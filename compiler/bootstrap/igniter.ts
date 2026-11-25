@@ -9839,7 +9839,7 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_bound;
                 if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isComptimeIntToken(lite_bound)) {
                     lite_extStr = liteFn$lib$core$int$tp_Int_op_toText(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$comptimeIntValue(lite_bound));
-                } else if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isAnyParamName(lite_genericParams, lite_bound)) {
+                } else if (((lite_bound) !== (""))) {
                     lite_extStr = lite_bound;
                 }
             }
@@ -9856,7 +9856,7 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponent(lite_pattern, lite_i);
                 void lite_comp;
                 void (lite_parts.push((((((lite_comp).label) + (":"))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$substCanonicalKind(lite_genericParams, (lite_comp).kind, lite_bindings)))));
-                lite_i = lite$addInt(lite_i, 1n, 76143);
+                lite_i = lite$addInt(lite_i, 1n, 76119);
             }
             return (((("(") + (liteFn$lib$core$text$joinTexts(lite_parts, ",")))) + (")"));
         }
@@ -9871,7 +9871,7 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnParamComponent(lite_pattern, lite_i);
                 void lite_comp;
                 void (lite_parts.push((((((lite_comp).label) + (":"))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$substCanonicalKind(lite_genericParams, (lite_comp).kind, lite_bindings)))));
-                lite_i = lite$addInt(lite_i, 1n, 76525);
+                lite_i = lite$addInt(lite_i, 1n, 76501);
             }
             return (((((("fn(") + (liteFn$lib$core$text$joinTexts(lite_parts, ",")))) + ("):"))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$substCanonicalKind(lite_genericParams, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnResultKind(lite_pattern), lite_bindings)));
         }
@@ -9884,9 +9884,9 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_semi) <= (7n))) {
                 return lite_pattern;
             }
-            const lite_hdr = lite$textSlice(lite_pattern, 7n, lite_semi, 76882);
+            const lite_hdr = lite$textSlice(lite_pattern, 7n, lite_semi, 76858);
             void lite_hdr;
-            const lite_baseHdr = lite$textSlice(lite_hdr, 0n, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerBaseEnd(lite_hdr), 76921);
+            const lite_baseHdr = lite$textSlice(lite_hdr, 0n, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerBaseEnd(lite_hdr), 76897);
             void lite_baseHdr;
             const lite_oldArgs: string[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerTypeArgs(lite_hdr))];
             void lite_oldArgs;
@@ -9908,7 +9908,7 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordComponent(lite_pattern, lite_fi);
                 void lite_comp;
                 void (lite_fieldParts.push((((((lite_comp).label) + (":"))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$substCanonicalKind(lite_genericParams, (lite_comp).kind, lite_bindings)))));
-                lite_fi = lite$addInt(lite_fi, 1n, 77557);
+                lite_fi = lite$addInt(lite_fi, 1n, 77533);
             }
             return (((((((("Record<") + (lite_newHdr))) + (";"))) + (liteFn$lib$core$text$joinTexts(lite_fieldParts, ",")))) + (">"));
         }
@@ -9951,7 +9951,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((((lite_bk).next) < (0n))) {
                 return lite_pattern;
             }
-            const lite_baseHdr = lite$textSlice((lite_hdr).text, 0n, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerBaseEnd((lite_hdr).text), 78696);
+            const lite_baseHdr = lite$textSlice((lite_hdr).text, 0n, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerBaseEnd((lite_hdr).text), 78672);
             void lite_baseHdr;
             const lite_oldArgs: string[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerTypeArgs((lite_hdr).text))];
             void lite_oldArgs;
@@ -9981,13 +9981,13 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                     liteFn$lib$util$text__builder$append(lite_encodedPairsBuf, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_cName))) + (":"))) + (lite_cName))));
                     liteFn$lib$util$text__builder$append(lite_encodedPairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(liteFn$lib$core$text$joinTexts(lite_newPayloads, ",")));
-                    lite_ci = lite$addInt(lite_ci, 1n, 79712);
+                    lite_ci = lite$addInt(lite_ci, 1n, 79688);
                 }
                 return (((((((((((("Enum<") + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_newHdr))) + (":"))) + (lite_newHdr)))))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText("$payload")))) + (liteFn$lib$core$int$tp_Int_op_toText((lite_info).count)))) + (";"))) + ((liteFn$lib$core$text$joinTexts(lite_encodedPairsBuf, ""))))) + (">"));
             }
             const lite_newBk = (Boolean((((lite_bk).text) === (""))) ? "" : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$substCanonicalKind(lite_genericParams, (lite_bk).text, lite_bindings));
             void lite_newBk;
-            const lite_tail = lite$textSlice(lite_pattern, (lite_bk).next, lite$subtractInt(lite$textLength(lite_pattern), 1n, 80051), 80019);
+            const lite_tail = lite$textSlice(lite_pattern, (lite_bk).next, lite$subtractInt(lite$textLength(lite_pattern), 1n, 80027), 79995);
             void lite_tail;
             return (((((((("Enum<") + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_newHdr))) + (":"))) + (lite_newHdr)))))) + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_newBk))) + (":"))) + (lite_newBk)))))) + (lite_tail))) + (">"));
         }
@@ -10071,7 +10071,7 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_err) !== (""))) {
                     return lite_err;
                 }
-                lite_i = lite$addInt(lite_i, 1n, 82548);
+                lite_i = lite$addInt(lite_i, 1n, 82524);
             }
             return "";
         }
@@ -10086,7 +10086,7 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_err) !== (""))) {
                     return lite_err;
                 }
-                lite_i = lite$addInt(lite_i, 1n, 82823);
+                lite_i = lite$addInt(lite_i, 1n, 82799);
             }
             const lite_rk = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnResultKind(lite_kind);
             void lite_rk;
@@ -10111,7 +10111,7 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_err) !== (""))) {
                     return lite_err;
                 }
-                lite_fi = lite$addInt(lite_fi, 1n, 83390);
+                lite_fi = lite$addInt(lite_fi, 1n, 83366);
             }
             return "";
         }
@@ -10143,7 +10143,7 @@ export function main(lite$write?: (text: string) => void): string {
                         return lite_err;
                     }
                 }
-                lite_ci = lite$addInt(lite_ci, 1n, 84317);
+                lite_ci = lite$addInt(lite_ci, 1n, 84293);
             }
             return "";
         }
@@ -10158,24 +10158,24 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_start, lite_prefix);
         void lite_cursor;
-        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 84793)) !== ("<"))))) {
+        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 84769)) !== ("<"))))) {
             return { ok: true, hasParams: false, paramsCsv: "", next: lite_cursor, errPos: (-1n), errMsg: "" };
         }
-        lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 84970), lite_prefix);
-        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 85016)) === (">"))))) {
+        lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 84946), lite_prefix);
+        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 84992)) === (">"))))) {
             return { ok: false, hasParams: true, paramsCsv: "", next: lite_cursor, errPos: lite_cursor, errMsg: "expected at least one type parameter inside <...>" };
         }
         let lite_paramsCsv = "";
         void lite_paramsCsv;
         while (((lite_cursor) < (lite_size))) {
-            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 85271))))) {
+            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 85247))))) {
                 return { ok: false, hasParams: true, paramsCsv: lite_paramsCsv, next: lite_cursor, errPos: lite_cursor, errMsg: "expected a comptime parameter name" };
             }
             const lite_nameStart = lite_cursor;
             void lite_nameStart;
             const lite_nameEnd = (lite$textSkipWhile(lite_source, lite_nameStart, false));
             void lite_nameEnd;
-            const lite_pName = lite$textSlice(lite_source, lite_nameStart, lite_nameEnd, 85561);
+            const lite_pName = lite$textSlice(lite_source, lite_nameStart, lite_nameEnd, 85537);
             void lite_pName;
             if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_pName)) {
                 return { ok: false, hasParams: true, paramsCsv: lite_paramsCsv, next: lite_nameStart, errPos: lite_nameStart, errMsg: (((("unsupported feature \"") + (lite_pName))) + ("\"")) };
@@ -10186,38 +10186,38 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_entry = lite_pName;
             void lite_entry;
             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_nameEnd, lite_prefix);
-            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 86145)) === (":"))))) {
-                const lite_kindStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 86223), lite_prefix);
+            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 86121)) === (":"))))) {
+                const lite_kindStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 86199), lite_prefix);
                 void lite_kindStart;
-                if (((((((lite_kindStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_kindStart, 86284))))))) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_kindStart, "fn")))) {
+                if (((((((lite_kindStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_kindStart, 86260))))))) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_kindStart, "fn")))) {
                     return { ok: false, hasParams: true, paramsCsv: lite_paramsCsv, next: lite_kindStart, errPos: lite_kindStart, errMsg: "expected comptime parameter kind after :" };
                 }
                 const lite_kindEnd0 = (lite$textSkipWhile(lite_source, lite_kindStart, false));
                 void lite_kindEnd0;
-                let lite_kindText = lite$textSlice(lite_source, lite_kindStart, lite_kindEnd0, 86618);
+                let lite_kindText = lite$textSlice(lite_source, lite_kindStart, lite_kindEnd0, 86594);
                 void lite_kindText;
                 let lite_kindEnd = lite_kindEnd0;
                 void lite_kindEnd;
                 const lite_afterK0 = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_kindEnd0, lite_prefix);
                 void lite_afterK0;
-                if (((((lite_afterK0) < (lite_size))) && (((lite$textAt(lite_source, lite_afterK0, 86792)) === ("."))))) {
-                    const lite_mStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterK0, 1n, 86873), lite_prefix);
+                if (((((lite_afterK0) < (lite_size))) && (((lite$textAt(lite_source, lite_afterK0, 86768)) === ("."))))) {
+                    const lite_mStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterK0, 1n, 86849), lite_prefix);
                     void lite_mStart;
-                    if (((((lite_mStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_mStart, 86935))))))) {
+                    if (((((lite_mStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_mStart, 86911))))))) {
                         return { ok: false, hasParams: true, paramsCsv: lite_paramsCsv, next: lite_mStart, errPos: lite_mStart, errMsg: "expected a type name after ." };
                     }
                     lite_kindEnd = (lite$textSkipWhile(lite_source, lite_mStart, false));
-                    lite_kindText = ((((lite_kindText) + ("."))) + (lite$textSlice(lite_source, lite_mStart, lite_kindEnd, 87237)));
+                    lite_kindText = ((((lite_kindText) + ("."))) + (lite$textSlice(lite_source, lite_mStart, lite_kindEnd, 87213)));
                 }
                 const lite_afterKind = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_kindEnd, lite_prefix);
                 void lite_afterKind;
-                if (((((lite_afterKind) < (lite_size))) && (((lite$textAt(lite_source, lite_afterKind, 87387)) === ("<"))))) {
+                if (((((lite_afterKind) < (lite_size))) && (((lite$textAt(lite_source, lite_afterKind, 87363)) === ("<"))))) {
                     if (((lite_kindText) !== ("Type"))) {
                         return { ok: false, hasParams: true, paramsCsv: lite_paramsCsv, next: lite_kindStart, errPos: lite_kindStart, errMsg: (((("unsupported comptime parameter kind ") + (lite_kindText))) + ("<...>; only Type, Int, Bool, String, and payload-free enums are supported")) };
                     }
-                    const lite_innerStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterKind, 1n, 87793), lite_prefix);
+                    const lite_innerStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterKind, 1n, 87769), lite_prefix);
                     void lite_innerStart;
-                    if (((((lite_innerStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_innerStart, 87855)) === (">"))))) {
+                    if (((((lite_innerStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_innerStart, 87831)) === (">"))))) {
                         return { ok: false, hasParams: true, paramsCsv: lite_paramsCsv, next: lite_innerStart, errPos: lite_innerStart, errMsg: "expected at least one type constraint inside Type<...>" };
                     }
                     let lite_cScan = lite_afterKind;
@@ -10227,33 +10227,33 @@ export function main(lite$write?: (text: string) => void): string {
                     let lite_cClose = (-1n);
                     void lite_cClose;
                     while (((lite_cScan) < (lite_size))) {
-                        const lite_ch2 = lite$textAt(lite_source, lite_cScan, 88263);
+                        const lite_ch2 = lite$textAt(lite_source, lite_cScan, 88239);
                         void lite_ch2;
                         if (((lite_ch2) === ("\""))) {
                             lite_cScan = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipAliasString(lite_source, lite_cScan);
                         } else if (((((lite_ch2) === ("/"))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cScan, "/*")))) {
                             lite_cScan = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipComment(lite_source, lite_cScan, lite_prefix);
                         } else if (((lite_ch2) === ("<"))) {
-                            lite_cDepth = lite$addInt(lite_cDepth, 1n, 88620);
-                            lite_cScan = lite$addInt(lite_cScan, 1n, 88663);
+                            lite_cDepth = lite$addInt(lite_cDepth, 1n, 88596);
+                            lite_cScan = lite$addInt(lite_cScan, 1n, 88639);
                         } else if (((lite_ch2) === (">"))) {
-                            lite_cDepth = lite$subtractInt(lite_cDepth, 1n, 88751);
+                            lite_cDepth = lite$subtractInt(lite_cDepth, 1n, 88727);
                             if (((lite_cDepth) === (0n))) {
                                 lite_cClose = lite_cScan;
                                 break;
                             }
-                            lite_cScan = lite$addInt(lite_cScan, 1n, 88940);
+                            lite_cScan = lite$addInt(lite_cScan, 1n, 88916);
                         } else {
-                            lite_cScan = lite$addInt(lite_cScan, 1n, 89012);
+                            lite_cScan = lite$addInt(lite_cScan, 1n, 88988);
                         }
                     }
                     if (((lite_cClose) < (0n))) {
                         return { ok: false, hasParams: true, paramsCsv: lite_paramsCsv, next: lite_afterKind, errPos: lite_afterKind, errMsg: "expected >" };
                     }
-                    const lite_rawBounds = lite$textSlice(lite_source, lite_innerStart, lite_cClose, 89286);
+                    const lite_rawBounds = lite$textSlice(lite_source, lite_innerStart, lite_cClose, 89262);
                     void lite_rawBounds;
                     lite_entry = ((((((lite_pName) + ("=Type<"))) + (lite_rawBounds))) + (">"));
-                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cClose, 1n, 89431), lite_prefix);
+                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cClose, 1n, 89407), lite_prefix);
                 } else if (((lite_kindText) === ("Type"))) {
                     lite_entry = lite_pName;
                     lite_cursor = lite_afterKind;
@@ -10265,19 +10265,19 @@ export function main(lite$write?: (text: string) => void): string {
                 }
             }
             lite_paramsCsv = (Boolean(((lite_paramsCsv) === (""))) ? lite_entry : ((((lite_paramsCsv) + (","))) + (lite_entry)));
-            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 90483)) === (","))))) {
-                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 90557), lite_prefix);
-                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 90611)) === (">"))))) {
+            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 90459)) === (","))))) {
+                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 90533), lite_prefix);
+                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 90587)) === (">"))))) {
                     break;
                 }
             } else {
                 break;
             }
         }
-        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 90724)) !== (">"))))) {
+        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 90700)) !== (">"))))) {
             return { ok: false, hasParams: true, paramsCsv: lite_paramsCsv, next: lite_cursor, errPos: lite_cursor, errMsg: "expected >" };
         }
-        return { ok: true, hasParams: true, paramsCsv: lite_paramsCsv, next: lite$addInt(lite_cursor, 1n, 90947), errPos: (-1n), errMsg: "" };
+        return { ok: true, hasParams: true, paramsCsv: lite_paramsCsv, next: lite$addInt(lite_cursor, 1n, 90923), errPos: (-1n), errMsg: "" };
     }
     void liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams;
     function liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleShapeMatches(lite_expectedKind: string, lite_actualKind: string): boolean {
@@ -10295,9 +10295,9 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_aCursor = 1n;
         void lite_aCursor;
         while (((((lite_eCursor) < (lite_expectedSize))) && (((lite_aCursor) < (lite_actualSize))))) {
-            const lite_eChar = lite$textAt(lite_expectedKind, lite_eCursor, 91485);
+            const lite_eChar = lite$textAt(lite_expectedKind, lite_eCursor, 91461);
             void lite_eChar;
-            const lite_aChar = lite$textAt(lite_actualKind, lite_aCursor, 91526);
+            const lite_aChar = lite$textAt(lite_actualKind, lite_aCursor, 91502);
             void lite_aChar;
             if (((((lite_eChar) === (")"))) || (((lite_aChar) === (")"))))) {
                 return ((((lite_eChar) === (")"))) && (((lite_aChar) === (")"))));
@@ -10305,8 +10305,8 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_eChar) !== (":"))) {
                 lite_eCursor = (lite$textSkipWhile(lite_expectedKind, lite_eCursor, false));
             }
-            if (((((lite_eCursor) < (lite_expectedSize))) && (((lite$textAt(lite_expectedKind, lite_eCursor, 91763)) === (":"))))) {
-                lite_eCursor = lite$addInt(lite_eCursor, 1n, 91802);
+            if (((((lite_eCursor) < (lite_expectedSize))) && (((lite$textAt(lite_expectedKind, lite_eCursor, 91739)) === (":"))))) {
+                lite_eCursor = lite$addInt(lite_eCursor, 1n, 91778);
             }
             const lite_eTypeStart = lite_eCursor;
             void lite_eTypeStart;
@@ -10314,24 +10314,24 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_aChar) !== (":"))) {
                 lite_aCursor = (lite$textSkipWhile(lite_actualKind, lite_aCursor, false));
             }
-            if (((((lite_aCursor) < (lite_actualSize))) && (((lite$textAt(lite_actualKind, lite_aCursor, 92012)) === (":"))))) {
-                lite_aCursor = lite$addInt(lite_aCursor, 1n, 92051);
+            if (((((lite_aCursor) < (lite_actualSize))) && (((lite$textAt(lite_actualKind, lite_aCursor, 91988)) === (":"))))) {
+                lite_aCursor = lite$addInt(lite_aCursor, 1n, 92027);
             }
             const lite_aTypeStart = lite_aCursor;
             void lite_aTypeStart;
             lite_aCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_actualKind, lite_aCursor);
-            const lite_eComp = lite$textSlice(lite_expectedKind, lite_eTypeStart, lite_eCursor, 92173);
+            const lite_eComp = lite$textSlice(lite_expectedKind, lite_eTypeStart, lite_eCursor, 92149);
             void lite_eComp;
-            const lite_aComp = lite$textSlice(lite_actualKind, lite_aTypeStart, lite_aCursor, 92229);
+            const lite_aComp = lite$textSlice(lite_actualKind, lite_aTypeStart, lite_aCursor, 92205);
             void lite_aComp;
             if (((((lite_eComp) !== (lite_aComp))) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnShapeMatches(lite_eComp, lite_aComp)))))) {
                 return false;
             }
-            if (((((lite_eCursor) < (lite_expectedSize))) && (((lite$textAt(lite_expectedKind, lite_eCursor, 92410)) === (","))))) {
-                lite_eCursor = lite$addInt(lite_eCursor, 1n, 92449);
+            if (((((lite_eCursor) < (lite_expectedSize))) && (((lite$textAt(lite_expectedKind, lite_eCursor, 92386)) === (","))))) {
+                lite_eCursor = lite$addInt(lite_eCursor, 1n, 92425);
             }
-            if (((((lite_aCursor) < (lite_actualSize))) && (((lite$textAt(lite_actualKind, lite_aCursor, 92503)) === (","))))) {
-                lite_aCursor = lite$addInt(lite_aCursor, 1n, 92542);
+            if (((((lite_aCursor) < (lite_actualSize))) && (((lite$textAt(lite_actualKind, lite_aCursor, 92479)) === (","))))) {
+                lite_aCursor = lite$addInt(lite_aCursor, 1n, 92518);
             }
         }
         return ((((lite_eCursor) >= (lite_expectedSize))) && (((lite_aCursor) >= (lite_actualSize))));
@@ -10393,11 +10393,11 @@ export function main(lite$write?: (text: string) => void): string {
                     liteFn$lib$util$text__builder$append(lite_vFieldsBuf, "; readonly _");
                     liteFn$lib$util$text__builder$append(lite_vFieldsBuf, (String(lite_pi)));
                     liteFn$lib$util$text__builder$append(lite_vFieldsBuf, ": ");
-                    liteFn$lib$util$text__builder$append(lite_vFieldsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite$listAt(lite_ps, lite_pi, 94616)));
-                    lite_pi = lite$addInt(lite_pi, 1n, 94647);
+                    liteFn$lib$util$text__builder$append(lite_vFieldsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite$listAt(lite_ps, lite_pi, 94592)));
+                    lite_pi = lite$addInt(lite_pi, 1n, 94623);
                 }
                 void (lite_variants.push((((("{ ") + ((liteFn$lib$core$text$joinTexts(lite_vFieldsBuf, ""))))) + (" }"))));
-                lite_ci = lite$addInt(lite_ci, 1n, 94757);
+                lite_ci = lite$addInt(lite_ci, 1n, 94733);
             }
             lite_out = (((("(") + (liteFn$lib$core$text$joinTexts(lite_variants, " | ")))) + (")"));
         } else if ((((((((lite$textLength(lite_kind)) > (5n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_kind, 0n, "List<")))) && (((lite$textAt(lite_kind, lite$subtractInt(lite$textLength(lite_kind), 1n, 14509), 14492)) === (">")))))) {
@@ -10425,7 +10425,7 @@ export function main(lite$write?: (text: string) => void): string {
                 liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleObjectKey((lite_comp).label, lite_index));
                 liteFn$lib$util$text__builder$append(lite_resultBuf, ": ");
                 liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType((lite_comp).kind));
-                lite_index = lite$addInt(lite_index, 1n, 95696);
+                lite_index = lite$addInt(lite_index, 1n, 95672);
             }
             liteFn$lib$util$text__builder$append(lite_resultBuf, " }");
             lite_out = (liteFn$lib$core$text$joinTexts(lite_resultBuf, ""));
@@ -10449,7 +10449,7 @@ export function main(lite$write?: (text: string) => void): string {
                     liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleObjectKey((lite_comp).label, lite_index));
                     liteFn$lib$util$text__builder$append(lite_resultBuf, ": ");
                     liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType((lite_comp).kind));
-                    lite_index = lite$addInt(lite_index, 1n, 96416);
+                    lite_index = lite$addInt(lite_index, 1n, 96392);
                 }
                 liteFn$lib$util$text__builder$append(lite_resultBuf, " }");
                 lite_out = (liteFn$lib$core$text$joinTexts(lite_resultBuf, ""));
@@ -10472,7 +10472,7 @@ export function main(lite$write?: (text: string) => void): string {
                 liteFn$lib$util$text__builder$append(lite_paramsBuf, lite_paramLabel);
                 liteFn$lib$util$text__builder$append(lite_paramsBuf, ": ");
                 liteFn$lib$util$text__builder$append(lite_paramsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType((lite_comp).kind));
-                lite_index = lite$addInt(lite_index, 1n, 97085);
+                lite_index = lite$addInt(lite_index, 1n, 97061);
             }
             lite_out = (((((((("((") + ((liteFn$lib$core$text$joinTexts(lite_paramsBuf, ""))))) + (") => "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnResultKind(lite_kind))))) + (")"));
         } else {
@@ -10545,8 +10545,8 @@ export function main(lite$write?: (text: string) => void): string {
                             liteFn$lib$util$text__builder$append(lite_dispExprBuf, " + \", \"");
                         }
                         liteFn$lib$util$text__builder$append(lite_dispExprBuf, " + ");
-                        liteFn$lib$util$text__builder$append(lite_dispExprBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsDisplayValueCode(lite$listAt(lite_ps, lite_pi, 99957), (("value._") + ((String(lite_pi))))));
-                        lite_pi = lite$addInt(lite_pi, 1n, 100017);
+                        liteFn$lib$util$text__builder$append(lite_dispExprBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsDisplayValueCode(lite$listAt(lite_ps, lite_pi, 99933), (("value._") + ((String(lite_pi))))));
+                        lite_pi = lite$addInt(lite_pi, 1n, 99993);
                     }
                     liteFn$lib$util$text__builder$append(lite_dispExprBuf, " + \")\"");
                     liteFn$lib$util$text__builder$append(lite_casesBuf, "case ");
@@ -10555,7 +10555,7 @@ export function main(lite$write?: (text: string) => void): string {
                     liteFn$lib$util$text__builder$append(lite_casesBuf, (liteFn$lib$core$text$joinTexts(lite_dispExprBuf, "")));
                     liteFn$lib$util$text__builder$append(lite_casesBuf, "; ");
                 }
-                lite_idx = lite$addInt(lite_idx, 1n, 100402);
+                lite_idx = lite$addInt(lite_idx, 1n, 100378);
             }
             return (((((((((((("((value: ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite_kind)))) + ("): string => { switch (value._t) { "))) + ((liteFn$lib$core$text$joinTexts(lite_casesBuf, ""))))) + ("default: return \"\"; } })("))) + (lite_code))) + (")"));
         }
@@ -10572,7 +10572,7 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_cInfo = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$enumCaseAt(lite_kind, lite_idx);
                 void lite_cInfo;
                 void (lite_labels.push(liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(((((lite_enumName) + ("."))) + ((lite_cInfo).name)))));
-                lite_idx = lite$addInt(lite_idx, 1n, 100930);
+                lite_idx = lite$addInt(lite_idx, 1n, 100906);
             }
             return (((((((("([") + (liteFn$lib$core$text$joinTexts(lite_labels, ", ")))) + ("]["))) + (lite_code))) + ("]!)"));
         }
@@ -10598,7 +10598,7 @@ export function main(lite$write?: (text: string) => void): string {
                 liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(((((lite_separator) + ((lite_comp).label))) + (" = "))));
                 liteFn$lib$util$text__builder$append(lite_resultBuf, " + ");
                 liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsDisplayValueCode((lite_comp).kind, (("value.") + ((lite_comp).prop))));
-                lite_index = lite$addInt(lite_index, 1n, 101886);
+                lite_index = lite$addInt(lite_index, 1n, 101862);
             }
             return (((((((((((((((("((value: ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite_kind)))) + ("): string => "))) + ((liteFn$lib$core$text$joinTexts(lite_resultBuf, ""))))) + (" + "))) + (liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(" }")))) + (")("))) + (lite_code))) + (")"));
         }
@@ -10621,7 +10621,7 @@ export function main(lite$write?: (text: string) => void): string {
                 liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(lite_prefixText));
                 liteFn$lib$util$text__builder$append(lite_resultBuf, " + ");
                 liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsDisplayValueCode((lite_comp).kind, (("value.") + ((lite_comp).prop))));
-                lite_index = lite$addInt(lite_index, 1n, 102768);
+                lite_index = lite$addInt(lite_index, 1n, 102744);
             }
             const lite_ending = (Boolean(((lite_count) === (1n))) ? ",)" : ")");
             void lite_ending;
@@ -10640,26 +10640,26 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         let lite_cursor = 1n;
         void lite_cursor;
-        while (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_kind, lite_cursor, 103325)) !== (")"))))) {
+        while (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_kind, lite_cursor, 103301)) !== (")"))))) {
             let lite_fieldLabel = "";
             void lite_fieldLabel;
-            if (((lite$textAt(lite_kind, lite_cursor, 103392)) !== (":"))) {
+            if (((lite$textAt(lite_kind, lite_cursor, 103368)) !== (":"))) {
                 const lite_nameStart = lite_cursor;
                 void lite_nameStart;
                 lite_cursor = (lite$textSkipWhile(lite_kind, lite_cursor, false));
-                lite_fieldLabel = lite$textSlice(lite_kind, lite_nameStart, lite_cursor, 103520);
+                lite_fieldLabel = lite$textSlice(lite_kind, lite_nameStart, lite_cursor, 103496);
             }
-            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_kind, lite_cursor, 103590)) === (":"))))) {
-                lite_cursor = lite$addInt(lite_cursor, 1n, 103626);
+            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_kind, lite_cursor, 103566)) === (":"))))) {
+                lite_cursor = lite$addInt(lite_cursor, 1n, 103602);
             }
             const lite_typeStart = lite_cursor;
             void lite_typeStart;
             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_kind, lite_cursor);
             if (((((lite_fieldLabel) !== (""))) && (((lite_fieldLabel) === (lite_label))))) {
-                return lite$textSlice(lite_kind, lite_typeStart, lite_cursor, 103787);
+                return lite$textSlice(lite_kind, lite_typeStart, lite_cursor, 103763);
             }
-            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_kind, lite_cursor, 103857)) === (","))))) {
-                lite_cursor = lite$addInt(lite_cursor, 1n, 103893);
+            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_kind, lite_cursor, 103833)) === (","))))) {
+                lite_cursor = lite$addInt(lite_cursor, 1n, 103869);
             }
         }
         return "";
@@ -10734,7 +10734,7 @@ export function main(lite$write?: (text: string) => void): string {
                     liteFn$lib$util$text__builder$append(lite_resultBuf, ": ");
                     liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_comp).kind));
                 }
-                lite_index = lite$addInt(lite_index, 1n, 105952);
+                lite_index = lite$addInt(lite_index, 1n, 105928);
             }
             return (((((liteFn$lib$core$text$joinTexts(lite_resultBuf, ""))) + ("): "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnResultKind(lite_kind))));
         }
@@ -10761,7 +10761,7 @@ export function main(lite$write?: (text: string) => void): string {
                 liteFn$lib$util$text__builder$append(lite_resultBuf, ": ");
                 liteFn$lib$util$text__builder$append(lite_resultBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_comp).kind));
             }
-            lite_index = lite$addInt(lite_index, 1n, 106630);
+            lite_index = lite$addInt(lite_index, 1n, 106606);
         }
         if (((((lite_count) === (1n))) && ((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponent(lite_kind, 0n)).label) === (""))))) {
             liteFn$lib$util$text__builder$append(lite_resultBuf, ",");
@@ -10786,12 +10786,12 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_pos) >= (lite_size))) {
                 return { ok: false, kind: "", code: "", intValue: 0n, error: "expected constant value for enum case" };
             }
-            const lite_ch = lite$textAt(lite_rawText, lite_pos, 107545);
+            const lite_ch = lite$textAt(lite_rawText, lite_pos, 107521);
             void lite_ch;
             if (((liteFn$lib$core$text$tp_String_op_wordAt(lite_rawText, lite_pos, "true")) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_rawText, lite_pos, "false")))) {
                 const lite_isTrue = liteFn$lib$core$text$tp_String_op_wordAt(lite_rawText, lite_pos, "true");
                 void lite_isTrue;
-                const lite_endPos = lite$addInt(lite_pos, ((Boolean(lite_isTrue) ? 4n : 5n)), 107692);
+                const lite_endPos = lite$addInt(lite_pos, ((Boolean(lite_isTrue) ? 4n : 5n)), 107668);
                 void lite_endPos;
                 if (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rawText, lite_endPos, lite_prefix)) < (lite_size))) {
                     return { ok: false, kind: "", code: "", intValue: 0n, error: "unexpected text after enum case value" };
@@ -10810,9 +10810,9 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_isNeg;
             const lite_isSign = ((((lite_ch) === ("-"))) || (((lite_ch) === ("+"))));
             void lite_isSign;
-            const lite_numPos = (Boolean(lite_isSign) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rawText, lite$addInt(lite_pos, 1n, 108605), lite_prefix) : lite_pos);
+            const lite_numPos = (Boolean(lite_isSign) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rawText, lite$addInt(lite_pos, 1n, 108581), lite_prefix) : lite_pos);
             void lite_numPos;
-            if (((((lite_numPos) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_rawText, lite_numPos, 108667))))) {
+            if (((((lite_numPos) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_rawText, lite_numPos, 108643))))) {
                 const lite_hintKind = (Boolean(((((lite_expectedBacking) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_FLOAT32))) || (((lite_expectedBacking) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_FLOAT))))) ? lite_expectedBacking : (Boolean(liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isIntKind(lite_expectedBacking)) ? lite_expectedBacking : ""));
                 void lite_hintKind;
                 const lite_lit = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$parseNumber(lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_TS, lite_rawText, lite_numPos, lite_prefix, lite_hintKind, 10n);
@@ -10845,7 +10845,7 @@ export function main(lite$write?: (text: string) => void): string {
                         void lite_fLit;
                         return { ok: true, kind: lite_expectedBacking, code: (Boolean(((lite_expectedBacking) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_FLOAT32))) ? (((("Math.fround(") + (lite_fLit))) + (")")) : lite_fLit), intValue: 0n, error: "" };
                     }
-                    const lite_intCode = (Boolean(((lite_finalInt) < (0n))) ? (((("(-") + (liteFn$lib$core$int$tp_Int_op_toText((lite$subtractInt(0n, lite_finalInt, 110516)))))) + ("n)")) : (((String(lite_finalInt))) + ("n")));
+                    const lite_intCode = (Boolean(((lite_finalInt) < (0n))) ? (((("(-") + (liteFn$lib$core$int$tp_Int_op_toText((lite$subtractInt(0n, lite_finalInt, 110492)))))) + ("n)")) : (((String(lite_finalInt))) + ("n")));
                     void lite_intCode;
                     return { ok: true, kind: lite_targetIntKind, code: lite_intCode, intValue: lite_finalInt, error: "" };
                 }
@@ -10906,7 +10906,7 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_firstValText = (lite_vDec).text;
             }
             lite_cur = (lite_vDec).next;
-            lite_idx = lite$addInt(lite_idx, 1n, 112477);
+            lite_idx = lite$addInt(lite_idx, 1n, 112453);
         }
         let lite_backingKind = lite_explicitBacking;
         void lite_backingKind;
@@ -10925,9 +10925,9 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_cIdx = 0n;
         void lite_cIdx;
         while (((lite_cIdx) < (lite_caseCount))) {
-            const lite_cName = lite$listAt(lite_names, lite_cIdx, 112927);
+            const lite_cName = lite$listAt(lite_names, lite_cIdx, 112903);
             void lite_cName;
-            const lite_cRaw = lite$listAt(lite_rawVals, lite_cIdx, 112958);
+            const lite_cRaw = lite$listAt(lite_rawVals, lite_cIdx, 112934);
             void lite_cRaw;
             let lite_valCode = "";
             void lite_valCode;
@@ -10944,20 +10944,20 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 lite_valCode = (lite_lit).code;
                 if (liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isIntKind(lite_backingKind)) {
-                    lite_nextInt = lite$addInt((lite_lit).intValue, 1n, 113637);
+                    lite_nextInt = lite$addInt((lite_lit).intValue, 1n, 113613);
                 }
             } else if (liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isIntKind(lite_backingKind)) {
                 if ((!(liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$intKindFits(lite_backingKind, lite_nextInt)))) {
                     return { ok: false, kind: "", next: lite_casesStart, error: (((((("enum case ") + (lite_cName))) + (" auto-assigned value does not fit "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_backingKind))) };
                 }
-                lite_valCode = (Boolean(((lite_nextInt) < (0n))) ? (((("(-") + (liteFn$lib$core$int$tp_Int_op_toText((lite$subtractInt(0n, lite_nextInt, 113996)))))) + ("n)")) : (((String(lite_nextInt))) + ("n")));
-                lite_nextInt = lite$addInt(lite_nextInt, 1n, 114088);
+                lite_valCode = (Boolean(((lite_nextInt) < (0n))) ? (((("(-") + (liteFn$lib$core$int$tp_Int_op_toText((lite$subtractInt(0n, lite_nextInt, 113972)))))) + ("n)")) : (((String(lite_nextInt))) + ("n")));
+                lite_nextInt = lite$addInt(lite_nextInt, 1n, 114064);
             } else {
                 return { ok: false, kind: "", next: lite_casesStart, error: (((((((("enum case ") + (lite_cName))) + (" requires an explicit "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_backingKind)))) + (" backing value")) };
             }
             liteFn$lib$util$text__builder$append(lite_encodedPairsBuf, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_cName))) + (":"))) + (lite_cName))));
             liteFn$lib$util$text__builder$append(lite_encodedPairsBuf, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_valCode))) + (":"))) + (lite_valCode))));
-            lite_cIdx = lite$addInt(lite_cIdx, 1n, 114454);
+            lite_cIdx = lite$addInt(lite_cIdx, 1n, 114430);
         }
         const lite_canonical = (((((((((((("Enum<") + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_hdrText))) + (":"))) + (lite_hdrText)))))) + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_backingKind))) + (":"))) + (lite_backingKind)))))) + ((String(lite_caseCount))))) + (";"))) + ((liteFn$lib$core$text$joinTexts(lite_encodedPairsBuf, ""))))) + (">"));
         void lite_canonical;
@@ -10979,10 +10979,10 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_clean;
             let lite_end = lite$textLength(lite_cur);
             void lite_end;
-            while (((((lite_end) > (lite_clean))) && ((((((((((lite$textAt(lite_cur, lite$subtractInt(lite_end, 1n, 115150), 115143)) === (" "))) || (((lite$textAt(lite_cur, lite$subtractInt(lite_end, 1n, 115176), 115169)) === ("\t"))))) || (((lite$textAt(lite_cur, lite$subtractInt(lite_end, 1n, 115203), 115196)) === ("\n"))))) || (((lite$textAt(lite_cur, lite$subtractInt(lite_end, 1n, 115230), 115223)) === ("\r")))))))) {
-                lite_end = lite$subtractInt(lite_end, 1n, 115268);
+            while (((((lite_end) > (lite_clean))) && ((((((((((lite$textAt(lite_cur, lite$subtractInt(lite_end, 1n, 115126), 115119)) === (" "))) || (((lite$textAt(lite_cur, lite$subtractInt(lite_end, 1n, 115152), 115145)) === ("\t"))))) || (((lite$textAt(lite_cur, lite$subtractInt(lite_end, 1n, 115179), 115172)) === ("\n"))))) || (((lite$textAt(lite_cur, lite$subtractInt(lite_end, 1n, 115206), 115199)) === ("\r")))))))) {
+                lite_end = lite$subtractInt(lite_end, 1n, 115244);
             }
-            const lite_name = lite$textSlice(lite_cur, lite_clean, lite_end, 115303);
+            const lite_name = lite$textSlice(lite_cur, lite_clean, lite_end, 115279);
             void lite_name;
             if (((((((((((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_INT))) || (((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_FLOAT))))) || (((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_STRING))))) || (((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_BOOL))))) || ((((liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isNarrowIntKind(lite_name)) || (((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT32)))))))) {
                 return lite_name;
@@ -10997,15 +10997,15 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_idx) < (0n))) {
                 return "";
             }
-            const lite_item = lite$listAt(lite_activeAliases, lite_idx, 115727);
+            const lite_item = lite$listAt(lite_activeAliases, lite_idx, 115703);
             void lite_item;
             if (liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_item).target), 0n, "$Kind:")) {
-                lite_cur = lite$textSlice(((lite_item).target), 6n, lite$textLength(((lite_item).target)), 115818);
+                lite_cur = lite$textSlice(((lite_item).target), 6n, lite$textLength(((lite_item).target)), 115794);
             } else {
                 lite_cur = (lite_item).target;
             }
             lite_activeAliases = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$aliasesUpToDepth(lite_activeAliases, (lite_item).depth))];
-            lite_hops = lite$addInt(lite_hops, 1n, 115999);
+            lite_hops = lite$addInt(lite_hops, 1n, 115975);
         }
         return "";
     }
@@ -11042,12 +11042,12 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_curPos;
                 let lite_countEnd = lite_curPos;
                 void lite_countEnd;
-                while (((((lite_countEnd) < (lite$textLength(lite_cur)))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_cur, lite_countEnd, 117303))))) {
-                    lite_countEnd = lite$addInt(lite_countEnd, 1n, 117348);
+                while (((((lite_countEnd) < (lite$textLength(lite_cur)))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_cur, lite_countEnd, 117279))))) {
+                    lite_countEnd = lite$addInt(lite_countEnd, 1n, 117324);
                 }
                 const lite_caseCount = (Boolean(((lite_countEnd) > (lite_curPos))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$parseDigits(lite_cur, lite_curPos, lite_countEnd) : 0n);
                 void lite_caseCount;
-                lite_curPos = (Boolean(((((lite_countEnd) < (lite$textLength(lite_cur)))) && (((lite$textAt(lite_cur, lite_countEnd, 117515)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 117546) : lite_countEnd);
+                lite_curPos = (Boolean(((((lite_countEnd) < (lite$textLength(lite_cur)))) && (((lite$textAt(lite_cur, lite_countEnd, 117491)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 117522) : lite_countEnd);
                 const lite_preChk = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$enumRawPreCheck(lite_cur, (lite_bkRaw).text, lite_curPos, lite_caseCount);
                 void lite_preChk;
                 if ((lite_preChk).hasPayload) {
@@ -11076,16 +11076,16 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_idx) < (0n))) {
                 return { ok: false, kind: "", error: (("unknown comptime parameter type ") + (lite_cur)) };
             }
-            const lite_item = lite$listAt(lite_activeAliases, lite_idx, 119087);
+            const lite_item = lite$listAt(lite_activeAliases, lite_idx, 119063);
             void lite_item;
             const lite_tgt = (lite_item).target;
             void lite_tgt;
             if (((((((((((((((((((((((((((((((((((lite_tgt) === (""))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "@recraw:")))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "@distraw:")))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "@genraw:")))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "@gentpl:")))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "$Val:")))) || (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordKind(lite_tgt)))) || (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isDistinctKind(lite_tgt)))) || ((((((lite$textLength(lite_tgt)) > (0n))) && (((lite$textAt(lite_tgt, 0n, 4339)) === ("(")))))))) || ((((((((lite$textLength(lite_tgt)) > (5n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "List<")))) && (((lite$textAt(lite_tgt, lite$subtractInt(lite$textLength(lite_tgt), 1n, 14509), 14492)) === (">")))))))) || ((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$arraySemiIndex(lite_tgt)) > (1n)))))) || (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isMapKind(lite_tgt)))) || (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isSetKind(lite_tgt)))) || ((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnCloseParenIndex(lite_tgt)) >= (2n)))))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "(")))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "[")))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "fn")))) {
                 return { ok: false, kind: "", error: (((("unsupported comptime parameter type ") + (lite_rawTypeName))) + ("; only Int, Bool, String, and payload-free enums are supported")) };
             }
-            lite_cur = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "$Kind:")) ? lite$textSlice(lite_tgt, 6n, lite$textLength(lite_tgt), 119826) : lite_tgt);
+            lite_cur = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tgt, 0n, "$Kind:")) ? lite$textSlice(lite_tgt, 6n, lite$textLength(lite_tgt), 119802) : lite_tgt);
             lite_activeAliases = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$aliasesUpToDepth(lite_activeAliases, (lite_item).depth))];
-            lite_hops = lite$addInt(lite_hops, 1n, 119954);
+            lite_hops = lite$addInt(lite_hops, 1n, 119930);
         }
         return { ok: false, kind: "", error: (("recursive type alias ") + (lite_rawTypeName)) };
     }
@@ -11096,32 +11096,32 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_prefix;
         const lite_size = lite$textLength(lite_source);
         void lite_size;
-        let lite_cursor = lite$addInt(lite_position, 1n, 120321);
+        let lite_cursor = lite$addInt(lite_position, 1n, 120297);
         void lite_cursor;
         while (((lite_cursor) < (lite_size))) {
-            const lite_ch = lite$textAt(lite_source, lite_cursor, 120372);
+            const lite_ch = lite$textAt(lite_source, lite_cursor, 120348);
             void lite_ch;
             if (((lite_ch) === ("\""))) {
-                const lite_next = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 120461), lite_prefix);
+                const lite_next = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 120437), lite_prefix);
                 void lite_next;
-                if (((((lite_next) < (lite_size))) && (((lite$textAt(lite_source, lite_next, 120513)) === ("\""))))) {
-                    lite_cursor = lite$addInt(lite_next, 1n, 120562);
+                if (((((lite_next) < (lite_size))) && (((lite$textAt(lite_source, lite_next, 120489)) === ("\""))))) {
+                    lite_cursor = lite$addInt(lite_next, 1n, 120538);
                     continue;
                 }
                 return true;
             }
             if (((lite_ch) === ("\\"))) {
-                if (((lite$addInt(lite_cursor, 1n, 120688)) >= (lite_size))) {
+                if (((lite$addInt(lite_cursor, 1n, 120664)) >= (lite_size))) {
                     return false;
                 }
-                const lite_esc = lite$textAt(lite_source, lite$addInt(lite_cursor, 1n, 120754), 120744);
+                const lite_esc = lite$textAt(lite_source, lite$addInt(lite_cursor, 1n, 120730), 120720);
                 void lite_esc;
                 if (((((((((((lite_esc) !== ("n"))) && (((lite_esc) !== ("t"))))) && (((lite_esc) !== ("r"))))) && (((lite_esc) !== ("\""))))) && (((lite_esc) !== ("\\"))))) {
                     return false;
                 }
-                lite_cursor = lite$addInt(lite_cursor, 2n, 120927);
+                lite_cursor = lite$addInt(lite_cursor, 2n, 120903);
             } else {
-                lite_cursor = lite$addInt(lite_cursor, 1n, 120977);
+                lite_cursor = lite$addInt(lite_cursor, 1n, 120953);
             }
         }
         return false;
@@ -11141,7 +11141,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_start) >= (lite_size))) {
             return { ok: false, token: "", next: lite_start, errPos: lite_start, errMsg: (((("expected comptime ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_expectedKind)))) + (" value")) };
         }
-        const lite_ch = lite$textAt(lite_source, lite_start, 121650);
+        const lite_ch = lite$textAt(lite_source, lite_start, 121626);
         void lite_ch;
         if (((lite_ch) === ("\""))) {
             if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canScanValidStringLiteral(lite_source, lite_start, lite_prefix)))) {
@@ -11159,9 +11159,9 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_isNeg;
             const lite_isSign = ((((lite_ch) === ("-"))) || (((lite_ch) === ("+"))));
             void lite_isSign;
-            const lite_numPos = (Boolean(lite_isSign) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 1n, 122477), lite_prefix) : lite_start);
+            const lite_numPos = (Boolean(lite_isSign) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 1n, 122453), lite_prefix) : lite_start);
             void lite_numPos;
-            if (((((lite_numPos) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_numPos, 122548))))))) {
+            if (((((lite_numPos) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_numPos, 122524))))))) {
                 return { ok: false, token: "", next: lite_start, errPos: lite_start, errMsg: "expected integer literal in comptime argument" };
             }
             const lite_scanned = liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$scanNumericLiteral(lite_source, lite_numPos);
@@ -11175,14 +11175,14 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_expectedKind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_INT))) {
                 return { ok: false, token: "", next: lite_start, errPos: lite_start, errMsg: (((("expected comptime ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_expectedKind)))) + (" value, got Int")) };
             }
-            const lite_val = (Boolean(lite_isNeg) ? (lite_scanned).magnitude : lite$subtractInt(0n, (lite_scanned).magnitude, 123505));
+            const lite_val = (Boolean(lite_isNeg) ? (lite_scanned).magnitude : lite$subtractInt(0n, (lite_scanned).magnitude, 123481));
             void lite_val;
             return { ok: true, token: ((((("ValI<") + (liteFn$lib$core$int$tp_Int_op_toText(lite_val)))) + (">"))), next: (lite_scanned).next, errPos: (-1n), errMsg: "" };
         }
         if (((liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_start, "true")) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_start, "false")))) {
             const lite_isTrue = liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_start, "true");
             void lite_isTrue;
-            const lite_endPos = lite$addInt(lite_start, ((Boolean(lite_isTrue) ? 4n : 5n)), 123783);
+            const lite_endPos = lite$addInt(lite_start, ((Boolean(lite_isTrue) ? 4n : 5n)), 123759);
             void lite_endPos;
             if (((lite_expectedKind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_BOOL))) {
                 return { ok: false, token: "", next: lite_start, errPos: lite_start, errMsg: (((("expected comptime ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_expectedKind)))) + (" value, got Bool")) };
@@ -11190,7 +11190,7 @@ export function main(lite$write?: (text: string) => void): string {
             return { ok: true, token: ((Boolean(lite_isTrue) ? "ValB<1>" : "ValB<0>")), next: lite_endPos, errPos: (-1n), errMsg: "" };
         }
         if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_start, "not")) {
-            const lite_subStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 3n, 124228), lite_prefix);
+            const lite_subStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 3n, 124204), lite_prefix);
             void lite_subStart;
             const lite_sub = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseComptimeValueArg(lite_source, lite_subStart, lite_prefix, lite_aliases, lite_genericType, lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_BOOL);
             void lite_sub;
@@ -11210,22 +11210,22 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_firstEnd = (lite$textSkipWhile(lite_source, lite_start, false));
         void lite_firstEnd;
-        const lite_first = lite$textSlice(lite_source, lite_start, lite_firstEnd, 125164);
+        const lite_first = lite$textSlice(lite_source, lite_start, lite_firstEnd, 125140);
         void lite_first;
         if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_first)) {
             return { ok: false, token: "", next: lite_start, errPos: lite_start, errMsg: (((("expected comptime ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_expectedKind)))) + (" value")) };
         }
         const lite_afterFirst = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_firstEnd, lite_prefix);
         void lite_afterFirst;
-        if (((((lite_afterFirst) < (lite_size))) && (((lite$textAt(lite_source, lite_afterFirst, 125472)) === ("."))))) {
-            const lite_secondStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFirst, 1n, 125556), lite_prefix);
+        if (((((lite_afterFirst) < (lite_size))) && (((lite$textAt(lite_source, lite_afterFirst, 125448)) === ("."))))) {
+            const lite_secondStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFirst, 1n, 125532), lite_prefix);
             void lite_secondStart;
-            if (((((lite_secondStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_secondStart, 125615))))))) {
+            if (((((lite_secondStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_secondStart, 125591))))))) {
                 return { ok: false, token: "", next: lite_secondStart, errPos: lite_secondStart, errMsg: "expected case name after ." };
             }
             const lite_secondEnd = (lite$textSkipWhile(lite_source, lite_secondStart, false));
             void lite_secondEnd;
-            const lite_second = lite$textSlice(lite_source, lite_secondStart, lite_secondEnd, 125859);
+            const lite_second = lite$textSlice(lite_source, lite_secondStart, lite_secondEnd, 125835);
             void lite_second;
             const lite_afterSecond = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_secondEnd, lite_prefix);
             void lite_afterSecond;
@@ -11235,16 +11235,16 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_caseName;
             let lite_finalEnd = lite_secondEnd;
             void lite_finalEnd;
-            if (((((lite_afterSecond) < (lite_size))) && (((lite$textAt(lite_source, lite_afterSecond, 126098)) === ("."))))) {
-                const lite_thirdStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterSecond, 1n, 126187), lite_prefix);
+            if (((((lite_afterSecond) < (lite_size))) && (((lite$textAt(lite_source, lite_afterSecond, 126074)) === ("."))))) {
+                const lite_thirdStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterSecond, 1n, 126163), lite_prefix);
                 void lite_thirdStart;
-                if (((((lite_thirdStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_thirdStart, 126249))))))) {
+                if (((((lite_thirdStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_thirdStart, 126225))))))) {
                     return { ok: false, token: "", next: lite_thirdStart, errPos: lite_thirdStart, errMsg: "expected case name after ." };
                 }
                 const lite_thirdEnd = (lite$textSkipWhile(lite_source, lite_thirdStart, false));
                 void lite_thirdEnd;
                 lite_typeName = ((((lite_first) + ("."))) + (lite_second));
-                lite_caseName = lite$textSlice(lite_source, lite_thirdStart, lite_thirdEnd, 126550);
+                lite_caseName = lite$textSlice(lite_source, lite_thirdStart, lite_thirdEnd, 126526);
                 lite_finalEnd = lite_thirdEnd;
             }
             const lite_resolved = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$resolveDiscreteType(lite_aliases, lite_typeName, lite_prefix);
@@ -11272,8 +11272,8 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_aliasIdx = (liteFn$_p__p_$_p__p_$compiler$src$symbol__table$findAlias(lite_aliases, lite_first));
         void lite_aliasIdx;
-        if (((((lite_aliasIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(((lite$listAt(lite_aliases, lite_aliasIdx, 127964)).target), 0n, "$Val:")))) {
-            const lite_tok = lite$textSlice(((lite$listAt(lite_aliases, lite_aliasIdx, 128033)).target), 5n, lite$textLength(((lite$listAt(lite_aliases, lite_aliasIdx, 128069)).target)), 128051);
+        if (((((lite_aliasIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(((lite$listAt(lite_aliases, lite_aliasIdx, 127940)).target), 0n, "$Val:")))) {
+            const lite_tok = lite$textSlice(((lite$listAt(lite_aliases, lite_aliasIdx, 128009)).target), 5n, lite$textLength(((lite$listAt(lite_aliases, lite_aliasIdx, 128045)).target)), 128027);
             void lite_tok;
             const lite_actualKind = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$comptimeValueTokenKind(lite_tok);
             void lite_actualKind;
@@ -11303,8 +11303,8 @@ export function main(lite$write?: (text: string) => void): string {
         if ((((((!(lite_useLocalErr))) && (((lite_start) < (lite_size))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "Union<")))) {
             const lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start);
             void lite_end;
-            if (((((lite_end) > (lite$addInt(lite_start, 7n, 129193)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 129215), 129208)) === (">"))))) {
-                const lite_uKind = lite$textSlice(lite_source, lite_start, lite_end, 129257);
+            if (((((lite_end) > (lite$addInt(lite_start, 7n, 129169)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 129191), 129184)) === (">"))))) {
+                const lite_uKind = lite$textSlice(lite_source, lite_start, lite_end, 129233);
                 void lite_uKind;
                 if (((((lite_context) !== ("alias"))) && (((lite_context) !== ("constraint"))))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, lite_errPos, lite_prefix, (((("type set union ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_uKind)))) + (" can only be used inside Type<...> constraints")));
@@ -11313,7 +11313,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
         }
         if ((((((!(lite_useLocalErr))) && (((lite_start) < (lite_size))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "@enumraw:")))) {
-            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 9n, 129706));
+            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 9n, 129682));
             void lite_hdr;
             const lite_bkRaw = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, (lite_hdr).next);
             void lite_bkRaw;
@@ -11321,12 +11321,12 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_cur;
             let lite_countEnd = lite_cur;
             void lite_countEnd;
-            while (((((lite_countEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_countEnd, 129871))))) {
-                lite_countEnd = lite$addInt(lite_countEnd, 1n, 129928);
+            while (((((lite_countEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_countEnd, 129847))))) {
+                lite_countEnd = lite$addInt(lite_countEnd, 1n, 129904);
             }
             const lite_caseCount = (Boolean(((lite_countEnd) > (lite_cur))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$parseDigits(lite_source, lite_cur, lite_countEnd) : 0n);
             void lite_caseCount;
-            lite_cur = (Boolean(((((lite_countEnd) < (lite_size))) && (((lite$textAt(lite_source, lite_countEnd, 130084)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 130115) : lite_countEnd);
+            lite_cur = (Boolean(((((lite_countEnd) < (lite_size))) && (((lite$textAt(lite_source, lite_countEnd, 130060)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 130091) : lite_countEnd);
             let lite_resolvedBacking = "";
             void lite_resolvedBacking;
             if ((((lite_bkRaw).text) !== (""))) {
@@ -11360,7 +11360,7 @@ export function main(lite$write?: (text: string) => void): string {
                     let lite_payCsv = "";
                     void lite_payCsv;
                     if (liteFn$lib$core$text$tp_String_op_startsWithAt((lite_vDec).text, 0n, "@pay:")) {
-                        const lite_rawPay = lite$textSlice((lite_vDec).text, 5n, lite$textLength((lite_vDec).text), 131363);
+                        const lite_rawPay = lite$textSlice((lite_vDec).text, 5n, lite$textLength((lite_vDec).text), 131339);
                         void lite_rawPay;
                         const lite_payItems: string[] = [...([])];
                         void lite_payItems;
@@ -11385,7 +11385,7 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                     liteFn$lib$util$text__builder$append(lite_encodedPairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText((lite_nDec).text));
                     liteFn$lib$util$text__builder$append(lite_encodedPairsBuf, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_payCsv))) + (":"))) + (lite_payCsv))));
-                    lite_ci = lite$addInt(lite_ci, 1n, 132735);
+                    lite_ci = lite$addInt(lite_ci, 1n, 132711);
                 }
                 return { kind: (((((((((((("Enum<") + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_effHdr))) + (":"))) + (lite_effHdr)))))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText("$payload")))) + ((String(lite_caseCount))))) + (";"))) + ((liteFn$lib$core$text$joinTexts(lite_encodedPairsBuf, ""))))) + (">")), next: lite_pCur };
             }
@@ -11399,23 +11399,23 @@ export function main(lite$write?: (text: string) => void): string {
         if ((((((!(lite_useLocalErr))) && (((lite_start) < (lite_size))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "Enum<")))) {
             const lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start);
             void lite_end;
-            if (((((lite_end) > (lite$addInt(lite_start, 6n, 133361)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 133383), 133376)) === (">"))))) {
-                return { kind: lite$textSlice(lite_source, lite_start, lite_end, 133431), next: lite_end };
+            if (((((lite_end) > (lite$addInt(lite_start, 6n, 133337)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 133359), 133352)) === (">"))))) {
+                return { kind: lite$textSlice(lite_source, lite_start, lite_end, 133407), next: lite_end };
             }
         }
         if ((((((!(lite_useLocalErr))) && (((lite_start) < (lite_size))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "@recraw:")))) {
-            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 8n, 133616));
+            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 8n, 133592));
             void lite_hdr;
             let lite_cur = (lite_hdr).next;
             void lite_cur;
             let lite_countEnd = lite_cur;
             void lite_countEnd;
-            while (((((lite_countEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_countEnd, 133720))))) {
-                lite_countEnd = lite$addInt(lite_countEnd, 1n, 133777);
+            while (((((lite_countEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_countEnd, 133696))))) {
+                lite_countEnd = lite$addInt(lite_countEnd, 1n, 133753);
             }
             const lite_fieldCount = (Boolean(((lite_countEnd) > (lite_cur))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$parseDigits(lite_source, lite_cur, lite_countEnd) : 0n);
             void lite_fieldCount;
-            lite_cur = (Boolean(((((lite_countEnd) < (lite_size))) && (((lite$textAt(lite_source, lite_countEnd, 133934)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 133965) : lite_countEnd);
+            lite_cur = (Boolean(((((lite_countEnd) < (lite_size))) && (((lite$textAt(lite_source, lite_countEnd, 133910)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 133941) : lite_countEnd);
             const lite_parts: string[] = [...([])];
             void lite_parts;
             let lite_idx = 0n;
@@ -11435,7 +11435,7 @@ export function main(lite$write?: (text: string) => void): string {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, lite_errPos, lite_prefix, "unsupported record field type Unit");
                 }
                 void (lite_parts.push((((((lite_fName).text) + (":"))) + ((lite_resolvedField).kind))));
-                lite_idx = lite$addInt(lite_idx, 1n, 134825);
+                lite_idx = lite$addInt(lite_idx, 1n, 134801);
             }
             const lite_effHdr = (Boolean(((lite_genericType) !== (""))) ? (((((((lite_hdr).text) + ("<"))) + (liteFn$lib$core$text$joinTexts([...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$splitCommaNames(lite_genericType))], ",")))) + (">")) : (lite_hdr).text);
             void lite_effHdr;
@@ -11444,12 +11444,12 @@ export function main(lite$write?: (text: string) => void): string {
         if ((((((!(lite_useLocalErr))) && (((lite_start) < (lite_size))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "Record<")))) {
             const lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start);
             void lite_end;
-            if (((((((lite_end) > (lite$addInt(lite_start, 8n, 135237)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 135259), 135252)) === (">"))))) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordHeaderSemi(lite$textSlice(lite_source, lite_start, lite_end, 135299))) > (7n))))) {
-                return { kind: lite$textSlice(lite_source, lite_start, lite_end, 135358), next: lite_end };
+            if (((((((lite_end) > (lite$addInt(lite_start, 8n, 135213)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 135235), 135228)) === (">"))))) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordHeaderSemi(lite$textSlice(lite_source, lite_start, lite_end, 135275))) > (7n))))) {
+                return { kind: lite$textSlice(lite_source, lite_start, lite_end, 135334), next: lite_end };
             }
         }
         if ((((((!(lite_useLocalErr))) && (((lite_start) < (lite_size))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "@distraw:")))) {
-            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 9n, 135544));
+            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 9n, 135520));
             void lite_hdr;
             const lite_rawTarget = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, (lite_hdr).next);
             void lite_rawTarget;
@@ -11471,12 +11471,12 @@ export function main(lite$write?: (text: string) => void): string {
         if ((((((!(lite_useLocalErr))) && (((lite_start) < (lite_size))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "Distinct<")))) {
             const lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start);
             void lite_end;
-            if (((((lite_end) > (lite$addInt(lite_start, 10n, 136717)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 136740), 136733)) === (">"))))) {
-                return { kind: lite$textSlice(lite_source, lite_start, lite_end, 136788), next: lite_end };
+            if (((((lite_end) > (lite$addInt(lite_start, 10n, 136693)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 136716), 136709)) === (">"))))) {
+                return { kind: lite$textSlice(lite_source, lite_start, lite_end, 136764), next: lite_end };
             }
         }
-        if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_source, lite_start, 136867)) === ("("))))) {
-            let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 1n, 136940), lite_prefix);
+        if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_source, lite_start, 136843)) === ("("))))) {
+            let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 1n, 136916), lite_prefix);
             void lite_cursor;
             const lite_labels: string[] = [...([])];
             void lite_labels;
@@ -11497,40 +11497,40 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_cursor) >= (lite_size))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "expected ) in tuple type");
                 }
-                if (((lite$textAt(lite_source, lite_cursor, 137431)) === (")"))) {
-                    lite_cursor = lite$addInt(lite_cursor, 1n, 137483);
+                if (((lite$textAt(lite_source, lite_cursor, 137407)) === (")"))) {
+                    lite_cursor = lite$addInt(lite_cursor, 1n, 137459);
                     break;
                 }
-                if (((lite$textAt(lite_source, lite_cursor, 137547)) === ("("))) {
+                if (((lite$textAt(lite_source, lite_cursor, 137523)) === ("("))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "nested tuple types are not supported");
                 }
                 let lite_label = "";
                 void lite_label;
                 let lite_componentStart = lite_cursor;
                 void lite_componentStart;
-                if (((lite$textAt(lite_source, lite_cursor, 137807)) === (":"))) {
+                if (((lite$textAt(lite_source, lite_cursor, 137783)) === (":"))) {
                     lite_hadColon = true;
-                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 137918), lite_prefix);
-                    if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 137976)) === ("("))))) {
+                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 137894), lite_prefix);
+                    if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 137952)) === ("("))))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "nested tuple types are not supported");
                     }
-                    if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 138199))))))) {
+                    if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 138175))))))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "expected a tuple field type");
                     }
                     lite_componentStart = lite_cursor;
                 } else {
-                    if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 138464))))) {
+                    if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 138440))))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "expected a tuple field name");
                     }
                     const lite_firstStart = lite_cursor;
                     void lite_firstStart;
                     const lite_firstEnd = (lite$textSkipWhile(lite_source, lite_cursor, false));
                     void lite_firstEnd;
-                    const lite_firstName = lite$textSlice(lite_source, lite_firstStart, lite_firstEnd, 138764);
+                    const lite_firstName = lite$textSlice(lite_source, lite_firstStart, lite_firstEnd, 138740);
                     void lite_firstName;
                     const lite_afterFirst = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_firstEnd, lite_prefix);
                     void lite_afterFirst;
-                    if (((((lite_afterFirst) < (lite_size))) && (((lite$textAt(lite_source, lite_afterFirst, 138916)) === (":"))))) {
+                    if (((((lite_afterFirst) < (lite_size))) && (((lite$textAt(lite_source, lite_afterFirst, 138892)) === (":"))))) {
                         lite_label = lite_firstName;
                         if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_label)) {
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$unsupportedFeature(lite_errSource, (Boolean(lite_useLocalErr) ? lite_firstStart : lite_errPos), lite_label, lite_prefix);
@@ -11539,11 +11539,11 @@ export function main(lite$write?: (text: string) => void): string {
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_firstStart : lite_errPos), lite_prefix, (("duplicate tuple field ") + (lite_label)));
                         }
                         void (lite_labels.push(lite_label));
-                        lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFirst, 1n, 139521), lite_prefix);
-                        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 139583)) === ("("))))) {
+                        lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFirst, 1n, 139497), lite_prefix);
+                        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 139559)) === ("("))))) {
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "nested tuple types are not supported");
                         }
-                        if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 139818))))))) {
+                        if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 139794))))))) {
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "expected a tuple field type");
                         }
                         lite_componentStart = lite_cursor;
@@ -11575,11 +11575,11 @@ export function main(lite$write?: (text: string) => void): string {
                     lite_singleLabel = lite_label;
                     lite_singleKind = lite_componentKind;
                 }
-                lite_count = lite$addInt(lite_count, 1n, 141188);
+                lite_count = lite$addInt(lite_count, 1n, 141164);
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_cursor, lite_prefix);
-                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 141297)) === (","))))) {
+                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 141273)) === (","))))) {
                     lite_hadComma = true;
-                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 141408), lite_prefix);
+                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 141384), lite_prefix);
                 }
             }
             if (((lite_count) === (0n))) {
@@ -11594,8 +11594,8 @@ export function main(lite$write?: (text: string) => void): string {
             liteFn$lib$util$text__builder$append(lite_kindTextBuf, ")");
             return { kind: (liteFn$lib$core$text$joinTexts(lite_kindTextBuf, "")), next: lite_cursor };
         }
-        if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_source, lite_start, 142060)) === ("["))))) {
-            const lite_elemStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 1n, 142132), lite_prefix);
+        if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_source, lite_start, 142036)) === ("["))))) {
+            const lite_elemStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 1n, 142108), lite_prefix);
             void lite_elemStart;
             const lite_inner = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_elemStart, lite_prefix, lite_aliases, "array element", lite_genericType, lite_seen);
             void lite_inner;
@@ -11604,18 +11604,18 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_afterElem = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_inner).next, lite_prefix);
             void lite_afterElem;
-            if (((((lite_afterElem) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterElem, 142567)) !== (";"))))) {
+            if (((((lite_afterElem) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterElem, 142543)) !== (";"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_afterElem : lite_errPos), lite_prefix, (Boolean(lite_useLocalErr) ? "expected ;" : "expected [Type; Extent] in array type"));
             }
-            const lite_extentStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterElem, 1n, 142834), lite_prefix);
+            const lite_extentStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterElem, 1n, 142810), lite_prefix);
             void lite_extentStart;
             let lite_extText = "";
             void lite_extText;
             let lite_extentEnd = lite_extentStart;
             void lite_extentEnd;
-            if (((((lite_extentStart) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_extentStart, 142954))))) {
+            if (((((lite_extentStart) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_extentStart, 142930))))) {
                 lite_extentEnd = (lite$textSkipWhile(lite_source, lite_extentStart, false));
-                const lite_extName = lite$textSlice(lite_source, lite_extentStart, lite_extentEnd, 143070);
+                const lite_extName = lite$textSlice(lite_source, lite_extentStart, lite_extentEnd, 143046);
                 void lite_extName;
                 const lite_vpKind = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$valueParamKind(lite_genericType, lite_extName);
                 void lite_vpKind;
@@ -11628,8 +11628,8 @@ export function main(lite$write?: (text: string) => void): string {
                 } else {
                     const lite_aliasIdx = (liteFn$_p__p_$_p__p_$compiler$src$symbol__table$findAlias(lite_aliases, lite_extName));
                     void lite_aliasIdx;
-                    if (((((lite_aliasIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(((lite$listAt(lite_aliases, lite_aliasIdx, 143775)).target), 0n, "$Val:")))) {
-                        const lite_tok = lite$textSlice(((lite$listAt(lite_aliases, lite_aliasIdx, 143856)).target), 5n, lite$textLength(((lite$listAt(lite_aliases, lite_aliasIdx, 143892)).target)), 143874);
+                    if (((((lite_aliasIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(((lite$listAt(lite_aliases, lite_aliasIdx, 143751)).target), 0n, "$Val:")))) {
+                        const lite_tok = lite$textSlice(((lite$listAt(lite_aliases, lite_aliasIdx, 143832)).target), 5n, lite$textLength(((lite$listAt(lite_aliases, lite_aliasIdx, 143868)).target)), 143850);
                         void lite_tok;
                         if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isComptimeIntToken(lite_tok)))) {
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_extentStart : lite_errPos), lite_prefix, (("array extent must be an Int, got ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$comptimeValueTokenKind(lite_tok)))));
@@ -11645,8 +11645,8 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                 }
             } else {
-                while (((((lite_extentEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_extentEnd, 144803))))) {
-                    lite_extentEnd = lite$addInt(lite_extentEnd, 1n, 144867);
+                while (((((lite_extentEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_extentEnd, 144779))))) {
+                    lite_extentEnd = lite$addInt(lite_extentEnd, 1n, 144843);
                 }
                 if (((lite_extentEnd) === (lite_extentStart))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_extentStart : lite_errPos), lite_prefix, "expected positive integer extent in array type");
@@ -11657,16 +11657,16 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_afterExtent = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_extentEnd, lite_prefix);
             void lite_afterExtent;
-            if (((((lite_afterExtent) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterExtent, 145323)) !== ("]"))))) {
+            if (((((lite_afterExtent) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterExtent, 145299)) !== ("]"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_afterExtent : lite_errPos), lite_prefix, (Boolean(lite_useLocalErr) ? "expected ]" : "expected [Type; Extent] in array type"));
             }
-            return { kind: (((((((("[") + ((lite_inner).kind))) + (";"))) + (lite_extText))) + ("]")), next: lite$addInt(lite_afterExtent, 1n, 145617) };
+            return { kind: (((((((("[") + ((lite_inner).kind))) + (";"))) + (lite_extText))) + ("]")), next: lite$addInt(lite_afterExtent, 1n, 145593) };
         }
         if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_start, "fn")) {
-            const lite_afterFn = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 2n, 145716), lite_prefix);
+            const lite_afterFn = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 2n, 145692), lite_prefix);
             void lite_afterFn;
-            if (((((lite_afterFn) < (lite_size))) && (((lite$textAt(lite_source, lite_afterFn, 145767)) === ("("))))) {
-                let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFn, 1n, 145848), lite_prefix);
+            if (((((lite_afterFn) < (lite_size))) && (((lite$textAt(lite_source, lite_afterFn, 145743)) === ("("))))) {
+                let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFn, 1n, 145824), lite_prefix);
                 void lite_cursor;
                 const lite_paramLabels: string[] = [...([])];
                 void lite_paramLabels;
@@ -11679,22 +11679,22 @@ export function main(lite$write?: (text: string) => void): string {
                     if (((lite_cursor) >= (lite_size))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "expected ) in function type");
                     }
-                    if (((lite$textAt(lite_source, lite_cursor, 146260)) === (")"))) {
-                        lite_cursor = lite$addInt(lite_cursor, 1n, 146316);
+                    if (((lite$textAt(lite_source, lite_cursor, 146236)) === (")"))) {
+                        lite_cursor = lite$addInt(lite_cursor, 1n, 146292);
                         break;
                     }
                     let lite_label = "";
                     void lite_label;
                     let lite_paramStart = lite_cursor;
                     void lite_paramStart;
-                    if (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 146467))) {
+                    if (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 146443))) {
                         const lite_nameEnd = (lite$textSkipWhile(lite_source, lite_cursor, false));
                         void lite_nameEnd;
-                        const lite_firstName = lite$textSlice(lite_source, lite_cursor, lite_nameEnd, 146590);
+                        const lite_firstName = lite$textSlice(lite_source, lite_cursor, lite_nameEnd, 146566);
                         void lite_firstName;
                         const lite_afterName = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_nameEnd, lite_prefix);
                         void lite_afterName;
-                        if (((((lite_afterName) < (lite_size))) && (((lite$textAt(lite_source, lite_afterName, 146742)) === (":"))))) {
+                        if (((((lite_afterName) < (lite_size))) && (((lite$textAt(lite_source, lite_afterName, 146718)) === (":"))))) {
                             lite_label = lite_firstName;
                             if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_label)) {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$unsupportedFeature(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_label, lite_prefix);
@@ -11703,7 +11703,7 @@ export function main(lite$write?: (text: string) => void): string {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, (("duplicate parameter ") + (lite_label)));
                             }
                             void (lite_paramLabels.push(lite_label));
-                            lite_paramStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 147385), lite_prefix);
+                            lite_paramStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 147361), lite_prefix);
                         }
                     }
                     const lite_paramType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_paramStart, lite_prefix, lite_aliases, "function", lite_genericType, lite_seen);
@@ -11714,12 +11714,12 @@ export function main(lite$write?: (text: string) => void): string {
                     liteFn$lib$util$text__builder$append(lite_encodedBuf, lite_label);
                     liteFn$lib$util$text__builder$append(lite_encodedBuf, ":");
                     liteFn$lib$util$text__builder$append(lite_encodedBuf, (lite_paramType).kind);
-                    lite_count = lite$addInt(lite_count, 1n, 147826);
+                    lite_count = lite$addInt(lite_count, 1n, 147802);
                     lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_paramType).next, lite_prefix);
-                    if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 147951)) === (","))))) {
-                        lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 148033), lite_prefix);
-                    } else if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 148098)) === (")"))))) {
-                        lite_cursor = lite$addInt(lite_cursor, 1n, 148154);
+                    if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 147927)) === (","))))) {
+                        lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 148009), lite_prefix);
+                    } else if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 148074)) === (")"))))) {
+                        lite_cursor = lite$addInt(lite_cursor, 1n, 148130);
                         break;
                     } else {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "expected , or ) in function type");
@@ -11727,10 +11727,10 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 const lite_afterClose = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_cursor, lite_prefix);
                 void lite_afterClose;
-                if (((((lite_afterClose) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterClose, 148489)) !== (":"))))) {
+                if (((((lite_afterClose) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterClose, 148465)) !== (":"))))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_afterClose : lite_errPos), lite_prefix, "expected : after function parameter types");
                 }
-                const lite_retType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite$addInt(lite_afterClose, 1n, 148749), lite_prefix, lite_aliases, "function", lite_genericType, lite_seen);
+                const lite_retType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite$addInt(lite_afterClose, 1n, 148725), lite_prefix, lite_aliases, "function", lite_genericType, lite_seen);
                 void lite_retType;
                 return { kind: (((((liteFn$lib$core$text$joinTexts(lite_encodedBuf, ""))) + ("):"))) + ((lite_retType).kind)), next: (lite_retType).next };
             }
@@ -11750,19 +11750,19 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_name) === ("Self"))) {
             const lite_selfIdx = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$findAlias(lite_aliases, "Self");
             void lite_selfIdx;
-            if (((((lite_selfIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt((lite$listAt(lite_aliases, lite_selfIdx, 149279)).target, 0n, "$Family:")))) {
-                const lite_fam = lite$textSlice((lite$listAt(lite_aliases, lite_selfIdx, 149352)).target, 8n, lite$textLength((lite$listAt(lite_aliases, lite_selfIdx, 149385)).target), 149368);
+            if (((((lite_selfIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt((lite$listAt(lite_aliases, lite_selfIdx, 149255)).target, 0n, "$Family:")))) {
+                const lite_fam = lite$textSlice((lite$listAt(lite_aliases, lite_selfIdx, 149328)).target, 8n, lite$textLength((lite$listAt(lite_aliases, lite_selfIdx, 149361)).target), 149344);
                 void lite_fam;
-                if (((((lite_afterName) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterName, 149455)) !== ("<"))))) {
+                if (((((lite_afterName) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterName, 149431)) !== ("<"))))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, lite_nameStart, lite_prefix, (((("generic type ") + (lite_fam))) + (" requires explicit type arguments on Self<...>")));
                 }
                 lite_resolvedName = lite_fam;
             }
         }
-        if (((((((lite_resolvedName) === ("List"))) && (((lite_afterName) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterName, 149738)) === ("<"))))) {
-            const lite_innerStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 149819), lite_prefix);
+        if (((((((lite_resolvedName) === ("List"))) && (((lite_afterName) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterName, 149714)) === ("<"))))) {
+            const lite_innerStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 149795), lite_prefix);
             void lite_innerStart;
-            if (((((lite_innerStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_innerStart, 149873)) === (">"))))) {
+            if (((((lite_innerStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_innerStart, 149849)) === (">"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_innerStart : lite_errPos), lite_prefix, "expected a list element type");
             }
             const lite_inner = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_innerStart, lite_prefix, lite_aliases, "list element", lite_genericType, lite_seen);
@@ -11772,30 +11772,30 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_close = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_inner).next, lite_prefix);
             void lite_close;
-            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 150436)) !== (">"))))) {
+            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 150412)) !== (">"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_close : lite_errPos), lite_prefix, (Boolean(lite_useLocalErr) ? "expected >" : "expected > in list type"));
             }
-            return { kind: (((("List<") + ((lite_inner).kind))) + (">")), next: lite$addInt(lite_close, 1n, 150686) };
+            return { kind: (((("List<") + ((lite_inner).kind))) + (">")), next: lite$addInt(lite_close, 1n, 150662) };
         }
-        if (((((((lite_resolvedName) === ("Array"))) && (((lite_afterName) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterName, 150761)) === ("<"))))) {
-            const lite_innerStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 150842), lite_prefix);
+        if (((((((lite_resolvedName) === ("Array"))) && (((lite_afterName) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterName, 150737)) === ("<"))))) {
+            const lite_innerStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 150818), lite_prefix);
             void lite_innerStart;
-            if (((((lite_innerStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_innerStart, 150896)) === (">"))))) {
+            if (((((lite_innerStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_innerStart, 150872)) === (">"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_innerStart : lite_errPos), lite_prefix, "expected an array element type");
             }
             const lite_inner = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_innerStart, lite_prefix, lite_aliases, "array element", lite_genericType, lite_seen);
             void lite_inner;
             const lite_close = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_inner).next, lite_prefix);
             void lite_close;
-            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 151284)) !== (">"))))) {
+            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 151260)) !== (">"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_close : lite_errPos), lite_prefix, (Boolean(lite_useLocalErr) ? "expected >" : "expected > in array type"));
             }
-            return { kind: (((("[") + ((lite_inner).kind))) + (";*]")), next: lite$addInt(lite_close, 1n, 151533) };
+            return { kind: (((("[") + ((lite_inner).kind))) + (";*]")), next: lite$addInt(lite_close, 1n, 151509) };
         }
-        if (((((((lite_resolvedName) === ("Map"))) && (((lite_afterName) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterName, 151606)) === ("<"))))) {
-            const lite_keyStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 151685), lite_prefix);
+        if (((((((lite_resolvedName) === ("Map"))) && (((lite_afterName) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterName, 151582)) === ("<"))))) {
+            const lite_keyStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 151661), lite_prefix);
             void lite_keyStart;
-            if (((((lite_keyStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_keyStart, 151737)) === (">"))))) {
+            if (((((lite_keyStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_keyStart, 151713)) === (">"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_keyStart : lite_errPos), lite_prefix, "expected a map key type");
             }
             const lite_keyParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_keyStart, lite_prefix, lite_aliases, "map key", lite_genericType, lite_seen);
@@ -11805,12 +11805,12 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_comma = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_keyParsed).next, lite_prefix);
             void lite_comma;
-            if (((((lite_comma) >= (lite_size))) || (((lite$textAt(lite_source, lite_comma, 152394)) !== (","))))) {
+            if (((((lite_comma) >= (lite_size))) || (((lite$textAt(lite_source, lite_comma, 152370)) !== (","))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_comma : lite_errPos), lite_prefix, "expected , in map type");
             }
-            const lite_valStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_comma, 1n, 152590), lite_prefix);
+            const lite_valStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_comma, 1n, 152566), lite_prefix);
             void lite_valStart;
-            if (((((lite_valStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_valStart, 152642)) === (">"))))) {
+            if (((((lite_valStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_valStart, 152618)) === (">"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_valStart : lite_errPos), lite_prefix, "expected a map value type");
             }
             const lite_valParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_valStart, lite_prefix, lite_aliases, "map value", lite_genericType, lite_seen);
@@ -11820,15 +11820,15 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_close = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_valParsed).next, lite_prefix);
             void lite_close;
-            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 153276)) !== (">"))))) {
+            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 153252)) !== (">"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_close : lite_errPos), lite_prefix, (Boolean(lite_useLocalErr) ? "expected >" : "expected > in map type"));
             }
-            return { kind: (((((((("Map<") + ((lite_keyParsed).kind))) + (","))) + ((lite_valParsed).kind))) + (">")), next: lite$addInt(lite_close, 1n, 153551) };
+            return { kind: (((((((("Map<") + ((lite_keyParsed).kind))) + (","))) + ((lite_valParsed).kind))) + (">")), next: lite$addInt(lite_close, 1n, 153527) };
         }
-        if (((((((lite_resolvedName) === ("Set"))) && (((lite_afterName) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterName, 153624)) === ("<"))))) {
-            const lite_elemStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 153704), lite_prefix);
+        if (((((((lite_resolvedName) === ("Set"))) && (((lite_afterName) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterName, 153600)) === ("<"))))) {
+            const lite_elemStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 153680), lite_prefix);
             void lite_elemStart;
-            if (((((lite_elemStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_elemStart, 153757)) === (">"))))) {
+            if (((((lite_elemStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_elemStart, 153733)) === (">"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_elemStart : lite_errPos), lite_prefix, "expected a set element type");
             }
             const lite_elemParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_elemStart, lite_prefix, lite_aliases, "set element", lite_genericType, lite_seen);
@@ -11838,10 +11838,10 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_close = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_elemParsed).next, lite_prefix);
             void lite_close;
-            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 154435)) !== (">"))))) {
+            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 154411)) !== (">"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_close : lite_errPos), lite_prefix, (Boolean(lite_useLocalErr) ? "expected >" : "expected > in set type"));
             }
-            return { kind: (((("Set<") + ((lite_elemParsed).kind))) + (">")), next: lite$addInt(lite_close, 1n, 154688) };
+            return { kind: (((("Set<") + ((lite_elemParsed).kind))) + (">")), next: lite$addInt(lite_close, 1n, 154664) };
         }
         if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isGenericParamName(lite_genericType, lite_name)) {
             return { kind: lite_name, next: lite_after };
@@ -11857,7 +11857,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_index = (liteFn$_p__p_$_p__p_$compiler$src$symbol__table$findAlias(lite_aliases, lite_name));
         void lite_index;
         if (((lite_index) >= (0n))) {
-            const lite_aliasItem = lite$listAt(lite_aliases, lite_index, 155242);
+            const lite_aliasItem = lite$listAt(lite_aliases, lite_index, 155218);
             void lite_aliasItem;
             const lite_seenKey = ((((liteFn$lib$core$int$tp_Int_op_toText(((lite_aliasItem).depth))) + (":"))) + (lite_name));
             void lite_seenKey;
@@ -11866,7 +11866,7 @@ export function main(lite$write?: (text: string) => void): string {
                 return { kind: "", next: lite_after };
             }
             if (liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), 0n, "$Kind:")) {
-                return { kind: lite$textSlice(((lite_aliasItem).target), 6n, lite$textLength(((lite_aliasItem).target)), 155585), next: lite_after };
+                return { kind: lite$textSlice(((lite_aliasItem).target), 6n, lite$textLength(((lite_aliasItem).target)), 155561), next: lite_after };
             }
             const lite_isGenRaw = liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), 0n, "@genraw:");
             void lite_isGenRaw;
@@ -11877,16 +11877,16 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_pDec;
                 const lite_tplParamsCsv = (lite_pDec).text;
                 void lite_tplParamsCsv;
-                const lite_tplBody = lite$textSlice(((lite_aliasItem).target), (lite_pDec).next, lite$textLength(((lite_aliasItem).target)), 155965);
+                const lite_tplBody = lite$textSlice(((lite_aliasItem).target), (lite_pDec).next, lite$textLength(((lite_aliasItem).target)), 155941);
                 void lite_tplBody;
-                if (((((lite_afterName) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterName, 156055)) !== ("<"))))) {
+                if (((((lite_afterName) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterName, 156031)) !== ("<"))))) {
                     if (((lite_name) === ("Self"))) {
                         const lite_famDisplay = (Boolean(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordKind(lite_tplBody)) ? (() => {
                             const lite_semi = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordHeaderSemi(lite_tplBody);
                             void lite_semi;
-                            const lite_hdr = (Boolean(((lite_semi) > (7n))) ? lite$textSlice(lite_tplBody, 7n, lite_semi, 156288) : "");
+                            const lite_hdr = (Boolean(((lite_semi) > (7n))) ? lite$textSlice(lite_tplBody, 7n, lite_semi, 156264) : "");
                             void lite_hdr;
-                            return liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerDisplayName(lite$textSlice(lite_hdr, 0n, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerBaseEnd(lite_hdr), 156364));
+                            return liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerDisplayName(lite$textSlice(lite_hdr, 0n, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerBaseEnd(lite_hdr), 156340));
                         })() : (Boolean(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isDistinctKind(lite_tplBody)) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerDisplayName((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$distinctMeta(lite_tplBody)).header) : (Boolean(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isEnumKind(lite_tplBody)) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__types$headerDisplayName(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$enumIdentityHeader(lite_tplBody)) : "Self")));
                         void lite_famDisplay;
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, lite_nameStart, lite_prefix, (((("generic type ") + (lite_famDisplay))) + (" requires explicit type arguments on Self<...>")));
@@ -11923,8 +11923,8 @@ export function main(lite$write?: (text: string) => void): string {
                                 const lite_bMembers: string[] = [...([(lite_bAtom0).kind])];
                                 void lite_bMembers;
                                 lite_bCur = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rb, (lite_bAtom0).next, lite_prefix);
-                                while (((((((lite_bCur) < (lite$textLength(lite_rb)))) && (((lite$textAt(lite_rb, lite_bCur, 158437)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rb, lite_bCur, "||")))))) {
-                                    const lite_bNext = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rb, lite$addInt(lite_bCur, 1n, 158559), lite_prefix);
+                                while (((((((lite_bCur) < (lite$textLength(lite_rb)))) && (((lite$textAt(lite_rb, lite_bCur, 158413)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rb, lite_bCur, "||")))))) {
+                                    const lite_bNext = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rb, lite$addInt(lite_bCur, 1n, 158535), lite_prefix);
                                     void lite_bNext;
                                     const lite_bAtom = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, (lite_aliasItem).at, false, lite_rb, lite_bNext, lite_prefix, lite_scopedTplAliases, "constraint", "", lite_emptySpecSeen);
                                     void lite_bAtom;
@@ -11958,9 +11958,9 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 const lite_paramSpecs: { name: string; kind: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$splitParamSpecs(lite_resolvedTplParamsCsv))];
                 void lite_paramSpecs;
-                let lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 160413), lite_prefix);
+                let lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 160389), lite_prefix);
                 void lite_argCursor;
-                if (((((lite_argCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_argCursor, 160470)) === (">"))))) {
+                if (((((lite_argCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_argCursor, 160446)) === (">"))))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_argCursor : lite_errPos), lite_prefix, (((("expected at least one type argument in ") + (lite_name))) + ("<...>")));
                 }
                 const lite_argKinds: string[] = [...([])];
@@ -11971,7 +11971,7 @@ export function main(lite$write?: (text: string) => void): string {
                     if (((lite_argIdx) >= (BigInt((lite_paramSpecs).length)))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_argCursor : lite_errPos), lite_prefix, (((((((("generic type ") + (lite_name))) + (" expects "))) + (liteFn$lib$core$int$tp_Int_op_toText(BigInt((lite_paramSpecs).length))))) + (" comptime argument(s)")));
                     }
-                    const lite_pSpec = lite$listAt(lite_paramSpecs, lite_argIdx, 161081);
+                    const lite_pSpec = lite$listAt(lite_paramSpecs, lite_argIdx, 161057);
                     void lite_pSpec;
                     if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isTypeParamKind((lite_pSpec).kind)) {
                         const lite_argParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_argCursor, lite_prefix, lite_aliases, "type argument", lite_genericType, lite_seen);
@@ -11987,20 +11987,20 @@ export function main(lite$write?: (text: string) => void): string {
                         void (lite_argKinds.push((lite_valArg).token));
                         lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_valArg).next, lite_prefix);
                     }
-                    lite_argIdx = lite$addInt(lite_argIdx, 1n, 161934);
-                    if (((((lite_argCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_argCursor, 161986)) === (","))))) {
-                        lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_argCursor, 1n, 162077), lite_prefix);
-                        if (((((lite_argCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_argCursor, 162142)) === (">"))))) {
+                    lite_argIdx = lite$addInt(lite_argIdx, 1n, 161910);
+                    if (((((lite_argCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_argCursor, 161962)) === (","))))) {
+                        lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_argCursor, 1n, 162053), lite_prefix);
+                        if (((((lite_argCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_argCursor, 162118)) === (">"))))) {
                             break;
                         }
                     } else {
                         break;
                     }
                 }
-                if (((((lite_argCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_argCursor, 162301)) !== (">"))))) {
+                if (((((lite_argCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_argCursor, 162277)) !== (">"))))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_argCursor : lite_errPos), lite_prefix, (Boolean(lite_useLocalErr) ? "expected >" : (("expected > in generic type ") + (lite_name))));
                 }
-                const lite_afterClose = lite$addInt(lite_argCursor, 1n, 162550);
+                const lite_afterClose = lite$addInt(lite_argCursor, 1n, 162526);
                 void lite_afterClose;
                 if (((BigInt((lite_argKinds).length)) !== (BigInt((lite_paramSpecs).length)))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, lite_nameStart, lite_prefix, (((((((((("generic type ") + (lite_name))) + (" expects "))) + (liteFn$lib$core$int$tp_Int_op_toText(BigInt((lite_paramSpecs).length))))) + (" comptime argument(s), got "))) + (liteFn$lib$core$int$tp_Int_op_toText(BigInt((lite_argKinds).length)))));
@@ -12008,12 +12008,12 @@ export function main(lite$write?: (text: string) => void): string {
                 let lite_chkIdx = 0n;
                 void lite_chkIdx;
                 while (((lite_chkIdx) < (BigInt((lite_paramSpecs).length)))) {
-                    const lite_cSpec = lite$listAt(lite_paramSpecs, lite_chkIdx, 162932);
+                    const lite_cSpec = lite$listAt(lite_paramSpecs, lite_chkIdx, 162908);
                     void lite_cSpec;
                     if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isTypeConstraintKind((lite_cSpec).kind)) {
                         const lite_constraint = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$typeConstraintUnion((lite_cSpec).kind);
                         void lite_constraint;
-                        const lite_argK = lite$listAt(lite_argKinds, lite_chkIdx, 163099);
+                        const lite_argK = lite$listAt(lite_argKinds, lite_chkIdx, 163075);
                         void lite_argK;
                         if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isGenericParamName(lite_genericType, lite_argK)) {
                             const lite_outerC = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$typeParamConstraintKind(lite_genericType, lite_argK);
@@ -12027,7 +12027,7 @@ export function main(lite$write?: (text: string) => void): string {
                             }
                         }
                     }
-                    lite_chkIdx = lite$addInt(lite_chkIdx, 1n, 163991);
+                    lite_chkIdx = lite$addInt(lite_chkIdx, 1n, 163967);
                 }
                 let lite_templateKind = lite_tplBody;
                 void lite_templateKind;
@@ -12057,8 +12057,8 @@ export function main(lite$write?: (text: string) => void): string {
                 let lite_bi = 0n;
                 void lite_bi;
                 while (((lite_bi) < (BigInt((lite_paramSpecs).length)))) {
-                    void (((lite_bindings).set((lite$listAt(lite_paramSpecs, lite_bi, 165094)).name, lite$listAt(lite_argKinds, lite_bi, 165113)), undefined));
-                    lite_bi = lite$addInt(lite_bi, 1n, 165143);
+                    void (((lite_bindings).set((lite$listAt(lite_paramSpecs, lite_bi, 165070)).name, lite$listAt(lite_argKinds, lite_bi, 165089)), undefined));
+                    lite_bi = lite$addInt(lite_bi, 1n, 165119);
                 }
                 const lite_instKind = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$substCanonicalKind(lite_resolvedTplParamsCsv, lite_templateKind, lite_bindings);
                 void lite_instKind;
@@ -12084,7 +12084,7 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_trailing;
             let lite_resolvedAliasKind = (lite_resolved).kind;
             void lite_resolvedAliasKind;
-            if (((((((lite_trailing) < (lite$textLength(((lite_aliasItem).target))))) && (((lite$textAt(((lite_aliasItem).target), lite_trailing, 166184)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), lite_trailing, "||")))))) {
+            if (((((((lite_trailing) < (lite$textLength(((lite_aliasItem).target))))) && (((lite$textAt(((lite_aliasItem).target), lite_trailing, 166160)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), lite_trailing, "||")))))) {
                 if (((((lite_context) !== ("alias"))) && (((lite_context) !== ("constraint"))))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, lite_nameStart, lite_prefix, (((("type set union ") + ((lite_aliasItem).target))) + (" can only be used inside Type<...> constraints")));
                 }
@@ -12093,8 +12093,8 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 const lite_uMembers: string[] = [...([(lite_resolved).kind])];
                 void lite_uMembers;
-                while (((((((lite_trailing) < (lite$textLength(((lite_aliasItem).target))))) && (((lite$textAt(((lite_aliasItem).target), lite_trailing, 166861)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), lite_trailing, "||")))))) {
-                    const lite_uNext = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia((lite_aliasItem).target, lite$addInt(lite_trailing, 1n, 167009), lite_prefix);
+                while (((((((lite_trailing) < (lite$textLength(((lite_aliasItem).target))))) && (((lite$textAt(((lite_aliasItem).target), lite_trailing, 166837)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), lite_trailing, "||")))))) {
+                    const lite_uNext = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia((lite_aliasItem).target, lite$addInt(lite_trailing, 1n, 166985), lite_prefix);
                     void lite_uNext;
                     const lite_uAtom = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, (lite_aliasItem).at, false, (lite_aliasItem).target, lite_uNext, lite_prefix, lite_scopedAliases, "alias", "", lite_nextSeen);
                     void lite_uAtom;
@@ -12143,7 +12143,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_first).next, lite_prefix);
         void lite_cursor;
-        if (((((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 169186)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "||")))))) {
+        if (((((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 169162)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "||")))))) {
             if (((((lite_context) !== ("alias"))) && (((lite_context) !== ("constraint"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, (Boolean(lite_useLocalErr) ? lite_cursor : lite_errPos), lite_prefix, "type set union is only allowed in alias declarations and Type<...> constraints");
             }
@@ -12155,8 +12155,8 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_members: string[] = [...([(lite_first).kind])];
             void lite_members;
-            while (((((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 170055)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "||")))))) {
-                const lite_nextStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 170175), lite_prefix);
+            while (((((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 170031)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "||")))))) {
+                const lite_nextStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 170151), lite_prefix);
                 void lite_nextStart;
                 const lite_atom = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_nextStart, lite_prefix, lite_aliases, lite_context, lite_genericType, lite_seen);
                 void lite_atom;
@@ -12275,7 +12275,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_idx) < (0n))) {
             return "";
         }
-        const lite_aliasItem = lite$listAt(lite_aliases, lite_idx, 174876);
+        const lite_aliasItem = lite$listAt(lite_aliases, lite_idx, 174852);
         void lite_aliasItem;
         if (liteFn$lib$core$text$tp_String_op_startsWithAt((lite_aliasItem).target, 0n, "@gentpl:")) {
             const lite_pDec = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt((lite_aliasItem).target, 8n);
@@ -12283,7 +12283,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((((lite_pDec).next) < (0n))) {
                 return "";
             }
-            const lite_tplBody = lite$textSlice((lite_aliasItem).target, (lite_pDec).next, lite$textLength((lite_aliasItem).target), 175073);
+            const lite_tplBody = lite$textSlice((lite_aliasItem).target, (lite_pDec).next, lite$textLength((lite_aliasItem).target), 175049);
             void lite_tplBody;
             return liteFn$_p__p_$_p__p_$compiler$src$frontend__types$typeOpOwnerKey(lite_tplBody);
         }
@@ -12293,7 +12293,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((((lite_pDec).next) < (0n))) {
                 return "";
             }
-            const lite_innerRaw = lite$textSlice((lite_aliasItem).target, (lite_pDec).next, lite$textLength((lite_aliasItem).target), 175356);
+            const lite_innerRaw = lite$textSlice((lite_aliasItem).target, (lite_pDec).next, lite$textLength((lite_aliasItem).target), 175332);
             void lite_innerRaw;
             if ((((((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_innerRaw, 0n, "@recraw:")))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_innerRaw, 0n, "@enumraw:")))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_innerRaw, 0n, "@distraw:")))))) {
                 return "";
@@ -12362,8 +12362,8 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_binder;
             const lite_afterFirst = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_binder).next, lite_prefix);
             void lite_afterFirst;
-            if ((((((((lite_binder).name) === ("K"))) && (((lite_afterFirst) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterFirst, 178209)) === (","))))) {
-                const lite_secondStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFirst, 1n, 178297), lite_prefix);
+            if ((((((((lite_binder).name) === ("K"))) && (((lite_afterFirst) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterFirst, 178185)) === (","))))) {
+                const lite_secondStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFirst, 1n, 178273), lite_prefix);
                 void lite_secondStart;
                 const lite_second = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$typeNameAt(lite_source, lite_secondStart, lite_prefix);
                 void lite_second;
@@ -12380,7 +12380,7 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$expectSymbol(lite_source, (lite_binder).next, ">", lite_prefix);
             }
             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_cursor, lite_prefix);
-        } else if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 178991)) === ("<"))))) {
+        } else if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 178967)) === ("<"))))) {
             const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite_cursor, lite_prefix);
             void lite_gp;
             if ((!((lite_gp).ok))) {
@@ -12398,30 +12398,30 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_count = 0n;
         void lite_count;
         if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "...")) {
-            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 179624), lite_prefix);
-            if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 179678))))))) {
+            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 179600), lite_prefix);
+            if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 179654))))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, "expected a name after ... in host value-pack declaration");
             }
             const lite_nameStart = lite_cursor;
             void lite_nameStart;
             lite_cursor = (lite$textSkipWhile(lite_source, lite_cursor, false));
-            lite_encoded = (("...") + (lite$textSlice(lite_source, lite_nameStart, lite_cursor, 179930)));
+            lite_encoded = (("...") + (lite$textSlice(lite_source, lite_nameStart, lite_cursor, 179906)));
             lite_count = (-1n);
             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_cursor, lite_prefix);
-            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 180072)) === (","))))) {
+            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 180048)) === (","))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, "host value-pack declaration must be its only parameter");
             }
-        } else if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 180250)) !== (")"))))) {
+        } else if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 180226)) !== (")"))))) {
             const lite_encodedBuf: string[] = [...([])];
             void lite_encodedBuf;
             while (Boolean(true)) {
-                if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 180375))))))) {
+                if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 180351))))))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, "expected a parameter name");
                 }
                 const lite_nameStart = lite_cursor;
                 void lite_nameStart;
                 lite_cursor = (lite$textSkipWhile(lite_source, lite_cursor, false));
-                const lite_parameterName = lite$textSlice(lite_source, lite_nameStart, lite_cursor, 180615);
+                const lite_parameterName = lite$textSlice(lite_source, lite_nameStart, lite_cursor, 180591);
                 void lite_parameterName;
                 if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_parameterName)) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$unsupportedFeature(lite_source, lite_nameStart, lite_parameterName, lite_prefix);
@@ -12437,7 +12437,7 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_access;
                 if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_cursor, "mut")) {
                     lite_access = "mut ";
-                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 181357), lite_prefix);
+                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 181333), lite_prefix);
                 }
                 const lite_typed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseFunctionType(lite_source, lite_cursor, lite_prefix, lite_aliases, lite_genericType);
                 void lite_typed;
@@ -12452,9 +12452,9 @@ export function main(lite$write?: (text: string) => void): string {
                 liteFn$lib$util$text__builder$append(lite_encodedBuf, "=");
                 liteFn$lib$util$text__builder$append(lite_encodedBuf, lite_access);
                 liteFn$lib$util$text__builder$append(lite_encodedBuf, (lite_typed).kind);
-                lite_count = lite$addInt(lite_count, 1n, 182149);
-                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 182194)) === (","))))) {
-                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 182272), lite_prefix);
+                lite_count = lite$addInt(lite_count, 1n, 182125);
+                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 182170)) === (","))))) {
+                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 182248), lite_prefix);
                 } else {
                     break;
                 }
@@ -12482,12 +12482,12 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_writable;
         if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_cursor, "mut")) {
             lite_writable = true;
-            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 183309), lite_prefix);
+            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 183285), lite_prefix);
         }
         const lite_typed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAt(lite_source, lite_cursor, lite_prefix, lite_aliases, "local", "");
         void lite_typed;
         if ((((lite_typed).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))) {
-            const lite_name = lite$textSlice(lite_source, lite_cursor, (lite$textSkipWhile(lite_source, lite_cursor, false)), 183466);
+            const lite_name = lite$textSlice(lite_source, lite_cursor, (lite$textSkipWhile(lite_source, lite_cursor, false)), 183442);
             void lite_name;
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (("unsupported local type ") + (lite_name)));
         }
@@ -12529,7 +12529,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_cursor;
         let lite_genericType = "";
         void lite_genericType;
-        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 184894)) === ("<"))))) {
+        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 184870)) === ("<"))))) {
             const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite_cursor, lite_prefix);
             void lite_gp;
             if ((!((lite_gp).ok))) {
@@ -12542,7 +12542,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_scopedAliases;
         lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$expectSymbol(lite_source, lite_cursor, "(", lite_prefix);
         lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_cursor, lite_prefix);
-        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 185448)) === (")"))))) {
+        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 185424)) === (")"))))) {
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((((("type operation ") + (lite_typeName))) + ("."))) + (lite_opName))) + (" requires a Self receiver first parameter")));
         }
         const lite_names: string[] = [...([])];
@@ -12552,13 +12552,13 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_count = 0n;
         void lite_count;
         while (Boolean(true)) {
-            if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 185758))))))) {
+            if (((((lite_cursor) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 185734))))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, "expected a parameter name");
             }
             const lite_nameStart = lite_cursor;
             void lite_nameStart;
             lite_cursor = (lite$textSkipWhile(lite_source, lite_cursor, false));
-            const lite_parameterName = lite$textSlice(lite_source, lite_nameStart, lite_cursor, 185978);
+            const lite_parameterName = lite$textSlice(lite_source, lite_nameStart, lite_cursor, 185954);
             void lite_parameterName;
             if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_parameterName)) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$unsupportedFeature(lite_source, lite_nameStart, lite_parameterName, lite_prefix);
@@ -12574,7 +12574,7 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_access;
             if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_cursor, "mut")) {
                 lite_access = "mut ";
-                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 186672), lite_prefix);
+                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 186648), lite_prefix);
             }
             const lite_typeStart = lite_cursor;
             void lite_typeStart;
@@ -12601,10 +12601,10 @@ export function main(lite$write?: (text: string) => void): string {
             liteFn$lib$util$text__builder$append(lite_encodedBuf, "=");
             liteFn$lib$util$text__builder$append(lite_encodedBuf, lite_access);
             liteFn$lib$util$text__builder$append(lite_encodedBuf, (lite_typed).kind);
-            lite_count = lite$addInt(lite_count, 1n, 188007);
-            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 188048)) === (","))))) {
-                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 188122), lite_prefix);
-                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 188176)) === (")"))))) {
+            lite_count = lite$addInt(lite_count, 1n, 187983);
+            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 188024)) === (","))))) {
+                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 188098), lite_prefix);
+                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 188152)) === (")"))))) {
                     break;
                 }
             } else {
@@ -12624,7 +12624,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_firstSep = liteFn$lib$core$text$tp_String_op_indexOf(lite_encoded, "|", 0n);
             void lite_firstSep;
-            const lite_recvPart = (Boolean(((lite_firstSep) < (0n))) ? lite_encoded : lite$textSlice(lite_encoded, 0n, lite_firstSep, 188874));
+            const lite_recvPart = (Boolean(((lite_firstSep) < (0n))) ? lite_encoded : lite$textSlice(lite_encoded, 0n, lite_firstSep, 188850));
             void lite_recvPart;
             if (liteFn$lib$core$text$tp_String_op_startsWithAt(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite_recvPart), 0n, "mut ")) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_position, lite_prefix, (((("$getIndex receiver on ") + (lite_typeName))) + (" must be read-only Self (not mut Self)")));
@@ -12638,7 +12638,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_firstSep = liteFn$lib$core$text$tp_String_op_indexOf(lite_encoded, "|", 0n);
             void lite_firstSep;
-            const lite_recvPart = (Boolean(((lite_firstSep) < (0n))) ? lite_encoded : lite$textSlice(lite_encoded, 0n, lite_firstSep, 189603));
+            const lite_recvPart = (Boolean(((lite_firstSep) < (0n))) ? lite_encoded : lite$textSlice(lite_encoded, 0n, lite_firstSep, 189579));
             void lite_recvPart;
             if ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite_recvPart), 0n, "mut ")))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_position, lite_prefix, (((("$setIndex receiver on ") + (lite_typeName))) + (" must be mut Self")));
@@ -12657,7 +12657,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_separator) < (0n))) {
             return lite_entry;
         }
-        return lite$textSlice(lite_entry, 0n, lite_separator, 190322);
+        return lite$textSlice(lite_entry, 0n, lite_separator, 190298);
     }
     void liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramNameOf;
     function liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite_entry: string): string {
@@ -12667,7 +12667,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_separator) < (0n))) {
             return "";
         }
-        return lite$textSlice(lite_entry, lite$addInt(lite_separator, 1n, 190574), lite$textLength(lite_entry), 190558);
+        return lite$textSlice(lite_entry, lite$addInt(lite_separator, 1n, 190550), lite$textLength(lite_entry), 190534);
     }
     void liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf;
     function liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnCanonicalKind(lite_params: string[], lite_first: bigint, lite_count: bigint, lite_resultKind: string): string {
@@ -12684,12 +12684,12 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_idx) > (0n))) {
                 liteFn$lib$util$text__builder$append(lite_out, ",");
             }
-            const lite_entry = lite$listAt(lite_params, lite$addInt(lite_first, lite_idx, 190995), 190989);
+            const lite_entry = lite$listAt(lite_params, lite$addInt(lite_first, lite_idx, 190971), 190965);
             void lite_entry;
             liteFn$lib$util$text__builder$append(lite_out, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramNameOf(lite_entry));
             liteFn$lib$util$text__builder$append(lite_out, ":");
             liteFn$lib$util$text__builder$append(lite_out, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite_entry));
-            lite_idx = lite$addInt(lite_idx, 1n, 191150);
+            lite_idx = lite$addInt(lite_idx, 1n, 191126);
         }
         liteFn$lib$util$text__builder$append(lite_out, "):");
         liteFn$lib$util$text__builder$append(lite_out, lite_resultKind);
@@ -12704,62 +12704,62 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         const lite_start = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_position, lite_prefix);
         void lite_start;
-        if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_source, lite_start, 191583)) === ("("))))) {
+        if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_source, lite_start, 191559)) === ("("))))) {
             let lite_cursor = lite_start;
             void lite_cursor;
             let lite_depth = 0n;
             void lite_depth;
             while (((lite_cursor) < (lite_size))) {
-                const lite_ch = lite$textAt(lite_source, lite_cursor, 191709);
+                const lite_ch = lite$textAt(lite_source, lite_cursor, 191685);
                 void lite_ch;
                 if (((lite_ch) === ("\""))) {
                     lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipAliasString(lite_source, lite_cursor);
                 } else if (((((lite_ch) === ("/"))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "/*")))) {
                     lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipComment(lite_source, lite_cursor, lite_prefix);
                 } else if (((lite_ch) === ("("))) {
-                    lite_depth = lite$addInt(lite_depth, 1n, 192019);
-                    lite_cursor = lite$addInt(lite_cursor, 1n, 192056);
+                    lite_depth = lite$addInt(lite_depth, 1n, 191995);
+                    lite_cursor = lite$addInt(lite_cursor, 1n, 192032);
                 } else if (((lite_ch) === (")"))) {
-                    lite_depth = lite$subtractInt(lite_depth, 1n, 192125);
-                    lite_cursor = lite$addInt(lite_cursor, 1n, 192162);
+                    lite_depth = lite$subtractInt(lite_depth, 1n, 192101);
+                    lite_cursor = lite$addInt(lite_cursor, 1n, 192138);
                     if (((lite_depth) === (0n))) {
-                        return { text: lite$textSlice(lite_source, lite_start, lite_cursor, 192241), next: lite_cursor };
+                        return { text: lite$textSlice(lite_source, lite_start, lite_cursor, 192217), next: lite_cursor };
                     }
                 } else {
-                    lite_cursor = lite$addInt(lite_cursor, 1n, 192350);
+                    lite_cursor = lite$addInt(lite_cursor, 1n, 192326);
                 }
             }
-            return { text: lite$textSlice(lite_source, lite_start, lite_size, 192402), next: lite_size };
-        } else if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_source, lite_start, 192473)) === ("["))))) {
+            return { text: lite$textSlice(lite_source, lite_start, lite_size, 192378), next: lite_size };
+        } else if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_source, lite_start, 192449)) === ("["))))) {
             let lite_cursor = lite_start;
             void lite_cursor;
             let lite_depth = 0n;
             void lite_depth;
             while (((lite_cursor) < (lite_size))) {
-                const lite_ch = lite$textAt(lite_source, lite_cursor, 192599);
+                const lite_ch = lite$textAt(lite_source, lite_cursor, 192575);
                 void lite_ch;
                 if (((lite_ch) === ("\""))) {
                     lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipAliasString(lite_source, lite_cursor);
                 } else if (((((lite_ch) === ("/"))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "/*")))) {
                     lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipComment(lite_source, lite_cursor, lite_prefix);
                 } else if (((lite_ch) === ("["))) {
-                    lite_depth = lite$addInt(lite_depth, 1n, 192909);
-                    lite_cursor = lite$addInt(lite_cursor, 1n, 192946);
+                    lite_depth = lite$addInt(lite_depth, 1n, 192885);
+                    lite_cursor = lite$addInt(lite_cursor, 1n, 192922);
                 } else if (((lite_ch) === ("]"))) {
-                    lite_depth = lite$subtractInt(lite_depth, 1n, 193015);
-                    lite_cursor = lite$addInt(lite_cursor, 1n, 193052);
+                    lite_depth = lite$subtractInt(lite_depth, 1n, 192991);
+                    lite_cursor = lite$addInt(lite_cursor, 1n, 193028);
                     if (((lite_depth) === (0n))) {
-                        return { text: lite$textSlice(lite_source, lite_start, lite_cursor, 193131), next: lite_cursor };
+                        return { text: lite$textSlice(lite_source, lite_start, lite_cursor, 193107), next: lite_cursor };
                     }
                 } else {
-                    lite_cursor = lite$addInt(lite_cursor, 1n, 193240);
+                    lite_cursor = lite$addInt(lite_cursor, 1n, 193216);
                 }
             }
-            return { text: lite$textSlice(lite_source, lite_start, lite_size, 193292), next: lite_size };
+            return { text: lite$textSlice(lite_source, lite_start, lite_size, 193268), next: lite_size };
         } else if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_start, "fn")) {
-            const lite_afterFn = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 2n, 193419), lite_prefix);
+            const lite_afterFn = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 2n, 193395), lite_prefix);
             void lite_afterFn;
-            if (((((lite_afterFn) < (lite_size))) && (((lite$textAt(lite_source, lite_afterFn, 193470)) === ("("))))) {
+            if (((((lite_afterFn) < (lite_size))) && (((lite$textAt(lite_source, lite_afterFn, 193446)) === ("("))))) {
                 let lite_cursor = lite_afterFn;
                 void lite_cursor;
                 let lite_depth = 0n;
@@ -12767,41 +12767,41 @@ export function main(lite$write?: (text: string) => void): string {
                 let lite_afterParen = (-1n);
                 void lite_afterParen;
                 while (((lite_cursor) < (lite_size))) {
-                    const lite_ch = lite$textAt(lite_source, lite_cursor, 193650);
+                    const lite_ch = lite$textAt(lite_source, lite_cursor, 193626);
                     void lite_ch;
                     if (((lite_ch) === ("\""))) {
                         lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipAliasString(lite_source, lite_cursor);
                     } else if (((((lite_ch) === ("/"))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "/*")))) {
                         lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipComment(lite_source, lite_cursor, lite_prefix);
                     } else if (((lite_ch) === ("("))) {
-                        lite_depth = lite$addInt(lite_depth, 1n, 193984);
-                        lite_cursor = lite$addInt(lite_cursor, 1n, 194025);
+                        lite_depth = lite$addInt(lite_depth, 1n, 193960);
+                        lite_cursor = lite$addInt(lite_cursor, 1n, 194001);
                     } else if (((lite_ch) === (")"))) {
-                        lite_depth = lite$subtractInt(lite_depth, 1n, 194102);
-                        lite_cursor = lite$addInt(lite_cursor, 1n, 194143);
+                        lite_depth = lite$subtractInt(lite_depth, 1n, 194078);
+                        lite_cursor = lite$addInt(lite_cursor, 1n, 194119);
                         if (((lite_depth) === (0n))) {
                             lite_afterParen = lite_cursor;
                             break;
                         }
                     } else {
-                        lite_cursor = lite$addInt(lite_cursor, 1n, 194343);
+                        lite_cursor = lite$addInt(lite_cursor, 1n, 194319);
                     }
                 }
                 if (((lite_afterParen) < (0n))) {
-                    return { text: lite$textSlice(lite_source, lite_start, lite_size, 194450), next: lite_size };
+                    return { text: lite$textSlice(lite_source, lite_start, lite_size, 194426), next: lite_size };
                 }
                 const lite_afterClose = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterParen, lite_prefix);
                 void lite_afterClose;
-                if (((((lite_afterClose) < (lite_size))) && (((lite$textAt(lite_source, lite_afterClose, 194615)) === (":"))))) {
-                    const lite_retTarget = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$collectTypeTarget(lite_source, lite$addInt(lite_afterClose, 1n, 194705), lite_prefix);
+                if (((((lite_afterClose) < (lite_size))) && (((lite$textAt(lite_source, lite_afterClose, 194591)) === (":"))))) {
+                    const lite_retTarget = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$collectTypeTarget(lite_source, lite$addInt(lite_afterClose, 1n, 194681), lite_prefix);
                     void lite_retTarget;
-                    return { text: lite$textSlice(lite_source, lite_start, (lite_retTarget).next, 194757), next: (lite_retTarget).next };
+                    return { text: lite$textSlice(lite_source, lite_start, (lite_retTarget).next, 194733), next: (lite_retTarget).next };
                 }
-                return { text: lite$textSlice(lite_source, lite_start, lite_afterClose, 194859), next: lite_afterClose };
+                return { text: lite$textSlice(lite_source, lite_start, lite_afterClose, 194835), next: lite_afterClose };
             }
             const lite_parsedName = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$typeNameAt(lite_source, lite_start, lite_prefix);
             void lite_parsedName;
-            return { text: lite$textSlice(lite_source, lite_start, (lite_parsedName).next, 194995), next: (lite_parsedName).next };
+            return { text: lite$textSlice(lite_source, lite_start, (lite_parsedName).next, 194971), next: (lite_parsedName).next };
         } else {
             const lite_parsedName = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$typeNameAt(lite_source, lite_start, lite_prefix);
             void lite_parsedName;
@@ -12809,34 +12809,34 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_after;
             const lite_afterName = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_after, lite_prefix);
             void lite_afterName;
-            if (((((lite_afterName) < (lite_size))) && (((lite$textAt(lite_source, lite_afterName, 195256)) === ("<"))))) {
+            if (((((lite_afterName) < (lite_size))) && (((lite$textAt(lite_source, lite_afterName, 195232)) === ("<"))))) {
                 let lite_cursor = lite_afterName;
                 void lite_cursor;
                 let lite_depth = 0n;
                 void lite_depth;
                 while (((lite_cursor) < (lite_size))) {
-                    const lite_ch = lite$textAt(lite_source, lite_cursor, 195406);
+                    const lite_ch = lite$textAt(lite_source, lite_cursor, 195382);
                     void lite_ch;
                     if (((lite_ch) === ("\""))) {
                         lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipAliasString(lite_source, lite_cursor);
                     } else if (((((lite_ch) === ("/"))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "/*")))) {
                         lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipComment(lite_source, lite_cursor, lite_prefix);
                     } else if (((lite_ch) === ("<"))) {
-                        lite_depth = lite$addInt(lite_depth, 1n, 195740);
-                        lite_cursor = lite$addInt(lite_cursor, 1n, 195781);
+                        lite_depth = lite$addInt(lite_depth, 1n, 195716);
+                        lite_cursor = lite$addInt(lite_cursor, 1n, 195757);
                     } else if (((lite_ch) === (">"))) {
-                        lite_depth = lite$subtractInt(lite_depth, 1n, 195858);
-                        lite_cursor = lite$addInt(lite_cursor, 1n, 195899);
+                        lite_depth = lite$subtractInt(lite_depth, 1n, 195834);
+                        lite_cursor = lite$addInt(lite_cursor, 1n, 195875);
                         if (((lite_depth) === (0n))) {
-                            return { text: lite$textSlice(lite_source, lite_start, lite_cursor, 195986), next: lite_cursor };
+                            return { text: lite$textSlice(lite_source, lite_start, lite_cursor, 195962), next: lite_cursor };
                         }
                     } else {
-                        lite_cursor = lite$addInt(lite_cursor, 1n, 196107);
+                        lite_cursor = lite$addInt(lite_cursor, 1n, 196083);
                     }
                 }
-                return { text: lite$textSlice(lite_source, lite_start, lite_size, 196171), next: lite_size };
+                return { text: lite$textSlice(lite_source, lite_start, lite_size, 196147), next: lite_size };
             } else {
-                return { text: lite$textSlice(lite_source, lite_start, lite_after, 196248), next: lite_after };
+                return { text: lite$textSlice(lite_source, lite_start, lite_after, 196224), next: lite_after };
             }
         }
     }
@@ -12856,8 +12856,8 @@ export function main(lite$write?: (text: string) => void): string {
         while (Boolean(true)) {
             const lite_after = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_endPos, lite_prefix);
             void lite_after;
-            if (((((((lite_after) < (lite_size))) && (((lite$textAt(lite_source, lite_after, 196784)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_after, "||")))))) {
-                const lite_nxt = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$collectSingleTypeTarget(lite_source, lite$addInt(lite_after, 1n, 196901), lite_prefix);
+            if (((((((lite_after) < (lite_size))) && (((lite$textAt(lite_source, lite_after, 196760)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_after, "||")))))) {
+                const lite_nxt = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$collectSingleTypeTarget(lite_source, lite$addInt(lite_after, 1n, 196877), lite_prefix);
                 void lite_nxt;
                 if ((((lite_nxt).next) <= (lite_endPos))) {
                     break;
@@ -12867,7 +12867,7 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
         }
-        return { text: lite$textSlice(lite_source, lite_start, lite_endPos, 197062), next: lite_endPos };
+        return { text: lite$textSlice(lite_source, lite_start, lite_endPos, 197038), next: lite_endPos };
     }
     void liteFn$_p__p_$_p__p_$compiler$src$frontend__types$collectTypeTarget;
     function liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipRecordFieldDefault(lite_source: string, lite_start: bigint, lite_limit: bigint, lite_prefix: string): bigint {
@@ -12884,29 +12884,29 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_bracketDepth = 0n;
         void lite_bracketDepth;
         while (((lite_cur) < (lite_limit))) {
-            const lite_ch = lite$textAt(lite_source, lite_cur, 197488);
+            const lite_ch = lite$textAt(lite_source, lite_cur, 197464);
             void lite_ch;
             if (((lite_ch) === ("\""))) {
                 lite_cur = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipAliasString(lite_source, lite_cur);
             } else if (((((lite_ch) === ("/"))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cur, "/*")))) {
                 lite_cur = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipComment(lite_source, lite_cur, lite_prefix);
             } else if (((lite_ch) === ("{"))) {
-                lite_braceDepth = lite$addInt(lite_braceDepth, 1n, 197766);
-                lite_cur = lite$addInt(lite_cur, 1n, 197793);
+                lite_braceDepth = lite$addInt(lite_braceDepth, 1n, 197742);
+                lite_cur = lite$addInt(lite_cur, 1n, 197769);
             } else if (((lite_ch) === ("}"))) {
                 if (((lite_braceDepth) > (0n))) {
-                    lite_braceDepth = lite$subtractInt(lite_braceDepth, 1n, 197900);
-                    lite_cur = lite$addInt(lite_cur, 1n, 197931);
+                    lite_braceDepth = lite$subtractInt(lite_braceDepth, 1n, 197876);
+                    lite_cur = lite$addInt(lite_cur, 1n, 197907);
                     if (((((((lite_braceDepth) === (0n))) && (((lite_parenDepth) === (0n))))) && (((lite_bracketDepth) === (0n))))) {
                         const lite_afterClose = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_cur, lite_prefix);
                         void lite_afterClose;
-                        if (((((lite_afterClose) < (lite_limit))) && (((lite$textAt(lite_source, lite_afterClose, 198142)) === (";"))))) {
-                            return lite$addInt(lite_afterClose, 1n, 198208);
+                        if (((((lite_afterClose) < (lite_limit))) && (((lite$textAt(lite_source, lite_afterClose, 198118)) === (";"))))) {
+                            return lite$addInt(lite_afterClose, 1n, 198184);
                         }
                         if (((lite_afterClose) >= (lite_limit))) {
                             return lite_cur;
                         }
-                        if ((((((((((((((((((((!(liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_afterClose, "else")))) && ((!(liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_afterClose, "then")))))) && ((!(liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_afterClose, "finally")))))) && (((lite$textAt(lite_source, lite_afterClose, 198473)) !== ("+"))))) && (((lite$textAt(lite_source, lite_afterClose, 198527)) !== ("-"))))) && (((lite$textAt(lite_source, lite_afterClose, 198561)) !== ("*"))))) && (((lite$textAt(lite_source, lite_afterClose, 198615)) !== ("/"))))) && (((lite$textAt(lite_source, lite_afterClose, 198649)) !== ("."))))) && (((lite$textAt(lite_source, lite_afterClose, 198703)) !== ("["))))) && (((lite$textAt(lite_source, lite_afterClose, 198737)) !== ("("))))) {
+                        if ((((((((((((((((((((!(liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_afterClose, "else")))) && ((!(liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_afterClose, "then")))))) && ((!(liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_afterClose, "finally")))))) && (((lite$textAt(lite_source, lite_afterClose, 198449)) !== ("+"))))) && (((lite$textAt(lite_source, lite_afterClose, 198503)) !== ("-"))))) && (((lite$textAt(lite_source, lite_afterClose, 198537)) !== ("*"))))) && (((lite$textAt(lite_source, lite_afterClose, 198591)) !== ("/"))))) && (((lite$textAt(lite_source, lite_afterClose, 198625)) !== ("."))))) && (((lite$textAt(lite_source, lite_afterClose, 198679)) !== ("["))))) && (((lite$textAt(lite_source, lite_afterClose, 198713)) !== ("("))))) {
                             return lite_cur;
                         }
                     }
@@ -12914,25 +12914,25 @@ export function main(lite$write?: (text: string) => void): string {
                     return lite_cur;
                 }
             } else if (((lite_ch) === ("("))) {
-                lite_parenDepth = lite$addInt(lite_parenDepth, 1n, 198967);
-                lite_cur = lite$addInt(lite_cur, 1n, 198994);
+                lite_parenDepth = lite$addInt(lite_parenDepth, 1n, 198943);
+                lite_cur = lite$addInt(lite_cur, 1n, 198970);
             } else if (((lite_ch) === (")"))) {
                 if (((lite_parenDepth) > (0n))) {
-                    lite_parenDepth = lite$subtractInt(lite_parenDepth, 1n, 199085);
+                    lite_parenDepth = lite$subtractInt(lite_parenDepth, 1n, 199061);
                 }
-                lite_cur = lite$addInt(lite_cur, 1n, 199114);
+                lite_cur = lite$addInt(lite_cur, 1n, 199090);
             } else if (((lite_ch) === ("["))) {
-                lite_bracketDepth = lite$addInt(lite_bracketDepth, 1n, 199189);
-                lite_cur = lite$addInt(lite_cur, 1n, 199216);
+                lite_bracketDepth = lite$addInt(lite_bracketDepth, 1n, 199165);
+                lite_cur = lite$addInt(lite_cur, 1n, 199192);
             } else if (((lite_ch) === ("]"))) {
                 if (((lite_bracketDepth) > (0n))) {
-                    lite_bracketDepth = lite$subtractInt(lite_bracketDepth, 1n, 199313);
+                    lite_bracketDepth = lite$subtractInt(lite_bracketDepth, 1n, 199289);
                 }
-                lite_cur = lite$addInt(lite_cur, 1n, 199342);
+                lite_cur = lite$addInt(lite_cur, 1n, 199318);
             } else if (((((((((lite_ch) === (";"))) && (((lite_braceDepth) === (0n))))) && (((lite_parenDepth) === (0n))))) && (((lite_bracketDepth) === (0n))))) {
-                return lite$addInt(lite_cur, 1n, 199462);
+                return lite$addInt(lite_cur, 1n, 199438);
             } else {
-                lite_cur = lite$addInt(lite_cur, 1n, 199506);
+                lite_cur = lite$addInt(lite_cur, 1n, 199482);
             }
         }
         return lite_cur;
@@ -12951,15 +12951,15 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_cursor;
         let lite_rawBacking = "";
         void lite_rawBacking;
-        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 199975)) === (":"))))) {
-            const lite_bkStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 200047), lite_prefix);
+        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 199951)) === (":"))))) {
+            const lite_bkStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 200023), lite_prefix);
             void lite_bkStart;
             const lite_bkRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$collectTypeTarget(lite_source, lite_bkStart, lite_prefix);
             void lite_bkRes;
             lite_rawBacking = (lite_bkRes).text;
             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_bkRes).next, lite_prefix);
         }
-        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 200257)) !== ("{"))))) {
+        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 200233)) !== ("{"))))) {
             return { text: "", next: lite_cursor };
         }
         const lite_closeEnd = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$scanBraceEnd(lite_source, lite_cursor, lite_prefix);
@@ -12967,9 +12967,9 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_closeEnd) < (0n))) {
             return { text: "", next: lite_size };
         }
-        const lite_bodyLimit = lite$subtractInt(lite_closeEnd, 1n, 200483);
+        const lite_bodyLimit = lite$subtractInt(lite_closeEnd, 1n, 200459);
         void lite_bodyLimit;
-        lite_cursor = lite$addInt(lite_cursor, 1n, 200508);
+        lite_cursor = lite$addInt(lite_cursor, 1n, 200484);
         const lite_names: string[] = [...([])];
         void lite_names;
         const lite_vals: string[] = [...([])];
@@ -12981,18 +12981,18 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_cursor) >= (lite_bodyLimit))) {
                 break;
             }
-            if (((lite$textAt(lite_source, lite_cursor, 200758)) === (","))) {
-                lite_cursor = lite$addInt(lite_cursor, 1n, 200806);
+            if (((lite$textAt(lite_source, lite_cursor, 200734)) === (","))) {
+                lite_cursor = lite$addInt(lite_cursor, 1n, 200782);
                 continue;
             }
-            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 200865))))) {
+            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 200841))))) {
                 return { text: "", next: lite_closeEnd };
             }
             const lite_cStart = lite_cursor;
             void lite_cStart;
             const lite_cEnd = (lite$textSkipWhile(lite_source, lite_cStart, false));
             void lite_cEnd;
-            const lite_cName = lite$textSlice(lite_source, lite_cStart, lite_cEnd, 201042);
+            const lite_cName = lite$textSlice(lite_source, lite_cStart, lite_cEnd, 201018);
             void lite_cName;
             if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_cName)) {
                 return { text: "", next: lite_closeEnd };
@@ -13001,21 +13001,21 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_afterName;
             let lite_rawVal = "";
             void lite_rawVal;
-            if (((((lite_afterName) < (lite_bodyLimit))) && (((lite$textAt(lite_source, lite_afterName, 201296)) === ("("))))) {
+            if (((((lite_afterName) < (lite_bodyLimit))) && (((lite$textAt(lite_source, lite_afterName, 201272)) === ("("))))) {
                 const lite_parenEnd = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$scanParenEnd(lite_source, lite_afterName, lite_prefix);
                 void lite_parenEnd;
                 if (((((lite_parenEnd) < (0n))) || (((lite_parenEnd) > (lite_bodyLimit))))) {
                     return { text: "", next: lite_closeEnd };
                 }
-                const lite_payloadInner = lite$textSlice(lite_source, lite$addInt(lite_afterName, 1n, 201563), lite$subtractInt(lite_parenEnd, 1n, 201577), 201547);
+                const lite_payloadInner = lite$textSlice(lite_source, lite$addInt(lite_afterName, 1n, 201539), lite$subtractInt(lite_parenEnd, 1n, 201553), 201523);
                 void lite_payloadInner;
                 const lite_afterParen = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_parenEnd, lite_prefix);
                 void lite_afterParen;
                 if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, lite_afterParen)) {
-                    let lite_vCur = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterParen, 1n, 201778), lite_prefix);
+                    let lite_vCur = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterParen, 1n, 201754), lite_prefix);
                     void lite_vCur;
                     while (((lite_vCur) < (lite_bodyLimit))) {
-                        const lite_vCh = lite$textAt(lite_source, lite_vCur, 201866);
+                        const lite_vCh = lite$textAt(lite_source, lite_vCur, 201842);
                         void lite_vCh;
                         if (((((((((lite_vCh) === (";"))) || (((lite_vCh) === (","))))) || (((lite_vCh) === ("\n"))))) || (((lite_vCh) === ("\r"))))) {
                             break;
@@ -13029,10 +13029,10 @@ export function main(lite$write?: (text: string) => void): string {
                             lite_vCur = lite_sEnd;
                             continue;
                         }
-                        if (((((((lite_vCh) === ("/"))) && (((lite$addInt(lite_vCur, 1n, 202259)) < (lite_bodyLimit))))) && (((lite$textAt(lite_source, lite$addInt(lite_vCur, 1n, 202294), 202286)) === ("*"))))) {
+                        if (((((((lite_vCh) === ("/"))) && (((lite$addInt(lite_vCur, 1n, 202235)) < (lite_bodyLimit))))) && (((lite$textAt(lite_source, lite$addInt(lite_vCur, 1n, 202270), 202262)) === ("*"))))) {
                             break;
                         }
-                        lite_vCur = lite$addInt(lite_vCur, 1n, 202349);
+                        lite_vCur = lite$addInt(lite_vCur, 1n, 202325);
                     }
                     lite_rawVal = (("@paymix:") + (lite_payloadInner));
                     lite_cursor = lite_vCur;
@@ -13041,12 +13041,12 @@ export function main(lite$write?: (text: string) => void): string {
                     lite_cursor = lite_afterParen;
                 }
             } else if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, lite_afterName)) {
-                const lite_valStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 202697), lite_prefix);
+                const lite_valStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterName, 1n, 202673), lite_prefix);
                 void lite_valStart;
                 let lite_vCur = lite_valStart;
                 void lite_vCur;
                 while (((lite_vCur) < (lite_bodyLimit))) {
-                    const lite_vCh = lite$textAt(lite_source, lite_vCur, 202811);
+                    const lite_vCh = lite$textAt(lite_source, lite_vCur, 202787);
                     void lite_vCh;
                     if (((((((((lite_vCh) === (";"))) || (((lite_vCh) === (","))))) || (((lite_vCh) === ("\n"))))) || (((lite_vCh) === ("\r"))))) {
                         break;
@@ -13060,31 +13060,31 @@ export function main(lite$write?: (text: string) => void): string {
                         lite_vCur = lite_sEnd;
                         continue;
                     }
-                    if (((((((lite_vCh) === ("/"))) && (((lite$addInt(lite_vCur, 1n, 203172)) < (lite_bodyLimit))))) && (((lite$textAt(lite_source, lite$addInt(lite_vCur, 1n, 203207), 203199)) === ("*"))))) {
+                    if (((((((lite_vCh) === ("/"))) && (((lite$addInt(lite_vCur, 1n, 203148)) < (lite_bodyLimit))))) && (((lite$textAt(lite_source, lite$addInt(lite_vCur, 1n, 203183), 203175)) === ("*"))))) {
                         break;
                     }
-                    lite_vCur = lite$addInt(lite_vCur, 1n, 203294);
+                    lite_vCur = lite$addInt(lite_vCur, 1n, 203270);
                 }
-                lite_rawVal = lite$textSlice(lite_source, lite_valStart, lite_vCur, 203341);
+                lite_rawVal = lite$textSlice(lite_source, lite_valStart, lite_vCur, 203317);
                 lite_cursor = lite_vCur;
             } else {
                 lite_cursor = lite_afterName;
             }
-            if (((((lite_cursor) < (lite_bodyLimit))) && ((((((lite$textAt(lite_source, lite_cursor, 203492)) === (";"))) || (((lite$textAt(lite_source, lite_cursor, 203520)) === (",")))))))) {
-                lite_cursor = lite$addInt(lite_cursor, 1n, 203569);
+            if (((((lite_cursor) < (lite_bodyLimit))) && ((((((lite$textAt(lite_source, lite_cursor, 203468)) === (";"))) || (((lite$textAt(lite_source, lite_cursor, 203496)) === (",")))))))) {
+                lite_cursor = lite$addInt(lite_cursor, 1n, 203545);
             }
             void (lite_names.push(lite_cName));
             void (lite_vals.push(lite_rawVal));
-            lite_count = lite$addInt(lite_count, 1n, 203678);
+            lite_count = lite$addInt(lite_count, 1n, 203654);
         }
         const lite_pairsBuf: string[] = [...([])];
         void lite_pairsBuf;
         let lite_idx = 0n;
         void lite_idx;
         while (((lite_idx) < (lite_count))) {
-            liteFn$lib$util$text__builder$append(lite_pairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_names, lite_idx, 203827)));
-            liteFn$lib$util$text__builder$append(lite_pairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_vals, lite_idx, 203897)));
-            lite_idx = lite$addInt(lite_idx, 1n, 203923);
+            liteFn$lib$util$text__builder$append(lite_pairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_names, lite_idx, 203803)));
+            liteFn$lib$util$text__builder$append(lite_pairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_vals, lite_idx, 203873)));
+            lite_idx = lite$addInt(lite_idx, 1n, 203899);
         }
         const lite_enumHeader = ((((((((lite_moduleIdentity) + ("#"))) + ((String(lite_declAt))))) + ("#"))) + (lite_enumName));
         void lite_enumHeader;
@@ -13102,7 +13102,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         const lite_start = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_bracePos, lite_prefix);
         void lite_start;
-        if (((((lite_start) >= (lite_size))) || (((lite$textAt(lite_source, lite_start, 204572)) !== ("{"))))) {
+        if (((((lite_start) >= (lite_size))) || (((lite$textAt(lite_source, lite_start, 204548)) !== ("{"))))) {
             return { text: "", next: lite_start };
         }
         const lite_closeEnd = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$scanBraceEnd(lite_source, lite_start, lite_prefix);
@@ -13110,9 +13110,9 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_closeEnd) < (0n))) {
             return { text: "", next: lite_size };
         }
-        const lite_bodyLimit = lite$subtractInt(lite_closeEnd, 1n, 204795);
+        const lite_bodyLimit = lite$subtractInt(lite_closeEnd, 1n, 204771);
         void lite_bodyLimit;
-        let lite_cursor = lite$addInt(lite_start, 1n, 204824);
+        let lite_cursor = lite$addInt(lite_start, 1n, 204800);
         void lite_cursor;
         const lite_names: string[] = [...([])];
         void lite_names;
@@ -13125,24 +13125,24 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_cursor) >= (lite_bodyLimit))) {
                 break;
             }
-            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 205083))))) {
+            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 205059))))) {
                 return { text: "", next: lite_closeEnd };
             }
             const lite_fStart = lite_cursor;
             void lite_fStart;
             const lite_fEnd = (lite$textSkipWhile(lite_source, lite_fStart, false));
             void lite_fEnd;
-            const lite_fName = lite$textSlice(lite_source, lite_fStart, lite_fEnd, 205260);
+            const lite_fName = lite$textSlice(lite_source, lite_fStart, lite_fEnd, 205236);
             void lite_fName;
             if (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_fName)) || ((((liteFn$lib$core$list$listIndexOfText(lite_names, lite_fName)) >= (0n)))))) {
                 return { text: "", next: lite_closeEnd };
             }
             const lite_afterField = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_fEnd, lite_prefix);
             void lite_afterField;
-            if (((((lite_afterField) >= (lite_bodyLimit))) || (((lite$textAt(lite_source, lite_afterField, 205532)) !== (":"))))) {
+            if (((((lite_afterField) >= (lite_bodyLimit))) || (((lite$textAt(lite_source, lite_afterField, 205508)) !== (":"))))) {
                 return { text: "", next: lite_closeEnd };
             }
-            const lite_typeStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterField, 1n, 205674), lite_prefix);
+            const lite_typeStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterField, 1n, 205650), lite_prefix);
             void lite_typeStart;
             const lite_rawType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$collectTypeTarget(lite_source, lite_typeStart, lite_prefix);
             void lite_rawType;
@@ -13151,18 +13151,18 @@ export function main(lite$write?: (text: string) => void): string {
             }
             void (lite_names.push(lite_fName));
             void (lite_typesList.push((lite_rawType).text));
-            lite_count = lite$addInt(lite_count, 1n, 205949);
+            lite_count = lite$addInt(lite_count, 1n, 205925);
             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_rawType).next, lite_prefix);
             if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, lite_cursor)) {
-                const lite_defStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 206128), lite_prefix);
+                const lite_defStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 206104), lite_prefix);
                 void lite_defStart;
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipRecordFieldDefault(lite_source, lite_defStart, lite_bodyLimit, lite_prefix);
-            } else if (((((lite_cursor) < (lite_bodyLimit))) && (((lite$textAt(lite_source, lite_cursor, 206272)) === (";"))))) {
-                lite_cursor = lite$addInt(lite_cursor, 1n, 206320);
+            } else if (((((lite_cursor) < (lite_bodyLimit))) && (((lite$textAt(lite_source, lite_cursor, 206248)) === (";"))))) {
+                lite_cursor = lite$addInt(lite_cursor, 1n, 206296);
             } else if (((lite_cursor) < (lite_bodyLimit))) {
                 const lite_afterSep = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_cursor, lite_prefix);
                 void lite_afterSep;
-                if (((((((lite_afterSep) < (lite_bodyLimit))) && ((((lite_rawType).next) > (0n))))) && (((lite$textAt(lite_source, lite$subtractInt((lite_rawType).next, 1n, 206515), 206499)) !== ("}"))))) {
+                if (((((((lite_afterSep) < (lite_bodyLimit))) && ((((lite_rawType).next) > (0n))))) && (((lite$textAt(lite_source, lite$subtractInt((lite_rawType).next, 1n, 206491), 206475)) !== ("}"))))) {
                 }
             }
         }
@@ -13171,9 +13171,9 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_idx = 0n;
         void lite_idx;
         while (((lite_idx) < (lite_count))) {
-            liteFn$lib$util$text__builder$append(lite_pairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_names, lite_idx, 206796)));
-            liteFn$lib$util$text__builder$append(lite_pairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_typesList, lite_idx, 206871)));
-            lite_idx = lite$addInt(lite_idx, 1n, 206897);
+            liteFn$lib$util$text__builder$append(lite_pairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_names, lite_idx, 206772)));
+            liteFn$lib$util$text__builder$append(lite_pairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_typesList, lite_idx, 206847)));
+            lite_idx = lite$addInt(lite_idx, 1n, 206873);
         }
         const lite_recHeader = ((((((((lite_moduleIdentity) + ("#"))) + ((String(lite_declAt))))) + ("#"))) + (lite_recName));
         void lite_recHeader;
@@ -13213,7 +13213,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_found;
         let lite_hasFound = false;
         void lite_hasFound;
-        let lite_cursor = lite$addInt(lite_openBracePos, 1n, 208919);
+        let lite_cursor = lite$addInt(lite_openBracePos, 1n, 208895);
         void lite_cursor;
         let lite_parenDepth = 0n;
         void lite_parenDepth;
@@ -13222,7 +13222,7 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_cursor) >= (lite_limit))) {
                 break;
             }
-            const lite_ch = lite$textAt(lite_source, lite_cursor, 209094);
+            const lite_ch = lite$textAt(lite_source, lite_cursor, 209070);
             void lite_ch;
             if (((lite_ch) === ("\""))) {
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipAliasString(lite_source, lite_cursor);
@@ -13237,30 +13237,30 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_parenDepth) === (0n))) {
                     break;
                 }
-                lite_parenDepth = lite$subtractInt(lite_parenDepth, 1n, 209462);
-                lite_cursor = lite$addInt(lite_cursor, 1n, 209495);
+                lite_parenDepth = lite$subtractInt(lite_parenDepth, 1n, 209438);
+                lite_cursor = lite$addInt(lite_cursor, 1n, 209471);
             } else if (((((lite_ch) === ("("))) || (((lite_ch) === ("["))))) {
-                lite_parenDepth = lite$addInt(lite_parenDepth, 1n, 209579);
-                lite_cursor = lite$addInt(lite_cursor, 1n, 209612);
+                lite_parenDepth = lite$addInt(lite_parenDepth, 1n, 209555);
+                lite_cursor = lite$addInt(lite_cursor, 1n, 209588);
             } else if (((((lite_ch) === (")"))) || (((lite_ch) === ("]"))))) {
                 if (((lite_parenDepth) > (0n))) {
-                    lite_parenDepth = lite$subtractInt(lite_parenDepth, 1n, 209716);
+                    lite_parenDepth = lite$subtractInt(lite_parenDepth, 1n, 209692);
                 }
-                lite_cursor = lite$addInt(lite_cursor, 1n, 209751);
+                lite_cursor = lite$addInt(lite_cursor, 1n, 209727);
             } else if (((((lite_parenDepth) === (0n))) && (((lite_ch === "_" || (lite_ch.length === 1 && ((lite_ch >= "a" && lite_ch <= "z") || (lite_ch >= "A" && lite_ch <= "Z")))))))) {
                 const lite_nameStart = lite_cursor;
                 void lite_nameStart;
                 const lite_afterName = (lite$textSkipWhile(lite_source, lite_cursor, false));
                 void lite_afterName;
-                const lite_name = lite$textSlice(lite_source, lite_nameStart, lite_afterName, 209923);
+                const lite_name = lite$textSlice(lite_source, lite_nameStart, lite_afterName, 209899);
                 void lite_name;
                 const lite_opPos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterName, lite_prefix);
                 void lite_opPos;
                 if (((((((lite_name) !== ("pub"))) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_name)))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_opPos, ":=")))) {
-                    const lite_typePos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_opPos, 2n, 210183), lite_prefix);
+                    const lite_typePos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_opPos, 2n, 210159), lite_prefix);
                     void lite_typePos;
                     if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_typePos, "alias")) {
-                        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_typePos, 5n, 210315), lite_prefix);
+                        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_typePos, 5n, 210291), lite_prefix);
                         void lite_gp;
                         const lite_targetStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_gp).next, lite_prefix);
                         void lite_targetStart;
@@ -13272,10 +13272,10 @@ export function main(lite$write?: (text: string) => void): string {
                             void (lite_found.push({ name: lite_name, target: lite_rawTxt, at: lite_nameStart, end: (lite_aliasTarget).next, depth: lite_blockDepth }));
                             lite_hasFound = true;
                         }
-                        lite_cursor = (Boolean((((lite_aliasTarget).next) > (lite$addInt(lite_typePos, 5n, 210932)))) ? (lite_aliasTarget).next : lite$addInt(lite_typePos, 5n, 210972));
+                        lite_cursor = (Boolean((((lite_aliasTarget).next) > (lite$addInt(lite_typePos, 5n, 210908)))) ? (lite_aliasTarget).next : lite$addInt(lite_typePos, 5n, 210948));
                         continue;
                     } else if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_typePos, "distinct")) {
-                        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_typePos, 8n, 211137), lite_prefix);
+                        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_typePos, 8n, 211113), lite_prefix);
                         void lite_gp;
                         const lite_distTarget = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$collectDistinctTarget(lite_source, (lite_gp).next, lite_prefix, (("b") + ((String(lite_blockDepth)))), lite_nameStart, lite_name);
                         void lite_distTarget;
@@ -13285,10 +13285,10 @@ export function main(lite$write?: (text: string) => void): string {
                             void (lite_found.push({ name: lite_name, target: lite_rawTxt, at: lite_nameStart, end: (lite_distTarget).next, depth: lite_blockDepth }));
                             lite_hasFound = true;
                         }
-                        lite_cursor = (Boolean((((lite_distTarget).next) > (lite$addInt(lite_typePos, 8n, 211714)))) ? (lite_distTarget).next : lite$addInt(lite_typePos, 8n, 211753));
+                        lite_cursor = (Boolean((((lite_distTarget).next) > (lite$addInt(lite_typePos, 8n, 211690)))) ? (lite_distTarget).next : lite$addInt(lite_typePos, 8n, 211729));
                         continue;
                     } else if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_typePos, "record")) {
-                        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_typePos, 6n, 211916), lite_prefix);
+                        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_typePos, 6n, 211892), lite_prefix);
                         void lite_gp;
                         const lite_braceStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_gp).next, lite_prefix);
                         void lite_braceStart;
@@ -13300,10 +13300,10 @@ export function main(lite$write?: (text: string) => void): string {
                             void (lite_found.push({ name: lite_name, target: lite_rawTxt, at: lite_nameStart, end: (lite_recTarget).next, depth: lite_blockDepth }));
                             lite_hasFound = true;
                         }
-                        lite_cursor = (Boolean((((lite_recTarget).next) > (lite$addInt(lite_typePos, 6n, 212567)))) ? (lite_recTarget).next : lite$addInt(lite_typePos, 6n, 212605));
+                        lite_cursor = (Boolean((((lite_recTarget).next) > (lite$addInt(lite_typePos, 6n, 212543)))) ? (lite_recTarget).next : lite$addInt(lite_typePos, 6n, 212581));
                         continue;
                     } else if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_typePos, "enum")) {
-                        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_typePos, 4n, 212766), lite_prefix);
+                        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_typePos, 4n, 212742), lite_prefix);
                         void lite_gp;
                         const lite_enumTarget = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$collectEnumTarget(lite_source, (lite_gp).next, lite_prefix, (("b") + ((String(lite_blockDepth)))), lite_nameStart, lite_name);
                         void lite_enumTarget;
@@ -13313,13 +13313,13 @@ export function main(lite$write?: (text: string) => void): string {
                             void (lite_found.push({ name: lite_name, target: lite_rawTxt, at: lite_nameStart, end: (lite_enumTarget).next, depth: lite_blockDepth }));
                             lite_hasFound = true;
                         }
-                        lite_cursor = (Boolean((((lite_enumTarget).next) > (lite$addInt(lite_typePos, 4n, 213339)))) ? (lite_enumTarget).next : lite$addInt(lite_typePos, 4n, 213378));
+                        lite_cursor = (Boolean((((lite_enumTarget).next) > (lite$addInt(lite_typePos, 4n, 213315)))) ? (lite_enumTarget).next : lite$addInt(lite_typePos, 4n, 213354));
                         continue;
                     }
                 }
                 lite_cursor = lite_opPos;
             } else {
-                lite_cursor = lite$addInt(lite_cursor, 1n, 213520);
+                lite_cursor = lite$addInt(lite_cursor, 1n, 213496);
             }
         }
         if ((!(lite_hasFound))) {
@@ -13354,7 +13354,7 @@ export function main(lite$write?: (text: string) => void): string {
             return { ok: false, kind: "", next: lite_start };
         }
         if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "@enumraw:")) {
-            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 9n, 214357));
+            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 9n, 214333));
             void lite_hdr;
             if ((((lite_hdr).next) < (0n))) {
                 return { ok: false, kind: "", next: lite_start };
@@ -13368,16 +13368,16 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_cur;
             let lite_countEnd = lite_cur;
             void lite_countEnd;
-            while (((((lite_countEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_countEnd, 214672))))) {
-                lite_countEnd = lite$addInt(lite_countEnd, 1n, 214729);
+            while (((((lite_countEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_countEnd, 214648))))) {
+                lite_countEnd = lite$addInt(lite_countEnd, 1n, 214705);
             }
             const lite_caseCount = (Boolean(((lite_countEnd) > (lite_cur))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$parseDigits(lite_source, lite_cur, lite_countEnd) : 0n);
             void lite_caseCount;
-            lite_cur = (Boolean(((((lite_countEnd) < (lite_size))) && (((lite$textAt(lite_source, lite_countEnd, 214885)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 214916) : lite_countEnd);
+            lite_cur = (Boolean(((((lite_countEnd) < (lite_size))) && (((lite$textAt(lite_source, lite_countEnd, 214861)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 214892) : lite_countEnd);
             let lite_resolvedBacking = "";
             void lite_resolvedBacking;
             if ((((lite_bkRaw).text) !== (""))) {
-                const lite_bkParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_bkRaw).text, 0n, lite_prefix, lite_aliases, "", lite_seen, lite$subtractInt(lite_depthLeft, 1n, 215088), false);
+                const lite_bkParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_bkRaw).text, 0n, lite_prefix, lite_aliases, "", lite_seen, lite$subtractInt(lite_depthLeft, 1n, 215064), false);
                 void lite_bkParsed;
                 if ((((!((lite_bkParsed).ok))) || (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia((lite_bkRaw).text, (lite_bkParsed).next, lite_prefix)) < (lite$textLength((lite_bkRaw).text)))))) {
                     return { ok: false, kind: "", next: lite_start };
@@ -13407,7 +13407,7 @@ export function main(lite$write?: (text: string) => void): string {
                     let lite_payCsv = "";
                     void lite_payCsv;
                     if (liteFn$lib$core$text$tp_String_op_startsWithAt((lite_vDec).text, 0n, "@pay:")) {
-                        const lite_rawPay = lite$textSlice((lite_vDec).text, 5n, lite$textLength((lite_vDec).text), 216094);
+                        const lite_rawPay = lite$textSlice((lite_vDec).text, 5n, lite$textLength((lite_vDec).text), 216070);
                         void lite_rawPay;
                         const lite_payItems: string[] = [...([])];
                         void lite_payItems;
@@ -13418,7 +13418,7 @@ export function main(lite$write?: (text: string) => void): string {
                         void lite_pKinds;
                         for (const lite_rp of [...(lite_payItems)]) {
                             void lite_rp;
-                            const lite_pRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_rp, 0n, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 216489), false);
+                            const lite_pRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_rp, 0n, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 216465), false);
                             void lite_pRes;
                             if ((((((((!((lite_pRes).ok))) || ((((lite_pRes).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) || ((((lite_pRes).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) || (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rp, (lite_pRes).next, lite_prefix)) < (lite$textLength(lite_rp)))))) {
                                 return { ok: false, kind: "", next: lite_start };
@@ -13429,7 +13429,7 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                     liteFn$lib$util$text__builder$append(lite_encodedPairsBuf, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText((lite_nDec).text));
                     liteFn$lib$util$text__builder$append(lite_encodedPairsBuf, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_payCsv))) + (":"))) + (lite_payCsv))));
-                    lite_ci = lite$addInt(lite_ci, 1n, 217144);
+                    lite_ci = lite$addInt(lite_ci, 1n, 217120);
                 }
                 return { ok: true, kind: (((((((((((("Enum<") + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_effHdr))) + (":"))) + (lite_effHdr)))))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText("$payload")))) + ((String(lite_caseCount))))) + (";"))) + ((liteFn$lib$core$text$joinTexts(lite_encodedPairsBuf, ""))))) + (">")), next: lite_pCur };
             }
@@ -13443,18 +13443,18 @@ export function main(lite$write?: (text: string) => void): string {
         if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "Enum<")) {
             const lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start);
             void lite_end;
-            if (((((lite_end) > (lite$addInt(lite_start, 6n, 217726)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 217748), 217741)) === (">"))))) {
-                return { ok: true, kind: lite$textSlice(lite_source, lite_start, lite_end, 217807), next: lite_end };
+            if (((((lite_end) > (lite$addInt(lite_start, 6n, 217702)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 217724), 217717)) === (">"))))) {
+                return { ok: true, kind: lite$textSlice(lite_source, lite_start, lite_end, 217783), next: lite_end };
             }
         }
         if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "Union<")) {
             const lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start);
             void lite_end;
-            if (((((lite_end) > (lite$addInt(lite_start, 7n, 217969)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 217991), 217984)) === (">"))))) {
+            if (((((lite_end) > (lite$addInt(lite_start, 7n, 217945)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 217967), 217960)) === (">"))))) {
                 if ((!(lite_allowUnion))) {
                     return { ok: false, kind: "", next: lite_start };
                 }
-                const lite_uKind = lite$textSlice(lite_source, lite_start, lite_end, 218113);
+                const lite_uKind = lite$textSlice(lite_source, lite_start, lite_end, 218089);
                 void lite_uKind;
                 if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isUnionKind(lite_uKind)))) {
                     return { ok: false, kind: "", next: lite_start };
@@ -13463,7 +13463,7 @@ export function main(lite$write?: (text: string) => void): string {
             }
         }
         if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "@recraw:")) {
-            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 8n, 218394));
+            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 8n, 218370));
             void lite_hdr;
             if ((((lite_hdr).next) < (0n))) {
                 return { ok: false, kind: "", next: lite_start };
@@ -13472,12 +13472,12 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_cur;
             let lite_countEnd = lite_cur;
             void lite_countEnd;
-            while (((((lite_countEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_countEnd, 218572))))) {
-                lite_countEnd = lite$addInt(lite_countEnd, 1n, 218629);
+            while (((((lite_countEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_countEnd, 218548))))) {
+                lite_countEnd = lite$addInt(lite_countEnd, 1n, 218605);
             }
             const lite_fieldCount = (Boolean(((lite_countEnd) > (lite_cur))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$parseDigits(lite_source, lite_cur, lite_countEnd) : 0n);
             void lite_fieldCount;
-            lite_cur = (Boolean(((((lite_countEnd) < (lite_size))) && (((lite$textAt(lite_source, lite_countEnd, 218786)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 218817) : lite_countEnd);
+            lite_cur = (Boolean(((((lite_countEnd) < (lite_size))) && (((lite$textAt(lite_source, lite_countEnd, 218762)) === (";"))))) ? lite$addInt(lite_countEnd, 1n, 218793) : lite_countEnd);
             const lite_parts: string[] = [...([])];
             void lite_parts;
             let lite_idx = 0n;
@@ -13491,27 +13491,27 @@ export function main(lite$write?: (text: string) => void): string {
                     return { ok: false, kind: "", next: lite_start };
                 }
                 lite_cur = (lite_fType).next;
-                const lite_resolvedField = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_fType).text, 0n, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 219280), false);
+                const lite_resolvedField = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_fType).text, 0n, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 219256), false);
                 void lite_resolvedField;
                 if ((((((!((lite_resolvedField).ok))) || ((((lite_resolvedField).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) || (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia((lite_fType).text, (lite_resolvedField).next, lite_prefix)) < (lite$textLength((lite_fType).text)))))) {
                     return { ok: false, kind: "", next: lite_start };
                 }
                 void (lite_parts.push((((((lite_fName).text) + (":"))) + ((lite_resolvedField).kind))));
-                lite_idx = lite$addInt(lite_idx, 1n, 219641);
+                lite_idx = lite$addInt(lite_idx, 1n, 219617);
             }
             const lite_effHdr = (Boolean(((lite_genericType) !== (""))) ? (((((((lite_hdr).text) + ("<"))) + (liteFn$lib$core$text$joinTexts([...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$splitCommaNames(lite_genericType))], ",")))) + (">")) : (lite_hdr).text);
             void lite_effHdr;
             return { ok: true, kind: (((((((("Record<") + (lite_effHdr))) + (";"))) + (liteFn$lib$core$text$joinTexts(lite_parts, ",")))) + (">")), next: lite_cur };
         }
-        if (((liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "Record<")) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordHeaderSemi(lite$textSlice(lite_source, lite_start, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start), 219985))) > (7n))))) {
+        if (((liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "Record<")) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordHeaderSemi(lite$textSlice(lite_source, lite_start, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start), 219961))) > (7n))))) {
             const lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start);
             void lite_end;
-            if (((((lite_end) > (lite$addInt(lite_start, 8n, 220103)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 220125), 220118)) === (">"))))) {
-                return { ok: true, kind: lite$textSlice(lite_source, lite_start, lite_end, 220184), next: lite_end };
+            if (((((lite_end) > (lite$addInt(lite_start, 8n, 220079)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 220101), 220094)) === (">"))))) {
+                return { ok: true, kind: lite$textSlice(lite_source, lite_start, lite_end, 220160), next: lite_end };
             }
         }
         if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "@distraw:")) {
-            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 9n, 220333));
+            const lite_hdr = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_source, lite$addInt(lite_start, 9n, 220309));
             void lite_hdr;
             if ((((lite_hdr).next) < (0n))) {
                 return { ok: false, kind: "", next: lite_start };
@@ -13521,7 +13521,7 @@ export function main(lite$write?: (text: string) => void): string {
             if ((((((lite_rawTarget).next) < (0n))) || ((((lite_rawTarget).text) === (""))))) {
                 return { ok: false, kind: "", next: lite_start };
             }
-            const lite_resolvedBase = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_rawTarget).text, 0n, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 220674), false);
+            const lite_resolvedBase = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_rawTarget).text, 0n, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 220650), false);
             void lite_resolvedBase;
             if ((((((((!((lite_resolvedBase).ok))) || ((((lite_resolvedBase).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) || ((((lite_resolvedBase).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) || (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia((lite_rawTarget).text, (lite_resolvedBase).next, lite_prefix)) < (lite$textLength((lite_rawTarget).text)))))) {
                 return { ok: false, kind: "", next: lite_start };
@@ -13533,14 +13533,14 @@ export function main(lite$write?: (text: string) => void): string {
         if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_start, "Distinct<")) {
             const lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$skipKindToken(lite_source, lite_start);
             void lite_end;
-            if (((((lite_end) > (lite$addInt(lite_start, 10n, 221367)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 221390), 221383)) === (">"))))) {
-                return { ok: true, kind: lite$textSlice(lite_source, lite_start, lite_end, 221449), next: lite_end };
+            if (((((lite_end) > (lite$addInt(lite_start, 10n, 221343)))) && (((lite$textAt(lite_source, lite$subtractInt(lite_end, 1n, 221366), 221359)) === (">"))))) {
+                return { ok: true, kind: lite$textSlice(lite_source, lite_start, lite_end, 221425), next: lite_end };
             }
         }
-        const lite_ch = lite$textAt(lite_source, lite_start, 221514);
+        const lite_ch = lite$textAt(lite_source, lite_start, 221490);
         void lite_ch;
         if (((lite_ch) === ("("))) {
-            let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 1n, 221598), lite_prefix);
+            let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 1n, 221574), lite_prefix);
             void lite_cursor;
             const lite_labels: string[] = [...([])];
             void lite_labels;
@@ -13552,21 +13552,21 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_hasNamed;
             let lite_hadComma = false;
             void lite_hadComma;
-            while (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 221813)) !== (")"))))) {
-                if (((lite$textAt(lite_source, lite_cursor, 221856)) === ("("))) {
+            while (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 221789)) !== (")"))))) {
+                if (((lite$textAt(lite_source, lite_cursor, 221832)) === ("("))) {
                     return { ok: false, kind: "", next: lite_cursor };
                 }
                 let lite_label = "";
                 void lite_label;
                 let lite_fieldStart = lite_cursor;
                 void lite_fieldStart;
-                if (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 222014))) {
+                if (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 221990))) {
                     const lite_afterName = (lite$textSkipWhile(lite_source, lite_cursor, false));
                     void lite_afterName;
                     const lite_colonPos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterName, lite_prefix);
                     void lite_colonPos;
-                    if (((((lite_colonPos) < (lite_size))) && (((lite$textAt(lite_source, lite_colonPos, 222215)) === (":"))))) {
-                        const lite_candidate = lite$textSlice(lite_source, lite_cursor, lite_afterName, 222277);
+                    if (((((lite_colonPos) < (lite_size))) && (((lite$textAt(lite_source, lite_colonPos, 222191)) === (":"))))) {
+                        const lite_candidate = lite$textSlice(lite_source, lite_cursor, lite_afterName, 222253);
                         void lite_candidate;
                         if (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_candidate)) || ((((liteFn$lib$core$list$listIndexOfText(lite_labels, lite_candidate)) >= (0n)))))) {
                             return { ok: false, kind: "", next: lite_cursor };
@@ -13574,13 +13574,13 @@ export function main(lite$write?: (text: string) => void): string {
                         lite_label = lite_candidate;
                         lite_hasNamed = true;
                         void (lite_labels.push(lite_label));
-                        lite_fieldStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_colonPos, 1n, 222693), lite_prefix);
-                        if (((((lite_fieldStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_fieldStart, 222759)) === ("("))))) {
+                        lite_fieldStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_colonPos, 1n, 222669), lite_prefix);
+                        if (((((lite_fieldStart) >= (lite_size))) || (((lite$textAt(lite_source, lite_fieldStart, 222735)) === ("("))))) {
                             return { ok: false, kind: "", next: lite_fieldStart };
                         }
                     }
                 }
-                const lite_parsedField = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite_fieldStart, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 223010), false);
+                const lite_parsedField = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite_fieldStart, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 222986), false);
                 void lite_parsedField;
                 if ((!((lite_parsedField).ok))) {
                     return { ok: false, kind: "", next: lite_fieldStart };
@@ -13589,52 +13589,52 @@ export function main(lite$write?: (text: string) => void): string {
                     return { ok: false, kind: "", next: lite_fieldStart };
                 }
                 void (lite_parts.push(((((lite_label) + (":"))) + ((lite_parsedField).kind))));
-                lite_count = lite$addInt(lite_count, 1n, 223406);
+                lite_count = lite$addInt(lite_count, 1n, 223382);
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_parsedField).next, lite_prefix);
-                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 223525)) === (","))))) {
+                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 223501)) === (","))))) {
                     lite_hadComma = true;
-                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 223636), lite_prefix);
+                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 223612), lite_prefix);
                 } else {
                     lite_hadComma = false;
                     break;
                 }
             }
-            if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 223788)) !== (")"))))) {
+            if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 223764)) !== (")"))))) {
                 return { ok: false, kind: "", next: lite_cursor };
             }
             if (((((lite_count) === (0n))) || ((((((((lite_count) === (1n))) && ((!(lite_hasNamed))))) && ((!(lite_hadComma)))))))) {
                 return { ok: false, kind: "", next: lite_start };
             }
-            return { ok: true, kind: (((("(") + (liteFn$lib$core$text$joinTexts(lite_parts, ",")))) + (")")), next: lite$addInt(lite_cursor, 1n, 224111) };
+            return { ok: true, kind: (((("(") + (liteFn$lib$core$text$joinTexts(lite_parts, ",")))) + (")")), next: lite$addInt(lite_cursor, 1n, 224087) };
         }
         if (((lite_ch) === ("["))) {
-            const lite_elem = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_start, 1n, 224177), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 224228), false);
+            const lite_elem = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_start, 1n, 224153), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 224204), false);
             void lite_elem;
             if ((((!((lite_elem).ok))) || ((((lite_elem).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) {
                 return { ok: false, kind: "", next: lite_start };
             }
             const lite_afterElem = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_elem).next, lite_prefix);
             void lite_afterElem;
-            if (((((lite_afterElem) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterElem, 224455)) !== (";"))))) {
+            if (((((lite_afterElem) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterElem, 224431)) !== (";"))))) {
                 return { ok: false, kind: "", next: lite_afterElem };
             }
-            const lite_extentStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterElem, 1n, 224610), lite_prefix);
+            const lite_extentStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterElem, 1n, 224586), lite_prefix);
             void lite_extentStart;
             let lite_extText = "";
             void lite_extText;
             let lite_extentEnd = lite_extentStart;
             void lite_extentEnd;
-            if (((((lite_extentStart) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_extentStart, 224730))))) {
+            if (((((lite_extentStart) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_extentStart, 224706))))) {
                 lite_extentEnd = (lite$textSkipWhile(lite_source, lite_extentStart, false));
-                const lite_extName = lite$textSlice(lite_source, lite_extentStart, lite_extentEnd, 224846);
+                const lite_extName = lite$textSlice(lite_source, lite_extentStart, lite_extentEnd, 224822);
                 void lite_extName;
                 if (((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$valueParamKind(lite_genericType, lite_extName)) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_INT))) {
                     lite_extText = lite_extName;
                 } else {
                     const lite_aliasIdx = (liteFn$_p__p_$_p__p_$compiler$src$symbol__table$findAlias(lite_aliases, lite_extName));
                     void lite_aliasIdx;
-                    if (((((lite_aliasIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(((lite$listAt(lite_aliases, lite_aliasIdx, 225111)).target), 0n, "$Val:")))) {
-                        const lite_tok = lite$textSlice(((lite$listAt(lite_aliases, lite_aliasIdx, 225192)).target), 5n, lite$textLength(((lite$listAt(lite_aliases, lite_aliasIdx, 225228)).target)), 225210);
+                    if (((((lite_aliasIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(((lite$listAt(lite_aliases, lite_aliasIdx, 225087)).target), 0n, "$Val:")))) {
+                        const lite_tok = lite$textSlice(((lite$listAt(lite_aliases, lite_aliasIdx, 225168)).target), 5n, lite$textLength(((lite$listAt(lite_aliases, lite_aliasIdx, 225204)).target)), 225186);
                         void lite_tok;
                         if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isComptimeIntToken(lite_tok)))) {
                             return { ok: false, kind: "", next: lite_extentStart };
@@ -13650,8 +13650,8 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                 }
             } else {
-                while (((((lite_extentEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_extentEnd, 225740))))) {
-                    lite_extentEnd = lite$addInt(lite_extentEnd, 1n, 225804);
+                while (((((lite_extentEnd) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_extentEnd, 225716))))) {
+                    lite_extentEnd = lite$addInt(lite_extentEnd, 1n, 225780);
                 }
                 if (((lite_extentEnd) === (lite_extentStart))) {
                     return { ok: false, kind: "", next: lite_extentStart };
@@ -13665,69 +13665,69 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_afterExtent = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_extentEnd, lite_prefix);
             void lite_afterExtent;
-            if (((((lite_afterExtent) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterExtent, 226235)) !== ("]"))))) {
+            if (((((lite_afterExtent) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterExtent, 226211)) !== ("]"))))) {
                 return { ok: false, kind: "", next: lite_afterExtent };
             }
-            return { ok: true, kind: (((((((("[") + ((lite_elem).kind))) + (";"))) + (lite_extText))) + ("]")), next: lite$addInt(lite_afterExtent, 1n, 226427) };
+            return { ok: true, kind: (((((((("[") + ((lite_elem).kind))) + (";"))) + (lite_extText))) + ("]")), next: lite$addInt(lite_afterExtent, 1n, 226403) };
         }
         if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_start, "fn")) {
-            const lite_afterFn = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 2n, 226526), lite_prefix);
+            const lite_afterFn = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_start, 2n, 226502), lite_prefix);
             void lite_afterFn;
-            if (((((lite_afterFn) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterFn, 226577)) !== ("("))))) {
+            if (((((lite_afterFn) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterFn, 226553)) !== ("("))))) {
                 return { ok: false, kind: "", next: lite_afterFn };
             }
-            let lite_pCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFn, 1n, 226726), lite_prefix);
+            let lite_pCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFn, 1n, 226702), lite_prefix);
             void lite_pCursor;
             const lite_paramLabels: string[] = [...([])];
             void lite_paramLabels;
             const lite_paramParts: string[] = [...([])];
             void lite_paramParts;
-            while (((((lite_pCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_pCursor, 226866)) !== (")"))))) {
+            while (((((lite_pCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_pCursor, 226842)) !== (")"))))) {
                 let lite_pLabel = "";
                 void lite_pLabel;
                 let lite_pTypeStart = lite_pCursor;
                 void lite_pTypeStart;
-                if (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_pCursor, 226979))) {
+                if (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_pCursor, 226955))) {
                     const lite_afterPLabel = (lite$textSkipWhile(lite_source, lite_pCursor, false));
                     void lite_afterPLabel;
                     const lite_pColon = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterPLabel, lite_prefix);
                     void lite_pColon;
-                    if (((((lite_pColon) < (lite_size))) && (((lite$textAt(lite_source, lite_pColon, 227182)) === (":"))))) {
-                        const lite_candidate = lite$textSlice(lite_source, lite_pCursor, lite_afterPLabel, 227242);
+                    if (((((lite_pColon) < (lite_size))) && (((lite$textAt(lite_source, lite_pColon, 227158)) === (":"))))) {
+                        const lite_candidate = lite$textSlice(lite_source, lite_pCursor, lite_afterPLabel, 227218);
                         void lite_candidate;
                         if (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_candidate)) || ((((liteFn$lib$core$list$listIndexOfText(lite_paramLabels, lite_candidate)) >= (0n)))))) {
                             return { ok: false, kind: "", next: lite_pCursor };
                         }
                         lite_pLabel = lite_candidate;
                         void (lite_paramLabels.push(lite_pLabel));
-                        lite_pTypeStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_pColon, 1n, 227635), lite_prefix);
+                        lite_pTypeStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_pColon, 1n, 227611), lite_prefix);
                     }
                 }
-                const lite_parsedParam = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite_pTypeStart, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 227779), false);
+                const lite_parsedParam = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite_pTypeStart, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 227755), false);
                 void lite_parsedParam;
                 if ((!((lite_parsedParam).ok))) {
                     return { ok: false, kind: "", next: lite_pTypeStart };
                 }
                 void (lite_paramParts.push(((((lite_pLabel) + (":"))) + ((lite_parsedParam).kind))));
                 lite_pCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_parsedParam).next, lite_prefix);
-                if (((((lite_pCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_pCursor, 228069)) === (","))))) {
-                    lite_pCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_pCursor, 1n, 228150), lite_prefix);
+                if (((((lite_pCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_pCursor, 228045)) === (","))))) {
+                    lite_pCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_pCursor, 1n, 228126), lite_prefix);
                 } else {
                     break;
                 }
             }
-            if (((((lite_pCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_pCursor, 228269)) !== (")"))))) {
+            if (((((lite_pCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_pCursor, 228245)) !== (")"))))) {
                 return { ok: false, kind: "", next: lite_pCursor };
             }
-            const lite_afterClose = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_pCursor, 1n, 228417), lite_prefix);
+            const lite_afterClose = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_pCursor, 1n, 228393), lite_prefix);
             void lite_afterClose;
-            if (((((lite_afterClose) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterClose, 228471)) !== (":"))))) {
+            if (((((lite_afterClose) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterClose, 228447)) !== (":"))))) {
                 return { ok: false, kind: "", next: lite_afterClose };
             }
-            const lite_retType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterClose, 1n, 228612), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 228663), false);
+            const lite_retType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterClose, 1n, 228588), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 228639), false);
             void lite_retType;
             if ((!((lite_retType).ok))) {
-                return { ok: false, kind: "", next: lite$addInt(lite_afterClose, 1n, 228753) };
+                return { ok: false, kind: "", next: lite$addInt(lite_afterClose, 1n, 228729) };
             }
             return { ok: true, kind: (((((("fn(") + (liteFn$lib$core$text$joinTexts(lite_paramParts, ",")))) + ("):"))) + ((lite_retType).kind)), next: (lite_retType).next };
         }
@@ -13736,17 +13736,17 @@ export function main(lite$write?: (text: string) => void): string {
         }
         let lite_afterName = (lite$textSkipWhile(lite_source, lite_start, false));
         void lite_afterName;
-        let lite_name = lite$textSlice(lite_source, lite_start, lite_afterName, 229035);
+        let lite_name = lite$textSlice(lite_source, lite_start, lite_afterName, 229011);
         void lite_name;
         const lite_dotCheck = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterName, lite_prefix);
         void lite_dotCheck;
-        if (((((lite_dotCheck) < (lite_size))) && (((lite$textAt(lite_source, lite_dotCheck, 229156)) === ("."))))) {
-            const lite_memCheckStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_dotCheck, 1n, 229238), lite_prefix);
+        if (((((lite_dotCheck) < (lite_size))) && (((lite$textAt(lite_source, lite_dotCheck, 229132)) === ("."))))) {
+            const lite_memCheckStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_dotCheck, 1n, 229214), lite_prefix);
             void lite_memCheckStart;
-            if (((((lite_memCheckStart) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_memCheckStart, 229295))))) {
+            if (((((lite_memCheckStart) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_memCheckStart, 229271))))) {
                 const lite_memCheckEnd = (lite$textSkipWhile(lite_source, lite_memCheckStart, false));
                 void lite_memCheckEnd;
-                const lite_qualCandidate = ((((lite_name) + ("."))) + (lite$textSlice(lite_source, lite_memCheckStart, lite_memCheckEnd, 229437)));
+                const lite_qualCandidate = ((((lite_name) + ("."))) + (lite$textSlice(lite_source, lite_memCheckStart, lite_memCheckEnd, 229413)));
                 void lite_qualCandidate;
                 if ((((liteFn$_p__p_$_p__p_$compiler$src$symbol__table$findAlias(lite_aliases, lite_qualCandidate))) >= (0n))) {
                     lite_name = lite_qualCandidate;
@@ -13759,91 +13759,91 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_name) === ("Self"))) {
             const lite_selfIdx = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$findAlias(lite_aliases, "Self");
             void lite_selfIdx;
-            if (((((lite_selfIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt((lite$listAt(lite_aliases, lite_selfIdx, 229774)).target, 0n, "$Family:")))) {
-                lite_resolvedName = lite$textSlice((lite$listAt(lite_aliases, lite_selfIdx, 229855)).target, 8n, lite$textLength((lite$listAt(lite_aliases, lite_selfIdx, 229888)).target), 229871);
+            if (((((lite_selfIdx) >= (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt((lite$listAt(lite_aliases, lite_selfIdx, 229750)).target, 0n, "$Family:")))) {
+                lite_resolvedName = lite$textSlice((lite$listAt(lite_aliases, lite_selfIdx, 229831)).target, 8n, lite$textLength((lite$listAt(lite_aliases, lite_selfIdx, 229864)).target), 229847);
             }
         }
         if (((lite_resolvedName) === ("List"))) {
             const lite_afterList = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterName, lite_prefix);
             void lite_afterList;
-            if (((((lite_afterList) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterList, 230069)) !== ("<"))))) {
+            if (((((lite_afterList) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterList, 230045)) !== ("<"))))) {
                 return { ok: false, kind: "", next: lite_afterList };
             }
-            const lite_elem = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterList, 1n, 230204), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 230255), false);
+            const lite_elem = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterList, 1n, 230180), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 230231), false);
             void lite_elem;
             if ((((((!((lite_elem).ok))) || (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isListKind((lite_elem).kind)))) || ((((lite_elem).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) {
-                return { ok: false, kind: "", next: lite$addInt(lite_afterList, 1n, 230413) };
+                return { ok: false, kind: "", next: lite$addInt(lite_afterList, 1n, 230389) };
             }
             const lite_close = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_elem).next, lite_prefix);
             void lite_close;
-            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 230527)) !== (">"))))) {
+            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 230503)) !== (">"))))) {
                 return { ok: false, kind: "", next: lite_close };
             }
-            return { ok: true, kind: (((("List<") + ((lite_elem).kind))) + (">")), next: lite$addInt(lite_close, 1n, 230689) };
+            return { ok: true, kind: (((("List<") + ((lite_elem).kind))) + (">")), next: lite$addInt(lite_close, 1n, 230665) };
         }
         if (((lite_resolvedName) === ("Array"))) {
             const lite_afterArr = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterName, lite_prefix);
             void lite_afterArr;
-            if (((((lite_afterArr) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterArr, 230838)) !== ("<"))))) {
+            if (((((lite_afterArr) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterArr, 230814)) !== ("<"))))) {
                 return { ok: false, kind: "", next: lite_afterArr };
             }
-            const lite_elem = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterArr, 1n, 230970), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 231021), false);
+            const lite_elem = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterArr, 1n, 230946), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 230997), false);
             void lite_elem;
             if ((((!((lite_elem).ok))) || ((((lite_elem).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) {
-                return { ok: false, kind: "", next: lite$addInt(lite_afterArr, 1n, 231153) };
+                return { ok: false, kind: "", next: lite$addInt(lite_afterArr, 1n, 231129) };
             }
             const lite_close = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_elem).next, lite_prefix);
             void lite_close;
-            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 231267)) !== (">"))))) {
+            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 231243)) !== (">"))))) {
                 return { ok: false, kind: "", next: lite_close };
             }
-            return { ok: true, kind: (((("[") + ((lite_elem).kind))) + (";*]")), next: lite$addInt(lite_close, 1n, 231427) };
+            return { ok: true, kind: (((("[") + ((lite_elem).kind))) + (";*]")), next: lite$addInt(lite_close, 1n, 231403) };
         }
         if (((lite_resolvedName) === ("Map"))) {
             const lite_afterMap = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterName, lite_prefix);
             void lite_afterMap;
-            if (((((lite_afterMap) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterMap, 231574)) !== ("<"))))) {
+            if (((((lite_afterMap) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterMap, 231550)) !== ("<"))))) {
                 return { ok: false, kind: "", next: lite_afterMap };
             }
-            const lite_keyRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterMap, 1n, 231708), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 231759), false);
+            const lite_keyRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterMap, 1n, 231684), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 231735), false);
             void lite_keyRes;
             if ((((!((lite_keyRes).ok))) || (((((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isGenericParamName(lite_genericType, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$distinctBaseKind((lite_keyRes).kind))))) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isMapKeyKind((lite_keyRes).kind))))))))) {
-                return { ok: false, kind: "", next: lite$addInt(lite_afterMap, 1n, 231964) };
+                return { ok: false, kind: "", next: lite$addInt(lite_afterMap, 1n, 231940) };
             }
             const lite_comma = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_keyRes).next, lite_prefix);
             void lite_comma;
-            if (((((lite_comma) >= (lite_size))) || (((lite$textAt(lite_source, lite_comma, 232080)) !== (","))))) {
+            if (((((lite_comma) >= (lite_size))) || (((lite$textAt(lite_source, lite_comma, 232056)) !== (","))))) {
                 return { ok: false, kind: "", next: lite_comma };
             }
-            const lite_valRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_comma, 1n, 232205), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 232256), false);
+            const lite_valRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_comma, 1n, 232181), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 232232), false);
             void lite_valRes;
             if ((((((!((lite_valRes).ok))) || ((((lite_valRes).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) || ((((lite_valRes).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) {
-                return { ok: false, kind: "", next: lite$addInt(lite_comma, 1n, 232427) };
+                return { ok: false, kind: "", next: lite$addInt(lite_comma, 1n, 232403) };
             }
             const lite_close = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_valRes).next, lite_prefix);
             void lite_close;
-            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 232543)) !== (">"))))) {
+            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 232519)) !== (">"))))) {
                 return { ok: false, kind: "", next: lite_close };
             }
-            return { ok: true, kind: (((((((("Map<") + ((lite_keyRes).kind))) + (","))) + ((lite_valRes).kind))) + (">")), next: lite$addInt(lite_close, 1n, 232726) };
+            return { ok: true, kind: (((((((("Map<") + ((lite_keyRes).kind))) + (","))) + ((lite_valRes).kind))) + (">")), next: lite$addInt(lite_close, 1n, 232702) };
         }
         if (((lite_resolvedName) === ("Set"))) {
             const lite_afterSet = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterName, lite_prefix);
             void lite_afterSet;
-            if (((((lite_afterSet) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterSet, 232873)) !== ("<"))))) {
+            if (((((lite_afterSet) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterSet, 232849)) !== ("<"))))) {
                 return { ok: false, kind: "", next: lite_afterSet };
             }
-            const lite_elemRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterSet, 1n, 233008), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 233059), false);
+            const lite_elemRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite$addInt(lite_afterSet, 1n, 232984), lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 233035), false);
             void lite_elemRes;
             if ((((!((lite_elemRes).ok))) || (((((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isGenericParamName(lite_genericType, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$distinctBaseKind((lite_elemRes).kind))))) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isMapKeyKind((lite_elemRes).kind))))))))) {
-                return { ok: false, kind: "", next: lite$addInt(lite_afterSet, 1n, 233267) };
+                return { ok: false, kind: "", next: lite$addInt(lite_afterSet, 1n, 233243) };
             }
             const lite_close = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_elemRes).next, lite_prefix);
             void lite_close;
-            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 233384)) !== (">"))))) {
+            if (((((lite_close) >= (lite_size))) || (((lite$textAt(lite_source, lite_close, 233360)) !== (">"))))) {
                 return { ok: false, kind: "", next: lite_close };
             }
-            return { ok: true, kind: (((("Set<") + ((lite_elemRes).kind))) + (">")), next: lite$addInt(lite_close, 1n, 233548) };
+            return { ok: true, kind: (((("Set<") + ((lite_elemRes).kind))) + (">")), next: lite$addInt(lite_close, 1n, 233524) };
         }
         if (((((((((((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_INT))) || (((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_FLOAT))))) || (((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_STRING))))) || (((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_BOOL))))) || (((lite_name) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) {
             return { ok: true, kind: lite_name, next: lite_afterName };
@@ -13862,7 +13862,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_aliasIdx) < (0n))) {
             return { ok: false, kind: "", next: lite_afterName };
         }
-        const lite_aliasItem = lite$listAt(lite_aliases, lite_aliasIdx, 234282);
+        const lite_aliasItem = lite$listAt(lite_aliases, lite_aliasIdx, 234258);
         void lite_aliasItem;
         const lite_seenKey = ((((liteFn$lib$core$int$tp_Int_op_toText(((lite_aliasItem).depth))) + (":"))) + (lite_name));
         void lite_seenKey;
@@ -13870,7 +13870,7 @@ export function main(lite$write?: (text: string) => void): string {
             return { ok: false, kind: "", next: lite_afterName };
         }
         if (liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), 0n, "$Kind:")) {
-            const lite_kindVal = lite$textSlice(((lite_aliasItem).target), 6n, lite$textLength(((lite_aliasItem).target)), 234537);
+            const lite_kindVal = lite$textSlice(((lite_aliasItem).target), 6n, lite$textLength(((lite_aliasItem).target)), 234513);
             void lite_kindVal;
             if (((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isUnionKind(lite_kindVal)) && ((!(lite_allowUnion))))) {
                 return { ok: false, kind: "", next: lite_afterName };
@@ -13889,11 +13889,11 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_tplParamsCsv = (lite_pDec).text;
             void lite_tplParamsCsv;
-            const lite_tplBody = lite$textSlice(((lite_aliasItem).target), (lite_pDec).next, lite$textLength(((lite_aliasItem).target)), 235140);
+            const lite_tplBody = lite$textSlice(((lite_aliasItem).target), (lite_pDec).next, lite$textLength(((lite_aliasItem).target)), 235116);
             void lite_tplBody;
             const lite_afterArgsOpen = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_afterName, lite_prefix);
             void lite_afterArgsOpen;
-            if (((((lite_afterArgsOpen) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterArgsOpen, 235301)) !== ("<"))))) {
+            if (((((lite_afterArgsOpen) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterArgsOpen, 235277)) !== ("<"))))) {
                 return { ok: false, kind: "", next: lite_afterName };
             }
             const lite_scopedTplAliases: { name: string; target: string; at: bigint; end: bigint; depth: bigint }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$aliasesUpToDepth(lite_aliases, (lite_aliasItem).depth))];
@@ -13918,7 +13918,7 @@ export function main(lite$write?: (text: string) => void): string {
                             void lite_rb;
                             let lite_bCur = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rb, 0n, lite_prefix);
                             void lite_bCur;
-                            const lite_bAtom0 = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_rb, lite_bCur, lite_prefix, lite_scopedTplAliases, "", lite_emptySpecSeen, lite$subtractInt(lite_depthLeft, 1n, 236201), true);
+                            const lite_bAtom0 = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_rb, lite_bCur, lite_prefix, lite_scopedTplAliases, "", lite_emptySpecSeen, lite$subtractInt(lite_depthLeft, 1n, 236177), true);
                             void lite_bAtom0;
                             if ((((((!((lite_bAtom0).ok))) || ((((lite_bAtom0).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) || ((((lite_bAtom0).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) {
                                 return { ok: false, kind: "", next: lite_afterArgsOpen };
@@ -13926,10 +13926,10 @@ export function main(lite$write?: (text: string) => void): string {
                             const lite_bMembers: string[] = [...([(lite_bAtom0).kind])];
                             void lite_bMembers;
                             lite_bCur = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rb, (lite_bAtom0).next, lite_prefix);
-                            while (((((((lite_bCur) < (lite$textLength(lite_rb)))) && (((lite$textAt(lite_rb, lite_bCur, 236637)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rb, lite_bCur, "||")))))) {
-                                const lite_bNext = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rb, lite$addInt(lite_bCur, 1n, 236755), lite_prefix);
+                            while (((((((lite_bCur) < (lite$textLength(lite_rb)))) && (((lite$textAt(lite_rb, lite_bCur, 236613)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rb, lite_bCur, "||")))))) {
+                                const lite_bNext = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_rb, lite$addInt(lite_bCur, 1n, 236731), lite_prefix);
                                 void lite_bNext;
-                                const lite_bAtom = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_rb, lite_bNext, lite_prefix, lite_scopedTplAliases, "", lite_emptySpecSeen, lite$subtractInt(lite_depthLeft, 1n, 236877), true);
+                                const lite_bAtom = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_rb, lite_bNext, lite_prefix, lite_scopedTplAliases, "", lite_emptySpecSeen, lite$subtractInt(lite_depthLeft, 1n, 236853), true);
                                 void lite_bAtom;
                                 if ((((((!((lite_bAtom).ok))) || ((((lite_bAtom).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) || ((((lite_bAtom).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) {
                                     return { ok: false, kind: "", next: lite_afterArgsOpen };
@@ -13961,9 +13961,9 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_paramSpecs: { name: string; kind: string }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$splitParamSpecs(lite_resolvedTplParamsCsv))];
             void lite_paramSpecs;
-            let lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterArgsOpen, 1n, 238243), lite_prefix);
+            let lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterArgsOpen, 1n, 238219), lite_prefix);
             void lite_argCursor;
-            if (((((lite_argCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_argCursor, 238296)) === (">"))))) {
+            if (((((lite_argCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_argCursor, 238272)) === (">"))))) {
                 return { ok: false, kind: "", next: lite_argCursor };
             }
             const lite_argKinds: string[] = [...([])];
@@ -13974,10 +13974,10 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_argIdx) >= (BigInt((lite_paramSpecs).length)))) {
                     return { ok: false, kind: "", next: lite_argCursor };
                 }
-                const lite_pSpec = lite$listAt(lite_paramSpecs, lite_argIdx, 238636);
+                const lite_pSpec = lite$listAt(lite_paramSpecs, lite_argIdx, 238612);
                 void lite_pSpec;
                 if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isTypeParamKind((lite_pSpec).kind)) {
-                    const lite_argParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite_argCursor, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 238789), false);
+                    const lite_argParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite_argCursor, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite$subtractInt(lite_depthLeft, 1n, 238765), false);
                     void lite_argParsed;
                     if ((!((lite_argParsed).ok))) {
                         return { ok: false, kind: "", next: lite_argCursor };
@@ -13993,20 +13993,20 @@ export function main(lite$write?: (text: string) => void): string {
                     void (lite_argKinds.push((lite_valArg).token));
                     lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_valArg).next, lite_prefix);
                 }
-                lite_argIdx = lite$addInt(lite_argIdx, 1n, 239415);
-                if (((((lite_argCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_argCursor, 239463)) === (","))))) {
-                    lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_argCursor, 1n, 239550), lite_prefix);
-                    if (((((lite_argCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_argCursor, 239611)) === (">"))))) {
+                lite_argIdx = lite$addInt(lite_argIdx, 1n, 239391);
+                if (((((lite_argCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_argCursor, 239439)) === (","))))) {
+                    lite_argCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_argCursor, 1n, 239526), lite_prefix);
+                    if (((((lite_argCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_argCursor, 239587)) === (">"))))) {
                         break;
                     }
                 } else {
                     break;
                 }
             }
-            if (((((lite_argCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_argCursor, 239750)) !== (">"))))) {
+            if (((((lite_argCursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_argCursor, 239726)) !== (">"))))) {
                 return { ok: false, kind: "", next: lite_argCursor };
             }
-            const lite_afterClose = lite$addInt(lite_argCursor, 1n, 239878);
+            const lite_afterClose = lite$addInt(lite_argCursor, 1n, 239854);
             void lite_afterClose;
             if (((BigInt((lite_argKinds).length)) !== (BigInt((lite_paramSpecs).length)))) {
                 return { ok: false, kind: "", next: lite_afterClose };
@@ -14014,12 +14014,12 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_chkIdx = 0n;
             void lite_chkIdx;
             while (((lite_chkIdx) < (BigInt((lite_paramSpecs).length)))) {
-                const lite_cSpec = lite$listAt(lite_paramSpecs, lite_chkIdx, 240112);
+                const lite_cSpec = lite$listAt(lite_paramSpecs, lite_chkIdx, 240088);
                 void lite_cSpec;
                 if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isTypeConstraintKind((lite_cSpec).kind)) {
                     const lite_constraint = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$typeConstraintUnion((lite_cSpec).kind);
                     void lite_constraint;
-                    const lite_argK = lite$listAt(lite_argKinds, lite_chkIdx, 240267);
+                    const lite_argK = lite$listAt(lite_argKinds, lite_chkIdx, 240243);
                     void lite_argK;
                     if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isGenericParamName(lite_genericType, lite_argK)) {
                         const lite_outerC = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$typeParamConstraintKind(lite_genericType, lite_argK);
@@ -14033,7 +14033,7 @@ export function main(lite$write?: (text: string) => void): string {
                         }
                     }
                 }
-                lite_chkIdx = lite$addInt(lite_chkIdx, 1n, 240892);
+                lite_chkIdx = lite$addInt(lite_chkIdx, 1n, 240868);
             }
             let lite_templateKind = lite_tplBody;
             void lite_templateKind;
@@ -14048,7 +14048,7 @@ export function main(lite$write?: (text: string) => void): string {
                     void (lite_nextSeen.push(lite_sEntry));
                 }
                 void (lite_nextSeen.push(lite_seenKey));
-                const lite_resolved = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_tplBody, 0n, lite_prefix, lite_scopedTplAliases, lite_resolvedTplParamsCsv, lite_nextSeen, lite$subtractInt(lite_depthLeft, 1n, 241343), true);
+                const lite_resolved = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_tplBody, 0n, lite_prefix, lite_scopedTplAliases, lite_resolvedTplParamsCsv, lite_nextSeen, lite$subtractInt(lite_depthLeft, 1n, 241319), true);
                 void lite_resolved;
                 if ((((!((lite_resolved).ok))) || (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_tplBody, (lite_resolved).next, lite_prefix)) < (lite$textLength(lite_tplBody)))))) {
                     return { ok: false, kind: "", next: lite_afterClose };
@@ -14060,8 +14060,8 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_bi = 0n;
             void lite_bi;
             while (((lite_bi) < (BigInt((lite_paramSpecs).length)))) {
-                void (((lite_bindings).set((lite$listAt(lite_paramSpecs, lite_bi, 241737)).name, lite$listAt(lite_argKinds, lite_bi, 241756)), undefined));
-                lite_bi = lite$addInt(lite_bi, 1n, 241782);
+                void (((lite_bindings).set((lite$listAt(lite_paramSpecs, lite_bi, 241713)).name, lite$listAt(lite_argKinds, lite_bi, 241732)), undefined));
+                lite_bi = lite$addInt(lite_bi, 1n, 241758);
             }
             const lite_instKind = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$substCanonicalKind(lite_resolvedTplParamsCsv, lite_templateKind, lite_bindings);
             void lite_instKind;
@@ -14085,7 +14085,7 @@ export function main(lite$write?: (text: string) => void): string {
         void (lite_nextSeen.push(lite_seenKey));
         const lite_scopedAliases: { name: string; target: string; at: bigint; end: bigint; depth: bigint }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$aliasesUpToDepth(lite_aliases, (lite_aliasItem).depth))];
         void lite_scopedAliases;
-        const lite_resolved = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_aliasItem).target, 0n, lite_prefix, lite_scopedAliases, "", lite_nextSeen, lite$subtractInt(lite_depthLeft, 1n, 242617), true);
+        const lite_resolved = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_aliasItem).target, 0n, lite_prefix, lite_scopedAliases, "", lite_nextSeen, lite$subtractInt(lite_depthLeft, 1n, 242593), true);
         void lite_resolved;
         if ((!((lite_resolved).ok))) {
             return { ok: false, kind: "", next: lite_afterName };
@@ -14094,7 +14094,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_trailing;
         let lite_resolvedAliasKind = (lite_resolved).kind;
         void lite_resolvedAliasKind;
-        if (((((((lite_trailing) < (lite$textLength(((lite_aliasItem).target))))) && (((lite$textAt(((lite_aliasItem).target), lite_trailing, 242899)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), lite_trailing, "||")))))) {
+        if (((((((lite_trailing) < (lite$textLength(((lite_aliasItem).target))))) && (((lite$textAt(((lite_aliasItem).target), lite_trailing, 242875)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), lite_trailing, "||")))))) {
             if ((!(lite_allowUnion))) {
                 return { ok: false, kind: "", next: lite_afterName };
             }
@@ -14103,10 +14103,10 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_uMembers: string[] = [...([(lite_resolved).kind])];
             void lite_uMembers;
-            while (((((((lite_trailing) < (lite$textLength(((lite_aliasItem).target))))) && (((lite$textAt(((lite_aliasItem).target), lite_trailing, 243347)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), lite_trailing, "||")))))) {
-                const lite_nextElemPos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia((lite_aliasItem).target, lite$addInt(lite_trailing, 1n, 243497), lite_prefix);
+            while (((((((lite_trailing) < (lite$textLength(((lite_aliasItem).target))))) && (((lite$textAt(((lite_aliasItem).target), lite_trailing, 243323)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(((lite_aliasItem).target), lite_trailing, "||")))))) {
+                const lite_nextElemPos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia((lite_aliasItem).target, lite$addInt(lite_trailing, 1n, 243473), lite_prefix);
                 void lite_nextElemPos;
-                const lite_uElem = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_aliasItem).target, lite_nextElemPos, lite_prefix, lite_scopedAliases, "", lite_nextSeen, lite$subtractInt(lite_depthLeft, 1n, 243615), true);
+                const lite_uElem = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt((lite_aliasItem).target, lite_nextElemPos, lite_prefix, lite_scopedAliases, "", lite_nextSeen, lite$subtractInt(lite_depthLeft, 1n, 243591), true);
                 void lite_uElem;
                 if ((((((!((lite_uElem).ok))) || ((((lite_uElem).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) || ((((lite_uElem).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) {
                     return { ok: false, kind: "", next: lite_afterName };
@@ -14142,7 +14142,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_atom0).next, lite_prefix);
         void lite_cursor;
-        if (((((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 244893)) !== ("|"))))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "||")))) {
+        if (((((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 244869)) !== ("|"))))) || (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "||")))) {
             return lite_atom0;
         }
         if ((((((lite_atom0).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))) || ((((lite_atom0).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) {
@@ -14150,8 +14150,8 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_members: string[] = [...([(lite_atom0).kind])];
         void lite_members;
-        while (((((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 245199)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "||")))))) {
-            const lite_nextPos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 245313), lite_prefix);
+        while (((((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 245175)) === ("|"))))) && ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "||")))))) {
+            const lite_nextPos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 245289), lite_prefix);
             void lite_nextPos;
             const lite_elem = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAtomAt(lite_source, lite_nextPos, lite_prefix, lite_aliases, lite_genericType, lite_seen, lite_depthLeft, true);
             void lite_elem;
@@ -14233,7 +14233,7 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_position, lite_prefix);
         void lite_cursor;
         if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_cursor, "mut")) {
-            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 248188), lite_prefix);
+            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 248164), lite_prefix);
         }
         const lite_emptySeen: string[] = [...([])];
         void lite_emptySeen;
@@ -14252,46 +14252,46 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_cursor;
         let lite_genericType = "";
         void lite_genericType;
-        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 248733)) === ("<"))))) {
+        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 248709)) === ("<"))))) {
             if (lite_listIntrinsic) {
-                const lite_binderStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 248840), lite_prefix);
+                const lite_binderStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 248816), lite_prefix);
                 void lite_binderStart;
-                if (((((lite_binderStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_binderStart, 248903))))))) {
+                if (((((lite_binderStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_binderStart, 248879))))))) {
                     return false;
                 }
                 const lite_binderEnd = (lite$textSkipWhile(lite_source, lite_binderStart, false));
                 void lite_binderEnd;
-                const lite_binder = lite$textSlice(lite_source, lite_binderStart, lite_binderEnd, 249035);
+                const lite_binder = lite$textSlice(lite_source, lite_binderStart, lite_binderEnd, 249011);
                 void lite_binder;
                 const lite_afterBinder = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_binderEnd, lite_prefix);
                 void lite_afterBinder;
-                if (((((((lite_binder) === ("K"))) && (((lite_afterBinder) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterBinder, 249202)) === (","))))) {
-                    const lite_sStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterBinder, 1n, 249291), lite_prefix);
+                if (((((((lite_binder) === ("K"))) && (((lite_afterBinder) < (lite_size))))) && (((lite$textAt(lite_source, lite_afterBinder, 249178)) === (","))))) {
+                    const lite_sStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterBinder, 1n, 249267), lite_prefix);
                     void lite_sStart;
-                    if (((((lite_sStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_sStart, 249353))))))) {
+                    if (((((lite_sStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_sStart, 249329))))))) {
                         return false;
                     }
                     const lite_sEnd = (lite$textSkipWhile(lite_source, lite_sStart, false));
                     void lite_sEnd;
-                    if (((lite$textSlice(lite_source, lite_sStart, lite_sEnd, 249471)) !== ("V"))) {
+                    if (((lite$textSlice(lite_source, lite_sStart, lite_sEnd, 249447)) !== ("V"))) {
                         return false;
                     }
                     const lite_afterSecond = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_sEnd, lite_prefix);
                     void lite_afterSecond;
-                    if (((((lite_afterSecond) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterSecond, 249638)) !== (">"))))) {
+                    if (((((lite_afterSecond) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterSecond, 249614)) !== (">"))))) {
                         return false;
                     }
                     lite_genericType = "K,V";
-                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterSecond, 1n, 249780), lite_prefix);
+                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterSecond, 1n, 249756), lite_prefix);
                 } else {
                     if (((lite_binder) !== ("T"))) {
                         return false;
                     }
-                    if (((((lite_afterBinder) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterBinder, 249916)) !== (">"))))) {
+                    if (((((lite_afterBinder) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterBinder, 249892)) !== (">"))))) {
                         return false;
                     }
                     lite_genericType = "T";
-                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterBinder, 1n, 250056), lite_prefix);
+                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterBinder, 1n, 250032), lite_prefix);
                 }
             } else {
                 const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite_cursor, lite_prefix);
@@ -14308,37 +14308,37 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_gp).next, lite_prefix);
             }
         }
-        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 250508)) !== ("("))))) {
+        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 250484)) !== ("("))))) {
             return false;
         }
-        lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 250591), lite_prefix);
+        lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 250567), lite_prefix);
         const lite_names: string[] = [...([])];
         void lite_names;
         const lite_emptySeen: string[] = [...([])];
         void lite_emptySeen;
         let lite_paramCount = 0n;
         void lite_paramCount;
-        while (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 250732)) !== (")"))))) {
+        while (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 250708)) !== (")"))))) {
             if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "...")) {
                 if ((((!(lite_listIntrinsic))) || (((lite_paramCount) > (0n))))) {
                     return false;
                 }
-                const lite_packStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 250928), lite_prefix);
+                const lite_packStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 250904), lite_prefix);
                 void lite_packStart;
-                if (((((lite_packStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_packStart, 250989))))))) {
+                if (((((lite_packStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_packStart, 250965))))))) {
                     return false;
                 }
                 const lite_packEnd = (lite$textSkipWhile(lite_source, lite_packStart, false));
                 void lite_packEnd;
-                if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite$textSlice(lite_source, lite_packStart, lite_packEnd, 251130))) {
+                if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite$textSlice(lite_source, lite_packStart, lite_packEnd, 251106))) {
                     return false;
                 }
                 const lite_afterPack = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_packEnd, lite_prefix);
                 void lite_afterPack;
-                if (((((lite_afterPack) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterPack, 251287)) !== (":"))))) {
+                if (((((lite_afterPack) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterPack, 251263)) !== (":"))))) {
                     return false;
                 }
-                const lite_packType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAt(lite_source, lite$addInt(lite_afterPack, 1n, 251386), lite_prefix, lite_aliases, lite_genericType, lite_emptySeen, 32n);
+                const lite_packType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAt(lite_source, lite$addInt(lite_afterPack, 1n, 251362), lite_prefix, lite_aliases, lite_genericType, lite_emptySeen, 32n);
                 void lite_packType;
                 if ((!((lite_packType).ok))) {
                     return false;
@@ -14346,14 +14346,14 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_packType).next, lite_prefix);
                 break;
             }
-            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 251608))))) {
+            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 251584))))) {
                 return false;
             }
             const lite_nameStart = lite_cursor;
             void lite_nameStart;
             const lite_nameEnd = (lite$textSkipWhile(lite_source, lite_nameStart, false));
             void lite_nameEnd;
-            const lite_pName = lite$textSlice(lite_source, lite_nameStart, lite_nameEnd, 251751);
+            const lite_pName = lite$textSlice(lite_source, lite_nameStart, lite_nameEnd, 251727);
             void lite_pName;
             if (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_pName)) || ((((liteFn$lib$core$list$listIndexOfText(lite_names, lite_pName)) >= (0n)))))) {
                 return false;
@@ -14361,15 +14361,15 @@ export function main(lite$write?: (text: string) => void): string {
             void (lite_names.push(lite_pName));
             const lite_afterPName = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_nameEnd, lite_prefix);
             void lite_afterPName;
-            if (((((lite_afterPName) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterPName, 252021)) !== (":"))))) {
+            if (((((lite_afterPName) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterPName, 251997)) !== (":"))))) {
                 return false;
             }
-            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterPName, 1n, 252116), lite_prefix);
+            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterPName, 1n, 252092), lite_prefix);
             let lite_isMutP = false;
             void lite_isMutP;
             if (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_cursor, "mut")) {
                 lite_isMutP = true;
-                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 252282), lite_prefix);
+                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 3n, 252258), lite_prefix);
             }
             const lite_pType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAt(lite_source, lite_cursor, lite_prefix, lite_aliases, lite_genericType, lite_emptySeen, 32n);
             void lite_pType;
@@ -14379,30 +14379,30 @@ export function main(lite$write?: (text: string) => void): string {
             if (((((((lite_isMutP) && ((!(lite_listIntrinsic))))) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isGenericParamName(lite_genericType, (lite_pType).kind)))))) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isMutContainerKind((lite_pType).kind)))))) {
                 return false;
             }
-            lite_paramCount = lite$addInt(lite_paramCount, 1n, 252645);
+            lite_paramCount = lite$addInt(lite_paramCount, 1n, 252621);
             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_pType).next, lite_prefix);
-            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 252750)) === (","))))) {
-                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 252824), lite_prefix);
+            if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 252726)) === (","))))) {
+                lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 252800), lite_prefix);
             } else {
                 break;
             }
         }
-        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 252922)) !== (")"))))) {
+        if (((((lite_cursor) >= (lite_size))) || (((lite$textAt(lite_source, lite_cursor, 252898)) !== (")"))))) {
             return false;
         }
-        const lite_afterParen = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 253010), lite_prefix);
+        const lite_afterParen = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 252986), lite_prefix);
         void lite_afterParen;
-        if (((((lite_afterParen) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterParen, 253060)) !== (":"))))) {
+        if (((((lite_afterParen) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterParen, 253036)) !== (":"))))) {
             return false;
         }
-        const lite_retType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAt(lite_source, lite$addInt(lite_afterParen, 1n, 253152), lite_prefix, lite_aliases, lite_genericType, lite_emptySeen, 32n);
+        const lite_retType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$canResolveTypeAt(lite_source, lite$addInt(lite_afterParen, 1n, 253128), lite_prefix, lite_aliases, lite_genericType, lite_emptySeen, 32n);
         void lite_retType;
         if ((!((lite_retType).ok))) {
             return false;
         }
         const lite_afterHeader = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_retType).next, lite_prefix);
         void lite_afterHeader;
-        if (((((lite_afterHeader) < (lite_size))) && (((lite$textAt(lite_source, lite_afterHeader, 253348)) === ("@"))))) {
+        if (((((lite_afterHeader) < (lite_size))) && (((lite$textAt(lite_source, lite_afterHeader, 253324)) === ("@"))))) {
             return false;
         }
         return true;
@@ -14413,7 +14413,7 @@ export function main(lite$write?: (text: string) => void): string {
         if ((!(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_kind, 0n, "__loopVal:")))) {
             return (-1n);
         }
-        const lite_suffix = lite$textSlice(lite_kind, 10n, lite$textLength(lite_kind), 253637);
+        const lite_suffix = lite$textSlice(lite_kind, 10n, lite$textLength(lite_kind), 253613);
         void lite_suffix;
         if (((lite_suffix) === (""))) {
             return (-1n);
@@ -14423,13 +14423,13 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_index = 0n;
         void lite_index;
         while (((lite_index) < (lite$textLength(lite_suffix)))) {
-            const lite_ch = lite$textAt(lite_suffix, lite_index, 253794);
+            const lite_ch = lite$textAt(lite_suffix, lite_index, 253770);
             void lite_ch;
             if ((!(((lite_ch.length === 1 && lite_ch >= "0" && lite_ch <= "9"))))) {
                 return (-1n);
             }
-            lite_value = lite$addInt(lite$multiplyInt(lite_value, 10n, 253870), liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$decimalDigit(lite_ch), 253875);
-            lite_index = lite$addInt(lite_index, 1n, 253924);
+            lite_value = lite$addInt(lite$multiplyInt(lite_value, 10n, 253846), liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$decimalDigit(lite_ch), 253851);
+            lite_index = lite$addInt(lite_index, 1n, 253900);
         }
         return lite_value;
     }
