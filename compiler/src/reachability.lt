@@ -889,13 +889,24 @@ pub simplifyConstantBranches := fn(items: Items, target: String): Items {
     falseLit := ir.targetBoolLiteralCode(target, false);
     var hasConstBranch := false;
     var hasCUnsupported := false;
+    var scanFnDepth := 0;
+    var scanImportedFn := false;
     loop items as scanItem {
+        if scanItem.kind == ir.ITEM_KIND_FUNCTION_START {
+            if scanFnDepth == 0 {
+                scanImportedFn = isImportedModuleFnRuntime(scanItem.runtime);
+            }
+            scanFnDepth = scanFnDepth + 1;
+        } else if scanItem.kind == ir.ITEM_KIND_FUNCTION_END {
+            if scanFnDepth > 0 { scanFnDepth = scanFnDepth - 1; }
+            if scanFnDepth == 0 { scanImportedFn = false; }
+        }
         if ((scanItem.kind == ir.ITEM_KIND_IF or scanItem.kind == ir.ITEM_KIND_ELSE_IF) and
         (scanItem.code == trueLit or scanItem.code == falseLit)) or
         (scanItem.kind == ir.ITEM_KIND_LOOP and scanItem.code == falseLit) {
             hasConstBranch = true;
         }
-        if target =!= ir.TARGET_TS and isCUnsupportedItem(scanItem) {
+        if target =!= ir.TARGET_TS and not scanImportedFn and not isImportedModuleRuntime(scanItem.runtime) and isCUnsupportedItem(scanItem) {
             hasCUnsupported = true;
         }
     }

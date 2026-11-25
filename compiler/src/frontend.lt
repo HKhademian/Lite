@@ -3350,8 +3350,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if aliasEntry.target == "" {
                 unsupportedAliasTarget(source, targetStart, prefix, "target");
             }
-            seenAliases: mut List<String> = [depth.toText() + ":" + name];
             resolvedType := if gp.hasParams {
+                seenAliases: mut List<String> = [depth.toText() + ":" + name];
                 scopedAliasEnv := aliasesUpToDepth(aliases, depth);
                 resolvedParams := types.resolveComptimeParamSpecs(source, typePosition + 5, prefix, scopedAliasEnv, gp.paramsCsv);
                 rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
@@ -3363,6 +3363,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 tplKind := types.resolveGenericTypeText(source, targetStart, prefix, scopedAliasEnv, rawInner, resolvedParams, seenAliases);
                 "@gentpl:" + types.encodeLengthPrefixedText(resolvedParams) + tplKind
             } else {
+                seenAliases: mut List<String> = [];
                 resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenAliases)
             };
             var exportedDefaults := "";
