@@ -60,4 +60,30 @@ compilerTest.assertCompileError(root, tsComp, "non-Int range end",
 cRangeRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; loop 0..5 as i { io.outputLine(i); }\n", "");
 test.checkInt("C compiles range loop: " + cRangeRes.stderr, 0, cRangeRes.status);
 
+ccInfo := compilerTest.probeCc();
+if ccInfo.available {
+    tailIfLoopSrc :=
+    "io := import \"core/io\";\n" +
+    "f := fn(): Int {\n" +
+    "    var acc := 0;\n" +
+    "    loop 0..5 as i {\n" +
+    "        if i == 1 {\n" +
+    "            acc += 10;\n" +
+    "        } else {\n" +
+    "            x := i * 2;\n" +
+    "            acc += x;\n" +
+    "            if acc > 999 { return -1; }\n" +
+    "        }\n" +
+    "    }\n" +
+    "    acc\n" +
+    "};\n" +
+    "io.outputLine(f());\n";
+    tsTail := compilerTest.compileCheckRunTs(root, tsComp, tailIfLoopSrc, "");
+    test.checkInt("tail-if range loop ts: " + tsTail.stderr, 0, tsTail.status);
+    test.checkText("tail-if range loop ts out", "28\n", tsTail.stdout);
+    cTail := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, tailIfLoopSrc, "", "");
+    test.checkInt("tail-if range loop c: " + cTail.stderr, 0, cTail.status);
+    test.checkText("tail-if range loop c out", "28\n", cTail.stdout);
+}
+
 test.done("range-loops");

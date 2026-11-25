@@ -3702,10 +3702,14 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             }
             if not blockExits {
                 if expr.kind == ir.VALUE_KIND_NEVER {
-                    mut statements.pushBack(stmtReturnPrefix + "(" + expr.code + ");");
+                    if target == ir.TARGET_C {
+                        mut statements.pushBack(ctx.cUnwrapIntoVar("", ir.VALUE_KIND_NEVER, expr.code));
+                    } else {
+                        mut statements.pushBack(stmtReturnPrefix + "(" + expr.code + ");");
+                    }
                     blockExits = true;
                 } else {
-                    mut statements.pushBack(if target == ir.TARGET_C { "(void)(" + expr.code + ");" } else { "void (" + expr.code + ");" });
+                    mut statements.pushBack(if target == ir.TARGET_C { ctx.cUnwrapIntoVar("", ir.VALUE_KIND_UNIT, expr.code) } else { "void (" + expr.code + ");" });
                     if reach.isPrunableExprForTarget(target, expr.kind, expr.code) {
                         mut stmtOwners.pushBack("#discard");
                         mut stmtDeps.pushBack("");
@@ -3760,10 +3764,14 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 syntax.failAt(source, start, prefix, "finally block must produce Unit, got " + types.displayKind(blockKind));
             }
             if blockKind == ir.VALUE_KIND_NEVER {
-                mut statements.pushBack("(" + blockCode + ");");
+                if target == ir.TARGET_C {
+                    mut statements.pushBack(ctx.cUnwrapIntoVar("", ir.VALUE_KIND_NEVER, blockCode));
+                } else {
+                    mut statements.pushBack("(" + blockCode + ");");
+                }
                 blockExits = true;
             } else if blockCode =!= ir.targetUnitLiteralCode(target) {
-                mut statements.pushBack(if target == ir.TARGET_C { "(void)(" + blockCode + ");" } else { "void (" + blockCode + ");" });
+                mut statements.pushBack(if target == ir.TARGET_C { ctx.cUnwrapIntoVar("", ir.VALUE_KIND_UNIT, blockCode) } else { "void (" + blockCode + ");" });
             }
         }
         finCode := textLib.joinTexts(statements, " ");
@@ -3779,10 +3787,14 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         syntax.failAt(source, start, prefix, "function " + currentName + " returns Unit and cannot return a value");
                     }
                     if blockKind == ir.VALUE_KIND_NEVER {
-                        mut statements.pushBack("(" + blockCode + ");");
+                        if target == ir.TARGET_C {
+                            mut statements.pushBack(ctx.cUnwrapIntoVar("", ir.VALUE_KIND_NEVER, blockCode));
+                        } else {
+                            mut statements.pushBack("(" + blockCode + ");");
+                        }
                         blockExits = true;
                     } else if blockCode =!= ir.targetUnitLiteralCode(target) {
-                        mut statements.pushBack(if target == ir.TARGET_C { "(void)(" + blockCode + ");" } else { "void (" + blockCode + ");" });
+                        mut statements.pushBack(if target == ir.TARGET_C { ctx.cUnwrapIntoVar("", ir.VALUE_KIND_UNIT, blockCode) } else { "void (" + blockCode + ");" });
                     }
                 } else if expected == ir.VALUE_KIND_NEVER {
                     if blockKind =!= ir.VALUE_KIND_NEVER {
@@ -3869,7 +3881,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 } else if topLoopValKind == ir.VALUE_KIND_UNIT {
                     if blockCode =!= ir.targetUnitLiteralCode(target) {
                         if target == ir.TARGET_C {
-                            mut statements.pushBack("(void)(" + blockCode + ");");
+                            mut statements.pushBack(ctx.cUnwrapIntoVar("", ir.VALUE_KIND_UNIT, blockCode));
                         } else {
                             mut statements.pushBack("void (" + blockCode + ");");
                         }
@@ -3937,11 +3949,15 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         }
         if not blockExits and sawTailExpr {
             if blockKind == ir.VALUE_KIND_NEVER {
-                mut statements.pushBack("(" + blockCode + ");");
+                if target == ir.TARGET_C {
+                    mut statements.pushBack(ctx.cUnwrapIntoVar("", ir.VALUE_KIND_NEVER, blockCode));
+                } else {
+                    mut statements.pushBack("(" + blockCode + ");");
+                }
                 blockExits = true;
             } else if topValKind == ir.VALUE_KIND_UNIT {
                 if blockCode =!= ir.targetUnitLiteralCode(target) {
-                    mut statements.pushBack(if target == ir.TARGET_C { "(void)(" + blockCode + ");" } else { "void (" + blockCode + ");" });
+                    mut statements.pushBack(if target == ir.TARGET_C { ctx.cUnwrapIntoVar("", ir.VALUE_KIND_UNIT, blockCode) } else { "void (" + blockCode + ");" });
                 }
             } else {
                 tailCode := ctx.assignValueCode(target, topValKind, blockKind, blockCode);
