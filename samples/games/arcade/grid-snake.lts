@@ -148,10 +148,11 @@ onCanvasUpdate := fn(dt: Float): Int {
     mut snake.pushFront(next);
     mut occupied.add(cellKey(next));
     if ate {
-        rx := state.rng.rangeInt(1, cols - 1);
-        ry := rx.next.rangeInt(1, rows - 1);
-        state.food = Cell { x = rx.value, y = ry.value };
-        state.rng = ry.next;
+        var r: mut rand.Rng = state.rng;
+        fx := mut r.rangeInt(1, cols - 1);
+        fy := mut r.rangeInt(1, rows - 1);
+        state.food = Cell { x = fx, y = fy };
+        state.rng = r;
         audio.tone(frequency = 587, durationMs = 80, volume = 16);
     } else {
         tail := mut snake.popBack();

@@ -1,6 +1,6 @@
 /** Deterministic, seedable pseudorandom number generator (`math/random`). */
 
-/** Immutable PRNG state handle; construct with `Rng.create` and advance with `rng.nextInt()`, `rng.rangeInt(...)`, or `rng.nextBool()`. */
+/** Mutable-method PRNG state handle; construct with `Rng.create` and advance with `mut rng.nextInt()`, `mut rng.rangeInt(...)`, or `mut rng.nextBool()`. */
 pub Rng := record {
     state: Int;
 };
@@ -8,33 +8,65 @@ pub Rng := record {
 MOD := 2147483647;
 MULT := 48271;
 
-/** Creates a deterministic `Rng` from any `seed`. */
-pub Rng.create := fn(seed: Int): Self {
+normalizeSeed := fn(seed: Int): Int {
     var s := seed % MOD;
     if s <= 0 { s = s + MOD - 1; }
     if s <= 0 { s = 1; }
-    Self { state = s }
+    s
 };
 
-/** Advances `rng` by one Park-Miller LCG step, returning a positive `Int` in `[1, 2147483646]` and the next `Rng`. */
-pub Rng.nextInt := fn(rng: Self): (value: Int, next: Self) {
+/** Creates a deterministic `Rng` from any `seed`. */
+pub Rng.create := fn(seed: Int): Self {
+    Self { state = normalizeSeed(seed) }
+};
+
+/** Reseeds `rng` in place from `seed`. */
+pub Rng.reseed := fn(rng: mut Self, seed: Int): Unit {
+    rng.state = normalizeSeed(seed);
+};
+
+/** Advances `rng` in place by one Park-Miller LCG step, returning a positive `Int` in `[1, 2147483646]`. */
+pub Rng.nextInt := fn(rng: mut Self): Int {
     s := (rng.state * MULT) % MOD;
     safe := if s <= 0 { s + MOD } else { s };
-    (value = safe, next = Self { state = safe })
+    rng.state = safe;
+    safe
 };
 
-/** Returns a deterministic `Int` in `[minVal, maxExclusive)` and the next `Rng`. */
-pub Rng.rangeInt := fn(rng: Self, minVal: Int, maxExclusive: Int): (value: Int, next: Self) {
-    step := rng.nextInt();
+/** Advances `rng` in place and returns a deterministic `Int` in `[minVal, maxExclusive)`. */
+pub Rng.rangeInt := fn(rng: mut Self, minVal: Int, maxExclusive: Int): Int {
+    val := mut rng.nextInt();
     span := maxExclusive - minVal;
     if span <= 1 {
-        return (value = minVal, next = step.next);
+        return minVal;
     }
-    (value = minVal + (step.value % span), next = step.next)
+    minVal + (val % span)
 };
 
-/** Returns a deterministic `Bool` and the next `Rng`. */
-pub Rng.nextBool := fn(rng: Self): (value: Bool, next: Self) {
-    step := rng.nextInt();
-    (value = (step.value % 2) == 1, next = step.next)
+/** Advances `rng` in place and returns a deterministic `Bool`. */
+pub Rng.nextBool := fn(rng: mut Self): Bool {
+    val := mut rng.nextInt();
+    (val % 2) == 1
+};
+
+var defaultRng: mut Rng = Rng.create(1234567);
+
+/** Seeds the module-level default PRNG used by `nextInt`, `rangeInt`, and `nextBool`. */
+pub seed := fn(value: Int): Unit {
+    mut defaultRng.reseed(value);
+};
+
+/** Returns a positive `Int` in `[1, 2147483646]` from the module-level default PRNG. */
+pub nextInt := fn(): Int {
+    mut defaultRng.nextInt()
+};
+
+/** Returns an `Int` in `[minVal, maxExclusive)` from the module-level default PRNG. */
+pub rangeInt := fn(minVal: Int, maxExclusive: Int): Int {
+    mut defaultRng.rangeInt(minVal, maxExclusive)
+};
+
+/** Returns a `Bool` from the module-level default PRNG. */
+pub nextBool := fn(): Bool {
+    mut defaultRng.nextBool()
 };

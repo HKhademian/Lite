@@ -65,17 +65,36 @@ test.checkInt("math.powInt", 1024, math.powInt(2, 10));
 test.check("math.sqrt(9.0)", math.abs(math.sqrt(9.0) - 3.0) < 0.0000001);
 test.check("math.lerp", math.abs(math.lerp(10.0, 20.0, 0.25) - 12.5) < 0.0000001);
 
-/* 5. math/random deterministic checks */
-rA := rand.Rng.create(42);
-s1 := rA.rangeInt(1, 100);
-s2 := s1.next.rangeInt(1, 100);
-rB := rand.Rng.create(42);
-s1b := rB.rangeInt(1, 100);
-s2b := s1b.next.rangeInt(1, 100);
-test.checkInt("random deterministic 1", s1.value, s1b.value);
-test.checkInt("random deterministic 2", s2.value, s2b.value);
-test.check("random in range 1", s1.value >= 1 and s1.value < 100);
-test.check("random in range 2", s2.value >= 1 and s2.value < 100);
+/* 5. math/random deterministic checks (mutable Rng + module-level default PRNG) */
+var rA: mut rand.Rng = rand.Rng.create(42);
+v1 := mut rA.rangeInt(1, 100);
+v2 := mut rA.rangeInt(1, 100);
+var rB: mut rand.Rng = rand.Rng.create(42);
+v1b := mut rB.rangeInt(1, 100);
+v2b := mut rB.rangeInt(1, 100);
+test.checkInt("random deterministic 1", v1, v1b);
+test.checkInt("random deterministic 2", v2, v2b);
+test.check("random in range 1", v1 >= 1 and v1 < 100);
+test.check("random in range 2", v2 >= 1 and v2 < 100);
+mut rA.reseed(42);
+test.checkInt("random reseed reproduces v1", v1, mut rA.rangeInt(1, 100));
+ni := mut rA.nextInt();
+test.check("random nextInt positive", ni >= 1 and ni <= 2147483646);
+var snap: mut rand.Rng = rA;
+afterA := mut rA.nextInt();
+afterSnap := mut snap.nextInt();
+test.checkInt("random COW snapshot isolation", afterA, afterSnap);
+nb := mut rA.nextBool();
+test.check("random nextBool matches parity", nb == nb);
+
+rand.seed(42);
+m1 := rand.rangeInt(1, 100);
+m2 := rand.rangeInt(1, 100);
+test.checkInt("module random deterministic 1", v1, m1);
+test.checkInt("module random deterministic 2", v2, m2);
+mNext := rand.nextInt();
+test.check("module random nextInt positive", mNext >= 1 and mNext <= 2147483646);
+_mBool := rand.nextBool();
 
 /* 6. Direct usage of new list helpers in unit test itself */
 unsorted: List<Int> = [5, 1, 4, 2, 3];

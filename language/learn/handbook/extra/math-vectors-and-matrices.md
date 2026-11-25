@@ -6,18 +6,17 @@ Lite provides pure, dual-target (TypeScript + C11) math, deterministic random ge
 
 [math/scalar](lite://module/math/scalar) defines numeric constraint unions (`IntScalar`, `FloatScalar`, `Numeric`), generic scalar helpers (`abs`, `min`, `max`, `clamp`, `sign`), constants (`PI`, `TAU`, `HALF_PI`, `E`), `floor`/`ceil`/`round`/`trunc`/`fract`, trigonometry (`sin`, `cos`, `tan`, `atan`, `atan2`), `sqrt`, `gcd`, and `lcm`.
 
-[math/random](lite://module/math/random) provides an immutable, seedable Lehmer PRNG (`Rng`) whose state advances explicitly without hidden global entropy (`Rng.create`, `.nextInt()`, `.rangeInt(...)`, `.nextBool()`):
+[math/random](lite://module/math/random) provides a seedable Lehmer PRNG `Rng` (`Rng.create`, `mut r.reseed(...)`, `mut r.nextInt()`, `mut r.rangeInt(...)`, `mut r.nextBool()`) plus module-level convenience functions backed by a private default instance (`seed`, `nextInt`, `rangeInt`, `nextBool`):
 
 ```lite
 io := import "core/io";
 math := import "math/scalar";
 rng := import "math/random";
 
-var r := rng.Rng.create(42);
-a := r.rangeInt(1, 7);
-r = a.next;
-b := r.rangeInt(1, 7);
-io.outputLine(a.value, b.value, math.clamp(a.value + b.value, 2, 12));
+var r: mut rng.Rng = rng.Rng.create(42);
+a := mut r.rangeInt(1, 7);
+b := mut r.rangeInt(1, 7);
+io.outputLine(a, b, math.clamp(a + b, 2, 12));
 ```
 
 ## 2D, 3D & Generic N-D Vector Math (`math/vector`)
