@@ -43,6 +43,11 @@ using a single known, constructible expected type. A named literal such as
 `User { ... }` supplies that type directly. Constructs with their own body
 headers, such as `fn`, `if`, and `loop`, retain their brace bodies.
 
+`do` fills the same scoping role as an always-entered `if true { ... }` in
+Mini. In Lite's draft, `do` enters its body unconditionally and produces
+the body's ordinary block result. This gives a standalone block a visible
+header without requiring a condition or an `else` for value use.
+
 ```text
 user: User = { name = "Ali" };
 saveUser({ name = "Ali" });
