@@ -1,7 +1,6 @@
 /** 2D/3D/4D vectors and generic N-dimensional `Vec<T, N>` math (`math/vector`) across TS and C11. */
 
 math := import "math/scalar";
-array := import "core/array";
 
 /** Generic N-dimensional numeric vector backed by a fixed-length array `[T; N]`. */
 pub Vec := record<T: Type<math.Numeric>, N: Int> {
@@ -39,7 +38,7 @@ pub Vec.from := fn<T: Type<math.Numeric>, N: Int>(data: [T; N]): Self<T, N> {
 
 /** Constructs a generic `Vec<T, N>` with all `N` components set to `val`. */
 pub Vec.splat := fn<T: Type<math.Numeric>, N: Int>(val: T): Self<T, N> {
-    Self<T, N> { data = array.filled<T, N>(val) }
+    Self<T, N> { data = Array<T, N>.filled(val) }
 };
 
 /** Zero-initialized generic `Vec<T, N>`. */

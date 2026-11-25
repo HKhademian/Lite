@@ -1,26 +1,32 @@
 /* Core fixed-length array operations. */
 
 /** Returns the compile-time element count of fixed-length array `values`. */
-pub Array.length := fn<T>(values: Self<T>): Int;
+pub Array.length := fn<T: Type, N: Int>(values: Self<T, N>): Int;
 
 /** Returns the element at zero-based `index` in fixed-length array `values`, faulting on out-of-bounds access. */
-pub Array.$getIndex := fn<T>(values: Self<T>, index: Int): T;
+pub Array.$getIndex := fn<T: Type, N: Int>(values: Self<T, N>, index: Int): T;
 
 /** Replaces the element at zero-based `index` in fixed-length array `values`, faulting on out-of-bounds access. */
-pub Array.$setIndex := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
+pub Array.$setIndex := fn<T: Type, N: Int>(values: mut Self<T, N>, index: Int, value: T): Unit;
 
 /** True when fixed-length array `values` has zero elements. */
-pub Array.isEmpty := fn<T>(values: Self<T>): Bool {
+pub Array.isEmpty := fn<T: Type, N: Int>(values: Self<T, N>): Bool {
     values.length() == 0
 };
 
-/** Constructs a fixed-length array `[T; N]` with every element initialized to `val`. */
-pub filled := fn<T: Type, N: Int>(val: T): [T; N] {
+/** Constructs a fixed-length array `Array<T, N>` with every element initialized to `val`. */
+pub Array.filled := fn<T: Type, N: Int>(val: T): Self<T, N> {
     [val; N]
 };
 
+/** Constructs a zero-initialized fixed-length array `Array<T, N>`. */
+pub Array.zeroed := fn<T: Type, N: Int>(): Self<T, N> {
+    res: Self<T, N>;
+    res
+};
+
 /** Overwrites every element of fixed-length array `values` with `val` in-place. */
-pub Array.fill := fn<T: Type>(values: mut Self<T>, val: T): Unit {
+pub Array.fill := fn<T: Type, N: Int>(values: mut Self<T, N>, val: T): Unit {
     loop 0..values.length() as i {
         values[i] = val;
     }

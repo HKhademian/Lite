@@ -24,7 +24,6 @@ tmpDir := tmpRes.path;
 
 functionalSrc :=
 "io := import \"core/io\";\n" +
-"array := import \"core/array\";\n" +
 "math := import \"math/scalar\";\n" +
 "vec := import \"math/vector\";\n" +
 "geom := import \"math/geom\";\n" +
@@ -149,10 +148,12 @@ functionalSrc :=
 "    and near(hs1.distanceOr(-1.0), 4.0)\n" +
 "    and near(hs2.distanceOr(-1.0), 1.0)\n" +
 "    and not hs3.isHit();\n" +
-"arrI := array.filled<Int, 4>(9);\n" +
-"mut arrM := array.filled<Int, 3>(1);\n" +
+"arrI := Array<Int, 4>.filled(9);\n" +
+"mut arrM := Array.filled<Int, 3>(1);\n" +
 "mut arrM.fill(7);\n" +
-"arrF := array.filled<Float, 3>(1.5);\n" +
+"arrF := Array<Float, 3>.filled(1.5);\n" +
+"arrZ := Array<Int, 4>.zeroed();\n" +
+"arrZ2 := Array.zeroed<Float, 2>();\n" +
 "ivZero := vec.IVec3.zeroed();\n" +
 "ivGen2: vec.Vec2<Int> = vec.vec2(3, 4);\n" +
 "fvGen2: vec.Vec2<Float> = vec.vec2(3.0, 4.0);\n" +
@@ -160,6 +161,8 @@ functionalSrc :=
 "    arrI.length() == 4 and arrI[0] == 9 and arrI[3] == 9\n" +
 "    and arrM[0] == 7 and arrM[2] == 7\n" +
 "    and near(arrF[1], 1.5)\n" +
+"    and arrZ.length() == 4 and arrZ[0] == 0 and arrZ[3] == 0\n" +
+"    and arrZ2.length() == 2 and arrZ2[1] == 0.0\n" +
 "    and ivZero.x() == 0 and ivZero.z() == 0\n" +
 "    and ivGen2.x() == 3 and ivGen2.y() == 4\n" +
 "    and near(fvGen2.cross2(vec.vec2(1.0, 2.0)), 2.0)\n" +

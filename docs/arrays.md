@@ -1,6 +1,6 @@
 # Fixed-length owning arrays
 
-Status: **fixed-array [T; N] source examples, known-size literal inference, and fixed-array/fixed-tuple spread construction selected in the 2026-10-24 discussion**. The 2026-10-25 storage contract selects header-free inline layout equal to the corresponding homogeneous unnamed tuple. Runtime-length arrays support variadic tails; their type spelling, ownership, allocation, ABI, and full construction grammar remain open. Array<T, N>/Array<T> remain schematic generic descriptions, not a second selected generic syntax. See [tuple and array shapes](lite://doc/tuple-array-shapes).
+Status: **fixed-array `Array<T, N>` (with `[T; N]` shorthand syntax sugar), known-size literal inference, `[val; N]` repeat-array construction, and fixed-array/fixed-tuple spread construction implemented**. The 2026-10-25 storage contract selects header-free inline layout equal to the corresponding homogeneous unnamed tuple. `[T; N]` is syntax sugar for `Array<T, N>`, and `lib/core/array.lt` defines the `Array<T, N>` interface (`Array.filled`, `Array.zeroed`, `Array.fill`, `Array.length`, `Array.isEmpty`, `Array.$getIndex`, `Array.$setIndex`). Runtime-length `Array<T>` remains rejected/reserved; use `List<T>` for growable sequences. See [tuple and array shapes](lite://doc/tuple-array-shapes).
 
 ## Compile-time size
 

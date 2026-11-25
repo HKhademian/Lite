@@ -453,8 +453,16 @@ arraySyntaxSrc :=
 "r: Row<Int> = c;\n" +
 "e: Array<Int, 0> = [];\n" +
 "bx := Box<Int, 3> { items = [10, 20, 30] };\n" +
-"io.outputLine(sum4(a), sum4(b), sum4(c), r[2], bx.items.length(), bx.items[1], e.length());\n";
-runBoth("array-two-arg-type-syntax", arraySyntaxSrc, "10 10 10 3 3 20 0\n");
+"f1 := Array<Int, 4>.filled(9);\n" +
+"f2 := Array.filled<Int, 3>(1);\n" +
+"z1 := Array<Float, 3>.zeroed();\n" +
+"z2 := Array.zeroed<Int, 4>();\n" +
+"af := Bytes4.filled(7);\n" +
+"az := Bytes4.zeroed();\n" +
+"rf := Row.filled(8);\n" +
+"rz := Row.zeroed<Float>();\n" +
+"io.outputLine(sum4(a), sum4(b), sum4(c), r[2], bx.items.length(), bx.items[1], e.length(), f1[3], f2[2], z1[1], z2[0], af[2], az[3], rf[1], rz[2]);\n";
+runBoth("array-two-arg-type-syntax", arraySyntaxSrc, "10 10 10 3 3 20 0 9 1 0 0 7 0 8 0\n");
 
 expectRejectBoth("reject-one-arg-array-type",
 "bad: Array<Int> = [1, 2];\n",

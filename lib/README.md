@@ -14,7 +14,7 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | `core/unicode` | Browser + CLI | UTF-8 / UTF-16 scalar encoding, decoding, and validation helpers |
 | `core/format` | Browser + CLI | Decimal/hex formatting, padding, and Int-join helpers |
 | `core/list` | Browser + CLI | `List.*` operations & index hooks (`pushBack`, `popBack`, `pushFront`, `popFront`, `length`, `isEmpty`, `map`, `filter`, `join`, `$getIndex`/`$setIndex`) |
-| `core/array` | Browser + CLI | Fixed-length `Array.*` operations & index hooks (`length`, `isEmpty`, `filled`, `fill`, `$getIndex`/`$setIndex`) |
+| `core/array` | Browser + CLI | Fixed-length `Array<T, N>` (`[T; N]` sugar) static & instance operations & index hooks (`filled`, `zeroed`, `fill`, `length`, `isEmpty`, `$getIndex`/`$setIndex`) |
 | `core/map` | Browser + CLI | `Map.*` operations & index hooks (`get`, `getOr`, `has`, `set`, `remove`, `clear`, `keys`, `values`, `size`, `isEmpty`, `$getIndex`/`$setIndex`) |
 | `core/set` | Browser + CLI | `Set.*` operations (`has`, `add`, `remove`, `clear`, `values`, `size`, `isEmpty`) |
 | `core/crypto` | Browser + CLI | Host CSPRNG plus pure-Lite SHA-256, SHA-512, HMAC, and hex digests |
