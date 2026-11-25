@@ -230,6 +230,7 @@ softBuiltinModuleForIdentity := fn(moduleIdentity: String): String {
         moduleIdentity == "lite.core.crypto.v1" { "lib/core/crypto" }
         moduleIdentity == "lite.core.file.v1" { "lib/core/file" }
         moduleIdentity == "lite.core.int.v1" { "lib/core/int" }
+        moduleIdentity == "lite.core.list.v1" { "lib/core/list" }
         moduleIdentity == "lite.core.text.v1" { "lib/core/text" }
         moduleIdentity == "lite.core.io.v1" { "lib/core/io" }
         moduleIdentity == "lite.core.unicode.v1" { "lib/core/unicode" }
@@ -240,7 +241,7 @@ softBuiltinModuleForIdentity := fn(moduleIdentity: String): String {
 /** True when `moduleName` is a canonical core stdlib path with soft-builtin support. */
 isSoftBuiltinModule := fn(moduleName: String): Bool {
     moduleName == "lib/core/crypto" or moduleName == "lib/core/file" or moduleName == "lib/core/int" or
-    moduleName == "lib/core/text" or moduleName == "lib/core/io" or moduleName == "lib/core/unicode"
+    moduleName == "lib/core/list" or moduleName == "lib/core/text" or moduleName == "lib/core/io" or moduleName == "lib/core/unicode"
 };
 
 /** Returns the expected `(params, result)` ABI for a registered soft-builtin function, or empty fields when absent. */
@@ -283,6 +284,10 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
     } else if moduleName == "lib/core/int" {
         if name == "Int.toText" {
             return (params = "value=Int", result = ir.VALUE_KIND_STRING);
+        }
+    } else if moduleName == "lib/core/list" {
+        if name == "List.join" {
+            return (params = "values=List<String>|separator=String", result = ir.VALUE_KIND_STRING);
         }
     } else if moduleName == "lib/core/text" {
         if name == "String.skipSpaces" or name == "String.skipName" {
