@@ -35,7 +35,7 @@ checkRejectBoth := fn(name: String, src: String): Unit {
     test.check(name + " C reject status != 0", cCompRes.status =!= 0);
 };
 
-/* 1. User reproducer and multi-script variables, reassignments, functions, and mut params */
+/* 1. User reproducer and 8-script variables, reassignments, functions, and mut params */
 persianBasics := text.joinTexts([
     "io := import \"core/io\";",
     "پیام := \"hello lite\\nAé🚀\\n\";",
@@ -45,15 +45,19 @@ persianBasics := text.joinTexts([
     "لیست: mut List<Int> = [10];",
     "کتاب_ها := 5;",
     "متغیر۱ := 2;",
+    "größe := 2;",
     "élève := 3;",
     "学生数 := 4;",
-    "αβ := 6;",
+    "άθροισμα := 6;",
+    "счётчик := 7;",
+    "հաշվիչ := 8;",
+    "მრიცხველი := 9;",
     "جمع := fn(الف: Int, ب: Int): Int { الف + ب };",
     "افزودن := fn(مقصد: mut List<Int>, مقدار: Int): Unit { mut مقصد.pushBack(مقدار) };",
     "افزودن(mut لیست, جمع(کتاب_ها, متغیر۱));",
-    "io.outputLine(شمارش + لیست[0] + لیست[1], élève + 学生数 + αβ);"
+    "io.outputLine(شمارش + لیست[0] + لیست[1], größe + élève + 学生数 + άθροισμα + счётчик + հաշվիչ + მრიცხველი);"
 ], "\n");
-checkParity("persian-and-multiscript-basics", persianBasics, "hello lite\nAé🚀\n\n19 13\n");
+checkParity("eight-script-basics", persianBasics, "hello lite\nAé🚀\n\n19 39\n");
 
 /* 2. Records, methods, tuples, enums, tagged loops, and generics with Unicode names */
 persianTypesAndControl := text.joinTexts([
@@ -80,21 +84,19 @@ persianTypesAndControl := text.joinTexts([
 ], "\n");
 checkParity("persian-records-enums-generics-tags", persianTypesAndControl, "سارا:12 کتاب 3 done 3 علی\n");
 
-/* 3. Persian vs Arabic lookalikes remain distinct and never silently collide */
+/* 3. Latin vs Cyrillic lookalikes remain distinct and never silently collide */
 lookalikeDistinct := text.joinTexts([
     "io := import \"core/io\";",
-    "پیام := 1;",
-    "پيام := 2;",
-    "ک := 3;",
-    "ك := 4;",
-    "io.outputLine(پیام, پيام, ک, ك);"
+    "score := 1;",
+    "scorе := 2;",
+    "io.outputLine(score, scorе);"
 ], "\n");
-checkParity("persian-arabic-lookalikes-distinct", lookalikeDistinct, "1 2 3 4\n");
+checkParity("latin-cyrillic-lookalikes-distinct", lookalikeDistinct, "1 2\n");
 
-checkRejectBoth("persian-arabic-mismatch-undefined", text.joinTexts([
+checkRejectBoth("latin-cyrillic-mismatch-undefined", text.joinTexts([
     "io := import \"core/io\";",
-    "پیام := 1;",
-    "io.outputLine(پيام);"
+    "score := 1;",
+    "io.outputLine(scorе);"
 ], "\n"));
 
 /* 4. Rejections: emoji, ZWNJ (U+200C), ZWJ (U+200D), and leading digits */
@@ -130,10 +132,11 @@ softCheckSrc := text.joinTexts([
     "zwj := uni.fromCodePoints([8205]).text;",
     "supp := uni.fromCodePoints([134071]).text;",
     "io.outputLine(\"پ\".isNameStart(), \"ی\".isNameStart(), \"۱\".isNameStart(), \"۱\".isNameContinue(), \"🚀\".isNameStart(), \"🚀\".isNameContinue());",
-    "io.outputLine(\"é\".isNameStart(), \"学\".isNameStart(), supp.isNameStart(), supp.isNameContinue(), zwnj.isNameContinue(), zwj.isNameContinue());",
+    "io.outputLine(\"ß\".isNameStart(), \"é\".isNameStart(), \"学\".isNameStart(), \"ά\".isNameStart(), \"ё\".isNameStart(), \"հ\".isNameStart(), \"მ\".isNameStart());",
+    "io.outputLine(supp.isNameStart(), supp.isNameContinue(), zwnj.isNameContinue(), zwj.isNameContinue());",
     "io.outputLine((\"پیام۱\" + zwnj + \"x\").skipName(0), (supp + \"۱ \" + \"ب\").skipName(0), \"پیام پ\".wordAt(0, \"پیام\"), \"پیام۱ پ\".wordAt(0, \"پیام\"));"
 ], "\n");
-expectedSoftOut := "true true false true false false\ntrue true true true false false\n5 2 true false\n";
+expectedSoftOut := "true true false true false false\ntrue true true true true true true\ntrue true false false\n5 2 true false\n";
 
 softTsDef := compilerTest.compileCheckRunTs(root, tsComp, softCheckSrc, "soft-xid-def.lts");
 test.checkInt("soft-xid TS default status: " + softTsDef.stderr, 0, softTsDef.status);

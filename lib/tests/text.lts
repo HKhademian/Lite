@@ -13,8 +13,13 @@ test.checkBool("name start persian", true, "پ".isNameStart());
 test.checkBool("name start persian digit", false, "۱".isNameStart());
 test.checkBool("name continue persian digit", true, "۱".isNameContinue());
 test.checkBool("name start emoji", false, "🚀".isNameStart());
-test.checkBool("name start latin accent", true, "é".isNameStart());
-test.checkBool("name start cjk", true, "学".isNameStart());
+test.checkBool("name start german", true, "ß".isNameStart());
+test.checkBool("name start french", true, "é".isNameStart());
+test.checkBool("name start chinese", true, "学".isNameStart());
+test.checkBool("name start greek", true, "α".isNameStart());
+test.checkBool("name start russian", true, "с".isNameStart());
+test.checkBool("name start armenian", true, "հ".isNameStart());
+test.checkBool("name start georgian", true, "მ".isNameStart());
 
 test.checkInt("skip spaces", 3, " \t\nx".skipSpaces(0));
 test.checkInt("skip name", 4, "abc9 ".skipName(0));
