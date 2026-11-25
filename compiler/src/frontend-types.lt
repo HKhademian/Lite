@@ -3874,8 +3874,8 @@ pub withSelfAlias := fn(aliases: List<AliasDecl>, selfTarget: String, depth: Int
     out
 };
 
-/** Parses a `TypeName.op := fn[<TypeParams>](...): Ret` header (with `Self` receiver for instance ops or without `Self` for static type ops). */
-pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, typeName: String, opName: String, selfTarget: String, ownerKey: String, isGenericOwner: Bool): (next: Int, result: String, params: String, count: Int, genericType: String) {
+/** Parses a `TypeName.op := fn[<TypeParams>](...): Ret` header, reporting `hasSelfRecv` when param 0 explicitly has `Self` type. */
+pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, typeName: String, opName: String, selfTarget: String, ownerKey: String, isGenericOwner: Bool): (next: Int, result: String, params: String, count: Int, genericType: String, hasSelfRecv: Bool) {
     size := source.length();
     var cursor := syntax.skipTrivia(source, position, prefix);
     var genericType := "";
@@ -3893,6 +3893,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
     names: mut List<String> = [];
     encodedBuf: mut tb.TextBuilder;
     var count := 0;
+    var hasSelfRecv := false;
     if cursor < size and source.at(cursor) =!= ")" {
         loop true {
             if cursor >= size or not source.at(cursor).isNameStart() {
@@ -3916,8 +3917,8 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
             }
             typeStart := cursor;
             typed := parseFunctionType(source, typeStart, prefix, scopedAliases, genericType);
-            if count == 0 and typeOpOwnerKey(typed.kind) == ownerKey and not source.wordAt(typeStart, "Self") {
-                syntax.failAt(source, typeStart, prefix, "receiver parameter of " + typeName + "." + opName + " must have Self type");
+            if count == 0 and source.wordAt(typeStart, "Self") and typeOpOwnerKey(typed.kind) == ownerKey {
+                hasSelfRecv = true;
             }
             if access =!= "" and not isGenericCoreOwner(typeName) and not isGenericParamName(genericType, distinctBaseKind(typed.kind)) and not isMutContainerKind(typed.kind) {
                 syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
@@ -3952,7 +3953,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
         if recvKind.startsWithAt(0, "mut ") {
             syntax.failAt(source, position, prefix, "$getIndex receiver on " + typeName + " must be read-only Self (not mut Self)");
         }
-        if typeOpOwnerKey(recvKind) =!= ownerKey {
+        if not hasSelfRecv {
             syntax.failAt(source, position, prefix, "$getIndex receiver on " + typeName + " must have Self type");
         }
         if resultType.kind == ir.VALUE_KIND_UNIT {
@@ -3968,14 +3969,14 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
         if not recvKind.startsWithAt(0, "mut ") {
             syntax.failAt(source, position, prefix, "$setIndex receiver on " + typeName + " must be mut Self");
         }
-        if typeOpOwnerKey(recvKind.slice(4, recvKind.length())) =!= ownerKey {
+        if not hasSelfRecv {
             syntax.failAt(source, position, prefix, "$setIndex receiver on " + typeName + " must have Self type");
         }
         if resultType.kind =!= ir.VALUE_KIND_UNIT {
             syntax.failAt(source, position, prefix, "$setIndex on " + typeName + " must return Unit");
         }
     }
-    (next = resultType.next, result = resultType.kind, params = encoded, count = count, genericType = genericType)
+    (next = resultType.next, result = resultType.kind, params = encoded, count = count, genericType = genericType, hasSelfRecv = hasSelfRecv)
 };
 
 /** Returns the source name from one encoded `name=kind` function parameter entry. */

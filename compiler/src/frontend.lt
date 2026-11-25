@@ -1417,12 +1417,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 opAt := decl.intValue;
                 owner := resolveOwnedTypeOpTarget(source, opAt, prefix, aliases, moduleIdentity, tName);
                 if owner.ok {
-                    typeOpKey := "$typeop:" + owner.ownerKey + "." + oName;
-                    if findFunction(functions, typeOpKey) < 0 {
+                    instKey := "$typeop:" + owner.ownerKey + "." + oName;
+                    statKey := "$statictypeop:" + owner.ownerKey + "." + oName;
+                    if findFunction(functions, instKey) < 0 and findFunction(functions, statKey) < 0 {
                         headerPos := parseDigits(decl.textValue, 0, decl.textValue.length());
                         scopedSelf := types.withSelfAlias(aliases, owner.selfTarget, 0);
                         if canPreParseFunctionHeader(source, headerPos, prefix, scopedSelf, false) {
                             header := types.parseTypeOpHeader(source, headerPos, prefix, aliases, tName, oName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
+                            typeOpKey := (if header.hasSelfRecv { "$typeop:" } else { "$statictypeop:" }) + owner.ownerKey + "." + oName;
                             afterHdr := skipTrivia(source, header.next, prefix);
                             if afterHdr < size and source.at(afterHdr) == ";" {
                                 hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, qualName, header.params, header.result);
@@ -3555,14 +3557,17 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if types.isEnumKind(owner.ownerKind) and opName == "value" and types.enumBackingKind(owner.ownerKind) =!= "" {
                         failAt(source, opStart, prefix, "cannot declare operation " + qualName + ": collides with enum backing value");
                     }
-                    typeOpKey := "$typeop:" + owner.ownerKey + "." + opName;
-                    existingOpIdx := findFunction(functions, typeOpKey);
+                    instKey := "$typeop:" + owner.ownerKey + "." + opName;
+                    statKey := "$statictypeop:" + owner.ownerKey + "." + opName;
+                    existingInst := findFunction(functions, instKey);
+                    existingOpIdx := if existingInst >= 0 { existingInst } else { findFunction(functions, statKey) };
                     if existingOpIdx >= 0 and functions[existingOpIdx].declAt =!= nameStart {
                         failAt(source, nameStart, prefix, "duplicate type operation " + qualName + " (overloading is not supported)");
                     }
                     wasPreRegisteredOp := existingOpIdx >= 0 and functions[existingOpIdx].declAt == nameStart;
                     position = skipTrivia(source, afterOpDecl + 2, prefix);
                     header := types.parseTypeOpHeader(source, position, prefix, aliases, name, opName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
+                    typeOpKey := (if header.hasSelfRecv { "$typeop:" } else { "$statictypeop:" }) + owner.ownerKey + "." + opName;
                     position = skipTrivia(source, header.next, prefix);
                     rejectMisplacedTag(source, position, prefix, "unexpected block tag in function header");
                     if position < size and source.at(position) == ";" {

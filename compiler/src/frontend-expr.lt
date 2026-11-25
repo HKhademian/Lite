@@ -1675,7 +1675,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             }
         }
         if typeOwnerKey =!= "" {
-            opIdx := sym.findFunction(functions, "$typeop:" + typeOwnerKey + "." + memberName);
+            opIdx := findTypeOp(functions, typeOwnerKey, memberName);
             if opIdx >= 0 {
                 opRes := resolveTypeQualifiedOp(
                 source, memberStart, prefix, opIdx, memberName, typeOwnerKey,
@@ -8235,12 +8235,16 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
     ctx.intParsed("", 0, false, openParen)
 };
 
-/** True when a type-attached operation is static/type-level (no matching `Self` receiver first parameter). */
-isStaticTypeOp := fn(opInfo: FunctionInfo, params: List<String>, ownerKey: String): Bool {
-    if opInfo.count <= 0 { return true; }
-    raw0 := types.paramKindOf(params[opInfo.first]);
-    base0 := if raw0.startsWithAt(0, "mut ") { raw0.slice(4, raw0.length()) } else { raw0 };
-    types.typeOpOwnerKey(base0) =!= ownerKey
+/** Finds an instance or static type-attached operation registered for `ownerKey.opName`, or -1. */
+findTypeOp := fn(functions: List<FunctionInfo>, ownerKey: String, opName: String): Int {
+    inst := sym.findFunction(functions, "$typeop:" + ownerKey + "." + opName);
+    if inst >= 0 { return inst; }
+    sym.findFunction(functions, "$statictypeop:" + ownerKey + "." + opName)
+};
+
+/** True when a type-attached operation is static/type-level (declared without an explicit `Self` receiver first parameter). */
+isStaticTypeOp := fn(opInfo: FunctionInfo): Bool {
+    opInfo.name.startsWithAt(0, "$statictypeop:")
 };
 
 /** Validates a type-qualified `Type.op` or `Alias.op` reference and extracts pre-bound generic arguments. */
@@ -8254,7 +8258,7 @@ functions: List<FunctionInfo>, params: List<String>, inferMode: Bool
     targetKind := if resolvedType =!= "" { resolvedType } else { aliasTplKind };
     targetParamsCsv := if resolvedType =!= "" { "" } else { aliasParamsCsv };
     if targetKind == "" { return (ok = true, initBindings = ""); }
-    isStatic := isStaticTypeOp(opInfo, params, typeOwnerKey);
+    isStatic := isStaticTypeOp(opInfo);
     if opInfo.runtime.startsWithAt(0, "$gen:") {
         tpl := generics.getTemplate(generics.findTemplate(opInfo.runtime.slice(5, opInfo.runtime.length())));
         rawB: mut Map<String, String>;
@@ -8319,8 +8323,7 @@ functions: List<FunctionInfo>, params: List<String>, inferMode: Bool
 /** Parses a type-attached dot call `receiver.op(args...)`, validating explicit call-site `mut` lease, `mut Self` permission, unifying generic receivers, and forwarding receiver as argument 0. */
 parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openParen: Int, receiver: Parsed, recvLocalIdx: Int, opIdx: Int, opLabel: String, explicitMut: Bool, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     info := functions[opIdx];
-    dotOwnerKey := types.typeOpOwnerKey(receiver.kind);
-    if isStaticTypeOp(info, params, dotOwnerKey) {
+    if isStaticTypeOp(info) {
         syntax.failAt(source, labelStart, prefix, "operation " + opLabel + " is a type-level operation with no Self receiver; call it on the type instead");
     }
     recvExpected := types.paramKindOf(params[info.first]);
@@ -8443,7 +8446,7 @@ parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mN
     labelEnd := source.skipName(labelStart);
     label := source.slice(labelStart, labelEnd);
     ownerKey := types.typeOpOwnerKey(entry.kind);
-    opIdx := if ownerKey =!= "" { sym.findFunction(functions, "$typeop:" + ownerKey + "." + label) } else { -1 };
+    opIdx := if ownerKey =!= "" { findTypeOp(functions, ownerKey, label) } else { -1 };
     if opIdx < 0 {
         syntax.failAt(source, labelStart, prefix, "type " + types.displayKind(entry.kind) + " has no operation " + label);
     }
@@ -8617,7 +8620,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                     }
                                 }
                                 if not handledModMember {
-                                    modOpIdx := if modTypeOwnerKey =!= "" { sym.findFunction(functions, "$typeop:" + modTypeOwnerKey + "." + caseName) } else { -1 };
+                                    modOpIdx := if modTypeOwnerKey =!= "" { findTypeOp(functions, modTypeOwnerKey, caseName) } else { -1 };
                                     if modOpIdx >= 0 {
                                         modOpRes := resolveTypeQualifiedOp(
                                         source, caseStart, prefix, modOpIdx, caseName, modTypeOwnerKey,
@@ -8742,7 +8745,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                 } else {
                     ownerKey := types.typeOpOwnerKey(left.kind);
-                    opIdx := if ownerKey =!= "" { sym.findFunction(functions, "$typeop:" + ownerKey + "." + label) } else { -1 };
+                    opIdx := if ownerKey =!= "" { findTypeOp(functions, ownerKey, label) } else { -1 };
                     afterOpLabel := syntax.skipTrivia(source, labelEnd, prefix);
                     if opIdx >= 0 {
                         if afterOpLabel >= sourceLen or source.at(afterOpLabel) =!= "(" {

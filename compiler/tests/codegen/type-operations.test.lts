@@ -256,10 +256,24 @@ expectRejectBoth("static-dollar-hook-rejected",
 "P.$getIndex := fn(a: Int, idx: Int): Int { a + idx };\n",
 "$getIndex receiver on P must have Self type");
 
-expectRejectBoth("non-self-receiver",
+expectRejectBoth("concrete-owner-dollar-hook-rejected",
 "P := record { hp: Int; }\n" +
-"P.get := fn(p: P): Int { p.hp };\n",
-"must have Self type");
+"P.$getIndex := fn(p: P, idx: Int): Int { p.hp + idx };\n",
+"$getIndex receiver on P must have Self type");
+
+expectRejectBoth("non-self-concrete-first-param-is-static",
+"P := record { hp: Int; }\n" +
+"P.createFrom := fn(v: P, bonus: Int): Self { Self { hp = v.hp + bonus } };\n" +
+"p := P { hp = 10 };\n" +
+"q := p.createFrom(5);\n",
+"is a type-level operation with no Self receiver");
+
+expectRejectBoth("generic-concrete-first-param-is-static",
+"Box := record<T: Type> { val: T; }\n" +
+"Box.createFrom := fn<T: Type>(v: Box<T>, extra: Int): Self<T> { _e := extra; v };\n" +
+"b := Box<Int> { val = 7 };\n" +
+"q := b.createFrom(1);\n",
+"is a type-level operation with no Self receiver");
 
 expectRejectBoth("alias-attachment",
 "P := record { hp: Int; }\n" +
@@ -402,6 +416,11 @@ staticLocalSrc :=
 "P := record { hp: Int; }\n" +
 "P.zero := fn(): Self { Self { hp = 0 } };\n" +
 "P.from := fn(hp: Int): Self { Self { hp = hp } };\n" +
+"P.createFrom := fn(v: P, bonus: Int): Self { Self { hp = v.hp + bonus } };\n" +
+"P.cloneSelf := fn(v: Self): Self { Self { hp = v.hp } };\n" +
+"Box := record<T: Type> { val: T; }\n" +
+"IntBox := alias Box<Int>;\n" +
+"Box.createFrom := fn<T: Type>(v: Box<T>, extra: T): Self<T> { Self<T> { val = extra } };\n" +
 "Vec := record<T: Type, N: Int> { data: [T; N]; }\n" +
 "Mat := record<T: Type, R: Int, C: Int> { rows: [Vec<T, C>; R]; }\n" +
 "Mat.id := fn<N: Int>(): Self<Float, N, N> {\n" +
@@ -412,10 +431,13 @@ staticLocalSrc :=
 "p0 := P.zero();\n" +
 "ctor := P.from;\n" +
 "p1 := ctor(42);\n" +
+"p2 := P.createFrom(p1, 8);\n" +
+"p3 := p2.cloneSelf();\n" +
+"bx := IntBox.createFrom(Box<Int> { val = 1 }, 99);\n" +
 "m3 := FMat3.id();\n" +
 "m2 := Mat<Float, 2, 2>.id();\n" +
 "m4 := Mat.id<4>();\n" +
-"io.outputLine(p0.hp, p1.hp, m3.rows.length(), m2.rows.length(), m4.rows.length());\n";
-runBoth("static-type-ops-local", staticLocalSrc, "0 42 3 2 4\n");
+"io.outputLine(p0.hp, p1.hp, p2.hp, p3.hp, bx.val, m3.rows.length(), m2.rows.length(), m4.rows.length());\n";
+runBoth("static-type-ops-local", staticLocalSrc, "0 42 50 50 99 3 2 4\n");
 
 test.done("type-operations");
