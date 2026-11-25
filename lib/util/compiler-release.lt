@@ -8,7 +8,6 @@ project := import "util/project";
 text := import "core/text";
 list := import "core/list";
 crypto := import "core/crypto";
-unicode := import "core/unicode";
 json := import "data/json";
 streams := import "util/streams";
 cases := import "util/cases";
@@ -70,8 +69,8 @@ runCheckedBytesToFile := fn(command: String, args: List<String>, cwd: String, st
     res := proc.runBytes(command, args, cwd, emptyEnv, 120000, stdinBytes, outFile, errFile);
     if res.error =!= "" { return (ok = false, error = res.error); }
     if res.status =!= 0 {
-        outText := unicode.utf8DecodeLossy(fs.readBytes(outFile));
-        errText := unicode.utf8DecodeLossy(fs.readBytes(errFile));
+        outText := String.fromUtf8Lossy(fs.readBytes(outFile));
+        errText := String.fromUtf8Lossy(fs.readBytes(errFile));
         return (ok = false, error = command + " " + args.join(" ") + " failed (" + res.status.toText() + "):\n" + outText + errText);
     }
     (ok = true, error = "")

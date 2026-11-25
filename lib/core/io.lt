@@ -1,7 +1,5 @@
 /* Provisional core host signatures and target-independent synchronous streams. This module adds no host authority by itself. */
 
-unicode := import "core/unicode";
-
 /** Opaque nominal handle to a synchronous byte/text input source (`"stdin"`, `"buffer"`, `"file"`, or `"error"`). */
 pub Reader := distinct (kind: String, handle: Int);
 
@@ -61,7 +59,7 @@ pub Reader.fromBytes := fn(bytes: List<Int>): Self;
 
 /** Creates an in-memory `Reader` backed by UTF-8 bytes of `text`. */
 pub Reader.fromText := fn(text: String): Self {
-    Reader.fromBytes(unicode.utf8Encode(text))
+    Reader.fromBytes(text.utf8Encode())
 };
 
 /** Creates an in-memory `Writer` accumulating written bytes. */
@@ -90,7 +88,7 @@ pub Reader.read := fn(reader: Self, maxBytes: Int): List<Int>;
 
 /** Decodes accumulated line bytes as strict UTF-8 into a single `readLine` result record. */
 decodeLineBytes := fn(lineBytes: List<Int>): (ok: Bool, line: String, eof: Bool, error: String) {
-    decoded := unicode.utf8DecodeStrict(lineBytes);
+    decoded := String.fromUtf8Strict(lineBytes);
     if not decoded.ok {
         return (ok = false, line = "", eof = false, error = decoded.error);
     }
@@ -121,7 +119,7 @@ pub Reader.readAllText := fn(reader: Self): (ok: Bool, text: String, error: Stri
     if not reader.ok() {
         return (ok = false, text = "", error = reader.error());
     }
-    unicode.utf8DecodeStrict(bytes)
+    String.fromUtf8Strict(bytes)
 };
 
 /** Reads one line synchronously from `reader`, stripping trailing `\n` or `\r\n`. */
@@ -166,7 +164,7 @@ pub Writer.write := fn(writer: Self, bytes: List<Int>): (ok: Bool, written: Int,
 
 /** Writes UTF-8 `text` synchronously to `writer`. */
 pub Writer.writeText := fn(writer: Self, text: String): (ok: Bool, error: String) {
-    res := writer.write(unicode.utf8Encode(text));
+    res := writer.write(text.utf8Encode());
     (ok = res.ok, error = res.error)
 };
 

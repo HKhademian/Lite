@@ -1,10 +1,9 @@
 /* Unicode scripts & UTF-8 — real Unicode identifiers across eight approved language scripts. */
 
 io := import "core/io";
-unicode := import "core/unicode";
 
 show := fn(lang: String, sample: String): Unit {
-    utf8Bytes := unicode.utf8Encode(sample).length();
+    utf8Bytes := sample.utf8Encode().length();
     io.outputLine(lang, "|", sample, "| chars:", sample.length(), "| utf8:", utf8Bytes, "| first:", sample.at(0));
 };
 

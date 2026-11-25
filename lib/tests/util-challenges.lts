@@ -2,7 +2,6 @@ challenges := import "util/challenges";
 fs := import "core/file";
 path := import "core/path";
 project := import "util/project";
-unicode := import "core/unicode";
 test := import "core/test";
 
 test.checkText("sorted counts json", "{\"a\":3,\"b\":2,\"c\":1}", challenges.formatSortedCountsJson(["b", "a", "c", "a", "b", "a"]));
@@ -34,7 +33,7 @@ repoRoot := project.findRepoRoot();
 test.checkBool("repo root found", true, repoRoot =!= "");
 entJson := fs.readText(path.join(repoRoot, "benchmark/challenges/tools/html-entities.json")).text;
 test.checkText("html entities match sample", "<x> & 🙂 € ¬it; &unknown;", challenges.unescapeChallengeHtml(entJson, "&lt;x&gt; &amp; &#x1F642; &#128; &notit; &unknown;"));
-rep := unicode.fromCodePoint(65533).text;
+rep := String.fromCodePoint(65533).text;
 test.checkText("html numeric edge", rep + " " + rep + " " + rep + " ", challenges.unescapeChallengeHtml(entJson, "&#0; &#xD800; &#x110000; &#11;"));
 
 tmpRes := fs.makeTempDir("lite-challenge-bench-test-");

@@ -6,7 +6,6 @@ list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-unicode := import "core/unicode";
 pool := import "external/pool";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
@@ -100,7 +99,7 @@ loop fi < fixCount {
     test.check("valid fixture filename: " + fileName, pFn.ok);
     fixJson := fs.readText(absFix).text;
     srcField := json.findField(fixJson, 0, "source");
-    srcText := unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, srcField.valuePos, compDir));
+    srcText := String.fromUtf8Strict(streams.readStreamBytes(fixJson, srcField.valuePos, compDir));
     test.check("fixture UTF-8 source: " + fileName, srcText.ok);
 
     mut fixNames.pushBack(fileName);
@@ -123,8 +122,8 @@ loop fi < fixCount {
     outField := json.findField(fixJson, c0, "stdout");
     errField := json.findField(fixJson, c0, "stderr");
     expExit := json.readFieldInt(fixJson, c0, "exitCode").value;
-    expOut := if outField.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, outField.valuePos, compDir)).text } else { "" };
-    expErr := if errField.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, errField.valuePos, compDir)).text } else { "" };
+    expOut := if outField.found { String.fromUtf8Strict(streams.readStreamBytes(fixJson, outField.valuePos, compDir)).text } else { "" };
+    expErr := if errField.found { String.fromUtf8Strict(streams.readStreamBytes(fixJson, errField.valuePos, compDir)).text } else { "" };
     inPath := path.join(workDir, "in-" + fi.toText() + ".bin");
     inBytes := if inField.found { streams.readStreamBytes(fixJson, inField.valuePos, compDir) } else { emptyBytes };
     _wi := fs.writeBytes(inPath, inBytes);
@@ -182,8 +181,8 @@ loop ri < fixCount {
         outF := json.findField(fixJson, cOff0, "stdout");
         errF := json.findField(fixJson, cOff0, "stderr");
         expEx := json.readFieldInt(fixJson, cOff0, "exitCode").value;
-        expOut := if outF.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, outF.valuePos, compDir)).text } else { "" };
-        expErr := if errF.found { unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, errF.valuePos, compDir)).text } else { "" };
+        expOut := if outF.found { String.fromUtf8Strict(streams.readStreamBytes(fixJson, outF.valuePos, compDir)).text } else { "" };
+        expErr := if errF.found { String.fromUtf8Strict(streams.readStreamBytes(fixJson, errF.valuePos, compDir)).text } else { "" };
         test.checkInt("c reject exit " + fixNames[ri], expEx, st);
         test.checkText("c reject out " + fixNames[ri], expOut, out);
         test.checkText("c reject err " + fixNames[ri], expErr, err);

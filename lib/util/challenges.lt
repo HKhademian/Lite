@@ -6,7 +6,6 @@ path := import "core/path";
 text := import "core/text";
 list := import "core/list";
 crypto := import "core/crypto";
-unicode := import "core/unicode";
 collections := import "util/collections";
 json := import "data/json";
 
@@ -351,8 +350,8 @@ pub compareTextLex := fn(a: String, b: String): Int {
         ca := a.at(i);
         cb := b.at(i);
         if ca =!= cb {
-            pa := unicode.toCodePoints(ca)[0];
-            pb := unicode.toCodePoints(cb)[0];
+            pa := ca.toCodePoints()[0];
+            pb := cb.toCodePoints()[0];
             return if pa < pb { -1 } else { 1 };
         }
         i = i + 1;
@@ -1379,17 +1378,17 @@ decodeNumericHtmlEntity := fn(n: Int): String {
     144, 8216, 8217, 8220, 8221, 8226, 8211, 8212, 732, 8482, 353, 8250, 339, 157, 382, 376
     ];
     if n == 0 or n > 1114111 or (n >= 55296 and n <= 57343) {
-        return unicode.fromCodePoint(65533).text;
+        return String.fromCodePoint(65533).text;
     }
     if n >= 128 and n <= 159 {
-        return unicode.fromCodePoint(legacy[n - 128]).text;
+        return String.fromCodePoint(legacy[n - 128]).text;
     }
     low16 := n % 65536;
     if (n >= 1 and n <= 8) or n == 11 or (n >= 14 and n <= 31) or n == 127 or (n >= 64976 and n <= 65007) or low16 >= 65534 {
         return "";
     }
-    cp := unicode.fromCodePoint(n);
-    if cp.ok { cp.text } else { unicode.fromCodePoint(65533).text }
+    cp := String.fromCodePoint(n);
+    if cp.ok { cp.text } else { String.fromCodePoint(65533).text }
 };
 
 pub sortIndexByKeys := fn(keys: List<String>): List<Int> {
@@ -1480,7 +1479,7 @@ pub unescapeHtmlWithTable := fn(sortedKeys: List<String>, sortedVals: List<Strin
         } else {
             var end := amp + 1;
             maxEnd := if amp + 1 + 33 < size { amp + 1 + 33 } else { size };
-            entityStops := "\t\n <&#" + unicode.fromCodePoint(12).text;
+            entityStops := "\t\n <&#" + String.fromCodePoint(12).text;
             loop end < maxEnd {
                 ch := value.at(end);
                 if entityStops.indexOf(ch, 0) >= 0 { break; }
@@ -1630,12 +1629,12 @@ encodeUriComponentStrict := fn(seg: String): String {
     unreserved := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~";
     hex := "0123456789ABCDEF";
     out: mut List<String> = [];
-    bytes := unicode.utf8Encode(seg);
+    bytes := seg.utf8Encode();
     var i := 0;
     loop i < bytes.length() {
         b := bytes[i];
         if b < 128 {
-            ch := unicode.fromCodePoint(b).text;
+            ch := String.fromCodePoint(b).text;
             if unreserved.indexOf(ch, 0) >= 0 {
                 mut out.pushBack(ch);
             } else {
@@ -1933,7 +1932,7 @@ pub buildBenchmarkEuler := fn(challengesRootDir: String, entitiesJsonText: Strin
                         _wa := fs.writeText(path.join(itemDir, "tests/public/answer.txt"), ans + "\n");
 
                         refUrl := "https://github.com/nayuki/Project-Euler-solutions/blob/master/python/p" + padded + ".py";
-                        ansSha := crypto.sha256Bytes(unicode.utf8Encode(ans));
+                        ansSha := crypto.sha256Bytes(ans.utf8Encode());
                         metaJson := "{\n"
                         + "  \"id\": " + json.quoteString(cid) + ",\n"
                         + "  \"source\": \"project-euler\",\n"

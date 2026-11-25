@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "unicode-and-format.lts",
-    "hash": "sha256:7bd59fb55b0b23543b92e48ae34f2bf151c920557bf06b41cde47d2f9d076b2b"
+    "hash": "sha256:fa8db92b357f2c73572ba07c1b1b3220a6c60ccf83c198403acd1c5e82497fec"
   },
   "features": [
     "feature.core.text.unicode-and-format"

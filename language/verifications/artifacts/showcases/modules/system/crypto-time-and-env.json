@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/modules/system/crypto-time-and-env.lts",
-    "hash": "sha256:d3015ef4ea5117ec363d2918bc889da22c53a94c14785984512864ec333019bf"
+    "hash": "sha256:87d667acc3e036555930baec9ac0a2137078ac7cc606ec10bad4f869ce9744c0"
   },
   "features": [
     "feature.core.crypto.digests-and-encodings",

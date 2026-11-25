@@ -78,11 +78,10 @@
           "file": "language/showcases/foundations/strings/strings-and-unicode.lts",
           "helperFiles": [],
           "manifest": "language/verifications/artifacts/showcases/foundations/strings/strings-and-unicode.json",
-          "summary": "Applies string escapes, core/text trimming and code-point indexing, and core/unicode scalar and strict UTF-8 round-trips.",
+          "summary": "Applies string escapes, core/text trimming and code-point indexing, and scalar and strict UTF-8 round-trips.",
           "teaches": [
             "String",
-            "core/text",
-            "core/unicode"
+            "core/text"
           ],
           "features": [
             "feature.text.strings.concatenation",

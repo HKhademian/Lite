@@ -7,7 +7,6 @@ project := import "util/project";
 crypto := import "core/crypto";
 text := import "core/text";
 time := import "core/time";
-unicode := import "core/unicode";
 list := import "core/list";
 path := import "core/path";
 json := import "data/json";
@@ -693,7 +692,7 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
     }
     (mut parts).pushBack("[" + depParts.join(",") + "]");
     mut parts.pushBack(proc.runtimeVersion());
-    (ok = true, hex = crypto.sha256Bytes(unicode.utf8Encode(parts.join("\n"))), error = "")
+    (ok = true, hex = crypto.sha256Bytes(parts.join("\n").utf8Encode()), error = "")
 };
 
 loadVerifyCache := fn(cacheFile: String, enabled: Bool): Set<String> {
@@ -1088,7 +1087,7 @@ formatStreamJson := fn(srcText: String, streamPos: Int, baseDir: String, indent:
     if streamPos >= 0 and json.findField(srcText, streamPos, "bytes").found {
         return "{\n" + indent + "  \"bytes\": " + formatBytesArrayJson(actualBytes, indent + "  ") + ",\n" + indent + "  \"hash\": " + json.quoteString(h) + "\n" + indent + "}";
     }
-    decoded := unicode.utf8DecodeLossy(actualBytes);
+    decoded := String.fromUtf8Lossy(actualBytes);
     "{\n" + indent + "  \"text\": " + json.quoteString(decoded) + ",\n" + indent + "  \"hash\": " + json.quoteString(h) + "\n" + indent + "}"
 };
 
@@ -1174,7 +1173,7 @@ formatUpdatedManifestJson := fn(srcText: String, sourceHash: String, scenariosJs
 };
 
 describeBytes := fn(bytes: List<Int>): String {
-    json.quoteString(unicode.utf8DecodeLossy(bytes))
+    json.quoteString(String.fromUtf8Lossy(bytes))
 };
 
 compileManifestArtifactOpt := fn(
@@ -1189,7 +1188,7 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String, optLevel: Int
     emptyEnv: List<String> = [];
     compArgs: List<String> = [compilerPath, "--stdin", "--name", displayName, "--root", absRootPath, "-O" + lvText];
     startNs := time.monotonicNs();
-    compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outTsPath, errPath);
+    compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, sourceText.utf8Encode(), outTsPath, errPath);
     elapsedNs := time.monotonicNs() - startNs;
     if compiled.error =!= "" {
         return (ok = false, artifactPath = "", compileNs = elapsedNs, emittedBytes = 0, error = compiled.error);
@@ -1266,7 +1265,7 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String
     errCPath := path.join(workDir, "compile-c.stderr");
     emptyEnv: List<String> = [];
     compArgs: List<String> = [cCompilerPath, "--stdin", "--name", displayName, "--root", absRootPath, "-O1"];
-    compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outCPath, errCPath);
+    compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, sourceText.utf8Encode(), outCPath, errCPath);
     if compiled.error =!= "" {
         return (ok = false, binaryPath = "", error = compiled.error);
     }
@@ -1316,7 +1315,7 @@ sourceText: String, hasSourceFile: Bool, sourcePath: String
     errPath := path.join(workDir, "compile.stderr");
     emptyEnv: List<String> = [];
     compArgs: List<String> = [compilerPath, "--stdin", "--name", displayName, "--root", absRootPath];
-    compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, unicode.utf8Encode(sourceText), outTsPath, errPath);
+    compiled := proc.runBytes(project.nodeExecPath(), compArgs, rootDir, emptyEnv, 0, sourceText.utf8Encode(), outTsPath, errPath);
     if compiled.error =!= "" {
         return (ok = false, artifactPath = "", error = compiled.error);
     }
@@ -1560,7 +1559,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                         streams.readStreamBytes(mText, sourceField.valuePos, mDir)
                     };
                     sourceHash := "sha256:" + crypto.sha256Bytes(sourceBytes);
-                    fullSource := unicode.utf8DecodeLossy(sourceBytes) + (if meta.hasAppend { "\n" + meta.appendText } else { "" });
+                    fullSource := String.fromUtf8Lossy(sourceBytes) + (if meta.hasAppend { "\n" + meta.appendText } else { "" });
 
                     if not opts.update and meta.sourceHashField =!= sourceHash {
                         io.outputLine("FAIL " + mId + ": source hash changed; run ./bin/lite verify --update");

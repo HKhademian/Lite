@@ -4,14 +4,13 @@
 declaration carries a `/** ... */` doc comment and is published automatically to
 the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
-## Core Modules (`lib/core/` — 16 modules)
+## Core Modules (`lib/core/` — 15 modules)
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
 | `core/io` | Browser + CLI | Host-backed console I/O (`output`, `outputLine`, `errorLine`, `input*`, `exit`) plus nominal `Reader`/`Writer` stream types (`Reader.stdin`/`fromBytes`/`fromText`, `Writer.stdout`/`stderr`/`buffer`) |
 | `core/int` | Browser + CLI | `Int.*` operations (`toText`, `checkedAdd`/`Sub`/`Mul`/`Div`/`Rem`/`Neg`, `floorDiv`/`floorMod`) and Int64 bounds (`intMin`, `intMax`) |
-| `core/text` | Browser + CLI | `String.*` hard/soft/pure operations (`length`, `isEmpty`, `at`, `slice`, `trim`, `startsWithAt`, `indexOf`, `toInt`, `split`, `splitLines`, `replaceAll`, `padLeft`, `padRight`, `lessOrEqual`) |
-| `core/unicode` | Browser + CLI | UTF-8 / UTF-16 scalar encoding, decoding, and validation helpers |
+| `core/text` | Browser + CLI | `String.*` hard/soft/pure operations (`length`, `isEmpty`, `at`, `slice`, `toCodePoints`, `fromCodePoints`, `fromCodePoint`, `codePointAt`, `utf16Length`, `utf16Encode`, `fromUtf16Strict`, `utf8Encode`, `fromUtf8Strict`, `fromUtf8Lossy`, `isValidUtf8`, `trim`, `startsWith`, `startsWithAt`, `endsWith`, `contains`, `indexOf`, `toInt`, `toLowerAscii`, `toUpperAscii`, `split`, `splitLines`, `replaceAll`, `padLeft`, `padRight`, `lessOrEqual`) and Unicode scalar/XID helpers (`isValidScalar`, `isXidStart`, `isXidContinue`) |
 | `core/list` | Browser + CLI | Generic `List.*` operations & index hooks (`pushBack`, `popBack`, `pushFront`, `popFront`, `length`, `isEmpty`, `map`, `filter`, `fold`, `any`, `all`, `find`, `findIndex`, `indexOf`, `contains`, `dedup`, `sort`, `sortBy`, `sortTexts`, `join`, `$getIndex`/`$setIndex`) |
 | `core/array` | Browser + CLI | Fixed-length `Array<T, N>` (`[T; N]` sugar) static & collection operations & index hooks (`filled`, `zeroed`, `fill`, `length`, `isEmpty`, `toList`, `join`, `map`, `filter`, `fold`, `any`, `all`, `find`, `findIndex`, `indexOf`, `contains`, `dedup`, `sort`, `sortBy`, `sortTexts`, `$getIndex`/`$setIndex`) |
 | `core/map` | Browser + CLI | `Map.*` operations & index hooks (`get`, `getOr`, `has`, `set`, `remove`, `clear`, `keys`, `values`, `size`, `isEmpty`, `$getIndex`/`$setIndex`) |

@@ -6,7 +6,6 @@ path := import "core/path";
 text := import "core/text";
 list := import "core/list";
 time := import "core/time";
-unicode := import "core/unicode";
 collections := import "util/collections";
 json := import "data/json";
 challenges := import "util/challenges";
@@ -48,7 +47,7 @@ replaceSpacesCollapse := fn(raw: String): String {
     size := raw.length();
     loop i < size {
         ch := raw.at(i);
-        isWs := ch == " " or ch == "\n" or ch == "\r" or ch == "\t" or ch == unicode.fromCodePoint(12).text or ch == unicode.fromCodePoint(11).text;
+        isWs := ch == " " or ch == "\n" or ch == "\r" or ch == "\t" or ch == String.fromCodePoint(12).text or ch == String.fromCodePoint(11).text;
         if isWs {
             if not inSpace {
                 mut out.pushBack(" ");

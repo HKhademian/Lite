@@ -4,7 +4,6 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-unicode := import "core/unicode";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -27,7 +26,7 @@ runComp := fn(compPath: String, extraArgs: List<String>, src: String, name: Stri
     argv: mut List<String> = [compPath, "--stdin", "--name", name];
     loop extraArgs as a { mut argv.pushBack(a); }
     emptyEnv: List<String> = [];
-    res := proc.runBytes(proc.execPath(), argv, root, emptyEnv, 30000, unicode.utf8Encode(src), outF, errF);
+    res := proc.runBytes(proc.execPath(), argv, root, emptyEnv, 30000, src.utf8Encode(), outF, errF);
     outTxt := fs.readText(outF).text;
     errTxt := fs.readText(errF).text;
     _rm := fs.remove(tmp.path);

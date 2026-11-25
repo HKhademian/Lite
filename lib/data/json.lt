@@ -1,7 +1,6 @@
 /** Pure RFC-8259 JSON scanner, typed reader, and O(N) string serializer (`data/json`) across TS and C11. */
 
 text := import "core/text";
-unicode := import "core/unicode";
 
 /** Top-level value classification at a JSON token offset. */
 pub JsonKind := enum {
@@ -145,11 +144,11 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
                 pos += 2;
                 runStart = pos;
             } else if esc == "b" {
-                if decode { mut parts.pushBack(unicode.fromCodePoint(8).text); }
+                if decode { mut parts.pushBack(String.fromCodePoint(8).text); }
                 pos += 2;
                 runStart = pos;
             } else if esc == "f" {
-                if decode { mut parts.pushBack(unicode.fromCodePoint(12).text); }
+                if decode { mut parts.pushBack(String.fromCodePoint(12).text); }
                 pos += 2;
                 runStart = pos;
             } else if esc == "u" {
@@ -167,7 +166,7 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
                         secondHex := parseHex4(source, pos + 8);
                         if secondHex.ok and secondHex.value >= 56320 and secondHex.value <= 57343 {
                             pair: List<Int> = [code, secondHex.value];
-                            pairRes := unicode.utf16DecodeStrict(pair);
+                            pairRes := String.fromUtf16Strict(pair);
                             if pairRes.ok {
                                 mut parts.pushBack(pairRes.text);
                                 consumed = 12;
@@ -180,7 +179,7 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
                     } else if code >= 55296 and code <= 57343 {
                         mut parts.pushBack(source.slice(pos, pos + 6));
                     } else {
-                        cpRes := unicode.fromCodePoint(code);
+                        cpRes := String.fromCodePoint(code);
                         if cpRes.ok {
                             mut parts.pushBack(cpRes.text);
                         } else {
@@ -548,7 +547,7 @@ pub objectKeys := fn(source: String, objectStart: Int): List<String> {
 
 /** Encodes `value` as a quoted RFC-8259 JSON string literal in O(N) time. */
 pub quoteString := fn(value: String): String {
-    cps := unicode.toCodePoints(value);
+    cps := value.toCodePoints();
     size := cps.length();
     parts: mut List<String> = ["\""];
     var runStart := 0;

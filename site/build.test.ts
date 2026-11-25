@@ -131,7 +131,6 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'modules/core/test.html',
     'modules/core/text.html',
     'modules/core/time.html',
-    'modules/core/unicode.html',
     'modules/extra/audio.html',
     'modules/extra/board.html',
     'modules/extra/canvas.html',
@@ -160,8 +159,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const coreListHtml = readFileSync(join(out, 'modules/core/list.html'), 'utf8');
   assert(coreListHtml.includes('Used Across Lite Academy'));
   assert(coreListHtml.includes('data-drawer-toggle="sidebar"'));
-  const coreUnicodeHtml = readFileSync(join(out, 'modules/core/unicode.html'), 'utf8');
-  assert(coreUnicodeHtml.includes('utf8-roundtrip-count'));
+  assert(coreTextHtml.includes('utf8-roundtrip-count'));
 
   const toolsHtml = readFileSync(join(out, 'tools/index.html'), 'utf8');
   assert(toolsHtml.includes('./bin/lite run'));
@@ -2208,7 +2206,7 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/named-calls-and-recursion' && e.to === 'lite://module/core/text' && e.kind === 'lite-uri' && e.fragment === 'String.toInt'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/arrays-and-lists' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/orb-catcher-game' && e.to === 'lite://play/play-paddle-pong' && e.kind === 'lite-uri'));
-  assert(builtGraph.edges.some(e => e.from === 'lite://gym/utf8-roundtrip-count' && e.to === 'lite://module/core/unicode' && e.kind === 'lite-uri' && e.fragment === 'utf8Encode'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://gym/utf8-roundtrip-count' && e.to === 'lite://module/core/text' && e.kind === 'lite-uri' && e.fragment === 'String.utf8Encode'));
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://gym/record-shorthand-destructure' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'catalog-ref'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/records-and-patterns' && e.to === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.kind === 'catalog-ref'));

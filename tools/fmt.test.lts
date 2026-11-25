@@ -5,7 +5,6 @@ path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
 text := import "core/text";
-unicode := import "core/unicode";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
@@ -23,7 +22,7 @@ runNode := fn(args: List<String>, stdinText: String): (status: Int, stdout: Stri
     outPath := path.join(tmpRes.path, "out");
     errPath := path.join(tmpRes.path, "err");
     emptyEnv: List<String> = [];
-    res := proc.runBytes(proc.execPath(), args, root, emptyEnv, 60000, unicode.utf8Encode(stdinText), outPath, errPath);
+    res := proc.runBytes(proc.execPath(), args, root, emptyEnv, 60000, stdinText.utf8Encode(), outPath, errPath);
     test.check("runNode process error: " + res.error, res.error == "");
     outText := fs.readText(outPath).text;
     errText := fs.readText(errPath).text;

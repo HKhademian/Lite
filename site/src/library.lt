@@ -326,12 +326,12 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
     hostSpecIds: List<String> = [
     "lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.text.v1",
     "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1",
-    "lite.core.unicode.v1", "lite.compiler.modules.v1"
+    "lite.compiler.modules.v1"
     ];
     hostSpecPaths: List<String> = [
     "lib/core/io.lt", "lib/core/int.lt", "lib/core/list.lt", "lib/core/text.lt",
     "lib/core/file.lt", "lib/core/process.lt", "lib/core/crypto.lt", "lib/core/time.lt",
-    "lib/core/unicode.lt", "compiler/src/modules.lt"
+    "compiler/src/modules.lt"
     ];
     hostIds: mut List<String> = [];
     hostTexts: mut List<String> = [];

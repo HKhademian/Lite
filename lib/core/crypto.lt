@@ -4,7 +4,6 @@ diag := import "core/diag";
 file := import "core/file";
 io := import "core/io";
 text := import "core/text";
-unicode := import "core/unicode";
 
 /** Generates `count` cryptographically strong random `0..255` byte values. */
 pub randomBytes := fn(count: Int): List<Int>;
@@ -377,7 +376,7 @@ pub sha256Bytes := fn(bytes: List<Int>): String {
 
 /** Returns the lowercase hexadecimal SHA-256 digest of UTF-8 `value`. */
 pub sha256Text := fn(value: String): String {
-    sha256Bytes(unicode.utf8Encode(value))
+    sha256Bytes(value.utf8Encode())
 };
 
 /** Returns the lowercase hexadecimal SHA-256 digest of the raw bytes of the file at `path`. */
@@ -560,7 +559,7 @@ pub sha512Bytes := fn(bytes: List<Int>): String {
 
 /** Returns the lowercase hexadecimal SHA-512 digest of UTF-8 `value`. */
 pub sha512Text := fn(value: String): String {
-    sha512Bytes(unicode.utf8Encode(value))
+    sha512Bytes(value.utf8Encode())
 };
 
 /** True when `ch` is one of the 64 non-padding Base64 alphabet characters. */

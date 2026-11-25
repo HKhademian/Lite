@@ -5,7 +5,6 @@ fs := import "core/file";
 proc := import "core/process";
 crypto := import "core/crypto";
 text := import "core/text";
-unicode := import "core/unicode";
 time := import "core/time";
 path := import "core/path";
 project := import "util/project";
@@ -81,7 +80,7 @@ computeToolingHash := fn(rootDir: String): String {
                         mut digestBytes.pushBack(0);
                     }
                     first = false;
-                    loop unicode.utf8Encode(prefix + entry) as b {
+                    loop (prefix + entry).utf8Encode() as b {
                         mut digestBytes.pushBack(b);
                     }
                     (mut digestBytes).pushBack(0);

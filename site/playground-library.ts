@@ -98,7 +98,7 @@ export function deriveLibraryTags(
   if (
     /import\s+"core\/unicode"/.test(src) ||
     /\b(unicode|utf-?8)\b/.test(titleLower + ' ' + fileLower) ||
-    /\b(utf8Encode|utf8DecodeStrict|toCodePoints|fromCodePoints|codePointAt)\b/.test(src)
+    /\b(utf8Encode|fromUtf8Strict|fromUtf8Lossy|utf8DecodeStrict|utf16Encode|fromUtf16Strict|isValidUtf8|toCodePoints|fromCodePoints|fromCodePoint|codePointAt)\b/.test(src)
   ) {
     tags.add('unicode');
     tags.add('utf8');

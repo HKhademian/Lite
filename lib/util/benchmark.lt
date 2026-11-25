@@ -9,7 +9,6 @@ text := import "core/text";
 list := import "core/list";
 crypto := import "core/crypto";
 time := import "core/time";
-unicode := import "core/unicode";
 json := import "data/json";
 streams := import "util/streams";
 cases := import "util/cases";
@@ -331,7 +330,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     syntheticByteLens: mut List<Int> = [];
     loop outputCounts as cnt {
         srcText := syntheticOutputSource(cnt);
-        srcBytes := unicode.utf8Encode(srcText);
+        srcBytes := srcText.utf8Encode();
         sPath := path.join(workDir, "syn-" + cnt.toText() + ".lts");
         _wsyn := fs.writeBytes(sPath, srcBytes);
         mut syntheticFiles.pushBack(sPath);
@@ -371,7 +370,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
                 errB := fs.readBytes(wRun.errPath);
                 if wRun.status =!= 0 or errB.length() =!= 0 {
                     _rm := fs.remove(workDir);
-                    io.errorLine("benchmark compilation failed: " + wName + ": " + unicode.utf8DecodeLossy(errB));
+                    io.errorLine("benchmark compilation failed: " + wName + ": " + String.fromUtf8Lossy(errB));
                     return 1;
                 }
                 outSha := crypto.sha256Bytes(fs.readBytes(wRun.outPath));
@@ -461,7 +460,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
                 errB := fs.readBytes(wRun.errPath);
                 if wRun.status =!= 0 or errB.length() =!= 0 {
                     _rm := fs.remove(workDir);
-                    io.errorLine("benchmark compilation failed: S: " + unicode.utf8DecodeLossy(errB));
+                    io.errorLine("benchmark compilation failed: S: " + String.fromUtf8Lossy(errB));
                     return 1;
                 }
                 outSha := crypto.sha256Bytes(fs.readBytes(wRun.outPath));
@@ -524,7 +523,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
         rRes := proc.runBytes(project.nodeExecPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
         expText := syntheticExpectedText(outputCounts[ri]);
         okSynRun := rRes.error == "" and rRes.status == 0
-        and unicode.utf8DecodeLossy(fs.readBytes(rOut)) == expText
+        and String.fromUtf8Lossy(fs.readBytes(rOut)) == expText
         and fs.readBytes(rErr).length() == 0;
         if not okSynRun {
             _rm := fs.remove(workDir);
@@ -545,7 +544,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
         rRes := proc.runBytes(project.nodeExecPath(), runArgs, workDir, emptyEnv, 10000, emptyBytes, rOut, rErr);
         rElapsedMicros := (time.monotonicNs() - rStartNs) / 1000;
         ok1000 := rRes.error == "" and rRes.status == 0
-        and unicode.utf8DecodeLossy(fs.readBytes(rOut)) == expected1000
+        and String.fromUtf8Lossy(fs.readBytes(rOut)) == expected1000
         and fs.readBytes(rErr).length() == 0;
         if not ok1000 {
             _rm := fs.remove(workDir);
@@ -742,7 +741,7 @@ pub runTextCacheCommand := fn(rootDir: String, args: List<String>): Int {
 
     loop counts as n {
         srcText := syntheticOutputSource(n);
-        srcBytes := unicode.utf8Encode(srcText);
+        srcBytes := srcText.utf8Encode();
         srcByteLen := srcBytes.length();
         rName := "report-" + n.toText();
 

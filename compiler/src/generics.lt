@@ -1,7 +1,6 @@
 /** Generic function template registry, type unification/substitution, and on-demand monomorphization queue. */
 
 textLib := import "core/text";
-unicode := import "core/unicode";
 ir := import "./frontend-ir";
 types := import "./frontend-types";
 
@@ -223,7 +222,7 @@ hashHex32 := fn(text: String): String {
     loop i < size {
         ch := text.at(i);
         idx := table.indexOf(ch, 0);
-        v := if idx >= 0 { idx + 1 } else { 97 + unicode.codePointAt(ch, 0) };
+        v := if idx >= 0 { idx + 1 } else { 97 + ch.codePointAt(0) };
         h1 = (h1 * 131 + v) % 1000000007;
         h2 = (h2 * 137 + v) % 1000000009;
         i = i + 1;

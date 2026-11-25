@@ -2,18 +2,17 @@
 
 io := import "core/io";
 crypto := import "core/crypto";
-unicode := import "core/unicode";
 time := import "core/time";
 proc := import "core/process";
 path := import "core/path";
 
 payload := "lite-study";
-bytes := unicode.utf8Encode(payload);
+bytes := payload.utf8Encode();
 sha := crypto.sha256Text(payload);
-mac := crypto.hmacSha256Bytes(unicode.utf8Encode("study-key"), bytes);
+mac := crypto.hmacSha256Bytes("study-key".utf8Encode(), bytes);
 hexed := crypto.hexEncode(bytes);
 b64 := crypto.base64Encode(bytes);
-roundtrip := unicode.utf8DecodeStrict(crypto.base64Decode(b64));
+roundtrip := String.fromUtf8Strict(crypto.base64Decode(b64));
 
 t0 := time.monotonicNs();
 time.sleepMs(1);

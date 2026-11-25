@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "digests-and-encodings.lts",
-    "hash": "sha256:bdfafe020bea69f0944fbabee54d7f2f57333d30ecff3fd845c6eb8f591db4b6"
+    "hash": "sha256:ebbe4c91a80a026d6afc3bf8d37c6ff347eb45309c5d5a0f22b24a18e7987e36"
   },
   "features": [
     "feature.core.crypto.digests-and-encodings"

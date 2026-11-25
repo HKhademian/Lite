@@ -2,7 +2,6 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-unicode := import "core/unicode";
 list := import "core/list";
 path := import "core/path";
 json := import "data/json";
@@ -148,7 +147,7 @@ checkHash: Bool
 pub readStreamBytes := fn(source: String, streamPos: Int, directory: String): List<Int> {
     if json.findField(source, streamPos, "text").found {
         tRes := json.readFieldString(source, streamPos, "text");
-        return unicode.utf8Encode(tRes.value);
+        return tRes.value.utf8Encode();
     }
     bField := json.findField(source, streamPos, "bytes");
     if bField.found {

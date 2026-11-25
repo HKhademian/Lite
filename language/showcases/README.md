@@ -12,7 +12,7 @@ Every topic is backed by a verified scenario manifest under [artifacts/showcases
 
 - [01 — Bindings, Zero Defaults, Reserved Storage, and Mutability](lite://play/example/showcase-bindings-and-mutability): `:=`, zero-initialized declarations, `= ?` reserved storage, `var`, `=`, and `+=`. ([declarations](lite://doc/declarations-and-assignment), [zero init](lite://doc/zero-initialization), [reserved storage](lite://doc/reserved-storage), [mutability](lite://doc/mutability))
 - [02 — Integers, Floats, Division Families, Narrow Widths, and Power](lite://play/example/showcase-numbers-and-division): truncating `/` & `%` vs floor `:/` & `:%`, `Float` contexts, `Int8`/`Int16`/`Int32`/`Float32`, and right-associative `**`. ([numbers](lite://doc/numbers), [operators](lite://doc/operators), [power](lite://doc/power-and-negation))
-- [03 — Escapes, Code-Point Text Operations, and UTF-8 Conversion](lite://play/example/showcase-strings-and-unicode): escapes, `core/text` code-point indexing and trimming, `core/unicode` scalar/UTF-8 round-trips, and `List.join`. ([strings](lite://doc/strings))
+- [03 — Escapes, Code-Point Text Operations, and UTF-8 Conversion](lite://play/example/showcase-strings-and-unicode): escapes, `core/text` code-point indexing, trimming, scalar/UTF-8 round-trips, and `List.join`. ([strings](lite://doc/strings))
 
 ## Chapter 2 — Control Flow (`control/`)
 

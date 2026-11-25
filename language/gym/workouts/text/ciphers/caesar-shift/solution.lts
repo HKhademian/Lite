@@ -1,10 +1,9 @@
 io := import "core/io";
-unicode := import "core/unicode";
 
 line := io.inputLine();
 shift := io.inputInt();
 k := shift :% 26;
-points := unicode.toCodePoints(line);
+points := line.toCodePoints();
 out: mut List<Int> = [];
 
 loop points as cp {
@@ -16,5 +15,5 @@ loop points as cp {
     mut out.pushBack(nextCp);
 }
 
-decoded := unicode.fromCodePoints(out);
+decoded := String.fromCodePoints(out);
 io.outputLine(decoded.text);

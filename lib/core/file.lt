@@ -2,7 +2,6 @@
 
 diag := import "core/diag";
 io := import "core/io";
-unicode := import "core/unicode";
 
 /** File kind returned by `kind` when no filesystem entry exists at `path`. */
 pub FILE_KIND_MISSING := "missing";
@@ -101,7 +100,7 @@ pub readText := fn(path: String): (ok: Bool, text: String, error: String) {
     if not closed.ok {
         return (ok = false, text = "", error = closed.error);
     }
-    unicode.utf8DecodeStrict(bytes)
+    String.fromUtf8Strict(bytes)
 }
 
 /** Writes raw `0..255` byte values to `path`, creating or truncating the file. */
@@ -113,7 +112,7 @@ pub writeBytes := fn(path: String, bytes: List<Int>): (ok: Bool, error: String) 
 
 /** Writes UTF-8 `text` to `path`, creating or truncating the file. */
 pub writeText := fn(path: String, text: String): (ok: Bool, error: String) {
-    writeBytes(path, unicode.utf8Encode(text))
+    writeBytes(path, text.utf8Encode())
 }
 
 /** Appends raw `0..255` byte values to `path`, creating the file when absent. */
@@ -125,5 +124,5 @@ pub appendBytes := fn(path: String, bytes: List<Int>): (ok: Bool, error: String)
 
 /** Appends UTF-8 `text` to `path`, creating the file when absent. */
 pub appendText := fn(path: String, text: String): (ok: Bool, error: String) {
-    appendBytes(path, unicode.utf8Encode(text))
+    appendBytes(path, text.utf8Encode())
 }

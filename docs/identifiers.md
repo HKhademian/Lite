@@ -1,6 +1,6 @@
 # Identifiers
 
-Status: **Selected design (2026-11-24): strict UAX #31 `(XID_Start | "_") { XID_Continue }` profile pinned to Unicode 16.0.0 (no format-control characters such as ZWNJ `U+200C` / ZWJ `U+200D`), ordinary underscore bindings and underscore-prefixed unused-name intent, case-sensitive names, NFC normalization for identifier identity, and distinct confusables/Persian-Arabic variants handled via diagnostics and UTS #39 lints. Current executable support: Phase 1 (Unicode 16.0.0 `XID_Start`/`XID_Continue` lexing in `core/text` + `core/unicode` and ASCII-fast-path C11 identifier mangling) is implemented across both TS and C11 backends; Phase 2 (NFC normalization) and Phase 3 (UTS #39 confusable diagnostics) remain planned.**
+Status: **Selected design (2026-11-24): strict UAX #31 `(XID_Start | "_") { XID_Continue }` profile pinned to Unicode 16.0.0 (no format-control characters such as ZWNJ `U+200C` / ZWJ `U+200D`), ordinary underscore bindings and underscore-prefixed unused-name intent, case-sensitive names, NFC normalization for identifier identity, and distinct confusables/Persian-Arabic variants handled via diagnostics and UTS #39 lints. Current executable support: Phase 1 (Unicode 16.0.0 `XID_Start`/`XID_Continue` lexing in `core/text` and ASCII-fast-path C11 identifier mangling) is implemented across both TS and C11 backends; Phase 2 (NFC normalization) and Phase 3 (UTS #39 confusable diagnostics) remain planned.**
 
 ## Purpose
 

@@ -5,7 +5,6 @@ path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
 text := import "core/text";
-unicode := import "core/unicode";
 project := import "util/project";
 
 rawRoot := project.findRepoRoot();
@@ -27,7 +26,7 @@ splitNulBytes := fn(bytes: List<Int>): List<String> {
     loop bytes as b {
         if b == 0 {
             if cur.length() > 0 {
-                dec := unicode.utf8DecodeStrict(cur);
+                dec := String.fromUtf8Strict(cur);
                 test.check("git ls-files utf8 decode", dec.ok);
                 mut out.pushBack(dec.text);
                 cur = [];
@@ -37,7 +36,7 @@ splitNulBytes := fn(bytes: List<Int>): List<String> {
         }
     }
     if cur.length() > 0 {
-        dec := unicode.utf8DecodeStrict(cur);
+        dec := String.fromUtf8Strict(cur);
         test.check("git ls-files utf8 decode tail", dec.ok);
         mut out.pushBack(dec.text);
     }

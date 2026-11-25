@@ -5,7 +5,6 @@ path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
 text := import "core/text";
-unicode := import "core/unicode";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 json := import "data/json";
@@ -188,7 +187,6 @@ _wBig := fs.writeText(bigFile, "A".repeat(70000) + "€");
 textIoSrc := [
     "io := import \"core/io\";",
     "file := import \"core/file\";",
-    "uni := import \"core/unicode\";",
     "u := \"a😀b€c😀d\";",
     "textSummary := [",
     "    \"hello world\".indexOf(\"world\", 0),",
@@ -231,7 +229,7 @@ textIoSrc := [
     "_cw := bw.close();",
     "wtClosed := bw.writeText(\"x\");",
     "bwClosedTxt := bw.text();",
-    "rtOk := io.Reader.fromBytes(uni.utf8Encode(\"hi€😀\")).readAllText();",
+    "rtOk := io.Reader.fromBytes(\"hi€😀\".utf8Encode()).readAllText();",
     "rtBad := io.Reader.fromBytes([255, 128]).readAllText();",
     "cr := io.Reader.fromText(\"x\");",
     "_crClose := cr.close();",
@@ -274,7 +272,7 @@ test.check("text-io rl=pure keeps writeLine", tioRlPure.contains("function lite$
 test.check("text-io rl=pure keeps textReader", tioRlPure.contains("function lite$ioTextReader("));
 _rmTio := fs.remove(textIoDir);
 
-/* 4. soft builtin overrides for core/unicode and core/file */
+/* 4. soft builtin overrides for core/text UTF-8 codecs and core/file */
 tmpUniFile := fs.makeTempDir("litescript-soft-unicode-file-");
 test.check("uni-file makeTempDir", tmpUniFile.ok);
 ufDir := tmpUniFile.path;
@@ -284,13 +282,12 @@ missingPath := path.join(ufDir, "missing.bin");
 ufSrc := [
     "file := import \"core/file\";",
     "io := import \"core/io\";",
-    "uni := import \"core/unicode\";",
-    "enc := uni.utf8Encode(\"A€🙂\");",
-    "dec := uni.utf8DecodeStrict(enc);",
-    "badRange := uni.utf8DecodeStrict([256]);",
-    "badSeq := uni.utf8DecodeStrict([255]);",
-    "lossy := uni.utf8DecodeLossy([65, 255, 66]);",
-    "lossyRange := uni.utf8DecodeLossy([65, 999, 66]);",
+    "enc := \"A€🙂\".utf8Encode();",
+    "dec := String.fromUtf8Strict(enc);",
+    "badRange := String.fromUtf8Strict([256]);",
+    "badSeq := String.fromUtf8Strict([255]);",
+    "lossy := String.fromUtf8Lossy([65, 255, 66]);",
+    "lossyRange := String.fromUtf8Lossy([65, 999, 66]);",
     "w1 := file.writeText(" + json.quoteString(textPath) + ", \"hi\");",
     "a1 := file.appendText(" + json.quoteString(textPath) + ", \"🙂\");",
     "r1 := file.readText(" + json.quoteString(textPath) + ");",
@@ -301,7 +298,7 @@ ufSrc := [
     "io.outputLine(enc, dec.ok, dec.text, not badRange.ok, not badSeq.ok, lossy, lossyRange);",
     "io.outputLine(w1.ok, a1.ok, r1.ok, r1.text, w2.ok, a2.ok, rb, not badW.ok);"
 ].join("\n");
-fffd := unicode.fromCodePoint(65533).text;
+fffd := String.fromCodePoint(65533).text;
 ufExpected := "[65, 226, 130, 172, 240, 159, 153, 130] true A€🙂 true true A" + fffd + "B A" + fffd + "B\ntrue true true hi🙂 true true [65, 66, 67] true\n";
 ufDef := compileCheckAndAssertOut(ufSrc, "main.lts", emptyList(), "uf default", ufExpected);
 test.check("uf default unicodeUtf8Encode", ufDef.contains("function lite$unicodeUtf8Encode("));
@@ -318,9 +315,9 @@ ufPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "pure"]
 test.check("uf pure no encode", not ufPure.contains("function lite$unicodeUtf8Encode("));
 test.check("uf pure no readBytes", not ufPure.contains("function lite$fileReadBytes("));
 
-ufUniPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "core/unicode=pure"], "uf unicode pure", ufExpected);
-test.check("uf unicode pure no encode", not ufUniPure.contains("function lite$unicodeUtf8Encode("));
-test.check("uf unicode pure keeps writeText", ufUniPure.contains("function lite$fileWriteText("));
+ufUniPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "core/text=pure"], "uf text pure", ufExpected);
+test.check("uf text pure no encode", not ufUniPure.contains("function lite$unicodeUtf8Encode("));
+test.check("uf text pure keeps writeText", ufUniPure.contains("function lite$fileWriteText("));
 
 ufRtPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "core/file.readText=pure"], "uf readText pure", ufExpected);
 test.check("uf readText pure no readText", not ufRtPure.contains("function lite$fileReadText("));
@@ -382,9 +379,8 @@ intTextSrc := [
     "integer := import \"core/int\";",
     "io := import \"core/io\";",
     "text := import \"core/text\";",
-    "uni := import \"core/unicode\";",
-    "nbsp := uni.fromCodePoints([160]).text;",
-    "vtab := uni.fromCodePoints([11]).text;",
+    "nbsp := String.fromCodePoints([160]).text;",
+    "vtab := String.fromCodePoints([11]).text;",
     "io.outputLine(0.toText(), (-42).toText(), integer.intMax.toText(), integer.intMin.toText());",
     "io.outputLine(\"A🙂B\".startsWithAt(1, \"🙂\"), \"A🙂B\".startsWithAt(2, \"B\"), \"A🙂B\".startsWithAt(-1, \"A\"), \"A🙂B\".startsWithAt(3, \"\"));",
     "io.outputLine(\"if_x\".wordAt(0, \"if\"), \"if 🙂\".wordAt(0, \"if\"), \"a🙂b\".wordAt(0, \"a\"), \"if\".wordAt(0, \"if\"));",

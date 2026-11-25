@@ -2,7 +2,6 @@
 
 io := import "core/io";
 text := import "core/text";
-unicode := import "core/unicode";
 diag := import "core/diag";
 
 assert := fn(cond: Bool, msg: String): Unit {
@@ -56,9 +55,9 @@ assert(("a" + "🚀" + "é").length() == 3, "utf8 concat cp length");
 assert("🚀".repeat(3).length() == 3, "utf8 repeat cp length");
 
 /* 4. Unicode round-trip. */
-cps := unicode.toCodePoints(utf8);
+cps := utf8.toCodePoints();
 assert(cps.length() == 7, "unicode toCodePoints length");
-rt := unicode.fromCodePoints(cps);
+rt := String.fromCodePoints(cps);
 assert(rt.ok and rt.text == utf8 and rt.text.length() == 7, "unicode fromCodePoints roundtrip");
 
 /* 5. Map<String, Int> and Set<String> (including long keys > 8 bytes and UTF-8 keys). */

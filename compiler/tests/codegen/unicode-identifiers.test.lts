@@ -2,7 +2,6 @@
 
 test := import "core/test";
 text := import "core/text";
-unicode := import "core/unicode";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 project := import "util/project";
@@ -102,8 +101,8 @@ checkRejectBoth("latin-cyrillic-mismatch-undefined", [
 /* 4. Rejections: emoji, ZWNJ (U+200C), ZWJ (U+200D), and leading digits */
 checkRejectBoth("reject-emoji-ident", "io := import \"core/io\";\n🚀 := 1;\nio.outputLine(🚀);\n");
 
-zwnj := unicode.fromCodePoints([8204]).text;
-zwj := unicode.fromCodePoints([8205]).text;
+zwnj := String.fromCodePoints([8204]).text;
+zwj := String.fromCodePoints([8205]).text;
 checkRejectBoth("reject-zwnj-ident", "io := import \"core/io\";\nکتاب" + zwnj + "ها := 1;\nio.outputLine(1);\n");
 checkRejectBoth("reject-zwj-ident", "io := import \"core/io\";\nکتاب" + zwj + "ها := 1;\nio.outputLine(1);\n");
 checkRejectBoth("reject-leading-persian-digit", "۱۲۳ := 1;\n");
@@ -127,10 +126,9 @@ test.check("ascii C omits xid tables when unused", not asciiC.stdout.contains("l
 softCheckSrc := [
     "io := import \"core/io\";",
     "text := import \"core/text\";",
-    "uni := import \"core/unicode\";",
-    "zwnj := uni.fromCodePoints([8204]).text;",
-    "zwj := uni.fromCodePoints([8205]).text;",
-    "supp := uni.fromCodePoints([134071]).text;",
+    "zwnj := String.fromCodePoints([8204]).text;",
+    "zwj := String.fromCodePoints([8205]).text;",
+    "supp := String.fromCodePoints([134071]).text;",
     "io.outputLine(\"پ\".isNameStart(), \"ی\".isNameStart(), \"۱\".isNameStart(), \"۱\".isNameContinue(), \"🚀\".isNameStart(), \"🚀\".isNameContinue());",
     "io.outputLine(\"ß\".isNameStart(), \"é\".isNameStart(), \"学\".isNameStart(), \"ά\".isNameStart(), \"ё\".isNameStart(), \"հ\".isNameStart(), \"მ\".isNameStart());",
     "io.outputLine(supp.isNameStart(), supp.isNameContinue(), zwnj.isNameContinue(), zwj.isNameContinue());",

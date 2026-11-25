@@ -566,7 +566,7 @@
     {
       "id": "drills.modules.unicode.utf8-roundtrip-count",
       "slug": "utf8-roundtrip-count",
-      "title": "core/unicode Scalars vs UTF-8 Bytes",
+      "title": "core/text Scalars vs UTF-8 Bytes",
       "mode": "drill",
       "belt": "emerald",
       "domain": "modules",
@@ -578,9 +578,9 @@
       "expectedStarterFailure": "wrong-output",
       "hints": [
         "Non-ASCII code points take 2–4 UTF-8 bytes even though they have scalar length 1.",
-        "Import `core/unicode` and compute `unicode.utf8Encode(s).length()`."
+        "Compute `s.utf8Encode().length()` directly on `String` (provided by `core/text`)."
       ],
-      "relatedDocs": ["lib/core/unicode.lt", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedDocs": ["lib/core/text.lt", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
       "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
       "visibleCases": [
         { "name": "ascii", "stdin": "Lite\n", "args": [], "expectedStdout": "scalars:4 utf8Bytes:4\n" },
@@ -982,10 +982,10 @@
       "brokenStarterSyntax": false,
       "expectedStarterFailure": "wrong-output",
       "hints": [
-        "Convert text to scalar code points via `unicode.toCodePoints(line)`.",
+        "Convert text to scalar code points via `line.toCodePoints()`.",
         "Because `:% 26` always produces `0..25`, negative shifts like `-3` wrap cleanly: `65 + ((cp - 65 + (shift :% 26)) :% 26)`."
       ],
-      "relatedDocs": ["lib/core/unicode.lt", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
+      "relatedDocs": ["lib/core/text.lt", "language/learn/handbook/foundations/numbers-operators-and-strings.md"],
       "relatedLessons": ["learn.foundations.strings.strings-and-unicode"],
       "visibleCases": [
         { "name": "forward-3", "stdin": "Hello, Lite-2026!\n3\n", "args": [], "expectedStdout": "Khoor, Olwh-2026!\n" },

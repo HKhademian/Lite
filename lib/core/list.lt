@@ -1,7 +1,6 @@
 /* Core list operations. */
 
 _set := import "core/set";
-unicode := import "core/unicode";
 
 /** Closed numeric scalar constraint supported by `List.sort`. */
 pub OrderedScalar := alias Int | Int8 | Int16 | Int32 | Float | Float32;
@@ -165,26 +164,6 @@ pub List.sort := fn<T: Type<OrderedScalar>>(values: Self<T>): List<T> {
     src
 };
 
-ASCII_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-
-/** Lexicographical Unicode code-point comparison helper used by `List.sortTexts`. */
-textLessOrEqual := fn(a: String, b: String): Bool {
-    la := a.length();
-    lb := b.length();
-    limit := if la < lb { la } else { lb };
-    loop 0..limit as i {
-        ca := a.at(i);
-        cb := b.at(i);
-        if ca =!= cb {
-            oa := ASCII_ORDER.indexOf(ca, 0);
-            ob := ASCII_ORDER.indexOf(cb, 0);
-            if oa >= 0 and ob >= 0 { return oa <= ob; }
-            return unicode.codePointAt(ca, 0) <= unicode.codePointAt(cb, 0);
-        }
-    }
-    la <= lb
-};
-
 /** Returns a new lexicographically sorted ascending copy of `values` using stable O(n log n) merge sort. */
 pub List.sortTexts := fn(values: Self<String>): List<String> {
     n := values.length();
@@ -200,7 +179,7 @@ pub List.sortTexts := fn(values: Self<String>): List<String> {
             var i := left;
             var j := mid;
             loop i < mid and j < right {
-                if textLessOrEqual(src[i], src[j]) {
+                if src[i].lessOrEqual(src[j]) {
                     mut dst.pushBack(src[i]);
                     i += 1;
                 } else {

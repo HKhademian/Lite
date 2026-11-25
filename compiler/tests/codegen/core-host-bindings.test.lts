@@ -5,7 +5,6 @@ path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
 text := import "core/text";
-unicode := import "core/unicode";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
 json := import "data/json";
@@ -35,7 +34,6 @@ coreHostSrc := [
 "proc := import \"core/process\";",
 "crypto := import \"core/crypto\";",
 "time := import \"core/time\";",
-"uni := import \"core/unicode\";",
 "io := import \"core/io\";",
 "writeTwoLines := fn(w: io.Writer, a: String, b: String): Bool {",
 "    r1 := w.writeLine(a);",
@@ -100,7 +98,7 @@ coreHostSrc := [
 "bytesErrPath := dir + \"/child-err.bin\";",
 "childBytes := proc.runBytes(proc.execPath(), [\"-e\", \"const b = process.getBuiltinModule('node:fs').readFileSync(0); process.stdout.write(b); process.stderr.write(Buffer.from([b.length, 42])); process.exit(3);\"], dir, [], 5000, rawBytes, bytesOutPath, bytesErrPath);",
 "childTimeout := proc.runBytes(proc.execPath(), [\"-e\", \"setTimeout(() => {}, 2000)\"], dir, [], 50, [], dir + \"/t-out.bin\", dir + \"/t-err.bin\");",
-"utfBytes := uni.utf8Encode(\"A€\");",
+"utfBytes := \"A€\".utf8Encode();",
 "hashText := crypto.sha256Text(\"hello\");",
 "hashBytes := crypto.sha256Bytes(rawBytes);",
 "hashEmptyBytes := crypto.sha256Bytes([]);",
@@ -117,7 +115,7 @@ coreHostSrc := [
 "io.outputLine(entries, linked.ok, real.ok, real.path == fs.realPath(file).path, removed.ok, removedMissing.ok);",
 "io.outputLine(proc.cwd() =!= \"\", proc.execPath() =!= \"\", proc.platform() =!= \"\", proc.arch() =!= \"\", proc.runtimeVersion() =!= \"\", not unsetEnv.found, unsetEnv.value == \"\", homeEnv.found);",
 "io.outputLine(childOk.status, childOk.stdout, childOk.stderr == \"\", childOk.error == \"\", childFail.status, childFail.error =!= \"\");",
-"io.outputLine(childBytes.status, childBytes.error == \"\", fs.readBytes(bytesOutPath), fs.readBytes(bytesErrPath), childTimeout.status, childTimeout.error =!= \"\", utfBytes, uni.utf8Encode(\"\"));",
+"io.outputLine(childBytes.status, childBytes.error == \"\", fs.readBytes(bytesOutPath), fs.readBytes(bytesErrPath), childTimeout.status, childTimeout.error =!= \"\", utfBytes, \"\".utf8Encode());",
 "io.outputLine(hashText == \"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\", hashBytes == hashRawFile.hex, hashEmptyBytes == crypto.sha256Text(\"\"), hashFile.ok, hashFile.hex == crypto.sha256Text(\"hello world\\n\"), not hashMissing.ok);",
 "io.outputLine(t1 >= t0, iso =!= \"\");",
 "clean := fs.remove(dir);",
@@ -152,8 +150,8 @@ fixtureName,
 extCoreSrc := [
 "crypto := import \"core/crypto\";",
 "list := import \"core/list\";",
+"text := import \"core/text\";",
 "time := import \"core/time\";",
-"uni := import \"core/unicode\";",
 "io := import \"core/io\";",
 "raw: List<Int> = [0, 65, 255];",
 "b64 := crypto.base64Encode(raw);",
@@ -181,34 +179,34 @@ extCoreSrc := [
 "time.sleepMs(15);",
 "mono1 := time.monotonicNs();",
 "ldate := time.localDate();",
-"u8 := uni.utf8Encode(\"A€🙂\");",
-"u8Ok := uni.utf8DecodeStrict(u8);",
-"u8Bad := uni.utf8DecodeStrict([255]);",
-"u8Overlong := uni.utf8DecodeStrict([192, 175]);",
-"u8Surrogate := uni.utf8DecodeStrict([237, 160, 128]);",
-"u8BadVal := uni.utf8DecodeStrict([256]);",
-"u8Lossy := uni.utf8DecodeLossy([65, 255, 66]);",
-"u8LossyEdge := uni.utf8DecodeLossy([65, 224, 128, 66, 226, 130]);",
-"u16 := uni.utf16Encode(\"A🙂\");",
-"u16Ok := uni.utf16DecodeStrict(u16);",
-"u16BadHigh := uni.utf16DecodeStrict([55357]);",
-"u16BadLow := uni.utf16DecodeStrict([56898]);",
-"u16BadRange := uni.utf16DecodeStrict([65536]);",
-"cps := uni.toCodePoints(\"A€🙂\");",
-"cpOk := uni.fromCodePoints(cps);",
-"cpBadSur := uni.fromCodePoints([55296]);",
-"cpBadHi := uni.fromCodePoints([1114112]);",
-"oneCp := uni.fromCodePoint(128578);",
+"u8 := \"A€🙂\".utf8Encode();",
+"u8Ok := String.fromUtf8Strict(u8);",
+"u8Bad := String.fromUtf8Strict([255]);",
+"u8Overlong := String.fromUtf8Strict([192, 175]);",
+"u8Surrogate := String.fromUtf8Strict([237, 160, 128]);",
+"u8BadVal := String.fromUtf8Strict([256]);",
+"u8Lossy := String.fromUtf8Lossy([65, 255, 66]);",
+"u8LossyEdge := String.fromUtf8Lossy([65, 224, 128, 66, 226, 130]);",
+"u16 := \"A🙂\".utf16Encode();",
+"u16Ok := String.fromUtf16Strict(u16);",
+"u16BadHigh := String.fromUtf16Strict([55357]);",
+"u16BadLow := String.fromUtf16Strict([56898]);",
+"u16BadRange := String.fromUtf16Strict([65536]);",
+"cps := \"A€🙂\".toCodePoints();",
+"cpOk := String.fromCodePoints(cps);",
+"cpBadSur := String.fromCodePoints([55296]);",
+"cpBadHi := String.fromCodePoints([1114112]);",
+"oneCp := String.fromCodePoint(128578);",
 "io.outputLine(b64, b64Ok, b64Dec, not b64Bad1, not b64Bad2);",
 "io.outputLine(hex, hexOk, hexDec, not hexBadOdd, not hexBadChar);",
 "io.outputLine(sha512 == \"ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f\", sha512 == sha512b);",
 "io.outputLine(hmac, hmacLong, rand0.length(), rand16.length());",
 "io.outputLine(ms0 > 1700000000000, ns0 >= ms0 * 1000000, mono1 > mono0, ldate, isoNow);",
 "io.outputLine(u8, u8Ok.ok, u8Ok.text == \"A€🙂\", not u8Bad.ok, not u8Overlong.ok, not u8Surrogate.ok, not u8BadVal.ok, u8Lossy, u8LossyEdge);",
-"io.outputLine(uni.isValidUtf8(u8), not uni.isValidUtf8([255]), uni.utf16Length(\"A🙂\"), u16, u16Ok.ok, u16Ok.text == \"A🙂\");",
+"io.outputLine(String.isValidUtf8(u8), not String.isValidUtf8([255]), \"A🙂\".utf16Length(), u16, u16Ok.ok, u16Ok.text == \"A🙂\");",
 "io.outputLine(not u16BadHigh.ok, not u16BadLow.ok, not u16BadRange.ok);",
 "io.outputLine(cps, cpOk.ok, cpOk.text == \"A€🙂\", not cpBadSur.ok, not cpBadHi.ok);",
-"io.outputLine(oneCp.ok, oneCp.text == \"🙂\", uni.codePointAt(\"A€🙂\", 2), uni.isValidScalar(65), not uni.isValidScalar(55296), not uni.isValidScalar(1114112));"
+"io.outputLine(oneCp.ok, oneCp.text == \"🙂\", \"A€🙂\".codePointAt(2), text.isValidScalar(65), not text.isValidScalar(55296), not text.isValidScalar(1114112));"
 ].join("\n");
 extRun := compilerTest.compileCheckRunTs(root, tsComp, extCoreSrc, fixtureName);
 test.checkInt("ext-core status", 0, extRun.status);
@@ -231,7 +229,7 @@ test.checkText("ext-core line 1", "0041ff true [0, 65, 255] true true", extLines
 test.checkText("ext-core line 2", "true true", extLines[2]);
 test.checkText("ext-core line 3", "9c196e32dc0175f86f4b1cb89289d6619de6bee699e4c378e68309ed97a1a6ab 1afc6ca6c0ce1afa0ffeebf214fd763101957961e5f70cfac3b5d005e8fd5625 0 16", extLines[3]);
 test.check("ext-core line 4 time markers: " + extLines[4], extLines[4].startsWithAt(0, "true true true ") and extLines[4].endsWith("Z") and extLines[4].contains("T"));
-fffd := unicode.fromCodePoint(65533).text;
+fffd := String.fromCodePoint(65533).text;
 test.checkText("ext-core line 5", "[65, 226, 130, 172, 240, 159, 153, 130] true true true true true true A" + fffd + "B A" + fffd + fffd + "B" + fffd, extLines[5]);
 test.checkText("ext-core line 6", "true true 3 [65, 55357, 56898] true true", extLines[6]);
 test.checkText("ext-core line 7", "true true true", extLines[7]);
@@ -239,7 +237,7 @@ test.checkText("ext-core line 8", "[65, 8364, 128578] true true true true", extL
 test.checkText("ext-core line 9", "true true 128578 true true true", extLines[9]);
 
 /* unicode-only builtin vs pure emitter */
-uniOnlySrc := "uni := import \"core/unicode\"; io := import \"core/io\"; io.outputLine(uni.utf8DecodeStrict(uni.utf8Encode(\"hi\")).text, uni.toCodePoints(\"🙂\"));";
+uniOnlySrc := "io := import \"core/io\"; io.outputLine(String.fromUtf8Strict(\"hi\".utf8Encode()).text, \"🙂\".toCodePoints());";
 uniDefaultComp := compilerTest.compileStdin(root, tsComp, uniOnlySrc, fixtureName);
 test.checkInt("uni-only default compile", 0, uniDefaultComp.status);
 test.check("uni-only default check", compilerTest.checkTsCode(root, uniDefaultComp.stdout).ok);

@@ -9,7 +9,6 @@ text := import "core/text";
 list := import "core/list";
 crypto := import "core/crypto";
 time := import "core/time";
-unicode := import "core/unicode";
 json := import "data/json";
 streams := import "util/streams";
 cases := import "util/cases";
@@ -286,7 +285,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
         return 1;
     }
     sourceBytes := fs.readBytes(rootSourcePath);
-    decoded := unicode.utf8DecodeStrict(sourceBytes);
+    decoded := String.fromUtf8Strict(sourceBytes);
     if not decoded.ok {
         io.errorLine(rootSourcePath + ": source is not valid UTF-8");
         return 1;
@@ -349,7 +348,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
         errBytes := fs.readBytes(tmpErr);
         if compRes.status =!= 0 or errBytes.length() =!= 0 {
             _rm := fs.remove(genWork);
-            io.errorLine("generation " + gen.toText() + " failed (" + compRes.status.toText() + "):\n" + unicode.utf8DecodeLossy(errBytes));
+            io.errorLine("generation " + gen.toText() + " failed (" + compRes.status.toText() + "):\n" + String.fromUtf8Lossy(errBytes));
             return 1;
         }
         chk := checkStrictSingle(rootDir, tmpOutTs);
@@ -658,7 +657,7 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
                 if matched {
                     rejectionMatches = rejectionMatches + 1;
                 } else {
-                    detail := "status " + actStatus.toText() + ", stderr " + json.quoteString(unicode.utf8DecodeLossy(actErrBytes));
+                    detail := "status " + actStatus.toText() + ", stderr " + json.quoteString(String.fromUtf8Lossy(actErrBytes));
                     mut mismatches.pushBack(fileName + "/" + caseName + ": compiler contract (" + detail + ")");
                 }
             } else if not matched {

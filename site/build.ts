@@ -69,7 +69,6 @@ function coreModuleIdentity(relPath: string): string {
     case 'lib/core/process.lt': return 'lite.core.process.v1';
     case 'lib/core/crypto.lt': return 'lite.core.crypto.v1';
     case 'lib/core/time.lt': return 'lite.core.time.v1';
-    case 'lib/core/unicode.lt': return 'lite.core.unicode.v1';
     default: return '';
   }
 }

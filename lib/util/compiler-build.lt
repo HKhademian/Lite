@@ -7,7 +7,6 @@ crypto := import "core/crypto";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
-unicode := import "core/unicode";
 json := import "data/json";
 
 /** Result returned by `buildCompiler`. */
@@ -23,7 +22,7 @@ error: String
 );
 
 sha256Text := fn(value: String): String {
-    crypto.sha256Bytes(unicode.utf8Encode(value))
+    crypto.sha256Bytes(value.utf8Encode())
 };
 
 isLowerHex64 := fn(value: String): Bool {

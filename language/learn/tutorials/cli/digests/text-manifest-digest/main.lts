@@ -2,7 +2,6 @@
 
 io := import "core/io";
 text := import "core/text";
-unicode := import "core/unicode";
 
 hexDigit := fn(nibble: Int): String {
     digits := "0123456789abcdef";
@@ -62,7 +61,7 @@ loop lines as line {
     trimmed := line.trim();
     if trimmed == "" { continue; }
     chars := trimmed.length();
-    bytes := unicode.utf8Encode(trimmed);
+    bytes := trimmed.utf8Encode();
     byteCount := bytes.length();
     digest := fnv32Hex(bytes);
     preview := if chars > 20 { trimmed.slice(0, 17) + "..." } else { trimmed };

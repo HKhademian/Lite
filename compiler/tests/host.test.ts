@@ -163,6 +163,7 @@ function isolatedCheckout(): string {
   const dependencies = (['ts', 'c'] as const).flatMap(target => buildCompiler(target).dependencies);
   const toolSources = readdirSync(join(root, 'tools/src')).filter(f => f.endsWith('.lts')).map(f => `tools/src/${f}`);
   const coreLibs = readdirSync(join(root, 'lib/core')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/core/${f}`);
+  const dataLibs = readdirSync(join(root, 'lib/data')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/data/${f}`);
   const externalLibs = readdirSync(join(root, 'lib/external')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/external/${f}`);
   const utilLibs = readdirSync(join(root, 'lib/util')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/util/${f}`);
   const siteLibs = readdirSync(join(root, 'site/src')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `site/src/${f}`);
@@ -173,7 +174,7 @@ function isolatedCheckout(): string {
     'config/versions.json',
     'compiler/bootstrap/igniter', 'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/tsconfig.json',
-    ...dependencies, ...toolSources, ...coreLibs, ...externalLibs, ...utilLibs, ...siteLibs,
+    ...dependencies, ...toolSources, ...coreLibs, ...dataLibs, ...externalLibs, ...utilLibs, ...siteLibs,
   ]);
   for (const path of paths) {
     const destination = join(directory, path);
@@ -283,8 +284,9 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
 test('selected compiler build exposes its imported source dependencies', () => {
   const selected = buildCompiler('ts');
   assert.deepEqual(selected.dependencies.slice(0, 4), [
-    'compiler/src/ts-root.lts', 'lib/core/int.lt', 'lib/core/unicode.lt', 'lib/core/text.lt',
+    'compiler/src/ts-root.lts', 'lib/core/int.lt', 'lib/core/list.lt', 'lib/core/set.lt',
   ]);
+  assert.ok(selected.dependencies.includes('lib/core/text.lt'));
   assert.ok(selected.dependencies.includes('compiler/src/driver-ts.lt'));
   assert.ok(selected.dependencies.includes('compiler/src/frontend.lt'));
   assert.ok(selected.dependencies.includes('compiler/src/host-fs.lt'));
@@ -382,8 +384,8 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     assert.deepEqual(provenance.dependencies, [
       'compiler/src/fixture-root.lts',
       'lib/core/int.lt',
-      'lib/core/unicode.lt',
-      'lib/core/text.lt',
+      'lib/core/list.lt',
+      'lib/core/set.lt',
       'compiler/src/fixture-c.lts',
       'lib/core/io.lt',
     ]);
@@ -409,8 +411,8 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const expectedRemovedDeps = [
       'compiler/src/fixture-root.lts',
       'lib/core/int.lt',
-      'lib/core/unicode.lt',
-      'lib/core/text.lt',
+      'lib/core/list.lt',
+      'lib/core/set.lt',
       'lib/core/io.lt',
     ];
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })

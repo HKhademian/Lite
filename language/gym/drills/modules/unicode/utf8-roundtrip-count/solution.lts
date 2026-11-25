@@ -1,7 +1,6 @@
 io := import "core/io";
-unicode := import "core/unicode";
 
 s := io.inputLine();
 scalars := s.length();
-byteCount := unicode.utf8Encode(s).length();
+byteCount := s.utf8Encode().length();
 io.outputLine("scalars:" + scalars.toText() + " utf8Bytes:" + byteCount.toText());

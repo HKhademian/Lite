@@ -6,7 +6,6 @@ fs := import "core/file";
 io := import "core/io";
 path := import "core/path";
 textLib := import "core/text";
-unicode := import "core/unicode";
 tb := import "util/text-builder";
 frontend := import "./frontend";
 optCfg := import "./opt-config";
@@ -409,7 +408,7 @@ hexDigit := fn(n: Int): String {
 quoteJson := fn(s: String): String {
     out: mut tb.TextBuilder;
     mut out.append("\"");
-    codePoints := unicode.toCodePoints(s);
+    codePoints := s.toCodePoints();
     loop codePoints as cp {
         if cp == 34 { mut out.append("\\\""); }
         else if cp == 92 { mut out.append("\\\\"); }
@@ -424,7 +423,7 @@ quoteJson := fn(s: String): String {
             mut out.append(hexDigit(cp % 16));
         } else {
             one: List<Int> = [cp];
-            dec := unicode.fromCodePoints(one);
+            dec := String.fromCodePoints(one);
             if dec.ok { mut out.append(dec.text); }
         }
     }

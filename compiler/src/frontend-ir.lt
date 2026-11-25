@@ -3,7 +3,6 @@
 numeric := import "./numeric-literals";
 tsLiteral := import "./ts-literals";
 cLiteral := import "./c-literals";
-unicode := import "core/unicode";
 
 /** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
 pub Parsed := alias (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
@@ -417,7 +416,7 @@ pub cSafeIdent := fn(name: String): String {
         } else if ch.isAsciiLetter() or ch.isDigit() {
             out = out + ch;
         } else {
-            out = out + "_u" + hexLower(unicode.codePointAt(ch, 0)) + "_";
+            out = out + "_u" + hexLower(ch.codePointAt(0)) + "_";
         }
         i = i + 1;
     }

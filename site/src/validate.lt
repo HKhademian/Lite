@@ -4,7 +4,6 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 text := import "core/text";
-unicode := import "core/unicode";
 intern := import "ds/intern";
 challenges := import "util/challenges";
 json := import "data/json";
@@ -66,14 +65,14 @@ decodePercent := fn(raw: String, plusAsSpace: Bool): (ok: Bool, value: String) {
             mut bytes.pushBack(32);
             i = i + 1;
         } else {
-            enc := unicode.utf8Encode(ch);
+            enc := ch.utf8Encode();
             loop enc as b {
                 mut bytes.pushBack(b);
             }
             i = i + 1;
         }
     }
-    dec := unicode.utf8DecodeStrict(bytes);
+    dec := String.fromUtf8Strict(bytes);
     if not dec.ok { return (ok = false, value = ""); }
     (ok = true, value = dec.text)
 };
@@ -303,8 +302,8 @@ compareLex := fn(a: String, b: String): Int {
         ca := a.at(i);
         cb := b.at(i);
         if ca =!= cb {
-            ba := unicode.utf8Encode(ca);
-            bb := unicode.utf8Encode(cb);
+            ba := ca.utf8Encode();
+            bb := cb.utf8Encode();
             var k := 0;
             blim := if ba.length() < bb.length() { ba.length() } else { bb.length() };
             loop k < blim {

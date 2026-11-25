@@ -5,7 +5,6 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-unicode := import "core/unicode";
 challenges := import "util/challenges";
 json := import "data/json";
 project := import "util/project";
@@ -20,7 +19,7 @@ runCmd := fn(exe: String, args: List<String>, cwd: String, envOver: List<String>
     test.check("runCmd makeTempDir: " + tmpRes.error, tmpRes.ok);
     outPath := path.join(tmpRes.path, "out");
     errPath := path.join(tmpRes.path, "err");
-    res := proc.runBytes(exe, args, cwd, envOver, 180000, unicode.utf8Encode(stdinText), outPath, errPath);
+    res := proc.runBytes(exe, args, cwd, envOver, 180000, stdinText.utf8Encode(), outPath, errPath);
     test.check("runCmd process error: " + res.error, res.error == "");
     outText := fs.readText(outPath).text;
     errText := fs.readText(errPath).text;

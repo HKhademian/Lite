@@ -6,7 +6,6 @@ path := import "core/path";
 proc := import "core/process";
 project := import "util/project";
 test := import "core/test";
-unicode := import "core/unicode";
 cases := import "util/cases";
 json := import "data/json";
 
@@ -62,7 +61,7 @@ pub runDriver := fn(driver: TestDriver, stdinText: String): RunOutput {
     outPath := path.join(driver.workDir, "run.stdout");
     errPath := path.join(driver.workDir, "run.stderr");
     ran := proc.runBytes(
-    project.nodeExecPath(), [driver.runnerPath, driver.artifactPath], driver.workDir, emptyEnv(), 30000, unicode.utf8Encode(stdinText), outPath, errPath
+    project.nodeExecPath(), [driver.runnerPath, driver.artifactPath], driver.workDir, emptyEnv(), 30000, stdinText.utf8Encode(), outPath, errPath
     );
     test.check("runDriver process error: " + ran.error, ran.error == "");
     outRes := fs.readText(outPath);
@@ -109,7 +108,7 @@ extraCompilerArgs: List<String>
     }
     outPath := path.join(workDir, "out");
     errPath := path.join(workDir, "err");
-    res := proc.runBytes(project.nodeExecPath(), args, cwdDir, emptyEnv(), 60000, unicode.utf8Encode(source), outPath, errPath);
+    res := proc.runBytes(project.nodeExecPath(), args, cwdDir, emptyEnv(), 60000, source.utf8Encode(), outPath, errPath);
     test.check("compileStdin error: " + res.error, res.error == "");
     outText := fs.readText(outPath).text;
     errText := fs.readText(errPath).text;
@@ -185,7 +184,7 @@ pub runPreparedTsWithBytes := fn(prepared: PreparedTs, stdinBytes: List<Int>, ex
 
 /** Executes a prepared TS artifact with `stdinText` and `extraArgs`. */
 pub runPreparedTsWithInput := fn(prepared: PreparedTs, stdinText: String, extraArgs: List<String>): RunOutput {
-    runPreparedTsWithBytes(prepared, unicode.utf8Encode(stdinText), extraArgs)
+    runPreparedTsWithBytes(prepared, stdinText.utf8Encode(), extraArgs)
 };
 
 /** Removes the temporary directory created by `prepareTs`. */
@@ -208,7 +207,7 @@ extraArgs: List<String>
 
 /** Strict-typechecks `tsCode` and runs it in a fresh Node process with `stdinText` and `extraArgs`. */
 pub checkAndRunTsWithInput := fn(rootDir: String, tsCode: String, stdinText: String, extraArgs: List<String>): RunOutput {
-    checkAndRunTsWithBytes(rootDir, tsCode, unicode.utf8Encode(stdinText), extraArgs)
+    checkAndRunTsWithBytes(rootDir, tsCode, stdinText.utf8Encode(), extraArgs)
 };
 
 /** Strict-typechecks `tsCode` and runs it in a fresh Node process with empty stdin/args. */
@@ -245,7 +244,7 @@ stdinText: String
     srcHash := crypto.sha256Text(sourceText);
     quotedHash := json.quoteString(srcHash);
     needleLen := quotedHash.length();
-    stdinB64 := crypto.base64Encode(unicode.utf8Encode(stdinText));
+    stdinB64 := crypto.base64Encode(stdinText.utf8Encode());
 
     casesField := json.findField(contractsJson, 0, "cases");
     test.check("process.json cases field", casesField.found);
@@ -361,7 +360,7 @@ pub compileAndRunC := fn(cCode: String, cc: String, stdinText: String): RunOutpu
 
     runOut := path.join(workDir, "run.stdout");
     runErr := path.join(workDir, "run.stderr");
-    ran := proc.runBytes(exePath, emptyEnv(), workDir, emptyEnv(), 10000, unicode.utf8Encode(stdinText), runOut, runErr);
+    ran := proc.runBytes(exePath, emptyEnv(), workDir, emptyEnv(), 10000, stdinText.utf8Encode(), runOut, runErr);
     test.check("compileAndRunC run error: " + ran.error, ran.error == "");
     outText := fs.readText(runOut).text;
     errText := fs.readText(runErr).text;

@@ -4,7 +4,7 @@ Compute deterministic SHA-256 and HMAC-SHA256 digests (`core/crypto`), Hex/Base6
 
 ## Walkthrough
 
-1. `bytes := unicode.utf8Encode(payload);` encodes text as UTF-8 byte values (`0..255`).
+1. `bytes := payload.utf8Encode();` encodes text as UTF-8 byte values (`0..255`).
 2. `crypto.sha256Text` and `crypto.hmacSha256Bytes` compute deterministic cryptographic digests.
 3. `crypto.hexEncode` / `base64Encode` / `base64Decode` convert cleanly between byte lists and printable ASCII encodings.
 4. `time.monotonicNs()` + `time.sleepMs(1)` verify non-decreasing monotonic elapsed time alongside `proc.cwd()`, `proc.platform()`, and `proc.arch()`.

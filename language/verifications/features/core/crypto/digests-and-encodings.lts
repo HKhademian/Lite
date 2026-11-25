@@ -1,18 +1,17 @@
 io := import "core/io";
 crypto := import "core/crypto";
-unicode := import "core/unicode";
 
 msg := io.inputLine("msg: ");
-bytes := unicode.utf8Encode(msg);
+bytes := msg.utf8Encode();
 digest256 := crypto.sha256Text(msg);
 digest512 := crypto.sha512Text(msg);
-hmac := crypto.hmacSha256Bytes(unicode.utf8Encode("lite-key"), bytes);
+hmac := crypto.hmacSha256Bytes("lite-key".utf8Encode(), bytes);
 hexStr := crypto.hexEncode(bytes);
 hexBack := crypto.hexDecode(hexStr);
 b64Str := crypto.base64Encode(bytes);
 b64Back := crypto.base64Decode(b64Str);
-hexDec := unicode.utf8DecodeStrict(hexBack);
-b64Dec := unicode.utf8DecodeStrict(b64Back);
+hexDec := String.fromUtf8Strict(hexBack);
+b64Dec := String.fromUtf8Strict(b64Back);
 
 io.outputLine(digest256);
 io.outputLine(digest512);

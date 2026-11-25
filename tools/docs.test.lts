@@ -5,7 +5,6 @@ path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
 text := import "core/text";
-unicode := import "core/unicode";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
@@ -27,7 +26,7 @@ runDocs := fn(args: List<String>, directory: String, stdinInput: String): (statu
         mut cmdArgs.pushBack(a);
     }
     envOver: List<String> = ["LITE_DOCS_ROOT=" + directory];
-    res := proc.runBytes(proc.execPath(), cmdArgs, root, envOver, 60000, unicode.utf8Encode(stdinInput), outPath, errPath);
+    res := proc.runBytes(proc.execPath(), cmdArgs, root, envOver, 60000, stdinInput.utf8Encode(), outPath, errPath);
     test.check("runDocs process error: " + res.error, res.error == "");
     outText := fs.readText(outPath).text;
     errText := fs.readText(errPath).text;
@@ -176,7 +175,7 @@ test.check("rendered[1].html has data-fence", html1.indexOf("data-fence=\"0\"", 
 modRes := runDocs(["--modules-json"], root, "");
 test.checkInt("docs --modules-json status: " + modRes.stderr, 0, modRes.status);
 modOffsets := json.arrayOffsets(modRes.stdout, 0);
-test.checkInt("modules count", 41, modOffsets.length());
+test.checkInt("modules count", 39, modOffsets.length());
 
 var foundIo := false;
 var foundCanvas := false;

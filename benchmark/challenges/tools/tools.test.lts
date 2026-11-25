@@ -3,7 +3,7 @@
 fs := import "core/file";
 path := import "core/path";
 test := import "core/test";
-unicode := import "core/unicode";
+text := import "core/text";
 cbuild := import "util/challenge-build";
 ch := import "util/challenges";
 project := import "util/project";
@@ -26,5 +26,5 @@ test.checkInt("roundDivTiesEven(-2675, 1000)", -3, cbuild.roundDivTiesEven(-2675
 decoded1 := ch.unescapeChallengeHtml(entitiesRes.text, "&lt;x&gt; &amp; &NotEqualTilde; &#x1F642; &#128; &notit; &unknown;");
 decoded2 := ch.unescapeChallengeHtml(entitiesRes.text, "&#0; &#xD800; &#x110000; &#11;");
 test.checkText("decoded1", "<x> & ≂̸ 🙂 € ¬it; &unknown;", decoded1);
-rep := unicode.fromCodePoint(unicode.UNICODE_REPLACEMENT_CHAR).text;
+rep := String.fromCodePoint(text.UNICODE_REPLACEMENT_CHAR).text;
 test.checkText("decoded2", rep + " " + rep + " " + rep + " ", decoded2);

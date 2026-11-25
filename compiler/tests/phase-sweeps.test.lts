@@ -5,7 +5,6 @@ list := import "core/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-unicode := import "core/unicode";
 pool := import "external/pool";
 compilerBuild := import "util/compiler-build";
 compilerTest := import "util/compiler-test";
@@ -102,7 +101,7 @@ if not skipHeavy {
         fileName := path.baseName(absFix);
         slug := corpus.parseFixtureFilename(fileName).slug;
         fixJson := fs.readText(absFix).text;
-        srcText := unicode.utf8DecodeStrict(streams.readStreamBytes(fixJson, json.findField(fixJson, 0, "source").valuePos, compDir)).text;
+        srcText := String.fromUtf8Strict(streams.readStreamBytes(fixJson, json.findField(fixJson, 0, "source").valuePos, compDir)).text;
         rLex := compilerTest.runDriver(lexDrv, srcText);
         var matchPat := "";
         var pi := 0;

@@ -1,13 +1,12 @@
 io := import "core/io";
-unicode := import "core/unicode";
 
 sample := "Aé🙂";
-points := unicode.toCodePoints(sample);
-rebuilt := unicode.fromCodePoints(points);
-utf8Bytes := unicode.utf8Encode(sample);
-decoded := unicode.utf8DecodeStrict(utf8Bytes);
-smile := unicode.fromCodePoint(128578);
+points := sample.toCodePoints();
+rebuilt := String.fromCodePoints(points);
+utf8Bytes := sample.utf8Encode();
+decoded := String.fromUtf8Strict(utf8Bytes);
+smile := String.fromCodePoint(128578);
 
 io.outputLine(points.map(fn(x: Int): String { x.toText() }).join(","), rebuilt.ok, rebuilt.text, decoded.ok, decoded.text, smile.text);
-io.outputLine(unicode.isValidUtf8(utf8Bytes), unicode.isValidUtf8([255, 0]));
+io.outputLine(String.isValidUtf8(utf8Bytes), String.isValidUtf8([255, 0]));
 io.outputLine("[" + "ok".padLeft(5) + "]", "[" + "ok".padRight(5) + "]", "[" + 42.toText().padLeft(4) + "]");
