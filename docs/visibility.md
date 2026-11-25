@@ -35,7 +35,9 @@ Mutation through a function parameter, dynamic interface dispatch, unsafe operat
 
 ## Open decisions
 
-Export syntax, private field access, friend-like access, package visibility, re-exports, effect annotations, capability passing, and interaction with generic interfaces.
+See [import expansion and re-exports](lite://doc/modules-and-packages#import-expansion-and-re-exports)
+for public import forms. Private field access, friend-like access, package visibility,
+effect annotations, capability passing, and interaction with generic interfaces remain open.
 
 ## Related concepts and references
 

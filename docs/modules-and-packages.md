@@ -34,17 +34,14 @@ Selected **2026-10-30**:
   belongs to an owning package/module namespace. It is not an interchangeable
   script file or an implicit script entry body. Exact package headers, exports,
   entry declarations, initialization, and file-to-module mapping remain open.
-- Facilities belong to packages/modules. In module-based source, access them
-  through module qualification or explicit member unpacking/introduction.
-  Possible local module aliases can keep qualification short; exact alias,
-  unpack/import syntax (including the suggested using spelling) is not selected.
-  There are no implicit imports in .lt files, including core type names such
-  as Int and Bool. Short names require explicit introduction; qualified names
-  retain their module owner. Language syntax/literal tokens are not imports;
-  inferring the type of a literal does not implicitly import its type's name.
-- Script-run conveniences must not make names ambient inside an imported .lt
-  module. A module's explicit dependencies do not change because a script uses
-  it. Import syntax alone does not choose host authority or operation effects.
+- Facilities belong to packages and modules. Imports introduce public names
+  directly or through a namespace alias. The
+  [package preload](lite://doc/modules-and-packages#package-preload) supplies
+  the package's ambient imports.
+- Running a script leaves the imports and preload of its dependencies scoped
+  to their respective packages. Language syntax and literal typing follow
+  their own rules.
+
 
 Selected clarification **2026-11-15**: an ordinary assignment such as `x = 5`
 is an executable assignment, not a symbol declaration. At file top level it is
@@ -216,6 +213,33 @@ does not complete module/import grammar.
 
 ## Source imports
 
+### Import expansion and re-exports
+
+Design selected **2026-11-26**. Import spelling controls how the imported
+module's public symbols enter the receiving scope. `pub` controls what that
+scope exports to its consumers.
+
+```text
+import "./shapes";           /* public names of shapes enter this block privately */
+shapes := import "./shapes"; /* the namespace alias is private in this scope */
+pub import "./shapes";       /* expose the imported public names directly */
+pub shapes := import "./shapes"; /* expose the namespace alias */
+```
+
+An unaliased import expands public names into its containing block. At file
+scope that means the file's root block. An aliased import collects the public
+names under the explicit alias. For example, if `./shapes` exports `Point`,
+the two `pub` forms above let a consumer of this file access `Point` or
+`shapes.Point`, respectively, under that consumer's own import of this file.
+A re-export preserves the original declaration's identity and access rules.
+The imported file's private declarations remain private to that file.
+
+These are four alternative forms. The public import forms and full block-local
+expansion need compiler verification on TS and C11. See also
+[visibility](lite://doc/modules-and-packages#visibility).
+
+### Namespace import history
+
 Owner-selected namespace collection form, **2026-11-11**:
 
 ```lite
@@ -237,7 +261,7 @@ directory. Lite appends `.lts` when the path does not already end in `.lts`.
 Same-directory files use the explicit `./` prefix; bare paths select library
 modules. Package manifests and version solving remain out of scope.
 
-Generated TS supports namespace imports only. Each import has an immutable
+At this historical checkpoint, generated TS supported namespace imports only. Each import has an immutable
 local alias; members stay qualified, including public functions, immutable
 scalar values, and public types usable in annotations. Receiverless imports
 are rejected so imports cannot implicitly add names to the current scope.
@@ -358,8 +382,9 @@ The braces in the import-list sketch group imported names; they are not a block 
 For imported modules, top-level declarations are private by default. The
 selected spelling `pub name := ...` exposes a declaration through its module
 alias. Private declarations remain visible inside their defining source unit;
-an inaccessible member is unknown to an importer. Visibility for record fields,
-re-exports, and visibility modifiers on imported module aliases remains open.
+an inaccessible member is unknown to an importer. The [import and re-export rules](lite://doc/modules-and-packages#import-expansion-and-re-exports)
+apply the same private default to imported names and namespace aliases.
+Record field visibility remains open.
 
 Within a compiled graph, modules are emitted in canonical topological
 `(level, logical, path)` order rather than source `import` order so swapping
@@ -374,10 +399,63 @@ Implicit arbitrary module initialization and package installation scripts were d
 
 ## Prelude
 
-The former general-prelude proposal is now scoped by source kind. Module-based
-.lt source has no implicit imports, including core type names and bare output
-APIs. Language syntax and literal typing are distinct from namespace imports;
-the exact compiler-intrinsic versus module-definition boundary remains open.
+### Package preload
+
+Selected **2026-11-26**, with compiler implementation pending. The reserved
+source file `$preload.lt` configures preloaded module names for a package.
+Resolve it independently for each package:
+
+1. If the package supplies a `$preload.lt` in its sources, use that file.
+   An empty override selects an empty preload.
+2. Otherwise use Lite's own `$preload.lt`, if present in Lite's source tree.
+3. If neither file exists, preload zero modules.
+
+The package file's sole role is to replace the default preload. The selected
+file's public symbols enter the package's source-file root scopes as private
+imports. For example, `pub import "core/list";` in the preload exposes the
+module's public names, such as `List` once it is exported, directly to those
+root scopes. A bare `import "core/list";` in the preload makes the names
+available to the preload itself. The application and each dependency compile
+under their own chosen file. Public signatures preserve the types resolved
+in the declaring package.
+
+Keep the default preload's directly visible surface small. Every public
+name from a module expanded with `pub import` enters each default receiving
+module or script scope. For instance, expanding `core/text` directly would
+introduce the bare name `UNICODE_REPLACEMENT_CHAR` everywhere that preload
+applies. Prefer a small export surface for modules expanded directly. For a
+broader API, export one alias:
+
+```text
+pub text := import "core/text";
+```
+
+Receiving modules and scripts then use `text.UNICODE_REPLACEMENT_CHAR`.
+The alias occupies one name in each scope, and the module's public API stays
+under it.
+
+A public operation follows its owning type where that type is visible.
+For instance, public operations of intrinsic `Int` are available through
+`Int`, and an alternative `List` brings its own operations. Resolution should
+follow the type owner and actual dependency edges instead of preloading a
+hard-coded list. The inventory of intrinsic names and default prelude exports
+will be reviewed as their type contracts are settled. See
+[fresh literals and defaults](lite://doc/types-and-inference#fresh-literals-and-default-types)
+for how literals acquire a type.
+
+Pending contract cases for TS and C11:
+
+- Without a package override, an export of Lite's `$preload.lt` is available.
+  An empty package preload removes that name. With both files absent, the
+  implicit module graph has no preload edges.
+- A preload export is visible inside a receiving module. Importing that
+  module exposes only what it explicitly publishes.
+- A package using an alternative list loads that list's owner and operations.
+  A dependency using the default list retains its original type and operations.
+  Compiling the alternative package alone has no implicit `core/list` edge.
+- An unaliased import scoped to a block introduces the module's public names
+  inside that block. The two public import forms expose names directly or
+  through the exported alias, respectively.
 
 ### Implicit core preloading gap
 
@@ -385,8 +463,8 @@ the exact compiler-intrinsic versus module-definition boundary remains open.
 namespace calls (`io.*`, `file.*`, `text.*`, etc.) require explicit imports
 everywhere and `.lt` files already enforce extensionless `.lt` resolution,
 prohibition of `.lt`-to-`.lts` imports, and declaration-only top-level items,
-the current compiler does **not** yet satisfy the no-implicit-imports rule for
-`.lt` files:
+the current compiler still has implicit loading outside the selected
+package-preload mechanism:
 
 1. [`compiler/src/modules.lt`](lite://repo/compiler/src/modules.lt)
    unconditionally preloads six core type-owner modules (`lib/core/int.lt`,

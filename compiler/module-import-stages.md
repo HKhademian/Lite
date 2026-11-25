@@ -148,10 +148,11 @@ still a separate, unproven milestone.
 
 ## Known gap in explicit module imports
 
-**Selected rule vs current compiler behavior (recorded 2026-11-24):** `.lt`
-modules must import all dependencies explicitly with zero implicit imports;
-only `.lts` scripts are intended to carry an implicit collector-less prelude
-(such as `base/*` spread into the root file block).
+The [package preload rule](lite://doc/modules-and-packages#package-preload)
+supersedes the 2026-11-24 script-only prelude direction. Each package can
+supply a `$preload.lt` that replaces Lite's default file for that package.
+When both files are absent, resolution adds no implicit module imports.
+Current hard-coded preloading remains an implementation gap.
 
 ### What is already enforced (2026-11-24)
 
@@ -185,21 +186,20 @@ only `.lts` scripts are intended to carry an implicit collector-less prelude
    [`compiler/src/frontend.lt`](lite://repo/compiler/src/frontend.lt) and
    [`compiler/src/frontend-types.lt`](lite://repo/compiler/src/frontend-types.lt)
    resolve primitive and built-in collection type names (`Int`, `String`,
-   `Bool`, `List`, `Array`, `Map`, `Set`, `Unit`, etc.) ambiently instead of
-   requiring explicit imports in `.lt` files.
+   `Bool`, `List`, `Array`, `Map`, `Set`, `Unit`, etc.) ambiently. Compare this set with the eventual intrinsic inventory
+   and the exports of the selected preload.
 
 ### Future fix prerequisites
 
-1. Finalize the `base/*` versus `core/*` module ownership and re-export
-   (`pub import`) design so `.lt` files import `core/*` (or base primitives)
-   explicitly while `.lts` scripts receive an implicit collector-less `base/*`
-   prelude.
-2. Stop preloading `coreOwnerRels` into `.lt` module scopes and restrict
-   `appendTransitiveTypeOps` to type operations owned by types explicitly
-   imported or carried through imported signatures.
-3. Migrate existing `.lt` files (`lib/`, `compiler/src/`, `site/src/`, and
-   tests) to declare their explicit core imports and run a staged self-hosting
-   seed promotion across TypeScript and C11.
+1. Resolve the selected preload file per package and introduce its public
+   symbols in each receiving root block as private imports. Cover both
+   [public import forms](lite://doc/modules-and-packages#import-expansion-and-re-exports)
+   and package isolation.
+2. Replace unconditional `coreOwnerRels` loading. Resolve public type
+   operations through visible types and their owners. Keep the exact
+   intrinsic name inventory separate from module preloading.
+3. Migrate affected modules and verify dependency edges, re-export visibility,
+   and self-hosting seed promotion on TS and C11.
 
 See [implicit core preloading gap](lite://doc/modules-and-packages#implicit-core-preloading-gap)
 for the language specification note.
