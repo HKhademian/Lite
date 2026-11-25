@@ -1500,6 +1500,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     transferCodes: mut List<String> = [];
     var transferCount := 0;
     var fnTryKey := "";
+    monoTryPrefix := if monoInstIdx >= 0 { "#m" + monoInstIdx.toText() } else { "" };
     var fnTransferStart := 0;
     loopIds: mut List<Int> = [];
     loopTryKeys: mut List<String> = [];
@@ -1569,7 +1570,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         fnTryId := nextStmtCtxId;
         nextStmtCtxId = nextStmtCtxId + 1;
         if target == TARGET_TS {
-            fnTryKey = moduleKey + "#mono#" + fnTryId.toText();
+            fnTryKey = moduleKey + monoTryPrefix + "#mono#" + fnTryId.toText();
             fnTransferStart = transferCount;
             mut items.pushBack((kind = ITEM_KIND_TRANSFER_TRY, name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
         }
@@ -3135,7 +3136,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             var loopTryKey := "";
             loopStartTransfers := transferCount;
             if target == TARGET_TS and currentLive and not currentStopped {
-                loopTryKey = moduleKey + "#lp#" + stmtLoopId.toText();
+                loopTryKey = moduleKey + monoTryPrefix + "#lp#" + stmtLoopId.toText();
                 mut items.pushBack((kind = ITEM_KIND_LOOP_TRANSFER_TRY, name = "", runtime = loopTryKey, code = stmtLoopId.toText(),
                 intValue = stmtLoopId, textValue = (0 - stmtLoopId).toText()));
             }
@@ -3675,7 +3676,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     nextStmtCtxId = nextStmtCtxId + 1;
                     fnTryKey = "";
                     if target == TARGET_TS and currentLive and not currentStopped {
-                        fnTryKey = moduleKey + "#fn#" + fnTryId.toText();
+                        fnTryKey = moduleKey + monoTryPrefix + "#fn#" + fnTryId.toText();
                         fnTransferStart = transferCount;
                         mut items.pushBack((kind = ITEM_KIND_TRANSFER_TRY, name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
                     }
@@ -3867,7 +3868,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 nextStmtCtxId = nextStmtCtxId + 1;
                 fnTryKey = "";
                 if target == TARGET_TS and currentLive and not currentStopped {
-                    fnTryKey = moduleKey + "#fn#" + fnTryId.toText();
+                    fnTryKey = moduleKey + monoTryPrefix + "#fn#" + fnTryId.toText();
                     fnTransferStart = transferCount;
                     mut items.pushBack((kind = ITEM_KIND_TRANSFER_TRY, name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
                 }
