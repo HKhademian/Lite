@@ -693,6 +693,8 @@ export interface SurfaceStateLike {
   pointerY: number;
   pointerDown: boolean;
   key: string;
+  keysDown?: Set<string>;
+  pendingWheelDelta?: number;
   pendingDeltaMs: number;
   targetFps: number;
 }
@@ -753,6 +755,8 @@ export function createCanvasSurfaceHost(
   let pointerY = 0;
   let pointerDown = false;
   let pendingKey = '';
+  const heldKeys = new Set<string>();
+  let pendingWheel = 0;
   let lastFrameAt = 0;
 
   const ensureImage = (width: number, height: number): void => {
@@ -781,9 +785,19 @@ export function createCanvasSurfaceHost(
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(k)) {
       ev.preventDefault?.();
     }
+    heldKeys.add(k);
     pendingKey = k;
   };
-  const onKeyUp = (_raw: unknown): void => {};
+  const onKeyUp = (raw: unknown): void => {
+    const ev = raw as { key?: string };
+    heldKeys.delete(String(ev.key ?? ''));
+  };
+  const onWheel = (raw: unknown): void => {
+    const ev = raw as { deltaY?: number };
+    if (typeof ev.deltaY === 'number' && Number.isFinite(ev.deltaY)) {
+      pendingWheel += ev.deltaY;
+    }
+  };
   const onPointerMove = (raw: unknown): void => {
     const ev = raw as { clientX: number; clientY: number };
     const cell = mapPointerToCell(ev.clientX, ev.clientY, canvas.getBoundingClientRect(), imgWidth || canvas.width, imgHeight || canvas.height);
@@ -816,6 +830,7 @@ export function createCanvasSurfaceHost(
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('wheel', onWheel);
   };
   const detachListeners = (): void => {
     if (!listenersAttached) return;
@@ -825,6 +840,7 @@ export function createCanvasSurfaceHost(
     canvas.removeEventListener?.('pointermove', onPointerMove);
     canvas.removeEventListener?.('pointerdown', onPointerDown);
     canvas.removeEventListener?.('pointerup', onPointerUp);
+    canvas.removeEventListener?.('wheel', onWheel);
   };
 
   const stop = (): void => {
@@ -857,6 +873,14 @@ export function createCanvasSurfaceHost(
         state.pointerX = pointerX;
         state.pointerY = pointerY;
         state.pointerDown = pointerDown;
+        if (state.keysDown) {
+          state.keysDown.clear();
+          for (const k of heldKeys) state.keysDown.add(k);
+        }
+        if (pendingWheel !== 0) {
+          state.pendingWheelDelta = (state.pendingWheelDelta ?? 0) + pendingWheel;
+          pendingWheel = 0;
+        }
         if (pendingKey) {
           state.key = pendingKey;
           pendingKey = '';

@@ -23,6 +23,9 @@ pub Vitals := alias (frameCount: Int, frameTimeMs: Float, avgFrameTimeMs: Float,
 /** Window geometry and fullscreen state snapshot for an active surface. */
 pub Bounds := alias (x: Int, y: Int, width: Int, height: Int, fullscreen: Bool);
 
+/** Offscreen RGBA pixel texture handle created by `createTexture`. */
+pub Texture := alias (handle: Int, width: Int, height: Int);
+
 /** Constructs a 2D point `(x, y)`. */
 pub point := fn(x: Float, y: Float): Point { (x = x, y = y) };
 
@@ -173,3 +176,51 @@ pub isFullscreen := fn(surface: Surface): Bool {
 pub toggleFullscreen := fn(surface: Surface): Unit {
     setFullscreen(surface, not isFullscreen(surface));
 };
+
+/** True while key `key` is currently held down on `surface`. */
+pub isKeyDown := fn(surface: Surface, key: String): Bool;
+
+/** True only on the frame key `key` transitions from up to down on `surface`. */
+pub isKeyPressed := fn(surface: Surface, key: String): Bool;
+
+/** True only on the frame key `key` transitions from down to up on `surface`. */
+pub isKeyReleased := fn(surface: Surface, key: String): Bool;
+
+/** True only on the frame the primary pointer button transitions from up to down. */
+pub isPointerPressed := fn(surface: Surface): Bool;
+
+/** True only on the frame the primary pointer button transitions from down to up. */
+pub isPointerReleased := fn(surface: Surface): Bool;
+
+/** Vertical scroll wheel delta accumulated since the previous frame. */
+pub wheelDelta := fn(surface: Surface): Float;
+
+/** Restricts subsequent drawing calls on `surface` to `area`. */
+pub setClipRect := fn(surface: Surface, area: Rect): Unit;
+
+/** Clears the active clipping rectangle so drawing spans the full surface. */
+pub clearClipRect := fn(surface: Surface): Unit;
+
+/** Fills the solid triangle `(a, b, c)` on `surface` with color `fill`. */
+pub fillTriangle := fn(surface: Surface, a: Point, b: Point, c: Point, fill: Color): Unit;
+
+/** Allocates a transparent `width x height` offscreen RGBA texture. */
+pub createTexture := fn(width: Int, height: Int): Texture;
+
+/** Writes color `fill` directly to pixel `(x, y)` inside offscreen texture `tex`. */
+pub setTexturePixel := fn(tex: Texture, x: Int, y: Int, fill: Color): Unit;
+
+/** Alpha-blends offscreen texture `tex` onto `surface` at top-left `at`. */
+pub blit := fn(surface: Surface, tex: Texture, at: Point): Unit;
+
+/** Alpha-blends offscreen texture `tex` scaled to `dest` on `surface`. */
+pub blitScaled := fn(surface: Surface, tex: Texture, dest: Rect): Unit;
+
+/** Releases offscreen texture `tex` and recycles its handle slot. */
+pub destroyTexture := fn(tex: Texture): Unit;
+
+/** Captures a checkpoint for per-frame scratch strings (O(1) no-op on GC targets, slab rewind on C11). */
+pub scratchMark := fn(): Int;
+
+/** Reclaims frame-scratch strings allocated after `mark` (O(1) no-op on GC targets, frees transient C11 slabs). */
+pub scratchRewind := fn(mark: Int): Unit;

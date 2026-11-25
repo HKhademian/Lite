@@ -64,7 +64,7 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | Module | Environment | Capabilities |
 | --- | --- | --- |
 | `extra/canvas` | Lite Play | Browser & desktop Play 2D pixel/rect canvas (`create`, `play`, `clear`, `fillRect`, `setPixel`, `rgb`/`rgba`) |
-| `extra/surface` | Lite Play / Desktop | Target-independent 2D desktop & headless surface (`open`, `resize`, `bounds`, `setFullscreen`, `toggleFullscreen`, `playTone`, `vitals`) |
+| `extra/surface` | Lite Play / Desktop | Target-independent 2D surface (`open`, `run`, `fillTriangle`, `setClipRect`, `Texture`/`blit`, `isKeyDown`/`Pressed`/`Released`, `wheelDelta`, `scratchMark`/`Rewind`, `vitals`) |
 | `extra/board` | Lite Play | 2D shape, sprite, and pixel-grid helpers built on `extra/canvas` |
 | `extra/audio` | Lite Play | WebAudio & native PCM tone queue (`tone`, `playNote`, `drain`) |
 | `extra/color` | Browser + CLI | Encoding-independent normalized RGBA/HSL color values (`fromRgb`, `fromRgba8`, `fromHsl`, `mix`, `withAlphaFloat`) |

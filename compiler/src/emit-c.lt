@@ -588,6 +588,22 @@ ensureCBuiltinMap := fn(): Unit {
     mut cBuiltinMap.set("extraCanvasResize", "lt_canvas_resize");
     mut cBuiltinMap.set("extraCanvasSetFullscreen", "lt_canvas_set_fullscreen");
     mut cBuiltinMap.set("extraCanvasRun", "lt_canvas_run");
+    mut cBuiltinMap.set("extraCanvasIsKeyDown", "lt_canvas_is_key_down");
+    mut cBuiltinMap.set("extraCanvasIsKeyPressed", "lt_canvas_is_key_pressed");
+    mut cBuiltinMap.set("extraCanvasIsKeyReleased", "lt_canvas_is_key_released");
+    mut cBuiltinMap.set("extraCanvasIsPointerPressed", "lt_canvas_is_pointer_pressed");
+    mut cBuiltinMap.set("extraCanvasIsPointerReleased", "lt_canvas_is_pointer_released");
+    mut cBuiltinMap.set("extraCanvasWheelDelta", "lt_canvas_wheel_delta");
+    mut cBuiltinMap.set("extraCanvasSetClipRect", "lt_canvas_set_clip_rect");
+    mut cBuiltinMap.set("extraCanvasClearClipRect", "lt_canvas_clear_clip_rect");
+    mut cBuiltinMap.set("extraCanvasFillTriangle", "lt_canvas_fill_triangle");
+    mut cBuiltinMap.set("extraCanvasCreateTexture", "lt_canvas_create_texture");
+    mut cBuiltinMap.set("extraCanvasSetTexturePixel", "lt_canvas_set_texture_pixel");
+    mut cBuiltinMap.set("extraCanvasBlit", "lt_canvas_blit");
+    mut cBuiltinMap.set("extraCanvasBlitScaled", "lt_canvas_blit_scaled");
+    mut cBuiltinMap.set("extraCanvasDestroyTexture", "lt_canvas_destroy_texture");
+    mut cBuiltinMap.set("extraCanvasScratchMark", "lt_canvas_scratch_mark");
+    mut cBuiltinMap.set("extraCanvasScratchRewind", "lt_canvas_scratch_rewind");
 };
 
 /** Rewrites registered `lite$...(` builtin calls via O(1) map lookup and strips internal `/*@T:...*/`/`/*@C:...*/`/`/*@P:...*/`/`/*@CFN_START:...*/` markers outside quoted strings. */
@@ -4462,13 +4478,22 @@ usesExtraCanvasBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$extraCanvasCapture(") or usesIntHelper(calls, "lite$extraCanvasSetTargetFps(") or
     usesIntHelper(calls, "lite$extraCanvasVitals(") or usesIntHelper(calls, "lite$extraCanvasPlayTone(") or
     usesIntHelper(calls, "lite$extraCanvasBounds(") or usesIntHelper(calls, "lite$extraCanvasResize(") or
-    usesIntHelper(calls, "lite$extraCanvasSetFullscreen(") or usesIntHelper(calls, "lite$extraCanvasRun(")
+    usesIntHelper(calls, "lite$extraCanvasSetFullscreen(") or usesIntHelper(calls, "lite$extraCanvasRun(") or
+    usesIntHelper(calls, "lite$extraCanvasIsKeyDown(") or usesIntHelper(calls, "lite$extraCanvasIsKeyPressed(") or
+    usesIntHelper(calls, "lite$extraCanvasIsKeyReleased(") or usesIntHelper(calls, "lite$extraCanvasIsPointerPressed(") or
+    usesIntHelper(calls, "lite$extraCanvasIsPointerReleased(") or usesIntHelper(calls, "lite$extraCanvasWheelDelta(") or
+    usesIntHelper(calls, "lite$extraCanvasSetClipRect(") or usesIntHelper(calls, "lite$extraCanvasClearClipRect(") or
+    usesIntHelper(calls, "lite$extraCanvasFillTriangle(") or usesIntHelper(calls, "lite$extraCanvasCreateTexture(") or
+    usesIntHelper(calls, "lite$extraCanvasSetTexturePixel(") or usesIntHelper(calls, "lite$extraCanvasBlit(") or
+    usesIntHelper(calls, "lite$extraCanvasBlitScaled(") or usesIntHelper(calls, "lite$extraCanvasDestroyTexture(") or
+    usesIntHelper(calls, "lite$extraCanvasScratchMark(") or usesIntHelper(calls, "lite$extraCanvasScratchRewind(")
 };
 
 /** Emits the self-contained C11 `extra/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder + vitals). */
 emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     if not usesExtraCanvasBuiltins(calls) { return; }
     surfTag := frontend.cStructTag("(handle:Int)");
+    texTag := frontend.cStructTag("(handle:Int,width:Int,height:Int)");
     colTag := frontend.cStructTag("(r:Float,g:Float,b:Float,a:Float)");
     ptTag := frontend.cStructTag("(x:Float,y:Float)");
     rcTag := frontend.cStructTag("(x:Float,y:Float,width:Float,height:Float)");
@@ -4476,13 +4501,16 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     vitTag := frontend.cStructTag("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
     bndTag := frontend.cStructTag("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
     okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
-    outLine("typedef struct { int w; int h; int x; int y; bool fullscreen; uint8_t *pixels; bool open; double px; double py; bool pdown; char key[16]; char key_out[16]; int64_t last_ms; int64_t frame_start_ns; int64_t frame_count; double target_fps; double last_frame_ms; double avg_frame_ms; bool headless; void *win; void *view; } lt_canvas_state;");
+    outLine("typedef struct { int w; int h; int x; int y; bool fullscreen; uint8_t *pixels; bool has_clip; int clip_x0; int clip_y0; int clip_x1; int clip_y1; bool open; double px; double py; bool pdown; bool prev_pdown; bool ppressed; bool preleased; double wheel_y; double pending_wheel_y; char key[16]; char key_out[16]; char keys_down[32][16]; int keys_down_n; char keys_prev[32][16]; int keys_prev_n; char keys_pressed[32][16]; int keys_pressed_n; char keys_released[32][16]; int keys_released_n; int64_t last_ms; int64_t frame_start_ns; int64_t frame_count; double target_fps; double last_frame_ms; double avg_frame_ms; bool headless; void *win; void *view; } lt_canvas_state;");
     outLine("static lt_canvas_state lt_canvas_slots[16];");
+    outLine("typedef struct { int w; int h; uint8_t *pixels; } lt_texture_state;");
+    outLine("static lt_texture_state lt_texture_slots[256];");
     outLine("LT_INLINE int64_t lt_canvas_now_ns(void) { struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return (int64_t)ts.tv_sec * 1000000000LL + (int64_t)ts.tv_nsec; }");
     outLine("LT_INLINE int64_t lt_canvas_now_ms(void) { return lt_canvas_now_ns() / 1000000LL; }");
     outLine("LT_INLINE uint8_t lt_canvas_u8(double v) { if (!(v > 0.0)) return 0; if (v >= 1.0) return 255; return (uint8_t)(v * 255.0 + 0.5); }");
     outLine("LT_INLINE void lt_canvas_blend(lt_canvas_state *s, int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {");
     outLine("    if (x < 0 || y < 0 || x >= s->w || y >= s->h || a == 0) return;");
+    outLine("    if (s->has_clip && (x < s->clip_x0 || y < s->clip_y0 || x >= s->clip_x1 || y >= s->clip_y1)) return;");
     outLine("    uint8_t *p = s->pixels + ((size_t)y * (size_t)s->w + (size_t)x) * 4u;");
     outLine("    if (a == 255) { p[0] = r; p[1] = g; p[2] = b; p[3] = 255; return; }");
     outLine("    unsigned inv = 255u - (unsigned)a;");
@@ -4519,7 +4547,7 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("        for (int row = 0; row < ch; row += 1) memcpy(nb + (size_t)row * (size_t)nw * 4u, s->pixels + (size_t)row * (size_t)s->w * 4u, (size_t)cw * 4u);");
     outLine("        free(s->pixels);");
     outLine("    }");
-    outLine("    s->pixels = nb; s->w = nw; s->h = nh;");
+    outLine("    s->pixels = nb; s->w = nw; s->h = nh; s->has_clip = false;");
     outLine("}");
     outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
     outLine("LT_INLINE CGRect lt_objc_rect(id obj, SEL sel) {");
@@ -4573,6 +4601,38 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("#endif");
     outLine("    return (" + surfTag + "){ .f_handle = (int64_t)(slot + 1) };");
     outLine("}");
+    outLine("LT_INLINE void lt_key_copy(char dst[16], const char *src) {");
+    outLine("    size_t i = 0u;");
+    outLine("    if (src != NULL) { while (i < 15u && src[i] != '\\0') { dst[i] = src[i]; i += 1u; } }");
+    outLine("    dst[i] = '\\0';");
+    outLine("}");
+    outLine("LT_INLINE bool lt_keyset_has(const char list[32][16], int count, const char *k) {");
+    outLine("    if (k == NULL || k[0] == '\\0') return false;");
+    outLine("    for (int i = 0; i < count; i += 1) { if (strcmp(list[i], k) == 0) return true; }");
+    outLine("    return false;");
+    outLine("}");
+    outLine("LT_INLINE void lt_keyset_add(char list[32][16], int *count, const char *k) {");
+    outLine("    if (k == NULL || k[0] == '\\0' || lt_keyset_has(list, *count, k) || *count >= 32) return;");
+    outLine("    lt_key_copy(list[*count], k); *count += 1;");
+    outLine("}");
+    outLine("LT_INLINE void lt_keyset_remove(char list[32][16], int *count, const char *k) {");
+    outLine("    if (k == NULL || k[0] == '\\0') return;");
+    outLine("    for (int i = 0; i < *count; i += 1) {");
+    outLine("        if (strcmp(list[i], k) == 0) { if (i != *count - 1) memcpy(list[i], list[*count - 1], 16u); *count -= 1; return; }");
+    outLine("    }");
+    outLine("}");
+    outLine("LT_INLINE void lt_map_cocoa_key(const char *u, char out[16]) {");
+    outLine("    if (!u || u[0] == '\\0') { out[0] = '\\0'; return; }");
+    outLine("    if (u[0] == 27) lt_key_copy(out, \"Escape\");");
+    outLine("    else if (u[0] == '\\r' || u[0] == '\\n') lt_key_copy(out, \"Enter\");");
+    outLine("    else if (u[0] == 127 || u[0] == 8) lt_key_copy(out, \"Backspace\");");
+    outLine("    else if ((unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x80) lt_key_copy(out, \"ArrowUp\");");
+    outLine("    else if ((unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x81) lt_key_copy(out, \"ArrowDown\");");
+    outLine("    else if ((unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x82) lt_key_copy(out, \"ArrowLeft\");");
+    outLine("    else if ((unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x83) lt_key_copy(out, \"ArrowRight\");");
+    outLine("    else if ((unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] >= 0x84 && (unsigned char)u[2] <= 0x8F) snprintf(out, 16, \"F%d\", (int)((unsigned char)u[2] - 0x83));");
+    outLine("    else lt_key_copy(out, u);");
+    outLine("}");
     outLine("LT_INLINE " + inpTag + " lt_canvas_poll(" + surfTag + " surf) {");
     outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle);");
     outLine("    if (!s) return (" + inpTag + "){ .f_open = false, .f_width = 0, .f_height = 0, .f_pointerX = 0.0, .f_pointerY = 0.0, .f_pointerDown = false, .f_key = LT_ASTR(\"\"), .f_deltaMs = 0 };");
@@ -4587,20 +4647,18 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("            unsigned long et = ((unsigned long (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"type\"));");
     outLine("            if (et == 1ul) s->pdown = true;");
     outLine("            else if (et == 2ul) s->pdown = false;");
-    outLine("            else if (et == 10ul) {");
+    outLine("            else if (et == 22ul) { s->pending_wheel_y += ((double (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"scrollingDeltaY\")); }");
+    outLine("            else if (et == 10ul || et == 11ul) {");
     outLine("                id chars = ((id (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"characters\"));");
     outLine("                const char *u = chars ? ((const char *(*)(id, SEL))objc_msgSend)(chars, sel_registerName(\"UTF8String\")) : \"\";");
-    outLine("                if (u && u[0] == 27) { strncpy(s->key, \"Escape\", 15); s->key[15] = '\\0'; }");
-    outLine("                else if (u && (u[0] == '\\r' || u[0] == '\\n')) { strncpy(s->key, \"Enter\", 15); s->key[15] = '\\0'; }");
-    outLine("                else if (u && (u[0] == 127 || u[0] == 8)) { strncpy(s->key, \"Backspace\", 15); s->key[15] = '\\0'; }");
-    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x80) { strncpy(s->key, \"ArrowUp\", 15); s->key[15] = '\\0'; }");
-    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x81) { strncpy(s->key, \"ArrowDown\", 15); s->key[15] = '\\0'; }");
-    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x82) { strncpy(s->key, \"ArrowLeft\", 15); s->key[15] = '\\0'; }");
-    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] == 0x83) { strncpy(s->key, \"ArrowRight\", 15); s->key[15] = '\\0'; }");
-    outLine("                else if (u && (unsigned char)u[0] == 0xEF && (unsigned char)u[1] == 0x9C && (unsigned char)u[2] >= 0x84 && (unsigned char)u[2] <= 0x8F) { snprintf(s->key, 16, \"F%d\", (int)((unsigned char)u[2] - 0x83)); }");
-    outLine("                else if (u) { strncpy(s->key, u, 15); s->key[15] = '\\0'; }");
-    outLine("                unsigned long mods = ((unsigned long (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"modifierFlags\"));");
-    outLine("                if ((mods & (1ul << 20)) == 0ul) continue;");
+    outLine("                char mapped[16]; lt_map_cocoa_key(u, mapped);");
+    outLine("                if (et == 10ul) {");
+    outLine("                    lt_key_copy(s->key, mapped); lt_keyset_add(s->keys_down, &s->keys_down_n, mapped);");
+    outLine("                    unsigned long mods = ((unsigned long (*)(id, SEL))objc_msgSend)(ev, sel_registerName(\"modifierFlags\"));");
+    outLine("                    if ((mods & (1ul << 20)) == 0ul) continue;");
+    outLine("                } else {");
+    outLine("                    lt_keyset_remove(s->keys_down, &s->keys_down_n, mapped);");
+    outLine("                }");
     outLine("            }");
     outLine("            ((void (*)(id, SEL, id))objc_msgSend)(app, sel_registerName(\"sendEvent:\"), ev);");
     outLine("        }");
@@ -4613,6 +4671,13 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("    }");
     outLine("#endif");
     outLine("    int64_t now = lt_canvas_now_ms(); int64_t dt = now - s->last_ms; if (dt < 0) dt = 0; s->last_ms = now;");
+    outLine("    s->keys_pressed_n = 0; s->keys_released_n = 0;");
+    outLine("    for (int i = 0; i < s->keys_down_n; i += 1) { if (!lt_keyset_has(s->keys_prev, s->keys_prev_n, s->keys_down[i])) lt_keyset_add(s->keys_pressed, &s->keys_pressed_n, s->keys_down[i]); }");
+    outLine("    if (s->key[0] != '\\0' && !lt_keyset_has(s->keys_prev, s->keys_prev_n, s->key)) lt_keyset_add(s->keys_pressed, &s->keys_pressed_n, s->key);");
+    outLine("    for (int i = 0; i < s->keys_prev_n; i += 1) { if (!lt_keyset_has(s->keys_down, s->keys_down_n, s->keys_prev[i])) lt_keyset_add(s->keys_released, &s->keys_released_n, s->keys_prev[i]); }");
+    outLine("    memcpy(s->keys_prev, s->keys_down, sizeof(s->keys_prev)); s->keys_prev_n = s->keys_down_n;");
+    outLine("    s->ppressed = s->pdown && !s->prev_pdown; s->preleased = !s->pdown && s->prev_pdown; s->prev_pdown = s->pdown;");
+    outLine("    s->wheel_y = s->pending_wheel_y; s->pending_wheel_y = 0.0;");
     outLine("    memcpy(s->key_out, s->key, 16);");
     outLine("    const char *kcopy = s->key_out[0] ? s->key_out : \"\";");
     outLine("    return (" + inpTag + "){ .f_open = s->open, .f_width = s->w, .f_height = s->h, .f_pointerX = s->px, .f_pointerY = s->py, .f_pointerDown = s->pdown, .f_key = lt_text_from_cstr(kcopy), .f_deltaMs = dt };");
@@ -4792,15 +4857,23 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lite$extraCanvasDrawText(") {
         outLine("LT_INLINE const uint8_t *lt_canvas_glyph(char ch) {");
-        outLine("    static const uint8_t g_sp[7]={0,0,0,0,0,0,0}, g_ex[7]={4,4,4,4,4,0,4}, g_dot[7]={0,0,0,0,0,12,12}, g_com[7]={0,0,0,0,4,4,8}, g_col[7]={0,4,4,0,4,4,0}, g_min[7]={0,0,0,31,0,0,0}, g_plu[7]={0,4,4,31,4,4,0}, g_sl[7]={1,2,2,4,8,8,16}, g_lp[7]={2,4,8,8,8,4,2}, g_rp[7]={8,4,2,2,2,4,8};");
-        outLine("    static const uint8_t g_dig[10][7]={{14,17,19,21,25,17,14},{4,12,4,4,4,4,14},{14,17,1,2,4,8,31},{30,1,1,14,1,1,30},{2,6,10,18,31,2,2},{31,16,30,1,1,17,14},{14,16,30,17,17,17,14},{31,1,2,4,8,8,8},{14,17,17,14,17,17,14},{14,17,17,15,1,1,14}};");
-        outLine("    static const uint8_t g_abc[26][7]={{14,17,17,31,17,17,17},{30,17,17,30,17,17,30},{14,17,16,16,16,17,14},{28,18,17,17,17,18,28},{31,16,16,30,16,16,31},{31,16,16,30,16,16,16},{14,17,16,23,17,17,15},{17,17,17,31,17,17,17},{14,4,4,4,4,4,14},{7,2,2,2,18,18,12},{17,18,20,24,20,18,17},{16,16,16,16,16,16,31},{17,27,21,21,17,17,17},{17,25,21,19,17,17,17},{14,17,17,17,17,17,14},{30,17,17,30,16,16,16},{14,17,17,17,21,18,13},{30,17,17,30,20,18,17},{15,16,16,14,1,1,30},{31,4,4,4,4,4,4},{17,17,17,17,17,17,14},{17,17,17,17,17,10,4},{17,17,17,21,21,27,17},{17,17,10,4,10,17,17},{17,17,10,4,4,4,4},{31,1,2,4,8,16,31}};");
-        outLine("    if (ch >= 'a' && ch <= 'z') ch = (char)(ch - 32);");
-        outLine("    if (ch >= '0' && ch <= '9') return g_dig[ch - '0'];");
-        outLine("    if (ch >= 'A' && ch <= 'Z') return g_abc[ch - 'A'];");
-        outLine("    if (ch == '!') return g_ex; if (ch == '.') return g_dot; if (ch == ',') return g_com; if (ch == ':') return g_col;");
-        outLine("    if (ch == '-') return g_min; if (ch == '+') return g_plu; if (ch == '/') return g_sl; if (ch == '(') return g_lp; if (ch == ')') return g_rp;");
-        outLine("    return g_sp;");
+        outLine("    static const uint8_t g_tbl[95][7] = {");
+        outLine("        {0,0,0,0,0,0,0},{4,4,4,4,4,0,4},{10,10,10,0,0,0,0},{10,10,31,10,31,10,10},{4,15,20,14,5,30,4},{24,25,2,4,8,19,3},{12,18,20,8,21,18,13},{4,4,8,0,0,0,0},");
+        outLine("        {2,4,8,8,8,4,2},{8,4,2,2,2,4,8},{0,4,21,14,21,4,0},{0,4,4,31,4,4,0},{0,0,0,0,0,4,8},{0,0,0,31,0,0,0},{0,0,0,0,0,12,12},{1,2,2,4,8,8,16},");
+        outLine("        {14,17,19,21,25,17,14},{4,12,4,4,4,4,14},{14,17,1,2,4,8,31},{30,1,1,14,1,1,30},{2,6,10,18,31,2,2},{31,16,30,1,1,17,14},{14,16,30,17,17,17,14},{31,1,2,4,8,8,8},");
+        outLine("        {14,17,17,14,17,17,14},{14,17,17,15,1,1,14},{0,4,4,0,4,4,0},{0,4,4,0,4,4,8},{2,4,8,16,8,4,2},{0,0,31,0,31,0,0},{8,4,2,1,2,4,8},{14,17,1,2,4,0,4},");
+        outLine("        {14,17,23,21,23,16,14},{14,17,17,31,17,17,17},{30,17,17,30,17,17,30},{14,17,16,16,16,17,14},{28,18,17,17,17,18,28},{31,16,16,30,16,16,31},{31,16,16,30,16,16,16},{14,17,16,23,17,17,15},");
+        outLine("        {17,17,17,31,17,17,17},{14,4,4,4,4,4,14},{7,2,2,2,18,18,12},{17,18,20,24,20,18,17},{16,16,16,16,16,16,31},{17,27,21,21,17,17,17},{17,25,21,19,17,17,17},{14,17,17,17,17,17,14},");
+        outLine("        {30,17,17,30,16,16,16},{14,17,17,17,21,18,13},{30,17,17,30,20,18,17},{15,16,16,14,1,1,30},{31,4,4,4,4,4,4},{17,17,17,17,17,17,14},{17,17,17,17,17,10,4},{17,17,17,21,21,27,17},");
+        outLine("        {17,17,10,4,10,17,17},{17,17,10,4,4,4,4},{31,1,2,4,8,16,31},{14,8,8,8,8,8,14},{16,8,8,4,2,2,1},{14,2,2,2,2,2,14},{4,10,17,0,0,0,0},{0,0,0,0,0,0,31},");
+        outLine("        {8,4,2,0,0,0,0},{0,0,14,1,15,17,15},{16,16,22,25,17,17,30},{0,0,15,16,16,17,14},{1,1,13,19,17,17,15},{0,0,14,17,31,16,14},{6,9,8,28,8,8,8},{0,15,17,17,15,1,14},");
+        outLine("        {16,16,22,25,17,17,17},{4,0,12,4,4,4,14},{2,0,6,2,2,18,12},{16,16,18,20,24,20,18},{12,4,4,4,4,4,14},{0,0,26,21,21,17,17},{0,0,22,25,17,17,17},{0,0,14,17,17,17,14},");
+        outLine("        {0,0,30,17,30,16,16},{0,0,13,19,15,1,1},{0,0,22,25,16,16,16},{0,0,15,16,14,1,30},{8,8,28,8,8,9,6},{0,0,17,17,17,19,13},{0,0,17,17,17,10,4},{0,0,17,17,21,21,10},");
+        outLine("        {0,0,17,10,4,10,17},{0,0,17,17,15,1,14},{0,0,31,2,4,8,31},{6,8,8,24,8,8,6},{4,4,4,4,4,4,4},{12,2,2,3,2,2,12},{0,0,8,21,2,0,0}");
+        outLine("    };");
+        outLine("    unsigned char uc = (unsigned char)ch;");
+        outLine("    if (uc < 32u || uc > 126u) return g_tbl[0];");
+        outLine("    return g_tbl[uc - 32u];");
         outLine("}");
         outLine("LT_INLINE void lt_canvas_draw_text(" + surfTag + " surf, lt_str content, " + ptTag + " at, double size, " + colTag + " fill) {");
         outLine("    if (content.byte_len == 0u) return; int scale = (int)floor(size / 7.0 + 0.5); if (scale < 1) scale = 1;");
@@ -4901,6 +4974,109 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
         outLine("#else");
         outLine("    (void)freq; (void)duration_ms; (void)volume;");
         outLine("#endif");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasIsKeyDown(") {
+        outLine("LT_INLINE bool lt_canvas_is_key_down(" + surfTag + " surf, lt_str key) { lt_canvas_state *s = lt_canvas_get(surf.f_handle); return s ? lt_keyset_has(s->keys_down, s->keys_down_n, lt_text_cstr(key)) : false; }");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasIsKeyPressed(") {
+        outLine("LT_INLINE bool lt_canvas_is_key_pressed(" + surfTag + " surf, lt_str key) { lt_canvas_state *s = lt_canvas_get(surf.f_handle); return s ? lt_keyset_has(s->keys_pressed, s->keys_pressed_n, lt_text_cstr(key)) : false; }");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasIsKeyReleased(") {
+        outLine("LT_INLINE bool lt_canvas_is_key_released(" + surfTag + " surf, lt_str key) { lt_canvas_state *s = lt_canvas_get(surf.f_handle); return s ? lt_keyset_has(s->keys_released, s->keys_released_n, lt_text_cstr(key)) : false; }");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasIsPointerPressed(") {
+        outLine("LT_INLINE bool lt_canvas_is_pointer_pressed(" + surfTag + " surf) { lt_canvas_state *s = lt_canvas_get(surf.f_handle); return s ? s->ppressed : false; }");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasIsPointerReleased(") {
+        outLine("LT_INLINE bool lt_canvas_is_pointer_released(" + surfTag + " surf) { lt_canvas_state *s = lt_canvas_get(surf.f_handle); return s ? s->preleased : false; }");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasWheelDelta(") {
+        outLine("LT_INLINE double lt_canvas_wheel_delta(" + surfTag + " surf) { lt_canvas_state *s = lt_canvas_get(surf.f_handle); return s ? s->wheel_y : 0.0; }");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasSetClipRect(") {
+        outLine("LT_INLINE void lt_canvas_set_clip_rect(" + surfTag + " surf, " + rcTag + " area) {");
+        outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
+        outLine("    s->has_clip = true;");
+        outLine("    s->clip_x0 = (int)floor(area.f_x); if (s->clip_x0 < 0) s->clip_x0 = 0;");
+        outLine("    s->clip_y0 = (int)floor(area.f_y); if (s->clip_y0 < 0) s->clip_y0 = 0;");
+        outLine("    s->clip_x1 = (int)ceil(area.f_x + area.f_width); if (s->clip_x1 > s->w) s->clip_x1 = s->w;");
+        outLine("    s->clip_y1 = (int)ceil(area.f_y + area.f_height); if (s->clip_y1 > s->h) s->clip_y1 = s->h;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasClearClipRect(") {
+        outLine("LT_INLINE void lt_canvas_clear_clip_rect(" + surfTag + " surf) { lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (s) s->has_clip = false; }");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasFillTriangle(") {
+        outLine("LT_INLINE void lt_canvas_fill_triangle(" + surfTag + " surf, " + ptTag + " a, " + ptTag + " b, " + ptTag + " c, " + colTag + " fill) {");
+        outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
+        outLine("    double area = (b.f_x - a.f_x) * (c.f_y - a.f_y) - (b.f_y - a.f_y) * (c.f_x - a.f_x);");
+        outLine("    if (area == 0.0) return;");
+        outLine("    uint8_t r = lt_canvas_u8(fill.f_r), g = lt_canvas_u8(fill.f_g), bl = lt_canvas_u8(fill.f_b), al = lt_canvas_u8(fill.f_a);");
+        outLine("    double minx = a.f_x < b.f_x ? (a.f_x < c.f_x ? a.f_x : c.f_x) : (b.f_x < c.f_x ? b.f_x : c.f_x);");
+        outLine("    double miny = a.f_y < b.f_y ? (a.f_y < c.f_y ? a.f_y : c.f_y) : (b.f_y < c.f_y ? b.f_y : c.f_y);");
+        outLine("    double maxx = a.f_x > b.f_x ? (a.f_x > c.f_x ? a.f_x : c.f_x) : (b.f_x > c.f_x ? b.f_x : c.f_x);");
+        outLine("    double maxy = a.f_y > b.f_y ? (a.f_y > c.f_y ? a.f_y : c.f_y) : (b.f_y > c.f_y ? b.f_y : c.f_y);");
+        outLine("    int x0 = (int)floor(minx); if (x0 < 0) x0 = 0; int y0 = (int)floor(miny); if (y0 < 0) y0 = 0;");
+        outLine("    int x1 = (int)ceil(maxx); if (x1 > s->w) x1 = s->w; int y1 = (int)ceil(maxy); if (y1 > s->h) y1 = s->h;");
+        outLine("    for (int y = y0; y < y1; y += 1) { double py = (double)y + 0.5; for (int x = x0; x < x1; x += 1) { double px = (double)x + 0.5; double e0 = (b.f_x - a.f_x) * (py - a.f_y) - (b.f_y - a.f_y) * (px - a.f_x); double e1 = (c.f_x - b.f_x) * (py - b.f_y) - (c.f_y - b.f_y) * (px - b.f_x); double e2 = (a.f_x - c.f_x) * (py - c.f_y) - (a.f_y - c.f_y) * (px - c.f_x); if (area > 0.0 ? (e0 >= 0.0 && e1 >= 0.0 && e2 >= 0.0) : (e0 <= 0.0 && e1 <= 0.0 && e2 <= 0.0)) lt_canvas_blend(s, x, y, r, g, bl, al); } }");
+        outLine("}");
+    }
+    outLine("LT_INLINE lt_texture_state *lt_texture_get(int64_t h) { if (h < 1 || h > 256) return NULL; lt_texture_state *t = &lt_texture_slots[h - 1]; return t->pixels ? t : NULL; }");
+    if usesIntHelper(calls, "lite$extraCanvasCreateTexture(") {
+        outLine("LT_INLINE " + texTag + " lt_canvas_create_texture(int64_t width, int64_t height) {");
+        outLine("    int w = width > 0 ? (int)width : 1; int h = height > 0 ? (int)height : 1;");
+        outLine("    int slot = -1; for (int i = 0; i < 256; i += 1) { if (lt_texture_slots[i].pixels == NULL) { slot = i; break; } }");
+        outLine("    if (slot < 0) return (" + texTag + "){ .f_handle = 0, .f_width = 0, .f_height = 0 };");
+        outLine("    lt_texture_slots[slot].w = w; lt_texture_slots[slot].h = h;");
+        outLine("    lt_texture_slots[slot].pixels = calloc((size_t)w * (size_t)h * 4u, 1u);");
+        outLine("    return (" + texTag + "){ .f_handle = (int64_t)(slot + 1), .f_width = (int64_t)w, .f_height = (int64_t)h };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasSetTexturePixel(") {
+        outLine("LT_INLINE void lt_canvas_set_texture_pixel(" + texTag + " tex, int64_t x, int64_t y, " + colTag + " fill) {");
+        outLine("    lt_texture_state *t = lt_texture_get(tex.f_handle); if (!t) return;");
+        outLine("    if (x < 0 || y < 0 || x >= t->w || y >= t->h) return;");
+        outLine("    size_t idx = ((size_t)y * (size_t)t->w + (size_t)x) * 4u;");
+        outLine("    t->pixels[idx] = lt_canvas_u8(fill.f_r); t->pixels[idx + 1] = lt_canvas_u8(fill.f_g); t->pixels[idx + 2] = lt_canvas_u8(fill.f_b); t->pixels[idx + 3] = lt_canvas_u8(fill.f_a);");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasBlit(") {
+        outLine("LT_INLINE void lt_canvas_blit(" + surfTag + " surf, " + texTag + " tex, " + ptTag + " at) {");
+        outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); lt_texture_state *t = lt_texture_get(tex.f_handle); if (!s || !t) return;");
+        outLine("    int ox = (int)floor(at.f_x + 0.5), oy = (int)floor(at.f_y + 0.5);");
+        outLine("    for (int sy = 0; sy < t->h; sy += 1) { int dy = oy + sy; if (dy < 0 || dy >= s->h) continue; for (int sx = 0; sx < t->w; sx += 1) { int dx = ox + sx; if (dx < 0 || dx >= s->w) continue; size_t idx = ((size_t)sy * (size_t)t->w + (size_t)sx) * 4u; lt_canvas_blend(s, dx, dy, t->pixels[idx], t->pixels[idx + 1], t->pixels[idx + 2], t->pixels[idx + 3]); } }");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasBlitScaled(") {
+        outLine("LT_INLINE void lt_canvas_blit_scaled(" + surfTag + " surf, " + texTag + " tex, " + rcTag + " dest) {");
+        outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); lt_texture_state *t = lt_texture_get(tex.f_handle);");
+        outLine("    if (!s || !t || dest.f_width <= 0.0 || dest.f_height <= 0.0) return;");
+        outLine("    int x0 = (int)floor(dest.f_x); if (x0 < 0) x0 = 0; int y0 = (int)floor(dest.f_y); if (y0 < 0) y0 = 0;");
+        outLine("    int x1 = (int)ceil(dest.f_x + dest.f_width); if (x1 > s->w) x1 = s->w; int y1 = (int)ceil(dest.f_y + dest.f_height); if (y1 > s->h) y1 = s->h;");
+        outLine("    for (int y = y0; y < y1; y += 1) {");
+        outLine("        int sy = (int)floor(((double)y + 0.5 - dest.f_y) / dest.f_height * (double)t->h); if (sy < 0) sy = 0; if (sy >= t->h) sy = t->h - 1;");
+        outLine("        for (int x = x0; x < x1; x += 1) {");
+        outLine("            int sx = (int)floor(((double)x + 0.5 - dest.f_x) / dest.f_width * (double)t->w); if (sx < 0) sx = 0; if (sx >= t->w) sx = t->w - 1;");
+        outLine("            size_t idx = ((size_t)sy * (size_t)t->w + (size_t)sx) * 4u;");
+        outLine("            lt_canvas_blend(s, x, y, t->pixels[idx], t->pixels[idx + 1], t->pixels[idx + 2], t->pixels[idx + 3]);");
+        outLine("        }");
+        outLine("    }");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasDestroyTexture(") {
+        outLine("LT_INLINE void lt_canvas_destroy_texture(" + texTag + " tex) { lt_texture_state *t = lt_texture_get(tex.f_handle); if (!t) return; free(t->pixels); memset(t, 0, sizeof(*t)); }");
+    }
+    hasUtf8Cache := usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesCTextSoftUtf8(calls);
+    if usesIntHelper(calls, "lite$extraCanvasScratchMark(") {
+        outLine("LT_INLINE int64_t lt_canvas_scratch_mark(void) { return lt_str_slab_mark(); }");
+    }
+    if usesIntHelper(calls, "lite$extraCanvasScratchRewind(") {
+        outLine("LT_INLINE void lt_canvas_scratch_rewind(int64_t mark) {");
+        outLine("    lt_str_slab_rewind(mark);");
+        if hasUtf8Cache {
+            outLine("    memset(lt_utf8_cache, 0, sizeof(lt_utf8_cache)); lt_utf8_last = NULL;");
+        }
         outLine("}");
     }
     outLine("");
@@ -5188,6 +5364,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     hasExtraCanvas := usesExtraCanvasBuiltins(calls);
     if hasExtraCanvas {
         mut seedKinds.pushBack("(handle:Int)");
+        mut seedKinds.pushBack("(handle:Int,width:Int,height:Int)");
         mut seedKinds.pushBack("(r:Float,g:Float,b:Float,a:Float)");
         mut seedKinds.pushBack("(x:Float,y:Float)");
         mut seedKinds.pushBack("(x:Float,y:Float,width:Float,height:Float)");
@@ -5374,25 +5551,68 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     emitIntArithmeticHelpers(calls, source, prefix);
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
-    if usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or usesIntHelper(calls, "lt_c_text_trim(") or usesIntHelper(calls, "lt_c_text_repeat(") or usesIntHelper(calls, "lt_c_text_to_lower(") {
-        outLine("static char *lt_str_alloc(size_t n) {");
-        outLine("    static char *slab = NULL;");
-        outLine("    static size_t pos = 0u, cap = 0u;");
-        outLine("    if (n > 16384u) {");
-        outLine("        char *p = malloc(n);");
-        outLine("        if (p == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
-        outLine("        return p;");
-        outLine("    }");
-        outLine("    if (pos + n > cap) {");
-        outLine("        cap = 65536u;");
-        outLine("        slab = malloc(cap);");
-        outLine("        if (slab == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
-        outLine("        pos = 0u;");
-        outLine("    }");
-        outLine("    char *p = slab + pos;");
-        outLine("    pos += n;");
-        outLine("    return p;");
-        outLine("}");
+    usesScratch := usesIntHelper(calls, "lite$extraCanvasScratchMark(") or usesIntHelper(calls, "lite$extraCanvasScratchRewind(");
+    if usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or usesIntHelper(calls, "lt_c_text_trim(") or usesIntHelper(calls, "lt_c_text_repeat(") or usesIntHelper(calls, "lt_c_text_to_lower(") or usesScratch {
+        if usesScratch {
+            outLine("typedef struct lt_str_slab { struct lt_str_slab *prev; size_t cap; size_t pos; char data[]; } lt_str_slab;");
+            outLine("static lt_str_slab *lt_str_head = NULL;");
+            outLine("LT_INLINE char *lt_str_alloc(size_t n) {");
+            outLine("    if (lt_str_head == NULL || lt_str_head->pos + n > lt_str_head->cap) {");
+            outLine("        size_t cap = n > 16384u ? n : 65536u;");
+            outLine("        lt_str_slab *ns = malloc(sizeof(lt_str_slab) + cap);");
+            outLine("        if (ns == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+            outLine("        ns->prev = lt_str_head; ns->cap = cap; ns->pos = 0u; lt_str_head = ns;");
+            outLine("    }");
+            outLine("    char *p = lt_str_head->data + lt_str_head->pos;");
+            outLine("    lt_str_head->pos += n;");
+            outLine("    return p;");
+            outLine("}");
+            outLine("typedef struct { int64_t id; lt_str_slab *slab; size_t pos; } lt_str_mark_entry;");
+            outLine("static lt_str_mark_entry lt_str_marks[64];");
+            outLine("static int lt_str_mark_n = 0;");
+            outLine("static int64_t lt_str_mark_seq = 0;");
+            outLine("LT_INLINE int64_t lt_str_slab_mark(void) {");
+            outLine("    int64_t id = ++lt_str_mark_seq;");
+            outLine("    int idx = lt_str_mark_n < 64 ? lt_str_mark_n++ : 63;");
+            outLine("    lt_str_marks[idx].id = id;");
+            outLine("    lt_str_marks[idx].slab = lt_str_head;");
+            outLine("    lt_str_marks[idx].pos = lt_str_head != NULL ? lt_str_head->pos : 0u;");
+            outLine("    return id;");
+            outLine("}");
+            outLine("LT_INLINE void lt_str_slab_rewind(int64_t mark) {");
+            outLine("    for (int i = lt_str_mark_n - 1; i >= 0; i -= 1) {");
+            outLine("        if (lt_str_marks[i].id == mark) {");
+            outLine("            lt_str_slab *target = lt_str_marks[i].slab;");
+            outLine("            while (lt_str_head != NULL && lt_str_head != target) {");
+            outLine("                if (target == NULL && lt_str_head->prev == NULL && lt_str_head->cap <= 65536u) { lt_str_head->pos = 0u; lt_str_mark_n = i; return; }");
+            outLine("                lt_str_slab *prev = lt_str_head->prev; free(lt_str_head); lt_str_head = prev;");
+            outLine("            }");
+            outLine("            if (lt_str_head != NULL) { lt_str_head->pos = lt_str_marks[i].pos; }");
+            outLine("            lt_str_mark_n = i;");
+            outLine("            return;");
+            outLine("        }");
+            outLine("    }");
+            outLine("}");
+        } else {
+            outLine("static char *lt_str_alloc(size_t n) {");
+            outLine("    static char *slab = NULL;");
+            outLine("    static size_t pos = 0u, cap = 0u;");
+            outLine("    if (n > 16384u) {");
+            outLine("        char *p = malloc(n);");
+            outLine("        if (p == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+            outLine("        return p;");
+            outLine("    }");
+            outLine("    if (pos + n > cap) {");
+            outLine("        cap = 65536u;");
+            outLine("        slab = malloc(cap);");
+            outLine("        if (slab == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+            outLine("        pos = 0u;");
+            outLine("    }");
+            outLine("    char *p = slab + pos;");
+            outLine("    pos += n;");
+            outLine("    return p;");
+            outLine("}");
+        }
     }
     if usesStringConcat(calls) { emitStringConcatHelper(); }
     emitTextPrimitiveHelpers(calls);

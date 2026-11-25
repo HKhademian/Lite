@@ -44,7 +44,20 @@ makeSrc := fn(outPng: String): String {
     "canvas.strokeRect(surf, canvas.rect(2.0, 2.0, 60.0, 44.0), 2.0, canvas.WHITE);\n" +
     "canvas.fillCircle(surf, canvas.point(32.0, 24.0), 10.0, canvas.withAlpha(canvas.CYAN, 0.5));\n" +
     "canvas.strokeLine(surf, canvas.point(0.0, 0.0), canvas.point(63.0, 47.0), 2.0, canvas.YELLOW);\n" +
-    "canvas.drawText(surf, \"OK\", canvas.point(8.0, 28.0), 14.0, canvas.WHITE);\n" +
+    "canvas.setClipRect(surf, canvas.rect(4.0, 4.0, 56.0, 40.0));\n" +
+    "canvas.fillTriangle(surf, canvas.point(10.0, 10.0), canvas.point(40.0, 12.0), canvas.point(22.0, 36.0), canvas.MAGENTA);\n" +
+    "canvas.clearClipRect(surf);\n" +
+    "canvas.drawText(surf, \"Score: 100% [a-z] {ok}\", canvas.point(4.0, 28.0), 7.0, canvas.WHITE);\n" +
+    "tex := canvas.createTexture(4, 4);\n" +
+    "canvas.setTexturePixel(tex, 1, 1, canvas.GREEN);\n" +
+    "canvas.setTexturePixel(tex, 2, 2, canvas.YELLOW);\n" +
+    "canvas.blit(surf, tex, canvas.point(6.0, 6.0));\n" +
+    "canvas.blitScaled(surf, tex, canvas.rect(12.0, 6.0, 8.0, 8.0));\n" +
+    "io.outputLine(tex.width, tex.height, canvas.isKeyDown(surf, \"Space\"), canvas.isKeyPressed(surf, \"a\"), canvas.isKeyReleased(surf, \"a\"), canvas.isPointerPressed(surf), canvas.isPointerReleased(surf), canvas.wheelDelta(surf));\n" +
+    "canvas.destroyTexture(tex);\n" +
+    "m0 := canvas.scratchMark();\n" +
+    "_tmpHud := \"HUD=\" + (42).toText();\n" +
+    "canvas.scratchRewind(m0);\n" +
     "canvas.present(surf);\n" +
     "v0 := canvas.vitals(surf);\n" +
     "canvas.setTargetFps(surf, 120.0);\n" +
@@ -71,6 +84,7 @@ expected :=
 "128 255\n" +
 "0 255 0\n" +
 "true 64 48\n" +
+"4 4 false false false false false 0\n" +
 "1 true true true true true\n" +
 "64 48 true 96 72 true false\n" +
 "true \n";
@@ -110,24 +124,34 @@ if ccInfo.available {
     test.check("c png exists and has PNG signature", cPngBytes.length() > 32 and
     cPngBytes[0] == 137 and cPngBytes[1] == 80 and cPngBytes[2] == 78 and cPngBytes[3] == 71);
 
-    /* 3. C11 AddressSanitizer + UBSan + 5,000-frame RSS stability leak gate */
+    /* 3. C11 AddressSanitizer + UBSan + 5,000-frame RSS stability leak gate (with frame-scratch HUD strings, triangles, clipping, and texture blits) */
     leakSrc :=
     "io := import \"core/io\";\n" +
     "canvas := import \"extra/surface\";\n" +
     "surf := canvas.open(\"LeakCheck\", 160, 120);\n" +
     "canvas.uncapFrameRate(surf);\n" +
+    "spr := canvas.createTexture(4, 4);\n" +
+    "canvas.setTexturePixel(spr, 1, 1, canvas.GREEN);\n" +
     "var rssStart := 0;\n" +
     "var i := 0;\n" +
     "loop i < 5000 {\n" +
+    "    mk := canvas.scratchMark();\n" +
     "    _inp := canvas.poll(surf);\n" +
     "    canvas.clear(surf, canvas.BLACK);\n" +
+    "    canvas.setClipRect(surf, canvas.rect(4.0, 4.0, 152.0, 112.0));\n" +
     "    canvas.fillRect(surf, canvas.rect(10.0, 10.0, 40.0, 30.0), canvas.RED);\n" +
+    "    canvas.fillTriangle(surf, canvas.point(60.0, 15.0), canvas.point(110.0, 20.0), canvas.point(80.0, 60.0), canvas.YELLOW);\n" +
     "    canvas.fillCircle(surf, canvas.point(80.0, 60.0), 20.0, canvas.withAlpha(canvas.CYAN, 0.5));\n" +
-    "    canvas.drawText(surf, \"OK\", canvas.point(12.0, 12.0), 14.0, canvas.WHITE);\n" +
+    "    canvas.blitScaled(surf, spr, canvas.rect(120.0, 10.0, 16.0, 16.0));\n" +
+    "    hud := \"FRAME \" + i.toText() + \" SCORE=\" + (i * 10).toText();\n" +
+    "    canvas.drawText(surf, hud, canvas.point(12.0, 12.0), 14.0, canvas.WHITE);\n" +
+    "    canvas.clearClipRect(surf);\n" +
     "    canvas.present(surf);\n" +
+    "    canvas.scratchRewind(mk);\n" +
     "    if i == 500 { rssStart = canvas.vitals(surf).memoryBytes; }\n" +
     "    i = i + 1;\n" +
     "}\n" +
+    "canvas.destroyTexture(spr);\n" +
     "rssEnd := canvas.vitals(surf).memoryBytes;\n" +
     "growth := rssEnd - rssStart;\n" +
     "io.outputLine(growth <= 1048576);\n" +

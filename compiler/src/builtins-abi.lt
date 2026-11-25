@@ -20,6 +20,7 @@ pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {
 extraHostFunction := fn(moduleIdentity: String, name: String, params: String, result: String): String {
     if moduleIdentity == "lite.extra.surface.v1" {
         surf := "(handle:Int)";
+        tex := "(handle:Int,width:Int,height:Int)";
         col := "(r:Float,g:Float,b:Float,a:Float)";
         pt := "(x:Float,y:Float)";
         rc := "(x:Float,y:Float,width:Float,height:Float)";
@@ -42,6 +43,22 @@ extraHostFunction := fn(moduleIdentity: String, name: String, params: String, re
         else if name == "bounds" and params == "surface=" + surf and result == "(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)" { "lite$extraCanvasBounds" }
         else if name == "resize" and params == "surface=" + surf + "|width=Int|height=Int" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasResize" }
         else if name == "setFullscreen" and params == "surface=" + surf + "|enabled=Bool" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetFullscreen" }
+        else if name == "isKeyDown" and params == "surface=" + surf + "|key=String" and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyDown" }
+        else if name == "isKeyPressed" and params == "surface=" + surf + "|key=String" and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyPressed" }
+        else if name == "isKeyReleased" and params == "surface=" + surf + "|key=String" and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyReleased" }
+        else if name == "isPointerPressed" and params == "surface=" + surf and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsPointerPressed" }
+        else if name == "isPointerReleased" and params == "surface=" + surf and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsPointerReleased" }
+        else if name == "wheelDelta" and params == "surface=" + surf and result == ir.VALUE_KIND_FLOAT { "lite$extraCanvasWheelDelta" }
+        else if name == "setClipRect" and params == "surface=" + surf + "|area=" + rc and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetClipRect" }
+        else if name == "clearClipRect" and params == "surface=" + surf and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasClearClipRect" }
+        else if name == "fillTriangle" and params == "surface=" + surf + "|a=" + pt + "|b=" + pt + "|c=" + pt + "|fill=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasFillTriangle" }
+        else if name == "createTexture" and params == "width=Int|height=Int" and result == tex { "lite$extraCanvasCreateTexture" }
+        else if name == "setTexturePixel" and params == "tex=" + tex + "|x=Int|y=Int|fill=" + col and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetTexturePixel" }
+        else if name == "blit" and params == "surface=" + surf + "|tex=" + tex + "|at=" + pt and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasBlit" }
+        else if name == "blitScaled" and params == "surface=" + surf + "|tex=" + tex + "|dest=" + rc and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasBlitScaled" }
+        else if name == "destroyTexture" and params == "tex=" + tex and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasDestroyTexture" }
+        else if name == "scratchMark" and params == "" and result == ir.VALUE_KIND_INT { "lite$extraCanvasScratchMark" }
+        else if name == "scratchRewind" and params == "mark=Int" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasScratchRewind" }
         else { "" }
     } else {
         ""
