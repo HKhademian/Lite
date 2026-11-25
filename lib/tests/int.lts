@@ -1,49 +1,49 @@
 integer := import "core/int";
 test := import "core/test";
 
-sum := integer.intAdd(2, 3);
+sum := 2.checkedAdd(3);
 test.checkInt("int add", 5, sum.value);
 test.checkBool("int add ok", true, sum.ok);
 
-overflow := integer.intAdd(integer.intMax, 1);
+overflow := integer.intMax.checkedAdd(1);
 test.checkBool("int add overflow", false, overflow.ok);
 
-underflow := integer.intSubtract(integer.intMin, 1);
+underflow := integer.intMin.checkedSub(1);
 test.checkBool("int subtract underflow", false, underflow.ok);
 
-difference := integer.intSubtract(7, 9);
+difference := 7.checkedSub(9);
 test.checkInt("int subtract", -2, difference.value);
 
-product := integer.intMultiply(-6, 7);
+product := (-6).checkedMul(7);
 test.checkInt("int multiply", -42, product.value);
-minimumProduct := integer.intMultiply(integer.intMin, -1);
+minimumProduct := integer.intMin.checkedMul(-1);
 test.checkBool("int multiply min overflow", false, minimumProduct.ok);
 
-quotient := integer.intDivide(-7, 2);
+quotient := (-7).checkedDiv(2);
 test.checkInt("int divide", -3, quotient.value);
-zeroQuotient := integer.intDivide(1, 0);
+zeroQuotient := 1.checkedDiv(0);
 test.checkBool("int divide zero", false, zeroQuotient.ok);
-minimumQuotient := integer.intDivide(integer.intMin, -1);
+minimumQuotient := integer.intMin.checkedDiv(-1);
 test.checkBool("int divide min", false, minimumQuotient.ok);
 
-remainder := integer.intRemainder(-7, 2);
+remainder := (-7).checkedRem(2);
 test.checkInt("int remainder", -1, remainder.value);
-zeroRemainder := integer.intRemainder(1, 0);
+zeroRemainder := 1.checkedRem(0);
 test.checkBool("int remainder zero", false, zeroRemainder.ok);
-minimumRemainder := integer.intRemainder(integer.intMin, -1);
+minimumRemainder := integer.intMin.checkedRem(-1);
 test.checkBool("int remainder minimum valid", true, minimumRemainder.ok);
 test.checkInt("int remainder minimum", 0, minimumRemainder.value);
 
-floor := integer.intFloorDivide(-7, 2);
+floor := (-7).floorDiv(2);
 test.checkInt("int floor divide", -4, floor.value);
-modulo := integer.intFloorModulo(-7, 2);
+modulo := (-7).floorMod(2);
 test.checkInt("int floor modulo", 1, modulo.value);
-zeroModulo := integer.intFloorModulo(1, 0);
+zeroModulo := 1.floorMod(0);
 test.checkBool("int floor modulo zero", false, zeroModulo.ok);
 
-negated := integer.intNegate(42);
+negated := 42.checkedNeg();
 test.checkInt("int negate", -42, negated.value);
-minimumNegation := integer.intNegate(integer.intMin);
+minimumNegation := integer.intMin.checkedNeg();
 test.checkBool("int negate min", false, minimumNegation.ok);
 
 test.checkText("int text zero", "0", (0).toText());

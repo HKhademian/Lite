@@ -48,13 +48,13 @@ pub boolParsed := fn(code: String, value: Bool, constant: Bool, next: Int): Pars
 
 /** Tries a constant integer operation without raising a compile-time runtime fault. */
 pub tryFoldInteger := fn(operator: String, left: Int, right: Int): (value: Int, ok: Bool) {
-    if operator == "+" { return integer.intAdd(left, right); }
-    if operator == "-" { return integer.intSubtract(left, right); }
-    if operator == "*" { return integer.intMultiply(left, right); }
-    if operator == "/" { return integer.intDivide(left, right); }
-    if operator == "%" { return integer.intRemainder(left, right); }
-    if operator == ":/" { return integer.intFloorDivide(left, right); }
-    integer.intFloorModulo(left, right)
+    if operator == "+" { return left.checkedAdd(right); }
+    if operator == "-" { return left.checkedSub(right); }
+    if operator == "*" { return left.checkedMul(right); }
+    if operator == "/" { return left.checkedDiv(right); }
+    if operator == "%" { return left.checkedRem(right); }
+    if operator == ":/" { return left.floorDiv(right); }
+    left.floorMod(right)
 };
 
 /** Lowers a checked integer operation whose result is not a safe constant, preserving evaluation and fault timing. */
@@ -507,7 +507,7 @@ pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, b
     loop rev > 0 {
         rev = rev - 1;
         rt := branchRuntimes[rev];
-        if not listLib.listContainsText(emitted, rt) {
+        if not emitted.contains(rt) {
             mut emitted.pushBack(rt);
             mut nextUpdates.pushBack((depth = branchDepth, runtime = rt, initState = branchStates[rev], code = branchCodes[rev]));
         }
@@ -525,7 +525,7 @@ pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, ha
     if hasElse and liveBranchCount == 0 { return nextLocals; }
     seenRuntimes: mut List<String> = [];
     loop here as u {
-        if not listLib.listContainsText(seenRuntimes, u.runtime) {
+        if not seenRuntimes.contains(u.runtime) {
             mut seenRuntimes.pushBack(u.runtime);
         }
     }
@@ -586,7 +586,7 @@ pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List
     var idx := 0;
     loop locals as l {
         if idx >= preLen and l.depth >= 0 and l.depth <= maxDepth {
-            if not listLib.listContainsText(updatedRuntimes, l.runtime) {
+            if not updatedRuntimes.contains(l.runtime) {
                 mut updatedRuntimes.pushBack(l.runtime);
             }
         }
@@ -780,9 +780,9 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
                 return (kind = kind, code = "lt_list_" + cTag + "_from(0, NULL)", intValue = 0, textValue = "", constant = false, next = next);
             }
             cArrType := "const " + types.cListElemType(cTag);
-            return (kind = kind, code = "lt_list_" + cTag + "_from(" + extent.toText() + ", (" + cArrType + "[]){" + textLib.joinTexts(items, ", ") + "})", intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = kind, code = "lt_list_" + cTag + "_from(" + extent.toText() + ", (" + cArrType + "[]){" + items.join(", ") + "})", intValue = 0, textValue = "", constant = false, next = next);
         }
-        (kind = kind, code = "[" + textLib.joinTexts(items, ", ") + "]", intValue = 0, textValue = "", constant = false, next = next)
+        (kind = kind, code = "[" + items.join(", ") + "]", intValue = 0, textValue = "", constant = false, next = next)
     }
     else if types.isFnKind(kind) {
         if target == ir.TARGET_C {
@@ -1283,7 +1283,7 @@ pub rejectDuplicateBlockDecl := fn(source: String, at: Int, prefix: String, decl
 
 /** Rejects redeclaring `name` inside the current `{ ... }` block. */
 pub rejectDuplicateInBlockNames := fn(source: String, at: Int, prefix: String, names: List<String>, name: String): Unit {
-    if listLib.listContainsText(names, name) {
+    if names.contains(name) {
         syntax.failAt(source, at, prefix, "duplicate declaration " + name + " in block");
     }
 };

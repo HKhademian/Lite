@@ -1,7 +1,6 @@
 /* Example 026: Higher-order list pipelines and stateful lexical closures. */
 
 io := import "core/io";
-fmt := import "core/format";
 
 IntMap := alias fn(Int): Int;
 IntPred := alias fn(Int): Bool;
@@ -51,6 +50,6 @@ total := foldInts(large, 0, fn(a: Int, b: Int): Int { a + b });
 seq := makeCounter(100, 5);
 ticks: List<Int> = [seq(), seq(), seq()];
 
-io.outputLine("scaled:", fmt.joinIntTexts(scaled, ", "));
-io.outputLine("large:", fmt.joinIntTexts(large, ", "), "sum:", total);
-io.outputLine("ticks:", fmt.joinIntTexts(ticks, ", "));
+io.outputLine("scaled:", scaled.map(fn(x: Int): String { x.toText() }).join(", "));
+io.outputLine("large:", large.map(fn(x: Int): String { x.toText() }).join(", "), "sum:", total);
+io.outputLine("ticks:", ticks.map(fn(x: Int): String { x.toText() }).join(", "));

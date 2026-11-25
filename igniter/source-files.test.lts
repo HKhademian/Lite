@@ -133,5 +133,5 @@ loop files as name {
 test.checkText(
 "Keep handwritten code in .lt/.lts/.lite/.ts files; generated C references belong under compiler/tests/references/generated or compiler/bootstrap.",
 "",
-text.joinTexts(violations, "\n")
+violations.join("\n")
 );

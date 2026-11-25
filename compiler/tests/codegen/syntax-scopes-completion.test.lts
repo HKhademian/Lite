@@ -184,7 +184,7 @@ if not skipHeavy {
         "io := import \"core/io\"; if \"a\" \"b\" == \"ab\" { io.outputLine(\"y\" \"es\"); } else { io.outputLine(\"no\"); }",
         "io := import \"core/io\"; io.output(\"x\" \"y\"); io.outputLine(\"z\");",
         "io := import \"core/io\"; io.outputLine(\"a\", \"b\"); io.outputLine(\"a\"); io.outputLine(\"b\");",
-        "io := import \"core/io\"; io.outputLine(" + text.joinTexts(repX, " ") + ");"
+        "io := import \"core/io\"; io.outputLine(" + repX.join(" ") + ");"
     ];
     adjTsOnly: List<String> = [
         "io := import \"core/io\"; echo := fn(s: String): String { s } io.outputLine(echo(\"a\" \"b\"));",

@@ -118,7 +118,7 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
             if pos > runStart {
                 mut parts.pushBack(source.slice(runStart, pos));
             }
-            return JsonString { ok = true, value = text.joinTexts(parts, ""), next = pos + 1, error = "" };
+            return JsonString { ok = true, value = parts.join(""), next = pos + 1, error = "" };
         }
         if ch == "\\" {
             if decode and pos > runStart {
@@ -568,7 +568,7 @@ pub quoteString := fn(value: String): String {
     }
     if runStart < size { mut parts.pushBack(value.slice(runStart, size)); }
     mut parts.pushBack("\"");
-    text.joinTexts(parts, "")
+    parts.join("")
 };
 
 /** Encodes a `Bool` as `"true"` or `"false"`. */
@@ -588,12 +588,12 @@ pub encodeField := fn(key: String, rawJsonValue: String): String {
 
 /** Joins encoded `"k":v` field fragments into a JSON object `{...}`. */
 pub encodeObject := fn(fields: List<String>): String {
-    "{" + text.joinTexts(fields, ",") + "}"
+    "{" + fields.join(",") + "}"
 };
 
 /** Joins raw JSON element fragments into a JSON array `[...]`. */
 pub encodeArray := fn(rawItems: List<String>): String {
-    "[" + text.joinTexts(rawItems, ",") + "]"
+    "[" + rawItems.join(",") + "]"
 };
 
 /** Encodes a `List<String>` as a JSON string array. */
@@ -602,7 +602,7 @@ pub encodeStringList := fn(items: List<String>): String {
     loop items as item {
         mut encoded.pushBack(quoteString(item));
     }
-    "[" + text.joinTexts(encoded, ",") + "]"
+    "[" + encoded.join(",") + "]"
 };
 
 /** Encodes a `List<Int>` as a JSON integer array. */
@@ -611,5 +611,5 @@ pub encodeIntList := fn(items: List<Int>): String {
     loop items as item {
         mut encoded.pushBack(item.toText());
     }
-    "[" + text.joinTexts(encoded, ",") + "]"
+    "[" + encoded.join(",") + "]"
 };

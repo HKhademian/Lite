@@ -3,12 +3,12 @@
   "kind": "feature",
   "source": {
     "file": "unicode-and-format.lts",
-    "hash": "sha256:055e56709baa910fa013a2ff6b1aee237656b17a8318a8a6d4cee3954d18bae9"
+    "hash": "sha256:7bd59fb55b0b23543b92e48ae34f2bf151c920557bf06b41cde47d2f9d076b2b"
   },
   "features": [
     "feature.core.text.unicode-and-format"
   ],
-  "guideline": "Checks scalar code-point conversions, strict UTF-8 round-trips, invalid UTF-8 detection, and text/integer padding via core/format.",
+  "guideline": "Checks scalar code-point conversions, strict UTF-8 round-trips, invalid UTF-8 detection, and String text/integer padding via core/text.",
   "targets": [
     "ts",
     "c"

@@ -28,7 +28,7 @@ replaceAllText := fn(source: String, needle: String, replacement: String): Strin
         (mut out).pushBack(replacement);
         pos = found + nLen;
     }
-    text.joinTexts(out, "")
+    out.join("")
 };
 
 unescapeAttrEntities := fn(raw: String): String {
@@ -149,7 +149,7 @@ stripScriptAndStyleBlocks := fn(html: String): String {
         }
         pos = closeIdx + closeTag.length();
     }
-    text.joinTexts(out, "")
+    out.join("")
 };
 
 /** Collects all `\bid="([^"]+)"` values in `html` into a `\n`-delimited lookup blob. */
@@ -172,7 +172,7 @@ collectHtmlIdBlob := fn(html: String): String {
         pos = idx + 4;
     }
     if out.length() == 0 { return ""; }
-    "\n" + text.joinTexts(out, "\n") + "\n"
+    "\n" + out.join("\n") + "\n"
 };
 
 /** Fast relative POSIX path resolution within site root (returns `(escaped: Bool, relPath: String)`). */
@@ -213,7 +213,7 @@ resolveRelInSite := fn(fromRelDir: String, noQuery: String): (escaped: Bool, rel
         if sl < 0 { break; }
         p = sl + 1;
     }
-    (escaped = false, relPath = text.joinTexts(segs, "/"))
+    (escaped = false, relPath = segs.join("/"))
 };
 
 parentRelDir := fn(relFile: String): String {
@@ -286,7 +286,7 @@ collectAllSiteFiles := fn(absSiteDir: String): List<String> {
             }
         }
     }
-    challenges.sortTexts(out)
+    out.sortTexts()
 };
 
 readOptStr := fn(src: String, objPos: Int, key: String): String {
@@ -626,6 +626,6 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     + "\"searchEntriesChecked\":" + searchEntriesChecked.toText() + ","
     + "\"graphNodesChecked\":" + graphNodesChecked.toText() + ","
     + "\"graphEdgesChecked\":" + graphEdgesChecked.toText() + ","
-    + "\"violations\":[" + text.joinTexts(violations, ",") + "]"
+    + "\"violations\":[" + violations.join(",") + "]"
     + "}"
 };

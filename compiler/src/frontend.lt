@@ -1,4 +1,3 @@
-formatLib := import "core/format";
 listLib := import "core/list";
 sourceLib := import "core/source";
 diagLib := import "core/diag";
@@ -2206,7 +2205,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     rejectDuplicateBlockDecl(source, destructureOpen, prefix, blockDecls, depth, bindName);
                     if depth == 0 {
                         mut blockDecls.pushBack((name = bindName, depth = depth));
-                    } else if not listLib.listContainsText(pendingDestrNames, bindName) {
+                    } else if not pendingDestrNames.contains(bindName) {
                         mut pendingDestrNames.pushBack(bindName);
                     }
                     bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);

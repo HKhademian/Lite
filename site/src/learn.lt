@@ -34,7 +34,7 @@ replaceAllText := fn(source: String, needle: String, replacement: String): Strin
         (mut out).pushBack(replacement);
         pos = found + nLen;
     }
-    text.joinTexts(out, "")
+    out.join("")
 };
 
 safeJsonForScript := fn(rawJson: String): String {
@@ -164,8 +164,8 @@ itemIds: List<String>
                 mut tagParts.pushBack("<code>" + escapeHtml(teaches[ti]) + "</code>");
                 ti = ti + 1;
             }
-            tags := text.joinTexts(tagParts, " ");
-            searchBlob := (title + " " + text.joinTexts(teaches, " ") + " " + trTitle + " " + sourceFile).toLowerAscii();
+            tags := tagParts.join(" ");
+            searchBlob := (title + " " + teaches.join(" ") + " " + trTitle + " " + sourceFile).toLowerAscii();
             ctaLabel := if kind == "tutorial" { "Build Tutorial" } else { "Start Lesson" };
             card := "<article class=\"portal-card learn-index-card\" data-lesson-id=\"" + escapeHtml(id)
             + "\" data-env=\"" + escapeHtml(env)
@@ -192,13 +192,13 @@ itemIds: List<String>
         + "  </div>\n"
         + "  <p class=\"section-note\">" + escapeHtml(trSummary) + "</p>\n"
         + "  <div class=\"portal-grid\">\n"
-        + "    " + text.joinTexts(cards, "\n") + "\n"
+        + "    " + cards.join("\n") + "\n"
         + "  </div>\n"
         + "</section>";
         mut trackSections.pushBack(sec);
     }
 
-    lessonsJson := "[" + text.joinTexts(orderedHrefObjs, ",") + "]";
+    lessonsJson := "[" + orderedHrefObjs.join(",") + "]";
     idxLines: List<String> = [
     "<section class=\"page-hero\">",
     "  <h1>Learn Lite</h1>",
@@ -231,7 +231,7 @@ itemIds: List<String>
     "    <span id=\"learn-visible-count\" class=\"code-card-meta\">Showing " + totalStr + " / " + totalStr + "</span>",
     "  </div>",
     "</section>",
-    text.joinTexts(trackSections, "\n"),
+    trackSections.join("\n"),
     "<script>",
     "  (function () {",
     "    var lessons = " + lessonsJson + ";",
@@ -345,7 +345,7 @@ itemIds: List<String>
     "  })();",
     "</script>"
     ];
-    text.joinTexts(idxLines, "\n")
+    idxLines.join("\n")
 };
 
 renderLessonBody := fn(
@@ -404,7 +404,7 @@ repoUrl: String
         grp := "<details class=\"portal-nav-group\"" + openAttr + ">\n"
         + "        <summary>" + escapeHtml(trTitle) + "</summary>\n"
         + "        <ul class=\"portal-nav-list\">\n"
-        + "          " + text.joinTexts(liParts, "\n          ") + "\n"
+        + "          " + liParts.join("\n          ") + "\n"
         + "        </ul>\n"
         + "      </details>";
         mut sidebarParts.pushBack(grp);
@@ -416,7 +416,7 @@ repoUrl: String
         loop itemHelperSpecs as spec {
             mut hParts.pushBack("<code>" + escapeHtml(spec) + "</code>");
         }
-        "<p class=\"code-card-meta\">Bundled helper modules: " + text.joinTexts(hParts, ", ") + "</p>"
+        "<p class=\"code-card-meta\">Bundled helper modules: " + hParts.join(", ") + "</p>"
     } else {
         ""
     };
@@ -453,7 +453,7 @@ repoUrl: String
     "<div id=\"ln-workbench\" class=\"learn-workbench has-split\" data-academy-visit-path=\"" + escapeHtml(itemOutPath) + "\" data-academy-visit-title=\"" + escapeHtml(itemTitle) + "\" data-academy-visit-section=\"Learn\">",
     "  <aside class=\"portal-sidebar learn-sidebar\" aria-label=\"Curriculum\">",
     "    <p class=\"portal-sidebar-title\"><a href=\"../\">All Tracks (" + totalCount.toText() + ")</a></p>",
-    "    " + text.joinTexts(sidebarParts, "\n      "),
+    "    " + sidebarParts.join("\n      "),
     "  </aside>",
     "",
     "  <article class=\"md-prose learn-guide\">",
@@ -865,7 +865,7 @@ repoUrl: String
     "    .catch(() => {});",
     "</script>"
     ];
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 /** Builds `/learn/` index, lesson pages, JSON payloads, and search entries from stdin JSON. */
@@ -968,9 +968,9 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
         seObj := "{"
         + "\"kind\":\"learn\","
         + "\"title\":" + json.quoteString(itTitle) + ","
-        + "\"subtitle\":" + json.quoteString(itTrackTitle + " · " + text.joinTexts(itTeaches, ", ")) + ","
+        + "\"subtitle\":" + json.quoteString(itTrackTitle + " · " + itTeaches.join(", ")) + ","
         + "\"href\":" + json.quoteString(itOutPath) + ","
-        + "\"keywords\":" + json.quoteString(itSlug + " " + itTrackId + " " + text.joinTexts(itTeaches, " ") + " " + itSourceFile) + ","
+        + "\"keywords\":" + json.quoteString(itSlug + " " + itTrackId + " " + itTeaches.join(" ") + " " + itSourceFile) + ","
         + "\"badge\":" + json.quoteString(badge)
         + "}";
         mut searchEntriesJson.pushBack(seObj);
@@ -981,9 +981,9 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
     outJson := "{"
     + "\"lessonCount\":" + lessonCount.toText() + ","
     + "\"tutorialCount\":" + tutorialCount.toText() + ","
-    + "\"pages\":[" + text.joinTexts(pagesJson, ",") + "],"
-    + "\"payloads\":[" + text.joinTexts(payloadsJson, ",") + "],"
-    + "\"searchEntries\":[" + text.joinTexts(searchEntriesJson, ",") + "]"
+    + "\"pages\":[" + pagesJson.join(",") + "],"
+    + "\"payloads\":[" + payloadsJson.join(",") + "],"
+    + "\"searchEntries\":[" + searchEntriesJson.join(",") + "]"
     + "}";
     (ok = true, jsonText = outJson, error = "")
 };

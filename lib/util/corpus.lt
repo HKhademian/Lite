@@ -65,7 +65,7 @@ pub parseToolOptions := fn(args: List<String>, allowedKeys: List<String>): (ok: 
             return (ok = false, error = "invalid or missing option: " + arg);
         }
         val := args[i + 1];
-        if not list.listContainsText(allowedKeys, key) or list.listContainsText(seen, key) or val.startsWithAt(0, "--") {
+        if not allowedKeys.contains(key) or seen.contains(key) or val.startsWithAt(0, "--") {
             return (ok = false, error = "invalid or missing option: " + arg);
         }
         (mut seen).pushBack(key);
@@ -149,7 +149,7 @@ pub toolIdentitiesJson := fn(rootDir: String, relPaths: List<String>): (ok: Bool
         if not hRes.ok { return (ok = false, jsonText = "", error = hRes.error); }
         (mut entries).pushBack("{\n      \"path\": " + json.quoteString(rel) + ",\n      \"sha256\": " + json.quoteString(hRes.hex) + "\n    }");
     }
-    (ok = true, jsonText = "[\n    " + text.joinTexts(entries, ",\n    ") + "\n  ]", error = "")
+    (ok = true, jsonText = "[\n    " + entries.join(",\n    ") + "\n  ]", error = "")
 };
 
 /** Strictly typechecks a single TS artifact file and returns elapsed integer milliseconds. */
@@ -228,7 +228,7 @@ indentTwoSpaces := fn(raw: String): String {
         if nl < 0 { break; }
         pos = nl + 1;
     }
-    text.joinTexts(lines, "\n  ")
+    lines.join("\n  ")
 };
 
 /** Executes `compiler/scripts/build.ts` natively and prints `{ ts, c }` JSON metadata. */
@@ -429,7 +429,7 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
     + "  \"source\": {\n"
     + "    \"bytes\": " + sel.totalDepBytes.toText() + ",\n"
     + "    \"sha256\": " + json.quoteString(sel.sourceSha256) + "\n  },\n"
-    + "  \"generations\": [\n    " + text.joinTexts(genJsonEntries, ",\n    ") + "\n  ],\n"
+    + "  \"generations\": [\n    " + genJsonEntries.join(",\n    ") + "\n  ],\n"
     + "  \"fixedPoint\": " + (if fixedPoint { "true" } else { "false" }) + ",\n"
     + "  \"matchesSelectedCompiler\": " + (if matchesSelected { "true" } else { "false" }) + ",\n"
     + "  \"equalsSelectedBuilder\": " + (if equalsBuilder { "true" } else { "false" }) + "\n}\n";
@@ -737,7 +737,7 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
     mismatchJson := if quotedMismatches.length() == 0 {
         "[]"
     } else {
-        "[\n    " + text.joinTexts(quotedMismatches, ",\n    ") + "\n  ]"
+        "[\n    " + quotedMismatches.join(",\n    ") + "\n  ]"
     };
     mmCount := mismatches.length();
     firstMm := if mmCount > 0 { mismatches[0] } else { "" };

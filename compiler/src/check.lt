@@ -4,7 +4,6 @@ lexer := import "./lexer";
 parser := import "./parser";
 numeric := import "./numeric-literals";
 diag := import "core/diag";
-format := import "core/format";
 io := import "core/io";
 tb := import "util/text-builder";
 
@@ -545,7 +544,7 @@ symbolToken := fn(symbol: Symbol): lexer.Token {
 
 /** Reports one token-positioned checker diagnostic and exits 2. */
 checkFail := fn(token: lexer.Token, prefix: String, message: String): Unit {
-    diag.fail(prefix, format.decimalText(token.line) + ":" + format.decimalText(token.column) + ": " + message);
+    diag.fail(prefix, token.line.toText() + ":" + token.column.toText() + ": " + message);
 }
 
 /** Skips one balanced `{ ... }` sequence and returns the position after it. */
@@ -1179,8 +1178,8 @@ checkCalls := fn(tokens: lexer.Tokens, symbols: Symbols, prefix: String): Unit {
                 expected := functionArity(symbols[index]);
                 actual := callArity(tokens, cursor + 1, prefix);
                 if expected =!= actual {
-                    checkFail(token, prefix, "function " + token.text + " expects " + format.decimalText(expected) +
-                    " arguments, got " + format.decimalText(actual));
+                    checkFail(token, prefix, "function " + token.text + " expects " + expected.toText() +
+                    " arguments, got " + actual.toText());
                 }
                 parameterTypes := functionParamTypes(symbols[index]);
                 var argumentCursor := cursor + 2;
@@ -1198,7 +1197,7 @@ checkCalls := fn(tokens: lexer.Tokens, symbols: Symbols, prefix: String): Unit {
                     expectedType := parameterTypes[argumentIndex];
                     inferred := contextualSimpleType(symbols, emptyLocals, argument.text, expectedType);
                     if not typesCompatible(symbols, expectedType, inferred) {
-                        checkFail(token, prefix, "argument " + format.decimalText(argumentIndex + 1) + " of " + token.text +
+                        checkFail(token, prefix, "argument " + (argumentIndex + 1).toText() + " of " + token.text +
                         " expects " + expectedType + ", got " + inferred);
                     }
                     argumentCursor = argument.next;
@@ -1224,8 +1223,8 @@ pub checkSource := fn(tokens: lexer.Tokens, prefix: String): Symbols {
 
 /** Formats one symbol as `kind|name|detail|line:column|offset`. */
 dumpSymbol := fn(symbol: Symbol): String {
-    symbol.kind + "|" + symbol.name + "|" + symbol.detail + "|" + format.decimalText(symbol.line) + ":" +
-    format.decimalText(symbol.column) + "|" + format.decimalText(symbol.offset)
+    symbol.kind + "|" + symbol.name + "|" + symbol.detail + "|" + symbol.line.toText() + ":" +
+    symbol.column.toText() + "|" + symbol.offset.toText()
 }
 
 /** Reports collected symbols in source order, one per line. */

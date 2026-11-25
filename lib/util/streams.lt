@@ -81,7 +81,7 @@ checkHash: Bool
     var form := "";
     var formCount := 0;
     loop keys as k {
-        if not list.listContainsText(allowed, k) {
+        if not allowed.contains(k) {
             return (ok = false, sha256 = "", kind = "", error = label + ": unexpected stream key");
         }
         if k =!= "hash" {

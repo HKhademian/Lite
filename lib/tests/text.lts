@@ -42,9 +42,9 @@ test.checkInt("index non-bmp emoji", 1, "a🙂bc".indexOf("🙂", 0));
 test.checkInt("index non-bmp empty", 4, "a🙂bc".indexOf("", 4));
 
 values: List<String> = ["a", "b", "c"];
-test.checkText("join texts", "a,b,c", text.joinTexts(values, ","));
+test.checkText("join texts", "a,b,c", values.join(","));
 empty: List<String> = [];
-test.checkText("join empty", "", text.joinTexts(empty, ","));
+test.checkText("join empty", "", empty.join(","));
 
 parsed := "42".toInt();
 test.checkInt("text to int", 42, parsed.value);
@@ -77,5 +77,15 @@ test.checkText("repeat zero", "", "ab".repeat(0));
 test.checkBool("contains match", true, "LiteScript".contains("Script"));
 test.checkBool("contains miss", false, "LiteScript".contains("Java"));
 test.checkText("to lower ascii", "hello world 123!", "HeLLo WoRLd 123!".toLowerAscii());
+
+test.checkText("split comma", "a|b||c", "a,b,,c".split(",").join("|"));
+test.checkText("split chars", "a-b-c", "abc".split("").join("-"));
+test.checkText("split lines", "one/two", "one\r\ntwo\n".splitLines().join("/"));
+test.checkText("replace all", "QUX bar QUX", "foo bar foo".replaceAll("foo", "QUX"));
+test.checkText("pad left", "  7", "7".padLeft(3));
+test.checkText("pad right", "7  ", "7".padRight(3));
+test.checkText("pad left int", "  -42", (-42).toText().padLeft(5));
+test.checkBool("lessOrEqual ascii", true, "actual".lessOrEqual("book"));
+test.checkBool("lessOrEqual unicode", true, "é".lessOrEqual("ü"));
 
 test.done("text");

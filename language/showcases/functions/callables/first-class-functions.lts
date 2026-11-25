@@ -1,7 +1,6 @@
 /* Showcase 05.02 — First-class callable types, contextual inference, higher-order lists, and dispatch tables. */
 
 io := import "core/io";
-fmt := import "core/format";
 
 IntOp := alias fn(Int): Int;
 IntCheck := alias fn(Int): Bool;
@@ -54,4 +53,4 @@ evensDoubled := mapList(filterList(source, fn(n) { n % 2 == 0 }), fn(n) { n * 2 
 sumVal := foldList(evensDoubled, 0, fn(a, b) { a + b });
 
 io.outputLine("direct:", direct, "piped:", piped);
-io.outputLine("evens*2:", fmt.joinIntTexts(evensDoubled, ","), "sum:", sumVal);
+io.outputLine("evens*2:", evensDoubled.map(fn(x: Int): String { x.toText() }).join(","), "sum:", sumVal);

@@ -115,7 +115,7 @@ elsewhere := tmpCwdRes.path;
 outsideCwd := tmpOutCwdRes.path;
 _mkElse := fs.makeDir(path.join(elsewhere, "nested"));
 _we1 := fs.writeText(path.join(elsewhere, "base.lt"), "pub twice := fn(v: Int): Int { v * 2 };\n");
-_we2 := fs.writeText(path.join(elsewhere, "nested/math.lt"), "base := import \"../base\"; text := import \"core/text\"; pub answer := fn(): Int { base.twice(text.joinTexts([\"a\", \"b\"], \"\").length()) };\n");
+_we2 := fs.writeText(path.join(elsewhere, "nested/math.lt"), "base := import \"../base\"; pub answer := fn(): Int { base.twice([\"a\", \"b\"].join(\"\").length()) };\n");
 mainFile := path.join(elsewhere, "nested/main.lts");
 _we3 := fs.writeText(mainFile, "math := import \"./math\"; io := import \"core/io\"; io.outputLine(math.answer());\n");
 cwdComp := compilerTest.compileFile(tsComp, outsideCwd, [mainFile]);

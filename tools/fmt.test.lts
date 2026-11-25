@@ -72,8 +72,8 @@ expected1Lines: List<String> = [
 "}",
 ""
 ];
-expected1 := text.joinTexts(expected1Lines, "\n");
-once1 := formatLite(text.joinTexts(input1Lines, "\n"));
+expected1 := expected1Lines.join("\n");
+once1 := formatLite(input1Lines.join("\n"));
 test.checkText("formatLite once", expected1, once1);
 test.checkText("formatLite twice", expected1, formatLite(once1));
 
@@ -250,7 +250,7 @@ expected9Lines: List<String> = [
 "x := if true { 1 } else { 2 } finally { io.outputLine(\"cond\"); }",
 ""
 ];
-expected9 := text.joinTexts(expected9Lines, "\n");
+expected9 := expected9Lines.join("\n");
 test.checkText("sample9 content", expected9, fs.readText(sample9).text);
 chk9 := runNode([liteBin, "fmt", "--check", sample9], "");
 test.checkInt("sample9 check: " + chk9.stderr, 0, chk9.status);

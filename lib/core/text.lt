@@ -1,6 +1,7 @@
 /* Core String operations (hard builtins, soft builtins, pure Lite). */
 
 integer := import "core/int";
+_list := import "core/list";
 unicode := import "core/unicode";
 
 /** Returns Unicode scalar count for one string value. */
@@ -367,17 +368,100 @@ pub String.toLowerAscii := fn(source: Self): String {
     toLowerAsciiPure(source)
 }
 
-/** Joins text values in list order with `separator` between adjacent values. */
-pub joinTexts := fn(values: List<String>, separator: String): String {
-    var result := "";
-    var first := true;
-    loop values as value {
-        if first {
-            result = value;
-            first = false;
-        } else {
-            result = result + separator + value;
+ASCII_CMP_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+/** Lexicographical Unicode code-point comparison (`a <= b`), with a fast ASCII path. */
+pub String.lessOrEqual := fn(a: Self, b: String): Bool {
+    la := a.length();
+    lb := b.length();
+    limit := if la < lb { la } else { lb };
+    var i := 0;
+    loop i < limit {
+        ca := a.at(i);
+        cb := b.at(i);
+        if ca =!= cb {
+            oa := ASCII_CMP_ORDER.indexOf(ca, 0);
+            ob := ASCII_CMP_ORDER.indexOf(cb, 0);
+            if oa >= 0 and ob >= 0 { return oa <= ob; }
+            return unicode.codePointAt(ca, 0) <= unicode.codePointAt(cb, 0);
         }
+        i += 1;
     }
-    result
-}
+    la <= lb
+};
+
+/** Returns `value` left-padded with spaces up to `width` scalars, or unchanged when already at least `width`. */
+pub String.padLeft := fn(value: Self, width: Int): String {
+    len := value.length();
+    if len >= width { value } else { " ".repeat(width - len) + value }
+};
+
+/** Returns `value` right-padded with spaces up to `width` scalars, or unchanged when already at least `width`. */
+pub String.padRight := fn(value: Self, width: Int): String {
+    len := value.length();
+    if len >= width { value } else { value + " ".repeat(width - len) }
+};
+
+/** Splits `source` on every non-overlapping occurrence of `divider`. When `divider` is empty, splits into Unicode scalars. */
+pub String.split := fn(source: Self, divider: String): List<String> {
+    out: mut List<String> = [];
+    srcLen := source.length();
+    divLen := divider.length();
+    if divLen == 0 {
+        var i := 0;
+        loop i < srcLen {
+            mut out.pushBack(source.at(i));
+            i += 1;
+        }
+        return out;
+    }
+    var pos := 0;
+    loop true {
+        hit := source.indexOf(divider, pos);
+        if hit < 0 {
+            mut out.pushBack(source.slice(pos, srcLen));
+            break;
+        }
+        (mut out).pushBack(source.slice(pos, hit));
+        pos = hit + divLen;
+    }
+    out
+};
+
+/** Splits `source` into lines on `\\n` (stripping any preceding `\\r`). */
+pub String.splitLines := fn(source: Self): List<String> {
+    out: mut List<String> = [];
+    srcLen := source.length();
+    if srcLen == 0 { return out; }
+    var pos := 0;
+    loop pos <= srcLen {
+        nl := source.indexOf("\n", pos);
+        end := if nl < 0 { srcLen } else { nl };
+        lineEnd := if end > pos and source.at(end - 1) == "\r" { end - 1 } else { end };
+        mut out.pushBack(source.slice(pos, lineEnd));
+        if nl < 0 { break; }
+        pos = nl + 1;
+        if pos == srcLen { break; }
+    }
+    out
+};
+
+/** Replaces every non-overlapping occurrence of non-empty `needle` in `source` with `replacement` in O(n). */
+pub String.replaceAll := fn(source: Self, needle: String, replacement: String): String {
+    needleLen := needle.length();
+    if needleLen == 0 { return source; }
+    first := source.indexOf(needle, 0);
+    if first < 0 { return source; }
+    srcLen := source.length();
+    parts: mut List<String> = [];
+    var pos := 0;
+    var hit := first;
+    loop hit >= 0 {
+        if hit > pos { mut parts.pushBack(source.slice(pos, hit)); }
+        mut parts.pushBack(replacement);
+        pos = hit + needleLen;
+        hit = source.indexOf(needle, pos);
+    }
+    if pos < srcLen { mut parts.pushBack(source.slice(pos, srcLen)); }
+    parts.join("")
+};

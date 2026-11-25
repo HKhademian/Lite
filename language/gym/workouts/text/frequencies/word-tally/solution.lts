@@ -61,7 +61,7 @@ loop pos < n {
         pos += 1;
     }
     word := raw.slice(start, pos).toLowerAscii();
-    idx := list.listIndexOfText(words, word);
+    idx := words.indexOf(word);
     if idx >= 0 {
         counts = withIntAt(counts, idx, counts[idx] + 1);
     } else {

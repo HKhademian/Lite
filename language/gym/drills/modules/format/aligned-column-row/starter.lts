@@ -1,7 +1,6 @@
-fmt := import "core/format";
 io := import "core/io";
 
 key := io.inputLine().trim();
 val := io.inputInt();
-row := fmt.padLeftText(key, 10) + " : " + fmt.padRightText(fmt.decimalText(val), 6);
+row := key.padLeft(10) + " : " + val.toText().padRight(6);
 io.outputLine(row);

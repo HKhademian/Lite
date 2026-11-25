@@ -42,7 +42,7 @@ cleanDocComment := fn(rawComment: String): String {
         if nl < 0 { break; }
         pos = nl + 1;
     }
-    text.joinTexts(cleanedLines, "\n").trim()
+    cleanedLines.join("\n").trim()
 };
 
 /** Normalizes internal line breaks and repeated whitespace in a extracted signature string. */
@@ -308,7 +308,7 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
     ",\"file\":" + json.quoteString(fileRel) +
     ",\"environment\":" + json.quoteString(env) +
     ",\"summary\":" + json.quoteString(moduleSummary) +
-    ",\"symbols\":[" + text.joinTexts(symbolsJson, ",") + "]}"
+    ",\"symbols\":[" + symbolsJson.join(",") + "]}"
 };
 
 /** Extracts sorted module API documentation records across `lib/core`, `lib/math`, `lib/ds`, `lib/data`, and `lib/extra` `.lt` files under `rootDir`. */
@@ -334,5 +334,5 @@ pub extractAllModulesJson := fn(rootDir: String): String {
             }
         }
     }
-    "[" + text.joinTexts(modJsonEntries, ",") + "]"
+    "[" + modJsonEntries.join(",") + "]"
 };

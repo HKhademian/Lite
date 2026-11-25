@@ -82,8 +82,7 @@
           "teaches": [
             "String",
             "core/text",
-            "core/unicode",
-            "core/format"
+            "core/unicode"
           ],
           "features": [
             "feature.text.strings.concatenation",
@@ -615,11 +614,11 @@
           "file": "language/showcases/modules/filesystem/files-paths-and-cleanup.lts",
           "helperFiles": [],
           "manifest": "language/verifications/artifacts/showcases/modules/filesystem/files-paths-and-cleanup.json",
-          "summary": "Uses core/path, core/file temp workspaces, aligned core/format output, and finally directory removal with deterministic output.",
+          "summary": "Uses core/path, core/file temp workspaces, aligned String padding output, and finally directory removal with deterministic output.",
           "teaches": [
             "core/path",
             "core/file",
-            "core/format",
+            "core/text",
             "finally cleanup"
           ],
           "features": [

@@ -2704,7 +2704,6 @@ softBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): St
         if fnName == "wordAt" {
             return "lite$textWordAt(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")";
         }
-        if fnName == "joinTexts" { return arg0 + ".join(" + paramRuntimeAt(params, 1) + ")"; }
         if fnName == "textToInt" { return "lite$textToInt(" + arg0 + ")"; }
         if fnName == "trimStart" { return "lite$textTrim(" + arg0 + ", true, false)"; }
         if fnName == "trimEnd" { return "lite$textTrim(" + arg0 + ", false, true)"; }

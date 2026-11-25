@@ -21,7 +21,7 @@ invokeIn := fn(workDirToClean: String, command: String, args: List<String>, cwd:
     if res.error =!= "" or res.status =!= 0 {
         if workDirToClean =!= "" { fs.remove(workDirToClean); }
         if res.error =!= "" { failCi(res.error); }
-        failCi("CI task failed: " + command + " " + text.joinTexts(args, " "));
+        failCi("CI task failed: " + command + " " + args.join(" "));
     }
 };
 

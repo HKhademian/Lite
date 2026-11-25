@@ -205,7 +205,7 @@ loop wfLines as rawLine {
         }
     }
 }
-triggers := challenges.sortTexts(rawTriggers);
+triggers := rawTriggers.sortTexts();
 
 allNames: List<String> = [
 "project", "language", "scripting", "compiler", "igniter", "cli",
@@ -216,7 +216,7 @@ rawExpectedPrefixes: mut List<String> = [];
 loop allNames as name {
     mut rawExpectedPrefixes.pushBack(rel.componentTagPrefix(name));
 }
-expectedPrefixes := challenges.sortTexts(rawExpectedPrefixes);
+expectedPrefixes := rawExpectedPrefixes.sortTexts();
 
 test.checkInt("workflow trigger count", expectedPrefixes.length(), triggers.length());
 var idx5 := 0;

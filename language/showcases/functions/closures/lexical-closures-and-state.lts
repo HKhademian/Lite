@@ -1,7 +1,6 @@
 /* Showcase 05.03 — Lexical closures capturing var storage, mut Lists, loop items, and escaping frames. */
 
 io := import "core/io";
-fmt := import "core/format";
 
 /* Each invocation of `makeCounter` allocates an independent mutable `current` state. */
 makeCounter := fn(start: Int, step: Int): fn(): Int {
@@ -37,5 +36,5 @@ loop [1, 2, 3] as item {
 }
 
 io.outputLine("counters:", cFast(), cFast(), cOffset(), cFast());
-io.outputLine("events:", fmt.joinIntTexts(events, ","));
+io.outputLine("events:", events.map(fn(x: Int): String { x.toText() }).join(","));
 io.outputLine("loopClosures:", getters[0](), getters[1](), getters[2]());

@@ -1,8 +1,7 @@
-fmt := import "core/format";
 io := import "core/io";
 
 a := io.inputInt();
 b := io.inputInt();
 items: mut List<Int> = [a];
 mut items.pushBack(b);
-io.outputLine(fmt.joinIntTexts(items, ","));
+io.outputLine(items.map(fn(x: Int): String { x.toText() }).join(","));

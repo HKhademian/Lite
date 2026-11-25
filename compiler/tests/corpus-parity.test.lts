@@ -46,8 +46,8 @@ test.check("ts deps > 1", tsDeps.length() > 1);
 test.check("c deps > 1", cDeps.length() > 1);
 test.checkText("ts root dep", "compiler/src/ts-root.lts", tsDeps[0]);
 test.checkText("c root dep", "compiler/src/c-root.lts", cDeps[0]);
-test.check("ts deps include frontend", list.listContainsText(tsDeps, "compiler/src/frontend.lt"));
-test.check("c deps include frontend", list.listContainsText(cDeps, "compiler/src/frontend.lt"));
+test.check("ts deps include frontend", tsDeps.contains("compiler/src/frontend.lt"));
+test.check("c deps include frontend", cDeps.contains("compiler/src/frontend.lt"));
 frontendModules: List<String> = [
     "compiler/src/frontend-ir.lt",
     "compiler/src/builtins-abi.lt",
@@ -60,8 +60,8 @@ frontendModules: List<String> = [
     "compiler/src/frontend-expr.lt",
 ];
 loop frontendModules as modPath {
-    test.check("ts deps include " + modPath, list.listContainsText(tsDeps, modPath));
-    test.check("c deps include " + modPath, list.listContainsText(cDeps, modPath));
+    test.check("ts deps include " + modPath, tsDeps.contains(modPath));
+    test.check("c deps include " + modPath, cDeps.contains(modPath));
 }
 
 /* compiler verification cases are well-formed and cover both categories */
@@ -113,7 +113,7 @@ loop fi < fixCount {
     c0 := cOffs[0];
     cName := json.readObjectString(fixJson, c0, "name").value;
     caseKey := fileName + "/" + cName;
-    test.check("unique case key: " + caseKey, not list.listContainsText(fixCaseKeys, caseKey));
+    test.check("unique case key: " + caseKey, not fixCaseKeys.contains(caseKey));
     mut fixCaseKeys.pushBack(caseKey);
 
     srcTmp := path.join(workDir, "src-" + fi.toText() + ".lts");

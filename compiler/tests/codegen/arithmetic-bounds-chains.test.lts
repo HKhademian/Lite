@@ -38,7 +38,7 @@ buildSelectorBranches := fn(varName: String, items: List<String>, wrapOutput: Bo
         mut lines.pushBack(kw + " " + varName + " == " + idx.toText() + " { " + body + " }");
         idx = idx + 1;
     }
-    text.joinTexts(lines, sep)
+    lines.join(sep)
 };
 
 int64BoundaryProgram := fn(division: Bool): String {
@@ -64,11 +64,11 @@ int64BoundaryProgram := fn(division: Bool): String {
             a := "a" + idx.toText();
             b := "b" + idx.toText();
             mut lines.pushBack("var " + a + " := " + left.toText() + "; var " + b + " := " + right.toText() + ";");
-            if integer.intAdd(left, right).ok { mut lines.pushBack("io.outputLine(" + a + " + " + b + ");"); }
-            if integer.intSubtract(left, right).ok { mut lines.pushBack("io.outputLine(" + a + " - " + b + ");"); }
-            if integer.intMultiply(left, right).ok { mut lines.pushBack("io.outputLine(" + a + " * " + b + ");"); }
+            if left.checkedAdd(right).ok { mut lines.pushBack("io.outputLine(" + a + " + " + b + ");"); }
+            if left.checkedSub(right).ok { mut lines.pushBack("io.outputLine(" + a + " - " + b + ");"); }
+            if left.checkedMul(right).ok { mut lines.pushBack("io.outputLine(" + a + " * " + b + ");"); }
             if division and right =!= 0 {
-                if integer.intDivide(left, right).ok {
+                if left.checkedDiv(right).ok {
                     mut lines.pushBack("io.outputLine(" + a + " / " + b + ", " + a + " :/ " + b + ");");
                 }
                 (mut lines).pushBack("io.outputLine(" + a + " % " + b + ", " + a + " :% " + b + ");");
@@ -88,7 +88,7 @@ int64BoundaryProgram := fn(division: Bool): String {
     mut lines.pushBack("var hi := 9223372036854775807; var lo := -9223372036854775808; var flag := false;");
     mut lines.pushBack("io.outputLine(flag and (hi + 1 > 0)); if flag { io.outputLine(lo - 1); }");
     mut lines.pushBack("io.outputLine(not flag or (hi * 2 > 0)); if flag { io.outputLine(-lo); }");
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 overflowingInt64Expressions: List<String> = [
@@ -275,7 +275,7 @@ loop constFaultExprs as expr {
     mut skippedLines.pushBack("loop false { io.outputLine(" + expr + "); }");
     mut skippedLines.pushBack("io.outputLine(false and (" + expr + " > 0), true or (" + expr + " > 0));");
 }
-constValidSrc := text.joinTexts(skippedLines, "\n") + "\nio.outputLine(2 * (3 - 4), -(-7), -9223372036854775808 % -1);";
+constValidSrc := skippedLines.join("\n") + "\nio.outputLine(2 * (3 - 4), -(-7), -9223372036854775808 % -1);";
 assertBothTargetsMatch("const-fault-skipped", constValidSrc, "", "", 0);
 
 constName := "constant faults سلام.lts";
@@ -355,8 +355,8 @@ loop ri < 300 {
     ri = ri + 1;
 }
 (mut repTerms).pushBack("2");
-mut chainRows.pushBack("var repeated := 1; io.outputLine(" + text.joinTexts(repTerms, " <= ") + ");");
-chainMatrix := text.joinTexts(chainRows, "\n");
+mut chainRows.pushBack("var repeated := 1; io.outputLine(" + repTerms.join(" <= ") + ");");
+chainMatrix := chainRows.join("\n");
 assertBothTargetsMatch("cmp-chain-matrix", chainMatrix, "", "", 0);
 
 chainEffectCases: List<(src: String, stdin: String, status: Int)> = [

@@ -1,6 +1,5 @@
 /** Expression, block, conditional, loop, call, and operator precedence parser and lowering for TS and C targets. */
 
-formatLib := import "core/format";
 listLib := import "core/list";
 sourceLib := import "core/source";
 numeric := import "./numeric-literals";
@@ -195,7 +194,7 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
                 nameEnd := source.skipName(nameStart);
                 label = source.slice(nameStart, nameEnd);
                 if syntax.isReservedWord(label) { syntax.unsupportedFeature(source, nameStart, label, prefix); }
-                if listLib.listContainsText(labels, label) {
+                if labels.contains(label) {
                     syntax.failAt(source, nameStart, prefix, "duplicate tuple field " + label);
                 }
                 valueStart = nameStart;
@@ -207,7 +206,7 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
                 if syntax.isSingleEquals(source, afterName) {
                     label = source.slice(cursor, nameEnd);
                     if syntax.isReservedWord(label) { syntax.unsupportedFeature(source, cursor, label, prefix); }
-                    if listLib.listContainsText(labels, label) {
+                    if labels.contains(label) {
                         syntax.failAt(source, cursor, prefix, "duplicate tuple field " + label);
                     }
                     valueStart = syntax.skipTrivia(source, afterName + 1, prefix);
@@ -323,7 +322,7 @@ parseUnarySignExpr := fn(target: String, source: String, start: Int, ch: String,
         if inferMode { ctx.collectParsedMarkers("", operand) } else { "" });
     }
     if operand.constant {
-        folded := if ch == "-" { integer.intNegate(operand.intValue) } else { (value = operand.intValue, ok = true) };
+        folded := if ch == "-" { operand.intValue.checkedNeg() } else { (value = operand.intValue, ok = true) };
         if folded.ok and numeric.intKindFits(operand.kind, folded.value) {
             return ctx.typedIntParsed(operand.kind, code, folded.value, true, operand.next);
         }
@@ -406,19 +405,19 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
                 if keyKind == "" {
                     keyKind = curKey.kind;
                 } else if not types.isCompatibleKind(keyKind, curKey.kind) {
-                    syntax.failAt(source, curKeyStart, prefix, "map entry " + formatLib.decimalText(entryCount + 1) + " key must be " +
+                    syntax.failAt(source, curKeyStart, prefix, "map entry " + (entryCount + 1).toText() + " key must be " +
                     types.displayKind(keyKind) + ", got " + types.displayKind(curKey.kind));
                 }
                 valStart := syntax.skipTrivia(source, curEq + 1, prefix);
                 valParsed := parseBinaryCtx(target, source, valStart, prefix, locals, functions, params, currentName, valKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
                 if inferMode { mapMarkers = ctx.collectParsedMarkers(mapMarkers, valParsed); }
                 if valParsed.kind == ir.VALUE_KIND_UNIT or valParsed.kind == ir.VALUE_KIND_NEVER {
-                    syntax.failAt(source, valStart, prefix, "map entry " + formatLib.decimalText(entryCount + 1) + " value cannot be " + types.displayKind(valParsed.kind));
+                    syntax.failAt(source, valStart, prefix, "map entry " + (entryCount + 1).toText() + " value cannot be " + types.displayKind(valParsed.kind));
                 }
                 if valKind == "" {
                     valKind = valParsed.kind;
                 } else if not types.isCompatibleKind(valKind, valParsed.kind) {
-                    syntax.failAt(source, valStart, prefix, "map entry " + formatLib.decimalText(entryCount + 1) + " value must be " +
+                    syntax.failAt(source, valStart, prefix, "map entry " + (entryCount + 1).toText() + " value must be " +
                     types.displayKind(valKind) + ", got " + types.displayKind(valParsed.kind));
                 }
                 kCode := ctx.assignValueCode(target, keyKind, curKey.kind, curKey.code);
@@ -446,11 +445,11 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
                 mTag := types.cMapTag(mapKind);
                 if mTag == "" { syntax.failAt(source, start, prefix, "C backend does not support Map yet"); }
                 return ctx.withMarkers((kind = mapKind,
-                code = "/*@T:" + mapKind + "@*/" + mTag + "_from(" + entryCount.toText() + ", (const " + mTag + "_entry[]){" + textLib.joinTexts(cEntryCodes, ", ") + "})",
+                code = "/*@T:" + mapKind + "@*/" + mTag + "_from(" + entryCount.toText() + ", (const " + mTag + "_entry[]){" + cEntryCodes.join(", ") + "})",
                 intValue = 0, textValue = "", constant = false, next = cursor), mapMarkers);
             }
             return ctx.withMarkers((kind = mapKind,
-            code = "new Map<" + types.tsFunctionType(keyKind) + ", " + types.tsFunctionType(valKind) + ">([" + textLib.joinTexts(entryCodes, ", ") + "])",
+            code = "new Map<" + types.tsFunctionType(keyKind) + ", " + types.tsFunctionType(valKind) + ">([" + entryCodes.join(", ") + "])",
             intValue = 0, textValue = "", constant = false, next = cursor), mapMarkers);
         }
         if isMapTarget {
@@ -470,7 +469,7 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
         element := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, elementKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
         if inferMode { listMarkers = ctx.collectParsedMarkers(listMarkers, element); }
         if element.kind == ir.VALUE_KIND_UNIT and elementKind =!= ir.VALUE_KIND_UNIT {
-            syntax.failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " cannot be Unit");
+            syntax.failAt(source, elementStart, prefix, "list element " + (count + 1).toText() + " cannot be Unit");
         }
         if types.isListKind(element.kind) {
             syntax.failAt(source, elementStart, prefix, "nested list types are not supported");
@@ -481,7 +480,7 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
             compatible := if isListTarget or isSetTarget { types.isCompatibleKind(elementKind, element.kind) }
             else { element.kind == ir.VALUE_KIND_NEVER or element.kind == elementKind or types.fnShapeMatches(elementKind, element.kind) };
             if not compatible {
-                syntax.failAt(source, elementStart, prefix, "list element " + formatLib.decimalText(count + 1) + " must be " +
+                syntax.failAt(source, elementStart, prefix, "list element " + (count + 1).toText() + " must be " +
                 types.displayKind(elementKind) + ", got " + types.displayKind(element.kind));
             }
         }
@@ -568,12 +567,12 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
             sCode := if count == 0 {
                 "/*@T:" + expected + "@*/" + sTag + "_from(0, NULL)"
             } else {
-                "/*@T:" + expected + "@*/" + sTag + "_from(" + count.toText() + ", (" + cArrType + "[]){" + textLib.joinTexts(elementCodes, ", ") + "})"
+                "/*@T:" + expected + "@*/" + sTag + "_from(" + count.toText() + ", (" + cArrType + "[]){" + elementCodes.join(", ") + "})"
             };
             return ctx.withMarkers((kind = expected, code = sCode, intValue = 0, textValue = "", constant = false, next = cursor), listMarkers);
         }
         return ctx.withMarkers((kind = expected,
-        code = "new Set<" + types.tsFunctionType(elementKind) + ">([" + textLib.joinTexts(elementCodes, ", ") + "])",
+        code = "new Set<" + types.tsFunctionType(elementKind) + ">([" + elementCodes.join(", ") + "])",
         intValue = 0, textValue = "", constant = false, next = cursor), listMarkers);
     }
     if count > 0 and elementKind == "" {
@@ -593,10 +592,10 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
             "lt_list_" + cTag + "_from(0, NULL)"
         } else {
             cArrType := "const " + types.cListElemType(cTag);
-            "lt_list_" + cTag + "_from(" + count.toText() + ", (" + cArrType + "[]){" + textLib.joinTexts(elementCodes, ", ") + "})"
+            "lt_list_" + cTag + "_from(" + count.toText() + ", (" + cArrType + "[]){" + elementCodes.join(", ") + "})"
         }
     } else {
-        "[" + textLib.joinTexts(elementCodes, ", ") + "]"
+        "[" + elementCodes.join(", ") + "]"
     };
     ctx.withMarkers((kind = resultKind, code = listCode,
     intValue = 0, textValue = "", constant = false, next = cursor), listMarkers)
@@ -724,7 +723,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         pEnd := source.skipName(pStart);
         pName := source.slice(pStart, pEnd);
         if syntax.isReservedWord(pName) { syntax.unsupportedFeature(source, pStart, pName, prefix); }
-        if listLib.listContainsText(paramNames, pName) {
+        if paramNames.contains(pName) {
             syntax.failAt(source, pStart, prefix, "duplicate parameter " + pName);
         }
         (mut paramNames).pushBack(pName);
@@ -856,7 +855,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     fnCtxs := ctx.appendCtx(emptyFnCtxs, fnCtx);
     var fnBodySink := "fnBody";
     if paramIdx > 0 {
-        fnBodySink = "fnBody:" + textLib.joinTexts(paramNames, ",");
+        fnBodySink = "fnBody:" + paramNames.join(",");
     }
     sym.invalidateLocals();
     fnBody := parseBinaryCtx(target, source, cursor, prefix, fnLocals, functions, params, "<fn>",
@@ -884,8 +883,8 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             isCell := le.runtime.startsWithAt(0, "(*lt_cell_");
             scanTok := if isCell { le.runtime.slice(2, le.runtime.length() - 1) } else { le.runtime };
             if (le.depth > 0 or isCell) and le.name =!= "$self" and scanTok =!= "" and
-            not listLib.listContainsText(paramRuntimes, le.runtime) and
-            not listLib.listContainsText(capRuntimes, le.runtime) and
+            not paramRuntimes.contains(le.runtime) and
+            not capRuntimes.contains(le.runtime) and
             reach.codeUsesTextCall(fnBody.code, scanTok) {
                 mut capRuntimes.pushBack(le.runtime);
                 mut capKinds.pushBack(le.kind);
@@ -1080,7 +1079,7 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
         if fieldKind == "" {
             syntax.failAt(source, labelStart, prefix, "record " + recName + " has no field " + label);
         }
-        if listLib.listContainsText(suppliedKeys, label) {
+        if suppliedKeys.contains(label) {
             syntax.failAt(source, labelStart, prefix, "duplicate record field " + label);
         }
         zeroEnd := syntax.isZeroInitLiteral(source, valStart, prefix);
@@ -1157,9 +1156,9 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
     }
     _unused := encodedSupplied;
     recCode := if cRecTag =!= "" {
-        "/*@T:" + recordKind + "@*/((" + cRecTag + "){ " + textLib.joinTexts(fieldExprs, ", ") + " })"
+        "/*@T:" + recordKind + "@*/((" + cRecTag + "){ " + fieldExprs.join(", ") + " })"
     } else {
-        "{ " + textLib.joinTexts(fieldExprs, ", ") + " }"
+        "{ " + fieldExprs.join(", ") + " }"
     };
     ctx.withMarkers((kind = recordKind, code = recCode, intValue = 0, textValue = "", constant = false, next = cursor), recMarkers)
 };
@@ -1231,7 +1230,7 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
             if shName == "_" {
                 syntax.failAt(source, shStart, prefix, "use _ = sourceField to discard a field");
             }
-            if shape == "record" and listLib.listContainsText(seenRecBinds, shName) {
+            if shape == "record" and seenRecBinds.contains(shName) {
                 syntax.failAt(source, shStart, prefix, "duplicate record pattern binding " + shName);
             }
             bindName = shName;
@@ -1253,7 +1252,7 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
             bindEnd := source.skipName(bindStart);
             bindName = source.slice(bindStart, bindEnd);
             if syntax.isReservedWord(bindName) { syntax.unsupportedFeature(source, bindStart, bindName, prefix); }
-            if shape == "record" and bindName =!= "_" and listLib.listContainsText(seenRecBinds, bindName) {
+            if shape == "record" and bindName =!= "_" and seenRecBinds.contains(bindName) {
                 syntax.failAt(source, bindStart, prefix, "duplicate record pattern binding " + bindName);
             }
             afterBind := syntax.skipTrivia(source, bindEnd, prefix);
@@ -2104,7 +2103,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     bindKind := tgtPart.text;
                     if not (destructure.shape == "record" and bindName == "_") {
                         ctx.rejectDuplicateInBlockNames(source, destructureOpen, prefix, declaredInBlock, bindName);
-                        if not listLib.listContainsText(pendingDestrNames, bindName) {
+                        if not pendingDestrNames.contains(bindName) {
                             mut pendingDestrNames.pushBack(bindName);
                         }
                         bindRuntime := trace.claimOrMakeLocalRuntime(target, blockLocals, bindName, "", blockLexDepth);
@@ -2252,7 +2251,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                                     mut enumLabels.pushBack(cLiteral.textLiteralCode(dName + "." + types.enumCaseAt(baseOutKind, eci).name));
                                     eci = eci + 1;
                                 }
-                                "printf(\"%s\", ((const char *const[]){" + textLib.joinTexts(enumLabels, ", ") + "}[" + outArg.code + "]));"
+                                "printf(\"%s\", ((const char *const[]){" + enumLabels.join(", ") + "}[" + outArg.code + "]));"
                             } else if baseOutKind == ir.VALUE_KIND_BOOL {
                                 "printf(\"%s\", (" + outArg.code + ") ? \"true\" : \"false\");"
                             } else if baseOutKind == ir.VALUE_KIND_STRING {
@@ -2291,14 +2290,14 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if stmtNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, outPos, prefix), prefix, "expected ; after " + blockOutputName); }
                 if not outDiverged and not blockExits {
                     if target == ir.TARGET_C {
-                        cOutBody := textLib.joinTexts(outParts, " printf(\" \"); ");
+                        cOutBody := outParts.join(" printf(\" \"); ");
                         cNewline := if blockOutputName == "outputLine" { " printf(\"\\n\");" } else { "" };
                         mut statements.pushBack("{ " + cOutBody + cNewline + " }");
                     } else {
                         lineCode := if outArgCount == 0 {
                             tsLiteral.textLiteralCode(if blockOutputName == "outputLine" { "\n" } else { "" })
                         } else {
-                            joinedArgs := textLib.joinTexts(outParts, " + \" \" + ");
+                            joinedArgs := outParts.join(" + \" \" + ");
                             ending := if blockOutputName == "outputLine" { " + \"\\n\"" } else { "" };
                             if ending =!= "" { "(" + joinedArgs + ")" + ending } else { joinedArgs }
                         };
@@ -3749,7 +3748,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         }
     }
     if isStmtBody {
-        stmtCode := textLib.joinTexts(statements, " ");
+        stmtCode := statements.join(" ");
         stmtKind := if blockExits { ir.VALUE_KIND_NEVER } else { ir.VALUE_KIND_UNIT };
         return ctx.withMarkers((kind = stmtKind, code = stmtCode, intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
@@ -3770,7 +3769,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 mut statements.pushBack(if target == ir.TARGET_C { ctx.cUnwrapIntoVar("", ir.VALUE_KIND_UNIT, blockCode) } else { "void (" + blockCode + ");" });
             }
         }
-        finCode := textLib.joinTexts(statements, " ");
+        finCode := statements.join(" ");
         finKind := if blockExits { ir.VALUE_KIND_NEVER } else { ir.VALUE_KIND_UNIT };
         return ctx.withMarkers((kind = finKind, code = finCode, intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
@@ -3820,7 +3819,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 syntax.failAt(source, start, prefix, "function " + currentName + " must return " + types.displayKind(expected));
             }
         }
-        var fnBodyJoined := textLib.joinTexts(statements, " ");
+        var fnBodyJoined := statements.join(" ");
         if reach.codeUsesTextCall(fnBodyJoined, "lite$throwTransfer(0,") {
             catchRet := if expected == ir.VALUE_KIND_UNIT { "return;" } else { "return lite$transferVal;" };
             fnBodyJoined = "try { " + fnBodyJoined + " } catch (lite$err) { if (lite$hasTransfer(lite$err, 0)) { " + catchRet + " } throw lite$err; }";
@@ -3899,7 +3898,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 syntax.failAt(source, start, prefix, "loop body must produce " + types.displayKind(topLoopValKind));
             }
         }
-        loopBodyJoined := textLib.joinTexts(statements, " ");
+        loopBodyJoined := statements.join(" ");
         return ctx.withMarkers((kind = if blockExits { ir.VALUE_KIND_NEVER } else { topLoopValKind }, code = loopBodyJoined,
         intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { ctx.filterOtherMarkers(blockMarkers, topLoopId) } else { "" });
@@ -3964,7 +3963,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
             }
         }
-        bodyJoined := textLib.joinTexts(statements, " ");
+        bodyJoined := statements.join(" ");
         if target == ir.TARGET_C {
             needsCLbl := reach.codeUsesTextCall(bodyJoined, "goto " + topLabel + ";");
             cBodyWithLbl := if needsCLbl { bodyJoined + " " + topLabel + ": ;" } else { bodyJoined };
@@ -4005,7 +4004,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         if afterUntaggedClose < blockSourceSize and source.wordAt(afterUntaggedClose, "finally") {
             finParsed := parseFinallyClause(target, source, afterUntaggedClose, prefix, locals, functions, params, currentName, ctxs, bodyDepth, inferMode, aliases);
             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, finParsed); }
-            stmtsJoined := textLib.joinTexts(statements, " ");
+            stmtsJoined := statements.join(" ");
             if target == ir.TARGET_C {
                 tryBlockC := if blockExits {
                     "/*@CBLK:0@*/" + stmtsJoined
@@ -4047,11 +4046,11 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     }
     if blockExits {
         if target == ir.TARGET_C {
-            return ctx.withMarkers((kind = ir.VALUE_KIND_NEVER, code = "/*@CBLK:0@*/" + textLib.joinTexts(statements, " "),
+            return ctx.withMarkers((kind = ir.VALUE_KIND_NEVER, code = "/*@CBLK:0@*/" + statements.join(" "),
             intValue = 0, textValue = "", constant = false, next = cursor),
             if inferMode { blockMarkers } else { "" });
         }
-        return ctx.withMarkers((kind = ir.VALUE_KIND_NEVER, code = "(() => { " + textLib.joinTexts(statements, " ") + " })()",
+        return ctx.withMarkers((kind = ir.VALUE_KIND_NEVER, code = "(() => { " + statements.join(" ") + " })()",
         intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
     }
@@ -4060,7 +4059,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         return if inferMode and blockMarkers =!= "" { ctx.withMarkers(baseBlock, blockMarkers) } else { baseBlock };
     }
     if target == ir.TARGET_C {
-        stmtsJoinedC := textLib.joinTexts(statements, " ");
+        stmtsJoinedC := statements.join(" ");
         if blockKind == ir.VALUE_KIND_UNIT or blockKind == ir.VALUE_KIND_NEVER {
             tailC := ctx.cUnwrapIntoVar("", blockKind, blockCode);
             return ctx.withMarkers((kind = blockKind, code = "/*@CBLK:0@*/" + stmtsJoinedC + (if tailC =!= "" { " " + tailC } else { "" }),
@@ -4083,7 +4082,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     } else {
         "return " + ctx.copiedValueCode(target, blockKind, blockCode) + ";"
     };
-    ctx.withMarkers((kind = blockKind, code = "(() => { " + textLib.joinTexts(statements, " ") + " " + returnCode + " })()",
+    ctx.withMarkers((kind = blockKind, code = "(() => { " + statements.join(" ") + " " + returnCode + " })()",
     intValue = 0, textValue = "", constant = false, next = cursor),
     if inferMode { blockMarkers } else { "" })
 };
@@ -4388,7 +4387,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                     mut catchClauses.pushBack("if (lite$hasTransfer(lite$err, " + brkBareId + ")) { break; }");
                 }
                 wrappedBody = "try { " + bodyParsed.code + " } catch (lite$err) { " +
-                textLib.joinTexts(catchClauses, " else ") + " else { throw lite$err; } }";
+                catchClauses.join(" else ") + " else { throw lite$err; } }";
             }
             cContLbl := "lt_cont_" + loopIdStr;
             cBrkLbl := "lt_brk_" + loopIdStr;
@@ -4459,7 +4458,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                     mut hdrClauses.pushBack("if (lite$hasTransfer(lite$err, " + brkBareId + ")) { }");
                 }
                 loopStmtCode = "try { " + labeledLoop + " } catch (lite$err) { " +
-                textLib.joinTexts(hdrClauses, " else ") + " else { throw lite$err; } }";
+                hdrClauses.join(" else ") + " else { throw lite$err; } }";
             } else {
                 loopStmtCode = labeledLoop;
             }
@@ -7256,7 +7255,7 @@ pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix
                 tpConc := generics.substKind(tpl.genericParams, tpBase, bindings);
                 mut allSubstParts.pushBack(tpName + "=" + (if tpIsMut { "mut " } else { "" }) + tpConc);
             }
-            effRuntime = generics.requestInstance(target, tplKey, generics.encodeBindings(tpl.genericParams, bindings), textLib.joinTexts(allSubstParts, "|"), concRes);
+            effRuntime = generics.requestInstance(target, tplKey, generics.encodeBindings(tpl.genericParams, bindings), allSubstParts.join("|"), concRes);
         }
         return (found = true, runtime = effRuntime, keyKind = concKey, valKind = concVal, resultKind = concRes);
     }
@@ -7431,7 +7430,7 @@ readOnlyArgNeedsSnapshot := fn(argCode: String, locals: List<Local>, mutArgRunti
     if not loc.writable { return false; }
     if loc.depth <= 0 { return true; }
     if loc.code == loc.runtime { return true; }
-    if listLib.listContainsText(mutArgRuntimes, loc.runtime) { return true; }
+    if mutArgRuntimes.contains(loc.runtime) { return true; }
     selfIdx := sym.localIndex(locals, "$self");
     if selfIdx >= 0 and loc.depth < locals[selfIdx].depth { return true; }
     if hasClosureHazard { return true; }
@@ -7538,7 +7537,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                 if isGenericCall {
                     uErr := generics.unifyKindMut(genParams, rawArgExpected, arg.kind, mut genBindings);
                     if uErr =!= "" {
-                        syntax.failAt(source, argNameStart, prefix, "argument " + formatLib.decimalText(slot + 1) + " of " + calleeDisplay + ": " + uErr);
+                        syntax.failAt(source, argNameStart, prefix, "argument " + (slot + 1).toText() + " of " + calleeDisplay + ": " + uErr);
                     }
                 }
                 (mut entryPositions).pushBack(argNameStart);
@@ -7579,7 +7578,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 }
                                 syntax.failAt(source, lease.nameStart, prefix, "expected a binding name after mut");
                             }
-                            syntax.failAt(source, rhsStart, prefix, "argument " + formatLib.decimalText(slot + 1) + " of " + calleeDisplay + " requires mut argument");
+                            syntax.failAt(source, rhsStart, prefix, "argument " + (slot + 1).toText() + " of " + calleeDisplay + " requires mut argument");
                         }
                         mNameStart := lease.nameStart;
                         mNameEnd := lease.nameEnd;
@@ -7597,7 +7596,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                             rawBaseMut := rawArgExpected.slice(4, rawArgExpected.length());
                             uErr := generics.unifyKindMut(genParams, rawBaseMut, mEntry.kind, mut genBindings);
                             if uErr =!= "" {
-                                syntax.failAt(source, rhsStart, prefix, "argument " + formatLib.decimalText(slot + 1) + " of " + calleeDisplay + ": " + uErr);
+                                syntax.failAt(source, rhsStart, prefix, "argument " + (slot + 1).toText() + " of " + calleeDisplay + ": " + uErr);
                             }
                         }
                         var mCode := if target == ir.TARGET_C { "&" + mEntry.runtime } else { mEntry.runtime };
@@ -7629,7 +7628,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                         if isGenericCall {
                             uErr := generics.unifyKindMut(genParams, rawArgExpected, arg.kind, mut genBindings);
                             if uErr =!= "" {
-                                syntax.failAt(source, rhsStart, prefix, "argument " + formatLib.decimalText(slot + 1) + " of " + calleeDisplay + ": " + uErr);
+                                syntax.failAt(source, rhsStart, prefix, "argument " + (slot + 1).toText() + " of " + calleeDisplay + ": " + uErr);
                             }
                         }
                         (mut entryPositions).pushBack(rhsStart);
@@ -7651,10 +7650,10 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                     }
                     if nextSlot < 0 {
                         suffix := if callCount == 1 { " argument" } else { " arguments" };
-                        syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(callCount) + suffix + ", got more");
+                        syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + callCount.toText() + suffix + ", got more");
                     }
                     slotName := types.paramNameOf(callParams[callFirst + nextSlot]);
-                    isOverwrittenPos := listLib.listContainsText(explicitLabels, slotName);
+                    isOverwrittenPos := explicitLabels.contains(slotName);
                     rawPosExpected := if isOverwrittenPos { "" } else { types.paramKindOf(callParams[callFirst + nextSlot]) };
                     slotEntry = ctx.setIntAt(slotEntry, nextSlot, entryCount);
                     if rawPosExpected.startsWithAt(0, "mut ") {
@@ -7666,7 +7665,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 }
                                 syntax.failAt(source, lease.nameStart, prefix, "expected a binding name after mut");
                             }
-                            syntax.failAt(source, cursor, prefix, "argument " + formatLib.decimalText(nextSlot + 1) + " of " + calleeDisplay + " requires mut argument");
+                            syntax.failAt(source, cursor, prefix, "argument " + (nextSlot + 1).toText() + " of " + calleeDisplay + " requires mut argument");
                         }
                         mNameStart := lease.nameStart;
                         mNameEnd := lease.nameEnd;
@@ -7684,7 +7683,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                             rawBaseMut := rawPosExpected.slice(4, rawPosExpected.length());
                             uErr := generics.unifyKindMut(genParams, rawBaseMut, mEntry.kind, mut genBindings);
                             if uErr =!= "" {
-                                syntax.failAt(source, cursor, prefix, "argument " + formatLib.decimalText(nextSlot + 1) + " of " + calleeDisplay + ": " + uErr);
+                                syntax.failAt(source, cursor, prefix, "argument " + (nextSlot + 1).toText() + " of " + calleeDisplay + ": " + uErr);
                             }
                         }
                         var mCode := if target == ir.TARGET_C { "&" + mEntry.runtime } else { mEntry.runtime };
@@ -7716,7 +7715,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                         if isGenericCall and not isOverwrittenPos {
                             uErr := generics.unifyKindMut(genParams, rawPosExpected, arg.kind, mut genBindings);
                             if uErr =!= "" {
-                                syntax.failAt(source, cursor, prefix, "argument " + formatLib.decimalText(nextSlot + 1) + " of " + calleeDisplay + ": " + uErr);
+                                syntax.failAt(source, cursor, prefix, "argument " + (nextSlot + 1).toText() + " of " + calleeDisplay + ": " + uErr);
                             }
                         }
                         (mut entryPositions).pushBack(cursor);
@@ -7745,8 +7744,8 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     }
     if filledCount =!= callCount {
         suffix := if callCount == 1 { " argument" } else { " arguments" };
-        syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(callCount) +
-        suffix + ", got " + formatLib.decimalText(filledCount));
+        syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + callCount.toText() +
+        suffix + ", got " + filledCount.toText());
     }
     var effRuntime := callRuntime;
     var effResult := callResult;
@@ -7800,7 +7799,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         }
         if not inferMode {
             bindingsEnc := generics.encodeBindings(genParams, genBindings);
-            substParamsPipe := textLib.joinTexts(allSubstParts, "|");
+            substParamsPipe := allSubstParts.join("|");
             effRuntime = generics.requestInstance(target, genTplKey, bindingsEnc, substParamsPipe, effResult);
         }
     }
@@ -7815,7 +7814,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         chkExp := if isMutExp { argExpected.slice(4, argExpected.length()) } else { argExpected };
         chkAct := if isMutAct { entryKinds[k].slice(4, entryKinds[k].length()) } else { entryKinds[k] };
         if isMutExp =!= isMutAct or not types.isCompatibleKind(chkExp, chkAct) {
-            syntax.failAt(source, entryPositions[k], prefix, "argument " + formatLib.decimalText(slotIdx + 1) + " of " +
+            syntax.failAt(source, entryPositions[k], prefix, "argument " + (slotIdx + 1).toText() + " of " +
             calleeDisplay + " must be " + types.displayKind(argExpected) + ", got " + types.displayKind(entryKinds[k]));
         }
         slotIdx += 1;
@@ -7850,10 +7849,10 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         if target == ir.TARGET_C and not isModuleFn {
             callFnKind := types.fnCanonicalKind(callParams, callFirst, callCount, effResult);
             callFnTag := types.cFnTag(callFnKind);
-            cCallArgs := if callCount > 0 { effRuntime + ", " + textLib.joinTexts(finalArgs, ", ") } else { effRuntime };
+            cCallArgs := if callCount > 0 { effRuntime + ", " + finalArgs.join(", ") } else { effRuntime };
             emittedCode = "/*@T:" + callFnKind + "@*/" + callFnTag + "_call(" + cCallArgs + ")";
         } else {
-            emittedCode = targetCallee + "(" + textLib.joinTexts(finalArgs, ", ") + ")";
+            emittedCode = targetCallee + "(" + finalArgs.join(", ") + ")";
         }
     } else if target =!= ir.TARGET_TS {
         discarded: mut List<String> = [];
@@ -7882,13 +7881,13 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         callExpr := if not isModuleFn {
             callFnKind := types.fnCanonicalKind(callParams, callFirst, callCount, effResult);
             callFnTag := types.cFnTag(callFnKind);
-            cCallArgs := if callCount > 0 { effRuntime + ", " + textLib.joinTexts(reorderedArgs, ", ") } else { effRuntime };
+            cCallArgs := if callCount > 0 { effRuntime + ", " + reorderedArgs.join(", ") } else { effRuntime };
             "/*@T:" + callFnKind + "@*/" + callFnTag + "_call(" + cCallArgs + ")"
         } else {
-            effRuntime + "(" + textLib.joinTexts(reorderedArgs, ", ") + ")"
+            effRuntime + "(" + reorderedArgs.join(", ") + ")"
         };
         emittedCode = if discarded.length() > 0 {
-            "(" + textLib.joinTexts(discarded, ", ") + ", " + callExpr + ")"
+            "(" + discarded.join(", ") + ", " + callExpr + ")"
         } else {
             callExpr
         };
@@ -7925,7 +7924,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             kIdx = kIdx + 1;
         }
         if callDiverged {
-            emittedCode = "(() => { " + textLib.joinTexts(evalStmts, " ") + " })()";
+            emittedCode = "(() => { " + evalStmts.join(" ") + " })()";
             emittedResultKind = ir.VALUE_KIND_NEVER;
         } else {
             slotTemps: mut List<String> = [];
@@ -7936,9 +7935,9 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                 sIdx = sIdx + 1;
             }
             targetCallee := if isModuleFn { effRuntime } else { "lite$fn" };
-            callExpr := targetCallee + "(" + textLib.joinTexts(slotTemps, ", ") + ")";
+            callExpr := targetCallee + "(" + slotTemps.join(", ") + ")";
             retStmt := if effResult == ir.VALUE_KIND_UNIT { "void (" + callExpr + "); return undefined;" } else { "return " + callExpr + ";" };
-            emittedCode = "(() => { " + textLib.joinTexts(evalStmts, " ") + " " + retStmt + " })()";
+            emittedCode = "(() => { " + evalStmts.join(" ") + " " + retStmt + " })()";
         }
     }
     if target == ir.TARGET_TS and mutRecBoxNames.length() > 0 and emittedResultKind =!= ir.VALUE_KIND_NEVER {
@@ -7954,9 +7953,9 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             bi = bi + 1;
         }
         if emittedResultKind == ir.VALUE_KIND_UNIT {
-            emittedCode = "(() => { " + textLib.joinTexts(wbSetup, " ") + " void (" + emittedCode + "); " + textLib.joinTexts(wbAssign, " ") + " return undefined; })()";
+            emittedCode = "(() => { " + wbSetup.join(" ") + " void (" + emittedCode + "); " + wbAssign.join(" ") + " return undefined; })()";
         } else {
-            emittedCode = "(((): " + types.tsFunctionType(emittedResultKind) + " => { " + textLib.joinTexts(wbSetup, " ") + " const lite$mr = " + emittedCode + "; " + textLib.joinTexts(wbAssign, " ") + " return lite$mr; })())";
+            emittedCode = "(((): " + types.tsFunctionType(emittedResultKind) + " => { " + wbSetup.join(" ") + " const lite$mr = " + emittedCode + "; " + wbAssign.join(" ") + " return lite$mr; })())";
         }
     }
     ctx.withMarkers((kind = emittedResultKind, code = emittedCode, intValue = 0, textValue = "", constant = false, next = cursor), callMarkers)
@@ -8728,9 +8727,9 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             else if backing == ir.VALUE_KIND_BOOL { "const bool" }
                             else if numeric.isFloatKind(backing) { "const double" }
                             else { "const lt_str" };
-                            "((" + cElemType + "[]){" + textLib.joinTexts(vals, ", ") + "}[" + left.code + "])"
+                            "((" + cElemType + "[]){" + vals.join(", ") + "}[" + left.code + "])"
                         } else {
-                            "([" + textLib.joinTexts(vals, ", ") + "][" + left.code + "]!)"
+                            "([" + vals.join(", ") + "][" + left.code + "]!)"
                         };
                         left = ctx.withMarkers((kind = backing, code = lookupCode,
                         intValue = 0, textValue = "", constant = false, next = labelEnd),
@@ -9117,13 +9116,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             }
                             if argumentCount >= info.count {
                                 suffix := if info.count == 1 { " argument" } else { " arguments" };
-                                syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(info.count) + suffix + ", got more");
+                                syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + info.count.toText() + suffix + ", got more");
                             }
                             argExpected := types.paramKindOf(params[info.first + argumentCount]);
                             argument := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, argExpected, 0, ctxs, iifeDepth, inferMode, "", aliases);
                             if inferMode { callMarkers = ctx.collectParsedMarkers(callMarkers, argument); }
                             if not types.isCompatibleKind(argExpected, argument.kind) {
-                                syntax.failAt(source, cursor, prefix, "argument " + formatLib.decimalText(argumentCount + 1) + " of " + calleeDisplay +
+                                syntax.failAt(source, cursor, prefix, "argument " + (argumentCount + 1).toText() + " of " + calleeDisplay +
                                 " must be " + types.displayKind(argExpected) + ", got " + types.displayKind(argument.kind));
                             }
                             (mut argumentCodes).pushBack(ctx.assignReadOnlyArgCode(target, argExpected, argument.kind, argument.code));
@@ -9143,8 +9142,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     optionalExit := info.runtime == "lite$exit";
                     if argumentCount =!= info.count and not ((optionalPrompt or optionalExit) and argumentCount == 0) {
                         suffix := if info.count == 1 { " argument" } else { " arguments" };
-                        syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + formatLib.decimalText(info.count) +
-                        suffix + ", got " + formatLib.decimalText(argumentCount));
+                        syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " expects " + info.count.toText() +
+                        suffix + ", got " + argumentCount.toText());
                     }
                     if optionalExit and argumentCount == 0 {
                         mut argumentCodes.pushBack(ir.targetIntLiteralCode(target, 0, false, "0"));
@@ -9152,15 +9151,15 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     if optionalPrompt {
                         if argumentCount == 0 { mut argumentCodes.pushBack(if target == ir.TARGET_C { "LT_NULL_STR" } else { "undefined" }); }
                         place := sourceLib.lineColumn(source, errPos);
-                        location := (if prefix == "" { "" } else { prefix + ":" }) + formatLib.decimalText(place.line) + ":" +
-                        formatLib.decimalText(place.column) + ": InputFault: ";
+                        location := (if prefix == "" { "" } else { prefix + ":" }) + place.line.toText() + ":" +
+                        place.column.toText() + ": InputFault: ";
                         mut argumentCodes.pushBack(ir.targetTextLiteralCode(target, location));
                     }
                     if info.runtime == "lite$textAt" or info.runtime == "lite$textSlice" {
                         mut argumentCodes.pushBack(errPos.toText());
                     }
                     callResultKind := if optionalExit { ir.VALUE_KIND_NEVER } else { info.result };
-                    left = ctx.withMarkers((kind = callResultKind, code = info.runtime + "(" + textLib.joinTexts(argumentCodes, ", ") + ")",
+                    left = ctx.withMarkers((kind = callResultKind, code = info.runtime + "(" + argumentCodes.join(", ") + ")",
                     intValue = 0, textValue = "", constant = false, next = cursor), callMarkers);
                 } else {
                     handleUserCall = true;
@@ -9691,7 +9690,7 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
         if syntax.isReservedWord(fName) {
             syntax.unsupportedFeature(source, fStart, fName, prefix);
         }
-        if listLib.listContainsText(fieldNames, fName) {
+        if fieldNames.contains(fName) {
             syntax.failAt(source, fStart, prefix, "duplicate record field " + fName);
         }
         (mut fieldNames).pushBack(fName);

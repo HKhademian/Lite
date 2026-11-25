@@ -161,7 +161,7 @@ run := fn(rawArgs: List<String>): Int {
             endPos := if comma < 0 { size } else { comma };
             part := onlyRaw.slice(pos, endPos).trim();
             if part =!= "" {
-                if not list.listContainsText(allNames, part) {
+                if not allNames.contains(part) {
                     return failFetch("unknown sources: " + part);
                 }
                 (mut selected).pushBack(part);

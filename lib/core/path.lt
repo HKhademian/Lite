@@ -91,7 +91,7 @@ pub normalize := fn(raw: String): String {
         if rootPrefix =!= "" { return rootPrefix; }
         return ".";
     }
-    rootPrefix + text.joinTexts(parts, separator)
+    rootPrefix + parts.join(separator)
 }
 
 /** Joins `baseDir` and `target` and normalizes the combined path. */
@@ -235,7 +235,7 @@ pub relative := fn(fromDir: String, toPath: String): String {
         down = down + 1;
     }
     if out.length() == 0 { return ""; }
-    text.joinTexts(out, sep())
+    out.join(sep())
 }
 
 /** True when `target` resolves to an existing filesystem entry (file, directory, or other). */
@@ -285,7 +285,7 @@ pub collectFiles := fn(baseDir: String, targets: List<String>, extension: String
             loop entryIdx >= 0 {
                 entry := entries[entryIdx];
                 isDot := skipDotEntries and entry.startsWithAt(0, ".");
-                if not isDot and not list.listContainsText(ignoredNames, entry) {
+                if not isDot and not ignoredNames.contains(entry) {
                     mut stack.pushBack(resolve(resolved, entry));
                     stackCount = stackCount + 1;
                 }
@@ -322,7 +322,7 @@ pub copyFiltered := fn(srcDir: String, dstDir: String, topSkipNames: List<String
         entries := file.listDir(curSrc);
         skipList := if curDepth == 0 { topSkipNames } else { nestedSkipNames };
         loop entries as entry {
-            if not list.listContainsText(skipList, entry) {
+            if not skipList.contains(entry) {
                 nextSrc := join(curSrc, entry);
                 nextDst := join(curDst, entry);
                 entryKind := file.kind(nextSrc);

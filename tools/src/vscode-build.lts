@@ -23,7 +23,7 @@ replaceAll := fn(haystack: String, needle: String, replacement: String): String 
         mut parts.pushBack(replacement);
         pos = found + nLen;
     }
-    text.joinTexts(parts, "")
+    parts.join("")
 };
 
 buildExtensionFile := fn(extRoot: String, distDir: String, name: String): (ok: Bool, error: String) {

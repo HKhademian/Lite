@@ -46,7 +46,6 @@ Sequence literals `[a, b, c]` infer fixed-size `[T; N]` arrays unless typed as `
 
 ```lite
 io := import "core/io";
-fmt := import "core/format";
 
 fixed: [Int; 3] = [10, 20, 30];
 [first, _, third] := fixed;
@@ -55,7 +54,7 @@ mut queue.pushFront(1);
 mut queue.pushBack(4);
 saved: List<Int> = queue;
 head := mut queue.popFront();
-io.outputLine("ends:", first, third, "head:", head, "queue:", fmt.joinIntTexts(queue, ","), "saved:", fmt.joinIntTexts(saved, ","));
+io.outputLine("ends:", first, third, "head:", head, "queue:", queue.map(fn(x: Int): String { x.toText() }).join(","), "saved:", saved.map(fn(x: Int): String { x.toText() }).join(","));
 ```
 
 Notice `saved: List<Int> = queue;` takes an independent value snapshot of `queue`—popping from `queue` afterward does not mutate `saved`. Both indexing and [core/list](lite://module/core/list) operations ([`List.pushBack`](lite://module/core/list#List.pushBack), [`List.popFront`](lite://module/core/list#List.popFront), etc.) are supported.

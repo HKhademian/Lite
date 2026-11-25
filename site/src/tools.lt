@@ -18,7 +18,7 @@ pub escapeSiteHtml := fn(raw: String): String {
         else { mut out.pushBack(ch); }
         i = i + 1;
     }
-    text.joinTexts(out, "")
+    out.join("")
 };
 
 slugifyCommandName := fn(name: String): String {
@@ -38,7 +38,7 @@ slugifyCommandName := fn(name: String): String {
         }
         i = i + 1;
     }
-    text.joinTexts(out, "")
+    out.join("")
 };
 
 /** Builds JSON `{"body": "...", "searchEntries": [...]}` for the `/tools/` site section. */
@@ -157,7 +157,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     + "    <details class=\"portal-nav-group\" open>\n"
     + "      <summary>CLI Commands</summary>\n"
     + "      <ul class=\"portal-nav-list\">\n"
-    + "        " + text.joinTexts(navItems, "\n        ") + "\n"
+    + "        " + navItems.join("\n        ") + "\n"
     + "      </ul>\n"
     + "    </details>\n"
     + "  </aside>\n\n"
@@ -193,7 +193,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     + "        <code>./bin/lite-compile</code>, <code>./bin/lite-compile-ts</code>, and <code>./bin/lite-compile-c</code>.\n"
     + "      </p>\n"
     + "      <div class=\"portal-grid-2\">\n"
-    + "        " + text.joinTexts(cards, "\n") + "\n"
+    + "        " + cards.join("\n") + "\n"
     + "      </div>\n"
     + "    </section>\n\n"
     + "    <section class=\"section\" id=\"vscode\">\n"
@@ -269,5 +269,5 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     + "  </aside>\n"
     + "</div>";
 
-    "{\"body\":" + json.quoteString(body) + ",\"searchEntries\":[" + text.joinTexts(searchEntries, ",") + "]}"
+    "{\"body\":" + json.quoteString(body) + ",\"searchEntries\":[" + searchEntries.join(",") + "]}"
 };

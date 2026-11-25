@@ -47,7 +47,7 @@ pub CsvTable.parse := fn(source: String, delimiter: String): Self {
                         pos += 1;
                     }
                 }
-                mut fields.pushBack(text.joinTexts(parts, ""));
+                mut fields.pushBack(parts.join(""));
                 rowLen += 1;
                 loop pos < size and source.at(pos) =!= delim and source.at(pos) =!= "\r" and source.at(pos) =!= "\n" {
                     pos += 1;
@@ -154,7 +154,7 @@ pub CsvTable.encodeField := fn(value: String, delimiter: String): String {
     }
     if segStart < size { mut parts.pushBack(value.slice(segStart, size)); }
     mut parts.pushBack("\"");
-    text.joinTexts(parts, "")
+    parts.join("")
 };
 
 /** Formats one row of fields separated by `delimiter` (`","` when empty). */
@@ -164,7 +164,7 @@ pub CsvTable.encodeRow := fn(fields: List<String>, delimiter: String): String {
     loop fields as field {
         mut encoded.pushBack(Self.encodeField(field, delim));
     }
-    text.joinTexts(encoded, delim)
+    encoded.join(delim)
 };
 
 /** Serializes all rows in `table` separated by `\n`. */
@@ -177,5 +177,5 @@ pub CsvTable.encode := fn(table: Self, delimiter: String): String {
         mut rows.pushBack(Self.encodeRow(table.row(r), delim));
         r += 1;
     }
-    text.joinTexts(rows, "\n")
+    rows.join("\n")
 };

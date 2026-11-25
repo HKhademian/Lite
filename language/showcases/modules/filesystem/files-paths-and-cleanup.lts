@@ -1,14 +1,13 @@
-/* Showcase 06.02 — Pure path manipulation, temp file I/O with finally cleanup, and core/format tables. */
+/* Showcase 06.02 — Pure path manipulation, temp file I/O with finally cleanup, and aligned String tables. */
 
 io := import "core/io";
 fs := import "core/file";
 path := import "core/path";
-fmt := import "core/format";
 
 /* Deterministic path operations never touch the host filesystem. */
 cleanPath := path.normalize("curriculum/modules/../06/./lesson.lts");
 relPath := path.relative("curriculum/05", "curriculum/06/lesson.lts");
-header := fmt.padRightText("stem=" + path.stem(cleanPath), 12) + "ext=" + path.extName(cleanPath) + " -> " + path.withExt(relPath, ".ts");
+header := ("stem=" + path.stem(cleanPath)).padRight(12) + "ext=" + path.extName(cleanPath) + " -> " + path.withExt(relPath, ".ts");
 io.outputLine(header);
 
 /* Isolate temporary filesystem writes and clean them up deterministically via `finally`. */

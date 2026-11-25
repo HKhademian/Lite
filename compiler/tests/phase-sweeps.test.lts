@@ -43,11 +43,11 @@ if not skipHeavy {
     /* Compile all L0 core libs and compiler source deps in parallel via external/pool */
     compileTargets: mut List<String> = [
     "lib/core/int.lt", "lib/core/text.lt", "lib/core/source.lt",
-    "lib/core/format.lt", "lib/core/diag.lt", "lib/core/list.lt", "lib/core/test.lt",
+    "lib/core/diag.lt", "lib/core/list.lt", "lib/core/test.lt",
     ];
     loop tsDeps as d { mut compileTargets.pushBack(d); }
     loop cDeps as d {
-        if not list.listContainsText(compileTargets, d) {
+        if not compileTargets.contains(d) {
             mut compileTargets.pushBack(d);
         }
     }

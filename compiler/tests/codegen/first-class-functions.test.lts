@@ -22,13 +22,13 @@ cComp := selC.path;
 tmpFn := fs.makeTempDir("lite-fn-values-");
 test.check("fn-values makeTempDir", tmpFn.ok);
 fnDir := tmpFn.path;
-_wOps := fs.writeText(path.join(fnDir, "ops.lts"), text.joinTexts([
+_wOps := fs.writeText(path.join(fnDir, "ops.lts"), [
     "helper := fn(n: Int): Int { n * 2 };",
     "pub double := fn(x: Int): Int { helper(x) };",
     "pub unusedPub := fn(x: Int): Int { x + 999 };"
-], "\n"));
+].join("\n"));
 appFnPath := path.join(fnDir, "app.lts");
-appFnSrc := text.joinTexts([
+appFnSrc := [
     "io := import \"core/io\";",
     "list := import \"core/list\";",
     "opsMod := import \"./ops.lts\";",
@@ -91,7 +91,7 @@ appFnSrc := text.joinTexts([
     "sink(42);",
     "_ := runNested(false);",
     "orderTest();"
-], "\n");
+].join("\n");
 _wApp := fs.writeText(appFnPath, appFnSrc);
 realAppPath := fs.realPath(appFnPath);
 test.check("fn-values realPath", realAppPath.ok);
@@ -101,7 +101,7 @@ test.checkInt("fn-values compile: " + appComp.stderr, 0, appComp.status);
 test.check("fn-values prunes unusedPub", not appComp.stdout.contains("unusedPub"));
 appRun := compilerTest.checkAndRunTs(root, appComp.stdout);
 test.checkInt("fn-values run status: " + appRun.stderr, 0, appRun.status);
-test.checkText("fn-values run stdout", text.joinTexts([
+test.checkText("fn-values run stdout", [
     "zero 0 0  0 57",
     "reassigned 107",
     "rec 120 10",
@@ -117,25 +117,25 @@ test.checkText("fn-values run stdout", text.joinTexts([
     "second",
     "body 10 3",
     "7"
-], "\n") + "\n", appRun.stdout);
+].join("\n") + "\n", appRun.stdout);
 _rmFn := fs.remove(fnDir);
 
-neverFnSrc := text.joinTexts([
+neverFnSrc := [
     "io := import \"core/io\";",
     "die := fn(code: Int): Int { io.exit(code); };",
     "runExit := fn(f: fn(Int): Int): Int { f(4) };",
     "io.outputLine(runExit(die));"
-], "\n");
+].join("\n");
 neverFnRun := compilerTest.compileCheckRunTs(root, tsComp, neverFnSrc, "");
 test.checkInt("fn-values never status", 4, neverFnRun.status);
 test.checkText("fn-values never stdout", "", neverFnRun.stdout);
 
-neverArgSrc := text.joinTexts([
+neverArgSrc := [
     "io := import \"core/io\";",
     "badB := fn(): Int { io.outputLine(\"should-not-run\"); 9 };",
     "localAdd := fn(a: Int, b: Int): Int { a + b };",
     "io.outputLine(localAdd(io.exit(5), badB()));"
-], "\n");
+].join("\n");
 neverArgRun := compilerTest.compileCheckRunTs(root, tsComp, neverArgSrc, "");
 test.checkInt("fn-values never-arg status", 5, neverArgRun.status);
 test.checkText("fn-values never-arg stdout", "", neverArgRun.stdout);

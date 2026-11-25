@@ -54,7 +54,7 @@ bmDir := tmpBm.path;
 sampleFile := path.join(bmDir, "sample.txt");
 sourceFile := path.join(bmDir, "digest.lts");
 _ws := fs.writeText(sampleFile, "hello world\n");
-bmSrc := text.joinTexts([
+bmSrc := [
     "crypto := import \"core/crypto\";",
     "io := import \"core/io\";",
     "fileHash := crypto.sha256File(" + json.quoteString(sampleFile) + ");",
@@ -64,7 +64,7 @@ bmSrc := text.joinTexts([
     "sha512B := crypto.sha512Bytes([97, 98, 99]);",
     "hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);",
     "io.outputLine(fileHash.ok, fileHash.hex, sha256T == sha256B, sha256T, sha512T == sha512B, hmac);"
-], "\n");
+].join("\n");
 _wSrcFile := fs.writeText(sourceFile, bmSrc);
 bmExpectedOut := "true a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447 true 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824 true 9c196e32dc0175f86f4b1cb89289d6619de6bee699e4c378e68309ed97a1a6ab\n";
 
@@ -185,7 +185,7 @@ test.check("text-io makeTempDir", tmpTextIo.ok);
 textIoDir := tmpTextIo.path;
 bigFile := path.join(textIoDir, "big.txt");
 _wBig := fs.writeText(bigFile, "A".repeat(70000) + "€");
-textIoSrc := text.joinTexts([
+textIoSrc := [
     "io := import \"core/io\";",
     "file := import \"core/file\";",
     "uni := import \"core/unicode\";",
@@ -247,7 +247,7 @@ textIoSrc := text.joinTexts([
     "    rtOk.ok, rtOk.text == \"hi€😀\", not rtBad.ok, not rtClosed.ok, not rlClosed.ok,",
     "    bigRes.ok, bigRes.text.length(), bigRes.text.at(70000)",
     ");"
-], "\n");
+].join("\n");
 textIoFile := path.join(textIoDir, "pure-text-io.lts");
 _wTio := fs.writeText(textIoFile, textIoSrc);
 textIoExpected := "[6, 3, -1, -1, 0, 3, -1, -1, 3, 5, 6, 7, -1] [97, 226, 130, 172, 240, 159, 152, 128] true [alpha]|[]|[beta\rgamma]|[€😀]  false false true true true true [65, 226, 130, 172, 240, 159, 152, 128, 10, 10] true true true true true true true true true true 70001 €\n";
@@ -281,7 +281,7 @@ ufDir := tmpUniFile.path;
 textPath := path.join(ufDir, "note.txt");
 bytesPath := path.join(ufDir, "raw.bin");
 missingPath := path.join(ufDir, "missing.bin");
-ufSrc := text.joinTexts([
+ufSrc := [
     "file := import \"core/file\";",
     "io := import \"core/io\";",
     "uni := import \"core/unicode\";",
@@ -300,7 +300,7 @@ ufSrc := text.joinTexts([
     "badW := file.writeBytes(" + json.quoteString(bytesPath) + ", [256]);",
     "io.outputLine(enc, dec.ok, dec.text, not badRange.ok, not badSeq.ok, lossy, lossyRange);",
     "io.outputLine(w1.ok, a1.ok, r1.ok, r1.text, w2.ok, a2.ok, rb, not badW.ok);"
-], "\n");
+].join("\n");
 fffd := unicode.fromCodePoint(65533).text;
 ufExpected := "[65, 226, 130, 172, 240, 159, 153, 130] true A€🙂 true true A" + fffd + "B A" + fffd + "B\ntrue true true hi🙂 true true [65, 66, 67] true\n";
 ufDef := compileCheckAndAssertOut(ufSrc, "main.lts", emptyList(), "uf default", ufExpected);
@@ -356,14 +356,14 @@ cryptoThinRun := compilerTest.checkAndRunTs(root, cryptoThinComp.stdout);
 test.checkInt("dce crypto status", 0, cryptoThinRun.status);
 test.checkText("dce crypto stdout", "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4\n", cryptoThinRun.stdout);
 
-mixedDceSrc := text.joinTexts([
+mixedDceSrc := [
     "io := import \"core/io\";",
     "unusedPure := \"PURGED_PURE_MARKER\";",
     "unusedSum := 1 + 2;",
     "sideEffectFn := fn(): Int { io.outputLine(\"kept-side-effect\"); 7 };",
     "keptSideEffect := sideEffectFn();",
     "unusedHelper := fn(): String { \"PURGED_FN_MARKER\" };"
-], "\n");
+].join("\n");
 mixedDceComp := compilerTest.compileStdin(root, tsComp, mixedDceSrc, "main.lts");
 test.checkInt("dce mixed compile", 0, mixedDceComp.status);
 test.check("dce mixed tsc", compilerTest.checkTsCode(root, mixedDceComp.stdout).ok);
@@ -378,7 +378,7 @@ test.check("dce top fault status != 0", topFaultRun.status =!= 0);
 test.check("dce top fault stderr", topFaultRun.stderr.contains("division by zero"));
 
 /* 6. soft builtin overrides for core/int, core/text, and core/crypto match pure implementations and respect --builtin-mode */
-intTextSrc := text.joinTexts([
+intTextSrc := [
     "integer := import \"core/int\";",
     "io := import \"core/io\";",
     "text := import \"core/text\";",
@@ -388,7 +388,8 @@ intTextSrc := text.joinTexts([
     "io.outputLine(0.toText(), (-42).toText(), integer.intMax.toText(), integer.intMin.toText());",
     "io.outputLine(\"A🙂B\".startsWithAt(1, \"🙂\"), \"A🙂B\".startsWithAt(2, \"B\"), \"A🙂B\".startsWithAt(-1, \"A\"), \"A🙂B\".startsWithAt(3, \"\"));",
     "io.outputLine(\"if_x\".wordAt(0, \"if\"), \"if 🙂\".wordAt(0, \"if\"), \"a🙂b\".wordAt(0, \"a\"), \"if\".wordAt(0, \"if\"));",
-    "io.outputLine(text.joinTexts([], \",\"), text.joinTexts([\"x\"], \",\"), text.joinTexts([\"a\", \"b\", \"c\"], \"-\"));",
+    "emptyParts: List<String> = []; onePart: List<String> = [\"x\"]; manyParts: List<String> = [\"a\", \"b\", \"c\"];",
+    "io.outputLine(emptyParts.join(\",\"), onePart.join(\",\"), manyParts.join(\"-\"));",
     "n0 := \"-9223372036854775808\".toInt(); n1 := \"+42\".toInt(); n2 := \"9223372036854775808\".toInt(); n3 := \"1a\".toInt();",
     "io.outputLine(n0.ok, n0.value, n1.ok, n1.value, n2.ok, n3.ok);",
     "padded := \" \\t\" + nbsp + \"hi\" + vtab + \"\\r\\n \";",
@@ -397,7 +398,7 @@ intTextSrc := text.joinTexts([
     "io.outputLine(\"ÄÉΩABC_xyz🙂\".toLowerAscii(), \"5\".isDigit(), \"Q\".isAsciiLetter(), \"_\".isNameStart(), \"9\".isNameContinue(), nbsp.isWhitespace());",
     "io.outputLine(\" \\t\\r\\n🙂x\".skipSpaces(0), \"🙂  foo\".skipSpaces(1), \"abc\".skipSpaces(10), \"abc_12🙂\".skipName(0), \"🙂abc\".skipName(1), \"abc\".skipName(9));",
     "io.outputLine(\"A🙂B🙂C\".indexOf(\"🙂\", 0), \"A🙂B🙂C\".indexOf(\"🙂\", 2), \"A🙂B\".indexOf(\"\", -1), \"A🙂B\".indexOf(\"\", 3), \"A🙂B\".indexOf(\"\", 4));"
-], "\n");
+].join("\n");
 
 itDef := compileCheckVariant(intTextSrc, "main.lts", emptyList(), "int/text default");
 test.check("itDef String(lite_value)", itDef.code.contains("String(lite_value)"));
@@ -428,7 +429,10 @@ test.check("itWordPure keeps startsWithAt", itWordPure.code.contains("function l
 itIdxPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/text:String.indexOf=pure"], "core/text:String.indexOf=pure");
 test.checkText("itIdxPure matches", itPure.stdout, itIdxPure.stdout);
 
-cryptoParitySrc := text.joinTexts([
+itJoinPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/list:List.join=pure"], "core/list:List.join=pure");
+test.checkText("itJoinPure matches", itPure.stdout, itJoinPure.stdout);
+
+cryptoParitySrc := [
     "crypto := import \"core/crypto\";",
     "io := import \"core/io\";",
     "io.outputLine(crypto.isValidBase64(\"\"), crypto.isValidBase64(\"AEH/\"), crypto.isValidBase64(\"YQ==\"), crypto.isValidBase64(\"Y===\"), crypto.isValidBase64(\"====\"), crypto.isValidBase64(\"YW Jj\"));",
@@ -440,7 +444,7 @@ cryptoParitySrc := text.joinTexts([
     "key: List<Int> = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];",
     "longKey := crypto.base64Decode(\"QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5\");",
     "io.outputLine(crypto.hmacSha256Bytes(key, raw), crypto.hmacSha256Bytes(longKey, raw));"
-], "\n");
+].join("\n");
 
 crDef := compileCheckVariant(cryptoParitySrc, "main.lts", emptyList(), "crypto default");
 test.check("crDef hmac", crDef.code.contains("function lite$cryptoHmacSha256Bytes("));

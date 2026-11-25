@@ -238,7 +238,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                         if shStart < parenClose - 1 and source.at(shStart).isNameStart() {
                             shEnd := source.skipName(shStart);
                             shName := source.slice(shStart, shEnd);
-                            if syntax.isReservedWord(shName) or listLib.listContainsText(tLabels, shName) {
+                            if syntax.isReservedWord(shName) or tLabels.contains(shName) {
                                 return (kind = "", next = start);
                             }
                             fLabel = shName;
@@ -253,7 +253,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                         eqPos := syntax.skipTrivia(source, afterLbl, prefix);
                         if eqPos < parenClose - 1 and syntax.isSingleEquals(source, eqPos) {
                             cand := source.slice(tCur, afterLbl);
-                            if syntax.isReservedWord(cand) or listLib.listContainsText(tLabels, cand) {
+                            if syntax.isReservedWord(cand) or tLabels.contains(cand) {
                                 return (kind = "", next = start);
                             }
                             fLabel = cand;
@@ -279,7 +279,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                 if tCur =!= parenClose - 1 or tCount == 0 or (tCount == 1 and tLabelCount == 0 and not tHadComma) {
                     return (kind = "", next = start);
                 }
-                leftKind = "(" + textLib.joinTexts(tParts, ",") + ")";
+                leftKind = "(" + tParts.join(",") + ")";
                 leftNext = parenClose;
             }
         }
@@ -392,7 +392,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
         if bodyOpen >= size or source.at(bodyOpen) =!= "{" { return (kind = "", next = start); }
         bodyClose := syntax.scanBraceEnd(source, bodyOpen, prefix);
         if bodyClose < 0 { return (kind = "", next = start); }
-        leftKind = "fn(" + textLib.joinTexts(fnParamParts, ",") + "):" + retTyped.kind;
+        leftKind = "fn(" + fnParamParts.join(",") + "):" + retTyped.kind;
         leftNext = bodyClose;
     } else if ch.isNameStart() {
         afterName := source.skipName(start);
@@ -526,7 +526,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                 mut fnParts.pushBack(types.paramNameOf(pEntry) + ":" + types.paramKindOf(pEntry));
                 pi = pi + 1;
             }
-            leftKind = "fn(" + textLib.joinTexts(fnParts, ",") + "):" + fnEntry.result;
+            leftKind = "fn(" + fnParts.join(",") + "):" + fnEntry.result;
             curFnIdx = -1;
         }
         if postPos >= size { break; }

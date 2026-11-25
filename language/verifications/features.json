@@ -479,7 +479,7 @@
     },
     {
       "id": "feature.core.text.unicode-and-format",
-      "summary": "Unicode code-point/UTF-8 helpers and core/format text/integer padding.",
+      "summary": "Unicode code-point/UTF-8 helpers and String text/integer padding.",
       "case": "features/core/text/unicode-and-format.json",
       "status": "verified",
       "docs": [

@@ -202,7 +202,7 @@ run := fn(rawArgs: List<String>): Unit {
                 + ",\"kind\":" + json.quoteString(meta.kind)
                 + ",\"identity\":" + ident.jsonText
                 + ",\"warmups\":" + meta.warmups.toText()
-                + ",\"milliseconds\":[" + text.joinTexts(msFields, ",") + "]"
+                + ",\"milliseconds\":[" + msFields.join(",") + "]"
                 + ",\"medianMilliseconds\":" + formatNsAsMsJson(medianNs)
                 + "}";
                 mut resultsJson.pushBack(entry);
@@ -269,7 +269,7 @@ run := fn(rawArgs: List<String>): Unit {
     + "  \"compiler\": " + compRes.jsonText + ",\n"
     + "  \"tooling\": " + json.quoteString(toolingHash) + ",\n"
     + "  \"scope\": " + json.quoteString(scopeText) + ",\n"
-    + "  \"results\": [\n    " + text.joinTexts(resultsJson, ",\n    ") + "\n  ]\n"
+    + "  \"results\": [\n    " + resultsJson.join(",\n    ") + "\n  ]\n"
     + "}\n";
 
     wrote := fs.writeText(output, report);

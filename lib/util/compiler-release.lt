@@ -59,7 +59,7 @@ runCheckedText := fn(command: String, args: List<String>, cwd: String): (ok: Boo
         return (ok = false, stdout = "", error = res.error);
     }
     if res.status =!= 0 {
-        return (ok = false, stdout = "", error = command + " " + text.joinTexts(args, " ") + " failed (" + res.status.toText() + "):\n" + res.stdout + res.stderr);
+        return (ok = false, stdout = "", error = command + " " + args.join(" ") + " failed (" + res.status.toText() + "):\n" + res.stdout + res.stderr);
     }
     (ok = true, stdout = res.stdout, error = "")
 };
@@ -72,7 +72,7 @@ runCheckedBytesToFile := fn(command: String, args: List<String>, cwd: String, st
     if res.status =!= 0 {
         outText := unicode.utf8DecodeLossy(fs.readBytes(outFile));
         errText := unicode.utf8DecodeLossy(fs.readBytes(errFile));
-        return (ok = false, error = command + " " + text.joinTexts(args, " ") + " failed (" + res.status.toText() + "):\n" + outText + errText);
+        return (ok = false, error = command + " " + args.join(" ") + " failed (" + res.status.toText() + "):\n" + outText + errText);
     }
     (ok = true, error = "")
 };
@@ -293,7 +293,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
                 scJson := "{\n          \"name\": " + json.quoteString(sName) + ",\n          \"stdin\": " + json.quoteString(crypto.base64Encode(inB)) + ",\n          \"stdout\": " + json.quoteString(crypto.base64Encode(outB)) + ",\n          \"stderr\": " + json.quoteString(crypto.base64Encode(errB)) + ",\n          \"exitCode\": " + exitCode.toText() + "\n        }";
                 mut caseEntries.pushBack(scJson);
             }
-            pEntry := "{\n      \"name\": " + json.quoteString(progName) + ",\n      \"cSha256\": " + json.quoteString(cSha) + ",\n      \"sourceSha256\": " + json.quoteString(srcSha) + ",\n      \"cases\": [\n        " + text.joinTexts(caseEntries, ",\n        ") + "\n      ]\n    }";
+            pEntry := "{\n      \"name\": " + json.quoteString(progName) + ",\n      \"cSha256\": " + json.quoteString(cSha) + ",\n      \"sourceSha256\": " + json.quoteString(srcSha) + ",\n      \"cases\": [\n        " + caseEntries.join(",\n        ") + "\n      ]\n    }";
             mut progEntries.pushBack(pEntry);
         }
     }
@@ -317,8 +317,8 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
     + "  \"nativeCompiler\": false,\n"
     + "  \"releasedComponent\": " + relCompJson + ",\n"
     + "  \"componentVersions\": " + versObj.jsonText + ",\n"
-    + "  \"compilers\": [\n    " + text.joinTexts(compJsonEntries, ",\n    ") + "\n  ],\n"
-    + "  \"programs\": [\n    " + text.joinTexts(progEntries, ",\n    ") + "\n  ]\n}\n";
+    + "  \"compilers\": [\n    " + compJsonEntries.join(",\n    ") + "\n  ],\n"
+    + "  \"programs\": [\n    " + progEntries.join(",\n    ") + "\n  ]\n}\n";
 
     _wR1 := fs.writeText(path.join(outDir, "release.json"), releaseJson);
     _wR2 := fs.writeText(path.join(genDir, "release.json"), releaseJson);
@@ -345,7 +345,7 @@ runNative := fn(rootDir: String, outDir: String, inputDir: String): Int {
     if not relInfo.ok { io.errorLine(relInfo.error); return 1; }
 
     target := proc.platform() + "-" + proc.arch();
-    if not list.listContainsText(supportedNativeTargets(), target) {
+    if not supportedNativeTargets().contains(target) {
         io.errorLine("unsupported native target: " + target);
         return 1;
     }
@@ -439,7 +439,7 @@ runNative := fn(rootDir: String, outDir: String, inputDir: String): Int {
     + "  \"compiler\": " + json.quoteString(ccVer.stdout) + ",\n"
     + "  \"flags\": [\"-std=c11\", \"-O2\", \"-Wall\", \"-Wextra\", \"-Werror\", \"-lm\"],\n"
     + "  \"runnerImage\": " + imgJson + ",\n"
-    + "  \"programs\": [\n    " + text.joinTexts(progReportEntries, ",\n    ") + "\n  ]\n}\n";
+    + "  \"programs\": [\n    " + progReportEntries.join(",\n    ") + "\n  ]\n}\n";
 
     _wN1 := fs.writeText(path.join(outDir, "native-" + target + ".json"), reportJson);
     _wN2 := fs.writeText(path.join(workDir, "build.json"), reportJson);
@@ -497,8 +497,8 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
     runJson := if runEnv.found and runEnv.value =!= "" { json.quoteString(runEnv.value) } else { "null" };
     trimmedRel := relInfo.text.trim();
     manifestJson := trimmedRel.slice(0, trimmedRel.length() - 1)
-    + ",\n  \"nativeReports\": [\n    " + text.joinTexts(natRepEntries, ",\n    ") + "\n  ],\n"
-    + "  \"assets\": [\n    " + text.joinTexts(assetEntries, ",\n    ") + "\n  ],\n"
+    + ",\n  \"nativeReports\": [\n    " + natRepEntries.join(",\n    ") + "\n  ],\n"
+    + "  \"assets\": [\n    " + assetEntries.join(",\n    ") + "\n  ],\n"
     + "  \"workflowRun\": " + runJson + "\n}\n";
     _wm := fs.writeText(path.join(outDir, "manifest.json"), manifestJson);
 
@@ -509,7 +509,7 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
     notes := "Igniter snapshot " + relInfo.label + "\n\n"
     + "Source commit: " + relInfo.commit + ". Igniter package: " + ignVer + ".\n\n"
     + "The igniter archive contains the source tree, one selected TS igniter, provisional libraries and rebuild instructions. Compiler dependencies are ordinary Lite source imports and no generated C seed is required.\n\n"
-    + "Generated C and " + text.joinTexts(targets, ", ") + " executables cover " + progCount.toText()
+    + "Generated C and " + targets.join(", ") + " executables cover " + progCount.toText()
     + " admitted compiler test programs. These executables are conformance programs; a native self-hosting C compiler is not available yet. Libraries remain provisional, without a stable stdlib API or ABI.\n\n"
     + "See IGNITER.md in the igniter archive. manifest.json records source/builder hashes and native toolchains; SHA256SUMS covers every other release asset. Native binaries depend on their runner OS/libc and are not signed.\n";
     _wn := fs.writeText(path.join(outDir, "RELEASE-NOTES.md"), notes);
@@ -523,7 +523,7 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
             (mut sumLines).pushBack(h.hex + "  " + entry);
         }
     }
-    _ws := fs.writeText(path.join(outDir, "SHA256SUMS"), text.joinTexts(sumLines, "\n") + "\n");
+    _ws := fs.writeText(path.join(outDir, "SHA256SUMS"), sumLines.join("\n") + "\n");
     io.outputLine("Verified " + targets.length().toText() + " native targets and wrote the release manifest/checksums.");
     0
 };

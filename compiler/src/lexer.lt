@@ -2,7 +2,6 @@
 
 sourceLib := import "core/source";
 diag := import "core/diag";
-format := import "core/format";
 numeric := import "./numeric-literals";
 io := import "core/io";
 tb := import "util/text-builder";
@@ -40,7 +39,7 @@ pub TOKEN_KIND_EOF := "EOF";
 /** Reports one source-positioned lexer diagnostic and exits 2. */
 lexFail := fn(source: String, position: Int, prefix: String, message: String): Unit {
     place := sourceLib.lineColumn(source, position);
-    diag.fail(prefix, format.decimalText(place.line) + ":" + format.decimalText(place.column) + ": " + message);
+    diag.fail(prefix, place.line.toText() + ":" + place.column.toText() + ": " + message);
 }
 
 /** True for Lite lexical whitespace. */
@@ -266,8 +265,8 @@ pub escapedTokenText := fn(text: String): String {
 
 /** Formats one token as `kind@line:column:offset text`. */
 dumpToken := fn(token: Token): String {
-    token.kind + "@" + format.decimalText(token.line) + ":" + format.decimalText(token.column) + ":" +
-        format.decimalText(token.offset) + " " + escapedTokenText(token.text)
+    token.kind + "@" + token.line.toText() + ":" + token.column.toText() + ":" +
+        token.offset.toText() + " " + escapedTokenText(token.text)
 }
 
 /** Reports every token in order, one per line. */

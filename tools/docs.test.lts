@@ -92,7 +92,7 @@ test.check("mkdir node_modules", fs.makeDir(path.join(dir1, "node_modules")).ok)
 test.check("write ignored.md", fs.writeText(path.join(dir1, "node_modules/ignored.md"), "[broken](absent.md)").ok);
 
 chk1Ok := checkDocuments(dir1);
-test.checkText("clean docs check", "", text.joinTexts(chk1Ok, "\n"));
+test.checkText("clean docs check", "", chk1Ok.join("\n"));
 docsJson1 := runDocs(["--json"], dir1, "");
 test.checkInt("docs --json status", 0, docsJson1.status);
 docOffsets1 := json.arrayElementOffsets(docsJson1.stdout, 0);
@@ -123,9 +123,9 @@ path.join(dir2, "config/documentation.json"),
 "{\"navigation\":[{\"label\":\"Start\",\"path\":\"README.md\"}],\"snippets\":[{\"document\":\"README.md\",\"source\":\"source.lts\",\"fence\":0}]}"
 ).ok
 );
-test.checkText("snippet matches", "", text.joinTexts(checkDocuments(dir2), "\n"));
+test.checkText("snippet matches", "", checkDocuments(dir2).join("\n"));
 test.check("mutate source.lts", fs.writeText(path.join(dir2, "source.lts"), "outputLine(25);\n").ok);
-snippetFails := text.joinTexts(checkDocuments(dir2), "\n");
+snippetFails := checkDocuments(dir2).join("\n");
 test.check("snippet mismatch reported: " + snippetFails, snippetFails.indexOf("code fence 0 differs", 0) >= 0);
 _rm2 := fs.remove(dir2);
 
@@ -271,8 +271,8 @@ goodHubLines: List<String> = [
 "- [Play](lite://play/demo)",
 "- [Tool](lite://tool/fmt)"
 ];
-test.check("write good README.md", fs.writeText(path.join(dir5, "README.md"), text.joinTexts(goodHubLines, "\n") + "\n").ok);
-test.checkText("valid lite:// URIs pass", "", text.joinTexts(checkDocuments(dir5), "\n"));
+test.check("write good README.md", fs.writeText(path.join(dir5, "README.md"), goodHubLines.join("\n") + "\n").ok);
+test.checkText("valid lite:// URIs pass", "", checkDocuments(dir5).join("\n"));
 
 badHubLines: List<String> = [
 "# Bad",
@@ -287,9 +287,9 @@ badHubLines: List<String> = [
 "- [ModSym](lite://module/core/io#nonexistent)",
 "- [ToolMissing](lite://tool/unknown-cmd)"
 ];
-test.check("write bad README.md", fs.writeText(path.join(dir5, "README.md"), text.joinTexts(badHubLines, "\n") + "\n").ok);
+test.check("write bad README.md", fs.writeText(path.join(dir5, "README.md"), badHubLines.join("\n") + "\n").ok);
 failures5 := checkDocuments(dir5);
-test.checkInt("bad lite:// URI failure count: " + text.joinTexts(failures5, "\n"), 10, failures5.length());
+test.checkInt("bad lite:// URI failure count: " + failures5.join("\n"), 10, failures5.length());
 test.check("unknown lite URI namespace", anyContains(failures5, "unknown lite URI namespace"));
 test.check("handbook missing fragment", anyContainsBoth(failures5, "missing fragment", "overview-and-setup#missing"));
 test.check("missing lite://brand", anyContains(failures5, "missing lite://brand"));

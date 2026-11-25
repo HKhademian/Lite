@@ -76,7 +76,7 @@ pub formatMicrosAsMs := fn(micros: Int): String {
 pub medianInt := fn(values: List<Int>): Int {
     n := values.length();
     if n == 0 { return 0; }
-    sorted := list.sortInts(values);
+    sorted := values.sort();
     mid := n / 2;
     if (n % 2) == 1 { return sorted[mid]; }
     (sorted[mid - 1] + sorted[mid]) / 2
@@ -89,7 +89,7 @@ syntheticOutputSource := fn(lineCount: Int): String {
         mut lines.pushBack("io.outputLine(" + i.toText() + ");");
         i = i + 1;
     }
-    text.joinTexts(lines, "\n") + "\n"
+    lines.join("\n") + "\n"
 };
 
 syntheticExpectedText := fn(lineCount: Int): String {
@@ -99,7 +99,7 @@ syntheticExpectedText := fn(lineCount: Int): String {
         mut lines.pushBack(i.toText());
         i = i + 1;
     }
-    text.joinTexts(lines, "\n") + "\n"
+    lines.join("\n") + "\n"
 };
 
 ensureWorkerArtifact := fn(rootDir: String): String {
@@ -490,8 +490,8 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
         mut mdResultLines.pushBack("- " + wName + ": median process " + formatMicrosAsMs(mProc) + " ms; load " + formatMicrosAsMs(mLoad) + " ms; compile " + formatMicrosAsMs(mComp) + " ms.");
         wEntry := "{\n"
         + "      \"workload\": " + json.quoteString(wName) + ",\n"
-        + "      \"inputs\": [\n        " + text.joinTexts(inputJsonEntries, ",\n        ") + "\n      ],\n"
-        + "      \"raw\": [\n        " + text.joinTexts(rawJsonEntries, ",\n        ") + "\n      ],\n"
+        + "      \"inputs\": [\n        " + inputJsonEntries.join(",\n        ") + "\n      ],\n"
+        + "      \"raw\": [\n        " + rawJsonEntries.join(",\n        ") + "\n      ],\n"
         + "      \"medians\": {\n"
         + "        \"processMs\": " + formatMicrosAsMs(mProc) + ",\n"
         + "        \"loadMs\": " + formatMicrosAsMs(mLoad) + ",\n"
@@ -609,9 +609,9 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     + "    \"checkedSyntheticOutputCounts\": [1, 100, 1000],\n"
     + "    \"workload\": \"output-1000\",\n"
     + "    \"artifactSha256\": " + json.quoteString(rtSourceSha) + ",\n"
-    + "    \"samples\": [" + text.joinTexts(execSamplesJson, ", ") + "],\n"
+    + "    \"samples\": [" + execSamplesJson.join(", ") + "],\n"
     + "    \"medianProcessMs\": " + formatMicrosAsMs(medExecMicros) + "\n  },\n"
-    + "  \"results\": [\n    " + text.joinTexts(resultJsonEntries, ",\n    ") + "\n  ]";
+    + "  \"results\": [\n    " + resultJsonEntries.join(",\n    ") + "\n  ]";
 
     summaryJson := "{\n" + summaryFields + "\n}\n";
     mdText := "# Generated compiler performance — " + date + "\n\n"
@@ -619,7 +619,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     + "Sequential fresh-process samples: " + samples.toText() + "; excluded warmups: " + warmups.toText()
     + ". Strict compiler check: " + formatMicrosAsMs(strictCompilerCheckMs) + " ms; strict program check: "
     + formatMicrosAsMs(strictProgramCheckMs) + " ms.\n\n"
-    + text.joinTexts(mdResultLines, "\n") + "\n\n"
+    + mdResultLines.join("\n") + "\n\n"
     + "Generated program execution: " + formatMicrosAsMs(medExecMicros) + " ms median process time; exact output checked.\n\n"
     + validation.cases.toText() + " compiler contracts and " + validation.executions.toText()
     + " strictly checked program executions pass. These finite cases do not establish full language support.\n\n"
@@ -870,9 +870,9 @@ pub runTextCacheCommand := fn(rootDir: String, args: List<String>): Int {
     + "  \"artifacts\": {\n"
     + "    \"before\": { \"sha256\": " + json.quoteString(beforeArtifactSha) + ", \"bytes\": " + beforeBytes.length().toText() + " },\n"
     + "    \"after\": { \"sha256\": " + json.quoteString(afterArtifactSha) + ", \"bytes\": " + afterBytes.length().toText() + " }\n  },\n"
-    + "  \"rows\": [" + text.joinTexts(rowEntries, ",") + "],\n"
-    + "  \"results\": [\n    " + text.joinTexts(compEntries, ",\n    ") + "\n  ],\n"
-    + "  \"self\": [" + text.joinTexts(selfEntries, ",") + "],\n"
+    + "  \"rows\": [" + rowEntries.join(",") + "],\n"
+    + "  \"results\": [\n    " + compEntries.join(",\n    ") + "\n  ],\n"
+    + "  \"self\": [" + selfEntries.join(",") + "],\n"
     + "  \"selfAfterMedianMs\": " + formatMicrosAsMs(selfAfterMed) + ",\n"
     + "  \"completedAt\": " + json.quoteString(time.utcIsoNow()) + "\n}\n";
 
@@ -884,13 +884,13 @@ pub runTextCacheCommand := fn(rootDir: String, args: List<String>): Int {
 
     mdText := "# TS compiler text-cache comparison\n\n"
     + date + " · Seven measured fresh-process samples after one discarded warm-up.\n\n"
-    + text.joinTexts(mdResults, "\n") + "\n\n" + selfSummaryLine + "\n\n"
+    + mdResults.join("\n") + "\n\n" + selfSummaryLine + "\n\n"
     + "Before artifact: `" + beforeArtifactSha + "`. After artifact: `" + afterArtifactSha + "`.\n";
 
     _wj := fs.writeText(prefix + ".json", fullJson);
     _wm := fs.writeText(prefix + ".md", mdText);
     outJson := "{\n"
-    + "  \"results\": [\n    " + text.joinTexts(compEntries, ",\n    ") + "\n  ],\n"
+    + "  \"results\": [\n    " + compEntries.join(",\n    ") + "\n  ],\n"
     + "  \"selfAfterMedianMs\": " + formatMicrosAsMs(selfAfterMed) + ",\n"
     + "  \"oldSelf\": " + selfEntries[0] + "\n}\n";
     io.output(outJson);

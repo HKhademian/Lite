@@ -40,7 +40,7 @@ renderSelectedJson := fn(rootDir: String, targets: List<String>): String {
         mut entries.pushBack(mdHtml.renderMarkdownJson(readRes.text, relPath));
     }
     if entries.length() == 0 { return "[]"; }
-    "[\n  " + text.joinTexts(entries, ",\n  ") + "\n]"
+    "[\n  " + entries.join(",\n  ") + "\n]"
 };
 
 run := fn(rawArgs: List<String>): Unit {
@@ -53,7 +53,7 @@ run := fn(rawArgs: List<String>): Unit {
     if args.length() == 1 and args[0] == "--check" {
         failures := docsUtil.checkDocuments(rootDir);
         if failures.length() > 0 {
-            io.errorLine(text.joinTexts(failures, "\n"));
+            io.errorLine(failures.join("\n"));
             io.exit(1);
         }
         io.outputLine("Documentation links, fragments and fences passed.");
@@ -90,7 +90,7 @@ run := fn(rawArgs: List<String>): Unit {
         _flag := mut args.popFront();
         isJson = true;
     }
-    query := text.joinTexts(args, " ");
+    query := args.join(" ");
 
     if isJson {
         io.outputLine(docsUtil.docsJson(rootDir, query));

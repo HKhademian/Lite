@@ -17,7 +17,7 @@ test.checkBool("scaled decimal not int", false, pDec.isIntLiteral);
 test.checkText("format csv float", "4.0", challenges.formatDifficultyCsv("leetcode", 4000, "4", true));
 test.checkText("format csv cryptopals int", "4", challenges.formatDifficultyCsv("cryptopals", 4000, "4", true));
 
-sorted := challenges.sortTexts(["zeta", "alpha", "mu", "alpha"]);
+sorted := ["zeta", "alpha", "mu", "alpha"].sortTexts();
 test.checkText("sort first", "alpha", sorted[0]);
 test.checkText("sort last", "zeta", sorted[3]);
 test.checkBool("binary search hit", true, challenges.sortedContainsText(sorted, "mu"));

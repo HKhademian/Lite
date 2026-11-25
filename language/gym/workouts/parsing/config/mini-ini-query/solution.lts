@@ -46,7 +46,7 @@ loop lines as line {
 
     if trimmed.startsWithAt(0, "QUERY ") {
         qKey := trimmed.slice(6, n).trim();
-        idx := list.listIndexOfText(keys, qKey);
+        idx := keys.indexOf(qKey);
         io.outputLine(if idx >= 0 { vals[idx] } else { "MISSING" });
         continue;
     }
@@ -61,7 +61,7 @@ loop lines as line {
         k := trimmed.slice(0, eq).trim();
         v := trimmed.slice(eq + 1, n).trim();
         fullKey := if section == "" { k } else { section + "." + k };
-        existing := list.listIndexOfText(keys, fullKey);
+        existing := keys.indexOf(fullKey);
         if existing >= 0 {
             vals = withTextAt(vals, existing, v);
         } else {

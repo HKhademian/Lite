@@ -3,7 +3,6 @@
 lexer := import "./lexer";
 numeric := import "./numeric-literals";
 diag := import "core/diag";
-format := import "core/format";
 io := import "core/io";
 tb := import "util/text-builder";
 
@@ -25,7 +24,7 @@ NODE_KIND_PROGRAM := "Program";
 
 /** Reports one token-positioned parser diagnostic and exits 2. */
 parseFail := fn(token: lexer.Token, prefix: String, message: String): Unit {
-    diag.fail(prefix, format.decimalText(token.line) + ":" + format.decimalText(token.column) + ": " + message);
+    diag.fail(prefix, token.line.toText() + ":" + token.column.toText() + ": " + message);
 }
 
 /** Number of tokens, including the final EOF token. */
@@ -806,8 +805,8 @@ pub parseTypeDeclarations := fn(tokens: lexer.Tokens, prefix: String): Nodes {
 
 /** Formats one parse node as `kind|name|detail|line:column|offset`. */
 dumpNode := fn(node: Node): String {
-    node.kind + "|" + node.name + "|" + node.detail + "|" + format.decimalText(node.line) + ":" +
-    format.decimalText(node.column) + "|" + format.decimalText(node.offset)
+    node.kind + "|" + node.name + "|" + node.detail + "|" + node.line.toText() + ":" +
+    node.column.toText() + "|" + node.offset.toText()
 }
 
 /** Reports parsed nodes in source order, one per line. */

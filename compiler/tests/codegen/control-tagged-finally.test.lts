@@ -39,7 +39,7 @@ partialFeatureRes := fs.readText(path.join(root, "language/verifications/feature
 test.check("read partial-conditionals.lts", partialFeatureRes.ok);
 compilerTest.assertCompileRunTs(root, tsComp, "partial-cond feature", partialFeatureRes.text, "0\n[]\n10\n3\n");
 
-partialRich := text.joinTexts([
+partialRich := [
     "io := import \"core/io\";",
     "flag := false;",
     "other := true;",
@@ -55,11 +55,11 @@ partialRich := text.joinTexts([
     "io.outputLine(a, b, \"[\" + c + \"]\", d, e.x, e.ok, f, g);",
     "g = if flag { 1 } else if other { 42 };",
     "io.outputLine(g);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "partial-cond rich", partialRich, "9 0 [] [0, 0] 0 false false 10\n42\n");
 
 if ccProbe.available {
-    partialC := text.joinTexts([
+    partialC := [
         "io := import \"core/io\";",
         "flag := false;",
         "other := true;",
@@ -68,7 +68,7 @@ if ccProbe.available {
         "io.outputLine(count);",
         "count = (if flag { 1 } else if other { 3 });",
         "io.outputLine(count);"
-    ], "\n");
+    ].join("\n");
     cPartRun := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, partialC, "", "");
     test.checkInt("partial-cond c status", 0, cPartRun.status);
     test.checkText("partial-cond c stdout", "10\n3\n", cPartRun.stdout);
@@ -85,7 +85,7 @@ partialRej: List<(bad: String, m1: String, m2: String)> = [
 assertRejectsTarget(tsComp, "partial-cond", partialRej);
 
 /* statement-bearing value blocks and Unit tails preserve lexical scope and types */
-valBlkSrc := text.joinTexts([
+valBlkSrc := [
     "io := import \"core/io\";",
     "y := 100;",
     "x := { y := 2; y * 3;;;; };",
@@ -95,7 +95,7 @@ valBlkSrc := text.joinTexts([
     "io.outputLine(y, x, a, b, c);",
     "io.outputLine({ x := 3; });",
     "io.outputLine({});"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "value-blocks", valBlkSrc, "100 6 6 9 1\nUnit\nUnit\n");
 valBlkRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "y := { x := 3; };", m1 = "cannot declare a Unit local y", m2 = ""),
@@ -114,7 +114,7 @@ test.check("io-exit top omits return lite$out", not topExitComp.stdout.contains(
 topExitRun := compilerTest.checkAndRunTs(root, topExitComp.stdout);
 test.checkInt("io-exit top status", 0, topExitRun.status);
 
-exitFlowSrc := text.joinTexts([
+exitFlowSrc := [
     "io := import \"core/io\";",
     "checkNonNeg := fn(n: Int): Int {",
     "  if n < 0 { io.errorLine(\"neg\"); io.exit(3); }",
@@ -161,7 +161,7 @@ exitFlowSrc := text.joinTexts([
     "} else {",
     "  io.outputLine(reorderedExit(false));",
     "}"
-], "\n");
+].join("\n");
 exitFlowComp := compilerTest.compileStdin(root, tsComp, exitFlowSrc, "");
 test.checkInt("io-exit flow compile", 0, exitFlowComp.status);
 prepExitFlow := compilerTest.prepareTs(root, exitFlowComp.stdout);
@@ -190,7 +190,7 @@ exitRej: List<(bad: String, m1: String, m2: String)> = [
 assertRejectsTarget(tsComp, "io-exit", exitRej);
 
 /* unnamed loop sequence traversal supports lists, fixed arrays, empty lists, snapshots, and scope checks */
-unnamedLoopSrc := text.joinTexts([
+unnamedLoopSrc := [
     "io := import \"core/io\";",
     "xs: mut List<Int> = [10, 20, 30];",
     "var listCount := 0;",
@@ -202,7 +202,7 @@ unnamedLoopSrc := text.joinTexts([
     "var emptyCount := 0;",
     "loop empty { emptyCount += 1; }",
     "io.outputLine(listCount, xs, arrCount, emptyCount);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "unnamed-loop", unnamedLoopSrc, "3 [10, 20, 30, 99, 99, 99] 3 0\n");
 unnamedLoopRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "io := import \"core/io\"; loop [1, 2] { io.outputLine(item); }", m1 = "unknown value item", m2 = ""),
@@ -212,7 +212,7 @@ unnamedLoopRej: List<(bad: String, m1: String, m2: String)> = [
 assertRejectsTarget(tsComp, "unnamed-loop", unnamedLoopRej);
 
 /* subjectless Boolean match supports value and statement forms in TS and action match in C */
-matchTsSrc := text.joinTexts([
+matchTsSrc := [
     "io := import \"core/io\";",
     "probe := fn(label: String, result: Bool): Bool { io.outputLine(\"probe:\" + label); result }",
     "choose := fn(n: Int): String {",
@@ -255,12 +255,12 @@ matchTsSrc := text.joinTexts([
     "    total",
     "}",
     "io.outputLine(choose(1), choose(2), choose(3), direct, grouped, single, nested, tailScore(-1), tailScore(0), tailScore(5), loopMatch(5));"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "match-ts", matchTsSrc, "probe:first\nprobe:first\nprobe:second\nprobe:first\nprobe:second\none two other 5 20 7 nested 10 20 30 20\n");
 matchCRes := compilerTest.compileStdin(root, cComp, matchTsSrc, "");
 test.checkInt("match-ts c compiles: " + matchCRes.stderr, 0, matchCRes.status);
 
-matchValScalarSrc := text.joinTexts([
+matchValScalarSrc := [
     "io := import \"core/io\";",
     "probe := fn(label: String, result: Bool): Bool { io.outputLine(\"probe:\" + label); result }",
     "choose := fn(n: Int): String {",
@@ -299,7 +299,7 @@ matchValScalarSrc := text.joinTexts([
     "    total",
     "}",
     "io.outputLine(choose(1), choose(2), choose(3), direct, single, nested, tailScore(-1), tailScore(0), tailScore(5), loopMatch(5));"
-], "\n");
+].join("\n");
 matchScalarExpected := "probe:first\nprobe:first\nprobe:second\nprobe:first\nprobe:second\none two other 5 7 nested 10 20 30 20\n";
 compilerTest.assertCompileRunTs(root, tsComp, "match-value-scalar ts", matchValScalarSrc, matchScalarExpected);
 cValMatchComp := compilerTest.compileStdin(root, cComp, matchValScalarSrc, "");
@@ -310,7 +310,7 @@ if ccProbe.available {
     test.checkText("match-value c stdout", matchScalarExpected, cValMatchRun.stdout);
 }
 
-matchActionSrc := text.joinTexts([
+matchActionSrc := [
     "io := import \"core/io\";",
     "var total := 0;",
     "match {",
@@ -325,7 +325,7 @@ matchActionSrc := text.joinTexts([
     "    _ { out = 44; }",
     "}",
     "io.outputLine(total, out);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "match-action ts", matchActionSrc, "7 44\n");
 cMatchComp := compilerTest.compileStdin(root, cComp, matchActionSrc, "");
 test.checkInt("match-action c compile", 0, cMatchComp.status);
@@ -347,7 +347,7 @@ assertRejectsTarget(tsComp, "match", matchRej);
 assertRejectsTarget(cComp, "match c", matchRej);
 
 /* tagged blocks, targeted non-local transfers, and misplaced tag diagnostics */
-taggedBlkSrc := text.joinTexts([
+taggedBlkSrc := [
     "io := import \"core/io\";",
     "pick := fn(first: String, second: String): String { first + \"-\" + second };",
     "compute := fn(flag: Bool): Int {",
@@ -412,7 +412,7 @@ taggedBlkSrc := text.joinTexts([
     "  io.outputLine(\"stmt-skipped\");",
     "}",
     "io.outputLine(\"stmt-after\");"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "tagged-blocks", taggedBlkSrc, "inside true\ninside false\n10 25\n77 13\nA-B\nafter-fn-check\nafter-u\n4\nstmt-before\nstmt-after\n");
 
 taggedBlkRej: List<(bad: String, m1: String, m2: String)> = [
@@ -452,7 +452,7 @@ taggedBlkCRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\
 test.checkInt("tagged-blocks c compiles: " + taggedBlkCRes.stderr, 0, taggedBlkCRes.status);
 
 /* tagged conditionals and conditional then blocks */
-taggedCondSrc := text.joinTexts([
+taggedCondSrc := [
     "io := import \"core/io\";",
     "choose := fn(useChoice: Bool, earlyExit: Bool): Int {",
     "  outcome: Int = @choose if useChoice {",
@@ -523,7 +523,7 @@ taggedCondSrc := text.joinTexts([
     "if true { 1 } else { 2 } then { io.outputLine(\"stmt-then\"); };",
     "match { true { 1 } _ { 2 } } then { io.outputLine(\"stmt-match-then\"); };",
     "io.outputLine(@cond if true { \"t\" } else { \"f\" });"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(
     root,
     tsComp,
@@ -559,7 +559,7 @@ loop taggedCondCOk as okSrc {
 }
 
 /* loop values, metadata, then clauses, barriers, and payload exits */
-loopMetaSrc := text.joinTexts([
+loopMetaSrc := [
     "io := import \"core/io\";",
     "integer := import \"core/int\";",
     "emptySrc: List<Int> = [];",
@@ -619,7 +619,7 @@ loopMetaSrc := text.joinTexts([
     "io.outputLine(tailVal([3, 4, 5]), tailDiv());",
     "@u loop [1, 2] { if @u.count == 1 { return @u; } io.outputLine(\"skip\"); };",
     "io.outputLine(\"unit-ok\");"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(
     root,
     tsComp,
@@ -667,7 +667,7 @@ finFeatRun := compilerTest.checkAndRunTs(root, finFeatComp.stdout);
 test.checkInt("finally-feature run status", 0, finFeatRun.status);
 test.checkText("finally-feature run stdout", "1\n2\nthen\nfinally\ncond\n1\nreturn-cleanup\n5\n", finFeatRun.stdout);
 
-finComplexSrc := text.joinTexts([
+finComplexSrc := [
     "io := import \"core/io\";",
     "{ io.outputLine(\"blk\"); } finally { io.outputLine(\"blk-stmt-fin\"); }",
     "blkVal := { n := 9; n + 1 } finally { io.outputLine(\"blk-fin\"); };",
@@ -708,8 +708,8 @@ finComplexSrc := text.joinTexts([
     "loop [1] { io.outputLine(\"body\"); } finally {",
     "  loop [8, 9] as k { if k == 8 { continue; } io.outputLine(\"in-fin\", k); }",
     "}"
-], "\n");
-finExpectedOut := text.joinTexts([
+].join("\n");
+finExpectedOut := [
     "blk", "blk-stmt-fin", "blk-fin", "tagged-fin", "if-fin",
     "partial-yes", "partial-fin", "partial-val-fin", "match-fin",
     "loop-then 2", "loop-fin", "10 20 31 0 50 6",
@@ -717,7 +717,7 @@ finExpectedOut := text.joinTexts([
     "unwind-if", "unwind-outer", "88",
     "unwind-loop 1", "unwind-loop 2", "outer-then 2", "outer-loop-fin", "105",
     "body", "in-fin 9"
-], "\n") + "\n";
+].join("\n") + "\n";
 compilerTest.assertCompileRunTs(root, tsComp, "finally-complex", finComplexSrc, finExpectedOut);
 
 finExitSrc := "io := import \"core/io\";\nloop [1] {\n  if true { io.exit(3); } finally { io.outputLine(\"exit-if-fin\"); }\n} finally {\n  io.outputLine(\"exit-loop-fin\");\n}\n";

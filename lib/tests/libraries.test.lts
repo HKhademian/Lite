@@ -19,7 +19,7 @@ test.check("select TS compiler: " + sel.error, sel.ok);
 /* L0 shared libraries have direct bootstrap tests */
 /* shared utility libraries under lib/util pass direct Lite tests */
 libNames: List<String> = [
-"int", "text", "source", "format", "diag", "list",
+"int", "text", "source", "diag", "list",
 "diag-fail", "test-fail",
 "util-path", "util-project", "util-cli", "util-release", "util-json",
 "util-markdown", "util-markdown-html", "util-docs", "util-docgen",

@@ -11,10 +11,10 @@ test.checkText("first heading", "Title", headings[0]);
 test.checkText("second heading", "A `name` <T>", headings[1]);
 
 anchors := md.collectAnchors(doc + "<a id=\"explicit-id\"></a>\n");
-test.checkBool("title anchor", true, list.listContainsText(anchors, "title"));
-test.checkBool("dedup first", true, list.listContainsText(anchors, "a-name-"));
-test.checkBool("dedup second", true, list.listContainsText(anchors, "a-name--1"));
-test.checkBool("explicit html id", true, list.listContainsText(anchors, "explicit-id"));
+test.checkBool("title anchor", true, anchors.contains("title"));
+test.checkBool("dedup first", true, anchors.contains("a-name-"));
+test.checkBool("dedup second", true, anchors.contains("a-name--1"));
+test.checkBool("explicit html id", true, anchors.contains("explicit-id"));
 
 links := md.extractLinkTargets(prose);
 test.checkInt("link count", 2, links.length());

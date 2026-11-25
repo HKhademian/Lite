@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/modules/filesystem/files-paths-and-cleanup.lts",
-    "hash": "sha256:839ecd2f7b9a5019bd9a6c42380c15527cec256c5b4e582bc7621203768cb03a"
+    "hash": "sha256:e5e7af85607508ae9ff736f34f81517a62a1eaaf10fba65abe580775c673d2a8"
   },
   "features": [
     "feature.core.filesystem.paths-and-temp-io",

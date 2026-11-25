@@ -74,7 +74,7 @@ run := fn(rawArgs: List<String>): Unit {
 
     docFailures := docsUtil.checkDocuments(rootDir);
     if docFailures.length() > 0 {
-        failDoctor(text.joinTexts(docFailures, "\n"));
+        failDoctor(docFailures.join("\n"));
     }
 
     registryVscode := project.readComponentVersion("vscode");

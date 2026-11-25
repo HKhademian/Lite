@@ -52,7 +52,7 @@ pub detectSourceEnvironment := fn(source: String): String {
 walkFilesWithSuffix := fn(absDir: String, relBase: String, suffix: String): List<String> {
     out: mut List<String> = [];
     if fs.kind(absDir) =!= fs.FILE_KIND_DIR { return out; }
-    names := challenges.sortTexts(fs.listDir(absDir));
+    names := fs.listDir(absDir).sortTexts();
     loop names as name {
         full := path.join(absDir, name);
         rel := relBase + "/" + name;
@@ -130,7 +130,7 @@ pub posixJoinAndNormalize := fn(dir: String, spec: String): String {
             mut stack.pushBack(part);
         }
     }
-    if stack.length() == 0 { "." } else { text.joinTexts(stack, "/") }
+    if stack.length() == 0 { "." } else { stack.join("/") }
 };
 
 collectRelativeModulesJson := fn(
@@ -187,7 +187,7 @@ rootDir: String, hostIds: List<String>, hostTexts: List<String>, entryRelFile: S
             pos = impPos + 6;
         }
     }
-    if modJsonEntries.length() == 0 { "" } else { "{" + text.joinTexts(modJsonEntries, ",") + "}" }
+    if modJsonEntries.length() == 0 { "" } else { "{" + modJsonEntries.join(",") + "}" }
 };
 
 capitalizeWord := fn(word: String): String {
@@ -219,7 +219,7 @@ pub slugToTitle := fn(relPath: String): String {
         i = i + 1;
     }
     if cur =!= "" { mut words.pushBack(capitalizeWord(cur)); }
-    text.joinTexts(words, " ")
+    words.join(" ")
 };
 
 cleanSlugBase := fn(preferred: String): String {
@@ -239,7 +239,7 @@ cleanSlugBase := fn(preferred: String): String {
         }
         i = i + 1;
     }
-    joined := text.joinTexts(out, "");
+    joined := out.join("");
     var s := 0;
     var e := joined.length();
     loop s < e and joined.at(s) == "-" { s = s + 1; }
@@ -268,7 +268,7 @@ nextAvailableSlug := fn(used: mut Set<String>, preferred: String): String {
 quoteStringList := fn(items: List<String>): String {
     quoted: mut List<String> = [];
     loop items as it { mut quoted.pushBack(json.quoteString(it)); }
-    "[" + text.joinTexts(quoted, ",") + "]"
+    "[" + quoted.join(",") + "]"
 };
 
 stripBackticksAndTrim := fn(s: String): String {
@@ -279,7 +279,7 @@ stripBackticksAndTrim := fn(s: String): String {
         if ch =!= "`" { mut out.pushBack(ch); }
         i = i + 1;
     }
-    text.joinTexts(out, "").trim()
+    out.join("").trim()
 };
 
 extractHeadingForLine := fn(lines: List<String>, lineIdx: Int, fallback: String): String {
@@ -496,7 +496,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
                     endLi = endLi + 1;
                 }
                 if endLi < nLines {
-                    code := text.joinTexts(codeLines, "\n");
+                    code := codeLines.join("\n");
                     if code.trim() =!= "" {
                         heading := extractHeadingForLine(lines, li, fallbackHeading);
                         slug := nextAvailableSlug(mut usedPieces, chapterSlug + "-" + fenceIdx.toText());
@@ -514,5 +514,5 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
         }
     }
 
-    (ok = true, jsonText = "[" + text.joinTexts(items, ",") + "]", error = "")
+    (ok = true, jsonText = "[" + items.join(",") + "]", error = "")
 };

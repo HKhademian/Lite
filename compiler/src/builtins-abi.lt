@@ -302,9 +302,6 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
         if name == "String.wordAt" {
             return (params = "source=String|position=Int|word=String", result = ir.VALUE_KIND_BOOL);
         }
-        if name == "joinTexts" {
-            return (params = "values=List<String>|separator=String", result = ir.VALUE_KIND_STRING);
-        }
         if name == "String.toInt" {
             return (params = "text=String", result = "(value:Int,ok:Bool)");
         }

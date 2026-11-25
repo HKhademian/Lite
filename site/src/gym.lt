@@ -48,7 +48,7 @@ replaceAllText := fn(source: String, needle: String, replacement: String): Strin
         (mut out).pushBack(replacement);
         pos = found + nLen;
     }
-    text.joinTexts(out, "")
+    out.join("")
 };
 
 safeJsonForScript := fn(rawJson: String): String {
@@ -161,9 +161,9 @@ renderCardGrid := fn(src: String, subsetOffs: List<Int>): String {
         "  </div>",
         "</article>"
         ];
-        mut cards.pushBack(text.joinTexts(cardLines, "\n"));
+        mut cards.pushBack(cardLines.join("\n"));
     }
-    text.joinTexts(cards, "\n")
+    cards.join("\n")
 };
 
 renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>): String {
@@ -225,11 +225,11 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
         "  </div>",
         "</div>"
         ];
-        mut beltCards.pushBack(text.joinTexts(bLines, "\n"));
+        mut beltCards.pushBack(bLines.join("\n"));
         bIdx = bIdx + 1;
     }
 
-    sortedDomains := challenges.sortTexts(rawDomains);
+    sortedDomains := rawDomains.sortTexts();
     domBtnParts: mut List<String> = [];
     loop sortedDomains as dom {
         mut domBtnParts.pushBack("<button class=\"gym-filter-btn\" type=\"button\" data-filter-domain=\"" + escapeHtml(dom) + "\" aria-pressed=\"false\">" + escapeHtml(dom) + "</button>");
@@ -242,7 +242,7 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
     };
     drillCountStr := drillOffs.length().toText();
     workoutCountStr := workoutOffs.length().toText();
-    orderedMetaJson := "[" + text.joinTexts(orderedMetaObjs, ",") + "]";
+    orderedMetaJson := "[" + orderedMetaObjs.join(",") + "]";
 
     lines: List<String> = [
     "<section class=\"page-hero\">",
@@ -258,7 +258,7 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
     "      </div>",
     "      <div class=\"learn-bar-track\"><div id=\"gym-progress-fill\" class=\"learn-bar-fill\" style=\"width: 0%;\"></div></div>",
     "      <div class=\"gym-belt-grid\">",
-    "        " + text.joinTexts(beltCards, "\n"),
+    "        " + beltCards.join("\n"),
     "      </div>",
     "    </div>",
     "    <div class=\"hero-actions\" style=\"margin: 0;\">",
@@ -286,7 +286,7 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
     "  </div>",
     "  <div class=\"gym-filter-group\" role=\"group\" aria-label=\"Domain filter\">",
     "    <button class=\"gym-filter-btn\" type=\"button\" data-filter-domain=\"all\" aria-pressed=\"true\">All Domains</button>",
-    "    " + text.joinTexts(domBtnParts, "\n    "),
+    "    " + domBtnParts.join("\n    "),
     "  </div>",
     "  <div class=\"gym-filter-group\">",
     "    <button id=\"gym-filter-unsolved\" class=\"gym-filter-btn\" type=\"button\" aria-pressed=\"false\">Unsolved Only</button>",
@@ -526,7 +526,7 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
     "  })();",
     "</script>"
     ];
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 renderSwitcherGroup := fn(
@@ -553,11 +553,11 @@ curOutPath: String
     "<details class=\"portal-nav-group\"" + openAttr + ">",
     "        <summary>" + escapeHtml(label) + " (" + subsetOffs.length().toText() + ")</summary>",
     "        <ul class=\"portal-nav-list\">",
-    "          " + text.joinTexts(liParts, "\n          "),
+    "          " + liParts.join("\n          "),
     "        </ul>",
     "      </details>"
     ];
-    text.joinTexts(grpLines, "\n")
+    grpLines.join("\n")
 };
 
 renderGymExerciseBody := fn(
@@ -608,7 +608,7 @@ workoutOffs: List<Int>
         vcExpOut := readOptStr(src, vcPos, "expectedStdout");
         vcArgs := readStringList(src, vcPos, "args");
         argsNote := if vcArgs.length() > 0 {
-            "<div class=\"gym-case-meta\">Args: <code>" + escapeHtml(text.joinTexts(vcArgs, " ")) + "</code></div>"
+            "<div class=\"gym-case-meta\">Args: <code>" + escapeHtml(vcArgs.join(" ")) + "</code></div>"
         } else {
             ""
         };
@@ -632,7 +632,7 @@ workoutOffs: List<Int>
         "  </div>",
         "</article>"
         ];
-        mut visCards.pushBack(text.joinTexts(cLines, "\n"));
+        mut visCards.pushBack(cLines.join("\n"));
     }
 
     switcherGroups := renderSwitcherGroup(src, "Concept Drills", drillOffs, exId, outPath)
@@ -693,7 +693,7 @@ workoutOffs: List<Int>
     "            <span class=\"code-card-meta\">+ " + hidCount.toText() + " hidden case" + hidSuffix + " graded on submit</span>",
     "          </div>",
     "          <div class=\"gym-cases\">",
-    "            " + text.joinTexts(visCards, "\n"),
+    "            " + visCards.join("\n"),
     "          </div>",
     "        </section>",
     "",
@@ -1221,7 +1221,7 @@ workoutOffs: List<Int>
     "    .catch(() => {});",
     "</script>"
     ];
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 /** Builds `/gym/` index, exercise dojo pages, payloads, and search entries from stdin JSON. */
@@ -1327,9 +1327,9 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
     }
 
     outJson := "{"
-    + "\"pages\":[" + text.joinTexts(pagesJson, ",") + "],"
-    + "\"payloads\":[" + text.joinTexts(payloadsJson, ",") + "],"
-    + "\"searchEntries\":[" + text.joinTexts(searchEntriesJson, ",") + "]"
+    + "\"pages\":[" + pagesJson.join(",") + "],"
+    + "\"payloads\":[" + payloadsJson.join(",") + "],"
+    + "\"searchEntries\":[" + searchEntriesJson.join(",") + "]"
     + "}";
     (ok = true, jsonText = outJson, error = "")
 };

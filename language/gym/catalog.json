@@ -538,7 +538,7 @@
     {
       "id": "drills.modules.format.aligned-column-row",
       "slug": "aligned-column-row",
-      "title": "core/format Table Padding",
+      "title": "core/text Table Padding",
       "mode": "drill",
       "belt": "emerald",
       "domain": "modules",
@@ -549,10 +549,10 @@
       "brokenStarterSyntax": false,
       "expectedStarterFailure": "wrong-output",
       "hints": [
-        "Left-aligning text pads spaces on the right (`padRightText`); right-aligning numbers pads spaces on the left (`padLeftText`).",
-        "Swap `padLeftText` and `padRightText` in `row`."
+        "Left-aligning text pads spaces on the right (`padRight`); right-aligning numbers pads spaces on the left (`padLeft`).",
+        "Swap `padLeft` and `padRight` in `row`."
       ],
-      "relatedDocs": ["lib/core/format.lt", "language/learn/handbook/modules/imports-visibility-and-io.md"],
+      "relatedDocs": ["lib/core/text.lt", "language/learn/handbook/modules/imports-visibility-and-io.md"],
       "relatedLessons": ["learn.tutorials.cli.text-manifest-digest"],
       "visibleCases": [
         { "name": "latency", "stdin": "latency\n42\n", "args": [], "expectedStdout": "latency    :     42\n" },
@@ -1216,7 +1216,7 @@
       "brokenStarterSyntax": false,
       "expectedStarterFailure": "wrong-output",
       "hints": [
-        "Use `list.listIndexOfText(keys, fullKey)` to overwrite an existing key cleanly instead of appending duplicates.",
+        "Use `keys.indexOf(fullKey)` to overwrite an existing key cleanly instead of appending duplicates.",
         "Trim around `section` in `[section]` as well as around `=` in `key = value`."
       ],
       "relatedDocs": ["lib/core/text.lt", "lib/core/list.lt"],

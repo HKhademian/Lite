@@ -447,7 +447,7 @@ pub writeTraceJson := fn(tracePath: String, graph: frontend.Items): Unit {
             mut edgeEntries.pushBack("{\"importer\":" + quoteJson(item.name) + ",\"spec\":" + quoteJson(item.code) + ",\"path\":" + quoteJson(item.runtime) + "}");
         }
     }
-    body := "{\"files\":[" + textLib.joinTexts(fileEntries, ",") + "],\"edges\":[" + textLib.joinTexts(edgeEntries, ",") + "]}\n";
+    body := "{\"files\":[" + fileEntries.join(",") + "],\"edges\":[" + edgeEntries.join(",") + "]}\n";
     w := fs.writeText(tracePath, body);
     if not w.ok {
         diagLib.fail("", "cannot write trace file " + tracePath + ": " + w.error);

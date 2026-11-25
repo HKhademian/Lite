@@ -115,7 +115,7 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
   `?` execution-trace ordering.
 - [028 — Modules and hashing](lite://play/example/modules-and-hashing): imports a helper
   module ([stats-module](lite://repo/language/examples/modules/core/helpers/stats-module.lts)) exporting `pub` types,
-  constants, and functions alongside `core/format` alignment and `core/crypto`
+  constants, and functions alongside `core/text` alignment and `core/crypto`
   SHA-256 hashing.
 - [029 — Nominal records](lite://play/example/nominal-records): declares nominal `record`
   types with field defaults and zero initialization, constructs values via `Type { = name }`

@@ -30,7 +30,7 @@ runChecked := fn(workToClean: String, command: String, args: List<String>, cwd: 
         if customError =!= "" {
             failRelease(workToClean, customError);
         }
-        failRelease(workToClean, command + " " + text.joinTexts(args, " ") + " failed:\n" + res.stdout + res.stderr);
+        failRelease(workToClean, command + " " + args.join(" ") + " failed:\n" + res.stdout + res.stderr);
     }
     res.stdout
 };

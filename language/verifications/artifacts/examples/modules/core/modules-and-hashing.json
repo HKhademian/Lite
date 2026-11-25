@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../../../examples/modules/core/modules-and-hashing.lts",
-    "hash": "sha256:6845ca5ca8e9c208797e79fa10be7c9c814518a4d2268d344a3e4bb15b2e77d9"
+    "hash": "sha256:a9d62406832e10c8f98cf75d36797514f4caceac5962639e60e9b239ab614066"
   },
   "features": [
     "feature.modules.visibility.namespace-imports",

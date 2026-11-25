@@ -94,7 +94,7 @@
           "helperModules": [],
           "stdin": "",
           "args": [],
-          "teaches": ["String", "core/text", "core/unicode", "core/format"],
+          "teaches": ["String", "core/text", "core/unicode"],
           "docs": ["language/learn/handbook/foundations/numbers-operators-and-strings.md", "docs/strings.md"]
         }
       ]
@@ -443,7 +443,7 @@
           "helperModules": [],
           "stdin": "",
           "args": [],
-          "teaches": ["core/path", "core/file", "core/format", "finally"],
+          "teaches": ["core/path", "core/file", "core/text", "finally"],
           "docs": ["language/learn/handbook/modules/imports-visibility-and-io.md"]
         },
         {
@@ -499,7 +499,7 @@
           "helperModules": [],
           "stdin": "hello lite\nAé🚀\n",
           "args": [],
-          "teaches": ["core/unicode", "core/format", "core/list", ":%"],
+          "teaches": ["core/unicode", "core/text", "core/list", ":%"],
           "docs": ["language/learn/handbook/modules/imports-visibility-and-io.md"]
         },
         {

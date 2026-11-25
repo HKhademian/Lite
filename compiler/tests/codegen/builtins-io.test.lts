@@ -85,8 +85,8 @@ loop ui < 32 {
 }
 (mut probeLines).pushBack("io.outputLine(original.length(), original.at(1), original.slice(2, 4));");
 mut expLines.pushBack("8 🙂 é");
-uSrc := text.joinTexts(probeLines, "\n");
-uExp := text.joinTexts(expLines, "\n") + "\n";
+uSrc := probeLines.join("\n");
+uExp := expLines.join("\n") + "\n";
 compilerTest.assertCompileRunTs(root, tsComp, "unicode cache pressure", uSrc, uExp);
 
 /* restricted compiler compiles input, diagnostic and exit builtins in value and statement positions */
@@ -164,9 +164,9 @@ loop ibi < 13 {
 cArgsCompile := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(io.inputArgs());\n", "");
 test.checkInt("C compiles inputArgs: " + cArgsCompile.stderr, 0, cArgsCompile.status);
 
-/* C compiler executes core/text UTF-8 primitives, pure helpers, and core/format natively */
+/* C compiler executes core/text UTF-8 primitives and String padding natively */
 ccTextInfo := compilerTest.probeCc();
-cTextParitySrc := "f := import \"core/format\"; io := import \"core/io\"; s := \"سلام🙂ab\"; io.outputLine(s.length(), s.at(0), s.at(4), s.slice(1, 5), s.indexOf(\"🙂\", 0), f.padLeftInt(42, 4));\n";
+cTextParitySrc := "io := import \"core/io\"; s := \"سلام🙂ab\"; io.outputLine(s.length(), s.at(0), s.at(4), s.slice(1, 5), s.indexOf(\"🙂\", 0), 42.toText().padLeft(4));\n";
 tsTextRes := compilerTest.compileCheckRunTs(root, tsComp, cTextParitySrc, "");
 test.checkInt("ts-text status", 0, tsTextRes.status);
 test.checkText("ts-text stdout", "7 س 🙂 لام🙂 4   42\n", tsTextRes.stdout);

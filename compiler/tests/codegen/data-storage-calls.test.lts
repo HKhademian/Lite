@@ -30,7 +30,7 @@ assertRejectsAny := fn(label: String, cases: List<(bad: String, m1: String, m2: 
 };
 
 /* tuple shapes support unnamed/mixed/singleton, shorthand, positional reads, destructuring, receiving labels, and __proto__ */
-tupleSrc := text.joinTexts([
+tupleSrc := [
     "io := import \"core/io\";",
     "kind := \"number\";",
     "token := (=kind, value = 12);",
@@ -49,7 +49,7 @@ tupleSrc := text.joinTexts([
     "io.outputLine(Unit, (), (1,), (1, 2), (1, left = 2, right = 3, 4));",
     "p := (__proto__ = 7);",
     "io.outputLine(p.__proto__, p);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(
     root,
     tsComp,
@@ -67,7 +67,7 @@ tupleRej: List<(bad: String, m1: String, m2: String)> = [
 assertRejectsAny("tuple-shapes", tupleRej);
 
 /* fixed arrays support inferred/explicit extents, aliases, functions, zero values, dot/bracket/loop access, and List tail distinction */
-arraySrc := text.joinTexts([
+arraySrc := [
     "io := import \"core/io\";",
     "Pair := alias [Int; 2];",
     "make := fn(): [Int; 2] { [1, 2] }",
@@ -81,7 +81,7 @@ arraySrc := text.joinTexts([
     "var total := 0;",
     "loop inferred as item { total = total + item; }",
     "io.outputLine(inferred[0], inferred.2, sum(explicit), aliased, zeroed, emptyArr, emptyZero, total);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "fixed-arrays", arraySrc, "10 30 9 [1, 2] [0, 0, 0] [] [] 60\n");
 arrayRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "f := fn(): List<Int> { [1, 2] }", m1 = "cannot return [Int; 2] from function f returning List<Int>", m2 = ""),
@@ -92,7 +92,7 @@ arrayRej: List<(bad: String, m1: String, m2: String)> = [
 assertRejectsAny("fixed-arrays", arrayRej);
 
 /* mutability and lists support inferred mut/var mut, front/back ops, List<Unit>, tuple copies, and rejections */
-mutListSrc := text.joinTexts([
+mutListSrc := [
     "io := import \"core/io\";",
     "values: mut List<Int> = [1, 2];",
     "mut values.pushFront(0);",
@@ -114,7 +114,7 @@ mutListSrc := text.joinTexts([
     "tuples: mut List<(name: String, n: Int)> = [(name = \"a\", n = 1)];",
     "item := mut tuples.popBack();",
     "io.outputLine(item.name, item.n, tuples);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "mut-lists", mutListSrc, "0 3 9 [1, 2]\n[z] [a]\nUnit Unit []\na 1 []\n");
 emptyOps: List<(call: String, msg: String)> = [
     (call = "popFront", msg = "pop_front"),
@@ -135,7 +135,7 @@ mutListRej: List<(bad: String, m1: String, m2: String)> = [
 assertRejectsAny("mut-lists", mutListRej);
 
 /* storage and updates support compound assignments, zero init, reserved storage, control-flow joins, and rejections */
-storageSrc := text.joinTexts([
+storageSrc := [
     "io := import \"core/io\";",
     "var n := 10;",
     "n += 5; n -= 3; n *= 2; n /= 4; n %= 3;",
@@ -152,7 +152,7 @@ storageSrc := text.joinTexts([
     "c: Int = ?;",
     "if n == 0 { c = 10; } else { c = 20; }",
     "io.outputLine(n, f, s, fl, z0.0, z0.1, z1, r, c);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "storage-updates", storageSrc, "0 2 ab 3.5 0  [0, 0] 42 10\n");
 storageRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "io := import \"core/io\"; a: Int = ?; io.outputLine(a);", m1 = "cannot read uninitialized local a", m2 = ""),
@@ -166,7 +166,7 @@ storageRej: List<(bad: String, m1: String, m2: String)> = [
 assertRejectsAny("storage-updates", storageRej);
 
 /* call routing supports named, positional, shorthand, replacement, recursion, trailing commas, module functions, and rejections */
-callRoutingSrc := text.joinTexts([
+callRoutingSrc := [
     "io := import \"core/io\";",
     "step := fn(label: String, n: Int): Int { io.outputLine(label, n); n };",
     "tag := fn(label: String): String { io.outputLine(label); label };",
@@ -183,7 +183,7 @@ callRoutingSrc := text.joinTexts([
     "};",
     "length := fn(text: String): Int { 4 };",
     "io.outputLine(r1, r2, r3, r4, sumDown(4, 0), length(text = \"abcd\"));"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "call-routing", callRoutingSrc, "skip\nkeep 1\ntail 3\nover\n7 done\n123 123 123 526 10 4\n");
 
 tmpCallDir := fs.makeTempDir("lite-call-routing-");
@@ -217,7 +217,7 @@ callRej: List<(bad: String, m1: String, m2: String)> = [
 assertRejectsAny("call-routing", callRej);
 
 /* out local hygiene avoids main accumulator collisions at root, nested, and imported module scopes */
-outSrc := text.joinTexts([
+outSrc := [
     "io := import \"core/io\";",
     "out := \"ok\";",
     "io.outputLine(out);",
@@ -227,7 +227,7 @@ outSrc := text.joinTexts([
     "f := fn(): Int { out2 };",
     "out2 := 9;",
     "io.outputLine(laterOut(), f());"
-], "\n");
+].join("\n");
 outComp := compilerTest.compileStdin(root, tsComp, outSrc, "");
 test.checkInt("out-hygiene compile", 0, outComp.status);
 test.check("out-hygiene const lite_out", outComp.stdout.contains("const lite_out = \"ok\";"));
@@ -253,7 +253,7 @@ compilerTest.assertCompileRunTsNamed(root, tsComp, "out-hygiene mod", appOutSrc,
 _rmOut := fs.remove(outDir);
 
 /* tuple destructuring supports empty (), grouped (x), var (x), singleton (x,), nested shadowing, value blocks, and rejections */
-destrSrc := text.joinTexts([
+destrSrc := [
     "io := import \"core/io\";",
     "var ticks := 0;",
     "bump := fn(): Unit { ticks += 1; };",
@@ -267,7 +267,7 @@ destrSrc := text.joinTexts([
     "{ (a, a) := (1, 2); (_, _) := (3, 4); io.outputLine(a); }",
     "v := { () := bump(); (p) := 3; var (q) := 4; q += 1; (r, s) := (q, p * 2); r + s };",
     "io.outputLine(ticks, x, y, z, v);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "tuple-destructuring", destrSrc, "2\n2 42 15 99 11\n");
 destrRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "() := 42;", m1 = "tuple destructuring requires Unit for (), got Int", m2 = ""),
@@ -283,7 +283,7 @@ destrRej: List<(bad: String, m1: String, m2: String)> = [
 assertRejectsAny("tuple-destructuring", destrRej);
 
 /* named/mixed/shorthand/typed tuple destructuring and fixed-array [a, b] := arr destructuring */
-namedArrDestrSrc := text.joinTexts([
+namedArrDestrSrc := [
     "io := import \"core/io\";",
     "readForward := fn(): Int { fwdA + fwdB };",
     "stored := (r = 20, l = 10);",
@@ -303,7 +303,7 @@ namedArrDestrSrc := text.joinTexts([
     "    r + x",
     "};",
     "io.outputLine(left, right, l, r, fruit, head, m, last, a0, a1, readForward(), innerArr);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "named-tuple-and-array-destructuring", namedArrDestrSrc, "10 20 10 20 30 1 m true 100 200 10 31\n");
 namedArrDestrRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "(= a) := (b = 1);", m1 = "tuple has no field a", m2 = ""),
@@ -323,7 +323,7 @@ arrDestrCRes := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"
 test.checkInt("C arr destructuring compiles: " + arrDestrCRes.stderr, 0, arrDestrCRes.status);
 
 /* scope-local counters avoid source-offset churn in functions, destructuring, loops, and C shadows */
-workBody := text.joinTexts([
+workBody := [
     "io := import \"core/io\";",
     "pick := fn(first: String, second: String): String { first + \"-\" + second };",
     "work := fn(x: String): String {",
@@ -338,7 +338,7 @@ workBody := text.joinTexts([
     "  acc + \":\" + p + q",
     "};",
     "io.outputLine(work(\"0\"));"
-], "\n");
+].join("\n");
 shiftedHeader := "/* extra top comment line 1\n   extra top comment line 2\n   extra top comment line 3 */\nunusedBanner := \"header\";\n\n";
 baseComp := compilerTest.compileStdin(root, tsComp, workBody, "");
 shiftedComp := compilerTest.compileStdin(root, tsComp, shiftedHeader + workBody, "");

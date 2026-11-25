@@ -67,12 +67,12 @@ renderSampleCard := fn(src: String, sPos: Int, basePath: String, includeNote: Bo
 
     inputParts: mut List<String> = [];
     if args.length() > 0 {
-        mut inputParts.pushBack("args: " + text.joinTexts(args, " "));
+        mut inputParts.pushBack("args: " + args.join(" "));
     }
     if stdin =!= "" {
         mut inputParts.pushBack("stdin: " + json.quoteString(stdin));
     }
-    metaText := if inputParts.length() > 0 { text.joinTexts(inputParts, " · ") } else { file };
+    metaText := if inputParts.length() > 0 { inputParts.join(" · ") } else { file };
     noteBlock := if includeNote { "<p class=\"sample-note\">" + escapeHtml(note) + "</p>" } else { "" };
     outputBlock := if showOutput {
         "<div class=\"output-block\">\n"
@@ -97,7 +97,7 @@ renderSampleCard := fn(src: String, sPos: Int, basePath: String, includeNote: Bo
     "  </footer>",
     "</article>"
     ];
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 renderHomeBody := fn(src: String, renderedOffs: List<Int>): String {
@@ -292,11 +292,11 @@ renderHomeBody := fn(src: String, renderedOffs: List<Int>): String {
     "    <a href=\"gallery/\">Explore Gallery (" + renderedOffs.length().toText() + " samples) &rarr;</a>",
     "  </div>",
     "  <div class=\"sample-grid\">",
-    "    " + text.joinTexts(featuredCards, "\n"),
+    "    " + featuredCards.join("\n"),
     "  </div>",
     "</section>"
     ];
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 renderGalleryCard := fn(src: String, sPos: Int, basePath: String): String {
@@ -330,7 +330,7 @@ renderGalleryCard := fn(src: String, sPos: Int, basePath: String): String {
     "  </footer>",
     "</article>"
     ];
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 renderGalleryBody := fn(
@@ -366,11 +366,11 @@ renderedPlayOffs: List<Int>
         "  </div>",
         "  <p class=\"section-note\">" + escapeHtml(gDesc) + "</p>",
         "  <div class=\"sample-grid\">",
-        "    " + text.joinTexts(cards, "\n"),
+        "    " + cards.join("\n"),
         "  </div>",
         "</section>"
         ];
-        mut langSections.pushBack(text.joinTexts(sLines, "\n"));
+        mut langSections.pushBack(sLines.join("\n"));
     }
 
     playJumps: mut List<String> = [];
@@ -396,11 +396,11 @@ renderedPlayOffs: List<Int>
         "  </div>",
         "  <p class=\"section-note\">" + escapeHtml(gDesc) + "</p>",
         "  <div class=\"sample-grid\">",
-        "    " + text.joinTexts(cards, "\n"),
+        "    " + cards.join("\n"),
         "  </div>",
         "</section>"
         ];
-        mut playSections.pushBack(text.joinTexts(sLines, "\n"));
+        mut playSections.pushBack(sLines.join("\n"));
     }
 
     lines: List<String> = [
@@ -412,18 +412,18 @@ renderedPlayOffs: List<Int>
     "  <nav class=\"gallery-jumps\" aria-label=\"Gallery categories\">",
     "    <div class=\"gallery-tier-line\">",
     "      <span class=\"gallery-tier-label\">Language &amp; Programs</span>",
-    "      " + text.joinTexts(langJumps, "\n      "),
+    "      " + langJumps.join("\n      "),
     "    </div>",
     "    <div class=\"gallery-tier-line\">",
     "      <span class=\"gallery-tier-label\">Play &mdash; Canvas, Audio &amp; Games</span>",
-    "      " + text.joinTexts(playJumps, "\n      "),
+    "      " + playJumps.join("\n      "),
     "    </div>",
     "  </nav>",
     "</section>",
-    text.joinTexts(langSections, "\n"),
-    text.joinTexts(playSections, "\n")
+    langSections.join("\n"),
+    playSections.join("\n")
     ];
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 renderPlaygroundBody := fn(src: String): String {
@@ -687,7 +687,7 @@ renderPlaygroundBody := fn(src: String): String {
     "",
     scriptHtml
     ];
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 /** Builds `/`, `/gallery/`, and `/playground/` page bodies from stdin JSON. */

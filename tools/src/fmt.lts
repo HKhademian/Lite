@@ -151,7 +151,7 @@ pub formatLite := fn(source: String): String {
         formattedCount = formattedCount - 1;
     }
     if formattedCount == 0 { return ""; }
-    text.joinTexts(formatted, "\n") + "\n"
+    formatted.join("\n") + "\n"
 }
 
 run := fn(rawArgs: List<String>): Unit {

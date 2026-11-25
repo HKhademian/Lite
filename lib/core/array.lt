@@ -1,5 +1,14 @@
 /* Core fixed-length array operations. */
 
+_set := import "core/set";
+unicode := import "core/unicode";
+
+/** Closed numeric scalar constraint supported by `Array.sort`. */
+pub ArrayOrderedScalar := alias Int | Int8 | Int16 | Int32 | Float | Float32;
+
+/** Closed equatable scalar constraint supported by `Array.indexOf`, `Array.contains`, and `Array.dedup`. */
+pub ArrayEquatable := alias ArrayOrderedScalar | String | Bool;
+
 /** Returns the compile-time element count of fixed-length array `values`. */
 pub Array.length := fn<T: Type, N: Int>(values: Self<T, N>): Int;
 
@@ -30,4 +39,250 @@ pub Array.fill := fn<T: Type, N: Int>(values: mut Self<T, N>, val: T): Unit {
     loop 0..values.length() as i {
         values[i] = val;
     }
+};
+
+/** Converts fixed-length array `values` into a dynamic `List<T>`. */
+pub Array.toList := fn<T: Type, N: Int>(values: Self<T, N>): List<T> {
+    out: mut List<T> = [];
+    loop 0..values.length() as i {
+        mut out.pushBack(values[i]);
+    }
+    out
+};
+
+/** Joins string array elements in order with `separator` between adjacent items. */
+pub Array.join := fn<N: Int>(values: Self<String, N>, separator: String): String {
+    var result := "";
+    loop 0..values.length() as i {
+        if i == 0 {
+            result = values[i];
+        } else {
+            result = result + separator + values[i];
+        }
+    }
+    result
+};
+
+/** Returns the zero-based index of `target` in `values`, or -1 when absent. */
+pub Array.indexOf := fn<T: Type<ArrayEquatable>, N: Int>(values: Self<T, N>, target: T): Int {
+    loop 0..values.length() as i {
+        if values[i] == target { return i; }
+    }
+    -1
+};
+
+/** True when `values` contains `target`. */
+pub Array.contains := fn<T: Type<ArrayEquatable>, N: Int>(values: Self<T, N>, target: T): Bool {
+    values.indexOf(target) >= 0
+};
+
+/** Folds `values` left-to-right starting from `initial` using `step(acc, item)`. */
+pub Array.fold := fn<T: Type, U: Type, N: Int>(values: Self<T, N>, initial: U, step: fn(U, T): U): U {
+    var acc := initial;
+    loop 0..values.length() as i {
+        acc = step(acc, values[i]);
+    }
+    acc
+};
+
+/** True when any element of `values` satisfies `pred`. */
+pub Array.any := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): Bool {
+    loop 0..values.length() as i {
+        if pred(values[i]) { return true; }
+    }
+    false
+};
+
+/** True when every element of `values` satisfies `pred`. */
+pub Array.all := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): Bool {
+    loop 0..values.length() as i {
+        if not pred(values[i]) { return false; }
+    }
+    true
+};
+
+/** Returns the zero-based index of the first element satisfying `pred`, or -1 when absent. */
+pub Array.findIndex := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): Int {
+    loop 0..values.length() as i {
+        if pred(values[i]) { return i; }
+    }
+    -1
+};
+
+/** Returns `(found = true, value = item)` for the first element satisfying `pred`, or `(found = false, value = zero)`. */
+pub Array.find := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): (found: Bool, value: T) {
+    z: T;
+    loop 0..values.length() as i {
+        if pred(values[i]) { return (found = true, value = values[i]); }
+    }
+    (found = false, value = z)
+};
+
+/** Returns a new fixed-length array `Array<U, N>` obtained by applying `transform` to every element of `values`. */
+pub Array.map := fn<T: Type, U: Type, N: Int>(values: Self<T, N>, transform: fn(T): U): Self<U, N> {
+    out: mut Self<U, N>;
+    loop 0..values.length() as i {
+        out[i] = transform(values[i]);
+    }
+    out
+};
+
+/** Returns a new `List<T>` containing the elements of `values` satisfying `pred`. */
+pub Array.filter := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): List<T> {
+    out: mut List<T> = [];
+    loop 0..values.length() as i {
+        item := values[i];
+        if pred(item) { mut out.pushBack(item); }
+    }
+    out
+};
+
+/** Returns unique elements of `values` preserving first-seen order in O(n). */
+pub Array.dedup := fn<T: Type<ArrayEquatable>, N: Int>(values: Self<T, N>): List<T> {
+    seen: mut Set<T>;
+    out: mut List<T> = [];
+    loop 0..values.length() as i {
+        v := values[i];
+        if not seen.has(v) {
+            mut seen.add(v);
+            mut out.pushBack(v);
+        }
+    }
+    out
+};
+
+/** Returns a stable O(n log n) `List<T>` copy of `values` ordered by `lessOrEqual(a, b)`. */
+pub Array.sortBy := fn<T: Type, N: Int>(values: Self<T, N>, lessOrEqual: fn(T, T): Bool): List<T> {
+    var src := values.toList();
+    n := src.length();
+    if n <= 1 { return src; }
+    var width := 1;
+    loop width < n {
+        dst: mut List<T> = [];
+        var left := 0;
+        loop left < n {
+            mid := if left + width < n { left + width } else { n };
+            right := if left + width * 2 < n { left + width * 2 } else { n };
+            var i := left;
+            var j := mid;
+            loop i < mid and j < right {
+                if lessOrEqual(src[i], src[j]) {
+                    mut dst.pushBack(src[i]);
+                    i += 1;
+                } else {
+                    mut dst.pushBack(src[j]);
+                    j += 1;
+                }
+            }
+            loop i < mid {
+                mut dst.pushBack(src[i]);
+                i += 1;
+            }
+            loop j < right {
+                mut dst.pushBack(src[j]);
+                j += 1;
+            }
+            left += width * 2;
+        }
+        src = dst;
+        width = width * 2;
+    }
+    src
+};
+
+/** Returns a new sorted ascending `List<T>` copy of numeric scalar `values`. */
+pub Array.sort := fn<T: Type<ArrayOrderedScalar>, N: Int>(values: Self<T, N>): List<T> {
+    var src := values.toList();
+    n := src.length();
+    if n <= 1 { return src; }
+    var width := 1;
+    loop width < n {
+        dst: mut List<T> = [];
+        var left := 0;
+        loop left < n {
+            mid := if left + width < n { left + width } else { n };
+            right := if left + width * 2 < n { left + width * 2 } else { n };
+            var i := left;
+            var j := mid;
+            loop i < mid and j < right {
+                if src[i] <= src[j] {
+                    mut dst.pushBack(src[i]);
+                    i += 1;
+                } else {
+                    mut dst.pushBack(src[j]);
+                    j += 1;
+                }
+            }
+            loop i < mid {
+                mut dst.pushBack(src[i]);
+                i += 1;
+            }
+            loop j < right {
+                mut dst.pushBack(src[j]);
+                j += 1;
+            }
+            left += width * 2;
+        }
+        src = dst;
+        width = width * 2;
+    }
+    src
+};
+
+ARRAY_ASCII_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+arrayTextLessOrEqual := fn(a: String, b: String): Bool {
+    la := a.length();
+    lb := b.length();
+    limit := if la < lb { la } else { lb };
+    loop 0..limit as i {
+        ca := a.at(i);
+        cb := b.at(i);
+        if ca =!= cb {
+            oa := ARRAY_ASCII_ORDER.indexOf(ca, 0);
+            ob := ARRAY_ASCII_ORDER.indexOf(cb, 0);
+            if oa >= 0 and ob >= 0 { return oa <= ob; }
+            return unicode.codePointAt(ca, 0) <= unicode.codePointAt(cb, 0);
+        }
+    }
+    la <= lb
+};
+
+/** Returns a new lexicographically sorted ascending `List<String>` copy of `values`. */
+pub Array.sortTexts := fn<N: Int>(values: Self<String, N>): List<String> {
+    var src := values.toList();
+    n := src.length();
+    if n <= 1 { return src; }
+    var width := 1;
+    loop width < n {
+        dst: mut List<String> = [];
+        var left := 0;
+        loop left < n {
+            mid := if left + width < n { left + width } else { n };
+            right := if left + width * 2 < n { left + width * 2 } else { n };
+            var i := left;
+            var j := mid;
+            loop i < mid and j < right {
+                if arrayTextLessOrEqual(src[i], src[j]) {
+                    mut dst.pushBack(src[i]);
+                    i += 1;
+                } else {
+                    mut dst.pushBack(src[j]);
+                    j += 1;
+                }
+            }
+            loop i < mid {
+                mut dst.pushBack(src[i]);
+                i += 1;
+            }
+            loop j < right {
+                mut dst.pushBack(src[j]);
+                j += 1;
+            }
+            left += width * 2;
+        }
+        src = dst;
+        width = width * 2;
+    }
+    src
 };

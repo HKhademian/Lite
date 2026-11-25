@@ -42,7 +42,7 @@ formatInlineDoc := fn(docText: String): String {
             pos = bt + 1;
         }
     }
-    text.joinTexts(out, "")
+    out.join("")
 };
 
 renderSymbolCard := fn(
@@ -95,14 +95,14 @@ modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts
         (mut grpBlocks).pushBack("<details class=\"portal-nav-group\" open>\n"
         + "        <summary>" + escapeHtml(grpLabels[gi]) + "</summary>\n"
         + "        <ul class=\"portal-nav-list\">\n"
-        + "          " + text.joinTexts(items, "\n          ") + "\n"
+        + "          " + items.join("\n          ") + "\n"
         + "        </ul>\n"
         + "      </details>");
         gi = gi + 1;
     }
     "<aside class=\"portal-sidebar\" aria-label=\"Modules navigation\">\n"
     + "      <p class=\"portal-sidebar-title\">Modules (" + modIds.length().toText() + ")</p>\n"
-    + "      " + text.joinTexts(grpBlocks, "\n      ") + "\n"
+    + "      " + grpBlocks.join("\n      ") + "\n"
     + "    </aside>"
 };
 
@@ -262,14 +262,14 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
 
         usages := modUsageCounts.getOr(mi, 0);
         usageText := if usages > 0 { " · " + usages.toText() + " sample" + (if usages == 1 { "" } else { "s" }) } else { "" };
-        searchBlob := challenges.asciiLower(mId + " " + mSum + " " + text.joinTexts(symNames, " "));
+        searchBlob := challenges.asciiLower(mId + " " + mSum + " " + symNames.join(" "));
         card := "<article class=\"portal-card module-index-card\" data-env=\"" + escapeHtml(mEnv) + "\" data-search=\"" + escapeHtml(searchBlob) + "\">\n"
         + "  <div class=\"portal-card-head\">\n"
         + "    <h2><a href=\"" + escapeHtml(mNs) + "/" + escapeHtml(mName) + ".html\"><code>" + escapeHtml(mId) + "</code></a></h2>\n"
         + "    <span class=\"status-pill " + envMetaPillClass(mEnv) + "\">" + escapeHtml(envMetaLabel(mEnv)) + "</span>\n"
         + "  </div>\n"
         + "  <p>" + formatInlineDoc(if mSum =!= "" { mSum } else { mId + " utilities." }) + "</p>\n"
-        + "  <div class=\"module-sym-preview\">" + text.joinTexts(previewParts, " ") + moreCount + "</div>\n"
+        + "  <div class=\"module-sym-preview\">" + previewParts.join(" ") + moreCount + "</div>\n"
         + "  <div class=\"portal-card-foot\">\n"
         + "    <span class=\"code-card-meta\">" + symCount.toText() + " symbol" + (if symCount == 1 { "" } else { "s" }) + usageText + "</span>\n"
         + "    <a href=\"" + escapeHtml(mNs) + "/" + escapeHtml(mName) + ".html\">Inspect API &rarr;</a>\n"
@@ -310,7 +310,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "    <span class=\"code-card-meta\">" + coreCount.toText() + " modules</span>\n"
     + "  </div>\n"
     + "  <div class=\"portal-grid\">\n"
-    + "    " + text.joinTexts(coreCards, "\n") + "\n"
+    + "    " + coreCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"math-modules\">\n"
@@ -319,7 +319,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "    <span class=\"code-card-meta\">" + mathCount.toText() + " modules</span>\n"
     + "  </div>\n"
     + "  <div class=\"portal-grid\">\n"
-    + "    " + text.joinTexts(mathCards, "\n") + "\n"
+    + "    " + mathCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"ds-modules\">\n"
@@ -328,7 +328,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "    <span class=\"code-card-meta\">" + dsCount.toText() + " modules</span>\n"
     + "  </div>\n"
     + "  <div class=\"portal-grid\">\n"
-    + "    " + text.joinTexts(dsCards, "\n") + "\n"
+    + "    " + dsCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"data-modules\">\n"
@@ -337,7 +337,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "    <span class=\"code-card-meta\">" + dataCount.toText() + " modules</span>\n"
     + "  </div>\n"
     + "  <div class=\"portal-grid\">\n"
-    + "    " + text.joinTexts(dataCards, "\n") + "\n"
+    + "    " + dataCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"extra-modules\">\n"
@@ -346,7 +346,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "    <span class=\"code-card-meta\">" + extraCount.toText() + " modules</span>\n"
     + "  </div>\n"
     + "  <div class=\"portal-grid\">\n"
-    + "    " + text.joinTexts(extraCards, "\n") + "\n"
+    + "    " + extraCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<script>\n"
@@ -456,17 +456,17 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         secHtml: mut List<String> = [];
         tocItems: mut List<String> = ["<li><a href=\"#overview\">Overview</a></li>"];
         if typeCards.length() > 0 {
-            mut secHtml.pushBack("<section class=\"section\" id=\"types\">\n      <div class=\"section-head\">\n        <h2>Types</h2>\n        <span class=\"code-card-meta\">" + typeCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + text.joinTexts(typeCards, "\n") + "\n      </div>\n    </section>");
+            mut secHtml.pushBack("<section class=\"section\" id=\"types\">\n      <div class=\"section-head\">\n        <h2>Types</h2>\n        <span class=\"code-card-meta\">" + typeCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + typeCards.join("\n") + "\n      </div>\n    </section>");
             mut tocItems.pushBack("<li><a href=\"#types\">Types</a></li>");
             loop typeToc as tl { mut tocItems.pushBack(tl); }
         }
         if constCards.length() > 0 {
-            mut secHtml.pushBack("<section class=\"section\" id=\"constants\">\n      <div class=\"section-head\">\n        <h2>Constants</h2>\n        <span class=\"code-card-meta\">" + constCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + text.joinTexts(constCards, "\n") + "\n      </div>\n    </section>");
+            mut secHtml.pushBack("<section class=\"section\" id=\"constants\">\n      <div class=\"section-head\">\n        <h2>Constants</h2>\n        <span class=\"code-card-meta\">" + constCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + constCards.join("\n") + "\n      </div>\n    </section>");
             mut tocItems.pushBack("<li><a href=\"#constants\">Constants</a></li>");
             loop constToc as tl { mut tocItems.pushBack(tl); }
         }
         if fnCards.length() > 0 {
-            mut secHtml.pushBack("<section class=\"section\" id=\"functions\">\n      <div class=\"section-head\">\n        <h2>Functions</h2>\n        <span class=\"code-card-meta\">" + fnCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + text.joinTexts(fnCards, "\n") + "\n      </div>\n    </section>");
+            mut secHtml.pushBack("<section class=\"section\" id=\"functions\">\n      <div class=\"section-head\">\n        <h2>Functions</h2>\n        <span class=\"code-card-meta\">" + fnCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + fnCards.join("\n") + "\n      </div>\n    </section>");
             mut tocItems.pushBack("<li><a href=\"#functions\">Functions</a></li>");
             loop fnToc as tl { mut tocItems.pushBack(tl); }
         }
@@ -479,7 +479,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
             + "        <span class=\"code-card-meta\">" + usageCards.length().toText() + "</span>\n"
             + "      </div>\n"
             + "      <div class=\"portal-grid-2\">\n"
-            + "        " + text.joinTexts(usageCards, "\n") + "\n"
+            + "        " + usageCards.join("\n") + "\n"
             + "      </div>\n"
             + "    </section>"
         } else { "" };
@@ -511,14 +511,14 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         + "      <pre class=\"code-block\"><code>" + modImportHtmls[mi] + "</code></pre>\n"
         + "      <p style=\"margin-top: 0.75rem; font-size: 0.88rem; color: var(--ink-muted);\">" + sourceLink + "</p>\n"
         + "    </section>\n"
-        + "    " + text.joinTexts(secHtml, "\n    ") + "\n"
+        + "    " + secHtml.join("\n    ") + "\n"
         + "    " + usagesSection + "\n"
         + "    " + academyUsagesHtml + "\n"
         + "  </article>\n"
         + "  <aside class=\"portal-toc\" aria-label=\"Symbols on this page\">\n"
         + "    <p class=\"portal-toc-title\">On This Page</p>\n"
         + "    <ul>\n"
-        + "      " + text.joinTexts(tocItems, "\n      ") + "\n"
+        + "      " + tocItems.join("\n      ") + "\n"
         + "    </ul>\n"
         + "  </aside>\n"
         + "</div>";
@@ -540,5 +540,5 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         mi = mi + 1;
     }
 
-    (ok = true, jsonText = "{\"moduleCount\":" + modCount.toText() + ",\"symbolCount\":" + totalSymbols.toText() + ",\"pages\":[" + text.joinTexts(pagesJson, ",") + "],\"searchEntries\":[" + text.joinTexts(searchEntriesJson, ",") + "]}", error = "")
+    (ok = true, jsonText = "{\"moduleCount\":" + modCount.toText() + ",\"symbolCount\":" + totalSymbols.toText() + ",\"pages\":[" + pagesJson.join(",") + "],\"searchEntries\":[" + searchEntriesJson.join(",") + "]}", error = "")
 };

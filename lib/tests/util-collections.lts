@@ -1,7 +1,6 @@
 /** Dual-target tests for `util/collections` O(n log n) sorts and O(n) Set/Map helpers. */
 
 collections := import "util/collections";
-format := import "core/format";
 test := import "core/test";
 text := import "core/text";
 
@@ -10,33 +9,33 @@ keys: List<String> = ["b", "a", "c", "a2"];
 scores: List<Int> = [20, 50, 20, 50];
 order := collections.sortIndicesBy(4, fn(i: Int, j: Int): Bool {
     if scores[i] =!= scores[j] { scores[i] > scores[j] }
-    else { collections.textLessOrEqual(keys[i], keys[j]) }
+    else { keys[i].lessOrEqual(keys[j]) }
 });
-test.checkText("sortIndicesBy multi-key", "1,3,0,2", format.joinIntTexts(order, ","));
+test.checkText("sortIndicesBy multi-key", "1,3,0,2", order.map(fn(x: Int): String { x.toText() }).join(","));
 
 emptyOrd := collections.sortIndicesBy(0, fn(i: Int, j: Int): Bool { i <= j });
 test.checkInt("sortIndicesBy empty", 0, emptyOrd.length());
 
 /* sortIntsBy descending + stability */
 nums: List<Int> = [3, 1, 4, 1, 5, 9, 2];
-descNums := collections.sortIntsBy(nums, fn(a: Int, b: Int): Bool { a >= b });
-test.checkText("sortIntsBy desc", "9,5,4,3,2,1,1", format.joinIntTexts(descNums, ","));
+descNums := nums.sortBy(fn(a: Int, b: Int): Bool { a >= b });
+test.checkText("sortIntsBy desc", "9,5,4,3,2,1,1", descNums.map(fn(x: Int): String { x.toText() }).join(","));
 
 /* sortTextsBy length then lex */
 words: List<String> = ["pear", "fig", "apple", "kiwi", "ant"];
-byLen := collections.sortTextsBy(words, fn(a: String, b: String): Bool {
+byLen := words.sortBy(fn(a: String, b: String): Bool {
     la := a.length();
     lb := b.length();
-    if la =!= lb { la < lb } else { collections.textLessOrEqual(a, b) }
+    if la =!= lb { la < lb } else { a.lessOrEqual(b) }
 });
-test.checkText("sortTextsBy len+lex", "ant,fig,kiwi,pear,apple", text.joinTexts(byLen, ","));
+test.checkText("sortTextsBy len+lex", "ant,fig,kiwi,pear,apple", byLen.join(","));
 
 /* dedupTexts & dedupInts */
 rawWords: List<String> = ["b", "a", "b", "c", "a", "d"];
-test.checkText("dedupTexts", "b,a,c,d", text.joinTexts(collections.dedupTexts(rawWords), ","));
+test.checkText("dedupTexts", "b,a,c,d", rawWords.dedup().join(","));
 
 rawInts: List<Int> = [5, 2, 5, 8, 2, 1];
-test.checkText("dedupInts", "5,2,8,1", format.joinIntTexts(collections.dedupInts(rawInts), ","));
+test.checkText("dedupInts", "5,2,8,1", rawInts.dedup().map(fn(x: Int): String { x.toText() }).join(","));
 
 /* countTexts */
 counts := collections.countTexts(["x", "y", "x", "z", "x", "y"]);
@@ -46,13 +45,13 @@ test.checkInt("countTexts z", 1, counts.getOr("z", 0));
 test.checkInt("countTexts missing", 0, counts.getOr("w", 0));
 
 /* textLessOrEqual: differing lengths, prefixes, and non-ASCII fallback */
-test.check("book <= actual is false", not collections.textLessOrEqual("book", "actual"));
-test.check("actual <= book is true", collections.textLessOrEqual("actual", "book"));
-test.check("act <= actual is true", collections.textLessOrEqual("act", "actual"));
-test.check("actual <= act is false", not collections.textLessOrEqual("actual", "act"));
-test.check("a <= é is true", collections.textLessOrEqual("a", "é"));
-test.check("é <= a is false", not collections.textLessOrEqual("é", "a"));
-test.check("é <= ü is true", collections.textLessOrEqual("é", "ü"));
-test.check("ü <= é is false", not collections.textLessOrEqual("ü", "é"));
+test.check("book <= actual is false", not "book".lessOrEqual("actual"));
+test.check("actual <= book is true", "actual".lessOrEqual("book"));
+test.check("act <= actual is true", "act".lessOrEqual("actual"));
+test.check("actual <= act is false", not "actual".lessOrEqual("act"));
+test.check("a <= é is true", "a".lessOrEqual("é"));
+test.check("é <= a is false", not "é".lessOrEqual("a"));
+test.check("é <= ü is true", "é".lessOrEqual("ü"));
+test.check("ü <= é is false", not "ü".lessOrEqual("é"));
 
 test.done("util-collections");

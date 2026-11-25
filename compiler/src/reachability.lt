@@ -1281,7 +1281,7 @@ rewriteAndMarkActiveReads := fn(code: String, activeSet: TokenBuckets, activeNam
     if segStart < size {
         mut parts.pushBack(code.slice(segStart, size));
     }
-    (code = textLib.joinTexts(parts, ""), readPipe = readPipe, changed = true)
+    (code = parts.join(""), readPipe = readPipe, changed = true)
 };
 
 /** True when `code` mentions identifier `targetName` outside string literals and property accesses, in O(|code|) time. */
@@ -1971,7 +1971,7 @@ evalConstIntMul := fn(src: String, start: Int, target: String): (ok: Bool, value
         if p < n and src.at(p) == "*" {
             rhs := evalConstIntAtom(src, p + 1, target);
             if not rhs.ok { return (ok = false, value = 0, next = p); }
-            prod := integer.intMultiply(cur.value, rhs.value);
+            prod := cur.value.checkedMul(rhs.value);
             if not prod.ok { return (ok = false, value = 0, next = p); }
             cur = (ok = true, value = prod.value, next = rhs.next);
         } else {
@@ -1993,7 +1993,7 @@ evalConstIntAdd := fn(src: String, start: Int, target: String): (ok: Bool, value
             isAdd := src.at(p) == "+";
             rhs := evalConstIntMul(src, p + 1, target);
             if not rhs.ok { return (ok = false, value = 0, next = p); }
-            comb := if isAdd { integer.intAdd(cur.value, rhs.value) } else { integer.intSubtract(cur.value, rhs.value) };
+            comb := if isAdd { cur.value.checkedAdd(rhs.value) } else { cur.value.checkedSub(rhs.value) };
             if not comb.ok { return (ok = false, value = 0, next = p); }
             cur = (ok = true, value = comb.value, next = rhs.next);
         } else {

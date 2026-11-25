@@ -115,7 +115,7 @@ dropFirstLines := fn(source: String, skipLines: Int): String {
 
 packAnchors := fn(anchors: List<String>): String {
     if anchors.length() == 0 { return "\n"; }
-    "\n" + text.joinTexts(anchors, "\n") + "\n"
+    "\n" + anchors.join("\n") + "\n"
 }
 
 isLiteUri := fn(target: String): Bool {
@@ -258,7 +258,7 @@ handbookSourceForSlug := fn(slug: String): String {
     "language/learn/handbook/extra/data-structures-and-memory.md",
     "language/learn/handbook/tooling/native-c11-and-optimization.md"
     ];
-    hit := list.listIndexOfText(hbSlugs, slug);
+    hit := hbSlugs.indexOf(slug);
     if hit >= 0 { hbPaths[hit] } else { "" }
 };
 
@@ -594,7 +594,7 @@ anchorCache: mut Map<String, String>
         ];
         var toolKey := stripSuffix(target, ".html");
         if toolKey == "" and fragment =!= "" { toolKey = fragment; }
-        if not list.listContainsText(knownTools, toolKey) {
+        if not knownTools.contains(toolKey) {
             return relPath + ": missing lite://tool target " + rawTarget;
         }
         return "";
@@ -754,7 +754,7 @@ pub navigationSummary := fn(directory: String): (ok: Bool, text: String, error: 
         mut lines.pushBack(label + ": " + navPath);
     }
     (mut lines).pushBack("Search: lite docs QUERY | --json [QUERY] | --check");
-    (ok = true, text = text.joinTexts(lines, "\n"), error = "")
+    (ok = true, text = lines.join("\n"), error = "")
 }
 
 docMatchesQuery := fn(relPath: String, title: String, headings: List<String>, queryLower: String): Bool {
@@ -785,7 +785,7 @@ pub searchDocsText := fn(directory: String, query: String): (count: Int, text: S
             count = count + 1;
         }
     }
-    (count = count, text = text.joinTexts(lines, "\n"))
+    (count = count, text = lines.join("\n"))
 }
 
 /** Formats matching documentation records as 2-space indented JSON (`JSON.stringify(..., null, 2)` parity). */
@@ -808,12 +808,12 @@ pub docsJson := fn(directory: String, query: String): String {
                 loop headings as h {
                     mut hLines.pushBack("      " + json.quoteString(h));
                 }
-                headingsJson = "[\n" + text.joinTexts(hLines, ",\n") + "\n    ]";
+                headingsJson = "[\n" + hLines.join(",\n") + "\n    ]";
             }
             entry := "  {\n    \"path\": " + json.quoteString(relPath) + ",\n    \"title\": " + json.quoteString(title) + ",\n    \"headings\": " + headingsJson + "\n  }";
             mut entries.pushBack(entry);
         }
     }
     if entries.length() == 0 { return "[]"; }
-    "[\n" + text.joinTexts(entries, ",\n") + "\n]"
+    "[\n" + entries.join(",\n") + "\n]"
 }

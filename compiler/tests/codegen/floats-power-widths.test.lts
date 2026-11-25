@@ -109,7 +109,7 @@ parityLines: List<String> = [
     "io.outputLine(fRound, z8, zf, w16, w32, w64, wf32a, wf32b, wf64);",
     "io.outputLine(p16, p32, pMix, pMix32, pPow, acc, facc, exactCheck, cmpWide);"
 ];
-paritySource := text.joinTexts(parityLines, "\n");
+paritySource := parityLines.join("\n");
 parityExpectedOut := "-128 127 -32768 32767 -2147483648 2147483647\n0.10000000149011612 0 0 127 32767 2147483647 -128 32767 -2147483648\n137 32777 127.0999984741211 2147516416 16129 2 2 false true\n";
 compilerTest.assertCompileRunTs(root, tsComp, "narrow-parity-ts", paritySource, parityExpectedOut);
 cParityCompiled := compilerTest.compileStdin(root, cComp, paritySource, "");
@@ -201,7 +201,7 @@ if not skipHeavy {
         midMinus1 + ".0"
     ];
     floatBoth: List<String> = [
-        "io := import \"core/io\"; io.outputLine(" + text.joinTexts(floatLiterals, ", ") + ");",
+        "io := import \"core/io\"; io.outputLine(" + floatLiterals.join(", ") + ");",
         "io := import \"core/io\"; var n: Float = 0.1; saved := n; n = 0.2; n = -n; io.outputLine(saved, n, +n, -(-n));",
         "io := import \"core/io\"; zero: Float; io.outputLine(zero, zero == 0.0, -zero, +zero);",
         "io := import \"core/io\"; a := 1.5; b := 2.5; io.outputLine(a == b, a =!= b, a < b, a <! b, a <= b, a <!= b, a > b, a >! b, a >= b, a >!= b);",
@@ -263,9 +263,9 @@ if not skipHeavy {
             else { tok };
         mut vecOutLines.pushBack(outTok);
     }
-    vecProgram := text.joinTexts(vecProgLines, "\n");
+    vecProgram := vecProgLines.join("\n");
     vecRec := compilerTest.assertContractStatus(contractsJson, "binary64-vectors", vecProgram, "", "", 0);
-    test.checkText("binary64-vectors contract stdout", text.joinTexts(vecOutLines, "\n") + "\n", vecRec.stdout);
+    test.checkText("binary64-vectors contract stdout", vecOutLines.join("\n") + "\n", vecRec.stdout);
     checkTsAndCContract("binary64-vectors", vecProgram, "", "", 0);
 
     floatInvalid: List<String> = [

@@ -4,17 +4,16 @@
 declaration carries a `/** ... */` doc comment and is published automatically to
 the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
-## Core Modules (`lib/core/` — 17 modules)
+## Core Modules (`lib/core/` — 16 modules)
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
 | `core/io` | Browser + CLI | Host-backed console/stream I/O (`output`, `outputLine`, `errorLine`, `inputLine`, `inputInt`, `inputFloat`, `inputAll`, `inputArgs`, `exit`) |
-| `core/int` | Browser + CLI | `Int.*` operations (`toText`, `toHex`), Int64 bounds, checked arithmetic, decimal/hex formatting and parsing |
-| `core/text` | Browser + CLI | `String.*` hard/soft/pure operations (`length`, `isEmpty`, `at`, `slice`, `trim`, `startsWithAt`, `indexOf`, `toInt`, ASCII predicates, split/join) |
+| `core/int` | Browser + CLI | `Int.*` operations (`toText`, `checkedAdd`/`Sub`/`Mul`/`Div`/`Rem`/`Neg`, `floorDiv`/`floorMod`) and Int64 bounds (`intMin`, `intMax`) |
+| `core/text` | Browser + CLI | `String.*` hard/soft/pure operations (`length`, `isEmpty`, `at`, `slice`, `trim`, `startsWithAt`, `indexOf`, `toInt`, `split`, `splitLines`, `replaceAll`, `padLeft`, `padRight`, `lessOrEqual`) |
 | `core/unicode` | Browser + CLI | UTF-8 / UTF-16 scalar encoding, decoding, and validation helpers |
-| `core/format` | Browser + CLI | Decimal/hex formatting, padding, and Int-join helpers |
-| `core/list` | Browser + CLI | `List.*` operations & index hooks (`pushBack`, `popBack`, `pushFront`, `popFront`, `length`, `isEmpty`, `map`, `filter`, `join`, `$getIndex`/`$setIndex`) |
-| `core/array` | Browser + CLI | Fixed-length `Array<T, N>` (`[T; N]` sugar) static & instance operations & index hooks (`filled`, `zeroed`, `fill`, `length`, `isEmpty`, `$getIndex`/`$setIndex`) |
+| `core/list` | Browser + CLI | Generic `List.*` operations & index hooks (`pushBack`, `popBack`, `pushFront`, `popFront`, `length`, `isEmpty`, `map`, `filter`, `fold`, `any`, `all`, `find`, `findIndex`, `indexOf`, `contains`, `dedup`, `sort`, `sortBy`, `sortTexts`, `join`, `$getIndex`/`$setIndex`) |
+| `core/array` | Browser + CLI | Fixed-length `Array<T, N>` (`[T; N]` sugar) static & collection operations & index hooks (`filled`, `zeroed`, `fill`, `length`, `isEmpty`, `toList`, `join`, `map`, `filter`, `fold`, `any`, `all`, `find`, `findIndex`, `indexOf`, `contains`, `dedup`, `sort`, `sortBy`, `sortTexts`, `$getIndex`/`$setIndex`) |
 | `core/map` | Browser + CLI | `Map.*` operations & index hooks (`get`, `getOr`, `has`, `set`, `remove`, `clear`, `keys`, `values`, `size`, `isEmpty`, `$getIndex`/`$setIndex`) |
 | `core/set` | Browser + CLI | `Set.*` operations (`has`, `add`, `remove`, `clear`, `values`, `size`, `isEmpty`) |
 | `core/crypto` | Browser + CLI | Host CSPRNG plus pure-Lite SHA-256, SHA-512, HMAC, and hex digests |

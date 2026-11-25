@@ -33,7 +33,7 @@ pub slugifyText := fn(value: String): String {
         }
         i = i + 1;
     }
-    joined := text.joinTexts(out, "");
+    joined := out.join("");
     var s := 0;
     var e := joined.length();
     loop s < e and joined.at(s) == "-" { s = s + 1; }
@@ -60,7 +60,7 @@ replaceSpacesCollapse := fn(raw: String): String {
         }
         i = i + 1;
     }
-    text.joinTexts(out, "").trim()
+    out.join("").trim()
 };
 
 cleanHtmlTitle := fn(entKeys: List<String>, entVals: List<String>, raw: String): String {
@@ -116,11 +116,11 @@ quoteStringList := fn(items: List<String>): String {
     loop items as it {
         mut quoted.pushBack(json.quoteString(it));
     }
-    "[" + text.joinTexts(quoted, ",") + "]"
+    "[" + quoted.join(",") + "]"
 };
 
 dedupTextsPreserveOrder := fn(items: List<String>): List<String> {
-    collections.dedupTexts(items)
+    items.dedup()
 };
 
 titleCaseTopic := fn(slug: String): String {
@@ -145,7 +145,7 @@ titleCaseTopic := fn(slug: String): String {
         }
         i = i + 1;
     }
-    text.joinTexts(parts, "")
+    parts.join("")
 };
 
 isAllDigitsStr := fn(s: String): Bool {
@@ -195,7 +195,7 @@ popJson: String, premium: Bool, status: String
     jsonLine = line, id = id, source = source, setVal = if hasSet { setVal } else { "" },
     hasNum = hasNum, numVal = numVal, cat = category, diffNormScaled = diffNormScaled,
     primaryTopic = if uniqTopics.length() > 0 { uniqTopics[0] } else { "" },
-    topicsJoined = text.joinTexts(uniqTopics, ";")
+    topicsJoined = uniqTopics.join(";")
     )
 };
 
@@ -211,7 +211,7 @@ collectHtmlPagesSorted := fn(cacheDir: String, subDir: String, prefix: String): 
             mut matched.pushBack(path.join(dir, name));
         }
     }
-    challenges.sortTexts(matched)
+    matched.sortTexts()
 };
 
 findClosingDoubleDiv := fn(html: String, startPos: Int): Int {
@@ -341,7 +341,7 @@ parseRoadmapListJson := fn(
 
     uniqFlat := dedupTextsPreserveOrder(flatIds);
     cnt := uniqFlat.length();
-    groupsField := if groupsJson.length() > 0 { ",\"groups\":[" + text.joinTexts(groupsJson, ",") + "]" } else { "" };
+    groupsField := if groupsJson.length() > 0 { ",\"groups\":[" + groupsJson.join(",") + "]" } else { "" };
     lJson := "{\"id\":" + json.quoteString(listId) + ",\"title\":" + json.quoteString(title)
         + ",\"kind\":\"roadmap\",\"source\":\"leetcode\",\"url\":" + json.quoteString(url)
         + ",\"description\":" + json.quoteString(description) + ",\"count\":" + cnt.toText()
@@ -432,7 +432,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
                         mut recTopSrcs.pushBack("none");
                         mut recStatuses.pushBack("verified");
                         mut recCsvRows.pushBack(challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",advent-of-code,puzzles,,,,"
-                        + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ","
+                        + challenges.csvEscapeField(tagsList.join(";")) + ","
                         + challenges.csvEscapeField("Day " + day.toText()) + "," + formatCsvTenths(tenths) + ",none,"
                         + challenges.csvEscapeField("stdin-stdout;two-part") + ",False," + challenges.csvEscapeField(curl));
                     }
@@ -503,7 +503,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         mut recStatuses.pushBack("verified");
         mut recTopicsAll.pushBack("math");
         mut recCsvRows.pushBack(challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",project-euler,mathematics,math,math,,"
-        + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + n.toText() + "," + formatCsvTenths(tenths)
+        + challenges.csvEscapeField(tagsList.join(";")) + "," + n.toText() + "," + formatCsvTenths(tenths)
         + ",curated," + challenges.csvEscapeField("stdin-stdout;single-answer") + ",False," + challenges.csvEscapeField(curl));
     }
 
@@ -564,21 +564,21 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             loop rawTopics as rt {
                 lk := json.readObjectString(catalogJsonText, lcField.valuePos, rt);
                 slugTp := if lk.found and lk.ok { lk.value } else { slugifyText(rt) };
-                if not list.listContainsText(mappedTopics, slugTp) {
+                if not mappedTopics.contains(slugTp) {
                     mut mappedTopics.pushBack(slugTp);
                 }
             }
             loop mappedTopics as mt { mut recTopicsAll.pushBack(mt); }
 
-            cat := if list.listContainsText(mappedTopics, "databases") { "databases" }
-            else if list.listContainsText(mappedTopics, "shell") { "shell" }
-            else if list.listContainsText(mappedTopics, "concurrency") { "concurrency" }
-            else if list.listContainsText(mappedTopics, "javascript") { "javascript" }
-            else if list.listContainsText(mappedTopics, "pandas") { "data-analysis" }
+            cat := if mappedTopics.contains("databases") { "databases" }
+            else if mappedTopics.contains("shell") { "shell" }
+            else if mappedTopics.contains("concurrency") { "concurrency" }
+            else if mappedTopics.contains("javascript") { "javascript" }
+            else if mappedTopics.contains("pandas") { "data-analysis" }
             else { "algorithms" };
 
-            fmtStr := if list.listContainsText(mappedTopics, "databases") { "sql" } else if list.listContainsText(mappedTopics, "shell") { "shell" } else { "function" };
-            langStr := if list.listContainsText(mappedTopics, "databases") { "sql" } else if list.listContainsText(mappedTopics, "shell") { "bash" } else if list.listContainsText(mappedTopics, "pandas") { "python" } else { "any" };
+            fmtStr := if mappedTopics.contains("databases") { "sql" } else if mappedTopics.contains("shell") { "shell" } else { "function" };
+            langStr := if mappedTopics.contains("databases") { "sql" } else if mappedTopics.contains("shell") { "bash" } else if mappedTopics.contains("pandas") { "python" } else { "any" };
             tpSrc := if mappedTopics.length() > 0 { "source" } else { "none" };
             stVal := if mappedTopics.length() > 0 { "verified" } else { "partial" };
 
@@ -605,7 +605,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             mut recStatuses.pushBack(stVal);
             mut recCsvRows.pushBack(challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",leetcode," + challenges.csvEscapeField(cat) + ","
             + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ","
-            + challenges.csvEscapeField(text.joinTexts(rawTopics, ";")) + "," + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ","
+            + challenges.csvEscapeField(rawTopics.join(";")) + "," + challenges.csvEscapeField(tagsList.join(";")) + ","
             + challenges.csvEscapeField(diffLabel) + "," + formatCsvTenths(normTenths) + "," + tpSrc + "," + challenges.csvEscapeField(fmtStr) + ","
             + (if paid { "True" } else { "False" }) + "," + challenges.csvEscapeField(curl));
         }
@@ -728,7 +728,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             loop rawTags as rt {
                 lk := json.readObjectString(catalogJsonText, cfField.valuePos, rt);
                 slugTp := if lk.found and lk.ok { lk.value } else { slugifyText(rt) };
-                if not list.listContainsText(mappedTags, slugTp) { mut mappedTags.pushBack(slugTp); }
+                if not mappedTags.contains(slugTp) { mut mappedTags.pushBack(slugTp); }
             }
             loop mappedTags as mt { mut recTopicsAll.pushBack(mt); }
 
@@ -754,7 +754,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             mut recStatuses.pushBack("verified");
             mut recCsvRows.pushBack(challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",codeforces,algorithms,"
             + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ","
-            + challenges.csvEscapeField(text.joinTexts(rawTags, ";")) + "," + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ","
+            + challenges.csvEscapeField(rawTags.join(";")) + "," + challenges.csvEscapeField(tagsList.join(";")) + ","
             + rating.toText() + "," + formatCsvTenths(tenths) + ",source,stdin-stdout,False," + challenges.csvEscapeField(curl));
         }
     }
@@ -823,7 +823,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
                     mut recStatuses.pushBack("verified");
                     mut recCsvRows.pushBack(challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",cses,algorithms,"
                     + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ",,"
-                    + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField(curSec)
+                    + challenges.csvEscapeField(tagsList.join(";")) + "," + challenges.csvEscapeField(curSec)
                     + "," + formatCsvTenths(baseVal) + ",section,stdin-stdout,False," + challenges.csvEscapeField(curl));
                     pos = aEnd + 4;
                 } else {
@@ -944,7 +944,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             mut recTopSrcs.pushBack("none");
             mut recStatuses.pushBack("verified");
             mut recCsvRows.pushBack(challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",atcoder,algorithms,,,,"
-            + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField(cDiffRaw[idx])
+            + challenges.csvEscapeField(tagsList.join(";")) + "," + challenges.csvEscapeField(cDiffRaw[idx])
             + "," + formatCsvTenths(cDiffTenths[idx]) + ",none,stdin-stdout,False," + challenges.csvEscapeField(curl));
         }
     }
@@ -1002,7 +1002,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
                     mut recStatuses.pushBack("verified");
                     mut recCsvRows.pushBack(challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",cryptopals,security,"
                     + challenges.csvEscapeField(rec.primaryTopic) + "," + challenges.csvEscapeField(rec.topicsJoined) + ",,"
-                    + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField("Set " + setNo)
+                    + challenges.csvEscapeField(tagsList.join(";")) + "," + challenges.csvEscapeField("Set " + setNo)
                     + "," + (1 + setNum).toText() + ",curated,programming,False," + challenges.csvEscapeField(curl));
                     pos = aEnd + 4;
                 } else {
@@ -1115,7 +1115,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             mut recTopSrcs.pushBack("curated");
             mut recStatuses.pushBack("verified");
             mut recCsvRows.pushBack(challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",rosalind,bioinformatics,bioinformatics,bioinformatics,,"
-            + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + "," + challenges.csvEscapeField(diffRaw)
+            + challenges.csvEscapeField(tagsList.join(";")) + "," + challenges.csvEscapeField(diffRaw)
             + "," + formatCsvTenths(tenths) + ",curated,stdin-stdout,False," + challenges.csvEscapeField(curl));
         }
     }
@@ -1190,11 +1190,11 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             mut recTopSrcs.pushBack("none");
             mut recStatuses.pushBack("verified");
             mut recCsvRows.pushBack(challenges.csvEscapeField(cid) + "," + challenges.csvEscapeField(ttl) + ",jane-street,puzzles,,,,"
-            + challenges.csvEscapeField(text.joinTexts(tagsList, ";")) + ",Puzzle,7.0,none,puzzle,False," + challenges.csvEscapeField(curl));
+            + challenges.csvEscapeField(tagsList.join(";")) + ",Puzzle,7.0,none,puzzle,False," + challenges.csvEscapeField(curl));
         }
     }
 
-    sortedIdsForCheck := challenges.sortTexts(recIds);
+    sortedIdsForCheck := recIds.sortTexts();
     var di := 1;
     loop di < sortedIdsForCheck.length() {
         if sortedIdsForCheck[di] == sortedIdsForCheck[di - 1] {
@@ -1289,7 +1289,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
 
     csesListSecs: mut List<String> = [];
     loop recOrd as idx {
-        if recSources[idx] == "cses" and not list.listContainsText(csesListSecs, recSets[idx]) {
+        if recSources[idx] == "cses" and not csesListSecs.contains(recSets[idx]) {
             mut csesListSecs.pushBack(recSets[idx]);
         }
     }
@@ -1370,9 +1370,9 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     schemaDir := path.join(challengesRootDir, "schema");
     _md1 := fs.makeDir(dataDir);
     _md2 := fs.makeDir(schemaDir);
-    _wj := fs.writeText(path.join(dataDir, "challenges.jsonl"), if allN == 0 { "" } else { text.joinTexts(sortedJsons, "\n") + "\n" });
-    _wl := fs.writeText(path.join(dataDir, "lists.jsonl"), if listsJsonEntries.length() == 0 { "" } else { text.joinTexts(listsJsonEntries, "\n") + "\n" });
-    _wc := fs.writeText(path.join(dataDir, "challenges.csv"), text.joinTexts(sortedCsvRows, "\r\n") + "\r\n");
+    _wj := fs.writeText(path.join(dataDir, "challenges.jsonl"), if allN == 0 { "" } else { sortedJsons.join("\n") + "\n" });
+    _wl := fs.writeText(path.join(dataDir, "lists.jsonl"), if listsJsonEntries.length() == 0 { "" } else { listsJsonEntries.join("\n") + "\n" });
+    _wc := fs.writeText(path.join(dataDir, "challenges.csv"), sortedCsvRows.join("\r\n") + "\r\n");
 
     siEntries: mut List<String> = [];
     taxSrcEntries: mut List<String> = [];
@@ -1388,7 +1388,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         mut taxSrcEntries.pushBack("{\"id\":" + json.quoteString(sid) + ",\"name\":" + json.quoteString(sname) + ",\"homepage\":" + json.quoteString(shome) + ",\"description\":" + json.quoteString(sdesc) + "}");
     }
 
-    uniqueSortedTopics := dedupTextsPreserveOrder(challenges.sortTexts(recTopicsAll));
+    uniqueSortedTopics := dedupTextsPreserveOrder(recTopicsAll.sortTexts());
     taxTopicEntries: mut List<String> = [];
     loop uniqueSortedTopics as tid {
         lblR := json.readObjectString(catalogJsonText, tlField.valuePos, tid);
@@ -1410,22 +1410,22 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     indexJson := "{\n"
     + "  \"total\": " + allN.toText() + ",\n"
     + "  \"built\": " + json.quoteString(time.localDate()) + ",\n"
-    + "  \"sources\": [" + text.joinTexts(siEntries, ",") + "],\n"
+    + "  \"sources\": [" + siEntries.join(",") + "],\n"
     + "  \"categories\": " + challenges.formatSortedCountsJson(sortedCats) + ",\n"
     + "  \"difficulty\": " + challenges.formatSortedCountsJson(sortedDiffs) + ",\n"
     + "  \"topics\": " + challenges.formatSortedCountsJson(recTopicsAll) + ",\n"
     + "  \"topics_source\": " + challenges.formatSortedCountsJson(sortedTopSrcs) + ",\n"
     + "  \"status\": " + challenges.formatSortedCountsJson(sortedStatuses) + ",\n"
-    + "  \"lists\": [" + text.joinTexts(listsMetaEntries, ",") + "]\n}\n";
+    + "  \"lists\": [" + listsMetaEntries.join(",") + "]\n}\n";
     _wi := fs.writeText(path.join(dataDir, "index.json"), indexJson);
 
     taxJson := "{\n"
     + "  \"version\": 1,\n"
     + "  \"note\": \"Generated by tools/build.ts from the topics present in the corpus.\",\n"
-    + "  \"categories\": [" + text.joinTexts(taxCatEntries, ",") + "],\n"
-    + "  \"topics\": [" + text.joinTexts(taxTopicEntries, ",") + "],\n"
+    + "  \"categories\": [" + taxCatEntries.join(",") + "],\n"
+    + "  \"topics\": [" + taxTopicEntries.join(",") + "],\n"
     + "  \"difficulty\": { \"scale\": \"normalized 1-10\", \"bands\": " + dbJson + " },\n"
-    + "  \"sources\": [" + text.joinTexts(taxSrcEntries, ",") + "]\n}\n";
+    + "  \"sources\": [" + taxSrcEntries.join(",") + "]\n}\n";
     _wt := fs.writeText(path.join(schemaDir, "taxonomy.json"), taxJson);
 
     sumLines: mut List<String> = [
@@ -1434,11 +1434,11 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     loop sourceOrder as sid {
         var sc := 0;
         loop sortedSources as rs { if rs == sid { sc = sc + 1; } }
-        (mut sumLines).pushBack("  " + challenges.padRight(sid, 16) + " " + challenges.padLeft(sc.toText(), 5));
+        (mut sumLines).pushBack("  " + sid.padRight(16) + " " + sc.toText().padLeft(5));
     }
-    (mut sumLines).pushBack("  " + challenges.padRight("TOTAL", 16) + " " + challenges.padLeft(allN.toText(), 5));
+    (mut sumLines).pushBack("  " + "TOTAL".padRight(16) + " " + allN.toText().padLeft(5));
     mut sumLines.pushBack("  topics: " + uniqueSortedTopics.length().toText() + "   categories: " + dedupTextsPreserveOrder(sortedCats).length().toText());
-    (ok = true, summaryText = text.joinTexts(sumLines, "\n"), error = "")
+    (ok = true, summaryText = sumLines.join("\n"), error = "")
 };
 
 /** CLI runner for `benchmark/challenges/tools/build.ts`. */

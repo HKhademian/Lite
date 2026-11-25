@@ -392,9 +392,9 @@ pub stripDeferredFnBodies := fn(exprCode: String): (code: String, pairsText: Str
         pos = pos + 1;
     }
     (mut outParts).pushBack(exprCode.slice(sliceStart, len));
-    pairsBody := textLib.joinTexts(pairParts, "");
+    pairsBody := pairParts.join("");
     pairsText := if pairsBody == "" { "" } else { "\n" + pairsBody };
-    (code = textLib.joinTexts(outParts, ""), pairsText = pairsText)
+    (code = outParts.join(""), pairsText = pairsText)
 };
 
 /** True when stripped eager code invokes a user/local/module callable or still contains an active `(function ` literal. */
@@ -904,7 +904,7 @@ extractExprDepsPair := fn(exprCode: String, skipLhsDecls: Bool): (allBag: String
         pos = pos + 1;
     }
     (mut outerParts).pushBack(exprCode.slice(sliceStart, len));
-    outerTokens := extractCodeRuntimeTokens(textLib.joinTexts(outerParts, ""), skipLhsDecls);
+    outerTokens := extractCodeRuntimeTokens(outerParts.join(""), skipLhsDecls);
     readBag = mergePipeBags(readBag, outerTokens);
     (allBag = allBag, readBag = readBag)
 };
@@ -1217,7 +1217,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                                     if sep > ik + 1 {
                                         depTok := itTokens.slice(ik + 1, sep);
                                         if not tokenInPipeBag(paramBag, depTok) and
-                                        not listLib.listContainsText(localShadowRuntimes, depTok) {
+                                        not localShadowRuntimes.contains(depTok) {
                                             if not tokenInPipeBag(allVisitedBag, depTok) {
                                                 allVisitedBag = appendPipeBag(allVisitedBag, depTok);
                                                 mut allQueue.pushBack(depTok);
@@ -1232,12 +1232,12 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                             }
                         }
                         if (it.kind.startsWithAt(0, "Local") or it.kind.startsWithAt(0, "Var")) and it.runtime =!= "" {
-                            if not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                            if not localShadowRuntimes.contains(it.runtime) {
                                 mut localShadowRuntimes.pushBack(it.runtime);
                                 mut localShadowDepths.pushBack(scopeDepth);
                             }
                         } else if it.kind.startsWithAt(0, "Assign") and it.runtime =!= "" {
-                            if not tokenInPipeBag(paramBag, it.runtime) and not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                            if not tokenInPipeBag(paramBag, it.runtime) and not localShadowRuntimes.contains(it.runtime) {
                                 assignUnreached := unreachedFutureLocalName(locals, it.runtime);
                                 if assignUnreached =!= "" {
                                     syntax.failAt(source, stmtAt, prefix, "cannot call before " + assignUnreached + " is initialized");
@@ -1401,7 +1401,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                                     if sep > ik + 1 {
                                         depTok := itReadToks.slice(ik + 1, sep);
                                         if not tokenInPipeBag(paramBag, depTok) and
-                                        not listLib.listContainsText(localShadowRuntimes, depTok) and
+                                        not localShadowRuntimes.contains(depTok) and
                                         not tokenInPipeBag(defWrittenBag, depTok) {
                                             if not tokenInPipeBag(readVisitedBag, depTok) {
                                                 readVisitedBag = appendPipeBag(readVisitedBag, depTok);
@@ -1417,12 +1417,12 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                             }
                         }
                         if (it.kind.startsWithAt(0, "Local") or it.kind.startsWithAt(0, "Var")) and it.runtime =!= "" {
-                            if not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                            if not localShadowRuntimes.contains(it.runtime) {
                                 mut localShadowRuntimes.pushBack(it.runtime);
                                 mut localShadowDepths.pushBack(scopeDepth);
                             }
                         } else if bodyBranchDepth == 0 and it.kind.startsWithAt(0, "Assign") and it.runtime =!= "" {
-                            if not tokenInPipeBag(paramBag, it.runtime) and not listLib.listContainsText(localShadowRuntimes, it.runtime) {
+                            if not tokenInPipeBag(paramBag, it.runtime) and not localShadowRuntimes.contains(it.runtime) {
                                 defWrittenBag = appendPipeBag(defWrittenBag, it.runtime);
                             }
                         }

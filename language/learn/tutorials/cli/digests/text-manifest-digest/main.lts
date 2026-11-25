@@ -1,6 +1,5 @@
 /* Project Tutorial 2: UTF-8 byte & word table formatter with 64-bit FNV-1a checksums. */
 
-fmt := import "core/format";
 io := import "core/io";
 text := import "core/text";
 unicode := import "core/unicode";
@@ -20,7 +19,7 @@ toHex8 := fn(value: Int): String {
         acc = acc :/ 16;
         step += 1;
     }
-    text.joinTexts(out, "")
+    out.join("")
 };
 
 /* 32-bit masked FNV-1a digest implemented cleanly with floored positive mod. */
@@ -54,7 +53,7 @@ splitLines := fn(raw: String): List<String> {
 
 raw := io.inputAll();
 lines := splitLines(raw);
-io.outputLine(fmt.padRightText("LINE", 22), fmt.padLeftText("CHARS", 6), fmt.padLeftText("BYTES", 6), "  DIGEST32");
+io.outputLine("LINE".padRight(22), "CHARS".padLeft(6), "BYTES".padLeft(6), "  DIGEST32");
 io.outputLine("-".repeat(46));
 
 var totalLines := 0;
@@ -68,9 +67,9 @@ loop lines as line {
     digest := fnv32Hex(bytes);
     preview := if chars > 20 { trimmed.slice(0, 17) + "..." } else { trimmed };
     io.outputLine(
-    fmt.padRightText(preview, 22),
-    fmt.padLeftText(chars.toText(), 6),
-    fmt.padLeftText(byteCount.toText(), 6),
+    preview.padRight(22),
+    chars.toText().padLeft(6),
+    byteCount.toText().padLeft(6),
     "  " + digest,
     );
     totalLines += 1;

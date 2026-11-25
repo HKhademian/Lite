@@ -12,7 +12,7 @@ Every topic is backed by a verified scenario manifest under [artifacts/showcases
 
 - [01 — Bindings, Zero Defaults, Reserved Storage, and Mutability](lite://play/example/showcase-bindings-and-mutability): `:=`, zero-initialized declarations, `= ?` reserved storage, `var`, `=`, and `+=`. ([declarations](lite://doc/declarations-and-assignment), [zero init](lite://doc/zero-initialization), [reserved storage](lite://doc/reserved-storage), [mutability](lite://doc/mutability))
 - [02 — Integers, Floats, Division Families, Narrow Widths, and Power](lite://play/example/showcase-numbers-and-division): truncating `/` & `%` vs floor `:/` & `:%`, `Float` contexts, `Int8`/`Int16`/`Int32`/`Float32`, and right-associative `**`. ([numbers](lite://doc/numbers), [operators](lite://doc/operators), [power](lite://doc/power-and-negation))
-- [03 — Escapes, Code-Point Text Operations, and UTF-8 Conversion](lite://play/example/showcase-strings-and-unicode): escapes, `core/text` code-point indexing and trimming, `core/unicode` scalar/UTF-8 round-trips, and `core/format` joins. ([strings](lite://doc/strings))
+- [03 — Escapes, Code-Point Text Operations, and UTF-8 Conversion](lite://play/example/showcase-strings-and-unicode): escapes, `core/text` code-point indexing and trimming, `core/unicode` scalar/UTF-8 round-trips, and `List.join`. ([strings](lite://doc/strings))
 
 ## Chapter 2 — Control Flow (`control/`)
 
@@ -46,5 +46,5 @@ Every topic is backed by a verified scenario manifest under [artifacts/showcases
 ## Chapter 6 — Modules & Core Utilities (`modules/`)
 
 - [01 — Namespace Imports, `pub` Contracts, and Private Module Helpers](lite://play/example/showcase-modules-and-visibility): importing [math-stats](lite://repo/language/showcases/modules/visibility/helpers/math-stats.lts) for `pub` types, values, and functions while keeping helpers private. ([visibility](lite://doc/visibility), [blocks](lite://doc/blocks-and-results))
-- [02 — Path Normalization, Temp Workspaces, File I/O, and Finally Cleanup](lite://play/example/showcase-files-paths-and-cleanup): `core/path`, `core/file` temporary directories, `core/format` alignment, and `finally` cleanup. ([tooling](lite://doc/tooling-and-learning), [finally](lite://doc/finally))
+- [02 — Path Normalization, Temp Workspaces, File I/O, and Finally Cleanup](lite://play/example/showcase-files-paths-and-cleanup): `core/path`, `core/file` temporary directories, `String.padRight` alignment, and `finally` cleanup. ([tooling](lite://doc/tooling-and-learning), [finally](lite://doc/finally))
 - [03 — Cryptographic Digests, Encodings, and Host/Clock Invariants](lite://play/example/showcase-crypto-time-and-env): `core/crypto` SHA-256, HMAC, Hex & Base64 round-trips alongside `core/time` and `core/process` checks. ([tooling](lite://doc/tooling-and-learning))

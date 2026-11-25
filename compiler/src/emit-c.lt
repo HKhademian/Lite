@@ -684,7 +684,7 @@ cCall := fn(kind: String, code: String): String {
                 mut labels.pushBack(cLiteral.textLiteralCode(dName + "." + frontend.enumCaseNameAt(kind, ci)));
                 ci = ci + 1;
             }
-            "printf(\"%s\", ((const char *const[]){" + textLib.joinTexts(labels, ", ") + "}[" + code + "]))"
+            "printf(\"%s\", ((const char *const[]){" + labels.join(", ") + "}[" + code + "]))"
         }
         frontend.isFloatScalarKind(kind) { "lt_print_float((double)(" + code + "))" }
         cListTagForKind(kind) =!= "" { "lt_list_" + cListTagForKind(kind) + "_print(" + code + ")" }

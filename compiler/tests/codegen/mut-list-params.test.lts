@@ -36,9 +36,9 @@ src :=
 "pushChunk(mut b, \"hello\");\n" +
 "pushChunk(mut b, \"\");\n" +
 "pushPair(mut b, \" \", \"world\");\n" +
-"io.outputLine(b.length(), text.joinTexts(b, \"\"));\n" +
+"io.outputLine(b.length(), b.join(\"\"));\n" +
 "mut b.clear();\n" +
-"io.outputLine(b.length(), text.joinTexts(b, \"\"));\n";
+"io.outputLine(b.length(), b.join(\"\"));\n";
 
 expected :=
 "3 hello world\n" +

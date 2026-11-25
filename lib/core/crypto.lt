@@ -647,7 +647,7 @@ pub base64Encode := fn(bytes: List<Int>): String {
         mut parts.pushBack(c0 + c1 + b64Alphabet.at(rem1 * 4 + (b2 / 64)) + b64Alphabet.at(b2 % 64));
         index += 3;
     }
-    text.joinTexts(parts, "")
+    parts.join("")
 }
 
 /** Decodes standard RFC 4648 base64 text into `0..255` byte values, faulting on malformed input. */
@@ -685,7 +685,7 @@ pub hexEncode := fn(bytes: List<Int>): String {
     loop bytes as b {
         mut parts.pushBack(hexAlphabet.at(b / 16) + hexAlphabet.at(b % 16));
     }
-    text.joinTexts(parts, "")
+    parts.join("")
 }
 
 /** Decodes hexadecimal text into `0..255` byte values, faulting on malformed input. */

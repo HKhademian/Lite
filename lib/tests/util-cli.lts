@@ -3,15 +3,15 @@ cli := import "util/cli";
 test := import "core/test";
 
 sepArgs: List<String> = ["--", "a.lts", "--", "--flag"];
-test.checkText("stripLeadingSeparator", "a.lts,--,--flag", text.joinTexts(cli.stripLeadingSeparator(sepArgs), ","));
+test.checkText("stripLeadingSeparator", "a.lts,--,--flag", cli.stripLeadingSeparator(sepArgs).join(","));
 plainArgs: List<String> = ["a.lts", "--flag"];
-test.checkText("stripLeadingSeparator noop", "a.lts,--flag", text.joinTexts(cli.stripLeadingSeparator(plainArgs), ","));
+test.checkText("stripLeadingSeparator noop", "a.lts,--flag", cli.stripLeadingSeparator(plainArgs).join(","));
 
 /* Verify in-place munching with list.popFront leaves remaining args untouched on caller list. */
 munched: mut List<String> = ["--flag", "target.lts", "--extra"];
 first := mut munched.popFront();
 test.checkText("popFront token", "--flag", first);
-test.checkText("popFront remaining", "target.lts,--extra", text.joinTexts(munched, ","));
+test.checkText("popFront remaining", "target.lts,--extra", munched.join(","));
 
 test.checkText("entry bin/lite", "lite", cli.entryCommand("/repo/bin/lite"));
 test.checkText("entry generated cli", "lite", cli.entryCommand("/repo/dist/tools/cli.ts"));

@@ -118,7 +118,7 @@ slice1TsOnlyRej: List<String> = [
 ];
 assertRejectsBothWithAny("slice1-ts-only-dup", slice1TsOnlyRej, false, dupSubs);
 
-slice1CombinedShared := text.joinTexts([
+slice1CombinedShared := [
     "io := import \"core/io\";",
     "Box := alias Int;",
     "x: Box = 10;",
@@ -150,7 +150,7 @@ slice1CombinedShared := text.joinTexts([
     "}",
     "if true { io := 99; sum += io; }",
     "io.outputLine(x, sum);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "slice1-shared ts", slice1CombinedShared, "10 362\n");
 cS1Comp := compilerTest.compileStdin(root, cComp, slice1CombinedShared, "");
 test.checkInt("slice1-shared c compile: " + cS1Comp.stderr, 0, cS1Comp.status);
@@ -160,7 +160,7 @@ if ccProbe.available {
     test.checkText("slice1-shared c stdout", "10 362\n", cS1Run.stdout);
 }
 
-slice1TsCombined := text.joinTexts([
+slice1TsCombined := [
     "io := import \"core/io\";",
     "helper := fn(a: Int): Int { var r := 0; { a := a + 10; r = a; } return r; };",
     "outerVal := helper(5);",
@@ -179,11 +179,11 @@ slice1TsCombined := text.joinTexts([
     "  helper + shadowed",
     "};",
     "io.outputLine(outerVal, v + acc, tagVal, helper(1));"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "slice1-ts-combined", slice1TsCombined, "15 225 7 11\n");
 
 /* Slice 2a: inner-block type aliases, parallel root wiring, and execution-trace safety on TS and C */
-slice2aSharedPos := text.joinTexts([
+slice2aSharedPos := [
     "io := import \"core/io\";",
     "Item := alias Int;",
     "Saved := alias Item;",
@@ -227,7 +227,7 @@ slice2aSharedPos := text.joinTexts([
     "pureVal := { ValT := alias Int; 5 };",
     "vOuter: Item = pureVal;",
     "io.outputLine(acc, vOuter);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "slice2a-shared ts", slice2aSharedPos, "ok\n66 5\n");
 cS2aComp := compilerTest.compileStdin(root, cComp, slice2aSharedPos, "");
 test.checkInt("slice2a-shared c compile: " + cS2aComp.stderr, 0, cS2aComp.status);
@@ -254,7 +254,7 @@ loop slice2aSharedRej as r {
     test.check("slice2a-rej c msg: " + rC.stderr, rC.stderr.contains(r.m1) or (r.m2 =!= "" and rC.stderr.contains(r.m2)));
 }
 
-slice2aTsPos := text.joinTexts([
+slice2aTsPos := [
     "io := import \"core/io\";",
     "list := import \"core/list\";",
     "f := fn(): Int { g() };",
@@ -292,7 +292,7 @@ slice2aTsPos := text.joinTexts([
     "tmp2 := 11;",
     "io.outputLine(f(), if even(4) { 1 } else { 0 }, apply(g), useForward(), count);",
     "io.outputLine(read(), before(), saved(), blkFn(), blk, valBlk, fnWithAlias(), thenResult, finAcc, finVal);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "slice2a-ts-pos", slice2aTsPos, "7 1 7 47 1\n5 9 11 11 5 4 8 5 4 1\n");
 
 slice2aTsRej: List<(src: String, msg: String)> = [
@@ -421,7 +421,7 @@ loop slice2bBadRej as r {
 }
 
 /* Slice 3: lexical captures, inner-block symbol wiring, trace safety, and escaping checks on TS */
-slice3Caps := text.joinTexts([
+slice3Caps := [
     "io := import \"core/io\";",
     "a := { x := 1; f := fn(): Int { x }; f() };",
     "var gx := 1;",
@@ -442,10 +442,10 @@ slice3Caps := text.joinTexts([
     "}",
     "deadCap := { outerX := 1; z := fn(): Int { outerX }; 5 };",
     "io.outputLine(a, b, c, d, wx, outerParam(7), outerCall(), g, closures[0](), closures[1](), closures[2](), deadCap);"
-], "\n");
+].join("\n");
 checkTsDceCase("slice3 captures", slice3Caps, "1 1 2 3 9 7 4 11 10 20 30 5\n", ["const lite_deadCap = 5n;"], ["outerX"]);
 
-slice3Escape := text.joinTexts([
+slice3Escape := [
     "io := import \"core/io\";",
     "makeReader := fn(x: Int): fn(): Int {",
     "  fn(): Int { x }",
@@ -462,10 +462,10 @@ slice3Escape := text.joinTexts([
     "c1 := makeCounter(0);",
     "c2 := makeCounter(10);",
     "io.outputLine(r1(), r2(), c1(), c1(), c2(), c1());"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "slice3 escape", slice3Escape, "41 99 1 2 11 3\n");
 
-slice3Wiring := text.joinTexts([
+slice3Wiring := [
     "io := import \"core/io\";",
     "valRes := {",
     "  countdown := fn(n: Int): Int {",
@@ -538,10 +538,10 @@ slice3Wiring := text.joinTexts([
     "  getP()",
     "};",
     "io.outputLine(valRes, ifRes, matchRes, loopRes, thenRes, finallyRes, finAcc, topFnRes, topNamedFn(2), dupBindRes);"
-], "\n");
+].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "slice3 wiring", slice3Wiring, "31 7 9 5 8 15 3 103 103 5\n");
 
-slice3Precedence := text.joinTexts([
+slice3Precedence := [
     "io := import \"core/io\";",
     "add := fn(x: Int): Int { x * 10 };",
     "s := 1;",
@@ -601,7 +601,7 @@ slice3Precedence := text.joinTexts([
     "  ops[0]()",
     "};",
     "io.outputLine(levelResult, eagerShadow, outerMut, mixedOrder, fnShadowRes, aliasDceRes, writeBeforeReadRes, listPushRes);"
-], "\n");
+].join("\n");
 checkTsDceCase("slice3 precedence", slice3Precedence, "9234 15 2 4 4 21 9 77\n", emptySubs, ["999n"]);
 
 cSlice3a := compilerTest.compileStdin(root, cComp, "{ x := 1; f := fn(): Int { x }; _ := f(); }", "");

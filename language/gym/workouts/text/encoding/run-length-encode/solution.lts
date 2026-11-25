@@ -22,5 +22,5 @@ if n == 0 {
         i += 1;
     }
     (mut parts).pushBack(cur + run.toText());
-    io.outputLine(text.joinTexts(parts, ""));
+    io.outputLine(parts.join(""));
 }

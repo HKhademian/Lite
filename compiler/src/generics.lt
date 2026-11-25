@@ -274,7 +274,7 @@ pub encodeBindings := fn(genericParams: String, bindings: Map<String, String>): 
     loop splitGenericParams(genericParams) as p {
         mut parts.pushBack(p + "=" + bindings.getOr(p, ""));
     }
-    textLib.joinTexts(parts, "|")
+    parts.join("|")
 };
 
 /** Encodes only currently bound entries of `bindings` in `genericParams` order as `T=Int`. */
@@ -285,7 +285,7 @@ pub encodePartialBindings := fn(genericParams: String, bindings: Map<String, Str
             mut parts.pushBack(p + "=" + bindings.getOr(p, ""));
         }
     }
-    textLib.joinTexts(parts, "|")
+    parts.join("|")
 };
 
 /** Decodes `"T=Int|U=String"` into a list of `(name, kind)` pairs. */
@@ -314,7 +314,7 @@ mangleBindings := fn(bindingsEncoded: String): String {
     loop decodeBindings(bindingsEncoded) as b {
         mut parts.pushBack(mangleOneKind(b.kind));
     }
-    joined := textLib.joinTexts(parts, "__");
+    joined := parts.join("__");
     if joined.length() > 64 {
         return "H_" + hashHex32(bindingsEncoded);
     }
@@ -463,7 +463,7 @@ pub substKindForExpected := fn(genericParams: String, pattern: String, bindings:
         } else {
             substKind(genericParams, rawRet, bindings)
         };
-        return "fn(" + textLib.joinTexts(parts, ",") + "):" + retHint;
+        return "fn(" + parts.join(",") + "):" + retHint;
     }
     ""
 };

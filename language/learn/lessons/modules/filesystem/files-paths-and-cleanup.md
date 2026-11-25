@@ -1,6 +1,6 @@
 # Paths, Temp Workspaces, File I/O & `finally` Cleanup
 
-Combine pure path math (`core/path`), aligned tables (`core/format`), and host filesystem operations (`core/file`) guarded by `finally` cleanup.
+Combine pure path math (`core/path`), aligned text columns (`core/text`), and host filesystem operations (`core/file`) guarded by `finally` cleanup.
 
 ## Walkthrough
 

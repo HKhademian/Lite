@@ -1,7 +1,6 @@
 /** Frontend lexical trivia, comments, operator scanning, literals, and lookahead block/construct scanners. */
 
 diagLib := import "core/diag";
-formatLib := import "core/format";
 sourceLib := import "core/source";
 textLib := import "core/text";
 tb := import "util/text-builder";
@@ -17,7 +16,7 @@ Operator := alias (text: String, width: Int);
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 pub failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
     place := sourceLib.lineColumn(source, position);
-    diagLib.fail(prefix, formatLib.decimalText(place.line) + ":" + formatLib.decimalText(place.column) + ": " + message);
+    diagLib.fail(prefix, place.line.toText() + ":" + place.column.toText() + ": " + message);
 };
 
 /** Consumes the exact `symbol` at `position`, or reports a source-positioned diagnostic and exits 2. */
@@ -1370,5 +1369,5 @@ pub lineStartCodes := fn(source: String): String {
         (mut parts).pushBack((nl + 1).toText());
         position = nl + 1;
     }
-    textLib.joinTexts(parts, ", ")
+    parts.join(", ")
 };

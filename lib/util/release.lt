@@ -163,7 +163,7 @@ pub selectComponentRelease := fn(rootDir: String, tag: String): (ok: Bool, hasTa
     components := allComponents();
     keys := json.objectKeys(verRead.text, 0);
     loop keys as key {
-        if key == "igniter" or not list.listContainsText(components, key) {
+        if key == "igniter" or not components.contains(key) {
             return (ok = false, hasTag = false, component = "", version = "", error = "unknown versions.json component: " + key);
         }
     }
@@ -246,7 +246,7 @@ pub versionsJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: Str
             }
         }
     }
-    (ok = true, jsonText = "{" + text.joinTexts(entries, ",") + "}", error = "")
+    (ok = true, jsonText = "{" + entries.join(",") + "}", error = "")
 };
 
 pub PROFILE_TOOLS := "tools";
@@ -258,7 +258,7 @@ pub releaseProfile := fn(hasTag: Bool, component: String, version: String): Stri
     toolComponents: List<String> = [
     "cli", "checker", "tester", "verifier", "benchmark", "release", "docs", "vscode", "formatter", "linker", "doctor"
     ];
-    if not hasTag or list.listContainsText(toolComponents, component) {
+    if not hasTag or toolComponents.contains(component) {
         return PROFILE_TOOLS;
     }
     if component == "project" or component == "language" or component == "scripting" {
@@ -350,7 +350,7 @@ tagMessage: String
     mut lines.pushBack("");
     mut lines.pushBack("See `docs/start-here.md`, `docs/release-automation.md`, and `compiler/transition-plan.md` in the archive.");
     mut lines.pushBack("");
-    text.joinTexts(lines, "\n")
+    lines.join("\n")
 };
 
 /** Serializes the validated component versions map as formatted JSON lines for `manifest.json`. */
@@ -384,5 +384,5 @@ pub formatComponentVersionsJson := fn(rootDir: String, indent: String): (ok: Boo
             }
         }
     }
-    (ok = true, jsonText = "{\n" + text.joinTexts(entries, ",\n") + "\n" + indent + "}", error = "")
+    (ok = true, jsonText = "{\n" + entries.join(",\n") + "\n" + indent + "}", error = "")
 };

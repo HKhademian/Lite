@@ -263,7 +263,7 @@ loop outEntries as name {
         mut rawExpected.pushBack(name);
     }
 }
-expectedFiles := challenges.sortTexts(rawExpected);
+expectedFiles := rawExpected.sortTexts();
 
 sumLines := splitLines(sumsText.trimEnd());
 test.checkInt("SHA256SUMS line count", expectedFiles.length(), sumLines.length());

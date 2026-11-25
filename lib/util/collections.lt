@@ -1,34 +1,7 @@
-/** Reusable O(n log n) comparator-driven merge sorts and O(n) Set/Map collection helpers. */
-
-unicode := import "core/unicode";
+/** Reusable O(n log n) comparator-driven index sort and O(n) frequency map helpers. */
 
 /** Comparator returning true when `a` should be ordered before or equal to `b`. */
 pub IntComparator := alias fn(Int, Int): Bool;
-
-/** Comparator returning true when `a` should be ordered before or equal to `b`. */
-pub TextComparator := alias fn(String, String): Bool;
-
-ASCII_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-
-/** Lexicographical Unicode code-point comparison (`a <= b`), with a fast ASCII path. */
-pub textLessOrEqual := fn(a: String, b: String): Bool {
-    la := a.length();
-    lb := b.length();
-    limit := if la < lb { la } else { lb };
-    var i := 0;
-    loop i < limit {
-        ca := a.at(i);
-        cb := b.at(i);
-        if ca =!= cb {
-            oa := ASCII_ORDER.indexOf(ca, 0);
-            ob := ASCII_ORDER.indexOf(cb, 0);
-            if oa >= 0 and ob >= 0 { return oa <= ob; }
-            return unicode.codePointAt(ca, 0) <= unicode.codePointAt(cb, 0);
-        }
-        i += 1;
-    }
-    la <= lb
-};
 
 /** Returns a stable O(n log n) sorted index permutation `[0..count-1]` ordered by `lessOrEq(i, j)`. */
 pub sortIndicesBy := fn(count: Int, lessOrEq: IntComparator): List<Int> {
@@ -71,56 +44,6 @@ pub sortIndicesBy := fn(count: Int, lessOrEq: IntComparator): List<Int> {
         width = width * 2;
     }
     src
-};
-
-/** Returns a stable O(n log n) copy of `values` ordered by `lessOrEq(a, b)`. */
-pub sortIntsBy := fn(values: List<Int>, lessOrEq: IntComparator): List<Int> {
-    n := values.length();
-    if n <= 1 { return values; }
-    order := sortIndicesBy(n, fn(i: Int, j: Int): Bool { lessOrEq(values[i], values[j]) });
-    out: mut List<Int> = [];
-    loop order as idx {
-        mut out.pushBack(values[idx]);
-    }
-    out
-};
-
-/** Returns a stable O(n log n) copy of `values` ordered by `lessOrEq(a, b)`. */
-pub sortTextsBy := fn(values: List<String>, lessOrEq: TextComparator): List<String> {
-    n := values.length();
-    if n <= 1 { return values; }
-    order := sortIndicesBy(n, fn(i: Int, j: Int): Bool { lessOrEq(values[i], values[j]) });
-    out: mut List<String> = [];
-    loop order as idx {
-        mut out.pushBack(values[idx]);
-    }
-    out
-};
-
-/** Returns unique elements of `values` preserving first-seen order in O(n). */
-pub dedupTexts := fn(values: List<String>): List<String> {
-    seen: mut Set<String>;
-    out: mut List<String> = [];
-    loop values as v {
-        if not seen.has(v) {
-            mut seen.add(v);
-            mut out.pushBack(v);
-        }
-    }
-    out
-};
-
-/** Returns unique elements of `values` preserving first-seen order in O(n). */
-pub dedupInts := fn(values: List<Int>): List<Int> {
-    seen: mut Set<Int>;
-    out: mut List<Int> = [];
-    loop values as v {
-        if not seen.has(v) {
-            mut seen.add(v);
-            mut out.pushBack(v);
-        }
-    }
-    out
 };
 
 /** Counts occurrences of each string in `values` in O(n), preserving first-seen key order. */

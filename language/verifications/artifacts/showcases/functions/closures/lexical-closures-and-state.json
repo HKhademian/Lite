@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/functions/closures/lexical-closures-and-state.lts",
-    "hash": "sha256:1fa0e4ece0beb4b478d8ba1468d1138c43b8bbf2785592c72b014dddce2a2061"
+    "hash": "sha256:9cac0841308b318023ba7bcee60452d17a4b3815815d6d4244ed4331d26734f5"
   },
   "features": [
     "feature.functions.closures.lexical-captures",

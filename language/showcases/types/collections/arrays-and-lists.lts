@@ -1,7 +1,6 @@
 /* Showcase 03.02 — Fixed arrays [T; N], growable List<T>, mut grants, and value snapshots. */
 
 io := import "core/io";
-fmt := import "core/format";
 
 /* Inferred array literal has a fixed length `[Int; 3]`. */
 fixed: [Int; 3] = [10, 20, 30];
@@ -22,9 +21,9 @@ seed: List<Int> = [5];
 replacement: List<Int> = [7, 8, 9];
 var mut bag := seed;
 mut bag.pushBack(6);
-bagAfterPush := fmt.joinIntTexts(bag, ",");
+bagAfterPush := bag.map(fn(x: Int): String { x.toText() }).join(",");
 bag = replacement;
 
 io.outputLine("fixedSum:", fixedTotal, "at[1]:", fixed[1]);
-io.outputLine("popped:", head, tail, "queue:", fmt.joinIntTexts(queue, ","));
-io.outputLine("saved:", fmt.joinIntTexts(saved, ","), "seed:", fmt.joinIntTexts(seed, ","), "pushed:", bagAfterPush, "bag:", fmt.joinIntTexts(bag, ","));
+io.outputLine("popped:", head, tail, "queue:", queue.map(fn(x: Int): String { x.toText() }).join(","));
+io.outputLine("saved:", saved.map(fn(x: Int): String { x.toText() }).join(","), "seed:", seed.map(fn(x: Int): String { x.toText() }).join(","), "pushed:", bagAfterPush, "bag:", bag.map(fn(x: Int): String { x.toText() }).join(","));

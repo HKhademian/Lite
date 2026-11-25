@@ -22,12 +22,12 @@ pub appendLine := fn(b: mut TextBuilder, line: String): Unit {
 
 /** Materializes all buffered chunks into one String via a single O(n) pass. */
 pub build := fn(b: TextBuilder): String {
-    text.joinTexts(b, "")
+    b.join("")
 };
 
 /** Materializes all buffered chunks joined by `separator` via a single O(n) pass. */
 pub buildJoined := fn(b: TextBuilder, separator: String): String {
-    text.joinTexts(b, separator)
+    b.join(separator)
 };
 
 /** Returns the number of buffered chunks currently stored in `b`. */

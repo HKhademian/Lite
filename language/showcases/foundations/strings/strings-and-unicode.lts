@@ -2,7 +2,6 @@
 
 io := import "core/io";
 unicode := import "core/unicode";
-fmt := import "core/format";
 
 /* String literals support escapes and concatenation; indexing operates on Unicode code points. */
 raw := "  Hello\t\"Lite\" 🚀  ";
@@ -18,5 +17,5 @@ utf8Bytes := unicode.utf8Encode(phrase);
 decoded := unicode.utf8DecodeStrict(utf8Bytes);
 
 io.outputLine("cleaned:", tag, "edges:", firstCh, lastCh, "len:", cleaned.length());
-io.outputLine("scalars:", fmt.joinIntTexts(scalars, ","));
-io.outputLine("utf8-bytes:", fmt.joinIntTexts(utf8Bytes, " "), "roundtrip:", decoded.ok, decoded.text);
+io.outputLine("scalars:", scalars.map(fn(x: Int): String { x.toText() }).join(","));
+io.outputLine("utf8-bytes:", utf8Bytes.map(fn(x: Int): String { x.toText() }).join(" "), "roundtrip:", decoded.ok, decoded.text);

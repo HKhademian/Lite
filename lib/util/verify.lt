@@ -308,7 +308,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
         }
         allowed: List<String> = ["id", "summary", "case", "status", "docs"];
         loop json.objectKeys(src, itemPos) as ik {
-            if not list.listContainsText(allowed, ik) {
+            if not allowed.contains(ik) {
                 return (ok = false, text = "", error = label + ": unexpected key " + ik);
             }
         }
@@ -385,7 +385,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
 
     allowedTop: List<String> = ["id", "kind", "source", "features", "guideline", "description", "append", "targets", "cases"];
     loop json.objectKeys(src, 0) as k {
-        if not list.listContainsText(allowedTop, k) {
+        if not allowedTop.contains(k) {
             return failManifestText(label + ": unexpected key " + k);
         }
     }
@@ -431,7 +431,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
             return failManifestText(label + ".features: unknown feature " + featName);
         }
     }
-    if expectedKind == KIND_FEATURE and not list.listContainsText(featItems, manifestId) {
+    if expectedKind == KIND_FEATURE and not featItems.contains(manifestId) {
         return failManifestText(label + ".features: feature case must include its own id");
     }
 
@@ -447,7 +447,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
             if t =!= "ts" and t =!= "c" {
                 return failManifestText(label + ".targets: unknown target " + t);
             }
-            if list.listContainsText(seenTargets, t) {
+            if seenTargets.contains(t) {
                 return failManifestText(label + ".targets: expected unique target names");
             }
             (mut seenTargets).pushBack(t);
@@ -496,7 +496,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
             return failManifestText(sLabel + ": expected an object");
         }
         loop json.objectKeys(src, sPos) as sk {
-            if not list.listContainsText(allowedScenario, sk) {
+            if not allowedScenario.contains(sk) {
                 return failManifestText(sLabel + ": unexpected key " + sk);
             }
         }
@@ -628,8 +628,8 @@ runCoverage := fn(rootDir: String, featureIds: List<String>): Int {
     io.outputLine("examples: " + exampleCount.toText() + "/" + exTotal.toText() + " manifests");
     io.outputLine("samples: " + sampleCount.toText() + "/" + smTotal.toText() + " manifests");
     io.outputLine("showcases: " + showcaseCount.toText() + "/" + shTotal.toText() + " manifests");
-    exJoined := if coveredExamples.length() > 0 { text.joinTexts(coveredExamples, ", ") } else { "(none)" };
-    smJoined := if coveredSamples.length() > 0 { text.joinTexts(coveredSamples, ", ") } else { "(none)" };
+    exJoined := if coveredExamples.length() > 0 { coveredExamples.join(", ") } else { "(none)" };
+    smJoined := if coveredSamples.length() > 0 { coveredSamples.join(", ") } else { "(none)" };
     io.outputLine("covered examples: " + exJoined);
     io.outputLine("covered samples: " + smJoined);
 
@@ -691,9 +691,9 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
         if not hRes.ok { return (ok = false, hex = "", error = hRes.error); }
         (mut depParts).pushBack("[" + json.quoteString(dep) + "," + json.quoteString(hRes.hex) + "]");
     }
-    (mut parts).pushBack("[" + text.joinTexts(depParts, ",") + "]");
+    (mut parts).pushBack("[" + depParts.join(",") + "]");
     mut parts.pushBack(proc.runtimeVersion());
-    (ok = true, hex = crypto.sha256Bytes(unicode.utf8Encode(text.joinTexts(parts, "\n"))), error = "")
+    (ok = true, hex = crypto.sha256Bytes(unicode.utf8Encode(parts.join("\n"))), error = "")
 };
 
 loadVerifyCache := fn(cacheFile: String, enabled: Bool): Set<String> {
@@ -725,7 +725,7 @@ saveVerifyCache := fn(cacheFile: String, passedKeys: Set<String>): Unit {
     loop passedKeys as k {
         mut entries.pushBack(json.quoteString(k) + ":true");
     }
-    body := "{\"version\":1,\"passed\":{" + text.joinTexts(entries, ",") + "}}\n";
+    body := "{\"version\":1,\"passed\":{" + entries.join(",") + "}}\n";
     _w := fs.writeText(cacheFile, body);
 };
 
@@ -735,7 +735,7 @@ quotedListJson := fn(items: List<String>): String {
     loop items as item {
         mut parts.pushBack(json.quoteString(item));
     }
-    "[" + text.joinTexts(parts, ",") + "]"
+    "[" + parts.join(",") + "]"
 };
 
 writeShardResult := fn(resultPath: String, executed: Int, cached: Int, failures: Int, added: List<String>, removed: List<String>): Unit {
@@ -836,7 +836,7 @@ passedKeysIn: Set<String>
         mut wArgs.pushBack(json.quoteString(resFile));
 
         (mut workerCmds).pushBack(workerBin);
-        mut workerArgsJson.pushBack("[" + text.joinTexts(wArgs, ",") + "]");
+        mut workerArgsJson.pushBack("[" + wArgs.join(",") + "]");
         mut shardResultFiles.pushBack(resFile);
         w = w + 1;
     }
@@ -994,7 +994,7 @@ invalidatesVerification := fn(relPath: String): Bool {
     "lib/util/streams.lt",
     "lib/util/json.lt"
     ];
-    if list.listContainsText(exact, relPath) { return true; }
+    if exact.contains(relPath) { return true; }
     prefixes: List<String> = [
     "compiler/src/",
     "compiler/bootstrap/",
@@ -1051,7 +1051,7 @@ formatStringArrayJson := fn(items: List<String>, indent: String): String {
     loop items as item {
         mut quoted.pushBack(indent + "  " + json.quoteString(item));
     }
-    "[\n" + text.joinTexts(quoted, ",\n") + "\n" + indent + "]"
+    "[\n" + quoted.join(",\n") + "\n" + indent + "]"
 };
 
 formatBytesArrayJson := fn(bytes: List<Int>, indent: String): String {
@@ -1060,7 +1060,7 @@ formatBytesArrayJson := fn(bytes: List<Int>, indent: String): String {
     loop bytes as b {
         mut parts.pushBack(indent + "  " + b.toText());
     }
-    "[\n" + text.joinTexts(parts, ",\n") + "\n" + indent + "]"
+    "[\n" + parts.join(",\n") + "\n" + indent + "]"
 };
 
 formatStreamJson := fn(srcText: String, streamPos: Int, baseDir: String, indent: String, hasActual: Bool, actualBytes: List<Int>, isInput: Bool): String {
@@ -1125,7 +1125,7 @@ actualStdout: List<Int>, actualStderr: List<Int>, actualExit: Int
         mut fields.pushBack("      \"stderr\": " + formatStreamJson(srcText, errPos, baseDir, "      ", true, actualStderr, false));
     }
     (mut fields).pushBack("      \"exitCode\": " + actualExit.toText());
-    "    {\n" + text.joinTexts(fields, ",\n") + "\n    }"
+    "    {\n" + fields.join(",\n") + "\n    }"
 };
 
 formatUpdatedManifestJson := fn(srcText: String, sourceHash: String, scenariosJson: List<String>): String {
@@ -1149,7 +1149,7 @@ formatUpdatedManifestJson := fn(srcText: String, sourceHash: String, scenariosJs
         mut srcParts.pushBack("    \"bytes\": " + formatBytesArrayJson(bs, "    "));
     }
     (mut srcParts).pushBack("    \"hash\": " + json.quoteString(sourceHash));
-    mut fields.pushBack("  \"source\": {\n" + text.joinTexts(srcParts, ",\n") + "\n  }");
+    mut fields.pushBack("  \"source\": {\n" + srcParts.join(",\n") + "\n  }");
 
     mut fields.pushBack("  \"features\": " + formatStringArrayJson(readStringArrayField(srcText, 0, "features"), "  "));
 
@@ -1169,8 +1169,8 @@ formatUpdatedManifestJson := fn(srcText: String, sourceHash: String, scenariosJs
     if targetsField.found {
         mut fields.pushBack("  \"targets\": " + formatStringArrayJson(readStringArrayField(srcText, 0, "targets"), "  "));
     }
-    (mut fields).pushBack("  \"cases\": [\n" + text.joinTexts(scenariosJson, ",\n") + "\n  ]");
-    "{\n" + text.joinTexts(fields, ",\n") + "\n}\n"
+    (mut fields).pushBack("  \"cases\": [\n" + scenariosJson.join(",\n") + "\n  ]");
+    "{\n" + fields.join(",\n") + "\n}\n"
 };
 
 describeBytes := fn(bytes: List<Int>): String {
@@ -1253,7 +1253,7 @@ probeCcBin := fn(): String {
 manifestIncludesC := fn(mText: String): Bool {
     targetsField := json.findObjectField(mText, 0, "targets");
     if not targetsField.found { return true; }
-    list.listContainsText(readStringArrayField(mText, 0, "targets"), "c")
+    readStringArrayField(mText, 0, "targets").contains("c")
 };
 
 compileManifestArtifactC := fn(
@@ -1757,7 +1757,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                         if not allLevelsOk {
                                             failures = failures + 1;
                                         } else if not opts.quiet {
-                                            io.outputLine("PASS " + mId + "/" + sName + " [" + text.joinTexts(levelMsParts, " ") + "]");
+                                            io.outputLine("PASS " + mId + "/" + sName + " [" + levelMsParts.join(" ") + "]");
                                         }
                                     } else {
                                         scenarioArgs := readStringArrayField(mText, sPos, "args");

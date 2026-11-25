@@ -314,7 +314,7 @@ readValidProvenance := fn(rootDir: String, name: String, expectedTarget: String,
         if not ei.found or not ei.ok or not es.found or not es.ok or not ep.found or not ep.ok {
             return (valid = false, path = "", sha256 = "");
         }
-        if not list.listContainsText(depPaths, ei.value) or not list.listContainsText(depPaths, ep.value) {
+        if not depPaths.contains(ei.value) or not depPaths.contains(ep.value) {
             return (valid = false, path = "", sha256 = "");
         }
         resolved := hostFs.resolveImportPath(path.join(rootDir, ei.value), es.value, rootDir, rootDir);
@@ -379,8 +379,8 @@ artSha: String, canonSource: String, graph: frontend.Items, fallbackFromC: Bool
     + "  \"compilerArtifactSha256\": " + json.quoteString(compilerArtifactSha) + ",\n"
     + "  \"compilerSourceSha256\": " + json.quoteString(compilerSourceSha) + ",\n"
     + "  \"artifactSha256\": " + json.quoteString(artSha) + ",\n"
-    + "  \"dependencies\": [\n" + text.joinTexts(depJson, ",\n") + "\n  ],\n"
-    + "  \"edges\": [\n" + text.joinTexts(edgeJson, ",\n") + "\n  ]\n}\n";
+    + "  \"dependencies\": [\n" + depJson.join(",\n") + "\n  ],\n"
+    + "  \"edges\": [\n" + edgeJson.join(",\n") + "\n  ]\n}\n";
     wrProv := fs.writeText(provPath, provBody);
     if not wrProv.ok {
         return (ok = false, error = wrProv.error);
@@ -1021,7 +1021,7 @@ run := fn(rawArgs: List<String>): Unit {
                 p = p + workerCount;
             }
             (mut workerCmds).pushBack(workerBin);
-            mut workerArgsJson.pushBack("[" + text.joinTexts(wArgs, ",") + "]");
+            mut workerArgsJson.pushBack("[" + wArgs.join(",") + "]");
             w = w + 1;
         }
 
@@ -1150,7 +1150,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     if jsonOutput {
-        outJson := "{\n  \"target\": " + json.quoteString(tgt.target) + ",\n  \"tools\": [\n" + text.joinTexts(toolEntries, ",\n") + "\n  ],\n"
+        outJson := "{\n  \"target\": " + json.quoteString(tgt.target) + ",\n  \"tools\": [\n" + toolEntries.join(",\n") + "\n  ],\n"
         + "  \"checked\": " + (if check { "true" } else { "false" }) + "\n}";
         io.outputLine(outJson);
     } else {

@@ -224,7 +224,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     if benchField.found {
         allowedBench: List<String> = ["warmups", "samples"];
         loop json.objectKeys(textSrc, benchField.valuePos) as bk {
-            if not list.listContainsText(allowedBench, bk) {
+            if not allowedBench.contains(bk) {
                 return (ok = false, id = "", error = caseFile + ": unexpected benchmark key " + bk);
             }
         }
@@ -433,7 +433,7 @@ buildTsConfigFilesText := fn(rootDir: String, files: List<String>): (ok: Bool, t
     loop files as f {
         mut quotedFiles.pushBack(json.quoteString(f));
     }
-    body := "{\"compilerOptions\":{" + text.joinTexts(parts, ",") + "},\"files\":[" + text.joinTexts(quotedFiles, ",") + "]}\n";
+    body := "{\"compilerOptions\":{" + parts.join(",") + "},\"files\":[" + quotedFiles.join(",") + "]}\n";
     (ok = true, text = body, error = "")
 }
 
@@ -793,7 +793,7 @@ hashFileMapJson := fn(caseText: String, objPos: Int, caseDir: String): String {
         digest := crypto.sha256Bytes(streams.readStreamBytes(caseText, fv.valuePos, caseDir));
         mut entries.pushBack(json.quoteString(fname) + ":" + json.quoteString(digest));
     }
-    "{" + text.joinTexts(entries, ",") + "}"
+    "{" + entries.join(",") + "}"
 }
 
 /** Builds deterministic JSON identity metadata (manifest, source, and scenario stream hashes) for `caseFile`. */
@@ -842,12 +842,12 @@ pub caseIdentityJson := fn(rootDir: String, caseFile: String): (ok: Bool, jsonTe
         if outFilesField.found {
             mut fields.pushBack("\"outputFiles\":" + hashFileMapJson(caseText, outFilesField.valuePos, caseDir));
         }
-        (mut scenarioJsonList).pushBack("{" + text.joinTexts(fields, ",") + "}");
+        (mut scenarioJsonList).pushBack("{" + fields.join(",") + "}");
     }
 
     body := "{\"manifest\":" + json.quoteString(manifestHash.hex)
     + ",\"source\":" + json.quoteString(sourceHash.hex)
-    + ",\"streams\":[" + text.joinTexts(scenarioJsonList, ",") + "]}";
+    + ",\"streams\":[" + scenarioJsonList.join(",") + "]}";
     (ok = true, jsonText = body, error = "")
 }
 

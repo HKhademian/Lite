@@ -36,7 +36,7 @@ assert("  \t hi \n ".trim() == "hi", "ascii trim");
 assert("ab".repeat(3) == "ababab", "ascii repeat");
 assert("AbC123".toLowerAscii() == "abc123", "ascii toLower");
 parts: List<String> = ["a", "bb", "ccc"];
-assert(text.joinTexts(parts, "-") == "a-bb-ccc", "ascii joinTexts");
+assert(parts.join("-") == "a-bb-ccc", "ascii joinTexts");
 
 /* 3. Multi-byte UTF-8 (2-byte accented, 3-byte em-dash, 4-byte emoji). */
 utf8 := "café—🚀!";

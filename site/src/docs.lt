@@ -44,7 +44,7 @@ pub relativeHref := fn(fromOutPath: String, toOutPath: String): String {
         mut ups.pushBack(toParts[ti]);
         ti = ti + 1;
     }
-    joined := text.joinTexts(ups, "/");
+    joined := ups.join("/");
     base := if joined == "" { siteLib.posixBasename(toOutPath, "") } else { joined };
     if toOutPath.endsWith("/") and not base.endsWith("/") {
         base + "/"
@@ -56,7 +56,7 @@ pub relativeHref := fn(fromOutPath: String, toOutPath: String): String {
 listSortedMdInDir := fn(dirPath: String): List<String> {
     out: mut List<String> = [];
     if fs.kind(dirPath) =!= fs.FILE_KIND_DIR { return out; }
-    loop challenges.sortTexts(fs.listDir(dirPath)) as name {
+    loop fs.listDir(dirPath).sortTexts() as name {
         full := path.join(dirPath, name);
         if fs.kind(full) == fs.FILE_KIND_FILE and name.endsWith(".md") {
             mut out.pushBack(name);
@@ -129,7 +129,7 @@ loadSnippetsJson := fn(rootDir: String): String {
             mut entries.pushBack("{\"key\":" + json.quoteString(key) + ",\"sourcePath\":" + json.quoteString(srcR.value) + "}");
         }
     }
-    "[" + text.joinTexts(entries, ",") + "]"
+    "[" + entries.join(",") + "]"
 };
 
 /** Discovers docs metadata, source->out map, snippets, and optionally rendered Markdown JSON. */
@@ -288,7 +288,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     }
     loop listSortedMdInDir(path.join(rootDir, "compiler")) as file {
         cp := "compiler/" + file;
-        if not list.listContainsText(compOrder, cp) { mut compAll.pushBack(cp); }
+        if not compOrder.contains(cp) { mut compAll.pushBack(cp); }
     }
     compSeen: mut Set<String>;
     loop compAll as src {
@@ -373,7 +373,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     }
 
     snippetsJson := loadSnippetsJson(rootDir);
-    out := "{\"metas\":[" + text.joinTexts(metasJson, ",") + "],\"docOutMap\":[" + text.joinTexts(mapJson, ",") + "],\"snippets\":" + snippetsJson + ",\"rendered\":[" + text.joinTexts(renderedJson, ",") + "]}";
+    out := "{\"metas\":[" + metasJson.join(",") + "],\"docOutMap\":[" + mapJson.join(",") + "],\"snippets\":" + snippetsJson + ",\"rendered\":[" + renderedJson.join(",") + "]}";
     (ok = true, jsonText = out, error = "")
 };
 
@@ -453,7 +453,7 @@ chIdx: Int, hbSubChIdx: List<Int>, hbSubIds: List<String>, hbSubLabels: List<Str
     + "        <span class=\"code-card-meta\">" + items.length().toText() + " sections</span>\n"
     + "      </div>\n"
     + "      <ol class=\"hb-roadmap-list\">\n"
-    + "        " + text.joinTexts(items, "\n        ") + "\n"
+    + "        " + items.join("\n        ") + "\n"
     + "      </ol>\n"
     + "    </nav>"
 };
@@ -515,7 +515,7 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
                 si = si + 1;
             }
             subListHtml := if subLis.length() > 0 {
-                "\n          <ul class=\"hb-subtopics\">\n            " + text.joinTexts(subLis, "\n            ") + "\n          </ul>"
+                "\n          <ul class=\"hb-subtopics\">\n            " + subLis.join("\n            ") + "\n          </ul>"
             } else { "" };
             searchBlob := challenges.asciiLower(hbNavs[hi] + " " + sumTxt);
             mut treeParts.pushBack("<div class=\"" + itemCls + "\" data-hb-chapter=\"" + escapeHtml(slug) + "\" data-hb-search=\"" + escapeHtml(searchBlob) + "\">\n"
@@ -551,7 +551,7 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
         + "        <div class=\"learn-bar-track\" style=\"height: 4px;\"><div id=\"hb-progress-fill\" class=\"learn-bar-fill\" style=\"width: 0%;\"></div></div>\n"
         + "      </div>\n"
         + "      <div id=\"hb-nav-tree\" class=\"hb-tree\">\n"
-        + "        " + text.joinTexts(treeParts, "\n        ") + "\n"
+        + "        " + treeParts.join("\n        ") + "\n"
         + "        <p id=\"hb-filter-empty\" class=\"code-card-meta hb-filter-empty\" hidden>No matching handbook topics. <button class=\"hb-inline-link\" type=\"button\" data-open-search>Search all docs &rarr;</button></p>\n"
         + "      </div>\n"
         + "      <div class=\"hb-sidebar-foot\">\n"
@@ -594,7 +594,7 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
             mut grpBlocks.pushBack("<details class=\"portal-nav-group\"" + openAttr + ">\n"
             + "        <summary>" + escapeHtml(grpTitles[gi]) + " (" + cnt.toText() + ")</summary>\n"
             + "        <ul class=\"portal-nav-list\">\n"
-            + "          " + text.joinTexts(lis, "\n            ") + "\n"
+            + "          " + lis.join("\n            ") + "\n"
             + "        </ul>\n"
             + "      </details>");
         }
@@ -615,7 +615,7 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
     + "        </label>\n"
     + "        <span id=\"docs-sidebar-count\" class=\"code-card-meta\"></span>\n"
     + "      </div>\n"
-    + "      " + text.joinTexts(grpBlocks, "\n      ") + "\n"
+    + "      " + grpBlocks.join("\n      ") + "\n"
     + "    </aside>"
 };
 
@@ -652,7 +652,7 @@ dirOutSample: String, spOuts: List<String>, spGroups: List<String>, spNavs: List
             mut out.pushBack("<details class=\"portal-nav-group\"" + openAttr + ">\n"
             + "        <summary>" + escapeHtml(grpTitles[gi]) + " (" + cnt.toText() + ")</summary>\n"
             + "        <ul class=\"portal-nav-list\">\n"
-            + "          " + text.joinTexts(lis, "\n            ") + "\n"
+            + "          " + lis.join("\n            ") + "\n"
             + "        </ul>\n"
             + "      </details>");
         } else {
@@ -703,7 +703,7 @@ activeOutPath: String, activeGroup: String, tmpls: List<String>, baseIdx: Int
     + "        </label>\n"
     + "        <span id=\"docs-sidebar-count\" class=\"code-card-meta\"></span>\n"
     + "      </div>\n"
-    + "      " + text.joinTexts(grpBlocks, "\n      ") + "\n"
+    + "      " + grpBlocks.join("\n      ") + "\n"
     + "    </aside>"
 };
 
@@ -729,7 +729,7 @@ rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOutInde
         (mut withIds).pushBack(html.slice(pos, idPos + 4));
         pos = idPos + 4;
     }
-    step1 := text.joinTexts(withIds, "");
+    step1 := withIds.join("");
 
     withLinks: mut List<String> = [];
     sLen := step1.length();
@@ -778,7 +778,7 @@ rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOutInde
         }
         pos = qEnd + 1;
     }
-    text.joinTexts(withLinks, "")
+    withLinks.join("")
 };
 
 isBoundaryBeforeId := fn(ch: String): Bool {
@@ -879,7 +879,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
                 }
             }
         }
-        tocHtml := if tocItemsHtml.length() > 0 { text.joinTexts(tocItemsHtml, "\n      ") } else { "<li><a href=\"#top\">Top of page</a></li>" };
+        tocHtml := if tocItemsHtml.length() > 0 { tocItemsHtml.join("\n      ") } else { "<li><a href=\"#top\">Top of page</a></li>" };
 
         if mLayer == "handbook" {
             mut hbSrcs.pushBack(mSrc);
@@ -979,7 +979,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     + "  </div>\n"
     + "  <p class=\"section-note\">Seven sequential chapters covering every language feature, collection type, and module supported by the compiler right now.</p>\n"
     + "  <div class=\"portal-grid\">\n"
-    + "    " + text.joinTexts(hbCards, "\n") + "\n"
+    + "    " + hbCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"design-spec\">\n"
@@ -993,7 +993,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     + "    open questions (<span class=\"status-pill status-pill-open\">Open Question</span>), and dated archives (<span class=\"status-pill status-pill-historical\">Historical</span>).\n"
     + "  </p>\n"
     + "  <div class=\"portal-grid\">\n"
-    + "    " + text.joinTexts(specHighlights, "\n") + "\n"
+    + "    " + specHighlights.join("\n") + "\n"
     + "  </div>\n"
     + "</section>";
     mut pagesJson.pushBack("{\"relPath\":\"docs/index.html\",\"title\":\"Docs — Lite\",\"description\":\"Two-layer Lite documentation portal: Shipped Lite Handbook and full Design Specification & Proposals.\",\"basePath\":\"../\",\"body\":" + json.quoteString(docsLandingBody) + "}");
@@ -1029,7 +1029,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     + "      and compiler architecture guides with explicit status labels distinguishing shipped TS behavior from selected design and open proposals.\n"
     + "    </p>\n"
     + "    <div class=\"portal-grid-2\">\n"
-    + "      " + text.joinTexts(startCards, "\n") + "\n"
+    + "      " + startCards.join("\n") + "\n"
     + "    </div>\n"
     + "  </article>\n"
     + "</div>";
@@ -1081,12 +1081,12 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     + "    </div>\n"
     + "    <h1>The Lite Handbook (Single-Page Edition)</h1>\n"
     + "    <p class=\"hero-lead\">All seven Shipped Handbook chapters on one page for fast reading, search, or printing.</p>\n"
-    + "    " + text.joinTexts(chBlocks, "\n") + "\n"
+    + "    " + chBlocks.join("\n") + "\n"
     + "  </article>\n"
     + "  <aside class=\"portal-toc\" aria-label=\"Chapters\">\n"
     + "    <p class=\"portal-toc-title\">Chapters</p>\n"
     + "    <ul>\n"
-    + "      " + text.joinTexts(singleTocItems, "\n      ") + "\n"
+    + "      " + singleTocItems.join("\n      ") + "\n"
     + "    </ul>\n"
     + "    <div class=\"portal-toc-foot\">\n"
     + "      <a href=\"overview-and-setup.html\">Chapter-by-chapter &rarr;</a>\n"
@@ -1268,5 +1268,5 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     loop spTocL2Ids as sse { mut searchEntriesJson.pushBack(sse); }
 
     docsPageCount := pagesJson.length();
-    (ok = true, jsonText = "{\"docsPageCount\":" + docsPageCount.toText() + ",\"handbookCount\":" + hbCount.toText() + ",\"specCount\":" + spCount.toText() + ",\"pages\":[" + text.joinTexts(pagesJson, ",") + "],\"searchEntries\":[" + text.joinTexts(searchEntriesJson, ",") + "]}", error = "")
+    (ok = true, jsonText = "{\"docsPageCount\":" + docsPageCount.toText() + ",\"handbookCount\":" + hbCount.toText() + ",\"specCount\":" + spCount.toText() + ",\"pages\":[" + pagesJson.join(",") + "],\"searchEntries\":[" + searchEntriesJson.join(",") + "]}", error = "")
 };

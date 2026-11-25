@@ -226,7 +226,7 @@ printVersionMeta := fn(label: String, component: String, asJson: Bool): Unit {
         if prov.compilerArtifactSha256 =!= "" {
             mut srcMeta.pushBack("built-by: " + shortHash(prov.compilerArtifactSha256));
         }
-        srcSuffix := if srcMeta.length() > 0 { " (" + text.joinTexts(srcMeta, ", ") + ")" } else { "" };
+        srcSuffix := if srcMeta.length() > 0 { " (" + srcMeta.join(", ") + ")" } else { "" };
         io.outputLine("source: " + source + srcSuffix);
     }
     io.outputLine("host: " + hostRuntime + " (" + proc.platform() + "/" + proc.arch() + ")");

@@ -661,7 +661,7 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                     (mut bodyLines).pushBack(lines[i]);
                     i += 1;
                 }
-                bodyRaw := if bodyLines.length() == 0 { "" } else { text.joinTexts(bodyLines, "\n") + "\n" };
+                bodyRaw := if bodyLines.length() == 0 { "" } else { bodyLines.join("\n") + "\n" };
                 langAttr := escapeHtml(fence.lang);
                 mut blocks.pushBack("<pre class=\"md-code\" data-lang=\"" + langAttr + "\" data-fence=\"" + fenceIndex.toText() + "\"><code>" + escapeHtml(bodyRaw) + "</code></pre>");
                 fenceIndex += 1;
@@ -760,11 +760,11 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                                     mut tdParts.pushBack("<td" + styleAttr + ">" + renderInline(cellVal) + "</td>");
                                     rci += 1;
                                 }
-                                (mut rowParts).pushBack("<tr>" + text.joinTexts(tdParts, "") + "</tr>");
+                                (mut rowParts).pushBack("<tr>" + tdParts.join("") + "</tr>");
                                 i += 1;
                             }
-                            tbodyHtml := if rowParts.length() == 0 { "" } else { "<tbody>" + text.joinTexts(rowParts, "") + "</tbody>" };
-                            mut blocks.pushBack("<div class=\"md-table-wrap\"><table><thead><tr>" + text.joinTexts(thParts, "") + "</tr></thead>" + tbodyHtml + "</table></div>");
+                            tbodyHtml := if rowParts.length() == 0 { "" } else { "<tbody>" + rowParts.join("") + "</tbody>" };
+                            mut blocks.pushBack("<div class=\"md-table-wrap\"><table><thead><tr>" + thParts.join("") + "</tr></thead>" + tbodyHtml + "</table></div>");
                         }
                     }
                     if not renderedTable {
@@ -786,12 +786,12 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                                     (mut itemLines).pushBack(nextLine.trim());
                                     i += 1;
                                 }
-                                (mut itemsHtml).pushBack("<li>" + renderInline(text.joinTexts(itemLines, " ")) + "</li>");
+                                (mut itemsHtml).pushBack("<li>" + renderInline(itemLines.join(" ")) + "</li>");
                                 if i < total and lines[i].trim() == "" and i + 1 < total and parseBulletItem(lines[i + 1]).ok {
                                     i += 1;
                                 }
                             }
-                            (mut blocks).pushBack("<ul>" + text.joinTexts(itemsHtml, "") + "</ul>");
+                            (mut blocks).pushBack("<ul>" + itemsHtml.join("") + "</ul>");
                         } else {
                             olItem := parseOrderedItem(line);
                             if olItem.ok {
@@ -811,12 +811,12 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                                         (mut olItemLines).pushBack(nextLine.trim());
                                         i += 1;
                                     }
-                                    (mut olItemsHtml).pushBack("<li>" + renderInline(text.joinTexts(olItemLines, " ")) + "</li>");
+                                    (mut olItemsHtml).pushBack("<li>" + renderInline(olItemLines.join(" ")) + "</li>");
                                     if i < total and lines[i].trim() == "" and i + 1 < total and parseOrderedItem(lines[i + 1]).ok {
                                         i += 1;
                                     }
                                 }
-                                (mut blocks).pushBack("<ol>" + text.joinTexts(olItemsHtml, "") + "</ol>");
+                                (mut blocks).pushBack("<ol>" + olItemsHtml.join("") + "</ol>");
                             } else {
                                 paraLines: mut List<String> = [];
                                 loop i < total {
@@ -835,7 +835,7 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                                     (mut paraLines).pushBack(pTrim);
                                     i += 1;
                                 }
-                                (mut blocks).pushBack("<p>" + renderInline(text.joinTexts(paraLines, " ")) + "</p>");
+                                (mut blocks).pushBack("<p>" + renderInline(paraLines.join(" ")) + "</p>");
                             }
                         }
                     }
@@ -844,8 +844,8 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
         }
     }
 
-    tocJson := "[" + text.joinTexts(tocEntries, ",") + "]";
-    (title = docTitle, html = text.joinTexts(blocks, "\n"), =tocJson)
+    tocJson := "[" + tocEntries.join(",") + "]";
+    (title = docTitle, html = blocks.join("\n"), =tocJson)
 };
 
 /** Renders Markdown `docText` to HTML, extracting document title, status classification, and JSON TOC. */
