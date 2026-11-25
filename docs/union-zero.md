@@ -107,7 +107,7 @@ value := if number_mode {
 }
 ```
 
-Selected branch inference gives T = Int | String. No match is noncontributing, but the declaration default would need `zero(T)`, whose active member remains unresolved. The declaration therefore requires an explicit final `else` or `?`; this is a declaration-default requirement, not a general conditional-zero definition. An explicit final else can supply a known result, but requiring one everywhere would not define zero for stored unions or zero-result callables.
+Selected branch inference gives T = Int | String. No match is noncontributing and leaves the binding uninitialized. An explicit contributing final `else` supplies an initialized value for that path. See [conditional guarded updates](lite://doc/conditionals#no-final-else-guarded-update).
 
 ## User's storage rule and the remaining conflict
 
@@ -239,9 +239,9 @@ value := if ready {
 }
 ```
 
-The inferred type is Int | Unit. A no-`else` declaration in a multi-member union requires an explicit `else` or `?`, so the unmatched path is noncontributing rather than selecting a union zero. If a `zero(Int | Unit)` value is needed elsewhere, Unit-first returns Unit and an Int-first ordering returns an Int zero; the ready branch remains Int(7) and the intentionally_empty branch remains Unit under both policies. No priority changes a value that an actual branch produced.
+The inferred type is Int | Unit. A no-`else` declaration initializer leaves the unmatched path uninitialized, including for multi-member union results. If a `zero(Int | Unit)` value is needed elsewhere, Unit-first returns Unit and an Int-first ordering returns an Int zero; the ready branch remains Int(7) and the intentionally_empty branch remains Unit under both policies. No priority changes a value that an actual branch produced.
 
-Contrast a declaration initialized by the partial `if ready { 7 }`, which infers Int and leaves the declaration default `zero(Int)` on no match, with the total `if ready { 7 } else {}`, which infers Int | Unit and explicitly returns Unit when false. Their false outcomes are fixed by the declaration default versus the explicit branch, independently of how the union's own zero is chosen.
+Contrast a declaration initialized by the partial `if ready { 7 }`, which infers Int and leaves the binding uninitialized on no match, with the total `if ready { 7 } else {}`, which infers Int | Unit and explicitly returns Unit when false. Their false outcomes follow the initializer rules independently of how the union's own zero is chosen.
 
 #### Unit alongside an explicit optional value
 

@@ -4,32 +4,14 @@ Status: **mandatory braces, unified actions/values, existing-name type tests, an
 
 Normative page: this page owns conditional result construction, no-match/guarded-update behavior, `?` branches, and `then`. Tag naming/access and its lifecycle are in [tags and contexts](lite://doc/tags-and-contexts); condition grammar is in the [grammar sketch](lite://doc/grammar-sketch); pattern-chain binding is in [condition chains](lite://doc/condition-chains). See the [normative page map](lite://doc/normative-pages).
 
-Implementation checkpoint, 2026-11-01: the igniter implements partial
-conditionals for direct declaration initializers (the declaration keeps
-`zero(T)` on no match, for example `x := if flag { 5 }` is 5 or 0) and for
-assignments (no write on no match, including grouped values). A value-required
-position still needs a final `else`. The explicit `else { ? }` reservation
-branch, condition/binding correlation, defaults for else-if chains, branch-result
-unions, `then`, and `finally` remain unimplemented; `?` is not parsed yet.
-The restricted bootstrap compiler separately accepts total, same-kind value
-`if`/`else if`/`else` expressions in initializers, assignments, arguments,
-returns and function-tail positions, emitting TS conditional expressions. A
-function-tail `if` whose branches hold statements before their tail expression
-also yields the function result, keeping the result branches explicit. The C
-path rejects value `if` clearly. In action position it accepts an optional-final
-`else` with any number of `else if` arms whose conditions are `Bool` and whose
-bodies are action blocks, emitting TS and C `else if` chains with nearest-scope
-locals. Partial value conditionals, branch unions, `then` and `finally` remain
-unimplemented there.
+Design revised **2026-11-26**. A partial declaration initializer stores the
+branch value only on a contributing path. A no-match path leaves the binding
+uninitialized. Ordinary reads require definite initialization.
 
-Lowering selected 2026-11-01: a partial declaration initializer selects the
-branch value or `zero(T)` and stores once; it is not required to materialize a
-zero store followed by a conditional overwrite, because the zero default is a
-semantic value and an unobservable zero store may be elided. A partial
-assignment lowers as one guarded store: evaluate the condition once, then write
-only when it is true. This preserves the value and effect equivalence with
-`x := 0` plus a guarded write, and with `if flag { x = value }` for assignments,
-without fixing a physical double-store shape.
+Implementation gap: the generated TS and C11 compilers previously observed
+in this review still supply `zero(T)` on this declaration path. The
+`score = if ready { 10 }` no-write behavior already matched the design.
+The earlier zero-default lowering is historical.
 
 Conditional branch-result union inference is selected 2026-10-21; explicit/expected result contracts remain constraints. Irrefutable pattern conditions are selected 2026-10-24, with a warning when the complete matching condition is provably always successful.
 
@@ -112,12 +94,11 @@ price := if premium {
 - Normally completing value branches must satisfy an expected result contract when one exists. Otherwise infer their normalized plain union, collapsing duplicate type identities.
 - A conditional's result type `T` comes from its normally completing value branches. A final `else` makes it total: every normal path supplies `T`. Without a final `else` it is **partial**: a matching branch supplies `T`, while no match is a noncontributing path.
 - A noncontributing path is interpreted by its context:
-  - declaration initializer: the declaration's default remains (`zero(T)` normally, or reserved with an explicit `?` branch);
+  - declaration initializer: the binding stays uninitialized;
   - assignment: no write; the target keeps its current state;
   - loop body contribution: no contribution; `.value` is preserved;
   - value-required context such as a call argument, return, arithmetic operand, nested expression, or `then`: invalid without a final `else`.
 - A conditional with `then` requires a final `else`; `then` needs a selected `T` to process. A partial conditional cannot carry `then`.
-- A multi-member union declaration initializer still needs an explicit `else` or `?` branch because `zero(T)` cannot choose an active member. Assignment and loop noncontributing paths do not need a union member.
 - A branch that explicitly exits checks its payload against its exit target, not against a local value it never produces.
 - Mixed branch results infer a plain union without inventing conversions or an escaping error channel. Explicit/expected result contracts remain constraints.
 
@@ -129,23 +110,17 @@ Exhausted conditional type-test branches warn and give exhausted bindings an int
 
 A conditional without a final `else` is partial. On a match, its branch supplies `T`. On no match, it produces no value and does not write, initialize, or contribute.
 
-In a declaration initializer, the declaration's default remains:
+In a declaration initializer, the binding is initialized only on a
+contributing path:
 
 ```text
-message: String = if ready {
-    "Continue"
-}
+next := if ready { 10 };
+use(next);  /* rejected if the path where ready is false can reach this read */
 ```
 
-When `ready` is false, `message` is the zero `String` (`""`) because the declaration default supplies the value; the conditional itself does not produce a zero result.
-
-```text
-found: Option<User> = @lookup if .Some(user) := find_user(id) {
-    .Some(user)
-}
-```
-
-On pattern mismatch, `found` remains the declaration default `.None`. No trailing `.None` body is needed. The expected type establishes `T`.
+The same rule applies to explicitly typed initializers and to union result
+types. A bare typed declaration such as `next: Int;` uses its separate
+[zero-initialization rule](lite://doc/zero-initialization).
 
 In an assignment, no match means no write:
 
@@ -164,7 +139,10 @@ total := @sum loop values as v {
 }
 ```
 
-Nonpositive values contribute nothing and `@sum.value` is preserved. If the conditional is not the body tail, its no-match path only skips the conditional; a later tail item still contributes normally. In particular, `x := if v > 0 { v }; x` still has `x: Int` with `x == 0` on no match, so the tail `x` contributes zero; put the conditional itself in tail position or use `else { ? }`/`continue` to skip.
+Nonpositive values contribute nothing and `@sum.value` is preserved. If the
+conditional is followed by another tail item, that item must satisfy its own
+result and initialization checks. For example, `x := if v > 0 { v }; x`
+is rejected if the tail read can be reached without writing `x`.
 
 Value-required contexts require a final `else`:
 
@@ -239,7 +217,7 @@ total: Int = @sum loop numbers as number {
 
 The `if` now returns either the updated total or the previous total, and the loop commits that `Int`. A guard with `continue` is another way to skip an iteration. The explicit `@sum` access follows the selected rule for outer loop metadata inside conditionals. See [loop value inference](lite://doc/loop-type-inference).
 
-A conditional used in a declaration initializer is different: `x := if should_add(number) { number }` makes `x: Int` with `x == 0` on no match, so a following tail `x` contributes zero. Put the conditional itself in tail position, or use `else { ? }`/`continue`, to skip the contribution.
+A conditional declaration followed by a read of its binding requires proof of initialization. Put the conditional itself in tail position when no match should skip the contribution.
 
 ### Conditional metadata requires explicit tags
 
@@ -379,6 +357,11 @@ if .Some := find_user(id) { report_found() }
 Here .Some tests only the case tag and binds no payload. The same selected omission rule applies to match arms and nested case patterns. It does not turn a bare constructor into a complete enum value for ordinary equality. Access/ownership effects and complete case-owner inference retain their separate contracts; see [tag-only enum patterns](lite://doc/enums-and-variants#tag-only-patterns). Equality-binding conditions remain ruled out.
 
 ## Pattern binding followed by guards
+
+The form below is selected syntax. The generated TS and C11 compilers
+rejected the leading-dot payload pattern in the November 2026 probe.
+Pending coverage checks source evaluation once, guard short-circuiting,
+and binding visibility in the guard and success body.
 
 ```text
 if .Some(user) := find_user(id) and user.age > 14 {

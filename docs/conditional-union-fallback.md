@@ -1,8 +1,11 @@
 # Missing conditional else with a union result
 
-Status: **selected 2026-10-21; narrowed 2026-10-25: a no-`else` conditional is noncontributing. A declaration initializer with a multi-member union still requires an explicit `else` or `?` branch because its default `zero(T)` cannot choose a member. Assignment and loop no-match paths do not require a union member.**
+Status: **historical rule from 2026-10-21 and 2026-10-25, revised
+2026-11-26**. The current [conditional initializer rule](lite://doc/conditionals#no-final-else-guarded-update)
+leaves the destination uninitialized on a no-match path, including when the
+result type is a multi-member union. Reads require definite initialization.
 
-The earlier rationale that union zero cannot choose a member is superseded by the selected no-known-member union zero. Whether this source restriction should change remains a separate review; the older rationale below is historical.
+The discussion below records the earlier zero-default contract.
 
 ## Rejected union declaration initializer
 

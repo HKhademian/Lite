@@ -109,7 +109,8 @@ A fixed target's first write requires proof that it has not already been initial
 
 ## Conditional reservation
 
-An explicit `?` branch can make initialization conditional:
+A partial initializer can make initialization conditional. The explicit
+`?` branch below also expresses the uninitialized path:
 
 ```text
 y: User = if flag {
@@ -143,10 +144,10 @@ if not flag {
 
 A write under `if flag` is rejected for a fixed binding because that path already initialized `y`; `var y` permits replacement there. After `if not flag { y = ... }`, both the true path (initialized by the declaration) and the false path (initialized by the write) are initialized.
 
-A declaration without `?` uses its normal default instead, so it is initialized on every path:
+Omitting the final `else` leaves the same path uninitialized:
 
 ```text
-x: User = if flag { new_user() }   /* new_user() or zero(User) */
+x: User = if flag { new_user() }   /* initialized only when flag is true */
 ```
 
 The compiler must retain the branch correlation between `flag` and `y`'s state. A merely conservative "maybe uninitialized" state would reject the valid first write under `if not flag`; exact correlation and loop/branch proof rules remain to formalize.

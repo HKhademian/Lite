@@ -12,7 +12,7 @@ locals; List and function reservation remain unsupported.
 
 ## Plain-union construction restriction
 
-A bare typed declaration zero-initializes every type, including multi-member unions. Contextual `0` can also request all-zero storage, but it is rejected if another distinct interpretation remains viable, such as an active numeric member of a union. Union zero has Kind 0 and no known active member; see [union initialization](lite://doc/union-initialization-policy#bare-local-declarations). Conditional fallback remains a separate source rule to review.
+A bare typed declaration zero-initializes every type, including multi-member unions. Contextual `0` can also request all-zero storage, but it is rejected if another distinct interpretation remains viable, such as an active numeric member of a union. Union zero has Kind 0 and no known active member; see [union initialization](lite://doc/union-initialization-policy#bare-local-declarations). A [partial conditional initializer](lite://doc/conditionals#no-final-else-guarded-update) leaves storage uninitialized on no match.
 
 ## Core distinction
 
@@ -119,7 +119,7 @@ numeric_success: Int ! ReadError = 0; /* numeric success: .ok(0) */
 
 An ordinary success expression `0` in an `Int ! E` function likewise remains implicit success with numeric zero. A stored zero outcome has no error payload to handle. Recursive zero initialization preserves outcome boundaries: the zero of `(T ! E1) ! E2` is `.ok(.ok(zero(T)))`.
 
-This mapping also applies where a declaration default or a loop's value context uses zero of a fallible type. A no-`else` conditional is noncontributing; its declaration default supplies the zero on no match. Representation, tag layout, and FFI adaptation must honor this semantic mapping and remain to be specified.
+This mapping also applies where a declaration default or a loop's value context uses zero of a fallible type. A no-`else` conditional initializer is noncontributing on no match and leaves its destination uninitialized. Representation, tag layout, and FFI adaptation must honor this semantic mapping and remain to be specified.
 
 ## Grammar and runtime boundaries
 

@@ -47,13 +47,13 @@ A conditional branch proven unreachable by the supported type-test exhaustion ru
 
 ## Unit, no final else, and then
 
-An explicit empty branch genuinely produces Unit. Thus `if flag { 1 } else {}` infers Int | Unit. By contrast, `if flag { 1 }` is partial: it infers Int from its contributing branch, and no match is a noncontributing path. It does not add Unit, and it does not produce `zero(Int)` as a conditional result. The context supplies the meaning: a declaration keeps its zero default, an assignment performs no write, a loop body contributes nothing, and a value-required context rejects the missing `else`.
+An explicit empty branch genuinely produces Unit. Thus `if flag { 1 } else {}` infers Int | Unit. By contrast, `if flag { 1 }` is partial: it infers Int from its contributing branch, and no match is a noncontributing path. It does not add Unit, and it does not produce `zero(Int)` as a conditional result. The context supplies the meaning: a declaration leaves its binding uninitialized, an assignment performs no write, a loop body contributes nothing, and a value-required context rejects the missing `else`.
 
-A multi-member union declaration still needs an explicit `else` or `?` branch because its default zero cannot select a member. Assignment and loop noncontributing paths do not require a union member.
+The declaration rule also applies when the inferred type is a multi-member union. Reads require proof that a contributing branch initialized the binding.
 
 A conditional with `then` requires a final `else`; inference determines the pre-then value type `T` from the total chain. The then body still produces final type `R`. An expected `R` does not by itself force the branch type `T` to equal `R`.
 
-The selected [conditional union-fallback rule](lite://doc/conditional-union-fallback) remains for declaration initializers whose default `zero(T)` is a normalized multi-member plain union. Exhaustive chains construct the chosen member directly, without first requiring undirected zero(T). A wider destination alone does not force a union fallback.
+See [guarded updates](lite://doc/conditionals#no-final-else-guarded-update) for definite initialization and [the previous union-fallback rule](lite://doc/conditional-union-fallback) for the history.
 
 ## Alternatives and tradeoff
 

@@ -29,6 +29,10 @@ plans:
 
 # Agent Handoff: LiteScript language-design review
 
+Update, 2026-11-26: the [conditional initializer rule](lite://doc/conditionals#no-final-else-guarded-update)
+now leaves the binding uninitialized on no match. References to a declaration
+default below describe the earlier review.
+
 > **Historical review log.** The original review plan and its todos are complete. Current rules live in [the decision ledger](lite://doc/decisions-and-open-questions) and the concept pages; entries below record review history rather than live status. Do not implement a compiler from this log alone.
 
 ## Mission
