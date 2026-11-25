@@ -859,6 +859,23 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     if inferMode { ctx.collectParsedMarkers("", fnBody) } else { "" })
 };
 
+/** Returns an error diagnostic if any bound parameter in `bindings` violates its `Type<...>` constraint, or `""`. */
+findGenericConstraintError := fn(genericParams: String, bindings: Map<String, String>, calleeSuffix: String): String {
+    loop generics.splitGenericParams(genericParams) as gp {
+        if bindings.has(gp) {
+            gpConstraint := types.typeParamConstraintKind(genericParams, gp);
+            if gpConstraint =!= "" {
+                boundEntry := bindings.get(gp);
+                boundKind := boundEntry.value;
+                if not types.typeSatisfiesConstraint(boundKind, gpConstraint) {
+                    return "type " + types.displayKind(boundKind) + " does not satisfy constraint " + types.displayKind(gpConstraint) + " for parameter " + gp + calleeSuffix;
+                }
+            }
+        }
+    }
+    ""
+};
+
 /** Ensures `$recpop:<recordKind>` and `$recdef:...` entries exist in `aliases`, lazily resolving forward-declared local records when needed. */
 ensureRecordDefaults := fn(target: String, source: String, recordKind: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): List<AliasDecl> {
     if types.findAlias(aliases, "$recpop:" + recordKind) >= 0 { return aliases; }
@@ -1526,6 +1543,10 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                         checkB: mut Map<String, String>;
                         if generics.unifyKindMut(tpl.genericParams, baseRecv, resolvedType, mut checkB) =!= "" {
                             syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(resolvedType));
+                        }
+                        cErr := findGenericConstraintError(tpl.genericParams, checkB, "");
+                        if cErr =!= "" {
+                            syntax.failAt(source, memberStart, prefix, cErr);
                         }
                     } else if not types.isCompatibleKind(baseRecv, resolvedType) {
                         syntax.failAt(source, memberStart, prefix, "operation " + memberName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(resolvedType));
@@ -6815,6 +6836,10 @@ pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix
                 syntax.failAt(source, errPos, prefix, "cannot infer type parameter " + gp + " for " + opName + " on " + types.displayKind(receiverKind));
             }
         }
+        cErr := findGenericConstraintError(tpl.genericParams, bindings, "");
+        if cErr =!= "" {
+            syntax.failAt(source, errPos, prefix, cErr);
+        }
         concKey := generics.substKind(tpl.genericParams, rawKey, bindings);
         concVal := generics.substKind(tpl.genericParams, rawVal, bindings);
         concRes := generics.substKind(tpl.genericParams, info.result, bindings);
@@ -7336,6 +7361,13 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                 syntax.failAt(source, errPos, prefix, "cannot infer type parameter " + gp + " in call to " + calleeDisplay);
             }
         }
+        cErr := findGenericConstraintError(genParams, genBindings, " in call to " + calleeDisplay);
+        if cErr =!= "" {
+            if inferMode {
+                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = openParen);
+            }
+            syntax.failAt(source, errPos, prefix, cErr);
+        }
         effResult = generics.substKind(genParams, callResult, genBindings);
         retValErr := generics.validateSubstitutedKind(effResult);
         if retValErr =!= "" {
@@ -7834,6 +7866,13 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
         if uErr =!= "" {
             syntax.failAt(source, labelStart, prefix, "operation " + opLabel + " requires " + types.displayKind(baseExpected) + ", got " + types.displayKind(receiver.kind));
         }
+        cErr := findGenericConstraintError(tpl.genericParams, recvBindings, "");
+        if cErr =!= "" {
+            if inferMode {
+                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = labelStart);
+            }
+            syntax.failAt(source, labelStart, prefix, cErr);
+        }
         initGenBindings = generics.encodePartialBindings(tpl.genericParams, recvBindings);
         concreteRecvExpected = generics.substKind(tpl.genericParams, baseExpected, recvBindings);
     } else {
@@ -8098,6 +8137,10 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                                 checkB: mut Map<String, String>;
                                                 if generics.unifyKindMut(tpl.genericParams, baseRecv, modTypeKind, mut checkB) =!= "" {
                                                     syntax.failAt(source, caseStart, prefix, "operation " + caseName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(modTypeKind));
+                                                }
+                                                cErr := findGenericConstraintError(tpl.genericParams, checkB, "");
+                                                if cErr =!= "" {
+                                                    syntax.failAt(source, caseStart, prefix, cErr);
                                                 }
                                             } else if not types.isCompatibleKind(baseRecv, modTypeKind) {
                                                 syntax.failAt(source, caseStart, prefix, "operation " + caseName + " requires " + types.displayKind(baseRecv) + ", got " + types.displayKind(modTypeKind));
@@ -8456,7 +8499,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             syntax.failAt(source, tpCursor, prefix, "function " + calleeDisplay + " expects " + paramSpecs.length().toText() + " comptime argument(s)");
                         }
                         pSpec := paramSpecs[tpIdx];
-                        if pSpec.kind == "" {
+                        if types.isTypeParamKind(pSpec.kind) {
                             if inferMode {
                                 emptySeenCallT: List<String> = [];
                                 canT := types.canResolveTypeAt(source, tpCursor, prefix, aliases, "", emptySeenCallT, 32);

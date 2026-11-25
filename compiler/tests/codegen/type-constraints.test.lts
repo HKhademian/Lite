@@ -1,0 +1,291 @@
+/* Dual-target (TS + C11) tests for closed-union type constraints (`T: Type<Constraint>`), multi-bound intersection (`T: Type<A, B>`), nominal/call-site checks, subset forwarding, and union position restrictions. */
+
+test := import "core/test";
+file := import "core/file";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expected: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
+    test.checkInt(label + " ts status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " ts stderr", "", tsRes.stderr);
+    test.checkText(label + " ts stdout", expected, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRes.stdout, cRes.stdout);
+    }
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccInfo.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. Closed unions, composed unions, inline unions, multi-bound intersection, constrained Vec.dot / record / distinct / alias / enum, transparent vs distinct, and nested forwarding. */
+coreConstraintsSrc :=
+"io := import \"core/io\";\n" +
+"\n" +
+"IntNum := alias Int | Int32 | Int64;\n" +
+"FloatNum := alias Float | Float32;\n" +
+"Numeric := alias IntNum | FloatNum;\n" +
+"MyInt := alias Int;\n" +
+"Meter := distinct Int;\n" +
+"ScalarLike := alias Numeric | Meter;\n" +
+"\n" +
+"Vec := record<T: Type<Numeric>, N: Int> {\n" +
+"    data: [T; N];\n" +
+"}\n" +
+"\n" +
+"Vec.dot := fn<T: Type<Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): T {\n" +
+"    var acc: T = a.data[0] * b.data[0];\n" +
+"    var i := 1;\n" +
+"    loop i < N {\n" +
+"        acc = acc + a.data[i] * b.data[i];\n" +
+"        i = i + 1;\n" +
+"    }\n" +
+"    acc\n" +
+"};\n" +
+"\n" +
+"BoxedInt := distinct<T: Type<IntNum>> T;\n" +
+"Pair := alias<T: Type<Int | Float>> (T, T);\n" +
+"ModeTag := enum<T: Type<Int | Bool>> {\n" +
+"    Active;\n" +
+"    Idle;\n" +
+"}\n" +
+"\n" +
+"ModeTag.isActive := fn<T: Type<Int | Bool>>(m: Self<T>): Bool {\n" +
+"    m == Self<T>.Active\n" +
+"};\n" +
+"\n" +
+"doubleNumeric := fn<T: Type<Numeric>>(x: T): T {\n" +
+"    x + x\n" +
+"};\n" +
+"\n" +
+"identityIntOrFloat := fn<T: Type<Int | Float>>(x: T): T {\n" +
+"    x\n" +
+"};\n" +
+"\n" +
+"pickCommon := fn<T: Type<Int | Float | String, Float | String | Bool>>(x: T): T {\n" +
+"    x\n" +
+"};\n" +
+"\n" +
+"commonNum := fn<T: Type<IntNum, Int | Float | Int32>>(x: T): T {\n" +
+"    x\n" +
+"};\n" +
+"\n" +
+"forwardIntSum := fn<U: Type<IntNum>>(a: U, b: U): Vec<U, 2> {\n" +
+"    Vec<U, 2> { data = [a, doubleNumeric<U>(b)] }\n" +
+"};\n" +
+"\n" +
+"wrapBoxed := fn<U: Type<IntNum>>(x: U): BoxedInt<U> {\n" +
+"    cast<BoxedInt<U>>(x)\n" +
+"};\n" +
+"\n" +
+"showMeter := fn<T: Type<ScalarLike>>(x: T): T { x };\n" +
+"\n" +
+"vi1 := Vec<Int, 3> { data = [1, 2, 3] };\n" +
+"vi2 := Vec<Int, 3> { data = [4, 5, 6] };\n" +
+"f1: Float32 = 1.5;\n" +
+"f2: Float32 = 2.0;\n" +
+"f3: Float32 = 3.0;\n" +
+"vf1 := Vec<Float32, 2> { data = [f1, f2] };\n" +
+"vf2 := Vec<Float32, 2> { data = [f2, f3] };\n" +
+"mi: MyInt = 7;\n" +
+"fv := forwardIntSum(mi, 5);\n" +
+"n12: Int32 = 12;\n" +
+"n3: Int32 = 3;\n" +
+"bx := wrapBoxed<Int32>(n12);\n" +
+"pr: Pair<Int> = (9, 4);\n" +
+"tg := ModeTag<Bool>.Active;\n" +
+"mDist: Meter = cast(42);\n" +
+"mBack: Int = cast(showMeter(mDist));\n" +
+"\n" +
+"io.outputLine(vi1.dot(vi2), Vec.dot(vf1, vf2));\n" +
+"io.outputLine(doubleNumeric(11), doubleNumeric<Float>(2.25), identityIntOrFloat(8));\n" +
+"io.outputLine(pickCommon(1.5), pickCommon(\"ok\"), commonNum(n3));\n" +
+"io.outputLine(fv.data[0], fv.data[1], cast<Int32>(bx), pr.0 + pr.1, tg.isActive(), mBack);\n";
+
+runBoth("core-type-constraints", coreConstraintsSrc,
+"32 9\n" +
+"22 4.5 8\n" +
+"1.5 ok 3\n" +
+"7 10 12 13 true 42\n");
+
+/* 2. Cross-module pub union aliases & constrained generics. */
+tmpDir := file.makeTempDir("lite-type-constraints-");
+test.check("makeTempDir: " + tmpDir.error, tmpDir.ok);
+libPath := tmpDir.path + "/numlib.lts";
+appPath := tmpDir.path + "/app.lts";
+
+libSrc :=
+"pub IntLike := alias Int | Int32;\n" +
+"pub FloatLike := alias Float | Float32;\n" +
+"pub Num := alias IntLike | FloatLike;\n" +
+"pub PairNum := record<T: Type<Num>> {\n" +
+"    x: T;\n" +
+"    y: T;\n" +
+"}\n" +
+"pub PairNum.sum := fn<T: Type<Num>>(p: Self<T>): T { p.x + p.y };\n" +
+"pub scaleNum := fn<T: Type<IntLike, Int | Int32 | String>>(a: T): T { a + a };\n";
+
+appSrc :=
+"io := import \"core/io\";\n" +
+"nl := import \"./numlib.lts\";\n" +
+"p1 := nl.PairNum<Int> { x = 10, y = 20 };\n" +
+"p2 := nl.PairNum<Float> { x = 1.25, y = 2.5 };\n" +
+"io.outputLine(p1.sum(), nl.PairNum.sum(p2), nl.scaleNum(7));\n";
+
+_w1 := file.writeText(libPath, libSrc);
+_w2 := file.writeText(appPath, appSrc);
+
+tsModComp := compilerTest.compileFile(tsComp, tmpDir.path, [appPath]);
+test.checkInt("cross-mod constraints ts compile: " + tsModComp.stderr, 0, tsModComp.status);
+tsModRes := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("cross-mod constraints ts status: " + tsModRes.stderr, 0, tsModRes.status);
+test.checkText("cross-mod constraints ts stdout", "30 3.75 14\n", tsModRes.stdout);
+if ccInfo.available {
+    cModComp := compilerTest.compileFile(cComp, tmpDir.path, [appPath]);
+    test.checkInt("cross-mod constraints c compile: " + cModComp.stderr, 0, cModComp.status);
+    cModRes := compilerTest.compileAndRunC(cModComp.stdout, ccInfo.cc, "");
+    test.checkInt("cross-mod constraints c status: " + cModRes.stderr, 0, cModRes.status);
+    test.checkText("cross-mod constraints c stdout parity", tsModRes.stdout, cModRes.stdout);
+}
+
+/* 3. Negative diagnostics: constraint violations, empty intersection, subset forwarding, and union positions. */
+expectRejectBoth("reject-inferred-call-constraint",
+"Numeric := alias Int | Float;\n" +
+"f := fn<T: Type<Numeric>>(x: T): T { x };\n" +
+"_ := f(\"bad\");\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-explicit-call-constraint",
+"Numeric := alias Int | Float;\n" +
+"f := fn<T: Type<Numeric>>(x: T): T { x };\n" +
+"_ := f<String>(\"bad\");\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-record-inst-constraint",
+"Numeric := alias Int | Float;\n" +
+"Vec := record<T: Type<Numeric>, N: Int> { data: [T; N]; }\n" +
+"bad: Vec<String, 2>;\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-distinct-inst-constraint",
+"IntNum := alias Int | Int32;\n" +
+"Boxed := distinct<T: Type<IntNum>> T;\n" +
+"bad: Boxed<Float>;\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-alias-inst-constraint",
+"ShortNum := alias Int | Float;\n" +
+"Pair := alias<T: Type<ShortNum>> (T, T);\n" +
+"bad: Pair<Bool>;\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-enum-inst-constraint",
+"FlagNum := alias Int | Bool;\n" +
+"Tag := enum<T: Type<FlagNum>> { A; B; }\n" +
+"_ := Tag<String>.A;\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-multibound-narrowed-out",
+"pickCommon := fn<T: Type<Int | Float | String, Float | String | Bool>>(x: T): T { x };\n" +
+"_ := pickCommon(10);\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-empty-intersection",
+"bad := fn<T: Type<Int, String>>(x: T): T { x };\n",
+"unsatisfiable empty type constraint");
+
+expectRejectBoth("reject-empty-type-constraint-syntax",
+"bad := fn<T: Type<>>(x: T): T { x };\n",
+"expected at least one type constraint inside Type<...>");
+
+expectRejectBoth("reject-subset-unconstrained-forwarding",
+"IntNum := alias Int | Int32;\n" +
+"Inner := record<T: Type<IntNum>> { v: T; }\n" +
+"outer := fn<U: Type>(x: U): Inner<U> { Inner<U> { v = x } };\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-subset-wider-forwarding",
+"IntNum := alias Int | Int32;\n" +
+"Numeric := alias Int | Int32 | Float;\n" +
+"Inner := record<T: Type<IntNum>> { v: T; }\n" +
+"outer := fn<U: Type<Numeric>>(x: U): Inner<U> { Inner<U> { v = x } };\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-distinct-not-in-base-union",
+"IntNum := alias Int | Int32;\n" +
+"Meter := distinct Int;\n" +
+"f := fn<T: Type<IntNum>>(x: T): T { x };\n" +
+"m: Meter = cast(1);\n" +
+"_ := f(m);\n",
+"does not satisfy constraint");
+
+expectRejectBoth("reject-union-in-var-type",
+"Numeric := alias Int | Float;\n" +
+"x: Numeric = 1;\n",
+"Type<...> constraints");
+
+expectRejectBoth("reject-union-in-fn-param",
+"Numeric := alias Int | Float;\n" +
+"f := fn(x: Numeric): Int { 1 };\n",
+"Type<...> constraints");
+
+expectRejectBoth("reject-union-in-record-field",
+"Numeric := alias Int | Float;\n" +
+"Bad := record { v: Numeric; }\n",
+"Type<...> constraints");
+
+expectRejectBoth("reject-union-in-list",
+"Numeric := alias Int | Float;\n" +
+"xs: List<Numeric> = [];\n",
+"Type<...> constraints");
+
+expectRejectBoth("reject-union-in-fixed-array",
+"Numeric := alias Int | Float;\n" +
+"arr: [Numeric; 2];\n",
+"Type<...> constraints");
+
+expectRejectBoth("reject-union-in-map-value",
+"Numeric := alias Int | Float;\n" +
+"m: Map<String, Numeric>;\n",
+"Type<...> constraints");
+
+expectRejectBoth("reject-union-in-distinct",
+"Numeric := alias Int | Float;\n" +
+"Bad := distinct Numeric;\n",
+"Type<...> constraints");
+
+expectRejectBoth("reject-union-as-generic-type-arg",
+"Numeric := alias Int | Float;\n" +
+"Box := record<T: Type> { v: T; }\n" +
+"bad: Box<Numeric>;\n",
+"Type<...> constraints");
+
+expectRejectBoth("reject-inline-union-outside-constraint",
+"bad := fn(x: Int | Float): Int { 1 };\n",
+"type set union is only allowed in alias declarations and Type<...> constraints");
+
+expectRejectBoth("reject-typeop-constraint-violation",
+"Numeric := alias Int | Float;\n" +
+"Vec := record<T: Type, N: Int> { data: [T; N]; }\n" +
+"Vec.dot := fn<T: Type<Numeric>, N: Int>(a: Self<T, N>, b: Self<T, N>): T { a.data[0] };\n" +
+"vs := Vec<String, 2> { data = [\"a\", \"b\"] };\n" +
+"_ := vs.dot(vs);\n",
+"does not satisfy constraint");
