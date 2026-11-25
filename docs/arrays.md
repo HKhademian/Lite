@@ -146,4 +146,6 @@ Known N can support exact destructuring, compile-time size checks, and specializ
 
 A bounded-capacity list differs from an array: its length can vary up to a fixed maximum. A known-length slice differs too: it views N elements rather than owning N inline slots. Both are useful later facilities, not reasons to merge the core contracts.
 
+An open future direction is whether `Array<T, N>` and `List<T>` should share a unified internal/structural `Collection` contract (without class inheritance — using interfaces/protocols or structural capability bounds rather than subtyping) so sequence algorithms can abstract cleanly over both fixed-size arrays and growable lists; that design remains under investigation.
+
 Remaining choices include runtime-array type spelling, multidimensional layout, element defaults, equality, allocation/failure behavior, ownership, and complete array/generic grammar. The [T; N] form and known-size inference used here do not adopt [T; ...] for runtime arrays; that ellipsis was a discussion placeholder. Related: [sequence families](lite://doc/sequence-types), [lists](lite://doc/lists), [slices](lite://doc/slices), [record copies](lite://doc/local-shadowing-and-copies), and [initialization](lite://doc/first-initialization).
