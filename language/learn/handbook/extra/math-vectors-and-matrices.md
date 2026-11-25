@@ -34,9 +34,9 @@ sum := a.add(b);
 io.outputLine(a.length(), a.dot(b), sum.x(), sum.y());
 ```
 
-## 2×2, 3×3 & 4×4 Matrix Transforms (`math/matrix`)
+## N×M, 2×2, 3×3 & 4×4 Matrix Transforms (`math/matrix`)
 
-[math/matrix](lite://module/math/matrix) builds on `math/vector` with `Mat2`, `Mat3`, and `Mat4` value types for 2D affine transforms (`translate2`, `scale2`, `rotate2`, `transformPoint2`) and 3D pipelines (`translate3`, `scale3`, `rotateX`, `rotateY`, `rotateZ`, `mul4`, `transpose4`, `det3`, `perspective`, `lookAt`):
+[math/matrix](lite://module/math/matrix) defines one unified generic row-major matrix record `Mat<T: Type<math.Numeric>, R: Int, C: Int>` backed by `[Vec<T, C>; R]` (`Mat2<T>`, `Mat3<T>`, `Mat4<T>`, `FMat2`, `FMat3`, `FMat4`), with generic `identity<N>()`, `.mul()`, `.mulVec()`, `.transpose()`, `.det()`, 2D affine transforms (`translate2`, `scale2`, `rotate2`, `.transformPoint2`), and 3D transforms (`translate3`, `scale3`, `rotateX`, `rotateY`, `rotateZ`, `perspective`, `.transformPoint3`):
 
 ```lite
 io := import "core/io";
@@ -45,9 +45,9 @@ mat := import "math/matrix";
 
 move := mat.translate2(10.0, 20.0);
 scale := mat.scale2(2.0, 3.0);
-xform := mat.mul3(move, scale);
-pt := mat.transformPoint2(xform, vec.vec2(4.0, 5.0));
-io.outputLine(pt.x(), pt.y());
+xform := move.mul(scale);
+pt := xform.transformPoint2(vec.vec2(4.0, 5.0));
+io.outputLine(pt.x(), pt.y(), xform.det());
 ```
 
 ## Flat-Backed 2D Grids (`ds/grid`)
@@ -67,7 +67,7 @@ Explore the module references: [math/scalar](lite://module/math/scalar), [math/r
 
 ## Geometry Primitives (`math/geom`)
 
-[math/geom](lite://module/math/geom) builds on `math/scalar` and `math/vector` with generic N-dimensional `Box<T, N>`, `Ray<T, N>`, and `Segment<T, N>`, payload-bearing `RayHit` (`Miss` / `Hit(Float)`), concrete 2D/3D `Rect`, `Circle`, and `Sphere` shapes, and intersection queries (`rayBoxHit`, `raySphereHit`, `containsPoint`, `intersects`).
+[math/geom](lite://module/math/geom) builds on `math/scalar` and `math/vector` with generic N-dimensional `Box<T, N>`, `Ray<T, N>`, `Segment<T, N>`, and `Ball<T, N>` (aliasing `Circle = Ball<Float, 2>` and `Sphere = Ball<Float, 3>` alongside concrete `Rect`), payload-bearing `RayHit` (`Miss` / `Hit(Float)`), and intersection queries (`rayBoxHit`, `raySphereHit`, `containsPoint`, `intersects`).
 
 ## Next Chapter
 

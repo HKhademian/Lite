@@ -44,17 +44,17 @@ Key `extra/surface` capabilities:
 
 ## Fixed-Timestep Clocks & Cooldowns (`extra/timer`)
 
-[extra/timer](lite://module/extra/timer) supplies deterministic game-loop timing primitives: fixed-timestep accumulators (`createClock`, `advanceClock`), ability/spawn cooldowns (`createCooldown`, `tickCooldown`, `trigger`), and monotonic stopwatches (`startStopwatch`, `elapsedMs`, `lap`):
+[extra/timer](lite://module/extra/timer) supplies nominal `record` game-loop timing primitives: fixed-timestep accumulators (`StepClock` with `createClock`, `advance`, `reset`), cooldowns (`Cooldown` with `createCooldown`, `tick`, `trigger`, `isReady`, `progress`), and monotonic stopwatches (`Stopwatch` with `startStopwatch`, `elapsedMs`, `lap`):
 
 ```lite
 io := import "core/io";
 timer := import "extra/timer";
 
-var clock := timer.createClock(60.0, 0.25);
-clock = timer.advanceClock(clock, 0.05);
-var cd := timer.createCooldown(1.0, false);
-cd = timer.tickCooldown(cd, 0.4);
-io.outputLine(clock.lastSteps, clock.totalSteps, timer.isReady(cd));
+mut clock := timer.createClock(60.0, 0.25);
+mut clock.advance(0.05);
+mut cd := timer.createCooldown(1.0, false);
+mut cd.tick(0.4);
+io.outputLine(clock.lastSteps, clock.totalSteps, cd.isReady());
 ```
 
 ## Native Desktop Runner (`./bin/lite play`)

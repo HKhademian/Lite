@@ -1,15 +1,30 @@
-/** Experimental fixed-timestep accumulators, cooldowns, and monotonic stopwatches (`extra/timer`). */
+/** Nominal fixed-timestep accumulators, cooldowns, and monotonic stopwatches (`extra/timer`). */
 
 time := import "core/time";
 
-/** Pure fixed-timestep accumulator state for deterministic simulation updates (UPS). */
-pub StepClock := alias (stepSec: Float, maxDeltaSec: Float, accumulatorSec: Float, totalSteps: Int, lastSteps: Int, alpha: Float);
+/** Fixed-timestep accumulator state for deterministic simulation updates (UPS). */
+pub StepClock := record {
+    stepSec: Float;
+    maxDeltaSec: Float;
+    accumulatorSec: Float;
+    totalSteps: Int;
+    lastSteps: Int;
+    alpha: Float;
+}
 
-/** Pure cooldown timer state. */
-pub Cooldown := alias (durationSec: Float, remainingSec: Float, fired: Bool);
+/** Nominal cooldown timer state. */
+pub Cooldown := record {
+    durationSec: Float;
+    remainingSec: Float;
+    fired: Bool;
+}
 
-/** Monotonic wall-clock stopwatch snapshot. */
-pub Stopwatch := alias (startNs: Int, lastLapNs: Int, lastLapMs: Float);
+/** Nominal monotonic wall-clock stopwatch. */
+pub Stopwatch := record {
+    startNs: Int;
+    lastLapNs: Int;
+    lastLapMs: Float;
+}
 
 /* ============================================================================
  * Fixed-timestep accumulator (StepClock)
@@ -19,11 +34,18 @@ pub Stopwatch := alias (startNs: Int, lastLapNs: Int, lastLapMs: Float);
 pub createClock := fn(ups: Float, maxDeltaSec: Float): StepClock {
     rate := if ups <= 0.0 { 60.0 } else { ups };
     cap := if maxDeltaSec <= 0.0 { 0.1 } else { maxDeltaSec };
-    (stepSec = 1.0 / rate, maxDeltaSec = cap, accumulatorSec = 0.0, totalSteps = 0, lastSteps = 0, alpha = 0.0)
+    StepClock {
+    stepSec = 1.0 / rate,
+    maxDeltaSec = cap,
+    accumulatorSec = 0.0,
+    totalSteps = 0,
+    lastSteps = 0,
+    alpha = 0.0
+    }
 };
 
 /** Advances `clock` by `deltaSec`, updating `lastSteps`, `totalSteps`, and render interpolation `alpha` (`0..1`). */
-pub advanceClock := fn(clock: StepClock, deltaSec: Float): StepClock {
+pub StepClock.advance := fn(clock: mut Self, deltaSec: Float): Unit {
     clamped := if deltaSec < 0.0 { 0.0 } else if deltaSec > clock.maxDeltaSec { clock.maxDeltaSec } else { deltaSec };
     var acc := clock.accumulatorSec + clamped;
     var steps := 0;
@@ -31,76 +53,81 @@ pub advanceClock := fn(clock: StepClock, deltaSec: Float): StepClock {
         acc = acc - clock.stepSec;
         steps += 1;
     }
-    alpha := if clock.stepSec > 0.0 { acc / clock.stepSec } else { 0.0 };
-    (
-    stepSec = clock.stepSec,
-    maxDeltaSec = clock.maxDeltaSec,
-    accumulatorSec = acc,
-    totalSteps = clock.totalSteps + steps,
-    lastSteps = steps,
-    alpha = alpha
-    )
+    clock.accumulatorSec = acc;
+    clock.totalSteps = clock.totalSteps + steps;
+    clock.lastSteps = steps;
+    clock.alpha = if clock.stepSec > 0.0 { acc / clock.stepSec } else { 0.0 };
 };
 
 /** Resets `clock`'s accumulator and step counters to zero. */
-pub resetClock := fn(clock: StepClock): StepClock {
-    (stepSec = clock.stepSec, maxDeltaSec = clock.maxDeltaSec, accumulatorSec = 0.0, totalSteps = 0, lastSteps = 0, alpha = 0.0)
+pub StepClock.reset := fn(clock: mut Self): Unit {
+    clock.accumulatorSec = 0.0;
+    clock.totalSteps = 0;
+    clock.lastSteps = 0;
+    clock.alpha = 0.0;
 };
 
 /* ============================================================================
- * Cooldown timer
+ * Cooldown timer (Cooldown)
  * ============================================================================ */
 
 /** Creates a cooldown timer with `durationSec` (ready immediately when `startReady` is true). */
 pub createCooldown := fn(durationSec: Float, startReady: Bool): Cooldown {
     dur := if durationSec < 0.0 { 0.0 } else { durationSec };
-    (durationSec = dur, remainingSec = if startReady { 0.0 } else { dur }, fired = false)
+    Cooldown { durationSec = dur, remainingSec = if startReady { 0.0 } else { dur }, fired = false }
 };
 
 /** True when `cd` has cooled down and is ready to fire. */
-pub isReady := fn(cd: Cooldown): Bool {
+pub Cooldown.isReady := fn(cd: Self): Bool {
     cd.remainingSec <= 0.0
 };
 
 /** Advances `cd` by `deltaSec`, clamping remaining time at `0.0`. */
-pub tickCooldown := fn(cd: Cooldown, deltaSec: Float): Cooldown {
+pub Cooldown.tick := fn(cd: mut Self, deltaSec: Float): Unit {
     dt := if deltaSec < 0.0 { 0.0 } else { deltaSec };
     rem := cd.remainingSec - dt;
-    (durationSec = cd.durationSec, remainingSec = if rem < 0.0 { 0.0 } else { rem }, fired = false)
+    cd.remainingSec = if rem < 0.0 { 0.0 } else { rem };
+    cd.fired = false;
 };
 
-/** Attempts to fire `cd`; if ready, resets `remainingSec = durationSec` and sets `fired = true`. */
-pub trigger := fn(cd: Cooldown): Cooldown {
+/** Attempts to fire `cd`; if ready, resets `remainingSec = durationSec`, sets `fired = true`, and returns `true`. */
+pub Cooldown.trigger := fn(cd: mut Self): Bool {
     if cd.remainingSec > 0.0 {
-        return (durationSec = cd.durationSec, remainingSec = cd.remainingSec, fired = false);
+        cd.fired = false;
+        return false;
     }
-    (durationSec = cd.durationSec, remainingSec = cd.durationSec, fired = true)
+    cd.remainingSec = cd.durationSec;
+    cd.fired = true;
+    true
 };
 
 /** Returns cooldown completion progress in `0.0..1.0` (`1.0` = ready). */
-pub progress := fn(cd: Cooldown): Float {
+pub Cooldown.progress := fn(cd: Self): Float {
     if cd.durationSec <= 0.0 or cd.remainingSec <= 0.0 { return 1.0; }
     p := 1.0 - (cd.remainingSec / cd.durationSec);
     if p < 0.0 { 0.0 } else if p > 1.0 { 1.0 } else { p }
 };
 
 /* ============================================================================
- * Monotonic Stopwatch
+ * Monotonic Stopwatch (Stopwatch)
  * ============================================================================ */
 
 /** Starts a new monotonic wall-clock stopwatch. */
 pub startStopwatch := fn(): Stopwatch {
     now := time.monotonicNs();
-    (startNs = now, lastLapNs = now, lastLapMs = 0.0)
+    Stopwatch { startNs = now, lastLapNs = now, lastLapMs = 0.0 }
 };
 
 /** Returns elapsed milliseconds since `sw` was started. */
-pub elapsedMs := fn(sw: Stopwatch): Float {
+pub Stopwatch.elapsedMs := fn(sw: Self): Float {
     (time.monotonicNs() - sw.startNs) / 1000000.0
 };
 
-/** Records a lap and stores milliseconds since the previous lap in `lastLapMs`. */
-pub lap := fn(sw: Stopwatch): Stopwatch {
+/** Records a lap and stores/returns milliseconds since the previous lap in `lastLapMs`. */
+pub Stopwatch.lap := fn(sw: mut Self): Float {
     now := time.monotonicNs();
-    (startNs = sw.startNs, lastLapNs = now, lastLapMs = (now - sw.lastLapNs) / 1000000.0)
+    lapMs := (now - sw.lastLapNs) / 1000000.0;
+    sw.lastLapNs = now;
+    sw.lastLapMs = lapMs;
+    lapMs
 };

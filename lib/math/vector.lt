@@ -63,31 +63,6 @@ pub vec4 := fn<T: Type<math.Numeric>>(x: T, y: T, z: T, w: T): Vec4<T> {
     Vec<T, 4> { data = [x, y, z, w] }
 };
 
-/** Constructs a 2D integer vector `IVec2`. */
-pub ivec2 := fn(x: Int, y: Int): IVec2 {
-    Vec<Int, 2> { data = [x, y] }
-};
-
-/** Constructs a 3D integer vector `IVec3`. */
-pub ivec3 := fn(x: Int, y: Int, z: Int): IVec3 {
-    Vec<Int, 3> { data = [x, y, z] }
-};
-
-/** Constructs a 2D `Float` vector `FVec2`. */
-pub fvec2 := fn(x: Float, y: Float): FVec2 {
-    Vec<Float, 2> { data = [x, y] }
-};
-
-/** Constructs a 3D `Float` vector `FVec3`. */
-pub fvec3 := fn(x: Float, y: Float, z: Float): FVec3 {
-    Vec<Float, 3> { data = [x, y, z] }
-};
-
-/** Constructs a 4D `Float` vector `FVec4`. */
-pub fvec4 := fn(x: Float, y: Float, z: Float, w: Float): FVec4 {
-    Vec<Float, 4> { data = [x, y, z, w] }
-};
-
 /** Zero 2D `Float` vector `(0, 0)`. */
 pub ZERO2 := zeroVec<Float, 2>();
 

@@ -76,19 +76,19 @@ functionalSrc :=
 "io.outputLine(\"scalar\", mathCheck, genericScalar);\n" +
 "\n" +
 "/* 2. Generic Vec<T, N> across Int, Int32, Float, Float32 and mut setters */\n" +
-"iv1 := vec.ivec2(3, 4);\n" +
-"iv2 := vec.ivec2(1, -2);\n" +
+"iv1 := vec.vec2(3, 4);\n" +
+"iv2 := vec.vec2(1, -2);\n" +
 "ivSum := iv1.add(iv2);\n" +
 "ivNeg := iv2.neg();\n" +
 "v32: mut vec.Vec<Int32, 3> = vec.splat<Int32, 3>(i32b);\n" +
 "mut v32.setX(2);\n" +
 "mut v32.setY(3);\n" +
 "mut v32.set(2, 6);\n" +
-"fvA := vec.fvec3(1.0, 2.0, 3.0);\n" +
-"fvB := vec.fvec3(4.0, 6.0, 3.0);\n" +
+"fvA := vec.vec3(1.0, 2.0, 3.0);\n" +
+"fvB := vec.vec3(4.0, 6.0, 3.0);\n" +
 "fvLerp := fvA.lerp(fvB, 0.5);\n" +
 "fvZero := vec.zeroVec<Float, 4>();\n" +
-"mut fvMut := vec.fvec4(0.1, 0.2, 0.3, 1.0);\n" +
+"mut fvMut := vec.vec4(0.1, 0.2, 0.3, 1.0);\n" +
 "mut fvMut.setZ(0.8);\n" +
 "mut fvMut.setW(0.5);\n" +
 "vf32a := vec.vecN<Float32, 2>([f32b, f32c]);\n" +
@@ -100,35 +100,37 @@ functionalSrc :=
 "    and ivNeg.x() == -1 and ivNeg.y() == 2\n" +
 "    and v32.x() == 2 and v32.y() == 3 and v32.z() == 6\n" +
 "    and v32.lengthSq() == 49\n" +
-"    and near(fvA.distance(vec.fvec3(1.0, 6.0, 6.0)), 5.0)\n" +
+"    and near(fvA.distance(vec.vec3(1.0, 6.0, 6.0)), 5.0)\n" +
 "    and near(fvLerp.x(), 2.5) and near(fvLerp.y(), 4.0) and near(fvLerp.z(), 3.0)\n" +
 "    and near(fvZero.w(), 0.0)\n" +
 "    and near(fvMut.r(), 0.1) and near(fvMut.g(), 0.2) and near(fvMut.b(), 0.8) and near(fvMut.a(), 0.5)\n" +
-"    and near(vec.fvec2(3.0, 4.0).normalize().x(), 0.6)\n" +
+"    and near(vec.vec2(3.0, 4.0).normalize().x(), 0.6)\n" +
 "    and near(vf32a.dot(vf32b), 8.25);\n" +
 "io.outputLine(\"vecN\", vecCheck);\n" +
 "\n" +
-"/* 3. math/geom generic Box<T, N>, Ray<T, N>, Segment<T, N>, and concrete 2D/3D shapes */\n" +
-"iboxA := geom.boxFromMinMax(vec.ivec2(0, 0), vec.ivec2(4, 6));\n" +
-"iboxB := geom.boxFromMinMax(vec.ivec2(3, 5), vec.ivec2(8, 9));\n" +
-"iboxExp := iboxA.expandPoint(vec.ivec2(-2, 10));\n" +
-"fbox3 := geom.boxFromMinMax(vec.fvec3(2.0, -1.0, -1.0), vec.fvec3(4.0, 1.0, 1.0));\n" +
-"rayHit3 := geom.ray(vec.fvec3(0.0, 0.0, 0.0), vec.fvec3(1.0, 0.0, 0.0));\n" +
-"rayMiss3 := geom.ray(vec.fvec3(0.0, 5.0, 0.0), vec.fvec3(1.0, 0.0, 0.0));\n" +
+"/* 3. math/geom generic Box<T, N>, Ray<T, N>, Segment<T, N>, Ball<T, N>, and 2D/3D shapes */\n" +
+"iboxA := geom.boxFromMinMax(vec.vec2(0, 0), vec.vec2(4, 6));\n" +
+"iboxB := geom.boxFromMinMax(vec.vec2(3, 5), vec.vec2(8, 9));\n" +
+"iboxExp := iboxA.expandPoint(vec.vec2(-2, 10));\n" +
+"fbox3 := geom.boxFromMinMax(vec.vec3(2.0, -1.0, -1.0), vec.vec3(4.0, 1.0, 1.0));\n" +
+"rayHit3 := geom.ray(vec.vec3(0.0, 0.0, 0.0), vec.vec3(1.0, 0.0, 0.0));\n" +
+"rayMiss3 := geom.ray(vec.vec3(0.0, 5.0, 0.0), vec.vec3(1.0, 0.0, 0.0));\n" +
 "hBox1 := geom.rayBoxHit(rayHit3, fbox3);\n" +
 "hBox2 := geom.rayBoxHit(rayMiss3, fbox3);\n" +
-"seg2 := geom.segment(vec.fvec2(1.0, 1.0), vec.fvec2(4.0, 5.0));\n" +
+"seg2 := geom.segment(vec.vec2(1.0, 1.0), vec.vec2(4.0, 5.0));\n" +
 "r1 := geom.rect(0.0, 0.0, 10.0, 6.0);\n" +
-"c1 := geom.circle(vec.vec2(12.0, 3.0), 2.5);\n" +
-"s1 := geom.sphere(vec.vec3(5.0, 0.0, 0.0), 1.0);\n" +
+"c1: geom.Ball<Float, 2> = geom.circle(vec.vec2(12.0, 3.0), 2.5);\n" +
+"s1: geom.Ball<Float, 3> = geom.sphere(vec.vec3(5.0, 0.0, 0.0), 1.0);\n" +
+"b2Gen := geom.ball(vec.vec2(5.0, 0.0), 1.0);\n" +
+"hb2 := geom.raySphereHit(vec.ZERO2, vec.vec2(1.0, 0.0), b2Gen);\n" +
 "hs1 := geom.raySphereHit(vec.ZERO3, vec.UNIT_X3, s1);\n" +
 "hs2 := geom.raySphereHit(vec.vec3(5.0, 0.0, 0.0), vec.UNIT_X3, s1);\n" +
 "hs3 := geom.raySphereHit(vec.vec3(0.0, 3.0, 0.0), vec.UNIT_X3, s1);\n" +
 "boxDist := match hBox1 { .Hit(d) { d } .Miss { -1.0 } };\n" +
 "geomCheck :=\n" +
 "    iboxA.size().x() == 4 and iboxA.size().y() == 6\n" +
-"    and iboxA.containsPoint(vec.ivec2(4, 3))\n" +
-"    and not iboxA.containsPoint(vec.ivec2(5, 3))\n" +
+"    and iboxA.containsPoint(vec.vec2(4, 3))\n" +
+"    and not iboxA.containsPoint(vec.vec2(5, 3))\n" +
 "    and iboxA.intersects(iboxB)\n" +
 "    and iboxExp.min.x() == -2 and iboxExp.max.y() == 10\n" +
 "    and iboxA.unionBox(iboxB).max.x() == 8\n" +
@@ -140,8 +142,10 @@ functionalSrc :=
 "    and r1.containsPoint(vec.vec2(10.0, 6.0))\n" +
 "    and r1.inset(1.0).area() == 32.0\n" +
 "    and c1.intersectsRect(r1)\n" +
+"    and c1.area() > 19.0\n" +
 "    and not c1.containsPoint(vec.vec2(0.0, 0.0))\n" +
 "    and s1.containsPoint(vec.vec3(5.0, 0.5, 0.0))\n" +
+"    and near(hb2.distanceOr(-1.0), 4.0)\n" +
 "    and near(hs1.distanceOr(-1.0), 4.0)\n" +
 "    and near(hs2.distanceOr(-1.0), 1.0)\n" +
 "    and not hs3.isHit();\n" +

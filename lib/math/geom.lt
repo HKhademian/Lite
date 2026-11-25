@@ -200,35 +200,51 @@ pub Rect.inset := fn(r: Self, pad: Float): Self {
     Rect { x = r.x + pad, y = r.y + pad, width = w, height = h }
 };
 
-/** 2D circle with `center` and `radius`. */
-pub Circle := record {
-    center: vec.FVec2;
-    radius: Float;
+/** Generic N-dimensional sphere (`Ball<T, N>`) with `center` and `radius`. */
+pub Ball := record<T: Type<math.FloatScalar>, N: Int> {
+    center: vec.Vec<T, N>;
+    radius: T;
 }
+
+/** 2D circle alias over `Ball<Float, 2>`. */
+pub Circle := alias Ball<Float, 2>;
+
+/** 3D sphere alias over `Ball<Float, 3>`. */
+pub Sphere := alias Ball<Float, 3>;
+
+/** Constructs an N-dimensional `Ball<T, N>`. */
+pub ball := fn<T: Type<math.FloatScalar>, N: Int>(center: vec.Vec<T, N>, radius: T): Ball<T, N> {
+    Ball<T, N> { center = center, radius = radius }
+};
 
 /** Constructs a 2D `Circle`. */
 pub circle := fn(center: vec.FVec2, radius: Float): Circle {
-    Circle { center = center, radius = radius }
+    Ball<Float, 2> { center = center, radius = radius }
 };
 
-/** Area `PI * radius^2` of `c` (`0.0` for non-positive radius). */
-pub Circle.area := fn(c: Self): Float {
+/** Constructs a 3D `Sphere`. */
+pub sphere := fn(center: vec.FVec3, radius: Float): Sphere {
+    Ball<Float, 3> { center = center, radius = radius }
+};
+
+/** Area `PI * radius^2` of 2D `Circle` `c` (`0.0` for non-positive radius). */
+pub Ball.area := fn(c: Self<Float, 2>): Float {
     if c.radius <= 0.0 { 0.0 } else { math.PI * c.radius * c.radius }
 };
 
-/** True when 2D point `p` lies inside or on the circumference of `c`. */
-pub Circle.containsPoint := fn(c: Self, p: vec.FVec2): Bool {
-    c.center.sub(p).lengthSq() <= (c.radius * c.radius)
+/** True when N-D point `p` lies inside or on the boundary of `b`. */
+pub Ball.containsPoint := fn<T: Type<math.FloatScalar>, N: Int>(b: Self<T, N>, p: vec.Vec<T, N>): Bool {
+    b.center.sub(p).lengthSq() <= (b.radius * b.radius)
 };
 
-/** True when circles `a` and `b` overlap or touch. */
-pub Circle.intersects := fn(a: Self, b: Self): Bool {
+/** True when N-D balls `a` and `b` overlap or touch. */
+pub Ball.intersects := fn<T: Type<math.FloatScalar>, N: Int>(a: Self<T, N>, b: Self<T, N>): Bool {
     rSum := a.radius + b.radius;
     a.center.sub(b.center).lengthSq() <= (rSum * rSum)
 };
 
-/** True when circle `c` overlaps or touches rectangle `r`. */
-pub Circle.intersectsRect := fn(c: Self, r: Rect): Bool {
+/** True when 2D circle `c` overlaps or touches rectangle `r`. */
+pub Ball.intersectsRect := fn(c: Self<Float, 2>, r: Rect): Bool {
     cx := math.clamp(c.center.x(), r.x, r.right());
     cy := math.clamp(c.center.y(), r.y, r.bottom());
     dx := c.center.x() - cx;
@@ -236,30 +252,8 @@ pub Circle.intersectsRect := fn(c: Self, r: Rect): Bool {
     ((dx * dx) + (dy * dy)) <= (c.radius * c.radius)
 };
 
-/** 3D sphere with `center` and `radius`. */
-pub Sphere := record {
-    center: vec.FVec3;
-    radius: Float;
-}
-
-/** Constructs a 3D `Sphere`. */
-pub sphere := fn(center: vec.FVec3, radius: Float): Sphere {
-    Sphere { center = center, radius = radius }
-};
-
-/** True when 3D point `p` lies inside or on the surface of `s`. */
-pub Sphere.containsPoint := fn(s: Self, p: vec.FVec3): Bool {
-    s.center.sub(p).lengthSq() <= (s.radius * s.radius)
-};
-
-/** True when spheres `a` and `b` overlap or touch. */
-pub Sphere.intersects := fn(a: Self, b: Self): Bool {
-    rSum := a.radius + b.radius;
-    a.center.sub(b.center).lengthSq() <= (rSum * rSum)
-};
-
-/** Tests intersection of 3D ray `origin + dir * t` (`t >= 0`) against sphere `s`. */
-pub raySphereHit := fn(origin: vec.FVec3, dir: vec.FVec3, s: Sphere): RayHit {
+/** Tests intersection of N-dimensional ray `origin + dir * t` (`t >= 0`) against `Ball<Float, N>` `s`. */
+pub raySphereHit := fn<N: Int>(origin: vec.Vec<Float, N>, dir: vec.Vec<Float, N>, s: Ball<Float, N>): RayHit {
     a := dir.dot(dir);
     if a <= 0.000000000001 { return .Miss; }
     oc := origin.sub(s.center);
