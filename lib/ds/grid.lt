@@ -274,3 +274,108 @@ pub destroyFloats := fn(grid: FloatGrid): Unit {
     mut fgGen.setAt(id, fgGen[id] + 1);
     mut fgFree.pushBack(id);
 };
+
+/* ============================================================================
+ * Generic Value-Typed Grid<T>
+ * ============================================================================ */
+
+/** Outcome of reading a cell from a generic `Grid<T>`. */
+pub GridCell := enum<T: Type> {
+    OutOfBounds;
+    Value(T);
+}
+
+/** True when `cell` holds a valid in-bounds `.Value(...)`. */
+pub GridCell.isValue := fn<T: Type>(cell: Self<T>): Bool {
+    match cell {
+        .OutOfBounds { false }
+        .Value { true }
+    }
+};
+
+/** Returns the cell value when `.Value(v)`, or `fallback` when `.OutOfBounds`. */
+pub GridCell.unwrapOr := fn<T: Type>(cell: Self<T>, fallback: T): T {
+    match cell {
+        .OutOfBounds { fallback }
+        .Value(v) { v }
+    }
+};
+
+/** Generic flat-backed 2D row-major grid storing `T` values. */
+pub Grid := record<T: Type> {
+    width: Int;
+    height: Int;
+    data: List<T>;
+}
+
+/** Creates a generic `width x height` grid filled with `fill`. */
+pub createGrid := fn<T: Type>(width: Int, height: Int, fill: T): Grid<T> {
+    w := if width < 1 { 1 } else { width };
+    h := if height < 1 { 1 } else { height };
+    total := w * h;
+    buf: mut List<T> = [];
+    var i := 0;
+    loop i < total {
+        mut buf.pushBack(fill);
+        i += 1;
+    }
+    Grid<T> { width = w, height = h, data = buf }
+};
+
+/** True when `(x, y)` lies inside `g`. */
+pub Grid.inBounds := fn<T: Type>(g: Self<T>, x: Int, y: Int): Bool {
+    x >= 0 and x < g.width and y >= 0 and y < g.height
+};
+
+/** Reads cell `(x, y)` or `.OutOfBounds`. */
+pub Grid.get := fn<T: Type>(g: Self<T>, x: Int, y: Int): GridCell<T> {
+    if not g.inBounds(x, y) { .OutOfBounds } else { .Value(g.data[(y * g.width) + x]) }
+};
+
+/** Reads cell `(x, y)`, returning `fallback` when out of bounds. */
+pub Grid.getOr := fn<T: Type>(g: Self<T>, x: Int, y: Int, fallback: T): T {
+    if not g.inBounds(x, y) { fallback } else { g.data[(y * g.width) + x] }
+};
+
+/** Writes `value` to cell `(x, y)`; returns `false` when out of bounds. */
+pub Grid.set := fn<T: Type>(g: mut Self<T>, x: Int, y: Int, value: T): Bool {
+    if not g.inBounds(x, y) { return false; }
+    buf: mut List<T> = g.data;
+    mut buf.setAt((y * g.width) + x, value);
+    g.data = buf;
+    true
+};
+
+/** Fills axis-aligned sub-rectangle `[x, x + w) x [y, y + h)` clamped to `g`. */
+pub Grid.fillRect := fn<T: Type>(g: mut Self<T>, x: Int, y: Int, w: Int, h: Int, value: T): Unit {
+    if w <= 0 or h <= 0 { return; }
+    x0 := if x < 0 { 0 } else { x };
+    y0 := if y < 0 { 0 } else { y };
+    x1 := if x + w > g.width { g.width } else { x + w };
+    y1 := if y + h > g.height { g.height } else { y + h };
+    if x0 >= x1 or y0 >= y1 { return; }
+    buf: mut List<T> = g.data;
+    var cy := y0;
+    loop cy < y1 {
+        rowOff := cy * g.width;
+        var cx := x0;
+        loop cx < x1 {
+            mut buf.setAt(rowOff + cx, value);
+            cx += 1;
+        }
+        cy += 1;
+    }
+    g.data = buf;
+};
+
+/** Resets every cell in `g` to `fill`. */
+pub Grid.clear := fn<T: Type>(g: mut Self<T>, fill: T): Unit {
+    buf: mut List<T> = g.data;
+    total := g.width * g.height;
+    var i := 0;
+    loop i < total {
+        mut buf.setAt(i, fill);
+        i += 1;
+    }
+    g.data = buf;
+};

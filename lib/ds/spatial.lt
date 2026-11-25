@@ -1,0 +1,147 @@
+/** Uniform 2D spatial hash grid (`ds/spatial`) for fast broad-phase range queries across TS and C11. */
+
+math := import "math/scalar";
+geom := import "math/geom";
+
+/** Unbounded 2D spatial hash grid indexing integer entity IDs across uniform square cells. */
+pub SpatialGrid2D := record {
+    cellSize: Float;
+    heads: Map<Int, Int>;
+    nodeIds: List<Int>;
+    nodeNext: List<Int>;
+    itemCount: Int;
+}
+
+cellKey := fn(cx: Int, cy: Int): Int {
+    cxOff := cx + 1073741824;
+    cyOff := cy + 1073741824;
+    (cxOff * 2147483648) + cyOff
+};
+
+cellCoord := fn(pos: Float, cellSize: Float): Int {
+    math.floorToInt(pos / cellSize)
+};
+
+/** Creates an empty `SpatialGrid2D` with uniform cell side length `cellSize` (`1.0` when non-positive). */
+pub create := fn(cellSize: Float): SpatialGrid2D {
+    cs := if cellSize <= 0.0 { 1.0 } else { cellSize };
+    heads: mut Map<Int, Int>;
+    nodeIds: List<Int> = [];
+    nodeNext: List<Int> = [];
+    SpatialGrid2D { cellSize = cs, heads = heads, nodeIds = nodeIds, nodeNext = nodeNext, itemCount = 0 }
+};
+
+/** Removes all entries from `g` while preserving `cellSize`. */
+pub SpatialGrid2D.clear := fn(g: mut Self): Unit {
+    heads: mut Map<Int, Int> = g.heads;
+    mut heads.clear();
+    emptyIds: List<Int> = [];
+    emptyNext: List<Int> = [];
+    g.heads = heads;
+    g.nodeIds = emptyIds;
+    g.nodeNext = emptyNext;
+    g.itemCount = 0;
+};
+
+/** Number of insert calls currently indexed in `g`. */
+pub SpatialGrid2D.count := fn(g: Self): Int {
+    g.itemCount
+};
+
+/** Number of occupied hash cells in `g`. */
+pub SpatialGrid2D.cellCount := fn(g: Self): Int {
+    g.heads.size()
+};
+
+/** Total cell-bucket node entries across all occupied cells. */
+pub SpatialGrid2D.entryCount := fn(g: Self): Int {
+    g.nodeIds.length()
+};
+
+/** Inserts entity `id` across every grid cell overlapped by axis-aligned `bounds`. */
+pub SpatialGrid2D.insertRect := fn(g: mut Self, id: Int, bounds: geom.Rect): Unit {
+    cs := g.cellSize;
+    minX := cellCoord(bounds.x, cs);
+    minY := cellCoord(bounds.y, cs);
+    w := if bounds.width < 0.0 { 0.0 } else { bounds.width };
+    h := if bounds.height < 0.0 { 0.0 } else { bounds.height };
+    maxX := cellCoord(bounds.x + w, cs);
+    maxY := cellCoord(bounds.y + h, cs);
+
+    heads: mut Map<Int, Int> = g.heads;
+    ids: mut List<Int> = g.nodeIds;
+    nexts: mut List<Int> = g.nodeNext;
+
+    var cy := minY;
+    loop cy <= maxY {
+        var cx := minX;
+        loop cx <= maxX {
+            k := cellKey(cx, cy);
+            prev := heads.get(k);
+            prevHead := if prev.found { prev.value } else { -1 };
+            idx := ids.length();
+            mut ids.pushBack(id);
+            mut nexts.pushBack(prevHead);
+            mut heads.set(k, idx);
+            cx += 1;
+        }
+        cy += 1;
+    }
+
+    g.heads = heads;
+    g.nodeIds = ids;
+    g.nodeNext = nexts;
+    g.itemCount = g.itemCount + 1;
+};
+
+/** Inserts point entity `id` at `(x, y)`. */
+pub SpatialGrid2D.insertPoint := fn(g: mut Self, id: Int, x: Float, y: Float): Unit {
+    mut g.insertRect(id, geom.rect(x, y, 0.0, 0.0));
+};
+
+/** Returns deduplicated entity IDs whose indexed cells overlap `bounds`. */
+pub SpatialGrid2D.queryRect := fn(g: Self, bounds: geom.Rect): List<Int> {
+    cs := g.cellSize;
+    minX := cellCoord(bounds.x, cs);
+    minY := cellCoord(bounds.y, cs);
+    w := if bounds.width < 0.0 { 0.0 } else { bounds.width };
+    h := if bounds.height < 0.0 { 0.0 } else { bounds.height };
+    maxX := cellCoord(bounds.x + w, cs);
+    maxY := cellCoord(bounds.y + h, cs);
+
+    out: mut List<Int> = [];
+    seen: mut Set<Int>;
+    var cy := minY;
+    loop cy <= maxY {
+        var cx := minX;
+        loop cx <= maxX {
+            headRes := g.heads.get(cellKey(cx, cy));
+            if headRes.found {
+                var idx := headRes.value;
+                loop idx >= 0 {
+                    entId := g.nodeIds[idx];
+                    if not seen.has(entId) {
+                        mut seen.add(entId);
+                        mut out.pushBack(entId);
+                    }
+                    idx = g.nodeNext[idx];
+                }
+            }
+            cx += 1;
+        }
+        cy += 1;
+    }
+    out
+};
+
+/** Returns deduplicated entity IDs in cells overlapped by bounding box of circle `c`. */
+pub SpatialGrid2D.queryCircle := fn(g: Self, c: geom.Circle): List<Int> {
+    r := if c.radius < 0.0 { 0.0 } else { c.radius };
+    d := r * 2.0;
+    g.queryRect(geom.rect(c.center.x - r, c.center.y - r, d, d))
+};
+
+/** Returns deduplicated entity IDs stored in the cell containing point `(x, y)`. */
+pub SpatialGrid2D.queryPoint := fn(g: Self, x: Float, y: Float): List<Int> {
+    g.queryRect(geom.rect(x, y, 0.0, 0.0))
+};

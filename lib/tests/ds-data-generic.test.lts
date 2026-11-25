@@ -1,0 +1,213 @@
+/* Dual-target (TS + C11 + ASan/UBSan) tests for generic `ds/{ring,deque,grid}`, `ds/spatial`, `data/json`, and `data/csv`. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+ccInfo := compilerTest.probeCc();
+
+tmpRes := fs.makeTempDir("lite-ds-data-generic-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+tmpDir := tmpRes.path;
+
+functionalSrc :=
+"io := import \"core/io\";\n" +
+"ring := import \"ds/ring\";\n" +
+"deque := import \"ds/deque\";\n" +
+"grid := import \"ds/grid\";\n" +
+"spatial := import \"ds/spatial\";\n" +
+"vec := import \"math/vector\";\n" +
+"geom := import \"math/geom\";\n" +
+"json := import \"data/json\";\n" +
+"csv := import \"data/csv\";\n" +
+"\n" +
+"Item := record { id: Int; label: String; }\n" +
+"\n" +
+"/* 1. Generic Ring<T> across Int, String, and record Item */\n" +
+"mut ri := ring.createRing<Int>(3);\n" +
+"rOv1 := mut ri.push(10);\n" +
+"rOv2 := mut ri.push(20);\n" +
+"rTp1 := mut ri.tryPush(30);\n" +
+"rTpFull := mut ri.tryPush(99);\n" +
+"rOv3 := mut ri.push(40);\n" +
+"rPop1 := mut ri.pop();\n" +
+"rPeekF := ri.peekFront();\n" +
+"rPeekB := ri.peekBack();\n" +
+"rGet1 := ri.get(1);\n" +
+"mut rs := ring.createRing<Item>(2);\n" +
+"_s1 := mut rs.push(Item { id = 7, label = \"orb\" });\n" +
+"sFront := rs.peekFront();\n" +
+"sId := match sFront { .Empty { -1 } .Some(it) { it.id } };\n" +
+"mut rs.clear();\n" +
+"ringOk :=\n" +
+"    not rOv1 and not rOv2 and rTp1 and not rTpFull and rOv3\n" +
+"    and rPop1.isSome() and rPop1.unwrapOr(-1) == 20\n" +
+"    and ri.length() == 2 and ri.capacity() == 3\n" +
+"    and rPeekF.unwrapOr(-1) == 30 and rPeekB.unwrapOr(-1) == 40\n" +
+"    and rGet1.unwrapOr(-1) == 40\n" +
+"    and sId == 7 and rs.isEmpty();\n" +
+"io.outputLine(\"ring\", ringOk);\n" +
+"\n" +
+"/* 2. Generic Deque<T> across Int and String */\n" +
+"mut dq := deque.createDeque<String>(4);\n" +
+"_d1 := mut dq.pushBack(\"b\");\n" +
+"_d2 := mut dq.pushFront(\"a\");\n" +
+"_d3 := mut dq.pushBack(\"c\");\n" +
+"_d4 := mut dq.pushFront(\"z\");\n" +
+"dFull := mut dq.pushBack(\"overflow\");\n" +
+"dp0 := mut dq.popFront();\n" +
+"dpLast := mut dq.popBack();\n" +
+"dg1 := dq.get(1);\n" +
+"mut dq.clear();\n" +
+"dequeOk :=\n" +
+"    not dFull\n" +
+"    and dp0.unwrapOr(\"\") == \"z\"\n" +
+"    and dpLast.unwrapOr(\"\") == \"c\"\n" +
+"    and dq.length() == 0 and dq.isEmpty()\n" +
+"    and dg1.unwrapOr(\"\") == \"b\";\n" +
+"/* Verify peek before clear via a second deque */\n" +
+"mut dqi := deque.createDeque<Int>(3);\n" +
+"_di1 := mut dqi.pushFront(2);\n" +
+"_di2 := mut dqi.pushBack(3);\n" +
+"_di3 := mut dqi.pushFront(1);\n" +
+"dqiMatch := match dqi.peekFront() { .Empty { -1 } .Some(v) { v } };\n" +
+"io.outputLine(\"deque\", dequeOk and dqi.isFull() and dqiMatch == 1 and dqi.peekBack().unwrapOr(-1) == 3);\n" +
+"\n" +
+"/* 3. Generic Grid<T> across Int and String */\n" +
+"mut gr := grid.createGrid<String>(5, 4, \".\");\n" +
+"_gs := mut gr.set(2, 1, \"#\");\n" +
+"mut gr.fillRect(0, 2, 3, 2, \"=\");\n" +
+"cIn := gr.get(2, 1);\n" +
+"cOut := gr.get(9, 1);\n" +
+"mut gr2 := grid.createGrid<Int>(3, 3, 5);\n" +
+"mut gr2.clear(9);\n" +
+"gridOk :=\n" +
+"    gr.inBounds(4, 3) and not gr.inBounds(5, 3)\n" +
+"    and cIn.isValue() and cIn.unwrapOr(\"\") == \"#\"\n" +
+"    and not cOut.isValue() and cOut.unwrapOr(\"miss\") == \"miss\"\n" +
+"    and gr.getOr(1, 3, \"?\") == \"=\"\n" +
+"    and gr.getOr(4, 3, \"?\") == \".\"\n" +
+"    and gr2.getOr(2, 2, 0) == 9;\n" +
+"io.outputLine(\"grid\", gridOk);\n" +
+"\n" +
+"/* 4. ds/spatial SpatialGrid2D */\n" +
+"mut sg := spatial.create(10.0);\n" +
+"mut sg.insertRect(101, geom.rect(-5.0, -5.0, 12.0, 12.0));\n" +
+"mut sg.insertPoint(102, 5.0, 5.0);\n" +
+"mut sg.insertPoint(103, 50.0, 50.0);\n" +
+"qBox := sg.queryRect(geom.rect(-2.0, -2.0, 10.0, 10.0));\n" +
+"qCirc := sg.queryCircle(geom.circle(vec.vec2(50.0, 50.0), 4.0));\n" +
+"qPt := sg.queryPoint(-1.0, -1.0);\n" +
+"var sumBox := 0;\n" +
+"loop qBox as eid { sumBox += eid; }\n" +
+"sgPreCells := sg.cellCount();\n" +
+"mut sg.clear();\n" +
+"spatialOk :=\n" +
+"    qBox.length() == 2 and sumBox == 203\n" +
+"    and qCirc.length() == 1 and qCirc[0] == 103\n" +
+"    and qPt.length() == 1 and qPt[0] == 101\n" +
+"    and sgPreCells >= 4\n" +
+"    and sg.count() == 0 and sg.cellCount() == 0 and sg.entryCount() == 0;\n" +
+"io.outputLine(\"spatial\", spatialOk);\n" +
+"\n" +
+"/* 5. data/json RFC-8259 validation, decoding, and O(N) encoding */\n" +
+"encoded := json.encodeObject([\n" +
+"    json.encodeField(\"name\", json.quoteString(\"Ada\\n\\\"Lovelace\\\"\")),\n" +
+"    json.encodeField(\"score\", json.encodeInt(-42)),\n" +
+"    json.encodeField(\"active\", json.encodeBool(true)),\n" +
+"    json.encodeField(\"tags\", json.encodeStringList([\"math\", \"logic\"])),\n" +
+"    json.encodeField(\"nums\", json.encodeIntList([1, 2, 3]))\n" +
+"]);\n" +
+"vOk := json.validate(encoded);\n" +
+"vBad := json.validate(\"{\\\"a\\\": 01}\");\n" +
+"vTrail := json.validate(\"{} 123\");\n" +
+"rName := json.readFieldString(encoded, 0, \"name\");\n" +
+"rScore := json.readFieldInt(encoded, 0, \"score\");\n" +
+"rActive := json.readFieldBool(encoded, 0, \"active\");\n" +
+"tagsF := json.findField(encoded, 0, \"tags\");\n" +
+"tagOffs := json.arrayOffsets(encoded, tagsF.valuePos);\n" +
+"tag1 := json.readStringAt(encoded, tagOffs[1]);\n" +
+"keys := json.objectKeys(encoded, 0);\n" +
+"uStr := json.readStringAt(\"\\\"\\\\u0041\\\\uD83D\\\\uDE00\\\"\", 0);\n" +
+"jsonOk :=\n" +
+"    vOk.ok and not vBad.ok and not vTrail.ok\n" +
+"    and rName.found and rName.ok and rName.value == \"Ada\\n\\\"Lovelace\\\"\"\n" +
+"    and rScore.found and rScore.ok and rScore.value == -42\n" +
+"    and rActive.found and rActive.ok and rActive.value\n" +
+"    and tagOffs.length() == 2 and tag1.ok and tag1.value == \"logic\"\n" +
+"    and keys.length() == 5 and keys[0] == \"name\"\n" +
+"    and uStr.ok and uStr.value == \"A😀\"\n" +
+"    and json.kindAt(encoded, tagsF.valuePos) == json.JsonKind.Array;\n" +
+"io.outputLine(\"json\", jsonOk);\n" +
+"\n" +
+"/* 6. data/csv RFC-4180 parsing & round-trip encoding */\n" +
+"csvSrc := \"name,note\\r\\n\\\"Doe, John\\\",\\\"line1\\nline2\\\"\\r\\nAda,\\\"a\\\"\\\"b\\\"\\\"\\\"\\n\";\n" +
+"tbl := csv.parse(csvSrc, \",\");\n" +
+"rt := csv.encodeTable(tbl, \",\");\n" +
+"tbl2 := csv.parse(rt, \",\");\n" +
+"row1 := csv.parseRow(\"10;20;\\\"a;b\\\"\", \";\");\n" +
+"csvOk :=\n" +
+"    tbl.rowCount() == 3\n" +
+"    and tbl.colCount(1) == 2\n" +
+"    and tbl.cell(1, 0) == \"Doe, John\"\n" +
+"    and tbl.cell(1, 1) == \"line1\\nline2\"\n" +
+"    and tbl.cell(2, 1) == \"a\\\"b\\\"\"\n" +
+"    and tbl2.rowCount() == 3 and tbl2.cell(1, 0) == \"Doe, John\" and tbl2.cell(1, 1) == \"line1\\nline2\"\n" +
+"    and row1.length() == 3 and row1[2] == \"a;b\";\n" +
+"io.outputLine(\"csv\", csvOk);\n";
+
+expectedOut :=
+"ring true\n" +
+"deque true\n" +
+"grid true\n" +
+"spatial true\n" +
+"json true\n" +
+"csv true\n";
+
+emptyEnv: List<String> = [];
+tsCompRes := compilerTest.compileStdin(root, selTs.path, functionalSrc, "");
+test.checkInt("TS compile status: " + tsCompRes.stderr, 0, tsCompRes.status);
+tsOutFile := path.join(tmpDir, "functional.ts");
+test.check("write functional.ts", fs.writeText(tsOutFile, tsCompRes.stdout).ok);
+tsRunner := path.join(tmpDir, "runner.ts");
+tsRunnerCode :=
+"import { writeSync } from 'node:fs';\n" +
+"import { main } from './functional.ts';\n" +
+"const out = main((t: string): void => { writeSync(1, t); });\n" +
+"if (typeof out === 'string' && out.length > 0) writeSync(1, out);\n";
+test.check("write runner.ts", fs.writeText(tsRunner, tsRunnerCode).ok);
+tsRun := proc.run(project.nodeExecPath(), [tsRunner], root, emptyEnv, true, "");
+test.checkInt("TS run status: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("TS functional output", expectedOut, tsRun.stdout);
+
+if ccInfo.available {
+    cCompRes := compilerTest.compileStdin(root, selC.path, functionalSrc, "");
+    test.checkInt("C11 compile status: " + cCompRes.stderr, 0, cCompRes.status);
+    cFile := path.join(tmpDir, "functional.c");
+    cBin := path.join(tmpDir, "functional");
+    test.check("write functional.c", fs.writeText(cFile, cCompRes.stdout).ok);
+    ccRes := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", cFile, "-o", cBin, "-lm"], tmpDir, emptyEnv, true, "");
+    test.checkInt("C11 cc status: " + ccRes.stderr, 0, ccRes.status);
+    cRun := proc.run(cBin, [], root, emptyEnv, true, "");
+    test.checkInt("C11 run status: " + cRun.stderr, 0, cRun.status);
+    test.checkText("C11 functional output matches TS", expectedOut, cRun.stdout);
+
+    funcPath := path.join(tmpDir, "functional.lts");
+    test.check("write functional.lts", fs.writeText(funcPath, functionalSrc).ok);
+    sanBin := path.join(tmpDir, "app-san");
+    buildSan := proc.run(path.join(root, "bin/lite"), ["build", "--sanitize", "--quiet", "-o", sanBin, funcPath], root, emptyEnv, true, "");
+    test.check("ASan/UBSan build ok: " + buildSan.stderr, buildSan.status == 0 and buildSan.error == "");
+    runSan := proc.run(sanBin, [], tmpDir, emptyEnv, true, "");
+    test.check("ASan/UBSan exit 0: " + runSan.stderr, runSan.status == 0 and runSan.error == "");
+    test.checkText("ASan/UBSan output", expectedOut, runSan.stdout);
+}

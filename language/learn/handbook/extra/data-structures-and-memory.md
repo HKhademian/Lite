@@ -46,9 +46,16 @@ intern.destroy(tbl);
 
 | Module | Types | Typical Use |
 | --- | --- | --- |
-| [ds/ring](lite://module/ds/ring) | `IntRing`, `FloatRing` | Fixed-capacity circular buffers for rolling telemetry, FPS windows, and audio samples (`pushInt`, `tryPushInt`, `sumInts`) |
-| [ds/deque](lite://module/ds/deque) | `IntDeque`, `TextDeque` | O(1) double-ended queues and FIFO worklists (`pushFrontInt`, `pushBackInt`, `popFrontInt`, `popBackInt`) |
+| [ds/ring](lite://module/ds/ring) | `Ring<T>`, `IntRing`, `FloatRing` | Fixed-capacity circular buffers for rolling telemetry, FPS windows, and audio samples (`push`, `tryPush`, `pop`) |
+| [ds/deque](lite://module/ds/deque) | `Deque<T>`, `IntDeque`, `TextDeque` | O(1) double-ended queues and FIFO worklists (`pushFront`, `pushBack`, `popFront`, `popBack`) |
 | [ds/heap](lite://module/ds/heap) | `MinHeap`, `MaxHeap`, `PriorityQueue` | Binary heaps and keyed priority queues for Dijkstra/A* pathfinding, event timers, and schedulers |
+| [ds/grid](lite://module/ds/grid) | `Grid<T>`, `IntGrid`, `FloatGrid` | Flat-backed 2D tilemaps and boards with generic value cells (`GridCell<T>`, `get`, `set`, `fillRect`) |
+| [ds/spatial](lite://module/ds/spatial) | `SpatialGrid2D` | Uniform 2D spatial hash grid for fast broad-phase `queryRect`, `queryCircle`, and `queryPoint` lookups |
+
+## Structured Data Codecs (`data/json`, `data/csv`)
+
+- [data/json](lite://module/data/json) provides a pure RFC-8259 JSON validator, offset scanner, typed reader, and O(N) serializer (`validate`, `kindAt`, `readFieldString`/`Int`/`Bool`, `quoteString`, `encodeObject`).
+- [data/csv](lite://module/data/csv) provides a pure RFC-4180 CSV parser and flat `CsvTable` encoder (`parse`, `parseRow`, `cell`, `row`, `encodeField`, `encodeRow`, `encodeTable`).
 
 ```lite
 io := import "core/io";

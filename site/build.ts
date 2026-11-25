@@ -374,7 +374,7 @@ export function buildSite(options?: BuildSiteOptions): void {
   const playStageJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'play-stage.ts'), 'utf8'), { mode: 'strip' });
 
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
-  for (const ns of ['core', 'math', 'ds', 'extra'] as const) {
+  for (const ns of ['core', 'math', 'ds', 'data', 'extra'] as const) {
     const libDir = join(root, 'lib', ns);
     for (const name of readdirSync(libDir).filter(f => f.endsWith('.lt')).sort()) {
       const relPath = `lib/${ns}/${name}`;

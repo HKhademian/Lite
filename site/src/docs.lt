@@ -168,10 +168,10 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     "Expression if/else, subjectless match, sequence loops, .index/.count/.value/.collected, then, @tag, and finally.",
     "Unnamed/named/mixed tuples, records, enums, [T; N] arrays, List<T>, Map<K, V>, Set<T>, and type aliases.",
     "Final-item block values, DCE pruning, parallel wiring, execution trace safety, self, and closures.",
-    "Namespace imports, pub boundaries, all 38 core/*, math/*, ds/*, and extra/* modules, and core/io streams.",
+    "Namespace imports, pub boundaries, all 41 core/*, math/*, ds/*, data/*, and extra/* modules, and core/io streams.",
     "extra/canvas, extra/surface desktop windows, extra/color, extra/audio, extra/board, extra/timer, and ./bin/lite play.",
     "math/scalar, math/random, Vec<T, N> and Vec2..4 math/vector, math/matrix transforms, math/geom primitives, and ds/grid.",
-    "ds/arena, ds/pool, ds/intern, ds/lru, ds/ring, ds/deque, ds/heap, ds/bitset, and ds/sparse.",
+    "ds/arena, ds/pool, ds/intern, ds/lru, ds/ring, ds/deque, ds/heap, ds/bitset, ds/sparse, ds/spatial, data/json, and data/csv.",
     "Dual-target TS & C11 parity, 3-generation self-hosting, ./bin/lite build, -O0..-O3/-Os, and ./bin/lite ignite."
     ];
 

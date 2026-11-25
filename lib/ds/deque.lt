@@ -318,3 +318,148 @@ pub destroyTexts := fn(deque: TextDeque): Unit {
     mut tdGen.setAt(id, tdGen[id] + 1);
     mut tdFree.pushBack(id);
 };
+
+/* ============================================================================
+ * Generic Value-Typed Deque<T>
+ * ============================================================================ */
+
+/** Outcome of reading or popping an element from a generic `Deque<T>`. */
+pub DequeItem := enum<T: Type> {
+    Empty;
+    Some(T);
+}
+
+/** True when `item` holds a present value `.Some(...)`. */
+pub DequeItem.isSome := fn<T: Type>(item: Self<T>): Bool {
+    match item {
+        .Empty { false }
+        .Some { true }
+    }
+};
+
+/** Returns the wrapped value when `.Some(v)`, or `fallback` when `.Empty`. */
+pub DequeItem.unwrapOr := fn<T: Type>(item: Self<T>, fallback: T): T {
+    match item {
+        .Empty { fallback }
+        .Some(v) { v }
+    }
+};
+
+/** Generic O(1) bounded-capacity circular double-ended queue storing `T` values. */
+pub Deque := record<T: Type> {
+    data: List<T>;
+    cap: Int;
+    head: Int;
+    count: Int;
+}
+
+/** Creates an empty generic `Deque<T>` with capacity `>= 1`. */
+pub createDeque := fn<T: Type>(capacity: Int): Deque<T> {
+    cap := if capacity < 1 { 1 } else { capacity };
+    buf: mut List<T> = [];
+    var z: T;
+    var i := 0;
+    loop i < cap {
+        mut buf.pushBack(z);
+        i += 1;
+    }
+    Deque<T> { data = buf, cap = cap, head = 0, count = 0 }
+};
+
+/** Number of stored elements currently in `d`. */
+pub Deque.length := fn<T: Type>(d: Self<T>): Int {
+    d.count
+};
+
+/** Fixed capacity of `d`. */
+pub Deque.capacity := fn<T: Type>(d: Self<T>): Int {
+    d.cap
+};
+
+/** True when `d` contains zero elements. */
+pub Deque.isEmpty := fn<T: Type>(d: Self<T>): Bool {
+    d.count == 0
+};
+
+/** True when `d` has reached capacity. */
+pub Deque.isFull := fn<T: Type>(d: Self<T>): Bool {
+    d.count >= d.cap
+};
+
+/** Pushes `value` onto the back of `d` in O(1); returns `false` if full. */
+pub Deque.pushBack := fn<T: Type>(d: mut Self<T>, value: T): Bool {
+    if d.count >= d.cap { return false; }
+    tail := (d.head + d.count) % d.cap;
+    buf: mut List<T> = d.data;
+    mut buf.setAt(tail, value);
+    d.data = buf;
+    d.count = d.count + 1;
+    true
+};
+
+/** Pushes `value` onto the front of `d` in O(1); returns `false` if full. */
+pub Deque.pushFront := fn<T: Type>(d: mut Self<T>, value: T): Bool {
+    if d.count >= d.cap { return false; }
+    nextHead := (d.head + d.cap - 1) % d.cap;
+    buf: mut List<T> = d.data;
+    mut buf.setAt(nextHead, value);
+    d.data = buf;
+    d.head = nextHead;
+    d.count = d.count + 1;
+    true
+};
+
+/** Pops and returns the back element, or `.Empty` if empty. */
+pub Deque.popBack := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
+    if d.count <= 0 { return .Empty; }
+    pos := (d.head + d.count - 1) % d.cap;
+    val := d.data[pos];
+    var z: T;
+    buf: mut List<T> = d.data;
+    mut buf.setAt(pos, z);
+    d.data = buf;
+    d.count = d.count - 1;
+    .Some(val)
+};
+
+/** Pops and returns the front element, or `.Empty` if empty. */
+pub Deque.popFront := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
+    if d.count <= 0 { return .Empty; }
+    val := d.data[d.head];
+    var z: T;
+    buf: mut List<T> = d.data;
+    mut buf.setAt(d.head, z);
+    d.data = buf;
+    d.head = (d.head + 1) % d.cap;
+    d.count = d.count - 1;
+    .Some(val)
+};
+
+/** Returns the front element without removing it. */
+pub Deque.peekFront := fn<T: Type>(d: Self<T>): DequeItem<T> {
+    if d.count <= 0 { .Empty } else { .Some(d.data[d.head]) }
+};
+
+/** Returns the back element without removing it. */
+pub Deque.peekBack := fn<T: Type>(d: Self<T>): DequeItem<T> {
+    if d.count <= 0 { .Empty } else { .Some(d.data[(d.head + d.count - 1) % d.cap]) }
+};
+
+/** Returns the element at zero-based logical `index` (`0` = front). */
+pub Deque.get := fn<T: Type>(d: Self<T>, index: Int): DequeItem<T> {
+    if index < 0 or index >= d.count { .Empty } else { .Some(d.data[(d.head + index) % d.cap]) }
+};
+
+/** Clears `d` and resets all slots to their zero value. */
+pub Deque.clear := fn<T: Type>(d: mut Self<T>): Unit {
+    buf: mut List<T> = d.data;
+    var z: T;
+    var i := 0;
+    loop i < d.cap {
+        mut buf.setAt(i, z);
+        i += 1;
+    }
+    d.data = buf;
+    d.head = 0;
+    d.count = 0;
+};

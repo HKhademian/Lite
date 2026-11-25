@@ -258,7 +258,7 @@ renderHomeBody := fn(src: String, renderedOffs: List<Int>): String {
     "    </article>",
     "  </div>",
     "  <div class=\"academy-ref-strip\">",
-    "    <span><strong>References &amp; Tooling:</strong> Auto-generated API reference for all " + modules + " shipped <code>core/*</code>, <code>math/*</code>, <code>ds/*</code> &amp; <code>extra/*</code> modules, CLI workflows, and VS Code support.</span>",
+    "    <span><strong>References &amp; Tooling:</strong> Auto-generated API reference for all " + modules + " shipped <code>core/*</code>, <code>math/*</code>, <code>ds/*</code>, <code>data/*</code> &amp; <code>extra/*</code> modules, CLI workflows, and VS Code support.</span>",
     "    <div class=\"academy-ref-links\">",
     "      <a href=\"modules/\">References &rarr;</a>",
     "      <a href=\"tools/\">Tools &rarr;</a>",

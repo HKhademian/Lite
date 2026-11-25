@@ -342,3 +342,138 @@ pub destroyFloats := fn(ring: FloatRing): Unit {
     mut frGen.setAt(id, frGen[id] + 1);
     mut frFree.pushBack(id);
 };
+
+/* ============================================================================
+ * Generic Value-Typed Ring<T>
+ * ============================================================================ */
+
+/** Outcome of reading or popping an element from a generic `Ring<T>`. */
+pub RingItem := enum<T: Type> {
+    Empty;
+    Some(T);
+}
+
+/** True when `item` holds a present value `.Some(...)`. */
+pub RingItem.isSome := fn<T: Type>(item: Self<T>): Bool {
+    match item {
+        .Empty { false }
+        .Some { true }
+    }
+};
+
+/** Returns the wrapped value when `.Some(v)`, or `fallback` when `.Empty`. */
+pub RingItem.unwrapOr := fn<T: Type>(item: Self<T>, fallback: T): T {
+    match item {
+        .Empty { fallback }
+        .Some(v) { v }
+    }
+};
+
+/** Generic fixed-capacity circular ring buffer storing `T` values. */
+pub Ring := record<T: Type> {
+    data: List<T>;
+    cap: Int;
+    head: Int;
+    count: Int;
+}
+
+/** Creates an empty generic `Ring<T>` with fixed capacity `>= 1`. */
+pub createRing := fn<T: Type>(capacity: Int): Ring<T> {
+    cap := if capacity < 1 { 1 } else { capacity };
+    buf: mut List<T> = [];
+    var z: T;
+    var i := 0;
+    loop i < cap {
+        mut buf.pushBack(z);
+        i += 1;
+    }
+    Ring<T> { data = buf, cap = cap, head = 0, count = 0 }
+};
+
+/** Number of stored elements currently in `r`. */
+pub Ring.length := fn<T: Type>(r: Self<T>): Int {
+    r.count
+};
+
+/** Fixed slot capacity of `r`. */
+pub Ring.capacity := fn<T: Type>(r: Self<T>): Int {
+    r.cap
+};
+
+/** True when `r` contains zero elements. */
+pub Ring.isEmpty := fn<T: Type>(r: Self<T>): Bool {
+    r.count == 0
+};
+
+/** True when `r` has reached capacity. */
+pub Ring.isFull := fn<T: Type>(r: Self<T>): Bool {
+    r.count >= r.cap
+};
+
+/** Appends `value` in O(1), overwriting the oldest element if full; returns `true` when an overwrite occurred. */
+pub Ring.push := fn<T: Type>(r: mut Self<T>, value: T): Bool {
+    tail := (r.head + r.count) % r.cap;
+    buf: mut List<T> = r.data;
+    mut buf.setAt(tail, value);
+    r.data = buf;
+    if r.count >= r.cap {
+        r.head = (r.head + 1) % r.cap;
+        true
+    } else {
+        r.count = r.count + 1;
+        false
+    }
+};
+
+/** Appends `value` only if space remains; returns `true` on success or `false` when full. */
+pub Ring.tryPush := fn<T: Type>(r: mut Self<T>, value: T): Bool {
+    if r.count >= r.cap { return false; }
+    tail := (r.head + r.count) % r.cap;
+    buf: mut List<T> = r.data;
+    mut buf.setAt(tail, value);
+    r.data = buf;
+    r.count = r.count + 1;
+    true
+};
+
+/** Removes and returns the oldest element, or `.Empty` if empty. */
+pub Ring.pop := fn<T: Type>(r: mut Self<T>): RingItem<T> {
+    if r.count <= 0 { return .Empty; }
+    val := r.data[r.head];
+    var z: T;
+    buf: mut List<T> = r.data;
+    mut buf.setAt(r.head, z);
+    r.data = buf;
+    r.head = (r.head + 1) % r.cap;
+    r.count = r.count - 1;
+    .Some(val)
+};
+
+/** Returns the oldest element without removing it. */
+pub Ring.peekFront := fn<T: Type>(r: Self<T>): RingItem<T> {
+    if r.count <= 0 { .Empty } else { .Some(r.data[r.head]) }
+};
+
+/** Returns the most recently pushed element without removing it. */
+pub Ring.peekBack := fn<T: Type>(r: Self<T>): RingItem<T> {
+    if r.count <= 0 { .Empty } else { .Some(r.data[(r.head + r.count - 1) % r.cap]) }
+};
+
+/** Returns the `index`-th element (`0` = oldest) without removing it. */
+pub Ring.get := fn<T: Type>(r: Self<T>, index: Int): RingItem<T> {
+    if index < 0 or index >= r.count { .Empty } else { .Some(r.data[(r.head + index) % r.cap]) }
+};
+
+/** Resets `r` to empty and clears stored elements to their zero value. */
+pub Ring.clear := fn<T: Type>(r: mut Self<T>): Unit {
+    buf: mut List<T> = r.data;
+    var z: T;
+    var i := 0;
+    loop i < r.cap {
+        mut buf.setAt(i, z);
+        i += 1;
+    }
+    r.data = buf;
+    r.head = 0;
+    r.count = 0;
+};

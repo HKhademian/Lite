@@ -36,20 +36,28 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 | `math/matrix` | Browser + CLI | 2×2, 3×3, and 4×4 matrix math (`Mat2`, `Mat3`, `Mat4`, `translate`, `scale`, `rotate`, `mul`, `transpose`, `det`, `perspective`, `lookAt`) |
 | `math/geom` | Browser + CLI | Generic `Box<T, N>`, `Ray<T, N>`, `Segment<T, N>`, `RayHit`, `Rect`, `Circle`, `Sphere`, and intersection helpers (`rayBoxHit`, `raySphereHit`) |
 
-## Data Structures (`lib/ds/` — 10 modules)
+## Data Structures (`lib/ds/` — 11 modules)
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
-| `ds/grid` | Browser + CLI | Flat-backed 2D `IntGrid` and `FloatGrid` tilemaps/heightfields (`getOr`, `set`, `fillRect`, `countValue`, `copy`) |
+| `ds/grid` | Browser + CLI | Generic `Grid<T>` (`GridCell<T>`, `get`, `set`, `fillRect`) plus handle-backed `IntGrid` and `FloatGrid` |
 | `ds/arena` | Browser + CLI | O(1) scratch/frame bump allocators (`Arena`, `IntArena`, `FloatArena`, `allocAligned`, `mark`/`rewind`, `reset`) |
 | `ds/pool` | Browser + CLI | Generational handle slot pools (`SlotPool`, `IntPool`, `TextPool`, safe stale-handle detection) |
 | `ds/intern` | Browser + CLI | String interner and symbol table (`SymbolId`, `intern`, `lookup`, `resolve`, `stats`) |
 | `ds/lru` | Browser + CLI | Bounded-capacity O(1) LRU caches (`LruText`, `LruInt`, `IntLru`, eviction reporting, `LruStats`) |
-| `ds/ring` | Browser + CLI | Fixed-capacity circular ring buffers (`IntRing`, `FloatRing`, `push`, `tryPush`, `pop`, `sumInts`) |
-| `ds/deque` | Browser + CLI | O(1) double-ended queues (`IntDeque`, `TextDeque`, `pushFront`, `pushBack`, `popFront`, `popBack`) |
+| `ds/ring` | Browser + CLI | Generic `Ring<T>` (`RingItem<T>`, `push`, `tryPush`, `pop`) plus `IntRing` and `FloatRing` circular buffers |
+| `ds/deque` | Browser + CLI | Generic `Deque<T>` (`DequeItem<T>`, `pushFront`, `pushBack`, `popFront`, `popBack`) plus `IntDeque` and `TextDeque` |
 | `ds/heap` | Browser + CLI | Binary `MinHeap`, `MaxHeap`, and keyed `PriorityQueue` |
 | `ds/bitset` | Browser + CLI | Compact bit-arrays packed 30 bits per word (`set`, `clear`, `toggle`, `test`, `countOnes`, `firstSet`, `orInto`/`andInto`/`xorInto`) |
 | `ds/sparse` | Browser + CLI | O(1) `SparseSet` with dense iteration (`insert`, `remove`, `has`, `denseAt`, `count`) |
+| `ds/spatial` | Browser + CLI | Uniform 2D spatial hash grid (`SpatialGrid2D`, `insertRect`, `insertPoint`, `queryRect`, `queryCircle`, `queryPoint`) |
+
+## Data & Codecs (`lib/data/` — 2 modules)
+
+| Module | Environment | Capabilities |
+| --- | --- | --- |
+| `data/json` | Browser + CLI | Pure RFC-8259 JSON scanner, typed reader, and O(N) string serializer (`validate`, `kindAt`, `readField*`, `quoteString`, `encode*`) |
+| `data/csv` | Browser + CLI | RFC-4180 CSV parser and flat `CsvTable` serializer (`parse`, `parseRow`, `cell`, `row`, `encodeField`, `encodeRow`, `encodeTable`) |
 
 ## Play & Extra Modules (`lib/extra/` — 6 modules)
 
@@ -64,11 +72,12 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
 ## Running Library Tests
 
-All `lib/{core,math,ds,extra}/*` suites run under dual-target TS and native C11 (with ASan/UBSan):
+All `lib/{core,math,ds,data,extra}/*` suites run under dual-target TS and native C11 (with ASan/UBSan):
 
 ```sh
 ./bin/lite test --unit libraries
 ./bin/lite test --unit math-geom
+./bin/lite test --unit ds-data-generic
 ./bin/lite test --unit extra-canvas
 ./bin/lite test --unit extra-memory
 ./bin/lite test --unit extra-structures

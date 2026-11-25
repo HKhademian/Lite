@@ -76,11 +76,11 @@ renderModuleSidebar := fn(
 modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts: List<Int>, activeId: String
 ): String {
     prefix := "../../modules/";
-    grpNss: List<String> = ["core", "math", "ds", "extra"];
-    grpLabels: List<String> = ["Core Modules (core/*)", "Math Modules (math/*)", "Data Structures (ds/*)", "Play & Extra (extra/*)"];
+    grpNss: List<String> = ["core", "math", "ds", "data", "extra"];
+    grpLabels: List<String> = ["Core Modules (core/*)", "Math Modules (math/*)", "Data Structures (ds/*)", "Data & Codecs (data/*)", "Play & Extra (extra/*)"];
     grpBlocks: mut List<String> = [];
     var gi := 0;
-    loop gi < 4 {
+    loop gi < 5 {
         ns := grpNss[gi];
         items: mut List<String> = [];
         var mi := 0;
@@ -220,11 +220,13 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     var coreCount := 0;
     var mathCount := 0;
     var dsCount := 0;
+    var dataCount := 0;
     var extraCount := 0;
     var totalSymbols := 0;
     coreCards: mut List<String> = [];
     mathCards: mut List<String> = [];
     dsCards: mut List<String> = [];
+    dataCards: mut List<String> = [];
     extraCards: mut List<String> = [];
 
     var mi := 0;
@@ -240,6 +242,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         if mNs == "core" { coreCount = coreCount + 1; }
         else if mNs == "math" { mathCount = mathCount + 1; }
         else if mNs == "ds" { dsCount = dsCount + 1; }
+        else if mNs == "data" { dataCount = dataCount + 1; }
         else if mNs == "extra" { extraCount = extraCount + 1; }
 
         symsF := json.findObjectField(inputJson, mp, "symbols");
@@ -275,6 +278,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         if mNs == "core" { mut coreCards.pushBack(card); }
         else if mNs == "math" { mut mathCards.pushBack(card); }
         else if mNs == "ds" { mut dsCards.pushBack(card); }
+        else if mNs == "data" { mut dataCards.pushBack(card); }
         else if mNs == "extra" { mut extraCards.pushBack(card); }
         mi = mi + 1;
     }
@@ -283,12 +287,12 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "  <h1>Standard &amp; Play Modules</h1>\n"
     + "  <p class=\"hero-lead\">\n"
     + "    Reference documentation extracted directly from all " + modCount.toText() + " shipped Lite modules\n"
-    + "    (" + coreCount.toText() + " <code>core/*</code>, " + mathCount.toText() + " <code>math/*</code>, " + dsCount.toText() + " <code>ds/*</code>, " + extraCount.toText() + " <code>extra/*</code>; " + totalSymbols.toText() + " public symbols).\n"
+    + "    (" + coreCount.toText() + " <code>core/*</code>, " + mathCount.toText() + " <code>math/*</code>, " + dsCount.toText() + " <code>ds/*</code>, " + dataCount.toText() + " <code>data/*</code>, " + extraCount.toText() + " <code>extra/*</code>; " + totalSymbols.toText() + " public symbols).\n"
     + "  </p>\n"
     + "  <div class=\"md-alert\">\n"
     + "    <div class=\"md-alert-title\">Provisional Module Surface</div>\n"
     + "    <p>\n"
-    + "      <code>lib/core/*</code>, <code>lib/math/*</code>, <code>lib/ds/*</code>, and <code>lib/extra/*</code> are Lite's shipped compiler, library, and Play support modules used today\n"
+    + "      <code>lib/core/*</code>, <code>lib/math/*</code>, <code>lib/ds/*</code>, <code>lib/data/*</code>, and <code>lib/extra/*</code> are Lite's shipped compiler, library, and Play support modules used today\n"
     + "      (see <a href=\"../docs/\">Documentation</a> for full language stabilization status).\n"
     + "    </p>\n"
     + "  </div>\n"
@@ -325,6 +329,15 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "  </div>\n"
     + "  <div class=\"portal-grid\">\n"
     + "    " + text.joinTexts(dsCards, "\n") + "\n"
+    + "  </div>\n"
+    + "</section>\n\n"
+    + "<section class=\"section\" id=\"data-modules\">\n"
+    + "  <div class=\"section-head\">\n"
+    + "    <h2>Data &amp; Codecs (<code>data/*</code>)</h2>\n"
+    + "    <span class=\"code-card-meta\">" + dataCount.toText() + " modules</span>\n"
+    + "  </div>\n"
+    + "  <div class=\"portal-grid\">\n"
+    + "    " + text.joinTexts(dataCards, "\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"extra-modules\">\n"
@@ -365,7 +378,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "</script>";
 
     pagesJson: mut List<String> = [
-    "{\"relPath\":\"modules/index.html\",\"title\":\"Modules — Lite\",\"description\":\"Reference documentation for Lite core/*, math/*, ds/*, and extra/* modules and their public APIs.\",\"basePath\":\"../\",\"body\":" + json.quoteString(indexBody) + "}"
+    "{\"relPath\":\"modules/index.html\",\"title\":\"Modules — Lite\",\"description\":\"Reference documentation for Lite core/*, math/*, ds/*, data/*, and extra/* modules and their public APIs.\",\"basePath\":\"../\",\"body\":" + json.quoteString(indexBody) + "}"
     ];
     searchEntriesJson: mut List<String> = [];
 

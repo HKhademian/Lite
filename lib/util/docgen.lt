@@ -1,4 +1,4 @@
-/** Module API documentation extractor across `lib/core`, `lib/math`, `lib/ds`, and `lib/extra`. */
+/** Module API documentation extractor across `lib/core`, `lib/math`, `lib/ds`, `lib/data`, and `lib/extra`. */
 
 fs := import "core/file";
 text := import "core/text";
@@ -311,9 +311,9 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
     ",\"symbols\":[" + text.joinTexts(symbolsJson, ",") + "]}"
 };
 
-/** Extracts sorted module API documentation records across `lib/core`, `lib/math`, `lib/ds`, and `lib/extra` `.lt` files under `rootDir`. */
+/** Extracts sorted module API documentation records across `lib/core`, `lib/math`, `lib/ds`, `lib/data`, and `lib/extra` `.lt` files under `rootDir`. */
 pub extractAllModulesJson := fn(rootDir: String): String {
-    namespaces: List<String> = ["core", "math", "ds", "extra"];
+    namespaces: List<String> = ["core", "math", "ds", "data", "extra"];
     modJsonEntries: mut List<String> = [];
     loop namespaces as ns {
         nsDir := path.join(rootDir, "lib/" + ns);

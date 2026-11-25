@@ -1,0 +1,181 @@
+/** Pure RFC-4180 CSV parser and flat table encoder (`data/csv`) across TS and C11. */
+
+text := import "core/text";
+
+/** Flat-backed parsed CSV table supporting variable-width rows across TS and C11. */
+pub CsvTable := record {
+    fields: List<String>;
+    rowStarts: List<Int>;
+    rowLens: List<Int>;
+}
+
+effectiveDelim := fn(delimiter: String): String {
+    if delimiter == "" { "," } else { delimiter }
+};
+
+/** Parses RFC-4180 CSV text using `delimiter` (`","` when empty) into a `CsvTable`. */
+pub parse := fn(source: String, delimiter: String): CsvTable {
+    delim := effectiveDelim(delimiter);
+    fields: mut List<String> = [];
+    rowStarts: mut List<Int> = [];
+    rowLens: mut List<Int> = [];
+    size := source.length();
+    var pos := 0;
+
+    loop pos < size {
+        rowStart := fields.length();
+        var rowLen := 0;
+        var inRow := true;
+        loop inRow {
+            if pos < size and source.at(pos) == "\"" {
+                pos += 1;
+                parts: mut List<String> = [];
+                var segStart := pos;
+                loop pos < size {
+                    if source.at(pos) == "\"" {
+                        if pos + 1 < size and source.at(pos + 1) == "\"" {
+                            if pos > segStart { mut parts.pushBack(source.slice(segStart, pos)); }
+                            mut parts.pushBack("\"");
+                            pos += 2;
+                            segStart = pos;
+                        } else {
+                            if pos > segStart { mut parts.pushBack(source.slice(segStart, pos)); }
+                            pos += 1;
+                            break;
+                        }
+                    } else {
+                        pos += 1;
+                    }
+                }
+                mut fields.pushBack(text.joinTexts(parts, ""));
+                rowLen += 1;
+                loop pos < size and source.at(pos) =!= delim and source.at(pos) =!= "\r" and source.at(pos) =!= "\n" {
+                    pos += 1;
+                }
+                if pos < size and source.at(pos) == delim {
+                    pos += 1;
+                } else if pos < size and source.at(pos) == "\r" {
+                    pos += 1;
+                    if pos < size and source.at(pos) == "\n" { pos += 1; }
+                    inRow = false;
+                } else if pos < size and source.at(pos) == "\n" {
+                    pos += 1;
+                    inRow = false;
+                } else {
+                    inRow = false;
+                }
+            } else {
+                segStart := pos;
+                loop pos < size {
+                    ch := source.at(pos);
+                    if ch == delim or ch == "\r" or ch == "\n" { break; }
+                    pos += 1;
+                }
+                mut fields.pushBack(source.slice(segStart, pos));
+                rowLen += 1;
+                if pos < size and source.at(pos) == delim {
+                    pos += 1;
+                } else if pos < size and source.at(pos) == "\r" {
+                    pos += 1;
+                    if pos < size and source.at(pos) == "\n" { pos += 1; }
+                    inRow = false;
+                } else if pos < size and source.at(pos) == "\n" {
+                    pos += 1;
+                    inRow = false;
+                } else {
+                    inRow = false;
+                }
+            }
+        }
+        mut rowStarts.pushBack(rowStart);
+        mut rowLens.pushBack(rowLen);
+    }
+
+    CsvTable { fields = fields, rowStarts = rowStarts, rowLens = rowLens }
+};
+
+/** Parses the first CSV record from `line` into a `List<String>`. */
+pub parseRow := fn(line: String, delimiter: String): List<String> {
+    if line == "" {
+        empty: List<String> = [];
+        return empty;
+    }
+    tbl := parse(line, delimiter);
+    tbl.row(0)
+};
+
+/** Number of parsed rows in `t`. */
+pub CsvTable.rowCount := fn(t: Self): Int {
+    t.rowStarts.length()
+};
+
+/** Number of columns in zero-based `row`, or `0` if out of bounds. */
+pub CsvTable.colCount := fn(t: Self, row: Int): Int {
+    if row < 0 or row >= t.rowLens.length() { 0 } else { t.rowLens[row] }
+};
+
+/** Returns decoded cell at `(row, col)`, or `""` when out of bounds. */
+pub CsvTable.cell := fn(t: Self, row: Int, col: Int): String {
+    if row < 0 or row >= t.rowStarts.length() { return ""; }
+    if col < 0 or col >= t.rowLens[row] { return ""; }
+    t.fields[t.rowStarts[row] + col]
+};
+
+/** Returns a fresh `List<String>` containing all fields in `row`. */
+pub CsvTable.row := fn(t: Self, row: Int): List<String> {
+    out: mut List<String> = [];
+    if row < 0 or row >= t.rowStarts.length() { return out; }
+    start := t.rowStarts[row];
+    cnt := t.rowLens[row];
+    var i := 0;
+    loop i < cnt {
+        mut out.pushBack(t.fields[start + i]);
+        i += 1;
+    }
+    out
+};
+
+/** Formats one CSV field with RFC-4180 quoting when containing `delimiter`, quotes, or newlines. */
+pub encodeField := fn(value: String, delimiter: String): String {
+    delim := effectiveDelim(delimiter);
+    needsQuote := value.contains(delim) or value.contains("\"") or value.contains("\n") or value.contains("\r");
+    if not needsQuote { return value; }
+    parts: mut List<String> = ["\""];
+    size := value.length();
+    var segStart := 0;
+    var i := 0;
+    loop i < size {
+        if value.at(i) == "\"" {
+            if i > segStart { mut parts.pushBack(value.slice(segStart, i)); }
+            mut parts.pushBack("\"\"");
+            segStart = i + 1;
+        }
+        i += 1;
+    }
+    if segStart < size { mut parts.pushBack(value.slice(segStart, size)); }
+    mut parts.pushBack("\"");
+    text.joinTexts(parts, "")
+};
+
+/** Formats one row of fields separated by `delimiter` (`","` when empty). */
+pub encodeRow := fn(fields: List<String>, delimiter: String): String {
+    delim := effectiveDelim(delimiter);
+    encoded: mut List<String> = [];
+    loop fields as field {
+        mut encoded.pushBack(encodeField(field, delim));
+    }
+    text.joinTexts(encoded, delim)
+};
+
+/** Serializes all rows in `table` separated by `\n`. */
+pub encodeTable := fn(table: CsvTable, delimiter: String): String {
+    delim := effectiveDelim(delimiter);
+    rows: mut List<String> = [];
+    rCount := table.rowCount();
+    var r := 0;
+    loop r < rCount {
+        mut rows.pushBack(encodeRow(table.row(r), delim));
+        r += 1;
+    }
+    text.joinTexts(rows, "\n")
+};

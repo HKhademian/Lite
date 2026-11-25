@@ -390,7 +390,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert.equal(buildMeta.lessons, 25);
   assert.equal(buildMeta.tutorials, 3);
   assert.equal(buildMeta.gymExercises, 56);
-  assert.equal(buildMeta.modules, 38);
+  assert.equal(buildMeta.modules, 41);
   assert(buildMeta.docsPages >= 200);
   assert(existsSync(join(out, 'docs/design/site-architecture.html')));
   assert(existsSync(join(out, 'docs/design/maps.html')));
@@ -403,6 +403,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(existsSync(join(out, 'modules/math/vector.html')));
   assert(existsSync(join(out, 'modules/math/geom.html')));
   assert(existsSync(join(out, 'modules/ds/arena.html')));
+  assert(existsSync(join(out, 'modules/ds/spatial.html')));
+  assert(existsSync(join(out, 'modules/data/json.html')));
+  assert(existsSync(join(out, 'modules/data/csv.html')));
   assert(readFileSync(join(out, 'modules/core/array.html'), 'utf8').includes('Array.length'));
   assert(readFileSync(join(out, 'modules/core/list.html'), 'utf8').includes('List.pushBack'));
   assert(readFileSync(join(out, 'modules/core/text.html'), 'utf8').includes('String.trim'));
