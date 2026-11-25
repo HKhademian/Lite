@@ -1584,7 +1584,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         return ctx.withMarkers((kind = targetKind, code = castCode, intValue = arg.intValue, textValue = arg.textValue, constant = arg.constant, next = closeParen), argMarkers);
     }
     if afterName < source.length() and (source.at(afterName) == "." or source.at(afterName) == "<") and
-    (types.findAlias(aliases, name) >= 0 or (source.at(afterName) == "." and (name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or name == "Int"))) {
+    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or (source.at(afterName) == "." and (name == "String" or name == "Int"))) {
         var resolvedType := "";
         var typeOwnerKey := "";
         var aliasParamsCsv := "";
@@ -1633,7 +1633,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             } else {
                 emptySeen: List<String> = [];
                 canRes := types.canResolveTypeAt(source, nameStart, prefix, aliases, "", emptySeen, 32);
-                if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind)) {
+                if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind) and types.typeOpOwnerKey(canRes.kind) == "") {
                     return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
                 }
                 resolvedType = canRes.kind;
@@ -8559,7 +8559,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                 } else if inferMode {
                                     emptySeen: List<String> = [];
                                     canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
-                                    if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind)) {
+                                    if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind) and types.typeOpOwnerKey(canRes.kind) == "") {
                                         return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
                                     }
                                     modTypeKind = canRes.kind;
@@ -8568,7 +8568,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                     emptySeen: List<String> = [];
                                     modTypeKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
                                     modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
-                                    if not types.isEnumKind(modTypeKind) and not types.isRecordKind(modTypeKind) and not types.isDistinctKind(modTypeKind) {
+                                    if not types.isEnumKind(modTypeKind) and not types.isRecordKind(modTypeKind) and not types.isDistinctKind(modTypeKind) and modTypeOwnerKey == "" {
                                         syntax.failAt(source, labelStart, prefix, "enum case access requires an enum type, got " + types.displayKind(modTypeKind));
                                     }
                                 }

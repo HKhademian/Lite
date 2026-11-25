@@ -2945,6 +2945,54 @@ pub parseComptimeValueArg := fn(source: String, position: Int, prefix: String, a
     (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got " + first)
 };
 
+/** Parses a fixed-array extent token (comptime `Int` param name, `$Val:` integer alias, or positive integer digits) followed by `closeSym`. */
+parseArrayExtentWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, extentStart: Int, closeSym: String, closeErrMsg: String, prefix: String, aliases: List<AliasDecl>, genericType: String): (extText: String, next: Int) {
+    size := source.length();
+    var extText := "";
+    var extentEnd := extentStart;
+    if extentStart < size and source.at(extentStart).isNameStart() {
+        extentEnd = source.skipName(extentStart);
+        extName := source.slice(extentStart, extentEnd);
+        vpKind := valueParamKind(genericType, extName);
+        if vpKind == ir.VALUE_KIND_INT {
+            extText = extName;
+        } else if vpKind =!= "" {
+            syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(vpKind));
+        } else if isGenericParamName(genericType, extName) {
+            syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent cannot be Type parameter " + extName);
+        } else {
+            aliasIdx := findAlias(aliases, extName);
+            if aliasIdx >= 0 and (aliases[aliasIdx].target).startsWithAt(0, "$Val:") {
+                tok := (aliases[aliasIdx].target).slice(5, (aliases[aliasIdx].target).length());
+                if not isComptimeIntToken(tok) {
+                    syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(comptimeValueTokenKind(tok)));
+                }
+                nVal := comptimeIntValue(tok);
+                if nVal <= 0 {
+                    syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be a positive integer, got " + nVal.toText());
+                }
+                extText = nVal.toText();
+            } else {
+                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer or Int comptime parameter extent in array type");
+            }
+        }
+    } else {
+        loop extentEnd < size and source.at(extentEnd).isDigit() {
+            extentEnd = extentEnd + 1;
+        }
+        if extentEnd == extentStart {
+            syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer extent in array type");
+        }
+        extent := syntax.parseDigits(source, extentStart, extentEnd);
+        extText = extent.toText();
+    }
+    afterExtent := syntax.skipTrivia(source, extentEnd, prefix);
+    if afterExtent >= size or source.at(afterExtent) =!= closeSym {
+        syntax.failAt(errSource, if useLocalErr { afterExtent } else { errPos }, prefix, if useLocalErr { "expected " + closeSym } else { closeErrMsg });
+    }
+    (extText = extText, next = afterExtent + 1)
+};
+
 /** Internal helper parsing one atomic source or alias type (excluding top-level `|` type unions). */
 parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
     size := source.length();
@@ -3192,49 +3240,8 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { afterElem } else { errPos }, prefix, if useLocalErr { "expected ;" } else { "expected [Type; Extent] in array type" });
         }
         extentStart := syntax.skipTrivia(source, afterElem + 1, prefix);
-        var extText := "";
-        var extentEnd := extentStart;
-        if extentStart < size and source.at(extentStart).isNameStart() {
-            extentEnd = source.skipName(extentStart);
-            extName := source.slice(extentStart, extentEnd);
-            vpKind := valueParamKind(genericType, extName);
-            if vpKind == ir.VALUE_KIND_INT {
-                extText = extName;
-            } else if vpKind =!= "" {
-                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(vpKind));
-            } else if isGenericParamName(genericType, extName) {
-                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent cannot be Type parameter " + extName);
-            } else {
-                aliasIdx := findAlias(aliases, extName);
-                if aliasIdx >= 0 and (aliases[aliasIdx].target).startsWithAt(0, "$Val:") {
-                    tok := (aliases[aliasIdx].target).slice(5, (aliases[aliasIdx].target).length());
-                    if not isComptimeIntToken(tok) {
-                        syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(comptimeValueTokenKind(tok)));
-                    }
-                    nVal := comptimeIntValue(tok);
-                    if nVal <= 0 {
-                        syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be a positive integer, got " + nVal.toText());
-                    }
-                    extText = nVal.toText();
-                } else {
-                    syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer or Int comptime parameter extent in array type");
-                }
-            }
-        } else {
-            loop extentEnd < size and source.at(extentEnd).isDigit() {
-                extentEnd = extentEnd + 1;
-            }
-            if extentEnd == extentStart {
-                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer extent in array type");
-            }
-            extent := syntax.parseDigits(source, extentStart, extentEnd);
-            extText = extent.toText();
-        }
-        afterExtent := syntax.skipTrivia(source, extentEnd, prefix);
-        if afterExtent >= size or source.at(afterExtent) =!= "]" {
-            syntax.failAt(errSource, if useLocalErr { afterExtent } else { errPos }, prefix, if useLocalErr { "expected ]" } else { "expected [Type; Extent] in array type" });
-        }
-        return (kind = "[" + inner.kind + ";" + extText + "]", next = afterExtent + 1);
+        ext := parseArrayExtentWithSeen(errSource, errPos, useLocalErr, source, extentStart, "]", "expected [Type; Extent] in array type", prefix, aliases, genericType);
+        return (kind = "[" + inner.kind + ";" + ext.extText + "]", next = ext.next);
     }
     if source.wordAt(start, "fn") {
         afterFn := syntax.skipTrivia(source, start + 2, prefix);
@@ -3331,11 +3338,22 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "expected an array element type");
         }
         inner := self(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, "array element", genericType, seen);
-        close := syntax.skipTrivia(source, inner.next, prefix);
-        if close >= size or source.at(close) =!= ">" {
-            syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in array type" });
+        if inner.kind == ir.VALUE_KIND_UNIT {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "unsupported array element type Unit");
         }
-        return (kind = "[" + inner.kind + ";*]", next = close + 1);
+        afterElem := syntax.skipTrivia(source, inner.next, prefix);
+        if afterElem < size and source.at(afterElem) == ">" {
+            if name == "Self" {
+                return (kind = "[" + inner.kind + ";*]", next = afterElem + 1);
+            }
+            syntax.failAt(errSource, nameStart, prefix, "Array requires two arguments: Array<T, N> (runtime-sized Array<T> is not supported yet; use List<T>)");
+        }
+        if afterElem >= size or source.at(afterElem) =!= "," {
+            syntax.failAt(errSource, if useLocalErr { afterElem } else { errPos }, prefix, if useLocalErr { "expected , in Array<T, N>" } else { "expected , and extent N in Array<T, N> type" });
+        }
+        extentStart := syntax.skipTrivia(source, afterElem + 1, prefix);
+        ext := parseArrayExtentWithSeen(errSource, errPos, useLocalErr, source, extentStart, ">", "expected > in Array<T, N> type", prefix, aliases, genericType);
+        return (kind = "[" + inner.kind + ";" + ext.extText + "]", next = ext.next);
     }
     if resolvedName == "Map" and afterName < size and source.at(afterName) == "<" {
         keyStart := syntax.skipTrivia(source, afterName + 1, prefix);
@@ -4492,6 +4510,44 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
     out
 };
 
+/** Non-failing parser for a fixed-array extent token followed by `closeSym`. */
+canResolveArrayExtent := fn(source: String, extentStart: Int, closeSym: String, prefix: String, aliases: List<AliasDecl>, genericType: String): (ok: Bool, extText: String, next: Int) {
+    size := source.length();
+    var extText := "";
+    var extentEnd := extentStart;
+    if extentStart < size and source.at(extentStart).isNameStart() {
+        extentEnd = source.skipName(extentStart);
+        extName := source.slice(extentStart, extentEnd);
+        if valueParamKind(genericType, extName) == ir.VALUE_KIND_INT {
+            extText = extName;
+        } else {
+            aliasIdx := findAlias(aliases, extName);
+            if aliasIdx >= 0 and (aliases[aliasIdx].target).startsWithAt(0, "$Val:") {
+                tok := (aliases[aliasIdx].target).slice(5, (aliases[aliasIdx].target).length());
+                if not isComptimeIntToken(tok) { return (ok = false, extText = "", next = extentStart); }
+                nVal := comptimeIntValue(tok);
+                if nVal <= 0 { return (ok = false, extText = "", next = extentStart); }
+                extText = nVal.toText();
+            } else {
+                return (ok = false, extText = "", next = extentStart);
+            }
+        }
+    } else {
+        loop extentEnd < size and source.at(extentEnd).isDigit() {
+            extentEnd = extentEnd + 1;
+        }
+        if extentEnd == extentStart { return (ok = false, extText = "", next = extentStart); }
+        extent := syntax.parseDigits(source, extentStart, extentEnd);
+        if extent < 0 { return (ok = false, extText = "", next = extentStart); }
+        extText = extent.toText();
+    }
+    afterExtent := syntax.skipTrivia(source, extentEnd, prefix);
+    if afterExtent >= size or source.at(afterExtent) =!= closeSym {
+        return (ok = false, extText = "", next = afterExtent);
+    }
+    (ok = true, extText = extText, next = afterExtent + 1)
+};
+
 /** Non-failing counterpart to `parseTypeWithSeen` used by root pre-registration and expression kind inference. */
 canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String, seen: List<String>, depthLeft: Int, allowUnion: Bool): (ok: Bool, kind: String, next: Int) {
     if depthLeft <= 0 { return (ok = false, kind = "", next = position); }
@@ -4684,39 +4740,9 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = afterElem);
         }
         extentStart := syntax.skipTrivia(source, afterElem + 1, prefix);
-        var extText := "";
-        var extentEnd := extentStart;
-        if extentStart < size and source.at(extentStart).isNameStart() {
-            extentEnd = source.skipName(extentStart);
-            extName := source.slice(extentStart, extentEnd);
-            if valueParamKind(genericType, extName) == ir.VALUE_KIND_INT {
-                extText = extName;
-            } else {
-                aliasIdx := findAlias(aliases, extName);
-                if aliasIdx >= 0 and (aliases[aliasIdx].target).startsWithAt(0, "$Val:") {
-                    tok := (aliases[aliasIdx].target).slice(5, (aliases[aliasIdx].target).length());
-                    if not isComptimeIntToken(tok) { return (ok = false, kind = "", next = extentStart); }
-                    nVal := comptimeIntValue(tok);
-                    if nVal <= 0 { return (ok = false, kind = "", next = extentStart); }
-                    extText = nVal.toText();
-                } else {
-                    return (ok = false, kind = "", next = extentStart);
-                }
-            }
-        } else {
-            loop extentEnd < size and source.at(extentEnd).isDigit() {
-                extentEnd = extentEnd + 1;
-            }
-            if extentEnd == extentStart { return (ok = false, kind = "", next = extentStart); }
-            extent := syntax.parseDigits(source, extentStart, extentEnd);
-            if extent <= 0 { return (ok = false, kind = "", next = extentStart); }
-            extText = extent.toText();
-        }
-        afterExtent := syntax.skipTrivia(source, extentEnd, prefix);
-        if afterExtent >= size or source.at(afterExtent) =!= "]" {
-            return (ok = false, kind = "", next = afterExtent);
-        }
-        return (ok = true, kind = "[" + elem.kind + ";" + extText + "]", next = afterExtent + 1);
+        ext := canResolveArrayExtent(source, extentStart, "]", prefix, aliases, genericType);
+        if not ext.ok { return (ok = false, kind = "", next = ext.next); }
+        return (ok = true, kind = "[" + elem.kind + ";" + ext.extText + "]", next = ext.next);
     }
     if source.wordAt(start, "fn") {
         afterFn := syntax.skipTrivia(source, start + 2, prefix);
@@ -4809,11 +4835,20 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if not elem.ok or elem.kind == ir.VALUE_KIND_UNIT {
             return (ok = false, kind = "", next = afterArr + 1);
         }
-        close := syntax.skipTrivia(source, elem.next, prefix);
-        if close >= size or source.at(close) =!= ">" {
-            return (ok = false, kind = "", next = close);
+        afterElem := syntax.skipTrivia(source, elem.next, prefix);
+        if afterElem < size and source.at(afterElem) == ">" {
+            if name == "Self" {
+                return (ok = true, kind = "[" + elem.kind + ";*]", next = afterElem + 1);
+            }
+            return (ok = false, kind = "", next = afterElem);
         }
-        return (ok = true, kind = "[" + elem.kind + ";*]", next = close + 1);
+        if afterElem >= size or source.at(afterElem) =!= "," {
+            return (ok = false, kind = "", next = afterElem);
+        }
+        extentStart := syntax.skipTrivia(source, afterElem + 1, prefix);
+        ext := canResolveArrayExtent(source, extentStart, ">", prefix, aliases, genericType);
+        if not ext.ok { return (ok = false, kind = "", next = ext.next); }
+        return (ok = true, kind = "[" + elem.kind + ";" + ext.extText + "]", next = ext.next);
     }
     if resolvedName == "Map" {
         afterMap := syntax.skipTrivia(source, afterName, prefix);

@@ -440,4 +440,33 @@ staticLocalSrc :=
 "io.outputLine(p0.hp, p1.hp, p2.hp, p3.hp, bx.val, m3.rows.length(), m2.rows.length(), m4.rows.length());\n";
 runBoth("static-type-ops-local", staticLocalSrc, "0 42 50 50 99 3 2 4\n");
 
+/* 7. Array<T, N> equivalence with [T; N], concrete/generic aliases, and 1-arg Array<T> rejection. */
+arraySyntaxSrc :=
+"io := import \"core/io\";\n" +
+"Row := alias<T: Type> Array<T, 4>;\n" +
+"Bytes4 := alias Array<Int, 4>;\n" +
+"Box := record<T: Type, N: Int> { items: Array<T, N>; }\n" +
+"sum4 := fn(xs: Array<Int, 4>): Int { xs[0] + xs[1] + xs[2] + xs[3] };\n" +
+"a: Array<Int, 4> = [1, 2, 3, 4];\n" +
+"b: [Int; 4] = a;\n" +
+"c: Bytes4 = b;\n" +
+"r: Row<Int> = c;\n" +
+"e: Array<Int, 0> = [];\n" +
+"bx := Box<Int, 3> { items = [10, 20, 30] };\n" +
+"io.outputLine(sum4(a), sum4(b), sum4(c), r[2], bx.items.length(), bx.items[1], e.length());\n";
+runBoth("array-two-arg-type-syntax", arraySyntaxSrc, "10 10 10 3 3 20 0\n");
+
+expectRejectBoth("reject-one-arg-array-type",
+"bad: Array<Int> = [1, 2];\n",
+"Array requires two arguments: Array<T, N>");
+
+expectRejectBoth("reject-array-unit-elem",
+"bad: Array<Unit, 3>;\n",
+"unsupported array element type Unit");
+
+expectRejectBoth("reject-array-generic-zero-extent",
+"Buf := alias<N: Int> Array<Int, N>;\n" +
+"bad: Buf<0>;\n",
+"array extent must be a positive integer");
+
 test.done("type-operations");

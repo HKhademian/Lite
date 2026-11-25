@@ -155,9 +155,9 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, params: String,
         else if name == "List.clear" and params == "values=mut List<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$list$clear:v1" }
         else { "" }
     } else if moduleIdentity == "lite.core.array.v1" {
-        if name == "Array.length" and params == "values=[T;*]" and result == ir.VALUE_KIND_INT { "lite$core$array$length:v1" }
-        else if name == "Array.$getIndex" and params == "values=[T;*]|index=Int" and result == "T" { "lite$core$array$getIndex:v1" }
-        else if name == "Array.$setIndex" and params == "values=mut [T;*]|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$array$setIndex:v1" }
+        if name == "Array.length" and (params == "values=[T;N]" or params == "values=[T;*]") and result == ir.VALUE_KIND_INT { "lite$core$array$length:v1" }
+        else if name == "Array.$getIndex" and (params == "values=[T;N]|index=Int" or params == "values=[T;*]|index=Int") and result == "T" { "lite$core$array$getIndex:v1" }
+        else if name == "Array.$setIndex" and (params == "values=mut [T;N]|index=Int|value=T" or params == "values=mut [T;*]|index=Int|value=T") and result == ir.VALUE_KIND_UNIT { "lite$core$array$setIndex:v1" }
         else { "" }
     } else if moduleIdentity == "lite.core.map.v1" {
         if (name == "Map.set" or name == "Map.$setIndex") and params == "entries=mut Map<K,V>|key=K|value=V" and result == ir.VALUE_KIND_UNIT { "lite$core$map$set:v1" }
