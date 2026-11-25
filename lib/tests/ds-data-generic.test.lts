@@ -106,11 +106,11 @@ functionalSrc :=
 "\n" +
 "/* 4. ds/spatial SpatialGrid2D */\n" +
 "mut sg := spatial.SpatialGrid2D.create(10.0);\n" +
-"mut sg.insertRect(101, geom.rect(-5.0, -5.0, 12.0, 12.0));\n" +
+"mut sg.insertRect(101, geom.Rect.create(-5.0, -5.0, 12.0, 12.0));\n" +
 "mut sg.insertPoint(102, 5.0, 5.0);\n" +
 "mut sg.insertPoint(103, 50.0, 50.0);\n" +
-"qBox := sg.queryRect(geom.rect(-2.0, -2.0, 10.0, 10.0));\n" +
-"qCirc := sg.queryCircle(geom.circle(vec.vec2(50.0, 50.0), 4.0));\n" +
+"qBox := sg.queryRect(geom.Rect.create(-2.0, -2.0, 10.0, 10.0));\n" +
+"qCirc := sg.queryCircle(geom.Circle.create(vec.vec2(50.0, 50.0), 4.0));\n" +
 "qPt := sg.queryPoint(-1.0, -1.0);\n" +
 "var sumBox := 0;\n" +
 "loop qBox as eid { sumBox += eid; }\n" +

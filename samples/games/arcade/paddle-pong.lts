@@ -54,7 +54,7 @@ var state := GameState {
 };
 
 clampPad := fn(y: Int): Int {
-    math.clampInt(y, 10, ctx.height - padH - 10)
+    math.clamp(y, 10, ctx.height - padH - 10)
 };
 
 render := fn(): Unit {

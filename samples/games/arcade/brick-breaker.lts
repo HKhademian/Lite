@@ -49,7 +49,7 @@ var state := GameState {
 };
 
 clampPad := fn(x: Int): Int {
-    math.clampInt(x, 10, ctx.width - padW - 10)
+    math.clamp(x, 10, ctx.width - padW - 10)
 };
 
 render := fn(): Unit {

@@ -19,7 +19,7 @@ var channels: [Int; 4] = [110, 196, 230, 215];
 var mixer := MixerState { activeChannel = 0, dragging = false };
 
 setChannelFromX := fn(ch: Int, col: Int): Unit {
-    channels[ch] = math.clampInt(((col - 26) * 255) / 160, 0, 255);
+    channels[ch] = math.clamp(((col - 26) * 255) / 160, 0, 255);
 };
 
 renderSlider := fn(idx: Int, y: Int, value: Int, barColor: canvas.Color): Unit {
@@ -104,7 +104,7 @@ onCanvasKeyDown := fn(key: String): Unit {
     } else if key == "ArrowLeft" or key == "ArrowRight" {
         delta := if key == "ArrowRight" { 16 } else { -16 };
         ch := mixer.activeChannel;
-        channels[ch] = math.clampInt(channels[ch] + delta, 0, 255);
+        channels[ch] = math.clamp(channels[ch] + delta, 0, 255);
         audio.tone(frequency = 360 + (ch * 70), durationMs = 40, volume = 12);
     }
     render();

@@ -52,25 +52,26 @@ rOob := compilerTest.checkAndRunTs(root, cOob.stdout);
 test.check("oob exits non-zero", rOob.status =!= 0);
 test.check("oob BoundPanic", rOob.stderr.contains("BoundPanic"));
 
-/* 4. core/math checks */
-test.checkInt("math.absInt", 7, math.absInt(-7));
-test.checkInt("math.minInt", 3, math.minInt(3, 9));
-test.checkInt("math.maxInt", 9, math.maxInt(3, 9));
-test.checkInt("math.clampInt lo", 10, math.clampInt(2, 10, 20));
-test.checkInt("math.clampInt hi", 20, math.clampInt(25, 10, 20));
+/* 4. math/scalar checks */
+test.checkInt("math.abs", 7, math.abs(-7));
+test.checkInt("math.min", 3, math.min(3, 9));
+test.checkInt("math.max", 9, math.max(3, 9));
+test.checkInt("math.clamp lo", 10, math.clamp(2, 10, 20));
+test.checkInt("math.clamp hi", 20, math.clamp(25, 10, 20));
+test.checkInt("math.sign", -1, math.sign(-42));
 test.checkInt("math.gcd", 6, math.gcd(48, 18));
 test.checkInt("math.lcm", 144, math.lcm(48, 18));
 test.checkInt("math.powInt", 1024, math.powInt(2, 10));
 test.check("math.sqrt(9.0)", math.abs(math.sqrt(9.0) - 3.0) < 0.0000001);
 test.check("math.lerp", math.abs(math.lerp(10.0, 20.0, 0.25) - 12.5) < 0.0000001);
 
-/* 5. core/random deterministic checks */
-rA := rand.create(42);
-s1 := rand.rangeInt(rA, 1, 100);
-s2 := rand.rangeInt(s1.next, 1, 100);
-rB := rand.create(42);
-s1b := rand.rangeInt(rB, 1, 100);
-s2b := rand.rangeInt(s1b.next, 1, 100);
+/* 5. math/random deterministic checks */
+rA := rand.Rng.create(42);
+s1 := rA.rangeInt(1, 100);
+s2 := s1.next.rangeInt(1, 100);
+rB := rand.Rng.create(42);
+s1b := rB.rangeInt(1, 100);
+s2b := s1b.next.rangeInt(1, 100);
 test.checkInt("random deterministic 1", s1.value, s1b.value);
 test.checkInt("random deterministic 2", s2.value, s2b.value);
 test.check("random in range 1", s1.value >= 1 and s1.value < 100);

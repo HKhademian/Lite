@@ -21,35 +21,37 @@ pub HALF_PI := 1.5707963267948966;
 /** Euler's number (`exp(1)`). */
 pub E := 2.718281828459045;
 
-/** Absolute value of an `Int`. */
-pub absInt := fn(x: Int): Int {
-    if x < 0 { -x } else { x }
+/** Generic absolute value over any `Numeric` scalar type. */
+pub abs := fn<T: Type<Numeric>>(x: T): T {
+    z: T;
+    if x < z { z - x } else { x }
 };
 
-/** Smaller of two `Int` values. */
-pub minInt := fn(a: Int, b: Int): Int {
+/** Smaller of two values of any `Numeric` scalar type. */
+pub min := fn<T: Type<Numeric>>(a: T, b: T): T {
     if a <= b { a } else { b }
 };
 
-/** Larger of two `Int` values. */
-pub maxInt := fn(a: Int, b: Int): Int {
+/** Larger of two values of any `Numeric` scalar type. */
+pub max := fn<T: Type<Numeric>>(a: T, b: T): T {
     if a >= b { a } else { b }
 };
 
-/** Clamps `x` to the closed interval `[lo, hi]`. */
-pub clampInt := fn(x: Int, lo: Int, hi: Int): Int {
+/** Clamps `x` to the closed interval `[lo, hi]` for any `Numeric` scalar type. */
+pub clamp := fn<T: Type<Numeric>>(x: T, lo: T, hi: T): T {
     if x < lo { lo } else if x > hi { hi } else { x }
 };
 
-/** Returns `-1`, `0`, or `1` according to the sign of `x`. */
-pub signInt := fn(x: Int): Int {
-    if x < 0 { -1 } else if x > 0 { 1 } else { 0 }
+/** Returns `-1`, `0`, or `1` (as `T`) according to the sign of `x` for any `Numeric` scalar type. */
+pub sign := fn<T: Type<Numeric>>(x: T): T {
+    z: T;
+    if x > z { x / x } else if x < z { z - (x / x) } else { z }
 };
 
 /** Non-negative greatest common divisor of `a` and `b`. */
 pub gcd := fn(a: Int, b: Int): Int {
-    var x := absInt(a);
-    var y := absInt(b);
+    var x := abs(a);
+    var y := abs(b);
     loop y =!= 0 {
         t := x % y;
         x = y;
@@ -61,7 +63,7 @@ pub gcd := fn(a: Int, b: Int): Int {
 /** Non-negative least common multiple of `a` and `b` (`0` if either input is `0`). */
 pub lcm := fn(a: Int, b: Int): Int {
     if a == 0 or b == 0 { return 0; }
-    absInt(a / gcd(a, b) * b)
+    abs(a / gcd(a, b) * b)
 };
 
 /** Integer exponentiation `base ^ exp` for non-negative `exp` (`0` for negative `exp`). */
@@ -76,26 +78,6 @@ pub powInt := fn(base: Int, exp: Int): Int {
         if e > 0 { b = b * b; }
     }
     res
-};
-
-/** Absolute value of a `Float`. */
-pub abs := fn(x: Float): Float {
-    if x < 0.0 { -x } else { x }
-};
-
-/** Smaller of two `Float` values. */
-pub min := fn(a: Float, b: Float): Float {
-    if a <= b { a } else { b }
-};
-
-/** Larger of two `Float` values. */
-pub max := fn(a: Float, b: Float): Float {
-    if a >= b { a } else { b }
-};
-
-/** Clamps `x` to `[lo, hi]`. */
-pub clamp := fn(x: Float, lo: Float, hi: Float): Float {
-    if x < lo { lo } else if x > hi { hi } else { x }
 };
 
 /** Linearly interpolates between `a` and `b` by factor `t`. */
@@ -170,11 +152,6 @@ pub trunc := fn(x: Float): Float {
 /** Fractional part `x - floor(x)` in `[0.0, 1.0)`. */
 pub fract := fn(x: Float): Float {
     x - floor(x)
-};
-
-/** Returns `-1.0`, `0.0`, or `1.0` according to the sign of `x`. */
-pub sign := fn(x: Float): Float {
-    if x < 0.0 { -1.0 } else if x > 0.0 { 1.0 } else { 0.0 }
 };
 
 /** Converts degrees to radians. */
@@ -287,25 +264,4 @@ pub atan2 := fn(y: Float, x: Float): Float {
     } else {
         0.0
     }
-};
-
-/** Generic absolute value over any `Numeric` scalar type. */
-pub absNum := fn<T: Type<Numeric>>(x: T): T {
-    var z: T;
-    if x < z { z - x } else { x }
-};
-
-/** Smaller of two values of any `Numeric` scalar type. */
-pub minNum := fn<T: Type<Numeric>>(a: T, b: T): T {
-    if a <= b { a } else { b }
-};
-
-/** Larger of two values of any `Numeric` scalar type. */
-pub maxNum := fn<T: Type<Numeric>>(a: T, b: T): T {
-    if a >= b { a } else { b }
-};
-
-/** Clamps `x` to `[lo, hi]` for any `Numeric` scalar type. */
-pub clampNum := fn<T: Type<Numeric>>(x: T, lo: T, hi: T): T {
-    if x < lo { lo } else if x > hi { hi } else { x }
 };

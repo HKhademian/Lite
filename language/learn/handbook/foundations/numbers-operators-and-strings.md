@@ -51,14 +51,14 @@ io.outputLine(inBand, notZero);
 
 Double-quoted `"..."` strings support multi-line text and standard escapes (`\n`, `\t`, `\"`, `\\`, `\r`). Concatenate strings with `+` and call `.length()` or `.isEmpty()` directly on any `String`.
 
-Use [core/text](lite://module/core/text) for code-point length, indexing, slicing, trimming, searching, and joining, [core/unicode](lite://module/core/unicode) for UTF-8 byte/scalar conversion, [math/scalar](lite://module/math/scalar) for numeric constants and helpers (`PI`, `TAU`, `sqrt`, `clampInt`, `min`), and [math/random](lite://module/math/random) for deterministic seedable PRNGs:
+Use [core/text](lite://module/core/text) for code-point length, indexing, slicing, trimming, searching, and joining, [core/unicode](lite://module/core/unicode) for UTF-8 byte/scalar conversion, [math/scalar](lite://module/math/scalar) for numeric constants and helpers (`PI`, `TAU`, `sqrt`, `clamp`, `min`), and [math/random](lite://module/math/random) for deterministic seedable PRNGs:
 
 ```lite
 io := import "core/io";
 math := import "math/scalar";
 
 msg := "  Lite\t".trim() + "!";
-io.outputLine(msg, msg.length(), msg.at(0), math.clampInt(120, 0, 100));
+io.outputLine(msg, msg.length(), msg.at(0), math.clamp(120, 0, 100));
 ```
 
 See [Numbers](lite://doc/numbers), [Division](lite://doc/division), [Comparison Chains](lite://doc/comparison-chains), [Strings](lite://doc/strings), and [Math, Vectors & Matrices](lite://handbook/math-vectors-and-matrices).

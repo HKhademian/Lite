@@ -4,20 +4,20 @@ Lite provides pure, dual-target (TypeScript + C11) math, deterministic random ge
 
 ## Core Math & Deterministic Randomness (`math/scalar`, `math/random`)
 
-[math/scalar](lite://module/math/scalar) defines numeric constraint unions (`IntScalar`, `FloatScalar`, `Numeric`), generic scalar helpers (`absNum`, `minNum`, `maxNum`, `clampNum`), constants (`PI`, `TAU`, `HALF_PI`, `E`), `absInt`/`abs`, `minInt`/`maxInt`, `clampInt`/`clamp`, `floor`/`ceil`/`round`/`trunc`/`fract`, trigonometry (`sin`, `cos`, `tan`, `atan`, `atan2`), `sqrt`, `signInt`/`sign`, `gcd`, and `lcm`.
+[math/scalar](lite://module/math/scalar) defines numeric constraint unions (`IntScalar`, `FloatScalar`, `Numeric`), generic scalar helpers (`abs`, `min`, `max`, `clamp`, `sign`), constants (`PI`, `TAU`, `HALF_PI`, `E`), `floor`/`ceil`/`round`/`trunc`/`fract`, trigonometry (`sin`, `cos`, `tan`, `atan`, `atan2`), `sqrt`, `gcd`, and `lcm`.
 
-[math/random](lite://module/math/random) provides an immutable, seedable Lehmer PRNG (`Rng`) whose state advances explicitly without hidden global entropy:
+[math/random](lite://module/math/random) provides an immutable, seedable Lehmer PRNG (`Rng`) whose state advances explicitly without hidden global entropy (`Rng.create`, `.nextInt()`, `.rangeInt(...)`, `.nextBool()`):
 
 ```lite
 io := import "core/io";
 math := import "math/scalar";
 rng := import "math/random";
 
-var r := rng.create(42);
-a := rng.rangeInt(r, 1, 7);
+var r := rng.Rng.create(42);
+a := r.rangeInt(1, 7);
 r = a.next;
-b := rng.rangeInt(r, 1, 7);
-io.outputLine(a.value, b.value, math.clampInt(a.value + b.value, 2, 12));
+b := r.rangeInt(1, 7);
+io.outputLine(a.value, b.value, math.clamp(a.value + b.value, 2, 12));
 ```
 
 ## 2D, 3D & Generic N-D Vector Math (`math/vector`)
@@ -67,7 +67,7 @@ Explore the module references: [math/scalar](lite://module/math/scalar), [math/r
 
 ## Geometry Primitives (`math/geom`)
 
-[math/geom](lite://module/math/geom) builds on `math/scalar` and `math/vector` with generic N-dimensional `Box<T, N>`, `Ray<T, N>`, `Segment<T, N>`, and `Ball<T, N>` (aliasing `Circle = Ball<Float, 2>` and `Sphere = Ball<Float, 3>` alongside concrete `Rect`), payload-bearing `RayHit` (`Miss` / `Hit(Float)`), and intersection queries (`rayBoxHit`, `raySphereHit`, `containsPoint`, `intersects`).
+[math/geom](lite://module/math/geom) builds on `math/scalar` and `math/vector` with generic N-dimensional `Box<T, N>`, `Ray<T, N>`, `Segment<T, N>`, and `Ball<T, N>` (aliasing `Circle = Ball<Float, 2>` and `Sphere = Ball<Float, 3>` alongside concrete `Rect`), static constructors (`Box.fromMinMax`, `Ray.create`, `Segment.create`, `Rect.create`, `Ball.create`/`Circle.create`/`Sphere.create`), payload-bearing `RayHit` (`Miss` / `Hit(Float)`), and intersection queries (`r.hitBox(...)`, `r.hitBall(...)`, `containsPoint`, `intersects`).
 
 ## Next Chapter
 

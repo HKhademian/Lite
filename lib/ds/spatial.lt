@@ -92,7 +92,7 @@ pub SpatialGrid2D.insertRect := fn(g: mut Self, id: Int, bounds: geom.Rect): Uni
 
 /** Inserts point entity `id` at `(x, y)`. */
 pub SpatialGrid2D.insertPoint := fn(g: mut Self, id: Int, x: Float, y: Float): Unit {
-    mut g.insertRect(id, geom.rect(x, y, 0.0, 0.0));
+    mut g.insertRect(id, geom.Rect.create(x, y, 0.0, 0.0));
 };
 
 /** Returns deduplicated entity IDs whose indexed cells overlap `bounds`. */
@@ -130,10 +130,10 @@ pub SpatialGrid2D.queryRect := fn(g: Self, bounds: geom.Rect): List<Int> {
 pub SpatialGrid2D.queryCircle := fn(g: Self, c: geom.Circle): List<Int> {
     r := if c.radius < 0.0 { 0.0 } else { c.radius };
     d := r * 2.0;
-    g.queryRect(geom.rect(c.center.x() - r, c.center.y() - r, d, d))
+    g.queryRect(geom.Rect.create(c.center.x() - r, c.center.y() - r, d, d))
 };
 
 /** Returns deduplicated entity IDs stored in the cell containing point `(x, y)`. */
 pub SpatialGrid2D.queryPoint := fn(g: Self, x: Float, y: Float): List<Int> {
-    g.queryRect(geom.rect(x, y, 0.0, 0.0))
+    g.queryRect(geom.Rect.create(x, y, 0.0, 0.0))
 };

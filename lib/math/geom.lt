@@ -36,8 +36,8 @@ pub Box := record<T: Type<math.Numeric>, N: Int> {
 }
 
 /** Constructs an axis-aligned `Box<T, N>` from `min` and `max` corners. */
-pub boxFromMinMax := fn<T: Type<math.Numeric>, N: Int>(min: vec.Vec<T, N>, max: vec.Vec<T, N>): Box<T, N> {
-    Box<T, N> { min = min, max = max }
+pub Box.fromMinMax := fn<T: Type<math.Numeric>, N: Int>(min: vec.Vec<T, N>, max: vec.Vec<T, N>): Self<T, N> {
+    Self<T, N> { min = min, max = max }
 };
 
 /** Component-wise extent `max - min` of box `b`. */
@@ -88,8 +88,8 @@ pub Ray := record<T: Type<math.FloatScalar>, N: Int> {
 }
 
 /** Constructs an N-dimensional ray from `origin` and `dir`. */
-pub ray := fn<T: Type<math.FloatScalar>, N: Int>(origin: vec.Vec<T, N>, dir: vec.Vec<T, N>): Ray<T, N> {
-    Ray<T, N> { origin = origin, dir = dir }
+pub Ray.create := fn<T: Type<math.FloatScalar>, N: Int>(origin: vec.Vec<T, N>, dir: vec.Vec<T, N>): Self<T, N> {
+    Self<T, N> { origin = origin, dir = dir }
 };
 
 /** Evaluates `r.origin + r.dir * t` along ray `r`. */
@@ -98,7 +98,7 @@ pub Ray.at := fn<T: Type<math.FloatScalar>, N: Int>(r: Self<T, N>, t: T): vec.Ve
 };
 
 /** Slab intersection test between N-dimensional ray `r` and box `b` (`t >= 0`). */
-pub rayBoxHit := fn<N: Int>(r: Ray<Float, N>, b: Box<Float, N>): RayHit {
+pub Ray.hitBox := fn<N: Int>(r: Self<Float, N>, b: Box<Float, N>): RayHit {
     var tMin := 0.0;
     var tMax := 0.0;
     var hasMax := false;
@@ -129,6 +129,23 @@ pub rayBoxHit := fn<N: Int>(r: Ray<Float, N>, b: Box<Float, N>): RayHit {
     }
 };
 
+/** Intersection test between N-dimensional ray `r` and `Ball<Float, N>` `s` (`t >= 0`). */
+pub Ray.hitBall := fn<N: Int>(r: Self<Float, N>, s: Ball<Float, N>): RayHit {
+    a := r.dir.dot(r.dir);
+    if a <= 0.000000000001 { return .Miss; }
+    oc := r.origin.sub(s.center);
+    b := oc.dot(r.dir);
+    c := oc.dot(oc) - (s.radius * s.radius);
+    disc := (b * b) - (a * c);
+    if disc < 0.0 { return .Miss; }
+    rootDisc := math.sqrt(disc);
+    t0 := (0.0 - b - rootDisc) / a;
+    if t0 >= 0.0 { return .Hit(t0); }
+    t1 := (0.0 - b + rootDisc) / a;
+    if t1 >= 0.0 { return .Hit(t1); }
+    .Miss
+};
+
 /** Line segment between endpoints `a` and `b` in `N` dimensions. */
 pub Segment := record<T: Type<math.FloatScalar>, N: Int> {
     a: vec.Vec<T, N>;
@@ -136,8 +153,8 @@ pub Segment := record<T: Type<math.FloatScalar>, N: Int> {
 }
 
 /** Constructs an N-dimensional line segment between `a` and `b`. */
-pub segment := fn<T: Type<math.FloatScalar>, N: Int>(a: vec.Vec<T, N>, b: vec.Vec<T, N>): Segment<T, N> {
-    Segment<T, N> { a = a, b = b }
+pub Segment.create := fn<T: Type<math.FloatScalar>, N: Int>(a: vec.Vec<T, N>, b: vec.Vec<T, N>): Self<T, N> {
+    Self<T, N> { a = a, b = b }
 };
 
 /** Evaluates linear point `(1 - t) * a + t * b` along segment `s`. */
@@ -163,8 +180,8 @@ pub Rect := record {
 }
 
 /** Constructs a 2D `Rect`. */
-pub rect := fn(x: Float, y: Float, width: Float, height: Float): Rect {
-    Rect { x = x, y = y, width = width, height = height }
+pub Rect.create := fn(x: Float, y: Float, width: Float, height: Float): Self {
+    Self { x = x, y = y, width = width, height = height }
 };
 
 /** Right edge `r.x + r.width`. */
@@ -212,19 +229,9 @@ pub Circle := alias Ball<Float, 2>;
 /** 3D sphere alias over `Ball<Float, 3>`. */
 pub Sphere := alias Ball<Float, 3>;
 
-/** Constructs an N-dimensional `Ball<T, N>`. */
-pub ball := fn<T: Type<math.FloatScalar>, N: Int>(center: vec.Vec<T, N>, radius: T): Ball<T, N> {
-    Ball<T, N> { center = center, radius = radius }
-};
-
-/** Constructs a 2D `Circle`. */
-pub circle := fn(center: vec.FVec2, radius: Float): Circle {
-    Ball<Float, 2> { center = center, radius = radius }
-};
-
-/** Constructs a 3D `Sphere`. */
-pub sphere := fn(center: vec.FVec3, radius: Float): Sphere {
-    Ball<Float, 3> { center = center, radius = radius }
+/** Constructs an N-dimensional `Ball<T, N>` (also inherited as `Circle.create` and `Sphere.create`). */
+pub Ball.create := fn<T: Type<math.FloatScalar>, N: Int>(center: vec.Vec<T, N>, radius: T): Self<T, N> {
+    Self<T, N> { center = center, radius = radius }
 };
 
 /** Area `PI * radius^2` of 2D `Circle` `c` (`0.0` for non-positive radius). */
@@ -250,21 +257,4 @@ pub Ball.intersectsRect := fn(c: Self<Float, 2>, r: Rect): Bool {
     dx := c.center.x() - cx;
     dy := c.center.y() - cy;
     ((dx * dx) + (dy * dy)) <= (c.radius * c.radius)
-};
-
-/** Tests intersection of N-dimensional ray `origin + dir * t` (`t >= 0`) against `Ball<Float, N>` `s`. */
-pub raySphereHit := fn<N: Int>(origin: vec.Vec<Float, N>, dir: vec.Vec<Float, N>, s: Ball<Float, N>): RayHit {
-    a := dir.dot(dir);
-    if a <= 0.000000000001 { return .Miss; }
-    oc := origin.sub(s.center);
-    b := oc.dot(dir);
-    c := oc.dot(oc) - (s.radius * s.radius);
-    disc := (b * b) - (a * c);
-    if disc < 0.0 { return .Miss; }
-    rootDisc := math.sqrt(disc);
-    t0 := (0.0 - b - rootDisc) / a;
-    if t0 >= 0.0 { return .Hit(t0); }
-    t1 := (0.0 - b + rootDisc) / a;
-    if t1 >= 0.0 { return .Hit(t1); }
-    .Miss
 };
