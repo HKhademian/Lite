@@ -4,10 +4,7 @@ The selected design uses `alias` to give a type or an existing symbol another
 name. The `distinct` declaration creates a fresh type identity from a type
 expression. Record and enum declarations create their own nominal types.
 
-**Compiler status.** The current compiler and Playground use
-`Name := type TypeExpression` for transparent type aliases. The examples below
-specify the new design. They use the planned spelling and include cases for the
-compiler migration.
+**Compiler status.** Transparent aliases use `Name := alias TypeExpression` and distinct nominal types use `Name := distinct TypeExpression` (with explicit 1-step `cast<T>(expr)` and context-inferred `cast(expr)` boundary crossings) across both TS and C11 backends; legacy `:= type` declarations have been migrated to `:= alias`. Lexically scoped symbol aliases (`xalias := alias x1`, `points := alias pointLib`) remain planned.
 
 ## Name a structural type or an existing type
 

@@ -1,6 +1,6 @@
 # Modules, Namespace Imports & `pub` Visibility Boundaries
 
-This runnable example uses the current compiler's `:= type` syntax for
+This runnable example uses the current compiler's `:= alias` syntax for
 transparent type aliases. The selected replacement is `:= alias`. See
 [aliases and distinct type declarations](lite://doc/type-aliases).
 
@@ -9,7 +9,7 @@ Split reusable logic into separate module files exposing only intentional `pub` 
 ## Walkthrough
 
 1. `stats := import "./helpers/math-stats.lts";` imports a sibling module under a local namespace alias (`stats`).
-2. `math-stats.lts` exports `pub RangeStats := type ...`, `pub VERSION`, `pub summarize`, and `pub span`, while keeping `minOf` and `maxOf` file-private.
+2. `math-stats.lts` exports `pub RangeStats := alias ...`, `pub VERSION`, `pub summarize`, and `pub span`, while keeping `minOf` and `maxOf` file-private.
 3. Consumers qualify exported names (`stats.RangeStats`, `stats.summarize(...)`); private helpers cannot leak outside `math-stats.lts`.
 
 > [!NOTE]

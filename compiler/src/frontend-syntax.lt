@@ -9,10 +9,10 @@ numeric := import "./numeric-literals";
 ir := import "./frontend-ir";
 
 /** One parsed expression matching `frontend-ir.Parsed`. */
-Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
+Parsed := alias (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
 
 /** One recognized binary operator spelling matching `frontend-ir.Operator`. */
-Operator := type (text: String, width: Int);
+Operator := alias (text: String, width: Int);
 
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 pub failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {

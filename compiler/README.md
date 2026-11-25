@@ -254,7 +254,7 @@ uses the math library; link emitted C with `-lm` where required. See the
 The compiler source is still restricted, but the accepted surface now includes
 Int/Float/String/Bool expressions, immutable and mutable locals (`:=`, `var`,
 assignment), `outputLine(...)`, action `if`/`else if`/`else`, Boolean or unconditional `loop`,
-transparent top-level type aliases (`Name := type Type;`), top-level
+transparent top-level type aliases (`Name := alias Type;`), top-level
 functions with Int/Float/String/Bool/Unit, flat named-tuple or `List<T>` parameters and
 results, positional calls, recursion/`self` and `return`. Aliases resolve to
 Int/Float/String/Bool/Unit, a flat named tuple, `List<T>`, or another alias and may

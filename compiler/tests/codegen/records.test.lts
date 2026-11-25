@@ -79,7 +79,7 @@ advancedRecordsSrc := "io := import \"core/io\";\n" +
 "    name: String = \"Anon\";\n" +
 "    age: Int = 18;\n" +
 "}\n" +
-"Member := type User;\n" +
+"Member := alias User;\n" +
 "Student := record {\n" +
 "    name: String = \"Anon\";\n" +
 "    age: Int = 18;\n" +

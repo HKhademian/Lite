@@ -3,7 +3,7 @@
 text := import "core/text";
 
 /** Buffered string builder backed by a list of chunks and a single final concatenation. */
-pub TextBuilder := type List<String>;
+pub TextBuilder := alias List<String>;
 
 /** Appends a non-empty chunk to `b` in amortized O(1). */
 pub append := fn(b: mut TextBuilder, chunk: String): Unit {

@@ -3,8 +3,8 @@
 io := import "core/io";
 fmt := import "core/format";
 
-IntOp := type fn(Int): Int;
-IntCheck := type fn(Int): Bool;
+IntOp := alias fn(Int): Int;
+IntCheck := alias fn(Int): Bool;
 
 applyOp := fn(op: IntOp, value: Int): Int {
     op(value)

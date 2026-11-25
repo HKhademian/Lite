@@ -1,6 +1,6 @@
 # Imports, Visibility & Core I/O
 
-This runnable example uses the current compiler's `:= type` syntax for
+This runnable example uses the current compiler's `:= alias` syntax for
 transparent type aliases. The selected replacement is `:= alias`. See
 [aliases and distinct type declarations](lite://doc/type-aliases).
 
@@ -12,7 +12,7 @@ Import standard helpers with `"core/..."` (or Play modules with `"extra/..."`) o
 
 ```lite
 /* helpers/math-stats.lts */
-pub Stats := type (count: Int, total: Int);
+pub Stats := alias (count: Int, total: Int);
 pub scaleFactor := 2;
 
 hiddenBoost := fn(x: Int): Int { x + 1 };

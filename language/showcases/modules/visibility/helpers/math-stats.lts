@@ -1,6 +1,6 @@
 /* Module imported by showcase 06.01 — exposes pub types, constants, and functions. */
 
-pub RangeStats := type (min: Int, max: Int, sum: Int);
+pub RangeStats := alias (min: Int, max: Int, sum: Int);
 pub VERSION := "stats-module/v1";
 
 minOf := fn(a: Int, b: Int): Int {

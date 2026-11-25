@@ -3,14 +3,14 @@
 ir := import "./frontend-ir";
 
 /** Local alias for `ir.Local`. */
-Local := type ir.Local;
+Local := alias ir.Local;
 /** Local alias for `ir.FunctionInfo`. */
-FunctionInfo := type ir.FunctionInfo;
+FunctionInfo := alias ir.FunctionInfo;
 /** Local alias for `ir.AliasDecl`. */
-AliasDecl := type ir.AliasDecl;
+AliasDecl := alias ir.AliasDecl;
 
 /** One undo entry recording the prior indexed state before `locals[i]` was pushed. */
-LocalUndo := type (
+LocalUndo := alias (
     name: String,
     runtime: String,
     depth: Int,
@@ -23,7 +23,7 @@ LocalUndo := type (
 );
 
 /** One undo entry recording the prior indexed state before `aliases[i]` was pushed. */
-AliasUndo := type (
+AliasUndo := alias (
     name: String,
     depth: Int,
     prevIdx: Int,

@@ -2,9 +2,9 @@
 
 io := import "core/io";
 
-pub Complex := type (re: Float, im: Float);
+pub Complex := alias (re: Float, im: Float);
 
-pub StreamResult := type (
+pub StreamResult := alias (
     tosRe: Float,
     tosIm: Float,
     depth: Int,
@@ -13,7 +13,7 @@ pub StreamResult := type (
     ops: Int
 );
 
-pub Converted := type (
+pub Converted := alias (
     tree: String,
     stream: String,
     bits: String

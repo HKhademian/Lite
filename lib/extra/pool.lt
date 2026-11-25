@@ -1,19 +1,19 @@
 /** Experimental generational slot pools (`extra/pool`) for O(1) object reuse with safe stale-handle detection. */
 
 /** Generational handle identifying a single slot inside a pool. */
-pub Handle := type (index: Int, generation: Int);
+pub Handle := alias (index: Int, generation: Int);
 
 /** Sentinel invalid handle returned when a pool is full or destroyed. */
 pub INVALID_HANDLE := (index = -1, generation = 0);
 
 /** Opaque generational handle to a pure slot allocator (pairs with user-owned parallel arrays). */
-pub SlotPool := type (handle: Int, gen: Int);
+pub SlotPool := alias (handle: Int, gen: Int);
 
 /** Opaque generational handle to a pool storing `Int` values. */
-pub IntPool := type (handle: Int, gen: Int);
+pub IntPool := alias (handle: Int, gen: Int);
 
 /** Opaque generational handle to a pool storing `String` values. */
-pub TextPool := type (handle: Int, gen: Int);
+pub TextPool := alias (handle: Int, gen: Int);
 
 /** True when `h` has a non-negative index and positive generation. */
 pub isHandleValid := fn(h: Handle): Bool {

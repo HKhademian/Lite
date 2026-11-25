@@ -4,10 +4,10 @@ diagLib := import "core/diag";
 ir := import "./frontend-ir";
 
 /** One parsed item entry matching `frontend-ir.Item`. */
-Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+Item := alias (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 
 /** Collection of items matching `frontend-ir.Items`. */
-Items := type List<Item>;
+Items := alias List<Item>;
 
 /** True when `moduleIdentity` is a verified `lite.core.*`, `lite.external.*`, or `lite.extra.*` host module identity. */
 pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {

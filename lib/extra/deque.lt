@@ -1,10 +1,10 @@
 /** Experimental O(1) double-ended queues and FIFO queues (`extra/deque`) backed by fixed-capacity circular slabs. */
 
 /** Opaque generational handle to an `Int` double-ended queue. */
-pub IntDeque := type (handle: Int, gen: Int);
+pub IntDeque := alias (handle: Int, gen: Int);
 
 /** Opaque generational handle to a `String` double-ended queue. */
-pub TextDeque := type (handle: Int, gen: Int);
+pub TextDeque := alias (handle: Int, gen: Int);
 
 /* --- IntDeque flat slab --- */
 var idSlab: mut List<Int> = [];

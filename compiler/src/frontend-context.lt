@@ -12,19 +12,19 @@ types := import "./frontend-types";
 trace := import "./trace-safety";
 
 /** One parsed expression matching `frontend-ir.Parsed`. */
-Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
+Parsed := alias (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
 
 /** One local visible to later statements matching `frontend-ir.Local`. */
-Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
+Local := alias (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
 
 /** Symbol declaration name owned directly by one block matching `frontend-ir.BlockDecl`. */
-BlockDecl := type (name: String, depth: Int);
+BlockDecl := alias (name: String, depth: Int);
 
 /** One outer local initialization and callable-dependency update matching `frontend-ir.BranchUpdate`. */
-BranchUpdate := type (depth: Int, runtime: String, initState: String, code: String);
+BranchUpdate := alias (depth: Int, runtime: String, initState: String, code: String);
 
 /** Lexical control-flow and metadata context matching `frontend-ir.ConstructCtx`. */
-ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
+ConstructCtx := alias (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
 
 /** Builds an integer parsed value with explicit scalar kind `kind`; `textValue` is empty. */
 pub typedIntParsed := fn(kind: String, code: String, value: Int, constant: Bool, next: Int): Parsed {

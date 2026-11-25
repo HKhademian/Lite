@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/types/aliases/type-aliases-and-scoping.lts",
-    "hash": "sha256:8c1e73447a747fbfa3e6babe83358510d2cf31ffe6dd3e777f6f87f516bebf12"
+    "hash": "sha256:d18c422df1bba5db93a5e5b6c9d4259cff6ee68b933d90ecade88cd15c9c14d6"
   },
   "features": [
     "feature.types.aliases.transparent-aliases",

@@ -73,9 +73,9 @@ Loops collect committed values with `.collected` (partial `if`/`match` tails ski
 - [Integer calculator](lite://play/example/integer-calculator): a scanner and
   recursive parser composed from smaller features.
 - [Type aliases](lite://play/example/type-aliases) shows how to name tuple and
-  list types using the current compiler's `:= type` syntax. The
-  [alias and distinct reference](lite://doc/type-aliases) covers the selected
-  replacement syntax.
+  list types using `:= alias`. The
+  [alias and distinct reference](lite://doc/type-aliases) covers `alias` and
+  `distinct` declarations.
 - [Sum loop](lite://play/example/sum-loop): mutable accumulators, `+=` updates, and
   explicit loop exit; continue with [loops](lite://doc/loops).
 - [Subjectless match](lite://play/example/subjectless-match): ordered

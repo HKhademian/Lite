@@ -1,10 +1,10 @@
 /** Experimental fixed-capacity circular ring buffers (`extra/ring`) for rolling windows, telemetry, and audio rings. */
 
 /** Opaque generational handle to a fixed-capacity `Int` ring buffer. */
-pub IntRing := type (handle: Int, gen: Int);
+pub IntRing := alias (handle: Int, gen: Int);
 
 /** Opaque generational handle to a fixed-capacity `Float` ring buffer. */
-pub FloatRing := type (handle: Int, gen: Int);
+pub FloatRing := alias (handle: Int, gen: Int);
 
 /* --- IntRing flat slab --- */
 var irSlab: mut List<Int> = [];

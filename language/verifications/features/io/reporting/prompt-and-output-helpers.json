@@ -17,11 +17,11 @@
     {
       "name": "all-helpers",
       "stdin": {
-        "text": "hello\r\n7 -2.5e2\nremaining\ud83d\ude42",
+        "text": "hello\r\n7 -2.5e2\nremaining🙂",
         "hash": "sha256:0c338048d106c6c76c384ba9b088826967ac3b56374e31aeb4cb9b0fff902eac"
       },
       "stdout": {
-        "text": "\nLine: Int: Float: All: values: hello 7 -250\n[1, 2] (left=7, right=hello) true\n\nremaining\ud83d\ude42\n",
+        "text": "\nLine: Int: Float: All: values: hello 7 -250\n[1, 2] (left=7, right=hello) true\n\nremaining🙂\n",
         "hash": "sha256:552789348dd2bedafbe608a749a15ff76c83efc1b385c72fc1ca3d22bd6a9c85"
       },
       "exitCode": 0

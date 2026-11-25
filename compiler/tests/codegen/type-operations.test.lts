@@ -233,7 +233,7 @@ expectRejectBoth("non-self-receiver",
 
 expectRejectBoth("alias-attachment",
 "P := record { hp: Int; }\n" +
-"AliasP := type P;\n" +
+"AliasP := alias P;\n" +
 "AliasP.get := fn(p: Self): Int { p.hp };\n",
 "cannot attach operation to alias or foreign type AliasP");
 

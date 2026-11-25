@@ -5,6 +5,6 @@ f = -4;
 g: Double = (9007199254740994);
 low: Float64 = -9223372036854775808;
 io.outputLine(f, g, low);
-Amount := type Double;
+Amount := alias Double;
 a: Amount = ((8));
 io.outputLine(a, a / 2);

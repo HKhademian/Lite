@@ -12,7 +12,7 @@ rawRoot := project.findRepoRoot();
 test.check("repo root found", rawRoot =!= "");
 root := fs.realPath(rawRoot).path;
 
-CmdResult := type (status: Int, stdout: String, stderr: String);
+CmdResult := alias (status: Int, stdout: String, stderr: String);
 
 runCmd := fn(args: List<String>): CmdResult {
     tmpRes := fs.makeTempDir("lite-boot-test-");

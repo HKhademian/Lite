@@ -26,7 +26,7 @@ seedArtifact := json.readObjectString(seedRead.text, seedBrace, "artifact").valu
 seedArtifactSha256 := json.readObjectString(seedRead.text, seedBrace, "artifactSha256").value;
 test.check("seed fields non-empty", seedArtifact =!= "" and seedArtifactSha256 =!= "");
 
-CmdResult := type (status: Int, stdout: String, stderr: String);
+CmdResult := alias (status: Int, stdout: String, stderr: String);
 
 invoke := fn(directory: String, commandRel: String, args: List<String>, timeoutMs: Int): CmdResult {
     tmpRes := fs.makeTempDir("lite-tooling-cmd-");

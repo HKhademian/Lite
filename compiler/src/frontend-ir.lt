@@ -6,43 +6,43 @@ cLiteral := import "./c-literals";
 unicode := import "core/unicode";
 
 /** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
-pub Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
+pub Parsed := alias (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
 
 /** One local visible to later statements: source name, hygienic runtime name, value kind, binding reassignment permission, held-data write grant, declaration block depth, constant value, target code, and definite-initialization state. */
-pub Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
+pub Local := alias (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
 
 /** One program or module-graph item: a report stream entry, declaration, control-flow marker, import edge, public function signature or module visit boundary. */
-pub Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+pub Item := alias (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 
 /** Parsed module/compiler items returned by parseProgram and consumed by the module collector and backend emitters. */
-pub Items := type List<Item>;
+pub Items := alias List<Item>;
 
 /** Completion facts saved while an inner block is parsed; earlier conditional arms are joined only after a final else. */
-pub BlockState := type (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool, preLocalsLen: Int, liveBranchCount: Int);
+pub BlockState := alias (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool, preLocalsLen: Int, liveBranchCount: Int);
 
 /** Symbol declaration name owned directly by the block at `depth` for same-block uniqueness checks. */
-pub BlockDecl := type (name: String, depth: Int);
+pub BlockDecl := alias (name: String, depth: Int);
 
 /** One outer local initialization and callable-dependency update recorded at the end of a conditional branch. */
-pub BranchUpdate := type (depth: Int, runtime: String, initState: String, code: String);
+pub BranchUpdate := alias (depth: Int, runtime: String, initState: String, code: String);
 
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
-pub Operator := type (text: String, width: Int);
+pub Operator := alias (text: String, width: Int);
 
 /** One previously declared top-level function: source name, result kind, first parameter entry and parameter count. */
-pub FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
+pub FunctionInfo := alias (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
 
 /** A later top-level scalar definition visible only while checking a deferred function body. */
-pub FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
+pub FutureValue := alias (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
 
 /** One transparent type alias: source name, raw target type text, declaration position, end position and enclosing block depth. */
-pub AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: Int);
+pub AliasDecl := alias (name: String, target: String, at: Int, end: Int, depth: Int);
 
 /** Lexical control-flow and metadata context for an enclosing function, block, conditional, match, loop or finally scope. */
-pub ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
+pub ConstructCtx := alias (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
 
 /** Hash-indexed string set for O(1) reachable-token membership checks across large module graphs. */
-pub TokenBuckets := type Set<String>;
+pub TokenBuckets := alias Set<String>;
 
 pub INIT_STATE_INIT := "init";
 pub INIT_STATE_UNINIT := "uninit";

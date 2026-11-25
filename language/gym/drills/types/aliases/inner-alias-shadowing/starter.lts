@@ -1,12 +1,12 @@
 io := import "core/io";
 
-NumOrText := type String;
+NumOrText := alias String;
 
 x := io.inputInt();
 y := io.inputInt();
 tag: NumOrText = "sum";
 total := {
-    Pair := type (a: NumOrText, b: NumOrText);
+    Pair := alias (a: NumOrText, b: NumOrText);
     item: Pair = (a = x, b = y);
     item.a + item.b
 };

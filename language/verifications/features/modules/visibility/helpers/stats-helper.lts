@@ -1,4 +1,4 @@
-pub Metric := type (label: String, total: Int);
+pub Metric := alias (label: String, total: Int);
 pub OFFSET := 100;
 
 privateScale := fn(n: Int): Int {

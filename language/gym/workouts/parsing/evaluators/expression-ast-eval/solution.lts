@@ -1,6 +1,6 @@
 io := import "core/io";
 
-EvalRes := type (ok: Bool, value: Int, next: Int);
+EvalRes := alias (ok: Bool, value: Int, next: Int);
 
 skipSp := fn(src: String, start: Int): Int {
     var p := start;

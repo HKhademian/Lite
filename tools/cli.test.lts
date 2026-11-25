@@ -14,7 +14,7 @@ rawRoot := project.findRepoRoot();
 test.check("repo root found", rawRoot =!= "");
 root := fs.realPath(rawRoot).path;
 
-CmdResult := type (status: Int, stdout: String, stderr: String);
+CmdResult := alias (status: Int, stdout: String, stderr: String);
 
 runIn := fn(exe: String, args: List<String>, cwd: String, timeoutMs: Int): CmdResult {
     tmpRes := fs.makeTempDir("lite-cli-t-");

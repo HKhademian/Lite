@@ -2,8 +2,8 @@
 
 io := import "core/io";
 
-Token := type (kind: String, text: String);
-Tokens := type List<Token>;
+Token := alias (kind: String, text: String);
+Tokens := alias List<Token>;
 
 describe := fn(token: Token): String {
     token.kind + ": " + token.text

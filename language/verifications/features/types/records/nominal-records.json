@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "nominal-records.lts",
-    "hash": "sha256:d43bdaed9eedc83d08cbf51ec0f8fd537ce6b48b42fbda484df5ca20ed4ba9de"
+    "hash": "sha256:b530b451217a611a79362780dac84004fc1bb012a6fcc8303240eaf4cdc7e142"
   },
   "features": [
     "feature.types.records.nominal-records"

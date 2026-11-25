@@ -5,10 +5,10 @@ colorLib := import "./color";
 surfLib := import "./surface";
 
 /** Packed 32-bit ARGB color (`0xAARRGGBB`) stored inside Int. */
-pub Color := type Int;
+pub Color := alias Int;
 
 /** Canvas dimensions and window title returned by setup and query calls. */
-pub Context := type (width: Int, height: Int, title: String);
+pub Context := alias (width: Int, height: Int, title: String);
 
 /** Canvas draw operation opcode for clearing the canvas. */
 CANVAS_OP_CLEAR := 1;

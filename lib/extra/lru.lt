@@ -2,16 +2,16 @@
 
 
 /** Opaque generational handle to a `String -> String` bounded LRU cache. */
-pub LruText := type (handle: Int, gen: Int);
+pub LruText := alias (handle: Int, gen: Int);
 
 /** Opaque generational handle to a `String -> Int` bounded LRU cache. */
-pub LruInt := type (handle: Int, gen: Int);
+pub LruInt := alias (handle: Int, gen: Int);
 
 /** Opaque generational handle to an `Int -> Int` bounded LRU cache. */
-pub IntLru := type (handle: Int, gen: Int);
+pub IntLru := alias (handle: Int, gen: Int);
 
 /** Cache occupancy and hit/miss/eviction counters. */
-pub LruStats := type (count: Int, capacity: Int, hits: Int, misses: Int, evictions: Int);
+pub LruStats := alias (count: Int, capacity: Int, hits: Int, misses: Int, evictions: Int);
 
 /* --- Shared doubly-linked node slab for LruText (String -> String) --- */
 var ttKey: mut List<String> = [];

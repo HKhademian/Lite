@@ -30,7 +30,7 @@ skipSpaces := fn(src: String, start: Int): Int {
 };
 
 /* Mutually recursive tuple-returning parser (`value`, `next`, `ok`, `error`). */
-ParseRes := type (ok: Bool, value: Int, next: Int, error: String);
+ParseRes := alias (ok: Bool, value: Int, next: Int, error: String);
 
 parseExpr := fn(src: String, pos: Int): ParseRes {
     leftInit := parseTerm(src, pos);

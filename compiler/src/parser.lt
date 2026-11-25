@@ -7,10 +7,10 @@ format := import "core/format";
 io := import "core/io";
 
 /** One flat parse node: kind, name, detail text and source position. */
-pub Node := type (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
+pub Node := alias (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
 
 /** Parse nodes in source order. */
-pub Nodes := type List<Node>;
+pub Nodes := alias List<Node>;
 
 /* Parse-node kind spellings (Lite has no enum in this bootstrap subset yet). */
 /** Canonical node kind for one type alias. */
@@ -722,7 +722,7 @@ pub parseProgram := fn(tokens: lexer.Tokens, prefix: String): Nodes {
     nodes
 }
 
-/** Parses one `Name := type Type;` declaration into scalar node fields. */
+/** Parses one `Name := alias Type;` declaration into scalar node fields. */
 pub parseTypeAlias := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
     token := tokenAt(tokens, index);
     if token.kind =!= lexer.TOKEN_KIND_NAME {

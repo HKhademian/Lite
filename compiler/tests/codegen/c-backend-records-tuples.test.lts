@@ -43,8 +43,8 @@ src :=
 "io.outputLine(snap);\n" +
 "\n" +
 "/* 3. Lists & fixed arrays of tuples/records */\n" +
-"Token := type (kind: String, text: String);\n" +
-"Tokens := type List<Token>;\n" +
+"Token := alias (kind: String, text: String);\n" +
+"Tokens := alias List<Token>;\n" +
 "describe := fn(tok: Token): String { tok.kind + \":\" + tok.text };\n" +
 "tokens: mut Tokens = [];\n" +
 "mut tokens.pushBack((kind = \"id\", text = \"x\"));\n" +

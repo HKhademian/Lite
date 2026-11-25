@@ -20,28 +20,28 @@ ctx := import "./frontend-context";
 textLib := import "core/text";
 
 /** One parsed expression matching `frontend-ir.Parsed`. */
-Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
+Parsed := alias (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
 
 /** One local visible to later statements matching `frontend-ir.Local`. */
-Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
+Local := alias (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
 
 /** One program or module-graph item matching `frontend-ir.Item`. */
-Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+Item := alias (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 
 /** Collection of items matching `frontend-ir.Items`. */
-Items := type List<Item>;
+Items := alias List<Item>;
 
 /** One previously declared top-level function matching `frontend-ir.FunctionInfo`. */
-FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
+FunctionInfo := alias (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
 
 /** A later top-level scalar definition matching `frontend-ir.FutureValue`. */
-FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
+FutureValue := alias (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
 
 /** One transparent type alias matching `frontend-ir.AliasDecl`. */
-AliasDecl := type (name: String, target: String, at: Int, end: Int, depth: Int);
+AliasDecl := alias (name: String, target: String, at: Int, end: Int, depth: Int);
 
 /** Lexical control-flow and metadata context matching `frontend-ir.ConstructCtx`. */
-ConstructCtx := type (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
+ConstructCtx := alias (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
 
 /** Normalizes expected contextual value kind by erasing non-value sentinels and unwrapping `TailList<T>`. */
 normalizeExpectedValueKind := fn(expected: String): String {
@@ -4233,7 +4233,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
 };
 
 /** One parsed subject-match pattern result (condition, tab-delimited bindings, irrefutability, Bool coverage mask, covered enum case pipe-bag, next offset, markers). */
-PatResult := type (cond: String, bindings: String, irrefutable: Bool, boolMask: Int, enumCases: String, next: Int, markers: String);
+PatResult := alias (cond: String, bindings: String, irrefutable: Bool, boolMask: Int, enumCases: String, next: Int, markers: String);
 
 /** Merges pipe-delimited enum case indices from `add` into `acc` (`|0|1|`), returning the updated bag and count of newly added cases. */
 mergeEnumCaseBag := fn(acc: String, add: String): (bag: String, added: Int) {

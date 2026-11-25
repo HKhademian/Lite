@@ -3,25 +3,25 @@
 color := import "extra/color";
 
 /** Opaque color value re-exported from `extra/color`. */
-pub Color := type color.Color;
+pub Color := alias color.Color;
 
 /** 2D point in logical surface coordinates. */
-pub Point := type (x: Float, y: Float);
+pub Point := alias (x: Float, y: Float);
 
 /** Axis-aligned rectangle in logical surface coordinates. */
-pub Rect := type (x: Float, y: Float, width: Float, height: Float);
+pub Rect := alias (x: Float, y: Float, width: Float, height: Float);
 
 /** Opaque handle identifying an open abstract drawing surface. */
-pub Surface := type (handle: Int);
+pub Surface := alias (handle: Int);
 
 /** Snapshot of surface state and user input for the current frame. */
-pub FrameInput := type (open: Bool, width: Int, height: Int, pointerX: Float, pointerY: Float, pointerDown: Bool, key: String, deltaMs: Int);
+pub FrameInput := alias (open: Bool, width: Int, height: Int, pointerX: Float, pointerY: Float, pointerDown: Bool, key: String, deltaMs: Int);
 
 /** Runtime performance and resource vitals for an active surface. */
-pub Vitals := type (frameCount: Int, frameTimeMs: Float, avgFrameTimeMs: Float, fps: Float, targetFps: Float, cpuTimeMs: Float, memoryBytes: Int);
+pub Vitals := alias (frameCount: Int, frameTimeMs: Float, avgFrameTimeMs: Float, fps: Float, targetFps: Float, cpuTimeMs: Float, memoryBytes: Int);
 
 /** Window geometry and fullscreen state snapshot for an active surface. */
-pub Bounds := type (x: Int, y: Int, width: Int, height: Int, fullscreen: Bool);
+pub Bounds := alias (x: Int, y: Int, width: Int, height: Int, fullscreen: Bool);
 
 /** Constructs a 2D point `(x, y)`. */
 pub point := fn(x: Float, y: Float): Point { (x = x, y = y) };
@@ -84,7 +84,7 @@ pub present := fn(surface: Surface): Unit;
 pub close := fn(surface: Surface): Unit;
 
 /** Frame callback invoked once per frame by `run`; return `false` to stop the loop. */
-pub FrameCallback := type fn(FrameInput): Bool;
+pub FrameCallback := alias fn(FrameInput): Bool;
 
 /** Runs a portable host-driven frame loop (`poll -> onFrame -> present`) across desktop, headless, and browser hosts until the surface closes or `onFrame` returns `false`. */
 pub run := fn(surface: Surface, onFrame: FrameCallback): Unit;

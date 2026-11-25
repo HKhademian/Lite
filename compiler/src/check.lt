@@ -8,16 +8,16 @@ format := import "core/format";
 io := import "core/io";
 
 /** One top-level symbol: kind, name, detail text and source position. */
-pub Symbol := type (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
+pub Symbol := alias (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);
 
 /** Top-level symbols in source order. */
-pub Symbols := type List<Symbol>;
+pub Symbols := alias List<Symbol>;
 
 /** One local binding: name, reassignment mutability, block depth and origin kind. */
-Local := type (name: String, typeText: String, mutable: Bool, writable: Bool, depth: Int, kind: String);
+Local := alias (name: String, typeText: String, mutable: Bool, writable: Bool, depth: Int, kind: String);
 
 /** Local bindings in declaration order, removed when their block closes. */
-Locals := type List<Local>;
+Locals := alias List<Local>;
 
 /** Canonical symbol kind for a type alias. */
 SYMBOL_KIND_TYPE := "type";

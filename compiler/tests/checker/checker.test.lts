@@ -31,7 +31,7 @@ badCheckCases: List<String> = [
 "f := fn(a: Int): Int { a }\nf := fn(): Int { 1 }\n",
 "var x := 1; x := 2; x = 3;\n",
 "x: Missing = 1;\n",
-"A := type B;\nB := type A;\n",
+"A := alias B;\nB := alias A;\n",
 "f := fn(a: Int, a: Int): Int { a }\n",
 "f := fn(a: Int): Int { a = 2; a }\n",
 "f := fn(): Int { y = 2; 1 }\n",
@@ -45,7 +45,7 @@ badCheckCases: List<String> = [
 "f := fn(): Int { return; }\n",
 "f := fn(): Int { break; 1 }\n",
 "f := fn(): String { return 1; }\n",
-"Pair := type (a: Int, b: String); p: Pair = (a = 1, b = \"x\"); x: Int = p.b;\n",
+"Pair := alias (a: Int, b: String); p: Pair = (a = 1, b = \"x\"); x: Int = p.b;\n",
 "values: List<Int> = [1, 2]; x: String = values[0];\n",
 "values: List<Int> = [\"bad\"];\n",
 "values: List<Int> = []; push_back(mut values, 1);\n",
@@ -69,7 +69,7 @@ badCheckErrs: List<String> = [
 "1:18: return requires a value\n",
 "1:18: break outside loop\n",
 "1:21: cannot return Int from function returning String\n",
-"1:63: cannot initialize Int with String\n",
+"1:64: cannot initialize Int with String\n",
 "1:29: cannot initialize String with Int\n",
 "1:1: cannot initialize List<Int> with List<String>\n",
 "1:39: cannot mutate list values without mut\n",
@@ -93,7 +93,7 @@ goodCheckCases: List<String> = [
 "f := fn(a: String): Int { 1 }\ng := fn(): Int { f(\"ok\") }\n",
 "f := fn(): Int { loop true { break; } 1 }\n",
 "f := fn(): Unit { return; }\n",
-"Pair := type (a: Int, b: String); p: Pair = (a = 1, b = \"x\"); x: String = p.b;\n",
+"Pair := alias (a: Int, b: String); p: Pair = (a = 1, b = \"x\"); x: String = p.b;\n",
 "values: List<Int> = [1, 2]; x: Int = values[0];\n",
 "values: List<String> = [\"ok\", \"yes\"];\n",
 "values: List<Int> = [];\n",
@@ -195,7 +195,7 @@ loop mci < 8 {
 
 /* Lite parser and checker support narrow numeric widths and literal contexts */
 npSrc :=
-"Byte := type Int8;\n" +
+"Byte := alias Int8;\n" +
 "a: Int8 = -128;\n" +
 "b: Int16 = 32767;\n" +
 "c: Int32 = 2147483647;\n" +
@@ -204,7 +204,7 @@ npSrc :=
 "xs: List<Int8> = [1, 2];";
 np := compilerTest.runDriver(progDriver, npSrc);
 test.checkInt("narrow parse status", 0, np.status);
-test.check("narrow Byte", np.stdout.contains("Byte := type Int8"));
+test.check("narrow Byte", np.stdout.contains("Byte := alias Int8"));
 test.check("narrow a", np.stdout.contains("a Int8 = (-128)"));
 test.check("narrow b", np.stdout.contains("b Int16 = 32767"));
 test.check("narrow c", np.stdout.contains("c Int32 = 2147483647"));
@@ -263,7 +263,7 @@ loop ni < 9 {
 /* Lite numeric alias phases normalize built-in synonyms across annotations and signatures */
 aliasGood: List<String> = [
 "i: Int64 = 2; f: Float64 = 0.5; d: Double = 1.5;",
-"Count := type Int64; f := fn(n: Count, x: Double): Float64 { return x; } y := f(2, 0.5);",
+"Count := alias Int64; f := fn(n: Count, x: Double): Float64 { return x; } y := f(2, 0.5);",
 "p: (i: Int64, f: Double) = (i = 2, f = 0.5); xs: List<Int64> = [1, 2];",
 ];
 loop aliasGood as src {

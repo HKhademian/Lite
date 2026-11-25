@@ -19,7 +19,7 @@ src :=
 "io := import \"core/io\";\n" +
 "text := import \"core/text\";\n" +
 "\n" +
-"Buf := type List<String>;\n" +
+"Buf := alias List<String>;\n" +
 "\n" +
 "pushChunk := fn(b: mut Buf, s: String): Unit {\n" +
 "    if s.length() > 0 {\n" +

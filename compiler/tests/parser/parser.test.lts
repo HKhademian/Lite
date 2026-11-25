@@ -58,15 +58,15 @@ test.check("read types fixture", typesSrc.ok and typesExp.ok);
 compilerTest.assertDriver(typesDriver, "types fixture", typesSrc.text, 0, typesExp.text, "");
 badTypesSrc: List<String> = [
 "x := 1;",
-"Bad := type List<;",
-"Bad := type Maybe<Int>;",
-"Bad := type (a: );",
+"Bad := alias List<;",
+"Bad := alias Maybe<Int>;",
+"Bad := alias (a: );",
 ];
 badTypesErr: List<String> = [
 "1:6: expected type after :=\n",
+"1:19: expected a type\n",
+"1:14: unsupported generic type Maybe\n",
 "1:18: expected a type\n",
-"1:13: unsupported generic type Maybe\n",
-"1:17: expected a type\n",
 ];
 var ti := 0;
 loop ti < 4 {

@@ -17,7 +17,7 @@
     {
       "name": "strings-and-unicode",
       "stdout": {
-        "text": "cleaned: Hello\t\"Lite\" \ud83d\ude80! edges: H \ud83d\ude80 len: 14\nscalars: 65,233,128640\nutf8-bytes: 65 195 169 240 159 154 128 roundtrip: true A\u00e9\ud83d\ude80\n",
+        "text": "cleaned: Hello\t\"Lite\" 🚀! edges: H 🚀 len: 14\nscalars: 65,233,128640\nutf8-bytes: 65 195 169 240 159 154 128 roundtrip: true Aé🚀\n",
         "hash": "sha256:fea9ad9c45f5810fbe70bda789ec8ef534d861f4860ce0e468951bc2b4215abe"
       },
       "exitCode": 0

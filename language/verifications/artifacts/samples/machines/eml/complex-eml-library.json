@@ -3,7 +3,7 @@
   "kind": "sample",
   "source": {
     "file": "../../../../../samples/machines/eml/complex-eml-library.lts",
-    "hash": "sha256:7560d7b9001932004a8d0d9bb3ee7b67a000d7df7455dddc2b7758d46bf23bdd"
+    "hash": "sha256:3f8742edf32d5c8dc6337d86e9a01078b97b979d7ee9d81e3257af36b48b7620"
   },
   "features": [
     "feature.numeric.floats.mixed-arithmetic",

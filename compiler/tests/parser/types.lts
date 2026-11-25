@@ -1,6 +1,6 @@
-Pair := type (left: Int, right: Int);
-Items := type List<Pair>;
-Line := type (line: Int, column: Int);
-Scalar := type Int;
-Plain := type String;
-NoValue := type Unit;
+Pair := alias (left: Int, right: Int);
+Items := alias List<Pair>;
+Line := alias (line: Int, column: Int);
+Scalar := alias Int;
+Plain := alias String;
+NoValue := alias Unit;

@@ -1,13 +1,13 @@
 io := import "core/io";
 
 seed := io.inputInt("seed: ");
-OuterBox := type Int;
+OuterBox := alias Int;
 var outerVar: OuterBox = seed;
 
 valResult := {
-    Box := type Inner;
-    Inner := type Int;
-    OuterBox := type String;
+    Box := alias Inner;
+    Inner := alias Int;
+    OuterBox := alias String;
     tag: OuterBox = "ok";
     base: Box = seed + 1;
     scaled: Inner = base * 2;

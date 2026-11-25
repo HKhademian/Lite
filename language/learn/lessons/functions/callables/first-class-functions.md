@@ -1,6 +1,6 @@
 # Callable Types, Contextual Inference & Higher-Order Pipelines
 
-This runnable example uses the current compiler's `:= type` syntax for
+This runnable example uses the current compiler's `:= alias` syntax for
 transparent type aliases. The selected replacement is `:= alias`. See
 [aliases and distinct type declarations](lite://doc/type-aliases).
 
@@ -8,7 +8,7 @@ Treat functions as first-class values: pass lambdas without redundant annotation
 
 ## Walkthrough
 
-1. `IntOp := type fn(Int): Int;` and `IntCheck := type fn(Int): Bool;` give readable names to function signatures.
+1. `IntOp := alias fn(Int): Int;` and `IntCheck := alias fn(Int): Bool;` give readable names to function signatures.
 2. `applyOp(fn(k) { k * k + 1 }, 4)` infers both parameter type `k: Int` and return type `Int` directly from `IntOp`!
 3. `ops: List<IntOp> = [...]` stores a pipeline of functions applied sequentially in a loop.
 4. `mapList(filterList(source, fn(n) { n % 2 == 0 }), fn(n) { n * 2 })` composes functional transformations concisely.

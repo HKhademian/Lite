@@ -1,25 +1,25 @@
 /** Experimental scratch and frame bump allocators (`extra/arena`) for O(1) bulk reclamation across TS and C11. */
 
 /** Opaque generational handle to a byte-addressed bump arena. */
-pub Arena := type (handle: Int, gen: Int);
+pub Arena := alias (handle: Int, gen: Int);
 
 /** Opaque generational handle to a typed integer scratch arena. */
-pub IntArena := type (handle: Int, gen: Int);
+pub IntArena := alias (handle: Int, gen: Int);
 
 /** Opaque generational handle to a typed float scratch arena. */
-pub FloatArena := type (handle: Int, gen: Int);
+pub FloatArena := alias (handle: Int, gen: Int);
 
 /** Byte slice allocation returned by `alloc` or `allocAligned`. */
-pub Slice := type (offset: Int, length: Int, ok: Bool);
+pub Slice := alias (offset: Int, length: Int, ok: Bool);
 
 /** Saved watermark returned by `mark` and passed to `rewind`. */
-pub Mark := type (offset: Int, gen: Int);
+pub Mark := alias (offset: Int, gen: Int);
 
 /** Contiguous span inside an `IntArena` or `FloatArena`. */
-pub Span := type (offset: Int, length: Int, ok: Bool);
+pub Span := alias (offset: Int, length: Int, ok: Bool);
 
 /** Allocation statistics snapshot for a byte-addressed `Arena`. */
-pub ArenaStats := type (usedBytes: Int, capacityBytes: Int, remainingBytes: Int, peakBytes: Int, resetCount: Int);
+pub ArenaStats := alias (usedBytes: Int, capacityBytes: Int, remainingBytes: Int, peakBytes: Int, resetCount: Int);
 
 /* --- Byte arena flat slab & metadata --- */
 var byteSlab: mut List<Int> = [];

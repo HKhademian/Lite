@@ -8,10 +8,10 @@ io := import "core/io";
 tb := import "util/text-builder";
 
 /** One lexical token: kind, decoded text, source offset and 1-based line/column. */
-pub Token := type (kind: String, text: String, offset: Int, line: Int, column: Int);
+pub Token := alias (kind: String, text: String, offset: Int, line: Int, column: Int);
 
 /** Tokens in source order, ending with one EOF token. */
-pub Tokens := type List<Token>;
+pub Tokens := alias List<Token>;
 
 /* Token-kind spellings (Lite has no enum in this bootstrap subset yet). */
 /** Canonical token kind for ordinary names. */

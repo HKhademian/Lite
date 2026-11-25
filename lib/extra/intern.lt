@@ -2,16 +2,16 @@
 
 
 /** Integer identifier representing a unique interned string inside an `Interner`. */
-pub SymbolId := type Int;
+pub SymbolId := alias Int;
 
 /** Sentinel invalid symbol identifier. */
 pub INVALID_SYMBOL := -1;
 
 /** Opaque generational handle to an interner table. */
-pub Interner := type (handle: Int, gen: Int);
+pub Interner := alias (handle: Int, gen: Int);
 
 /** Deduplication statistics snapshot for an `Interner`. */
-pub InternStats := type (uniqueCount: Int, totalChars: Int, internCalls: Int, hitCalls: Int);
+pub InternStats := alias (uniqueCount: Int, totalChars: Int, internCalls: Int, hitCalls: Int);
 
 /* --- Global string entry slab (recycled on clear/destroy) --- */
 var entryText: mut List<String> = [];

@@ -18,8 +18,8 @@ ccInfo := compilerTest.probeCc();
 src :=
 "io := import \"core/io\";\n" +
 "\n" +
-"Counts := type Map<String, Int>;\n" +
-"Tags := type Set<String>;\n" +
+"Counts := alias Map<String, Int>;\n" +
+"Tags := alias Set<String>;\n" +
 "\n" +
 "bump := fn(c: mut Counts, key: String, delta: Int): Unit {\n" +
 "    cur := c.getOr(key, 0);\n" +

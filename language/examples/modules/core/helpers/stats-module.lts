@@ -1,6 +1,6 @@
 /* Shared helper module imported by 028-modules-and-hashing.lts. */
 
-pub Bucket := type (name: String, total: Int, count: Int);
+pub Bucket := alias (name: String, total: Int, count: Int);
 pub LABEL := "stats-v1";
 
 clampPositive := fn(n: Int): Int {

@@ -135,7 +135,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   outer-block shadowing and single-statement inner-block tuple component
   ordering remain preserved.
 - [x] **Inner-block type aliases and parallel root wiring (2026-11-15, Unified Block Model Slice 2a):**
-  `Name := type Target;` declarations work in all inner `{ ... }` blocks on
+  `Name := alias Target;` declarations work in all inner `{ ... }` blocks on
   both TS and C with parallel forward type wiring, outer lexical alias
   preservation under shadowing, and cycle/unknown-type rejection; file-root
   `fn` and root bindings wire in parallel so forward/mutual `fn` calls and

@@ -1,7 +1,7 @@
 /** Abstract, encoding-independent color values and color-space helpers. */
 
 /** Opaque color value; zero-initialized `Color` is transparent black. */
-pub Color := type (r: Float, g: Float, b: Float, a: Float);
+pub Color := alias (r: Float, g: Float, b: Float, a: Float);
 
 clampUnit := fn(value: Float): Float {
     if value < 0.0 { return 0.0; }

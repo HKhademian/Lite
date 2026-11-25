@@ -3,10 +3,10 @@
 unicode := import "core/unicode";
 
 /** Comparator returning true when `a` should be ordered before or equal to `b`. */
-pub IntComparator := type fn(Int, Int): Bool;
+pub IntComparator := alias fn(Int, Int): Bool;
 
 /** Comparator returning true when `a` should be ordered before or equal to `b`. */
-pub TextComparator := type fn(String, String): Bool;
+pub TextComparator := alias fn(String, String): Bool;
 
 ASCII_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 

@@ -11,7 +11,7 @@ unicode := import "core/unicode";
 json := import "util/json";
 
 /** Result returned by `buildCompiler`. */
-pub CompilerBuildResult := type (
+pub CompilerBuildResult := alias (
 ok: Bool,
 path: String,
 sourceSha256: String,
@@ -363,7 +363,7 @@ depsQuoted: List<String>
 };
 
 /** Flat return type used by `trySelectionCache` since nested tuples are not supported in Subset L. */
-SelectionTryResult := type (
+SelectionTryResult := alias (
 hit: Bool,
 ok: Bool,
 path: String,

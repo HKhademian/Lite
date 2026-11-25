@@ -10,13 +10,13 @@ types := import "./frontend-types";
 trace := import "./trace-safety";
 
 /** One parsed item entry matching `frontend-ir.Item`. */
-Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+Item := alias (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 
 /** Collection of items matching `frontend-ir.Items`. */
-Items := type List<Item>;
+Items := alias List<Item>;
 
 /** Hash-indexed string set matching `frontend-ir.TokenBuckets`. */
-TokenBuckets := type Set<String>;
+TokenBuckets := alias Set<String>;
 
 /** True when emitted target code calls `needle` outside quoted String literal text. */
 pub codeUsesTextCall := fn(code: String, needle: String): Bool {

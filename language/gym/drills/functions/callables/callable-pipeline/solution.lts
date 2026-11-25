@@ -1,6 +1,6 @@
 io := import "core/io";
 
-IntOp := type fn(Int): Int;
+IntOp := alias fn(Int): Int;
 
 applyAll := fn(seed: Int, steps: List<IntOp>): Int {
     var cur := seed;

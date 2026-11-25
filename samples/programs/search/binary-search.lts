@@ -2,7 +2,7 @@
 
 io := import "core/io";
 
-SearchResult := type (index: Int, found: Bool);
+SearchResult := alias (index: Int, found: Bool);
 
 binarySearch := fn(items: List<Int>, len: Int, target: Int): SearchResult {
     var lo := 0;

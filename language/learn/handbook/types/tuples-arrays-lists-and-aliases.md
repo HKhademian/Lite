@@ -98,7 +98,7 @@ For example, `Point := alias (x: Int, y: Int)` names a structural tuple type.
 A `distinct` declaration creates a fresh type identity. See
 [aliases and distinct type declarations](lite://doc/type-aliases).
 
-The runnable example uses `Name := type TypeExpression`, the spelling accepted
+The runnable example uses `Name := alias TypeExpression`, the spelling accepted
 by the current Playground. `Point` names a tuple type with fields `x` and `y`.
 `Pair` names a tuple type with two unnamed `Int` components scoped to the block.
 The annotation `pair: Pair` uses the block's forward type lookup.
@@ -106,12 +106,12 @@ The annotation `pair: Pair` uses the block's forward type lookup.
 ```lite
 io := import "core/io";
 
-Point := type (x: Int, y: Int);
+Point := alias (x: Int, y: Int);
 p: Point = (x = 3, y = 4);
 
 pairSum := {
     pair: Pair = (10, 20);
-    Pair := type (:Int, :Int);
+    Pair := alias (:Int, :Int);
     pair.0 + pair.1
 };
 io.outputLine(p, pairSum);

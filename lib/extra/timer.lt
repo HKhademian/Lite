@@ -3,13 +3,13 @@
 time := import "core/time";
 
 /** Pure fixed-timestep accumulator state for deterministic simulation updates (UPS). */
-pub StepClock := type (stepSec: Float, maxDeltaSec: Float, accumulatorSec: Float, totalSteps: Int, lastSteps: Int, alpha: Float);
+pub StepClock := alias (stepSec: Float, maxDeltaSec: Float, accumulatorSec: Float, totalSteps: Int, lastSteps: Int, alpha: Float);
 
 /** Pure cooldown timer state. */
-pub Cooldown := type (durationSec: Float, remainingSec: Float, fired: Bool);
+pub Cooldown := alias (durationSec: Float, remainingSec: Float, fired: Bool);
 
 /** Monotonic wall-clock stopwatch snapshot. */
-pub Stopwatch := type (startNs: Int, lastLapNs: Int, lastLapMs: Float);
+pub Stopwatch := alias (startNs: Int, lastLapNs: Int, lastLapMs: Float);
 
 /* ============================================================================
  * Fixed-timestep accumulator (StepClock)

@@ -11,7 +11,7 @@ pub EmitFormat := enum { Pretty; Compact; };
 pub SourceMapMode := enum { None; Comments; Lines; };
 
 /** Per-pass optimization and emission configuration. Presets (`OptClass`) set defaults; every field is overridable. */
-pub OptConfig := type (
+pub OptConfig := alias (
     ok: Bool,
     error: String,
     preset: OptClass,

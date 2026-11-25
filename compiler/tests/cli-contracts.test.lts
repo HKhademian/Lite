@@ -275,9 +275,10 @@ isDocDeclLine := fn(line: String): Bool {
     trimmed := line.trimStart();
     if line.startsWithAt(0, " ") or line.startsWithAt(0, "\t") { return false; }
     colEq := trimmed.indexOf(" := fn", 0);
-    colEqT := trimmed.indexOf(" := type", 0);
-    if colEq < 0 and colEqT < 0 { return false; }
-    trimmed.indexOf(" ", 0) == colEq or trimmed.indexOf(" ", 0) == colEqT
+    colEqA := trimmed.indexOf(" := alias", 0);
+    colEqD := trimmed.indexOf(" := distinct", 0);
+    if colEq < 0 and colEqA < 0 and colEqD < 0 { return false; }
+    trimmed.indexOf(" ", 0) == colEq or trimmed.indexOf(" ", 0) == colEqA or trimmed.indexOf(" ", 0) == colEqD
 };
 docDirs: List<String> = [path.join(root, "lib/core"), path.join(root, "compiler/src")];
 docFiles := path.collectFiles(root, docDirs, ".lts", [], false);

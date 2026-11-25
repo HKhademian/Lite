@@ -90,7 +90,7 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
   to report a b, an empty line, and the literal --check. Omit the suffix for no
   arguments/output. The helper consumes no stdin and adds no prompt.
 
-- [021 — Type aliases](lite://play/example/type-aliases): demonstrates Alias := type TypeExpression
+- [021 — Type aliases](lite://play/example/type-aliases): demonstrates Alias := alias TypeExpression
   defining transparent named contracts for tuples and growable lists with zero
   runtime memory overhead. Reports ident: total, op: +=, and num: 100.
 

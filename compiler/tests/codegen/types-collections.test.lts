@@ -45,13 +45,13 @@ loop si < 4 {
 
 /* restricted compiler resolves transparent scalar aliases */
 aliasSrc :=
-"Count := type Int;\n" +
-"Alias := type Count;\n" +
-"Forward := type Later;\n" +
-"Later := type Int;\n" +
-"Word := type String;\n" +
-"Flag := type Bool;\n" +
-"Nothing := type Unit;\n" +
+"Count := alias Int;\n" +
+"Alias := alias Count;\n" +
+"Forward := alias Later;\n" +
+"Later := alias Int;\n" +
+"Word := alias String;\n" +
+"Flag := alias Bool;\n" +
+"Nothing := alias Unit;\n" +
 "add := fn (a: Alias, b: Count): Alias { a + b }\n" +
 "echo := fn (text: Word): Word { text }\n" +
 "noop := fn (): Nothing { return; }\n" +
@@ -66,12 +66,12 @@ aliasSrc :=
 compilerTest.assertCompileRunTs(root, tsComp, "scalar aliases TS", aliasSrc, "2 41 ok true 43 ok 3\n");
 
 aliasCSrc :=
-"Count := type Int;\n" +
-"Alias := type Count;\n" +
-"Forward := type Later;\n" +
-"Later := type Int;\n" +
-"Word := type String;\n" +
-"Flag := type Bool;\n" +
+"Count := alias Int;\n" +
+"Alias := alias Count;\n" +
+"Forward := alias Later;\n" +
+"Later := alias Int;\n" +
+"Word := alias String;\n" +
+"Flag := alias Bool;\n" +
 "x: Alias = 2;\n" +
 "var y: Count = 40;\n" +
 "y = y + 1;\n" +
@@ -86,22 +86,22 @@ if ccInfo.available {
     test.checkText("scalar aliases C stderr", "", cAlias.stderr);
 }
 badAliasSrc: List<String> = [
-"A := type Int;\nA := type String;\n",
-"A := type Missing;\n",
-"A := type B;\nB := type A;\n",
-"A := type A;\n",
-"A := type List<>;\n",
-"A := type ();\n",
-"A := type Float16;\n",
+"A := alias Int;\nA := alias String;\n",
+"A := alias Missing;\n",
+"A := alias B;\nB := alias A;\n",
+"A := alias A;\n",
+"A := alias List<>;\n",
+"A := alias ();\n",
+"A := alias Float16;\n",
 ];
 badAliasErr: List<String> = [
 "2:1: duplicate type alias A\n",
-"1:11: unknown type alias Missing\n",
+"1:12: unknown type alias Missing\n",
 "2:1: recursive type alias B\n",
 "1:1: recursive type alias A\n",
-"1:11: expected a list element type\n",
-"1:11: tuple type needs at least one field\n",
-"1:11: unknown type alias Float16\n",
+"1:12: expected a list element type\n",
+"1:12: tuple type needs at least one field\n",
+"1:12: unknown type alias Float16\n",
 ];
 var ai := 0;
 loop ai < 7 {
@@ -113,8 +113,8 @@ loop ai < 7 {
 /* restricted compiler compiles flat named tuples and tuple functions to runnable TS */
 tupleSrc :=
 "io := import \"core/io\";\n" +
-"Pair := type (kind: String, code: String);\n" +
-"Pair2 := type Pair;\n" +
+"Pair := alias (kind: String, code: String);\n" +
+"Pair2 := alias Pair;\n" +
 "rewrap := fn (value: Pair2): Pair { (kind = value.kind, code = value.code) }\n" +
 "label := fn (value: (kind: String, code: String)): String { value.kind }\n" +
 "p: Pair2 = (kind = \"number\", code = \"12\");\n" +
@@ -158,13 +158,13 @@ test.checkInt("tuple compiles in C: " + cTupleRes.stderr, 0, cTupleRes.status);
 /* restricted compiler compiles growable lists, literals and indexing to runnable TS */
 listSrc :=
 "io := import \"core/io\";\n" +
-"Ints := type List<Int>;\n" +
-"Chain := type Ints;\n" +
-"Count := type Int;\n" +
-"Counts := type List<Count>;\n" +
-"Words := type List<String>;\n" +
-"Pair := type (kind: String, code: String);\n" +
-"Pairs := type List<Pair>;\n" +
+"Ints := alias List<Int>;\n" +
+"Chain := alias Ints;\n" +
+"Count := alias Int;\n" +
+"Counts := alias List<Count>;\n" +
+"Words := alias List<String>;\n" +
+"Pair := alias (kind: String, code: String);\n" +
+"Pairs := alias List<Pair>;\n" +
 "first := fn (values: Ints): Int { values[0] }\n" +
 "make := fn (): Chain { res: Chain = [6, 7]; res }\n" +
 "none := fn (): List<Int> { [] }\n" +
@@ -216,10 +216,10 @@ test.checkInt("list C compiles 2: " + cList2.stderr, 0, cList2.status);
 /* restricted compiler compiles list traversal to runnable TS */
 travSrc :=
 "io := import \"core/io\";\n" +
-"Ints := type List<Int>;\n" +
-"Chain := type Ints;\n" +
-"Pair := type (kind: String, code: Int);\n" +
-"Pairs := type List<Pair>;\n" +
+"Ints := alias List<Int>;\n" +
+"Chain := alias Ints;\n" +
+"Pair := alias (kind: String, code: Int);\n" +
+"Pairs := alias List<Pair>;\n" +
 "make := fn (): Chain { res: Chain = [6, 7]; res }\n" +
 "pairs := fn (): Pairs { res: Pairs = [(kind = \"number\", code = 12), (kind = \"symbol\", code = 3)]; res }\n" +
 "values: Ints = [10, 20];\n" +
@@ -264,9 +264,9 @@ test.checkInt("list traversal C compiles: " + cTravRes.stderr, 0, cTravRes.statu
 /* restricted compiler compiles list mutation grants, push and pop to runnable TS */
 mutSrc :=
 "io := import \"core/io\";\n" +
-"Ints := type List<Int>;\n" +
-"Values := type Ints;\n" +
-"Pair := type (kind: String, code: Int);\n" +
+"Ints := alias List<Int>;\n" +
+"Values := alias Ints;\n" +
+"Pair := alias (kind: String, code: Int);\n" +
 "pass := fn (items: List<Int>): List<Int> { items }\n" +
 "values: mut Values = [1, 2];\n" +
 "mut values.pushBack(3);\n" +

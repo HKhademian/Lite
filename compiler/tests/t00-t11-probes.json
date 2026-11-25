@@ -380,13 +380,13 @@
   {
     "id": "alias.array",
     "summary": "Transparent aliases to fixed-array types",
-    "source": "Pair := type [Int; 2]; pair: Pair = [1, 2]; outputLine(pair[1]);",
+    "source": "Pair := alias [Int; 2]; pair: Pair = [1, 2]; outputLine(pair[1]);",
     "test": "transparent type aliases support scalar, tuple, array and list forms"
   },
   {
     "id": "alias.shadowing",
     "summary": "One lexical namespace: a later value hides an alias",
-    "source": "T := type Int; old: T = 3; T := 9; outputLine(old, T);",
+    "source": "T := alias Int; old: T = 3; T := 9; outputLine(old, T);",
     "test": "type aliases follow single lexical scope with value shadowing and rejection"
   },
   {

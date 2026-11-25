@@ -1,5 +1,5 @@
-Pair := type (left: Int, right: Int);
-Items := type List<Pair>;
+Pair := alias (left: Int, right: Int);
+Items := alias List<Pair>;
 add := fn(a: Int, b: Int): Int { a + b }
 choose := fn(flag: Bool): Int { if flag { 1 } else { 0 } }
 count := 1;

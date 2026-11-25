@@ -5,13 +5,13 @@ Status: **established direction; source-file body selected 2026-10-28**.
 ## Purpose and template
 
 Generated compiler coverage, 2026-11-16: TS supports full value-producing and
-statement `{ ... }` blocks, lexical closures, inner-block `type` aliases,
+statement `{ ... }` blocks, lexical closures, inner-block `alias` / `distinct` declarations,
 parallel forward symbol wiring across root and inner blocks, compile-time
 execution-trace safety, and side-effect-free dead-code elimination. Generated C
-supports statement scopes, inner `type` aliases, parallel non-`fn` type wiring,
-and scalar DCE while explicitly rejecting `fn` values. See the
-[transition queue](lite://doc/compiler/gaps). The selected replacement for
-`:= type` is described in [aliases and distinct type declarations](lite://doc/type-aliases).
+supports statement scopes, inner `alias` / `distinct` declarations, parallel non-`fn` type wiring,
+and scalar DCE while explicitly rejecting escaping `fn` closures. See the
+[transition queue](lite://doc/compiler/gaps). Type aliases and distinct types use
+`:= alias` and `:= distinct` per [aliases and distinct type declarations](lite://doc/type-aliases).
 
 An executable block groups items, introduces lexical scope, and produces its final item's result when execution reaches the end.
 

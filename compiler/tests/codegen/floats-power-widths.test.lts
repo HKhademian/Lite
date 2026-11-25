@@ -145,7 +145,7 @@ loop narrowPanics as pc {
     }
 }
 
-narrowTsOnly := "io := import \"core/io\";\nByte := type Int8;\nHalf := type Float32;\nwiden := fn(x: Int16): Int32 { one: Int16 = 1; x + one }\ntoHalf := fn(x: Byte): Half { x }\na8: Byte = 5;\nb16: Int16 = 300;\nf32: Half = 0.25;\nifJoined := if true { a8 } else { b16 };\nmatchJoined := match { false { a8 } _ { f32 } };\nbytes: List<Int8> = [1, -128, 127];\nblankPair: (a: Int8, b: Float32);\nio.outputLine(widen(a8), toHalf(a8), ifJoined, matchJoined, bytes, blankPair);\n";
+narrowTsOnly := "io := import \"core/io\";\nByte := alias Int8;\nHalf := alias Float32;\nwiden := fn(x: Int16): Int32 { one: Int16 = 1; x + one }\ntoHalf := fn(x: Byte): Half { x }\na8: Byte = 5;\nb16: Int16 = 300;\nf32: Half = 0.25;\nifJoined := if true { a8 } else { b16 };\nmatchJoined := match { false { a8 } _ { f32 } };\nbytes: List<Int8> = [1, -128, 127];\nblankPair: (a: Int8, b: Float32);\nio.outputLine(widen(a8), toHalf(a8), ifJoined, matchJoined, bytes, blankPair);\n";
 compilerTest.assertCompileRunTs(root, tsComp, "narrow-ts-only", narrowTsOnly, "6 5 5 0.25 [1, -128, 127] (a=0, b=0)\n");
 
 narrowIndexWidenSrc := "io := import \"core/io\";\nxs := [10, 20];\ni: Int8 = 1;\nio.outputLine(xs[i]);\n";
@@ -449,17 +449,17 @@ if not skipHeavy {
         "io := import \"core/io\"; i: Int64 = 5; f: Float64 = 2.5; d: Double = 3.5; io.outputLine(i, f, d);",
         "io := import \"core/io\"; i: Int64; f: Float64; d: Double; io.outputLine(i, f, d);",
         "io := import \"core/io\"; var i: Int64 = 2; var f: Double = 0.5; i = i + 1; f = i * f; io.outputLine(i, f);",
-        "io := import \"core/io\"; Count := type Int64; SavedCount := type Count; Amount := type Double; a: SavedCount = 7; b: Amount = 0.25; io.outputLine(a, b, a + b);",
+        "io := import \"core/io\"; Count := alias Int64; SavedCount := alias Count; Amount := alias Double; a: SavedCount = 7; b: Amount = 0.25; io.outputLine(a, b, a + b);",
         "io := import \"core/io\"; var i: Int64 = 7; { i: Int64 = -i; io.outputLine(i); } io.outputLine(i);",
         "io := import \"core/io\"; low: Int64 = -9223372036854775808; high: Int64 = 9223372036854775807; io.outputLine(low, high);",
         "io := import \"core/io\"; var total: Float64 = 0.0; var n: Int64 = 0; loop n < 3 { total = total + 0.5; n = n + 1; } io.outputLine(total);",
         "io := import \"core/io\"; x: Double = 2 ** 3; io.outputLine(x, x == 8, x / 2);",
         "io := import \"core/io\"; f := fn(n: Int64, x: Float64): Double { n * x } io.outputLine(f(3, 0.5));",
-        "io := import \"core/io\"; Count := type Int64; Amount := type Float64; f := fn(n: Count, x: Amount): Double { if n > 0 { return x; } -x } io.outputLine(f(2, 0.5), f(0, 0.5));"
+        "io := import \"core/io\"; Count := alias Int64; Amount := alias Float64; f := fn(n: Count, x: Amount): Double { if n > 0 { return x; } -x } io.outputLine(f(2, 0.5), f(0, 0.5));"
     ];
     aliasTsOnly: List<String> = [
         "io := import \"core/io\"; p: (i: Int64, f: Double) = (i = 2, f = 0.5); io.outputLine(p, p.i, p.f);",
-        "io := import \"core/io\"; Pair := type (i: Int64, f: Float64); f := fn(p: Pair): Double { p.i * p.f } p: Pair = (i = 3, f = 0.5); io.outputLine(f(p));"
+        "io := import \"core/io\"; Pair := alias (i: Int64, f: Float64); f := fn(p: Pair): Double { p.i * p.f } p: Pair = (i = 3, f = 0.5); io.outputLine(f(p));"
     ];
     loop aliasBoth as src { checkTsAndCContract("alias-both", src, "", "", 0); }
     loop aliasTsOnly as src { checkTsOnlyContract("alias-ts", src, "", "", 0, false); }
@@ -509,7 +509,7 @@ if not skipHeavy {
         "io := import \"core/io\"; f: Float = 2; g: Float = f; io.outputLine(f, g);",
         "io := import \"core/io\"; f: Float = 9007199254740993 + 0.5; g: Float = (9007199254740993) + 0.5; io.outputLine(f, g);",
         "io := import \"core/io\"; var f: Float = 2; loop f < 5 { f = f + 1; } io.outputLine(f);",
-        "io := import \"core/io\"; Amount := type Double; var f: Amount = 2; f = (4); io.outputLine(f);",
+        "io := import \"core/io\"; Amount := alias Double; var f: Amount = 2; f = (4); io.outputLine(f);",
         "io := import \"core/io\"; f: Float = (2.0 + 3.0); g: Float = -(2.5); io.outputLine(f, g);",
         "io := import \"core/io\"; f: Float = (-9007199254740993) * 0.5; io.outputLine(f);",
         "io := import \"core/io\"; f := fn(n: Float): Float { n } io.outputLine(f(2), f(-3), f((4)));",
@@ -526,7 +526,7 @@ if not skipHeavy {
     ctxTsOnly: List<String> = [
         "io := import \"core/io\"; xs: List<Float> = [1, -2, 9007199254740994]; io.outputLine(xs);",
         "io := import \"core/io\"; p: (n: Float, m: Double) = (n = 2, m = -3); io.outputLine(p);",
-        "io := import \"core/io\"; Pair := type (n: Float); f := fn(): Pair { (n = 2) } io.outputLine(f());",
+        "io := import \"core/io\"; Pair := alias (n: Float); f := fn(): Pair { (n = 2) } io.outputLine(f());",
         "io := import \"core/io\"; xs: List<(n: Float)> = [(n = 2), (n = -3)]; io.outputLine(xs);"
     ];
     loop ctxBoth as src { checkTsAndCContract("float-ctx-both", src, "", "", 0); }

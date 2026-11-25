@@ -6,20 +6,20 @@ ir := import "./frontend-ir";
 types := import "./frontend-types";
 
 /** Local alias for `ir.Item`. */
-Item := type ir.Item;
+Item := alias ir.Item;
 /** Local alias for `ir.Items`. */
-Items := type ir.Items;
+Items := alias ir.Items;
 /** Local alias for `ir.Local`. */
-Local := type ir.Local;
+Local := alias ir.Local;
 /** Local alias for `ir.FunctionInfo`. */
-FunctionInfo := type ir.FunctionInfo;
+FunctionInfo := alias ir.FunctionInfo;
 /** Local alias for `ir.AliasDecl`. */
-AliasDecl := type ir.AliasDecl;
+AliasDecl := alias ir.AliasDecl;
 /** Local alias for `ir.FutureValue`. */
-FutureValue := type ir.FutureValue;
+FutureValue := alias ir.FutureValue;
 
 /** Registered uninstantiated generic function or type-attached operation template. */
-pub GenericTemplate := type (
+pub GenericTemplate := alias (
     key: String,
     qualName: String,
     typeOpKey: String,
@@ -39,7 +39,7 @@ pub GenericTemplate := type (
 );
 
 /** Index slice into flat environment tables for one parsed module. */
-pub ModuleEnvRange := type (
+pub ModuleEnvRange := alias (
     moduleKey: String,
     localsStart: Int, localsCount: Int,
     fnsStart: Int, fnsCount: Int,
@@ -50,7 +50,7 @@ pub ModuleEnvRange := type (
 );
 
 /** One requested concrete monomorphization of a `GenericTemplate`. */
-pub GenericInstance := type (
+pub GenericInstance := alias (
     templateKey: String,
     bindingsEncoded: String,
     substParams: String,

@@ -3,10 +3,10 @@
 unicode := import "core/unicode";
 
 /** Handle to a synchronous byte/text input source (`"stdin"`, `"buffer"`, `"file"`, or `"error"`). */
-pub Reader := type (kind: String, handle: Int);
+pub Reader := alias (kind: String, handle: Int);
 
 /** Handle to a synchronous byte/text output sink (`"stdout"`, `"stderr"`, `"buffer"`, `"file"`, or `"error"`). */
-pub Writer := type (kind: String, handle: Int);
+pub Writer := alias (kind: String, handle: Int);
 
 /** ASCII line-feed byte (`\n`). */
 BYTE_LF := 10;

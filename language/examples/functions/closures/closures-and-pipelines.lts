@@ -3,8 +3,8 @@
 io := import "core/io";
 fmt := import "core/format";
 
-IntMap := type fn(Int): Int;
-IntPred := type fn(Int): Bool;
+IntMap := alias fn(Int): Int;
+IntPred := alias fn(Int): Bool;
 
 mapInts := fn(items: List<Int>, mapper: IntMap): List<Int> {
     out: mut List<Int> = [];

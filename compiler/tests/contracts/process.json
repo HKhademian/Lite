@@ -179,7 +179,7 @@
     "43e6ab171482b73d32319623e54431e0323f68e6f3b2879f6bb6833ae5a7ada5": "io := import \"core/io\"; io.outputLine(\"before\"); f: Float = 2 + (3);",
     "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a": "{}",
     "445dbd1184fae22641deaeb540861b34761470d402f889cbae051a2665074c85": "io := import \"core/io\"; touch := fn(n: Int): Int { io.outputLine(n,); n } add := fn(a: Int, b: Int): Int { a + b } io.outputLine(add(touch(1,), touch(2,),),);",
-    "447af38446f1d73eaf286d8040cb865beaa596d919f71bde24edbd4b883e7e7e": "Number := type Int",
+    "1ee7ce78fa9f1ff4d20d1cbf693afb5acf0655cafe55b743e8fd2f2019da9d06": "Number := alias Int",
     "447f6bb8d6124a8732c541f1c8d43a9e380f42e3cb39a2876626a0de893d0dfd": "io := import \"core/io\"; io.outputLine(false and (\"x\" + 1 > 0));",
     "44a16c781d02aa76a49c3d117e522c8619fa47733ae5266d2c5874bd39ac621f": "io := import \"core/io\"; io.outputLine(\"before\"); 1 + true;",
     "44ad7566da639a60873437308cb25555b44a69df5f8c233f2eceae6bd5e1d167": "io := import \"core/io\"; f: Float = if true{2}else{3} + 0.5; io.outputLine(f);",
@@ -267,7 +267,7 @@
     "66d7b0d92c01617d3dfc9e00c2063dad69029f48efbe93447a970eb64be9f115": "io := import \"core/io\"; f := fn(flag: Bool): Float { if flag { 0.1 } else { 2.5 } } io.outputLine(f(true), f(false));",
     "6721c8cc6ee358558d28383eb59db097bff949451e8509effd3534b9552cc2f3": "io := import \"core/io\"; f := fn(flag: Bool): (n: Int) { if flag { p := (n = 1); p; } else { return (n = 2); } } io.outputLine(f(true), f(false));",
     "679db8792e640479c73a6a3ccd0c515328671489b446bf8a0e516908ea75be07": "io := import \"core/io\"; io.outputLine(\"before\");\r\nio.outputLine(-1e309);",
-    "67f5c53dc50f9a1cae5a294c5e87bd909c94e383ea73b4bf87004fc6b570525c": "io := import \"core/io\"; Pair := type (i: Int64, f: Float64); f := fn(p: Pair): Double { p.i * p.f } p: Pair = (i = 3, f = 0.5); io.outputLine(f(p));",
+    "513d53c0038fc0a5317c21afb6db6648bd11fd0de669b236494e082f9895ce8f": "io := import \"core/io\"; Pair := alias (i: Int64, f: Float64); f := fn(p: Pair): Double { p.i * p.f } p: Pair = (i = 3, f = 0.5); io.outputLine(f(p));",
     "685c478158a01735359dbd20ffd8b99d86244e507af7fa7260e46ed61b882f85": "io := import \"core/io\"; f := fn(flag: Bool): Int { if flag { return 1; } else { return 2; } } io.outputLine(f(true), f(false));",
     "68be844d53e3a029c158a9ddd6345aebd00f1eb271217f0c8b4aaa227b29b300": "io := import \"core/io\"; x := 1 /* } */ io.outputLine(x);",
     "69029557e3c561287c398ffd585a55b177814138066906b425cfcccd8dcbefbe": "io := import \"core/io\"; /* 🙂 */ io.outputLine(\"before\");\r\nselector := io.inputInt();\r\nvar hi := 9223372036854775807; var lo := -9223372036854775808;\r\nif selector == 0 { io.outputLine(hi + 1); }\nelse if selector == 1 { io.outputLine(lo + -1); }\nelse if selector == 2 { io.outputLine(hi - -1); }\nelse if selector == 3 { io.outputLine(lo - 1); }\nelse if selector == 4 { io.outputLine(hi * 2); }\nelse if selector == 5 { io.outputLine(lo * 2); }\nelse if selector == 6 { io.outputLine(-lo); }\nelse if selector == 7 { io.outputLine(lo * -1); }\nelse if selector == 8 { io.outputLine((hi + 1) - 1); }\nelse if selector == 9 { io.outputLine((hi + 1) + (lo - 1)); }\nelse if selector == 10 { io.outputLine((lo - 1) + (hi + 1)); }",
@@ -369,7 +369,7 @@
     "95fc744a4575189ee27ade948100622674d83cfe2ec10c99e3dfdaac8d9637a0": "io := import \"core/io\"; io.outputLine(\"before\"); io.outputLine(\"x\" ** 2);",
     "963abd4559ca9e6dddaccc72aac5adf9fa8d20d94fd9783f2b6739ef340404f4": "io := import \"core/io\"; io.outputLine(\"before\");\r\nio.outputLine(0.0 / 0.0);",
     "965a2e3c8ba11c7a4b29fab505f2381ae6d7a13fcab212af75760597f5f01c23": "io := import \"core/io\"; io.outputLine(1,,);",
-    "967d7feb45332443cba07f97ecef8afd59f4f06e8d267efdd56e16c8e48e2db3": "io := import \"core/io\"; Count := type Int64; SavedCount := type Count; Amount := type Double; a: SavedCount = 7; b: Amount = 0.25; io.outputLine(a, b, a + b);",
+    "5f9d2bb25334b27b8c4a0575060074e3382d8caaad670c6db0df40b41a99adee": "io := import \"core/io\"; Count := alias Int64; SavedCount := alias Count; Amount := alias Double; a: SavedCount = 7; b: Amount = 0.25; io.outputLine(a, b, a + b);",
     "9767b5ec6d7ddae15118aca8c89b33d60a7bb33576fa02463bd437c83d55dcb5": "io := import \"core/io\"; io.outputLine(\"before\");\r\nio.outputLine(-9223372036854775808 / -1);",
     "978dabad678dd456573f75ca58450fdac47d621715a363270ba5881e99451744": "io := import \"core/io\"; var x := 2; io.outputLine((x =!= 1), (x =!= 2), (x == 2));",
     "97c22bcd16200f4f24113845093407872eb36bec0aac8bd36e51bc69008c22ee": "io := import \"core/io\"; var f: Float = 2; f = -4; io.outputLine(f); f = ((8)); io.outputLine(f);",
@@ -401,7 +401,7 @@
     "a32378bdfec242c132d7d7fcda8fb996bdf0b714e0c420becc376b87d0074be2": "io := import \"core/io\"; io.outputLine(\"before\"); io.outputLine(** 2);",
     "a36a499e9f67d8667878c4d43895ea1335faf19a0f7effb820718a3dd3477dc8": "io := import \"core/io\"; io.outputLine(\"before\");\r\nio.outputLine((2 ** 0) ** (1e308 ** 2));",
     "a437f7aae5efe2fb720c9276bdc7023d9d086b5be79370f0a2e015f99eb55250": "report(1);",
-    "a44cf841bb853774c95a307c1b194a81691917f45ca37228a24b170ce565c7a9": "io := import \"core/io\"; Amount := type Double; var f: Amount = 2; f = (4); io.outputLine(f);",
+    "2b0d5df3d77efbb1f38ce1c3c316c624b3f03a7c6e89c3e4b5d2a007cc4e0f3a": "io := import \"core/io\"; Amount := alias Double; var f: Amount = 2; f = (4); io.outputLine(f);",
     "a49aae8c3ad15d91012cee79df812d26d6ee81eaadc333b66458cb85aee4bfcd": "and true and false; or false or true;",
     "a546a9ec8dea2ddb64fd8cfec181d953295c0eb4db4552eb60c6a278a030b12f": "io := import \"core/io\"; io.inputLine(\"line? \"); io.outputLine(io.inputLine());",
     "a5e7cf488de2c01598b4b8e0bde9a5c95f6453f62dee39224815221831e36918": "1; \"quiet\"; not false; (2 + 3); +4; -5;",
@@ -427,7 +427,7 @@
     "ad90fa88d632fea788c894cac7ef354dff7c7274617fa3dc33af455de26d1751": "{} else {}",
     "adedb2d4054bb693704f826377e8c570e3665338696e0985b50f2ad44914c080": "x := 1; var x: Bool = true; x = 1;",
     "ae5e0d603cc63323c40093b50abf472a7858fcc665a84fdab77af12ec3af3176": "list := import \"core/list\"; io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(list.popBack(mut values,),);",
-    "ae9e6432673bb898152e30dea01c97630d51a5d6a4ecdf61522bca4e9ef2b48b": "io := import \"core/io\"; Number := type Int io.outputLine(1);",
+    "8cc7a6a2ad42497458ac9e2f63d8e5807072e882e58d0adf3156a5466f3d2426": "io := import \"core/io\"; Number := alias Int io.outputLine(1);",
     "af1204c42f8c54677c8bc58c9190981c969342b38e16f85b5dd3c56f1bb0e779": "io := import \"core/io\"; var x := -9223372036854775808; io.outputLine(x / -1);",
     "af3074f247f2cfc1c2f74a2bbee2711d26b45d43df3902a0bcaf9f606116f450": "io := import \"core/io\"; value: Float = io.inputFloat(); io.outputLine(value);",
     "afd8c710152f04e889dda316e775f9401304e52cd983dc76af5acb5f6d458c3f": "io := import \"core/io\"; f := fn(n: Float): Float { n } io.outputLine(f(2), f(-3), f((4)));",
@@ -518,8 +518,8 @@
     "d5adfbf249c1e474a9ee50b7720017485be437a7290bcc7d70a0bd63ccac6ec1": "io := import \"core/io\"; g := fn(): String { io.outputLine(\"effect\"); \"value\" } f := fn(): Unit { (g());; } f();",
     "d6198a735b56c5a12d52793e4b1e9ba03109ff391c634ac2f7197f12beb45e46": "io := import \"core/io\"; loop { loop { break; } io.outputLine(\"outer\"); break; } io.outputLine(\"after\");",
     "d67f8a1e22758b3f09da18b51ae8ef6acadc87fa88163e8efd83fa8a0180f886": "true; false; Unit;",
-    "d6e3090f26decba576de4b46964e5d8fd80a2937ecea75dcee5d7c09c536e5fc": "io := import \"core/io\"; Pair := type (n: Float); f := fn(): Pair { (n = 2) } io.outputLine(f());",
-    "d6e9dcc1c8ac340e40a503201f301a84811ce7412276e1c6145ca5b8b4e0f631": "io := import \"core/io\"; Count := type Int64; Amount := type Float64; f := fn(n: Count, x: Amount): Double { if n > 0 { return x; } -x } io.outputLine(f(2, 0.5), f(0, 0.5));",
+    "540f702292a359a881c787dc6e3efd7160461c773182c77df6383086bfdbf369": "io := import \"core/io\"; Pair := alias (n: Float); f := fn(): Pair { (n = 2) } io.outputLine(f());",
+    "d96a00c0457df6aefd0aeb7eeddaa35930e0176669133c26efa6602e10aa43a8": "io := import \"core/io\"; Count := alias Int64; Amount := alias Float64; f := fn(n: Count, x: Amount): Double { if n > 0 { return x; } -x } io.outputLine(f(2, 0.5), f(0, 0.5));",
     "d70fa753d49d0c447fb7f36f2d4e8fa944719eca00a79f8b050befd5d2d58b4b": "io := import \"core/io\"; zero: Float; io.outputLine(zero, zero == 0.0, -zero, +zero);",
     "d714526f15642e70d883c0b5cd105269bc0bfee230ca711e77422f3a79a4389f": "false and (1 / 0 > 0); true or (9223372036854775807 + 1 > 0);",
     "d71ac9fa6e052a7b8841df18bac5c98e4fcab5696c9395d1fc492daa59fc3146": "io := import \"core/io\"; io.outputLine(\"before\");\r\nf := fn(a: Bool, b: Bool): Int { if a { if b { return 1; } } else { return 2; } } io.outputLine(f(true, false));",
@@ -1534,7 +1534,7 @@
       "stderr": ""
     },
     {
-      "source": "ae9e6432673bb898152e30dea01c97630d51a5d6a4ecdf61522bca4e9ef2b48b",
+      "source": "8cc7a6a2ad42497458ac9e2f63d8e5807072e882e58d0adf3156a5466f3d2426",
       "stdin": "",
       "args": [],
       "name": null,
@@ -2119,7 +2119,7 @@
       "stderr": "output سلام🙂.lts:2:23: ArithmeticPanic: remainder by zero\n"
     },
     {
-      "source": "67f5c53dc50f9a1cae5a294c5e87bd909c94e383ea73b4bf87004fc6b570525c",
+      "source": "513d53c0038fc0a5317c21afb6db6648bd11fd0de669b236494e082f9895ce8f",
       "stdin": "",
       "args": [],
       "name": null,
@@ -2146,7 +2146,7 @@
       "stderr": ""
     },
     {
-      "source": "447af38446f1d73eaf286d8040cb865beaa596d919f71bde24edbd4b883e7e7e",
+      "source": "1ee7ce78fa9f1ff4d20d1cbf693afb5acf0655cafe55b743e8fd2f2019da9d06",
       "stdin": "bGluZQo=",
       "args": [],
       "name": null,
@@ -3010,7 +3010,7 @@
       "stderr": ""
     },
     {
-      "source": "d6e3090f26decba576de4b46964e5d8fd80a2937ecea75dcee5d7c09c536e5fc",
+      "source": "540f702292a359a881c787dc6e3efd7160461c773182c77df6383086bfdbf369",
       "stdin": "",
       "args": [],
       "name": null,
@@ -3397,7 +3397,7 @@
       "stderr": "1:11: SourceError: expected expression (or unsupported feature)\n"
     },
     {
-      "source": "d6e9dcc1c8ac340e40a503201f301a84811ce7412276e1c6145ca5b8b4e0f631",
+      "source": "d96a00c0457df6aefd0aeb7eeddaa35930e0176669133c26efa6602e10aa43a8",
       "stdin": "",
       "args": [],
       "name": null,
@@ -3415,7 +3415,7 @@
       "stderr": "2:22: TypeError: function body produces Unit; expected Int\n"
     },
     {
-      "source": "967d7feb45332443cba07f97ecef8afd59f4f06e8d267efdd56e16c8e48e2db3",
+      "source": "5f9d2bb25334b27b8c4a0575060074e3382d8caaad670c6db0df40b41a99adee",
       "stdin": "",
       "args": [],
       "name": null,
@@ -3550,7 +3550,7 @@
       "stderr": ""
     },
     {
-      "source": "a44cf841bb853774c95a307c1b194a81691917f45ca37228a24b170ce565c7a9",
+      "source": "2b0d5df3d77efbb1f38ce1c3c316c624b3f03a7c6e89c3e4b5d2a007cc4e0f3a",
       "stdin": "",
       "args": [],
       "name": null,
@@ -4514,11 +4514,11 @@
     },
     {
       "source": "de1c8a5b476707bafda55091baf05fb01ed0061cafaec6ae90a8fb95efd65644",
-      "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IG91dHB1dExpbmUoZigyLCAwLjUpKTs=",
+      "stdin": "Q291bnQgOj0gYWxpYXMgSW50NjQ7IGYgOj0gZm4objogQ291bnQsIHg6IERvdWJsZSk6IEZsb2F0NjQgeyByZXR1cm4geDsgfSBvdXRwdXRMaW5lKGYoMiwgMC41KSk7",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "Program||Count := type Int; f := fn(n: Count, x: Float): Float { return x }; outputLine(f(2, 0.5))|1:1|0\n",
+      "stdout": "Program||Count := alias Int; f := fn(n: Count, x: Float): Float { return x }; outputLine(f(2, 0.5))|1:1|0\n",
       "stderr": ""
     },
     {
@@ -4874,16 +4874,16 @@
     },
     {
       "source": "b02fe17a30847e64821e40251b522b263a18c175a0ce8ad4943824c08961ed91",
-      "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IG91dHB1dExpbmUoZigyLCAwLjUpKTs=",
+      "stdin": "Q291bnQgOj0gYWxpYXMgSW50NjQ7IGYgOj0gZm4objogQ291bnQsIHg6IERvdWJsZSk6IEZsb2F0NjQgeyByZXR1cm4geDsgfSBvdXRwdXRMaW5lKGYoMiwgMC41KSk7",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "type|Count|Int|1:1|0\nfunction|f|(n: Count, x: Float): Float|1:22|21\n",
+      "stdout": "type|Count|Int|1:1|0\nfunction|f|(n: Count, x: Float): Float|1:23|22\n",
       "stderr": ""
     },
     {
       "source": "b02fe17a30847e64821e40251b522b263a18c175a0ce8ad4943824c08961ed91",
-      "stdin": "QSA6PSB0eXBlIEI7CkIgOj0gdHlwZSBBOwo=",
+      "stdin": "QSA6PSBhbGlhcyBCOwpCIDo9IGFsaWFzIEE7Cg==",
       "args": [],
       "name": null,
       "status": 2,
@@ -4892,29 +4892,29 @@
     },
     {
       "source": "b02fe17a30847e64821e40251b522b263a18c175a0ce8ad4943824c08961ed91",
-      "stdin": "UGFpciA6PSB0eXBlIChhOiBJbnQsIGI6IFN0cmluZyk7IHA6IFBhaXIgPSAoYSA9IDEsIGIgPSAieCIpOyB4OiBJbnQgPSBwLmI7Cg==",
+      "stdin": "UGFpciA6PSBhbGlhcyAoYTogSW50LCBiOiBTdHJpbmcpOyBwOiBQYWlyID0gKGEgPSAxLCBiID0gIngiKTsgeDogSW50ID0gcC5iOwo=",
       "args": [],
       "name": null,
       "status": 2,
       "stdout": "",
-      "stderr": "1:63: cannot initialize Int with String\n"
+      "stderr": "1:64: cannot initialize Int with String\n"
     },
     {
       "source": "b02fe17a30847e64821e40251b522b263a18c175a0ce8ad4943824c08961ed91",
-      "stdin": "UGFpciA6PSB0eXBlIChhOiBJbnQsIGI6IFN0cmluZyk7IHA6IFBhaXIgPSAoYSA9IDEsIGIgPSAieCIpOyB4OiBTdHJpbmcgPSBwLmI7Cg==",
+      "stdin": "UGFpciA6PSBhbGlhcyAoYTogSW50LCBiOiBTdHJpbmcpOyBwOiBQYWlyID0gKGEgPSAxLCBiID0gIngiKTsgeDogU3RyaW5nID0gcC5iOwo=",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "type|Pair|(a: Int, b: String)|1:1|0\nvalue|p|Pair = (a = 1, b = \"x\")|1:35|34\nvalue|x|String = p.b|1:63|62\n",
+      "stdout": "type|Pair|(a: Int, b: String)|1:1|0\nvalue|p|Pair = (a = 1, b = \"x\")|1:36|35\nvalue|x|String = p.b|1:64|63\n",
       "stderr": ""
     },
     {
       "source": "b02fe17a30847e64821e40251b522b263a18c175a0ce8ad4943824c08961ed91",
-      "stdin": "UGFpciA6PSB0eXBlIChsZWZ0OiBJbnQsIHJpZ2h0OiBJbnQpOwpJdGVtcyA6PSB0eXBlIExpc3Q8UGFpcj47CmFkZCA6PSBmbihhOiBJbnQsIGI6IEludCk6IEludCB7IGEgKyBiIH0KY2hvb3NlIDo9IGZuKGZsYWc6IEJvb2wpOiBJbnQgeyBpZiBmbGFnIHsgMSB9IGVsc2UgeyAwIH0gfQpjb3VudCA6PSAxOwp2YXIgdG90YWw6IEludCA9IDA7CnZhbHVlczogbXV0IExpc3Q8SW50PiA9IFtdOwo=",
+      "stdin": "UGFpciA6PSBhbGlhcyAobGVmdDogSW50LCByaWdodDogSW50KTsKSXRlbXMgOj0gYWxpYXMgTGlzdDxQYWlyPjsKYWRkIDo9IGZuKGE6IEludCwgYjogSW50KTogSW50IHsgYSArIGIgfQpjaG9vc2UgOj0gZm4oZmxhZzogQm9vbCk6IEludCB7IGlmIGZsYWcgeyAxIH0gZWxzZSB7IDAgfSB9CmNvdW50IDo9IDE7CnZhciB0b3RhbDogSW50ID0gMDsKdmFsdWVzOiBtdXQgTGlzdDxJbnQ+ID0gW107Cg==",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "type|Pair|(left: Int, right: Int)|1:1|0\ntype|Items|List<Pair>|2:1|38\nfunction|add|(a: Int, b: Int): Int|3:1|64\nfunction|choose|(flag: Bool): Int|4:1|105\nvalue|count|:= 1|5:1|164\nvalue|total|var Int = 0|6:5|180\nvalue|values|mut List<Int> = []|7:1|196\n",
+      "stdout": "type|Pair|(left: Int, right: Int)|1:1|0\ntype|Items|List<Pair>|2:1|39\nfunction|add|(a: Int, b: Int): Int|3:1|66\nfunction|choose|(flag: Bool): Int|4:1|107\nvalue|count|:= 1|5:1|166\nvalue|total|var Int = 0|6:5|182\nvalue|values|mut List<Int> = []|7:1|198\n",
       "stderr": ""
     },
     {
@@ -7844,11 +7844,11 @@
     },
     {
       "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
-      "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IG91dHB1dExpbmUoZigyLCAwLjUpKTs=",
+      "stdin": "Q291bnQgOj0gYWxpYXMgSW50NjQ7IGYgOj0gZm4objogQ291bnQsIHg6IERvdWJsZSk6IEZsb2F0NjQgeyByZXR1cm4geDsgfSBvdXRwdXRMaW5lKGYoMiwgMC41KSk7",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "Program||Count := type Int; f := fn(n: Count, x: Float): Float { return x }; outputLine(f(2, 0.5))|1:1|0\n",
+      "stdout": "Program||Count := alias Int; f := fn(n: Count, x: Float): Float { return x }; outputLine(f(2, 0.5))|1:1|0\n",
       "stderr": ""
     },
     {
@@ -8168,16 +8168,16 @@
     },
     {
       "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
-      "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IG91dHB1dExpbmUoZigyLCAwLjUpKTs=",
+      "stdin": "Q291bnQgOj0gYWxpYXMgSW50NjQ7IGYgOj0gZm4objogQ291bnQsIHg6IERvdWJsZSk6IEZsb2F0NjQgeyByZXR1cm4geDsgfSBvdXRwdXRMaW5lKGYoMiwgMC41KSk7",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "type|Count|Int|1:1|0\nfunction|f|(n: Count, x: Float): Float|1:22|21\n",
+      "stdout": "type|Count|Int|1:1|0\nfunction|f|(n: Count, x: Float): Float|1:23|22\n",
       "stderr": ""
     },
     {
       "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
-      "stdin": "QSA6PSB0eXBlIEI7CkIgOj0gdHlwZSBBOwo=",
+      "stdin": "QSA6PSBhbGlhcyBCOwpCIDo9IGFsaWFzIEE7Cg==",
       "args": [],
       "name": null,
       "status": 2,
@@ -8186,29 +8186,29 @@
     },
     {
       "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
-      "stdin": "UGFpciA6PSB0eXBlIChhOiBJbnQsIGI6IFN0cmluZyk7IHA6IFBhaXIgPSAoYSA9IDEsIGIgPSAieCIpOyB4OiBJbnQgPSBwLmI7Cg==",
+      "stdin": "UGFpciA6PSBhbGlhcyAoYTogSW50LCBiOiBTdHJpbmcpOyBwOiBQYWlyID0gKGEgPSAxLCBiID0gIngiKTsgeDogSW50ID0gcC5iOwo=",
       "args": [],
       "name": null,
       "status": 2,
       "stdout": "",
-      "stderr": "1:63: cannot initialize Int with String\n"
+      "stderr": "1:64: cannot initialize Int with String\n"
     },
     {
       "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
-      "stdin": "UGFpciA6PSB0eXBlIChhOiBJbnQsIGI6IFN0cmluZyk7IHA6IFBhaXIgPSAoYSA9IDEsIGIgPSAieCIpOyB4OiBTdHJpbmcgPSBwLmI7Cg==",
+      "stdin": "UGFpciA6PSBhbGlhcyAoYTogSW50LCBiOiBTdHJpbmcpOyBwOiBQYWlyID0gKGEgPSAxLCBiID0gIngiKTsgeDogU3RyaW5nID0gcC5iOwo=",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "type|Pair|(a: Int, b: String)|1:1|0\nvalue|p|Pair = (a = 1, b = \"x\")|1:35|34\nvalue|x|String = p.b|1:63|62\n",
+      "stdout": "type|Pair|(a: Int, b: String)|1:1|0\nvalue|p|Pair = (a = 1, b = \"x\")|1:36|35\nvalue|x|String = p.b|1:64|63\n",
       "stderr": ""
     },
     {
       "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
-      "stdin": "UGFpciA6PSB0eXBlIChsZWZ0OiBJbnQsIHJpZ2h0OiBJbnQpOwpJdGVtcyA6PSB0eXBlIExpc3Q8UGFpcj47CmFkZCA6PSBmbihhOiBJbnQsIGI6IEludCk6IEludCB7IGEgKyBiIH0KY2hvb3NlIDo9IGZuKGZsYWc6IEJvb2wpOiBJbnQgeyBpZiBmbGFnIHsgMSB9IGVsc2UgeyAwIH0gfQpjb3VudCA6PSAxOwp2YXIgdG90YWw6IEludCA9IDA7CnZhbHVlczogbXV0IExpc3Q8SW50PiA9IFtdOwo=",
+      "stdin": "UGFpciA6PSBhbGlhcyAobGVmdDogSW50LCByaWdodDogSW50KTsKSXRlbXMgOj0gYWxpYXMgTGlzdDxQYWlyPjsKYWRkIDo9IGZuKGE6IEludCwgYjogSW50KTogSW50IHsgYSArIGIgfQpjaG9vc2UgOj0gZm4oZmxhZzogQm9vbCk6IEludCB7IGlmIGZsYWcgeyAxIH0gZWxzZSB7IDAgfSB9CmNvdW50IDo9IDE7CnZhciB0b3RhbDogSW50ID0gMDsKdmFsdWVzOiBtdXQgTGlzdDxJbnQ+ID0gW107Cg==",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "type|Pair|(left: Int, right: Int)|1:1|0\ntype|Items|List<Pair>|2:1|38\nfunction|add|(a: Int, b: Int): Int|3:1|64\nfunction|choose|(flag: Bool): Int|4:1|105\nvalue|count|:= 1|5:1|164\nvalue|total|var Int = 0|6:5|180\nvalue|values|mut List<Int> = []|7:1|196\n",
+      "stdout": "type|Pair|(left: Int, right: Int)|1:1|0\ntype|Items|List<Pair>|2:1|39\nfunction|add|(a: Int, b: Int): Int|3:1|66\nfunction|choose|(flag: Bool): Int|4:1|107\nvalue|count|:= 1|5:1|166\nvalue|total|var Int = 0|6:5|182\nvalue|values|mut List<Int> = []|7:1|198\n",
       "stderr": ""
     },
     {
@@ -9050,20 +9050,20 @@
     },
     {
       "source": "53962854599c09074b9b62e93844a2f74db7424565422ae0de9ec1894d997e40",
-      "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IHkgOj0gZigyLCAwLjUpOw==",
+      "stdin": "Q291bnQgOj0gYWxpYXMgSW50NjQ7IGYgOj0gZm4objogQ291bnQsIHg6IERvdWJsZSk6IEZsb2F0NjQgeyByZXR1cm4geDsgfSB5IDo9IGYoMiwgMC41KTs=",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "Program||Count := type Int; f := fn(n: Count, x: Float): Float { return x }; y := f(2, 0.5)|1:1|0\n",
+      "stdout": "Program||Count := alias Int; f := fn(n: Count, x: Float): Float { return x }; y := f(2, 0.5)|1:1|0\n",
       "stderr": ""
     },
     {
       "source": "b1216de9d53221f441042db98a2b4ca189e20283765d78256699be2ba43aa270",
-      "stdin": "Q291bnQgOj0gdHlwZSBJbnQ2NDsgZiA6PSBmbihuOiBDb3VudCwgeDogRG91YmxlKTogRmxvYXQ2NCB7IHJldHVybiB4OyB9IHkgOj0gZigyLCAwLjUpOw==",
+      "stdin": "Q291bnQgOj0gYWxpYXMgSW50NjQ7IGYgOj0gZm4objogQ291bnQsIHg6IERvdWJsZSk6IEZsb2F0NjQgeyByZXR1cm4geDsgfSB5IDo9IGYoMiwgMC41KTs=",
       "args": [],
       "name": null,
       "status": 0,
-      "stdout": "type|Count|Int|1:1|0\nfunction|f|(n: Count, x: Float): Float|1:22|21\nvalue|y|:= f(2, 0.5)|1:74|73\n",
+      "stdout": "type|Count|Int|1:1|0\nfunction|f|(n: Count, x: Float): Float|1:23|22\nvalue|y|:= f(2, 0.5)|1:75|74\n",
       "stderr": ""
     },
     {

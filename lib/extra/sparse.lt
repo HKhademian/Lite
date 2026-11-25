@@ -1,7 +1,7 @@
 /** Experimental sparse sets (`extra/sparse`) with O(1) membership/removal and cache-friendly dense iteration. */
 
 /** Opaque generational handle to a bounded-universe integer sparse set (`0..capacity-1`). */
-pub SparseSet := type (handle: Int, gen: Int);
+pub SparseSet := alias (handle: Int, gen: Int);
 
 var ssSparse: mut List<Int> = [];
 var ssDense: mut List<Int> = [];

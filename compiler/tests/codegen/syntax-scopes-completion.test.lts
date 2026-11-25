@@ -128,7 +128,7 @@ if not skipHeavy {
         "x: Int = 1",
         "x: Int",
         "var x := 1; x = 2",
-        "Number := type Int",
+        "Number := alias Int",
         "io := import \"core/io\"; if true { io.outputLine(7) }",
         "io := import \"core/io\"; if true { x := 7 } io.outputLine(8)",
         "io := import \"core/io\"; var n := 0; loop n < 3 { n = n + 1; continue } io.outputLine(n)",
@@ -155,7 +155,7 @@ if not skipHeavy {
         "var x := 1\nx = 2",
         "io := import \"core/io\"; x := 1 /* } */ io.outputLine(x);",
         "io := import \"core/io\"; x := (if true { 1 } else { 2 }) io.outputLine(x);",
-        "io := import \"core/io\"; Number := type Int io.outputLine(1);",
+        "io := import \"core/io\"; Number := alias Int io.outputLine(1);",
         "io := import \"core/io\"; if true { io.outputLine(1)",
         "noop := fn(): Unit { return",
         "f := fn(): Int { return }"

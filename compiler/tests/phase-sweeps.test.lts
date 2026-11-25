@@ -136,7 +136,7 @@ if not skipHeavy {
         test.checkText("parser-input err " + pk, "", pr.stderr);
     }
     boundGood: List<String> = [
-    "x := 1", "x: Int", "Number := type Int",
+    "x := 1", "x: Int", "Number := alias Int",
     "if true { x := 1 } outputLine(2)", "if true { outputLine(1) }; outputLine(2)",
     "f := fn(): Int { return 7 } outputLine(f())",
     "x := if true { 1 } else { 2 } outputLine(x)",

@@ -11,10 +11,10 @@ cases := import "util/cases";
 json := import "util/json";
 
 /** Result of compiling or executing a Lite program or compiler phase driver. */
-pub RunOutput := type (status: Int, stdout: String, stderr: String);
+pub RunOutput := alias (status: Int, stdout: String, stderr: String);
 
 /** Prepared TS-compiled phase driver artifact and isolated Node runner inside `workDir`. */
-pub TestDriver := type (workDir: String, artifactPath: String, runnerPath: String);
+pub TestDriver := alias (workDir: String, artifactPath: String, runnerPath: String);
 
 emptyEnv := fn(): List<String> {
     res: List<String> = [];
@@ -143,7 +143,7 @@ pub compileFile := fn(compilerPath: String, cwdDir: String, args: List<String>):
 };
 
 /** Strict-typechecked TS artifact and isolated runner inside `workDir`. */
-pub PreparedTs := type (workDir: String, artifactPath: String, runnerPath: String);
+pub PreparedTs := alias (workDir: String, artifactPath: String, runnerPath: String);
 
 /** Strict-typechecks `tsCode` once in a temporary directory and prepares an isolated runner for repeated executions. */
 pub prepareTs := fn(rootDir: String, tsCode: String): PreparedTs {

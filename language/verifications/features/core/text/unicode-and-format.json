@@ -17,7 +17,7 @@
     {
       "name": "unicode-and-padding",
       "stdout": {
-        "text": "65,233,128578 true A\u00e9\ud83d\ude42 true A\u00e9\ud83d\ude42 \ud83d\ude42\ntrue false\n[   ok] [ok   ] [  42]\n",
+        "text": "65,233,128578 true Aé🙂 true Aé🙂 🙂\ntrue false\n[   ok] [ok   ] [  42]\n",
         "hash": "sha256:85b790ec1c7a5e321d87cb9566c3c5fdf7f4041dc144cfb8fb086ad281c3dbd5"
       },
       "exitCode": 0

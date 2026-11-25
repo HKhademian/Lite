@@ -1,10 +1,10 @@
 /** Experimental flat-backed 2D grids (`extra/grid`) for tilemaps, cellular automata, and board games. */
 
 /** Opaque generational handle to a 2D `Int` grid. */
-pub IntGrid := type (handle: Int, gen: Int);
+pub IntGrid := alias (handle: Int, gen: Int);
 
 /** Opaque generational handle to a 2D `Float` grid. */
-pub FloatGrid := type (handle: Int, gen: Int);
+pub FloatGrid := alias (handle: Int, gen: Int);
 
 /* --- IntGrid flat slab --- */
 var igSlab: mut List<Int> = [];

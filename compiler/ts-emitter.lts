@@ -701,23 +701,23 @@ scanNumericLiteral := fn(source: String, position: Int): (next: Int, integerEnd:
    places the target literal encoders before this file and the emitter/driver
    after it. */
 /** One parsed expression: target `code`, checked compile-time value, whether that value is a constant, and the next source position. */
-Parsed := type (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
+Parsed := alias (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);
 /** One local visible to later statements: source name, hygienic runtime name, value kind, binding reassignment permission, held-data write grant, declaration block depth, constant value and target code. */
-Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String);
+Local := alias (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String);
 /** One program or module-graph item: a report stream entry, declaration, control-flow marker, import edge, public function signature or module visit boundary. */
-Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+Item := alias (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 /** Parsed module/compiler items returned by parseProgram and consumed by the module collector and backend emitters. */
-Items := type List<Item>;
+Items := alias List<Item>;
 /** Completion facts saved while an inner block is parsed; earlier conditional arms are joined only after a final else. */
-BlockState := type (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool);
+BlockState := alias (returned: Bool, stopped: Bool, branchesReturned: Bool, branchesStopped: Bool, hasElse: Bool, loopForever: Bool, live: Bool);
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
-Operator := type (text: String, width: Int);
+Operator := alias (text: String, width: Int);
 /** One previously declared top-level function: source name, result kind, first parameter entry and parameter count. */
-FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int);
+FunctionInfo := alias (name: String, runtime: String, result: String, first: Int, count: Int);
 /** A later top-level scalar definition visible only while checking a deferred function body. */
-FutureValue := type (name: String, runtime: String, kind: String, at: Int, intValue: Int, textValue: String);
+FutureValue := alias (name: String, runtime: String, kind: String, at: Int, intValue: Int, textValue: String);
 /** One top-level transparent type alias: source name, raw target type text, declaration position and the position just after that target. */
-AliasDecl := type (name: String, target: String, at: Int, end: Int);
+AliasDecl := alias (name: String, target: String, at: Int, end: Int);
 
 /** Reports one source-positioned diagnostic as `name:line:column: message`, or `line:column: message` when `prefix` is empty, then exits 2. */
 failAt := fn(source: String, position: Int, prefix: String, message: String): Unit {
@@ -1706,7 +1706,7 @@ collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: S
     }
 }
 
-/** Collects top-level `Name := type Target;` declarations before parsing so aliases may reference later aliases and cycles can be reported. */
+/** Collects top-level `Name := alias Target;` declarations before parsing so aliases may reference later aliases and cycles can be reported. */
 collectAliases := fn(source: String, prefix: String): List<AliasDecl> {
     aliases: mut List<AliasDecl> = [];
     size := textLib.length(source);

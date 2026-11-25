@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "value-blocks-and-dce.lts",
-    "hash": "sha256:05acfb0fd1a56f6ab5f0cbf371c577bf644b2a735c44d664bf07359817006f10"
+    "hash": "sha256:54033b8209a3c084b169a7c7386e6796c8f5776b6f6e9bf2a0dfc44a4947f68e"
   },
   "features": [
     "feature.blocks.evaluation.value-blocks-and-dce"

@@ -327,9 +327,9 @@ ptDir := fs.realPath(tmpPubTypeRes.path).path;
 ptRoot := path.join(ptDir, "app.lts");
 ptTypes := path.join(ptDir, "types.lts");
 _wpt1 := fs.writeText(ptTypes,
-"InternalCount := type Int;\n" +
-"pub Count := type InternalCount;\n" +
-"pub Point := type (x: Int, y: Int);\n" +
+"InternalCount := alias Int;\n" +
+"pub Count := alias InternalCount;\n" +
+"pub Point := alias (x: Int, y: Int);\n" +
 "pub shift := fn(point: Point, dx: Int): Point { (x = point.x + dx, y = point.y) }\n"
 );
 _wpt2 := fs.writeText(ptRoot,

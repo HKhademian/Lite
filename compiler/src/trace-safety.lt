@@ -9,19 +9,19 @@ syntax := import "./frontend-syntax";
 types := import "./frontend-types";
 
 /** One local visible to later statements matching `frontend-ir.Local`. */
-Local := type (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
+Local := alias (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
 
 /** One parsed item entry matching `frontend-ir.Item`. */
-Item := type (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
+Item := alias (kind: String, name: String, runtime: String, code: String, intValue: Int, textValue: String);
 
 /** Collection of items matching `frontend-ir.Items`. */
-Items := type List<Item>;
+Items := alias List<Item>;
 
 /** One previously declared top-level function matching `frontend-ir.FunctionInfo`. */
-FunctionInfo := type (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
+FunctionInfo := alias (name: String, runtime: String, result: String, first: Int, count: Int, declAt: Int);
 
 /** A later top-level scalar definition matching `frontend-ir.FutureValue`. */
-FutureValue := type (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
+FutureValue := alias (name: String, runtime: String, kind: String, at: Int, mutable: Bool, writable: Bool, initState: String);
 
 /** Returns the index of the latest reached or deferred local (`depth >= -1`) with runtime `runtime`, or -1 when unreached. */
 pub latestActiveLocalByRuntime := fn(locals: List<Local>, runtime: String): Int {

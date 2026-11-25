@@ -1,6 +1,6 @@
 io := import "core/io";
 
-Op := type fn(Int): Int;
+Op := alias fn(Int): Int;
 
 apply := fn(op: Op, x: Int): Int {
     op(x)
