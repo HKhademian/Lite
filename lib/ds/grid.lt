@@ -41,7 +41,7 @@ pub IntGrid := alias Grid<Int>;
 pub FloatGrid := alias Grid<Float>;
 
 /** Creates a generic `width x height` grid filled with `fill`. */
-pub createGrid := fn<T: Type>(width: Int, height: Int, fill: T): Grid<T> {
+pub Grid.create := fn<T: Type>(width: Int, height: Int, fill: T): Self<T> {
     w := if width < 1 { 1 } else { width };
     h := if height < 1 { 1 } else { height };
     total := w * h;
@@ -49,7 +49,7 @@ pub createGrid := fn<T: Type>(width: Int, height: Int, fill: T): Grid<T> {
     loop 0..total {
         mut buf.pushBack(fill);
     }
-    Grid<T> { width = w, height = h, data = buf }
+    Self<T> { width = w, height = h, data = buf }
 };
 
 /** True when `(x, y)` lies inside `g`. */

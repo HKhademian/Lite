@@ -9,7 +9,7 @@ pub SparseSet := record {
 }
 
 /** Creates a sparse set supporting integer IDs in `0..capacity-1`. */
-pub create := fn(capacity: Int): SparseSet {
+pub SparseSet.create := fn(capacity: Int): Self {
     cap := if capacity < 1 { 1 } else { capacity };
     sp: mut List<Int> = [];
     dn: mut List<Int> = [];
@@ -17,7 +17,7 @@ pub create := fn(capacity: Int): SparseSet {
         mut sp.pushBack(-1);
         mut dn.pushBack(0);
     }
-    SparseSet { sparse = sp, dense = dn, cap = cap, liveCount = 0 }
+    Self { sparse = sp, dense = dn, cap = cap, liveCount = 0 }
 };
 
 /** True when `value` is currently a member of `s` in O(1). */

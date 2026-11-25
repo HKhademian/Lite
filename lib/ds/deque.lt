@@ -37,14 +37,14 @@ pub IntDeque := alias Deque<Int>;
 pub TextDeque := alias Deque<String>;
 
 /** Creates an empty generic `Deque<T>` with capacity `>= 1`. */
-pub createDeque := fn<T: Type>(capacity: Int): Deque<T> {
+pub Deque.create := fn<T: Type>(capacity: Int): Self<T> {
     cap := if capacity < 1 { 1 } else { capacity };
     buf: mut List<T> = [];
     z: T;
     loop 0..cap {
         mut buf.pushBack(z);
     }
-    Deque<T> { data = buf, cap = cap, head = 0, count = 0 }
+    Self<T> { data = buf, cap = cap, head = 0, count = 0 }
 };
 
 /** Number of stored elements currently in `d`. */

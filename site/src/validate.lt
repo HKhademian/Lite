@@ -342,7 +342,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     absSiteDir := path.resolve(proc.cwd(), siteDirRaw);
 
     sortedSiteFiles := collectAllSiteFiles(absSiteDir);
-    mut siteFileTable := intern.create();
+    mut siteFileTable := intern.Interner.create();
     htmlFiles: mut List<String> = [];
     loop sortedSiteFiles as relFile {
         _sfId := mut siteFileTable.intern(relFile);
@@ -364,11 +364,11 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     /* Load playground library targets if present. */
     hasSampleFilesDir := fs.kind(path.join(absSiteDir, "playground/samples")) == fs.FILE_KIND_DIR;
     hasPlayTargets := siteFileTable.has("playground/library.json");
-    mut playAllIds := intern.create();
-    mut playCatSample := intern.create();
-    mut playCatExample := intern.create();
-    mut playCatCase := intern.create();
-    mut playCatPiece := intern.create();
+    mut playAllIds := intern.Interner.create();
+    mut playCatSample := intern.Interner.create();
+    mut playCatExample := intern.Interner.create();
+    mut playCatCase := intern.Interner.create();
+    mut playCatPiece := intern.Interner.create();
     if hasPlayTargets {
         libRead := fs.readText(path.join(absSiteDir, "playground/library.json"));
         if libRead.ok {

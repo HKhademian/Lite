@@ -7,7 +7,7 @@ json := import "util/json";
 siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
-mut gymMetaCache := lru.create<String, String>(1024);
+mut gymMetaCache := lru.LruText.create(1024);
 
 beltLabel := fn(belt: String): String {
     if belt == "amber" { "Amber Belt" }

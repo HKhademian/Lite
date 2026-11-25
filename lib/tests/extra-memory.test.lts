@@ -28,7 +28,7 @@ functionalSrc :=
 "lru := import \"ds/lru\";\n" +
 "\n" +
 "/* 1. ds/arena: byte arena + alignment + int32 + mark/rewind + reset + TypedArena<T> */\n" +
-"mut a := arena.create(64);\n" +
+"mut a := arena.Arena.create(64);\n" +
 "s1 := mut a.alloc(5);\n" +
 "s2 := mut a.allocAligned(8, 8);\n" +
 "badAlign := mut a.allocAligned(4, 3);\n" +
@@ -49,12 +49,12 @@ functionalSrc :=
 "mut a.destroy();\n" +
 "allocDead := mut a.alloc(4);\n" +
 "io.outputLine(\"arenaDead\", a.isValid(), allocDead.ok);\n" +
-"mut a2 := arena.create(32);\n" +
+"mut a2 := arena.Arena.create(32);\n" +
 "io.outputLine(\"arenaReuse\", a2.isValid(), a2.capacityBytes());\n" +
 "mut a2.destroy();\n" +
 "\n" +
 "/* Generic TypedArena<T> (IntArena & FloatArena) */\n" +
-"ia: mut arena.IntArena = arena.createTyped<Int>(16);\n" +
+"ia: mut arena.IntArena = arena.IntArena.create(16);\n" +
 "i0 := mut ia.alloc(42);\n" +
 "ispan := mut ia.allocSpan(4, 7);\n" +
 "_iset := mut ia.set(ispan.offset + 2, 99);\n" +
@@ -65,14 +65,14 @@ functionalSrc :=
 "mut ia.reset();\n" +
 "mut ia.destroy();\n" +
 "\n" +
-"fa: mut arena.FloatArena = arena.createTyped<Float>(8);\n" +
+"fa: mut arena.FloatArena = arena.TypedArena<Float>.create(8);\n" +
 "f0 := mut fa.alloc(1.5);\n" +
 "fspan := mut fa.allocSpan(3, 2.5);\n" +
 "io.outputLine(\"floatArena\", f0, fa.get(f0), fa.get(fspan.offset + 1), fa.used());\n" +
 "mut fa.destroy();\n" +
 "\n" +
 "/* 2. ds/pool: generational ABA protection + SlotPool + generic Pool<T> */\n" +
-"mut sp := pool.createSlots(2);\n" +
+"mut sp := pool.SlotPool.create(2);\n" +
 "h1 := mut sp.acquire();\n" +
 "h2 := mut sp.acquire();\n" +
 "hFull := mut sp.acquire();\n" +
@@ -83,7 +83,7 @@ functionalSrc :=
 "mut sp.clear();\n" +
 "io.outputLine(\"slotClear\", sp.count(), sp.isAlive(h2), sp.isAlive(h3));\n" +
 "\n" +
-"ip: mut pool.IntPool = pool.create<Int>(4);\n" +
+"ip: mut pool.IntPool = pool.IntPool.create(4);\n" +
 "ih := mut ip.acquire(101);\n" +
 "_is := mut ip.set(ih, 202);\n" +
 "ig1 := ip.get(ih);\n" +
@@ -91,7 +91,7 @@ functionalSrc :=
 "ig2 := ip.get(ih);\n" +
 "io.outputLine(\"intPool\", ig1.isSome(), ig1.unwrapOr(-1), ig2.isSome(), ip.count());\n" +
 "\n" +
-"tp: mut pool.TextPool = pool.create<String>(4);\n" +
+"tp: mut pool.TextPool = pool.Pool<String>.create(4);\n" +
 "th := mut tp.acquire(\"alpha\");\n" +
 "_ts := mut tp.set(th, \"beta\");\n" +
 "tg1 := tp.get(th);\n" +
@@ -100,8 +100,8 @@ functionalSrc :=
 "io.outputLine(\"textPool\", tg1.isSome(), tg1.unwrapOr(\"\"), tg2.isSome(), tp.count());\n" +
 "\n" +
 "/* 3. ds/intern: deduplication + multi-table isolation + clear */\n" +
-"mut t1 := intern.create();\n" +
-"mut t2 := intern.create();\n" +
+"mut t1 := intern.Interner.create();\n" +
+"mut t2 := intern.Interner.create();\n" +
 "idA := mut t1.intern(\"alpha\");\n" +
 "idA2 := mut t1.intern(\"alpha\");\n" +
 "idColon := mut t1.intern(\":alpha\");\n" +
@@ -114,7 +114,7 @@ functionalSrc :=
 "io.outputLine(\"internClear\", t1.count(), t1.has(\"alpha\"), t1.hasId(idA), t2.has(\"alpha\"));\n" +
 "\n" +
 "/* 4. ds/lru: generic O(1) bounded LRU<K, V> (LruText, LruInt, IntLru) */\n" +
-"c: mut lru.LruText = lru.create<String, String>(3);\n" +
+"c: mut lru.LruText = lru.LruText.create(3);\n" +
 "_p1 := mut c.put(\"a\", \"1\");\n" +
 "_p2 := mut c.put(\"b\", \"2\");\n" +
 "_p3 := mut c.put(\"c\", \"3\");\n" +
@@ -127,7 +127,7 @@ functionalSrc :=
 "ev2 := mut c.evictOldest();\n" +
 "io.outputLine(\"lruTextRm\", rmOk, ev2.evicted, ev2.key, c.count());\n" +
 "\n" +
-"ci: mut lru.LruInt = lru.create<String, Int>(2);\n" +
+"ci: mut lru.LruInt = lru.Lru<String, Int>.create(2);\n" +
 "_pi1 := mut ci.put(\"x\", 10);\n" +
 "_pi2 := mut ci.put(\"y\", 20);\n" +
 "_gi := mut ci.get(\"x\");\n" +
@@ -135,7 +135,7 @@ functionalSrc :=
 "giMiss := mut ci.get(\"y\");\n" +
 "io.outputLine(\"lruInt\", evi.evicted, evi.key, evi.value, giMiss.isSome(), ci.count());\n" +
 "\n" +
-"ck: mut lru.IntLru = lru.create<Int, Int>(2);\n" +
+"ck: mut lru.IntLru = lru.IntLru.create(2);\n" +
 "_pk1 := mut ck.put(100, 1);\n" +
 "_pk2 := mut ck.put(200, 2);\n" +
 "_gk := mut ck.get(100);\n" +
@@ -203,23 +203,23 @@ if ccInfo.available {
     "intern := import \"ds/intern\";\n" +
     "lru := import \"ds/lru\";\n" +
     "\n" +
-    "mut a := arena.create(256);\n" +
+    "mut a := arena.Arena.create(256);\n" +
     "loop 0..5000 as f {\n" +
     "    s := mut a.allocAligned(64, 8);\n" +
     "    _w := mut a.writeInt32(s.offset, f);\n" +
     "    mut a.reset();\n" +
     "}\n" +
-    "mut sp := pool.create<Int>(32);\n" +
+    "mut sp := pool.IntPool.create(32);\n" +
     "loop 0..5000 as p {\n" +
     "    h := mut sp.acquire(p);\n" +
     "    _r := mut sp.release(h);\n" +
     "}\n" +
-    "mut it := intern.create();\n" +
+    "mut it := intern.Interner.create();\n" +
     "loop 0..500 as ic {\n" +
     "    _s1 := mut it.intern(\"sym_\" + (ic % 16).toText());\n" +
     "    if (ic % 50) == 49 { mut it.clear(); }\n" +
     "}\n" +
-    "mut lc := lru.create<Int, Int>(32);\n" +
+    "mut lc := lru.IntLru.create(32);\n" +
     "loop 0..5000 as lk {\n" +
     "    _ev := mut lc.put(lk, lk * 2);\n" +
     "}\n" +
@@ -240,9 +240,9 @@ if ccInfo.available {
 }
 
 /* Nominal type safety: unrelated ds records and distinct IDs cannot cross boundaries. */
-nomBad1 := compilerTest.compileStdin(root, selTs.path, "arena := import \"ds/arena\"; bad := fn(x: arena.TypedArena<Int>): Int { x.used() }; mut a := arena.create(16); bad(a);\n", "");
+nomBad1 := compilerTest.compileStdin(root, selTs.path, "arena := import \"ds/arena\"; bad := fn(x: arena.TypedArena<Int>): Int { x.used() }; mut a := arena.Arena.create(16); bad(a);\n", "");
 test.check("reject Arena passed as TypedArena<Int>", nomBad1.status =!= 0);
-nomBad2 := compilerTest.compileStdin(root, selTs.path, "intern := import \"ds/intern\"; mut t := intern.create(); id := mut t.intern(\"a\"); n: Int = id;\n", "");
+nomBad2 := compilerTest.compileStdin(root, selTs.path, "intern := import \"ds/intern\"; mut t := intern.Interner.create(); id := mut t.intern(\"a\"); n: Int = id;\n", "");
 test.check("reject distinct SymbolId assigned to Int", nomBad2.status =!= 0);
 
 fs.remove(tmpDir);

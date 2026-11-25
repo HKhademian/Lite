@@ -12,9 +12,9 @@ ctx := canvas.play(width = 320, height = 200, title = "Particle Pool · Click/Sp
 bg := canvas.rgb(10, 14, 24);
 MAX_PARTICLES := 128;
 
-mut slots := pool.createSlots(MAX_PARTICLES);
-mut active := sparse.create(MAX_PARTICLES);
-mut frameScratch := arena.createTyped<Int>(MAX_PARTICLES);
+mut slots := pool.SlotPool.create(MAX_PARTICLES);
+mut active := sparse.SparseSet.create(MAX_PARTICLES);
+mut frameScratch := arena.IntArena.create(MAX_PARTICLES);
 
 /* Parallel component arrays indexed by SlotPool handle index (zero heap churn after startup). */
 var hGen: mut List<Int> = [];

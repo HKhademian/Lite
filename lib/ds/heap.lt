@@ -122,15 +122,15 @@ popIntHeap := fn(buf: mut List<Int>, isMax: Bool): HeapItem<Int> {
  * ============================================================================ */
 
 /** Creates a fixed-capacity binary min-heap of `Int` values. */
-pub createMin := fn(capacity: Int): MinHeap {
+pub MinHeap.create := fn(capacity: Int): Self {
     cap := if capacity < 1 { 1 } else { capacity };
-    MinHeap { cap = cap }
+    Self { cap = cap }
 };
 
 /** Creates a fixed-capacity binary max-heap of `Int` values. */
-pub createMax := fn(capacity: Int): MaxHeap {
+pub MaxHeap.create := fn(capacity: Int): Self {
     cap := if capacity < 1 { 1 } else { capacity };
-    MaxHeap { cap = cap }
+    Self { cap = cap }
 };
 
 /** Inserts `value` into min-heap `h` in O(log n); returns `false` if full. */
@@ -216,9 +216,9 @@ pub MaxHeap.clear := fn(h: mut Self): Unit {
  * ============================================================================ */
 
 /** Creates a fixed-capacity generic min-priority queue storing `(priority, item)` pairs. */
-pub createPQ := fn<T: Type>(capacity: Int): PriorityQueue<T> {
+pub PriorityQueue.create := fn<T: Type>(capacity: Int): Self<T> {
     cap := if capacity < 1 { 1 } else { capacity };
-    PriorityQueue<T> { cap = cap }
+    Self<T> { cap = cap }
 };
 
 /** Enqueues `(priority, item)` into `pq` in O(log n); returns `false` if full. */

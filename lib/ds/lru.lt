@@ -114,7 +114,7 @@ lruPushFront := fn<K: Type<LruKey>, V: Type>(c: mut Lru<K, V>, idx: Int): Unit {
 };
 
 /** Creates a bounded O(1) `Lru<K, V>` cache holding at most `capacity` entries (`>= 1`). */
-pub create := fn<K: Type<LruKey>, V: Type>(capacity: Int): Lru<K, V> {
+pub Lru.create := fn<K: Type<LruKey>, V: Type>(capacity: Int): Self<K, V> {
     cap := if capacity < 1 { 1 } else { capacity };
     ks: mut List<K> = [];
     vs: mut List<V> = [];

@@ -11,7 +11,7 @@ Alongside built-in `[T; N]`, `List<T>`, `Map<K, V>`, and `Set<T>`, Lite ships ge
 io := import "core/io";
 pool := import "ds/pool";
 
-mut p := pool.create<Int>(8);
+mut p := pool.Pool<Int>.create(8);
 h1 := mut p.acquire(100);
 h2 := mut p.acquire(200);
 _rel := mut p.release(h1);
@@ -28,11 +28,11 @@ io := import "core/io";
 intern := import "ds/intern";
 lru := import "ds/lru";
 
-mut tbl := intern.create();
+mut tbl := intern.Interner.create();
 idA := mut tbl.intern("alpha");
 idB := mut tbl.intern("alpha");
 
-mut cache := lru.create<String, String>(2);
+mut cache := lru.LruText.create(2);
 _e1 := mut cache.put("a", "one");
 _e2 := mut cache.put("b", "two");
 ev := mut cache.put("c", "three");
@@ -58,7 +58,7 @@ io.outputLine(idA == idB, ev.evicted, ev.key);
 io := import "core/io";
 heap := import "ds/heap";
 
-mut h := heap.createMin(8);
+mut h := heap.MinHeap.create(8);
 _a := mut h.push(30);
 _b := mut h.push(10);
 _c := mut h.push(20);
@@ -77,11 +77,11 @@ io := import "core/io";
 bitset := import "ds/bitset";
 sparse := import "ds/sparse";
 
-mut flags := bitset.create(64);
+mut flags := bitset.Bitset.create(64);
 _s1 := mut flags.set(3);
 _s2 := mut flags.set(42);
 
-mut entities := sparse.create(32);
+mut entities := sparse.SparseSet.create(32);
 _i1 := mut entities.insert(7);
 _i2 := mut entities.insert(19);
 io.outputLine(flags.countOnes(), flags.firstSet(), entities.has(19), entities.count());

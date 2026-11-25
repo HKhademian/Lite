@@ -6,7 +6,7 @@ json := import "util/json";
 siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
-mut learnMetaCache := lru.create<String, String>(1024);
+mut learnMetaCache := lru.LruText.create(1024);
 
 envMetaLabel := fn(env: String): String {
     if env == "play" { "Lite Play" } else if env == "cli" { "CLI / Host OS" } else { "Browser + CLI" }

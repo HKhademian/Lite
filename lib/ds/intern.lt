@@ -51,8 +51,8 @@ pub Interner := record {
 }
 
 /** Creates a new empty `Interner`. */
-pub create := fn(): Interner {
-    Interner {}
+pub Interner.create := fn(): Self {
+    Self {}
 };
 
 /** Interns `value` in O(1), returning its stable `SymbolId`. */

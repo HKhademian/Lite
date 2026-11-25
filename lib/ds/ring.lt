@@ -39,14 +39,14 @@ pub IntRing := alias Ring<Int>;
 pub FloatRing := alias Ring<Float>;
 
 /** Creates an empty generic `Ring<T>` with fixed capacity `>= 1`. */
-pub createRing := fn<T: Type>(capacity: Int): Ring<T> {
+pub Ring.create := fn<T: Type>(capacity: Int): Self<T> {
     cap := if capacity < 1 { 1 } else { capacity };
     buf: mut List<T> = [];
     z: T;
     loop 0..cap {
         mut buf.pushBack(z);
     }
-    Ring<T> { data = buf, cap = cap, head = 0, count = 0 }
+    Self<T> { data = buf, cap = cap, head = 0, count = 0 }
 };
 
 /** Number of stored elements currently in `r`. */

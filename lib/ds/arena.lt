@@ -83,13 +83,13 @@ normByte := fn(value: Int): Int {
  * ============================================================================ */
 
 /** Creates a fixed-capacity byte-addressed bump arena backed by a zero-initialized slab. */
-pub create := fn(capacityBytes: Int): Arena {
+pub Arena.create := fn(capacityBytes: Int): Self {
     cap := if capacityBytes < 0 { 0 } else { capacityBytes };
     buf: mut List<Int> = [];
     loop 0..cap {
         mut buf.pushBack(0);
     }
-    Arena { data = buf, cap = cap, offset = 0, peak = 0, resets = 0, gen = 1, alive = true }
+    Self { data = buf, cap = cap, offset = 0, peak = 0, resets = 0, gen = 1, alive = true }
 };
 
 /** True when `a` is active and has not been destroyed. */
@@ -233,14 +233,14 @@ pub Arena.destroy := fn(a: mut Self): Unit {
  * ============================================================================ */
 
 /** Creates a typed scratch bump arena holding up to `capacity` `T` elements. */
-pub createTyped := fn<T: Type>(capacity: Int): TypedArena<T> {
+pub TypedArena.create := fn<T: Type>(capacity: Int): Self<T> {
     cap := if capacity < 0 { 0 } else { capacity };
     buf: mut List<T> = [];
     z: T;
     loop 0..cap {
         mut buf.pushBack(z);
     }
-    TypedArena<T> { data = buf, cap = cap, offset = 0, peak = 0, resets = 0, gen = 1, alive = true }
+    Self<T> { data = buf, cap = cap, offset = 0, peak = 0, resets = 0, gen = 1, alive = true }
 };
 
 /** True when typed arena `a` is active and has not been destroyed. */

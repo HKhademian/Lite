@@ -71,7 +71,7 @@ pub TextPool := alias Pool<String>;
  * ============================================================================ */
 
 /** Creates a fixed-capacity generational `SlotPool` with O(1) acquire and release. */
-pub createSlots := fn(capacity: Int): SlotPool {
+pub SlotPool.create := fn(capacity: Int): Self {
     cap := if capacity < 0 { 0 } else { capacity };
     gens: mut List<Int> = [];
     alive: mut List<Bool> = [];
@@ -81,7 +81,7 @@ pub createSlots := fn(capacity: Int): SlotPool {
         mut alive.pushBack(false);
         mut free.pushBack(cap - 1 - i);
     }
-    SlotPool { slotGen = gens, slotAlive = alive, freeList = free, cap = cap, liveCount = 0 }
+    Self { slotGen = gens, slotAlive = alive, freeList = free, cap = cap, liveCount = 0 }
 };
 
 /** Acquires a slot in O(1), returning its generational `Handle` or `INVALID_HANDLE` if full. */
@@ -152,7 +152,7 @@ pub SlotPool.clear := fn(p: mut Self): Unit {
  * ============================================================================ */
 
 /** Creates a fixed-capacity generic `Pool<T>` storing `T` payloads per slot. */
-pub create := fn<T: Type>(capacity: Int): Pool<T> {
+pub Pool.create := fn<T: Type>(capacity: Int): Self<T> {
     cap := if capacity < 0 { 0 } else { capacity };
     vals: mut List<T> = [];
     gens: mut List<Int> = [];
@@ -165,7 +165,7 @@ pub create := fn<T: Type>(capacity: Int): Pool<T> {
         mut alive.pushBack(false);
         mut free.pushBack(cap - 1 - i);
     }
-    Pool<T> { values = vals, slotGen = gens, slotAlive = alive, freeList = free, cap = cap, liveCount = 0 }
+    Self<T> { values = vals, slotGen = gens, slotAlive = alive, freeList = free, cap = cap, liveCount = 0 }
 };
 
 /** Allocates a slot in `p` initialized with `value`, returning `Handle` or `INVALID_HANDLE` if full. */

@@ -40,17 +40,17 @@ the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
 | Module | Environment | Capabilities |
 | --- | --- | --- |
-| `ds/grid` | Browser + CLI | Generic `Grid<T>` (`GridCell<T>`, `get`, `set`, `fillRect`, `copyFrom`, `countValue`) plus `IntGrid` and `FloatGrid` aliases |
-| `ds/arena` | Browser + CLI | Nominal O(1) bump `Arena` (`allocAligned`, `mark`/`rewind`, `reset`, `ArenaStats`) and generic `TypedArena<T>` (`IntArena`, `FloatArena`) |
-| `ds/pool` | Browser + CLI | Generational `Handle`, `SlotPool`, and generic `Pool<T>` (`IntPool`, `TextPool`, `PoolItem<T>`, safe stale-handle detection) |
-| `ds/intern` | Browser + CLI | Nominal `Interner` and `SymbolId` (`intern`, `lookupId`, `resolve`, `stats`) |
-| `ds/lru` | Browser + CLI | Bounded-capacity generic O(1) `Lru<K, V>` (`LruText`, `LruInt`, `IntLru`, `LruEviction<K, V>`, `LruStats`) |
-| `ds/ring` | Browser + CLI | Generic `Ring<T>` (`RingItem<T>`, `push`, `tryPush`, `pop`, `sum`, `avg`, `minMax`) plus `IntRing` and `FloatRing` aliases |
-| `ds/deque` | Browser + CLI | Generic `Deque<T>` (`DequeItem<T>`, `pushFront`, `pushBack`, `popFront`, `popBack`) plus `IntDeque` and `TextDeque` aliases |
-| `ds/heap` | Browser + CLI | Nominal `MinHeap`, `MaxHeap`, and generic `PriorityQueue<T>` (`IntPriorityQueue`, `HeapItem<T>`, `PQItem<T>`) |
-| `ds/bitset` | Browser + CLI | Nominal compact `Bitset` packed 30 bits per word (`set`, `clear`, `toggle`, `test`, `countOnes`, `firstSet`, `orInto`/`andInto`/`xorInto`) |
-| `ds/sparse` | Browser + CLI | Nominal O(1) `SparseSet` with dense iteration (`insert`, `remove`, `has`, `denseAt`, `count`) |
-| `ds/spatial` | Browser + CLI | Uniform 2D spatial hash grid (`SpatialGrid2D`, `insertRect`, `insertPoint`, `queryRect`, `queryCircle`, `queryPoint`) |
+| `ds/grid` | Browser + CLI | Generic `Grid<T>` (`Grid.create`, `GridCell<T>`, `get`, `set`, `fillRect`, `copyFrom`, `countValue`) plus `IntGrid` and `FloatGrid` aliases |
+| `ds/arena` | Browser + CLI | Nominal O(1) bump `Arena` (`Arena.create`, `allocAligned`, `mark`/`rewind`, `reset`, `ArenaStats`) and generic `TypedArena<T>` (`TypedArena.create`, `IntArena`, `FloatArena`) |
+| `ds/pool` | Browser + CLI | Generational `Handle`, `SlotPool` (`SlotPool.create`), and generic `Pool<T>` (`Pool.create`, `IntPool`, `TextPool`, `PoolItem<T>`, safe stale-handle detection) |
+| `ds/intern` | Browser + CLI | Nominal `Interner` (`Interner.create`) and `SymbolId` (`intern`, `lookupId`, `resolve`, `stats`) |
+| `ds/lru` | Browser + CLI | Bounded-capacity generic O(1) `Lru<K, V>` (`Lru.create`, `LruText`, `LruInt`, `IntLru`, `LruEviction<K, V>`, `LruStats`) |
+| `ds/ring` | Browser + CLI | Generic `Ring<T>` (`Ring.create`, `RingItem<T>`, `push`, `tryPush`, `pop`, `sum`, `avg`, `minMax`) plus `IntRing` and `FloatRing` aliases |
+| `ds/deque` | Browser + CLI | Generic `Deque<T>` (`Deque.create`, `DequeItem<T>`, `pushFront`, `pushBack`, `popFront`, `popBack`) plus `IntDeque` and `TextDeque` aliases |
+| `ds/heap` | Browser + CLI | Nominal `MinHeap` (`MinHeap.create`), `MaxHeap` (`MaxHeap.create`), and generic `PriorityQueue<T>` (`PriorityQueue.create`, `IntPriorityQueue`, `HeapItem<T>`, `PQItem<T>`) |
+| `ds/bitset` | Browser + CLI | Nominal compact `Bitset` (`Bitset.create`) packed 30 bits per word (`set`, `clear`, `toggle`, `test`, `countOnes`, `firstSet`, `orInto`/`andInto`/`xorInto`) |
+| `ds/sparse` | Browser + CLI | Nominal O(1) `SparseSet` (`SparseSet.create`) with dense iteration (`insert`, `remove`, `has`, `denseAt`, `count`) |
+| `ds/spatial` | Browser + CLI | Uniform 2D spatial hash grid (`SpatialGrid2D`, `SpatialGrid2D.create`, `insertRect`, `insertPoint`, `queryRect`, `queryCircle`, `queryPoint`) |
 
 ## Data & Codecs (`lib/data/` — 2 modules)
 

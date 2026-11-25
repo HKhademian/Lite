@@ -23,12 +23,12 @@ cellCoord := fn(pos: Float, cellSize: Float): Int {
 };
 
 /** Creates an empty `SpatialGrid2D` with uniform cell side length `cellSize` (`1.0` when non-positive). */
-pub create := fn(cellSize: Float): SpatialGrid2D {
+pub SpatialGrid2D.create := fn(cellSize: Float): Self {
     cs := if cellSize <= 0.0 { 1.0 } else { cellSize };
     heads: mut Map<Int, Int>;
     nodeIds: List<Int> = [];
     nodeNext: List<Int> = [];
-    SpatialGrid2D { cellSize = cs, heads = heads, nodeIds = nodeIds, nodeNext = nodeNext, itemCount = 0 }
+    Self { cellSize = cs, heads = heads, nodeIds = nodeIds, nodeNext = nodeNext, itemCount = 0 }
 };
 
 /** Removes all entries from `g` while preserving `cellSize`. */

@@ -58,7 +58,7 @@ io.outputLine(pt.x(), pt.y(), xform.det());
 io := import "core/io";
 grid := import "ds/grid";
 
-mut g := grid.createGrid<Int>(6, 4, 0);
+mut g := grid.IntGrid.create(6, 4, 0);
 mut g.fillRect(1, 1, 3, 2, 1);
 io.outputLine(g.getOr(2, 2, -1), g.countValue(1));
 ```

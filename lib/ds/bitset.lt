@@ -86,14 +86,14 @@ wordsForBits := fn(numBits: Int): Int {
 };
 
 /** Creates a zero-initialized `Bitset` holding `numBits` bits. */
-pub create := fn(numBits: Int): Bitset {
+pub Bitset.create := fn(numBits: Int): Self {
     bits := if numBits < 0 { 0 } else { numBits };
     needed := wordsForBits(bits);
     ws: mut List<Int> = [];
     loop 0..needed {
         mut ws.pushBack(0);
     }
-    Bitset { words = ws, bitLen = bits }
+    Self { words = ws, bitLen = bits }
 };
 
 /** Sets bit `index` to `1`; returns `false` if out of bounds. */
