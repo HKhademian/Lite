@@ -274,19 +274,19 @@ pub fnStripLabels := fn(kind: String): String {
     if not isFnKind(kind) { return kind; }
     count := fnParamCount(kind);
     out: mut tb.TextBuilder;
-    tb.append(mut out, "fn(");
+    mut out.append("fn(");
     var idx := 0;
     loop idx < count {
-        if idx > 0 { tb.append(mut out, ","); }
+        if idx > 0 { mut out.append(","); }
         comp := fnParamComponent(kind, idx);
-        tb.append(mut out, ":");
-        tb.append(mut out, if isFnKind(comp.kind) { self(comp.kind) } else { comp.kind });
+        mut out.append(":");
+        mut out.append(if isFnKind(comp.kind) { self(comp.kind) } else { comp.kind });
         idx = idx + 1;
     }
     res := fnResultKind(kind);
-    tb.append(mut out, "):");
-    tb.append(mut out, if isFnKind(res) { self(res) } else { res });
-    tb.build(out)
+    mut out.append("):");
+    mut out.append(if isFnKind(res) { self(res) } else { res });
+    out.build()
 };
 
 /* Cached parsed component lists for tuple and nominal record kinds. */
@@ -359,13 +359,13 @@ pub convertTupleValue := fn(expectedKind: String, actualKind: String, actualCode
     loop index < count {
         expectedComp := tupleComponent(expectedKind, index);
         actualComp := tupleComponent(actualKind, index);
-        if index > 0 { tb.append(mut fieldsBuf, ", "); }
-        tb.append(mut fieldsBuf, tupleObjectKey(expectedComp.label, index));
-        tb.append(mut fieldsBuf, ": lite$t.");
-        tb.append(mut fieldsBuf, actualComp.prop);
+        if index > 0 { mut fieldsBuf.append(", "); }
+        mut fieldsBuf.append(tupleObjectKey(expectedComp.label, index));
+        mut fieldsBuf.append(": lite$t.");
+        mut fieldsBuf.append(actualComp.prop);
         index = index + 1;
     }
-    "(() => { const lite$t = " + actualCode + "; return { " + tb.build(fieldsBuf) + " }; })()"
+    "(() => { const lite$t = " + actualCode + "; return { " + fieldsBuf.build() + " }; })()"
 };
 
 /** True when `kind` is this compiler's canonical one-argument list kind, written `List<ElementKind>`. */
@@ -1293,16 +1293,16 @@ pub cFnTag := fn(kind: String): String {
     }
     pCount := fnParamCount(kind);
     sigBuf: mut tb.TextBuilder;
-    tb.append(mut sigBuf, "fn(");
+    mut sigBuf.append("fn(");
     var i := 0;
     loop i < pCount {
-        if i > 0 { tb.append(mut sigBuf, ","); }
-        tb.append(mut sigBuf, fnParamComponent(kind, i).kind);
+        if i > 0 { mut sigBuf.append(","); }
+        mut sigBuf.append(fnParamComponent(kind, i).kind);
         i = i + 1;
     }
-    tb.append(mut sigBuf, "):");
-    tb.append(mut sigBuf, fnResultKind(kind));
-    sig := tb.build(sigBuf);
+    mut sigBuf.append("):");
+    mut sigBuf.append(fnResultKind(kind));
+    sig := sigBuf.build();
     tag := "lt_fnv_" + cStructHash(sig);
     mut cFnTagCache.set(kind, tag);
     tag
@@ -1473,15 +1473,15 @@ pub encodeRecordPairs := fn(keys: List<String>, values: List<String>): String {
     loop keys { count = count + 1; }
     if count == 0 { return ""; }
     out: mut tb.TextBuilder;
-    tb.append(mut out, count.toText());
-    tb.append(mut out, ";");
+    mut out.append(count.toText());
+    mut out.append(";");
     var idx := 0;
     loop idx < count {
-        tb.append(mut out, encodeLengthPrefixedText(keys[idx]));
-        tb.append(mut out, encodeLengthPrefixedText(values[idx]));
+        mut out.append(encodeLengthPrefixedText(keys[idx]));
+        mut out.append(encodeLengthPrefixedText(values[idx]));
         idx = idx + 1;
     }
-    tb.build(out)
+    out.build()
 };
 
 /** Looks up resolved declared default code for `field` of canonical `recordKind` inside `aliases`, or `""` when absent. */
@@ -1988,11 +1988,11 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
                 loop enumCasePayloads(pattern, ci) as pk {
                     mut newPayloads.pushBack(self(genericParams, pk, bindings));
                 }
-                tb.append(mut encodedPairsBuf, encodeLengthPrefixedText(cName));
-                tb.append(mut encodedPairsBuf, encodeLengthPrefixedText(newPayloads.join(",")));
+                mut encodedPairsBuf.append(encodeLengthPrefixedText(cName));
+                mut encodedPairsBuf.append(encodeLengthPrefixedText(newPayloads.join(",")));
                 ci = ci + 1;
             }
-            return "Enum<" + encodeLengthPrefixedText(newHdr) + encodeLengthPrefixedText("$payload") + info.count.toText() + ";" + tb.build(encodedPairsBuf) + ">";
+            return "Enum<" + encodeLengthPrefixedText(newHdr) + encodeLengthPrefixedText("$payload") + info.count.toText() + ";" + encodedPairsBuf.build() + ">";
         }
         newBk := if bk.text == "" { "" } else { self(genericParams, bk.text, bindings) };
         tail := pattern.slice(bk.next, pattern.length() - 1);
@@ -2276,17 +2276,17 @@ pub tsFunctionType := fn(kind: String): String {
         loop ci < cc {
             ps := enumCasePayloads(kind, ci);
             vFieldsBuf: mut tb.TextBuilder;
-            tb.append(mut vFieldsBuf, "readonly _t: ");
-            tb.append(mut vFieldsBuf, ci.toText());
+            mut vFieldsBuf.append("readonly _t: ");
+            mut vFieldsBuf.append(ci.toText());
             var pi := 0;
             loop pi < ps.length() {
-                tb.append(mut vFieldsBuf, "; readonly _");
-                tb.append(mut vFieldsBuf, pi.toText());
-                tb.append(mut vFieldsBuf, ": ");
-                tb.append(mut vFieldsBuf, self(ps[pi]));
+                mut vFieldsBuf.append("; readonly _");
+                mut vFieldsBuf.append(pi.toText());
+                mut vFieldsBuf.append(": ");
+                mut vFieldsBuf.append(self(ps[pi]));
                 pi = pi + 1;
             }
-            mut variants.pushBack("{ " + tb.build(vFieldsBuf) + " }");
+            mut variants.pushBack("{ " + vFieldsBuf.build() + " }");
             ci = ci + 1;
         }
         out = "(" + variants.join(" | ") + ")";
@@ -2297,18 +2297,18 @@ pub tsFunctionType := fn(kind: String): String {
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         resultBuf: mut tb.TextBuilder;
-        tb.append(mut resultBuf, "{ ");
+        mut resultBuf.append("{ ");
         var index := 0;
         loop index < count {
             comp := tupleComponent(kind, index);
-            if index > 0 { tb.append(mut resultBuf, "; "); }
-            tb.append(mut resultBuf, tupleObjectKey(comp.label, index));
-            tb.append(mut resultBuf, ": ");
-            tb.append(mut resultBuf, self(comp.kind));
+            if index > 0 { mut resultBuf.append("; "); }
+            mut resultBuf.append(tupleObjectKey(comp.label, index));
+            mut resultBuf.append(": ");
+            mut resultBuf.append(self(comp.kind));
             index = index + 1;
         }
-        tb.append(mut resultBuf, " }");
-        out = tb.build(resultBuf);
+        mut resultBuf.append(" }");
+        out = resultBuf.build();
     }
     else if isRecordKind(kind) {
         count := recordComponentCount(kind);
@@ -2316,18 +2316,18 @@ pub tsFunctionType := fn(kind: String): String {
             out = "{}";
         } else {
             resultBuf: mut tb.TextBuilder;
-            tb.append(mut resultBuf, "{ ");
+            mut resultBuf.append("{ ");
             var index := 0;
             loop index < count {
                 comp := recordComponent(kind, index);
-                if index > 0 { tb.append(mut resultBuf, "; "); }
-                tb.append(mut resultBuf, tupleObjectKey(comp.label, index));
-                tb.append(mut resultBuf, ": ");
-                tb.append(mut resultBuf, self(comp.kind));
+                if index > 0 { mut resultBuf.append("; "); }
+                mut resultBuf.append(tupleObjectKey(comp.label, index));
+                mut resultBuf.append(": ");
+                mut resultBuf.append(self(comp.kind));
                 index = index + 1;
             }
-            tb.append(mut resultBuf, " }");
-            out = tb.build(resultBuf);
+            mut resultBuf.append(" }");
+            out = resultBuf.build();
         }
     } else if isFnKind(kind) {
         count := fnParamCount(kind);
@@ -2335,14 +2335,14 @@ pub tsFunctionType := fn(kind: String): String {
         var index := 0;
         loop index < count {
             comp := fnParamComponent(kind, index);
-            if index > 0 { tb.append(mut paramsBuf, ", "); }
+            if index > 0 { mut paramsBuf.append(", "); }
             paramLabel := if comp.label =!= "" { "lite_" + comp.label } else { "lite_arg" + index.toText() };
-            tb.append(mut paramsBuf, paramLabel);
-            tb.append(mut paramsBuf, ": ");
-            tb.append(mut paramsBuf, self(comp.kind));
+            mut paramsBuf.append(paramLabel);
+            mut paramsBuf.append(": ");
+            mut paramsBuf.append(self(comp.kind));
             index = index + 1;
         }
-        out = "((" + tb.build(paramsBuf) + ") => " + self(fnResultKind(kind)) + ")";
+        out = "((" + paramsBuf.build() + ") => " + self(fnResultKind(kind)) + ")";
     } else {
         out = tsLiteral.tsScalarType(kind);
     }
@@ -2385,31 +2385,31 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
             cName := enumCaseAt(kind, idx).name;
             ps := enumCasePayloads(kind, idx);
             if ps.length() == 0 {
-                tb.append(mut casesBuf, "case ");
-                tb.append(mut casesBuf, idx.toText());
-                tb.append(mut casesBuf, ": return ");
-                tb.append(mut casesBuf, tsLiteral.textLiteralCode(enumName + "." + cName));
-                tb.append(mut casesBuf, "; ");
+                mut casesBuf.append("case ");
+                mut casesBuf.append(idx.toText());
+                mut casesBuf.append(": return ");
+                mut casesBuf.append(tsLiteral.textLiteralCode(enumName + "." + cName));
+                mut casesBuf.append("; ");
             } else {
                 dispExprBuf: mut tb.TextBuilder;
-                tb.append(mut dispExprBuf, tsLiteral.textLiteralCode(enumName + "." + cName + "("));
+                mut dispExprBuf.append(tsLiteral.textLiteralCode(enumName + "." + cName + "("));
                 var pi := 0;
                 loop pi < ps.length() {
-                    if pi > 0 { tb.append(mut dispExprBuf, " + \", \""); }
-                    tb.append(mut dispExprBuf, " + ");
-                    tb.append(mut dispExprBuf, self(ps[pi], "value._" + pi.toText()));
+                    if pi > 0 { mut dispExprBuf.append(" + \", \""); }
+                    mut dispExprBuf.append(" + ");
+                    mut dispExprBuf.append(self(ps[pi], "value._" + pi.toText()));
                     pi = pi + 1;
                 }
-                tb.append(mut dispExprBuf, " + \")\"");
-                tb.append(mut casesBuf, "case ");
-                tb.append(mut casesBuf, idx.toText());
-                tb.append(mut casesBuf, ": return ");
-                tb.append(mut casesBuf, tb.build(dispExprBuf));
-                tb.append(mut casesBuf, "; ");
+                mut dispExprBuf.append(" + \")\"");
+                mut casesBuf.append("case ");
+                mut casesBuf.append(idx.toText());
+                mut casesBuf.append(": return ");
+                mut casesBuf.append(dispExprBuf.build());
+                mut casesBuf.append("; ");
             }
             idx = idx + 1;
         }
-        return "((value: " + tsFunctionType(kind) + "): string => { switch (value._t) { " + tb.build(casesBuf) + "default: return \"\"; } })(" + code + ")";
+        return "((value: " + tsFunctionType(kind) + "): string => { switch (value._t) { " + casesBuf.build() + "default: return \"\"; } })(" + code + ")";
     }
     if isEnumKind(kind) {
         enumName := enumDisplayName(kind);
@@ -2430,36 +2430,36 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
             return "((value: {}): string => { void value; return " + tsLiteral.textLiteralCode(recName + " {}") + "; })(" + code + ")";
         }
         resultBuf: mut tb.TextBuilder;
-        tb.append(mut resultBuf, tsLiteral.textLiteralCode(recName + " { "));
+        mut resultBuf.append(tsLiteral.textLiteralCode(recName + " { "));
         var index := 0;
         loop index < count {
             comp := recordComponent(kind, index);
             separator := if index == 0 { "" } else { ", " };
-            tb.append(mut resultBuf, " + ");
-            tb.append(mut resultBuf, tsLiteral.textLiteralCode(separator + comp.label + " = "));
-            tb.append(mut resultBuf, " + ");
-            tb.append(mut resultBuf, self(comp.kind, "value." + comp.prop));
+            mut resultBuf.append(" + ");
+            mut resultBuf.append(tsLiteral.textLiteralCode(separator + comp.label + " = "));
+            mut resultBuf.append(" + ");
+            mut resultBuf.append(self(comp.kind, "value." + comp.prop));
             index = index + 1;
         }
-        return "((value: " + tsFunctionType(kind) + "): string => " + tb.build(resultBuf) + " + " + tsLiteral.textLiteralCode(" }") + ")(" + code + ")";
+        return "((value: " + tsFunctionType(kind) + "): string => " + resultBuf.build() + " + " + tsLiteral.textLiteralCode(" }") + ")(" + code + ")";
     }
     if isTupleKind(kind) {
         resultBuf: mut tb.TextBuilder;
-        tb.append(mut resultBuf, tsLiteral.textLiteralCode("("));
+        mut resultBuf.append(tsLiteral.textLiteralCode("("));
         count := tupleComponentCount(kind);
         var index := 0;
         loop index < count {
             comp := tupleComponent(kind, index);
             separator := if index == 0 { "" } else { ", " };
             prefixText := if comp.label == "" { separator } else { separator + comp.label + "=" };
-            tb.append(mut resultBuf, " + ");
-            tb.append(mut resultBuf, tsLiteral.textLiteralCode(prefixText));
-            tb.append(mut resultBuf, " + ");
-            tb.append(mut resultBuf, self(comp.kind, "value." + comp.prop));
+            mut resultBuf.append(" + ");
+            mut resultBuf.append(tsLiteral.textLiteralCode(prefixText));
+            mut resultBuf.append(" + ");
+            mut resultBuf.append(self(comp.kind, "value." + comp.prop));
             index = index + 1;
         }
         ending := if count == 1 { ",)" } else { ")" };
-        return "((value: " + tsFunctionType(kind) + "): string => " + tb.build(resultBuf) + " + " + tsLiteral.textLiteralCode(ending) + ")(" + code + ")";
+        return "((value: " + tsFunctionType(kind) + "): string => " + resultBuf.build() + " + " + tsLiteral.textLiteralCode(ending) + ")(" + code + ")";
     }
     code
 };
@@ -2514,41 +2514,41 @@ pub displayKind := fn(kind: String): String {
     if isFnKind(kind) {
         count := fnParamCount(kind);
         resultBuf: mut tb.TextBuilder;
-        tb.append(mut resultBuf, "fn(");
+        mut resultBuf.append("fn(");
         var index := 0;
         loop index < count {
             comp := fnParamComponent(kind, index);
-            if index > 0 { tb.append(mut resultBuf, ", "); }
+            if index > 0 { mut resultBuf.append(", "); }
             if comp.label == "" {
-                tb.append(mut resultBuf, self(comp.kind));
+                mut resultBuf.append(self(comp.kind));
             } else {
-                tb.append(mut resultBuf, comp.label);
-                tb.append(mut resultBuf, ": ");
-                tb.append(mut resultBuf, self(comp.kind));
+                mut resultBuf.append(comp.label);
+                mut resultBuf.append(": ");
+                mut resultBuf.append(self(comp.kind));
             }
             index = index + 1;
         }
-        return tb.build(resultBuf) + "): " + self(fnResultKind(kind));
+        return resultBuf.build() + "): " + self(fnResultKind(kind));
     }
     if not isTupleKind(kind) { return kind; }
     count := tupleComponentCount(kind);
     resultBuf: mut tb.TextBuilder;
-    tb.append(mut resultBuf, "(");
+    mut resultBuf.append("(");
     var index := 0;
     loop index < count {
         comp := tupleComponent(kind, index);
-        if index > 0 { tb.append(mut resultBuf, ", "); }
+        if index > 0 { mut resultBuf.append(", "); }
         if comp.label == "" {
-            tb.append(mut resultBuf, self(comp.kind));
+            mut resultBuf.append(self(comp.kind));
         } else {
-            tb.append(mut resultBuf, comp.label);
-            tb.append(mut resultBuf, ": ");
-            tb.append(mut resultBuf, self(comp.kind));
+            mut resultBuf.append(comp.label);
+            mut resultBuf.append(": ");
+            mut resultBuf.append(self(comp.kind));
         }
         index = index + 1;
     }
-    if count == 1 and tupleComponent(kind, 0).label == "" { tb.append(mut resultBuf, ","); }
-    tb.build(resultBuf) + ")"
+    if count == 1 and tupleComponent(kind, 0).label == "" { mut resultBuf.append(","); }
+    resultBuf.build() + ")"
 };
 
 /** True when `kind` is an admissible scalar enum backing type. */
@@ -2692,11 +2692,11 @@ buildCanonicalEnumKind := fn(hdrText: String, explicitBacking: String, rawSource
         } else {
             return (ok = false, kind = "", next = casesStart, error = "enum case " + cName + " requires an explicit " + displayKind(backingKind) + " backing value");
         }
-        tb.append(mut encodedPairsBuf, encodeLengthPrefixedText(cName));
-        tb.append(mut encodedPairsBuf, encodeLengthPrefixedText(valCode));
+        mut encodedPairsBuf.append(encodeLengthPrefixedText(cName));
+        mut encodedPairsBuf.append(encodeLengthPrefixedText(valCode));
         cIdx = cIdx + 1;
     }
-    canonical := "Enum<" + encodeLengthPrefixedText(hdrText) + encodeLengthPrefixedText(backingKind) + caseCount.toText() + ";" + tb.build(encodedPairsBuf) + ">";
+    canonical := "Enum<" + encodeLengthPrefixedText(hdrText) + encodeLengthPrefixedText(backingKind) + caseCount.toText() + ";" + encodedPairsBuf.build() + ">";
     (ok = true, kind = canonical, next = cur, error = "")
 };
 
@@ -3058,11 +3058,11 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                     }
                     payCsv = pKinds.join(",");
                 }
-                tb.append(mut encodedPairsBuf, encodeLengthPrefixedText(nDec.text));
-                tb.append(mut encodedPairsBuf, encodeLengthPrefixedText(payCsv));
+                mut encodedPairsBuf.append(encodeLengthPrefixedText(nDec.text));
+                mut encodedPairsBuf.append(encodeLengthPrefixedText(payCsv));
                 ci = ci + 1;
             }
-            return (kind = "Enum<" + encodeLengthPrefixedText(effHdr) + encodeLengthPrefixedText("$payload") + caseCount.toText() + ";" + tb.build(encodedPairsBuf) + ">", next = pCur);
+            return (kind = "Enum<" + encodeLengthPrefixedText(effHdr) + encodeLengthPrefixedText("$payload") + caseCount.toText() + ";" + encodedPairsBuf.build() + ">", next = pCur);
         }
         built := buildCanonicalEnumKind(effHdr, resolvedBacking, source, cur, caseCount, prefix);
         if not built.ok {
@@ -3136,7 +3136,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         var cursor := syntax.skipTrivia(source, start + 1, prefix);
         labels: mut List<String> = [];
         kindTextBuf: mut tb.TextBuilder;
-        tb.append(mut kindTextBuf, "(");
+        mut kindTextBuf.append("(");
         var count := 0;
         var hadComma := false;
         var singleLabel := "";
@@ -3205,10 +3205,10 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             if componentKind == ir.VALUE_KIND_UNIT {
                 syntax.failAt(errSource, diagPos, prefix, "unsupported tuple component type Unit");
             }
-            if count > 0 { tb.append(mut kindTextBuf, ","); }
-            tb.append(mut kindTextBuf, label);
-            tb.append(mut kindTextBuf, ":");
-            tb.append(mut kindTextBuf, componentKind);
+            if count > 0 { mut kindTextBuf.append(","); }
+            mut kindTextBuf.append(label);
+            mut kindTextBuf.append(":");
+            mut kindTextBuf.append(componentKind);
             if count == 0 { singleLabel = label; singleKind = componentKind; }
             count = count + 1;
             cursor = syntax.skipTrivia(source, cursor, prefix);
@@ -3226,8 +3226,8 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             }
             return (kind = singleKind, next = cursor);
         }
-        tb.append(mut kindTextBuf, ")");
-        return (kind = tb.build(kindTextBuf), next = cursor);
+        mut kindTextBuf.append(")");
+        return (kind = kindTextBuf.build(), next = cursor);
     }
     if start < size and source.at(start) == "[" {
         elemStart := syntax.skipTrivia(source, start + 1, prefix);
@@ -3249,7 +3249,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             var cursor := syntax.skipTrivia(source, afterFn + 1, prefix);
             paramLabels: mut List<String> = [];
             encodedBuf: mut tb.TextBuilder;
-            tb.append(mut encodedBuf, "fn(");
+            mut encodedBuf.append("fn(");
             var count := 0;
             loop true {
                 if cursor >= size {
@@ -3278,10 +3278,10 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                     }
                 }
                 paramType := self(errSource, errPos, useLocalErr, source, paramStart, prefix, aliases, "function", genericType, seen);
-                if count > 0 { tb.append(mut encodedBuf, ","); }
-                tb.append(mut encodedBuf, label);
-                tb.append(mut encodedBuf, ":");
-                tb.append(mut encodedBuf, paramType.kind);
+                if count > 0 { mut encodedBuf.append(","); }
+                mut encodedBuf.append(label);
+                mut encodedBuf.append(":");
+                mut encodedBuf.append(paramType.kind);
                 count = count + 1;
                 cursor = syntax.skipTrivia(source, paramType.next, prefix);
                 if cursor < size and source.at(cursor) == "," {
@@ -3298,7 +3298,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 syntax.failAt(errSource, if useLocalErr { afterClose } else { errPos }, prefix, "expected : after function parameter types");
             }
             retType := self(errSource, errPos, useLocalErr, source, afterClose + 1, prefix, aliases, "function", genericType, seen);
-            return (kind = tb.build(encodedBuf) + "):" + retType.kind, next = retType.next);
+            return (kind = encodedBuf.build() + "):" + retType.kind, next = retType.next);
         }
     }
     nameStart := if useLocalErr { start } else { errPos };
@@ -3836,11 +3836,11 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
                 syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
             }
             cursor = syntax.skipTrivia(source, typed.next, prefix);
-            if count > 0 { tb.append(mut encodedBuf, "|"); }
-            tb.append(mut encodedBuf, parameterName);
-            tb.append(mut encodedBuf, "=");
-            tb.append(mut encodedBuf, access);
-            tb.append(mut encodedBuf, typed.kind);
+            if count > 0 { mut encodedBuf.append("|"); }
+            mut encodedBuf.append(parameterName);
+            mut encodedBuf.append("=");
+            mut encodedBuf.append(access);
+            mut encodedBuf.append(typed.kind);
             count = count + 1;
             if cursor < size and source.at(cursor) == "," {
                 cursor = syntax.skipTrivia(source, cursor + 1, prefix);
@@ -3848,7 +3848,7 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
                 break;
             }
         }
-        encoded = tb.build(encodedBuf);
+        encoded = encodedBuf.build();
     }
     cursor = syntax.expectSymbol(source, cursor, ")", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
@@ -3939,11 +3939,11 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
                 syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
             }
             cursor = syntax.skipTrivia(source, typed.next, prefix);
-            if count > 0 { tb.append(mut encodedBuf, "|"); }
-            tb.append(mut encodedBuf, parameterName);
-            tb.append(mut encodedBuf, "=");
-            tb.append(mut encodedBuf, access);
-            tb.append(mut encodedBuf, typed.kind);
+            if count > 0 { mut encodedBuf.append("|"); }
+            mut encodedBuf.append(parameterName);
+            mut encodedBuf.append("=");
+            mut encodedBuf.append(access);
+            mut encodedBuf.append(typed.kind);
             count = count + 1;
             if cursor < size and source.at(cursor) == "," {
                 cursor = syntax.skipTrivia(source, cursor + 1, prefix);
@@ -3953,7 +3953,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
             }
         }
     }
-    encoded := tb.build(encodedBuf);
+    encoded := encodedBuf.build();
     cursor = syntax.expectSymbol(source, cursor, ")", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
     cursor = syntax.expectSymbol(source, cursor, ":", prefix);
@@ -4011,19 +4011,19 @@ pub paramKindOf := fn(entry: String): String {
 /** Builds a canonical `fn(label:Kind,...):ResultKind` string from encoded parameter entries and a return kind. */
 pub fnCanonicalKind := fn(params: List<String>, first: Int, count: Int, resultKind: String): String {
     out: mut tb.TextBuilder;
-    tb.append(mut out, "fn(");
+    mut out.append("fn(");
     var idx := 0;
     loop idx < count {
-        if idx > 0 { tb.append(mut out, ","); }
+        if idx > 0 { mut out.append(","); }
         entry := params[first + idx];
-        tb.append(mut out, paramNameOf(entry));
-        tb.append(mut out, ":");
-        tb.append(mut out, paramKindOf(entry));
+        mut out.append(paramNameOf(entry));
+        mut out.append(":");
+        mut out.append(paramKindOf(entry));
         idx = idx + 1;
     }
-    tb.append(mut out, "):");
-    tb.append(mut out, resultKind);
-    tb.build(out)
+    mut out.append("):");
+    mut out.append(resultKind);
+    out.build()
 };
 
 /** Reads one single raw alias target atom from `position`, capturing tuples, arrays, fns, or `Name<...>`. */
@@ -4323,12 +4323,12 @@ pub collectEnumTarget := fn(source: String, afterEnumKw: Int, prefix: String, mo
     pairsBuf: mut tb.TextBuilder;
     var idx := 0;
     loop idx < count {
-        tb.append(mut pairsBuf, encodeLengthPrefixedText(names[idx]));
-        tb.append(mut pairsBuf, encodeLengthPrefixedText(vals[idx]));
+        mut pairsBuf.append(encodeLengthPrefixedText(names[idx]));
+        mut pairsBuf.append(encodeLengthPrefixedText(vals[idx]));
         idx = idx + 1;
     }
     enumHeader := moduleIdentity + "#" + declAt.toText() + "#" + enumName;
-    (text = "@enumraw:" + encodeLengthPrefixedText(enumHeader) + encodeLengthPrefixedText(rawBacking) + count.toText() + ";" + tb.build(pairsBuf), next = closeEnd)
+    (text = "@enumraw:" + encodeLengthPrefixedText(enumHeader) + encodeLengthPrefixedText(rawBacking) + count.toText() + ";" + pairsBuf.build(), next = closeEnd)
 };
 
 /** Pre-scans `Name := record { field: Type [= default]; ... }` into an encoded `@recraw:` target and end offset. */
@@ -4387,12 +4387,12 @@ pub collectRecordTarget := fn(source: String, bracePos: Int, prefix: String, mod
     pairsBuf: mut tb.TextBuilder;
     var idx := 0;
     loop idx < count {
-        tb.append(mut pairsBuf, encodeLengthPrefixedText(names[idx]));
-        tb.append(mut pairsBuf, encodeLengthPrefixedText(typesList[idx]));
+        mut pairsBuf.append(encodeLengthPrefixedText(names[idx]));
+        mut pairsBuf.append(encodeLengthPrefixedText(typesList[idx]));
         idx = idx + 1;
     }
     recHeader := moduleIdentity + "#" + declAt.toText() + "#" + recName;
-    (text = "@recraw:" + encodeLengthPrefixedText(recHeader) + count.toText() + ";" + tb.build(pairsBuf), next = closeEnd)
+    (text = "@recraw:" + encodeLengthPrefixedText(recHeader) + count.toText() + ";" + pairsBuf.build(), next = closeEnd)
 };
 
 /** Pre-scans `Name := distinct TargetType` into an encoded `@distraw:` target and end offset. */
@@ -4598,11 +4598,11 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
                     }
                     payCsv = pKinds.join(",");
                 }
-                tb.append(mut encodedPairsBuf, encodeLengthPrefixedText(nDec.text));
-                tb.append(mut encodedPairsBuf, encodeLengthPrefixedText(payCsv));
+                mut encodedPairsBuf.append(encodeLengthPrefixedText(nDec.text));
+                mut encodedPairsBuf.append(encodeLengthPrefixedText(payCsv));
                 ci = ci + 1;
             }
-            return (ok = true, kind = "Enum<" + encodeLengthPrefixedText(effHdr) + encodeLengthPrefixedText("$payload") + caseCount.toText() + ";" + tb.build(encodedPairsBuf) + ">", next = pCur);
+            return (ok = true, kind = "Enum<" + encodeLengthPrefixedText(effHdr) + encodeLengthPrefixedText("$payload") + caseCount.toText() + ";" + encodedPairsBuf.build() + ">", next = pCur);
         }
         built := buildCanonicalEnumKind(effHdr, resolvedBacking, source, cur, caseCount, prefix);
         if not built.ok { return (ok = false, kind = "", next = start); }

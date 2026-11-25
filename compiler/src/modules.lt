@@ -70,10 +70,10 @@ normalizeSlashes := fn(path: String): String {
     size := path.length();
     loop index < size {
         ch := path.at(index);
-        tb.append(mut result, if ch == "\\" { "/" } else { ch });
+        mut result.append(if ch == "\\" { "/" } else { ch });
         index = index + 1;
     }
-    tb.build(result)
+    result.build()
 }
 
 /** Drops one trailing `.lt` or `.lts` suffix when a non-empty stem precedes it. */
@@ -179,22 +179,22 @@ encodeModuleSlug := fn(target: String, logical: String): String {
     loop index < size {
         ch := logical.at(index);
         if ch.isAsciiLetter() or ch.isDigit() {
-            tb.append(mut result, ch);
+            mut result.append(ch);
         } else if ch == "/" {
-            tb.append(mut result, if target == frontend.TARGET_TS { "$" } else { "_s_" });
+            mut result.append(if target == frontend.TARGET_TS { "$" } else { "_s_" });
         } else if ch == "-" {
-            tb.append(mut result, if target == frontend.TARGET_TS { "__" } else { "_d_" });
+            mut result.append(if target == frontend.TARGET_TS { "__" } else { "_d_" });
         } else if ch == "_" {
-            tb.append(mut result, "_u_");
+            mut result.append("_u_");
         } else if ch == "." {
-            tb.append(mut result, "_p_");
+            mut result.append("_p_");
         } else {
             code := asciiCode(ch);
-            tb.append(mut result, if code >= 0 { "_a" + code.toText() + "_" } else { "_z_" });
+            mut result.append(if code >= 0 { "_a" + code.toText() + "_" } else { "_z_" });
         }
         index = index + 1;
     }
-    built := tb.build(result);
+    built := result.build();
     if built == "" { return "module"; }
     built
 }

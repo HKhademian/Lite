@@ -590,7 +590,7 @@ parseFunctionSymbol := fn(tokens: lexer.Tokens, index: Int, prefix: String): (ne
     }
     var cursor := parser.expectSymbol(tokens, afterName + 1, "(", prefix);
     detailBuf: mut tb.TextBuilder;
-    tb.append(mut detailBuf, "(");
+    mut detailBuf.append("(");
     var parameterCount := 0;
     parameterNames: mut List<String> = [];
     loop true {
@@ -605,10 +605,10 @@ parseFunctionSymbol := fn(tokens: lexer.Tokens, index: Int, prefix: String): (ne
         (mut parameterNames).pushBack(parameter.text);
         colon := parser.expectSymbol(tokens, cursor + 1, ":", prefix);
         parameterType := parser.parseType(tokens, colon, prefix);
-        if parameterCount > 0 { tb.append(mut detailBuf, ", "); }
-        tb.append(mut detailBuf, parameter.text);
-        tb.append(mut detailBuf, ": ");
-        tb.append(mut detailBuf, parameterType.text);
+        if parameterCount > 0 { mut detailBuf.append(", "); }
+        mut detailBuf.append(parameter.text);
+        mut detailBuf.append(": ");
+        mut detailBuf.append(parameterType.text);
         parameterCount = parameterCount + 1;
         cursor = parameterType.next;
         if parser.isSymbol(parser.tokenAt(tokens, cursor), ",") {
@@ -620,9 +620,9 @@ parseFunctionSymbol := fn(tokens: lexer.Tokens, index: Int, prefix: String): (ne
     cursor = parser.expectSymbol(tokens, cursor, ")", prefix);
     resultColon := parser.expectSymbol(tokens, cursor, ":", prefix);
     resultType := parser.parseType(tokens, resultColon, prefix);
-    tb.append(mut detailBuf, "): ");
-    tb.append(mut detailBuf, resultType.text);
-    detail := tb.build(detailBuf);
+    mut detailBuf.append("): ");
+    mut detailBuf.append(resultType.text);
+    detail := detailBuf.build();
     var afterBody := skipBraces(tokens, resultType.next, prefix);
     if parser.isSymbol(parser.tokenAt(tokens, afterBody), ";") { afterBody = afterBody + 1; }
     (next = afterBody, name = nameToken.text, detail = detail,

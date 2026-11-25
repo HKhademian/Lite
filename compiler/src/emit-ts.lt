@@ -62,21 +62,21 @@ tsParameterList := fn(encoded: String): String {
         parameterKind := if isMutParam {
             rawParameterKind.slice(4, rawParameterKind.length())
         } else { rawParameterKind };
-        if tb.count(result) > 0 { tb.append(mut result, ", "); }
-        tb.append(mut result, "lite_");
-        tb.append(mut result, parameterName);
+        if result.count() > 0 { mut result.append(", "); }
+        mut result.append("lite_");
+        mut result.append(parameterName);
         if isMutParam and frontend.isRecordOrDistinctRecord(parameterKind) {
-            tb.append(mut result, ": { v: ");
-            tb.append(mut result, tsFunctionType(parameterKind));
-            tb.append(mut result, " }");
+            mut result.append(": { v: ");
+            mut result.append(tsFunctionType(parameterKind));
+            mut result.append(" }");
         } else {
-            tb.append(mut result, ": ");
-            tb.append(mut result, tsFunctionType(parameterKind));
+            mut result.append(": ");
+            mut result.append(tsFunctionType(parameterKind));
         }
         if separator < 0 { break; }
         start = separator + 1;
     }
-    tb.build(result)
+    result.build()
 }
 
 /** Emits `void` reads for parameters so strict unused-parameter checking accepts bodies that ignore inputs. */
@@ -2988,14 +2988,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     var count := 0;
     var mainStopped := false;
     activeTriesBuf: mut tb.TextBuilder;
-    tb.append(mut activeTriesBuf, "|");
+    mut activeTriesBuf.append("|");
     loop effectiveItems as tryItem {
         if (tryItem.kind == frontend.ITEM_KIND_TRANSFER_CATCH or tryItem.kind == frontend.ITEM_KIND_LOOP_TRANSFER_CATCH) and tryItem.runtime =!= "" {
-            tb.append(mut activeTriesBuf, tryItem.runtime);
-            tb.append(mut activeTriesBuf, "|");
+            mut activeTriesBuf.append(tryItem.runtime);
+            mut activeTriesBuf.append("|");
         }
     }
-    activeTries := tb.build(activeTriesBuf);
+    activeTries := activeTriesBuf.build();
     var pendingLocFile := "";
     var pendingLocLine := 0;
     var pendingLocCol := "";
@@ -3204,7 +3204,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             if count == 0 {
                 outLine(indent + "lite$emit(" + tsLiteral.textLiteralCode(if item.kind == frontend.ITEM_KIND_END { "\n" } else { "" }) + ");");
             } else {
-                line := tb.build(lineBuf);
+                line := lineBuf.build();
                 ending := if item.kind == frontend.ITEM_KIND_END { " + \"\\n\"" } else { "" };
                 emitted := if count == 1 and item.kind == frontend.ITEM_KIND_END and not line.startsWithAt(0, "(") and line.indexOf("?", 0) >= 0 {
                     "(" + line + ")"
@@ -3213,14 +3213,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 };
                 outLine(indent + "lite$emit(" + emitted + ending + ");");
             }
-            tb.clear(mut lineBuf);
+            mut lineBuf.clear();
             count = 0;
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP {
             mainStopped = true;
         } else if item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_NOOP {
         } else {
-            if count > 0 { tb.append(mut lineBuf, " + \" \" + "); }
-            tb.append(mut lineBuf, reportArgumentCode(item));
+            if count > 0 { mut lineBuf.append(" + \" \" + "); }
+            mut lineBuf.append(reportArgumentCode(item));
             count = count + 1;
         }
     }

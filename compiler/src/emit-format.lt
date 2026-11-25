@@ -30,10 +30,10 @@ indentSpaces := fn(level: Int): String {
     out: mut tb.TextBuilder;
     var i := 0;
     loop i < level {
-        tb.append(mut out, "    ");
+        mut out.append("    ");
         i = i + 1;
     }
-    tb.build(out)
+    out.build()
 };
 
 /** Skips a quoted string or char literal starting at `start`, returning index after closing quote. */
@@ -120,8 +120,8 @@ pub replaceIdentToken := fn(code: String, ident: String, replacement: String): S
             code.at(afterPos) =!= "$"
             );
             if beforeOk and afterOk {
-                if i > flushed { tb.append(mut out, code.slice(flushed, i)); }
-                tb.append(mut out, replacement);
+                if i > flushed { mut out.append(code.slice(flushed, i)); }
+                mut out.append(replacement);
                 i = afterPos;
                 flushed = i;
                 continue;
@@ -130,8 +130,8 @@ pub replaceIdentToken := fn(code: String, ident: String, replacement: String): S
         i = i + 1;
     }
     if flushed == 0 { return code; }
-    if flushed < n { tb.append(mut out, code.slice(flushed, n)); }
-    tb.build(out)
+    if flushed < n { mut out.append(code.slice(flushed, n)); }
+    out.build()
 };
 
 /** Finds the first `;` at or after `start` outside quotes, comments, and balanced `()`/`[]`/`{}`, or -1 when absent. */
@@ -369,42 +369,42 @@ pub formatEmittedLine := fn(rawLine: String): String {
                 _pop := mut braceStack.popBack();
                 _popP := mut braceParenStack.popBack();
                 if blockDepth > 0 { blockDepth = blockDepth - 1; }
-                tb.append(mut out, baseIndent + indentSpaces(blockDepth) + "}");
+                mut out.append(baseIndent + indentSpaces(blockDepth) + "}");
                 i = i + 1;
                 atLineStart = false;
                 /* Check if `else` or `catch` or `finally` or `;` follows on same line. */
                 var peek := i;
                 loop peek < n and trimmed.at(peek) == " " { peek = peek + 1; }
                 if peek < n and (trimmed.wordAt(peek, "else") or trimmed.wordAt(peek, "catch") or trimmed.wordAt(peek, "finally")) {
-                    tb.append(mut out, " ");
+                    mut out.append(" ");
                     i = peek;
                 } else if peek < n and (trimmed.at(peek) == ";" or trimmed.at(peek) == ")" or trimmed.at(peek) == ",") {
                     i = peek;
                 } else if peek < n {
-                    tb.append(mut out, "\n");
+                    mut out.append("\n");
                     atLineStart = true;
                     i = peek;
                 }
                 continue;
             }
-            tb.append(mut out, baseIndent + indentSpaces(blockDepth));
+            mut out.append(baseIndent + indentSpaces(blockDepth));
             atLineStart = false;
         }
         if ch == "\"" or ch == "'" or ch == "`" {
             endQ := skipQuoted(trimmed, i);
-            tb.append(mut out, trimmed.slice(i, endQ));
+            mut out.append(trimmed.slice(i, endQ));
             i = endQ;
         } else if ch == "/" and i + 1 < n and trimmed.at(i + 1) == "*" {
             endC := skipBlockComment(trimmed, i);
-            tb.append(mut out, trimmed.slice(i, endC));
+            mut out.append(trimmed.slice(i, endC));
             i = endC;
         } else if ch == "(" {
             parenDepth = parenDepth + 1;
-            tb.append(mut out, "(");
+            mut out.append("(");
             i = i + 1;
         } else if ch == ")" {
             if parenDepth > 0 { parenDepth = parenDepth - 1; }
-            tb.append(mut out, ")");
+            mut out.append(")");
             i = i + 1;
         } else if ch == "{" {
             topIdx := braceStack.length() - 1;
@@ -419,17 +419,17 @@ pub formatEmittedLine := fn(rawLine: String): String {
                 }
                 if nextNonWs < n and trimmed.at(nextNonWs) == "}" {
                     changed = true;
-                    tb.append(mut out, "{\n" + baseIndent + indentSpaces(blockDepth) + "}");
+                    mut out.append("{\n" + baseIndent + indentSpaces(blockDepth) + "}");
                     i = nextNonWs + 1;
                     var afterEmpty := i;
                     loop afterEmpty < n and trimmed.at(afterEmpty) == " " { afterEmpty = afterEmpty + 1; }
                     if afterEmpty < n and (trimmed.wordAt(afterEmpty, "else") or trimmed.wordAt(afterEmpty, "catch") or trimmed.wordAt(afterEmpty, "finally")) {
-                        tb.append(mut out, " ");
+                        mut out.append(" ");
                         i = afterEmpty;
                     } else if afterEmpty < n and (trimmed.at(afterEmpty) == ";" or trimmed.at(afterEmpty) == ")" or trimmed.at(afterEmpty) == ",") {
                         i = afterEmpty;
                     } else if afterEmpty < n {
-                        tb.append(mut out, "\n");
+                        mut out.append("\n");
                         atLineStart = true;
                         i = afterEmpty;
                     }
@@ -438,14 +438,14 @@ pub formatEmittedLine := fn(rawLine: String): String {
                     mut braceStack.pushBack(1);
                     mut braceParenStack.pushBack(parenDepth);
                     blockDepth = blockDepth + 1;
-                    tb.append(mut out, "{\n");
+                    mut out.append("{\n");
                     atLineStart = true;
                     i = nextNonWs;
                 }
             } else {
                 mut braceStack.pushBack(0);
                 mut braceParenStack.pushBack(parenDepth);
-                tb.append(mut out, "{");
+                mut out.append("{");
                 i = i + 1;
             }
         } else if ch == "}" {
@@ -457,39 +457,39 @@ pub formatEmittedLine := fn(rawLine: String): String {
             if isExpanded {
                 changed = true;
                 if blockDepth > 0 { blockDepth = blockDepth - 1; }
-                tb.append(mut out, "\n" + baseIndent + indentSpaces(blockDepth) + "}");
+                mut out.append("\n" + baseIndent + indentSpaces(blockDepth) + "}");
                 i = i + 1;
                 var peek := i;
                 loop peek < n and trimmed.at(peek) == " " { peek = peek + 1; }
                 if peek < n and (trimmed.wordAt(peek, "else") or trimmed.wordAt(peek, "catch") or trimmed.wordAt(peek, "finally")) {
-                    tb.append(mut out, " ");
+                    mut out.append(" ");
                     i = peek;
                 } else if peek < n and (trimmed.at(peek) == ";" or trimmed.at(peek) == ")" or trimmed.at(peek) == ",") {
                     i = peek;
                 } else if peek < n {
-                    tb.append(mut out, "\n");
+                    mut out.append("\n");
                     atLineStart = true;
                     i = peek;
                 }
             } else {
-                tb.append(mut out, "}");
+                mut out.append("}");
                 i = i + 1;
             }
         } else if ch == ";" and blockDepth > 0 and braceStack.length() > 0 and braceStack[braceStack.length() - 1] == 1 and parenDepth == braceParenStack[braceParenStack.length() - 1] {
-            tb.append(mut out, ";");
+            mut out.append(";");
             i = i + 1;
             var peek := i;
             loop peek < n and trimmed.at(peek) == " " { peek = peek + 1; }
             if peek < n {
                 changed = true;
-                tb.append(mut out, "\n");
+                mut out.append("\n");
                 atLineStart = true;
                 i = peek;
             }
         } else {
-            tb.append(mut out, ch);
+            mut out.append(ch);
             i = i + 1;
         }
     }
-    if changed { tb.build(out) } else { rawLine }
+    if changed { out.build() } else { rawLine }
 };

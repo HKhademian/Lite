@@ -61,16 +61,16 @@ normalizeSignature := fn(raw: String): String {
         } else {
             if pendingSpace {
                 if lastCh =!= "(" and ch =!= ")" and ch =!= "," {
-                    tb.append(mut out, " ");
+                    mut out.append(" ");
                 }
                 pendingSpace = false;
             }
-            tb.append(mut out, ch);
+            mut out.append(ch);
             lastCh = ch;
         }
         i += 1;
     }
-    tb.build(out).trim()
+    out.build().trim()
 };
 
 skipBlockComment := fn(source: String, start: Int, startLine: Int): (next: Int, nextLine: Int, raw: String) {

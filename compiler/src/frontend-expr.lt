@@ -244,17 +244,17 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
         }
         cursor = syntax.expectSymbol(source, cursor, ")", prefix);
         kindTextBuf: mut tb.TextBuilder;
-        tb.append(mut kindTextBuf, "(");
+        mut kindTextBuf.append("(");
         var index := 0;
         loop index < count {
-            if index > 0 { tb.append(mut kindTextBuf, ","); }
-            tb.append(mut kindTextBuf, labels[index]);
-            tb.append(mut kindTextBuf, ":");
-            tb.append(mut kindTextBuf, kinds[index]);
+            if index > 0 { mut kindTextBuf.append(","); }
+            mut kindTextBuf.append(labels[index]);
+            mut kindTextBuf.append(":");
+            mut kindTextBuf.append(kinds[index]);
             index = index + 1;
         }
-        tb.append(mut kindTextBuf, ")");
-        tupleKind := tb.build(kindTextBuf);
+        mut kindTextBuf.append(")");
+        tupleKind := kindTextBuf.build();
         if target == ir.TARGET_C and types.cStructTag(tupleKind) =!= "" {
             tag := types.cStructTag(tupleKind);
             if count == 0 {
@@ -263,27 +263,27 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
             cCodeBuf: mut tb.TextBuilder;
             var ci := 0;
             loop ci < count {
-                if ci > 0 { tb.append(mut cCodeBuf, ", "); }
-                tb.append(mut cCodeBuf, ".");
-                tb.append(mut cCodeBuf, types.cFieldName(types.tupleRuntimeProp(labels[ci], ci)));
-                tb.append(mut cCodeBuf, " = ");
-                tb.append(mut cCodeBuf, codes[ci]);
+                if ci > 0 { mut cCodeBuf.append(", "); }
+                mut cCodeBuf.append(".");
+                mut cCodeBuf.append(types.cFieldName(types.tupleRuntimeProp(labels[ci], ci)));
+                mut cCodeBuf.append(" = ");
+                mut cCodeBuf.append(codes[ci]);
                 ci = ci + 1;
             }
-            return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ " + tb.build(cCodeBuf) + " })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
+            return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ " + cCodeBuf.build() + " })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
         }
         codeBuf: mut tb.TextBuilder;
-        tb.append(mut codeBuf, "{ ");
+        mut codeBuf.append("{ ");
         var ti := 0;
         loop ti < count {
-            if ti > 0 { tb.append(mut codeBuf, ", "); }
-            tb.append(mut codeBuf, types.tupleObjectKey(labels[ti], ti));
-            tb.append(mut codeBuf, ": ");
-            tb.append(mut codeBuf, codes[ti]);
+            if ti > 0 { mut codeBuf.append(", "); }
+            mut codeBuf.append(types.tupleObjectKey(labels[ti], ti));
+            mut codeBuf.append(": ");
+            mut codeBuf.append(codes[ti]);
             ti = ti + 1;
         }
-        tb.append(mut codeBuf, " }");
-        return ctx.withMarkers((kind = tupleKind, code = tb.build(codeBuf), intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
+        mut codeBuf.append(" }");
+        return ctx.withMarkers((kind = tupleKind, code = codeBuf.build(), intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
     }
     var groupedExpected := expected;
     if numeric.isNumericKind(expected) {
@@ -536,15 +536,15 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
                     }
                 } else if element.constant and tsSlot == "lite$v" and repeatCount <= 32 {
                     repBuf: mut tb.TextBuilder;
-                    tb.append(mut repBuf, "[");
+                    mut repBuf.append("[");
                     var ri := 0;
                     loop ri < repeatCount {
-                        if ri > 0 { tb.append(mut repBuf, ", "); }
-                        tb.append(mut repBuf, elemValCode);
+                        if ri > 0 { mut repBuf.append(", "); }
+                        mut repBuf.append(elemValCode);
                         ri = ri + 1;
                     }
-                    tb.append(mut repBuf, "]");
-                    tb.build(repBuf)
+                    mut repBuf.append("]");
+                    repBuf.build()
                 } else {
                     "((lite$v: " + tsElem + "): " + tsElem + "[] => { const lite$a: " + tsElem + "[] = []; for (let lite$i = 0; lite$i < " + repeatCount.toText() + "; lite$i += 1) { lite$a.push(" + tsSlot + "); } return lite$a; })(" + elemValCode + ")"
                 }
@@ -713,7 +713,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     paramNames: mut List<String> = [];
     paramKinds: mut List<String> = [];
     encodedKindBuf: mut tb.TextBuilder;
-    tb.append(mut encodedKindBuf, "fn(");
+    mut encodedKindBuf.append("fn(");
     var paramIdx := 0;
     loop cursor < size and source.at(cursor) =!= ")" {
         pStart := cursor;
@@ -742,10 +742,10 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             syntax.failAt(source, pStart, prefix, "function parameter " + pName + " cannot have type Unit");
         }
         (mut paramKinds).pushBack(pKind);
-        if paramIdx > 0 { tb.append(mut encodedKindBuf, ","); }
-        tb.append(mut encodedKindBuf, pName);
-        tb.append(mut encodedKindBuf, ":");
-        tb.append(mut encodedKindBuf, pKind);
+        if paramIdx > 0 { mut encodedKindBuf.append(","); }
+        mut encodedKindBuf.append(pName);
+        mut encodedKindBuf.append(":");
+        mut encodedKindBuf.append(pKind);
         paramIdx = paramIdx + 1;
         if cursor < size and source.at(cursor) == "," {
             cursor = syntax.skipTrivia(source, cursor + 1, prefix);
@@ -753,7 +753,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             break;
         }
     }
-    encodedKind := tb.build(encodedKindBuf);
+    encodedKind := encodedKindBuf.build();
     cursor = syntax.expectSymbol(source, cursor, ")", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
     var retKind := "";
@@ -800,7 +800,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     }
     tsParamsBuf: mut tb.TextBuilder;
     cParamsBuf: mut tb.TextBuilder;
-    tb.append(mut cParamsBuf, "void *_env");
+    mut cParamsBuf.append("void *_env");
     paramVoidBuf: mut tb.TextBuilder;
     paramRuntimes: mut List<String> = [];
     var pBindIdx := 0;
@@ -812,22 +812,22 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         mut fnLocals.pushBack((name = pName, runtime = pRuntime, kind = pKind,
         mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
         intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
-        if pBindIdx > 0 { tb.append(mut tsParamsBuf, ", "); }
-        tb.append(mut tsParamsBuf, pRuntime);
-        tb.append(mut tsParamsBuf, ": ");
-        tb.append(mut tsParamsBuf, types.tsFunctionType(pKind));
-        tb.append(mut cParamsBuf, ", ");
-        tb.append(mut cParamsBuf, types.cValueType(pKind));
-        tb.append(mut cParamsBuf, " ");
-        tb.append(mut cParamsBuf, pRuntime);
-        tb.append(mut paramVoidBuf, if isCFnLit { "(void)" } else { "void " });
-        tb.append(mut paramVoidBuf, pRuntime);
-        tb.append(mut paramVoidBuf, "; ");
+        if pBindIdx > 0 { mut tsParamsBuf.append(", "); }
+        mut tsParamsBuf.append(pRuntime);
+        mut tsParamsBuf.append(": ");
+        mut tsParamsBuf.append(types.tsFunctionType(pKind));
+        mut cParamsBuf.append(", ");
+        mut cParamsBuf.append(types.cValueType(pKind));
+        mut cParamsBuf.append(" ");
+        mut cParamsBuf.append(pRuntime);
+        mut paramVoidBuf.append(if isCFnLit { "(void)" } else { "void " });
+        mut paramVoidBuf.append(pRuntime);
+        mut paramVoidBuf.append("; ");
         pBindIdx = pBindIdx + 1;
     }
-    tsParamsCode := tb.build(tsParamsBuf);
-    cParamsCode := tb.build(cParamsBuf);
-    paramVoidStmts := tb.build(paramVoidBuf);
+    tsParamsCode := tsParamsBuf.build();
+    cParamsCode := cParamsBuf.build();
+    paramVoidStmts := paramVoidBuf.build();
     fnBodyDepth := if isCFnLit { iifeDepth } else { iifeDepth + 1 };
     if retKind == "$InferRet" {
         inferFnCtx := (id = 0, tag = "", kind = ir.CTX_KIND_FN, phase = ir.CTX_PHASE_BODY, iifeDepth = fnBodyDepth,
@@ -915,70 +915,70 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             fName := "f_" + ci.toText();
             pName := "a_" + ci.toText();
             if ci > 0 {
-                tb.append(mut mkParamsBuf, ", ");
-                tb.append(mut mkArgsBuf, ", ");
+                mut mkParamsBuf.append(", ");
+                mut mkArgsBuf.append(", ");
             }
             if isCell {
                 cellPtr := cRt.slice(2, cRt.length() - 1);
-                tb.append(mut envFieldsBuf, cT);
-                tb.append(mut envFieldsBuf, " *");
-                tb.append(mut envFieldsBuf, fName);
-                tb.append(mut envFieldsBuf, "; ");
-                tb.append(mut mkParamsBuf, cT);
-                tb.append(mut mkParamsBuf, " *");
-                tb.append(mut mkParamsBuf, pName);
-                tb.append(mut mkArgsBuf, cellPtr);
-                tb.append(mut mkInitsBuf, "e->");
-                tb.append(mut mkInitsBuf, fName);
-                tb.append(mut mkInitsBuf, " = ");
-                tb.append(mut mkInitsBuf, pName);
-                tb.append(mut mkInitsBuf, "; ");
-                tb.append(mut envUnpackBuf, cT);
-                tb.append(mut envUnpackBuf, " *");
-                tb.append(mut envUnpackBuf, cellPtr);
-                tb.append(mut envUnpackBuf, " = ((");
-                tb.append(mut envUnpackBuf, envType);
-                tb.append(mut envUnpackBuf, " *)_env)->");
-                tb.append(mut envUnpackBuf, fName);
-                tb.append(mut envUnpackBuf, "; (void)");
-                tb.append(mut envUnpackBuf, cellPtr);
-                tb.append(mut envUnpackBuf, "; ");
+                mut envFieldsBuf.append(cT);
+                mut envFieldsBuf.append(" *");
+                mut envFieldsBuf.append(fName);
+                mut envFieldsBuf.append("; ");
+                mut mkParamsBuf.append(cT);
+                mut mkParamsBuf.append(" *");
+                mut mkParamsBuf.append(pName);
+                mut mkArgsBuf.append(cellPtr);
+                mut mkInitsBuf.append("e->");
+                mut mkInitsBuf.append(fName);
+                mut mkInitsBuf.append(" = ");
+                mut mkInitsBuf.append(pName);
+                mut mkInitsBuf.append("; ");
+                mut envUnpackBuf.append(cT);
+                mut envUnpackBuf.append(" *");
+                mut envUnpackBuf.append(cellPtr);
+                mut envUnpackBuf.append(" = ((");
+                mut envUnpackBuf.append(envType);
+                mut envUnpackBuf.append(" *)_env)->");
+                mut envUnpackBuf.append(fName);
+                mut envUnpackBuf.append("; (void)");
+                mut envUnpackBuf.append(cellPtr);
+                mut envUnpackBuf.append("; ");
             } else {
-                tb.append(mut envFieldsBuf, cT);
-                tb.append(mut envFieldsBuf, " ");
-                tb.append(mut envFieldsBuf, fName);
-                tb.append(mut envFieldsBuf, "; ");
-                tb.append(mut mkParamsBuf, cT);
-                tb.append(mut mkParamsBuf, " ");
-                tb.append(mut mkParamsBuf, pName);
-                tb.append(mut mkArgsBuf, ctx.copiedValueCode(target, cK, cRt));
-                tb.append(mut mkInitsBuf, "e->");
-                tb.append(mut mkInitsBuf, fName);
-                tb.append(mut mkInitsBuf, " = ");
-                tb.append(mut mkInitsBuf, pName);
-                tb.append(mut mkInitsBuf, "; ");
+                mut envFieldsBuf.append(cT);
+                mut envFieldsBuf.append(" ");
+                mut envFieldsBuf.append(fName);
+                mut envFieldsBuf.append("; ");
+                mut mkParamsBuf.append(cT);
+                mut mkParamsBuf.append(" ");
+                mut mkParamsBuf.append(pName);
+                mut mkArgsBuf.append(ctx.copiedValueCode(target, cK, cRt));
+                mut mkInitsBuf.append("e->");
+                mut mkInitsBuf.append(fName);
+                mut mkInitsBuf.append(" = ");
+                mut mkInitsBuf.append(pName);
+                mut mkInitsBuf.append("; ");
                 if cM {
                     bodyRewritten = ctx.cReplaceIdentToken(bodyRewritten, cRt, "(((" + envType + " *)_env)->" + fName + ")");
                 } else {
-                    tb.append(mut envUnpackBuf, cT);
-                    tb.append(mut envUnpackBuf, " ");
-                    tb.append(mut envUnpackBuf, cRt);
-                    tb.append(mut envUnpackBuf, " = ((");
-                    tb.append(mut envUnpackBuf, envType);
-                    tb.append(mut envUnpackBuf, " *)_env)->");
-                    tb.append(mut envUnpackBuf, fName);
-                    tb.append(mut envUnpackBuf, "; (void)");
-                    tb.append(mut envUnpackBuf, cRt);
-                    tb.append(mut envUnpackBuf, "; ");
+                    mut envUnpackBuf.append(cT);
+                    mut envUnpackBuf.append(" ");
+                    mut envUnpackBuf.append(cRt);
+                    mut envUnpackBuf.append(" = ((");
+                    mut envUnpackBuf.append(envType);
+                    mut envUnpackBuf.append(" *)_env)->");
+                    mut envUnpackBuf.append(fName);
+                    mut envUnpackBuf.append("; (void)");
+                    mut envUnpackBuf.append(cRt);
+                    mut envUnpackBuf.append("; ");
                 }
             }
             ci = ci + 1;
         }
-        envFields := tb.build(envFieldsBuf);
-        envUnpack := tb.build(envUnpackBuf);
-        mkParams := tb.build(mkParamsBuf);
-        mkInits := tb.build(mkInitsBuf);
-        mkArgs := tb.build(mkArgsBuf);
+        envFields := envFieldsBuf.build();
+        envUnpack := envUnpackBuf.build();
+        mkParams := mkParamsBuf.build();
+        mkInits := mkInitsBuf.build();
+        mkArgs := mkArgsBuf.build();
         mkName := "lt_mk_" + cid;
         cFnDef := "typedef struct { " + envFields + "} " + envType + ";\nstatic " + cRetType + " " + clName + "(" + cParamsCode + ") { (void)_env; /*@CFN_TEMPS@*/" + selfBind + envUnpack + paramVoidStmts + bodyRewritten + " }\nstatic " + cFnTag + " " + mkName + "(" + mkParams + ") { " + envType + " *e = malloc(sizeof(" + envType + ")); if (e == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } " + mkInits + "return (" + cFnTag + "){ " + clName + ", e }; }";
         cExpr := "/*@T:" + fnKind + "@*//*@CFN_START:" + clName + "@*/" + cFnDef + "/*@CFN_END@*/" + mkName + "(" + mkArgs + ")";
@@ -1288,10 +1288,10 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
             }
         }
         if shape == "record" and bindName =!= "_" { mut seenRecBinds.pushBack(bindName); }
-        tb.append(mut encodedBuf, types.encodeLengthPrefixedText(bindName));
-        tb.append(mut encodedBuf, types.encodeLengthPrefixedText(sourceField));
-        tb.append(mut encodedBuf, types.encodeLengthPrefixedText(expectedKind));
-        tb.append(mut encodedBuf, types.encodeLengthPrefixedText(clauseMode));
+        mut encodedBuf.append(types.encodeLengthPrefixedText(bindName));
+        mut encodedBuf.append(types.encodeLengthPrefixedText(sourceField));
+        mut encodedBuf.append(types.encodeLengthPrefixedText(expectedKind));
+        mut encodedBuf.append(types.encodeLengthPrefixedText(clauseMode));
         lastMode = clauseMode;
         lastExpected = expectedKind;
         count = count + 1;
@@ -1303,7 +1303,7 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
             break;
         }
     }
-    encoded := tb.build(encodedBuf);
+    encoded := encodedBuf.build();
     next := syntax.expectSymbol(source, cursor, closeDelim, prefix);
     if count == 0 and shape == "record" {
         syntax.failAt(source, openPos, prefix, "record destructuring needs at least one field clause");
@@ -1406,13 +1406,13 @@ pub resolveAggregateBindings := fn(target: String, shape: String, count: Int, en
             }
             targetKind = expectedKind;
         }
-        tb.append(mut out, types.encodeLengthPrefixedText(bindName));
-        tb.append(mut out, types.encodeLengthPrefixedText(propExpr));
-        tb.append(mut out, types.encodeLengthPrefixedText(srcKind));
-        tb.append(mut out, types.encodeLengthPrefixedText(targetKind));
+        mut out.append(types.encodeLengthPrefixedText(bindName));
+        mut out.append(types.encodeLengthPrefixedText(propExpr));
+        mut out.append(types.encodeLengthPrefixedText(srcKind));
+        mut out.append(types.encodeLengthPrefixedText(targetKind));
         clIndex = clIndex + 1;
     }
-    tb.build(out)
+    out.build()
 };
 
 /** Parses name-headed primaries: `Unit`, `true`/`false`, `not`, `if`/`match`/`loop`, `fn`, `self`, locals, module functions, and list intrinsics. */
@@ -1729,29 +1729,29 @@ emitPayloadEnumValue := fn(target: String, enumKind: String, caseIdx: Int, argCo
         fieldsInitBuf: mut tb.TextBuilder;
         var pi := 0;
         loop pi < argCodes.length() {
-            if pi > 0 { tb.append(mut fieldsInitBuf, ", "); }
-            tb.append(mut fieldsInitBuf, ".f");
-            tb.append(mut fieldsInitBuf, pi.toText());
-            tb.append(mut fieldsInitBuf, " = ");
-            tb.append(mut fieldsInitBuf, argCodes[pi]);
+            if pi > 0 { mut fieldsInitBuf.append(", "); }
+            mut fieldsInitBuf.append(".f");
+            mut fieldsInitBuf.append(pi.toText());
+            mut fieldsInitBuf.append(" = ");
+            mut fieldsInitBuf.append(argCodes[pi]);
             pi = pi + 1;
         }
-        return "/*@T:" + enumKind + "@*/((" + tag + "){ .tag = " + caseIdx.toText() + ", .u = { .c" + caseIdx.toText() + " = { " + tb.build(fieldsInitBuf) + " } } })";
+        return "/*@T:" + enumKind + "@*/((" + tag + "){ .tag = " + caseIdx.toText() + ", .u = { .c" + caseIdx.toText() + " = { " + fieldsInitBuf.build() + " } } })";
     }
     tsT := types.tsFunctionType(enumKind);
     objBuf: mut tb.TextBuilder;
-    tb.append(mut objBuf, "_t: ");
-    tb.append(mut objBuf, caseIdx.toText());
-    tb.append(mut objBuf, " as const");
+    mut objBuf.append("_t: ");
+    mut objBuf.append(caseIdx.toText());
+    mut objBuf.append(" as const");
     var pi := 0;
     loop pi < argCodes.length() {
-        tb.append(mut objBuf, ", _");
-        tb.append(mut objBuf, pi.toText());
-        tb.append(mut objBuf, ": ");
-        tb.append(mut objBuf, argCodes[pi]);
+        mut objBuf.append(", _");
+        mut objBuf.append(pi.toText());
+        mut objBuf.append(": ");
+        mut objBuf.append(argCodes[pi]);
         pi = pi + 1;
     }
-    "({ " + tb.build(objBuf) + " } as " + tsT + ")"
+    "({ " + objBuf.build() + " } as " + tsT + ")"
 };
 
 /** Parses plain or payload-bearing enum case construction (`Enum.Case` / `.Case(...)`), validating payload count and types. */
@@ -2692,11 +2692,11 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, branch); }
                         if branch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
                         prefixKw := if isFirstIf { "if (" } else { " else if (" };
-                        tb.append(mut ifPartsBuf, prefixKw);
-                        tb.append(mut ifPartsBuf, condCode);
-                        tb.append(mut ifPartsBuf, ") { ");
-                        tb.append(mut ifPartsBuf, branch.code);
-                        tb.append(mut ifPartsBuf, " }");
+                        mut ifPartsBuf.append(prefixKw);
+                        mut ifPartsBuf.append(condCode);
+                        mut ifPartsBuf.append(") { ");
+                        mut ifPartsBuf.append(branch.code);
+                        mut ifPartsBuf.append(" }");
                         ifCursor = branch.next;
                         isFirstIf = false;
                         afterBranch := syntax.skipTrivia(source, ifCursor, prefix);
@@ -2711,9 +2711,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                                 elseBranch := parseBinaryCtx(target, source, elseOpen - 1, prefix, blockLocals, functions, params, currentName, ifBranchExpected, 0, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
                                 if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, elseBranch); }
                                 if elseBranch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
-                                tb.append(mut ifPartsBuf, " else { ");
-                                tb.append(mut ifPartsBuf, elseBranch.code);
-                                tb.append(mut ifPartsBuf, " }");
+                                mut ifPartsBuf.append(" else { ");
+                                mut ifPartsBuf.append(elseBranch.code);
+                                mut ifPartsBuf.append(" }");
                                 ifCursor = elseBranch.next;
                                 break;
                             }
@@ -2721,7 +2721,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             break;
                         }
                     }
-                    ifParts := tb.build(ifPartsBuf);
+                    ifParts := ifPartsBuf.build();
                     if not blockExits {
                         mut statements.pushBack(ifParts);
                         if hasElseBranch and allBranchesExit { blockExits = true; }
@@ -2807,13 +2807,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, arm); }
                             if arm.kind =!= ir.VALUE_KIND_NEVER { allArmsExit = false; }
                             if armCount == 0 {
-                                tb.append(mut matchPartsBuf, "{ ");
-                                tb.append(mut matchPartsBuf, arm.code);
-                                tb.append(mut matchPartsBuf, " }");
+                                mut matchPartsBuf.append("{ ");
+                                mut matchPartsBuf.append(arm.code);
+                                mut matchPartsBuf.append(" }");
                             } else {
-                                tb.append(mut matchPartsBuf, " else { ");
-                                tb.append(mut matchPartsBuf, arm.code);
-                                tb.append(mut matchPartsBuf, " }");
+                                mut matchPartsBuf.append(" else { ");
+                                mut matchPartsBuf.append(arm.code);
+                                mut matchPartsBuf.append(" }");
                             }
                             armCount = armCount + 1;
                             matchCursor = arm.next;
@@ -2851,16 +2851,16 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, arm); }
                             if arm.kind =!= ir.VALUE_KIND_NEVER { allArmsExit = false; }
                             armKw := if armCount == 0 { "if (" } else { " else if (" };
-                            tb.append(mut matchPartsBuf, armKw);
-                            tb.append(mut matchPartsBuf, condCode);
-                            tb.append(mut matchPartsBuf, ") { ");
-                            tb.append(mut matchPartsBuf, arm.code);
-                            tb.append(mut matchPartsBuf, " }");
+                            mut matchPartsBuf.append(armKw);
+                            mut matchPartsBuf.append(condCode);
+                            mut matchPartsBuf.append(") { ");
+                            mut matchPartsBuf.append(arm.code);
+                            mut matchPartsBuf.append(" }");
                             armCount = armCount + 1;
                             matchCursor = arm.next;
                         }
                     }
-                    matchParts := tb.build(matchPartsBuf);
+                    matchParts := matchPartsBuf.build();
                     if not blockExits {
                         mut statements.pushBack(matchParts);
                         if sawFallback and allArmsExit { blockExits = true; }
@@ -4641,7 +4641,7 @@ mergeEnumCaseBag := fn(acc: String, add: String): (bag: String, added: Int) {
     if add == "" { return (bag = acc, added = 0); }
     baseAcc := if acc == "" { "|" } else { acc };
     outBuf: mut tb.TextBuilder;
-    tb.append(mut outBuf, baseAcc);
+    mut outBuf.append(baseAcc);
     seen: mut Set<String>;
     var added := 0;
     size := add.length();
@@ -4658,14 +4658,14 @@ mergeEnumCaseBag := fn(acc: String, add: String): (bag: String, added: Int) {
             tag := "|" + tok + "|";
             if baseAcc.indexOf(tag, 0) < 0 and not seen.has(tok) {
                 mut seen.add(tok);
-                tb.append(mut outBuf, tok);
-                tb.append(mut outBuf, "|");
+                mut outBuf.append(tok);
+                mut outBuf.append("|");
                 added = added + 1;
             }
         }
         pos = end + 1;
     }
-    (bag = tb.build(outBuf), added = added)
+    (bag = outBuf.build(), added = added)
 };
 
 /** Checks whether a pattern type annotation matches a subject or component type kind. */
@@ -4803,14 +4803,14 @@ emitPatAssignments := fn(target: String, baseLocals: List<Local>, armDepth: Int,
             name := bindings.slice(pos, t1);
             exprCode := bindings.slice(t2 + 1, lineEnd);
             rt := ir.localRuntimeName(target, baseLocals, name, "", armDepth);
-            tb.append(mut out, rt);
-            tb.append(mut out, " = ");
-            tb.append(mut out, exprCode);
-            tb.append(mut out, "; ");
+            mut out.append(rt);
+            mut out.append(" = ");
+            mut out.append(exprCode);
+            mut out.append("; ");
         }
         pos = lineEnd + 1;
     }
-    tb.build(out)
+    out.build()
 };
 
 /** Scans inside a record pattern clause for a top-level single `=` before `,` or `}`, returning its index or -1. */
@@ -5507,35 +5507,35 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
     var orCondCode := "";
     if target == ir.TARGET_C {
         cOrBuf: mut tb.TextBuilder;
-        tb.append(mut cOrBuf, "/*@COR@*/bool lt_or = false; ");
+        mut cOrBuf.append("/*@COR@*/bool lt_or = false; ");
         var i := 0;
         loop i < altCount {
             c := if altConds[i] == "" { "true" } else { altConds[i] };
             assigns := emitPatAssignments(target, locals, armDepth, altBindings[i]);
-            tb.append(mut cOrBuf, "if (!lt_or && (");
-            tb.append(mut cOrBuf, c);
-            tb.append(mut cOrBuf, ")) { ");
-            tb.append(mut cOrBuf, assigns);
-            tb.append(mut cOrBuf, "lt_or = true; } ");
+            mut cOrBuf.append("if (!lt_or && (");
+            mut cOrBuf.append(c);
+            mut cOrBuf.append(")) { ");
+            mut cOrBuf.append(assigns);
+            mut cOrBuf.append("lt_or = true; } ");
             i = i + 1;
         }
-        orCondCode = tb.build(cOrBuf);
+        orCondCode = cOrBuf.build();
     } else {
         iifeBuf: mut tb.TextBuilder;
-        tb.append(mut iifeBuf, "(() => { ");
+        mut iifeBuf.append("(() => { ");
         var i := 0;
         loop i < altCount {
             c := if altConds[i] == "" { "true" } else { altConds[i] };
             assigns := emitPatAssignments(target, locals, armDepth, altBindings[i]);
-            tb.append(mut iifeBuf, "if (");
-            tb.append(mut iifeBuf, c);
-            tb.append(mut iifeBuf, ") { ");
-            tb.append(mut iifeBuf, assigns);
-            tb.append(mut iifeBuf, "return true; } ");
+            mut iifeBuf.append("if (");
+            mut iifeBuf.append(c);
+            mut iifeBuf.append(") { ");
+            mut iifeBuf.append(assigns);
+            mut iifeBuf.append("return true; } ");
             i = i + 1;
         }
-        tb.append(mut iifeBuf, "return false; })()");
-        orCondCode = tb.build(iifeBuf);
+        mut iifeBuf.append("return false; })()");
+        orCondCode = iifeBuf.build();
     }
     /* Preserve binding declarations (names + kinds) with empty per-binding expr sentinel so arm header emits `let rt!: T;` once. */
     declBindingsBuf: mut tb.TextBuilder;
@@ -5547,12 +5547,12 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         t1 := first.bindings.indexOf("\t", bPos);
         t2 := if t1 >= 0 { first.bindings.indexOf("\t", t1 + 1) } else { -1 };
         if t1 > bPos and t2 > t1 and t2 < lineEnd {
-            tb.append(mut declBindingsBuf, first.bindings.slice(bPos, t2));
-            tb.append(mut declBindingsBuf, "\t\n");
+            mut declBindingsBuf.append(first.bindings.slice(bPos, t2));
+            mut declBindingsBuf.append("\t\n");
         }
         bPos = lineEnd + 1;
     }
-    (cond = orCondCode, bindings = tb.build(declBindingsBuf), irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers)
+    (cond = orCondCode, bindings = declBindingsBuf.build(), irrefutable = anyIrref, boolMask = combinedMask, enumCases = combinedEnumCases, next = lastEnd, markers = combinedMarkers)
 };
 
 /** Parses a subject-based `match <subject> { ... }` body for value, statement, or tagged/then/finally IIFE lowering. */
@@ -5596,32 +5596,32 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     armsCodeBuf: mut tb.TextBuilder;
     if isCTarget {
         if not canTernary {
-            tb.append(mut armsCodeBuf, types.cValueType(subj.kind));
-            tb.append(mut armsCodeBuf, " ");
-            tb.append(mut armsCodeBuf, subjVar);
-            tb.append(mut armsCodeBuf, " = ");
-            tb.append(mut armsCodeBuf, subj.code);
-            tb.append(mut armsCodeBuf, "; (void)");
-            tb.append(mut armsCodeBuf, subjVar);
-            tb.append(mut armsCodeBuf, "; bool ");
-            tb.append(mut armsCodeBuf, doneVar);
-            tb.append(mut armsCodeBuf, " = false; ");
+            mut armsCodeBuf.append(types.cValueType(subj.kind));
+            mut armsCodeBuf.append(" ");
+            mut armsCodeBuf.append(subjVar);
+            mut armsCodeBuf.append(" = ");
+            mut armsCodeBuf.append(subj.code);
+            mut armsCodeBuf.append("; (void)");
+            mut armsCodeBuf.append(subjVar);
+            mut armsCodeBuf.append("; bool ");
+            mut armsCodeBuf.append(doneVar);
+            mut armsCodeBuf.append(" = false; ");
         }
     } else if canTernary {
-        tb.append(mut armsCodeBuf, "let ");
-        tb.append(mut armsCodeBuf, doneVar);
-        tb.append(mut armsCodeBuf, ": boolean = false; ");
+        mut armsCodeBuf.append("let ");
+        mut armsCodeBuf.append(doneVar);
+        mut armsCodeBuf.append(": boolean = false; ");
     } else {
-        tb.append(mut armsCodeBuf, "const ");
-        tb.append(mut armsCodeBuf, subjVar);
-        tb.append(mut armsCodeBuf, subjTsType);
-        tb.append(mut armsCodeBuf, " = ");
-        tb.append(mut armsCodeBuf, subj.code);
-        tb.append(mut armsCodeBuf, "; void ");
-        tb.append(mut armsCodeBuf, subjVar);
-        tb.append(mut armsCodeBuf, "; let ");
-        tb.append(mut armsCodeBuf, doneVar);
-        tb.append(mut armsCodeBuf, ": boolean = false; ");
+        mut armsCodeBuf.append("const ");
+        mut armsCodeBuf.append(subjVar);
+        mut armsCodeBuf.append(subjTsType);
+        mut armsCodeBuf.append(" = ");
+        mut armsCodeBuf.append(subj.code);
+        mut armsCodeBuf.append("; void ");
+        mut armsCodeBuf.append(subjVar);
+        mut armsCodeBuf.append("; let ");
+        mut armsCodeBuf.append(doneVar);
+        mut armsCodeBuf.append(": boolean = false; ");
     }
     ternaryConds: mut List<String> = [];
     ternaryVals: mut List<String> = [];
@@ -5725,40 +5725,40 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 } else {
                     if isCTarget {
                         bCType := types.cValueType(bKind);
-                        tb.append(mut declStmtsBuf, bCType);
-                        tb.append(mut declStmtsBuf, " ");
-                        tb.append(mut declStmtsBuf, bRt);
+                        mut declStmtsBuf.append(bCType);
+                        mut declStmtsBuf.append(" ");
+                        mut declStmtsBuf.append(bRt);
                         if bExpr == "" {
                             bZero := ctx.zeroParsed(ir.TARGET_C, bKind, 0).code;
-                            tb.append(mut declStmtsBuf, " = ");
-                            tb.append(mut declStmtsBuf, bZero);
-                            tb.append(mut declStmtsBuf, "; ");
+                            mut declStmtsBuf.append(" = ");
+                            mut declStmtsBuf.append(bZero);
+                            mut declStmtsBuf.append("; ");
                         } else {
-                            tb.append(mut declStmtsBuf, "; ");
-                            tb.append(mut assignStmtsBuf, bRt);
-                            tb.append(mut assignStmtsBuf, " = ");
-                            tb.append(mut assignStmtsBuf, bExpr);
-                            tb.append(mut assignStmtsBuf, "; ");
+                            mut declStmtsBuf.append("; ");
+                            mut assignStmtsBuf.append(bRt);
+                            mut assignStmtsBuf.append(" = ");
+                            mut assignStmtsBuf.append(bExpr);
+                            mut assignStmtsBuf.append("; ");
                         }
-                        tb.append(mut voidStmtsBuf, "(void)");
-                        tb.append(mut voidStmtsBuf, bRt);
-                        tb.append(mut voidStmtsBuf, "; ");
+                        mut voidStmtsBuf.append("(void)");
+                        mut voidStmtsBuf.append(bRt);
+                        mut voidStmtsBuf.append("; ");
                     } else {
                         bTsType := types.tsFunctionType(bKind);
-                        tb.append(mut declStmtsBuf, "let ");
-                        tb.append(mut declStmtsBuf, bRt);
-                        tb.append(mut declStmtsBuf, "!: ");
-                        tb.append(mut declStmtsBuf, bTsType);
-                        tb.append(mut declStmtsBuf, "; ");
+                        mut declStmtsBuf.append("let ");
+                        mut declStmtsBuf.append(bRt);
+                        mut declStmtsBuf.append("!: ");
+                        mut declStmtsBuf.append(bTsType);
+                        mut declStmtsBuf.append("; ");
                         if bExpr =!= "" {
-                            tb.append(mut assignStmtsBuf, bRt);
-                            tb.append(mut assignStmtsBuf, " = ");
-                            tb.append(mut assignStmtsBuf, bExpr);
-                            tb.append(mut assignStmtsBuf, "; ");
+                            mut assignStmtsBuf.append(bRt);
+                            mut assignStmtsBuf.append(" = ");
+                            mut assignStmtsBuf.append(bExpr);
+                            mut assignStmtsBuf.append("; ");
                         }
-                        tb.append(mut voidStmtsBuf, "void ");
-                        tb.append(mut voidStmtsBuf, bRt);
-                        tb.append(mut voidStmtsBuf, "; ");
+                        mut voidStmtsBuf.append("void ");
+                        mut voidStmtsBuf.append(bRt);
+                        mut voidStmtsBuf.append("; ");
                     }
                     bindIsConst := subj.constant and bExpr == subjVar;
                     mut armLocals.pushBack((name = bName, runtime = bRt, kind = bKind, mutable = false, writable = false,
@@ -5768,9 +5768,9 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             }
             bPos = lineEnd + 1;
         }
-        declStmts := tb.build(declStmtsBuf);
-        assignStmts := tb.build(assignStmtsBuf);
-        voidStmts := tb.build(voidStmtsBuf);
+        declStmts := declStmtsBuf.build();
+        assignStmts := assignStmtsBuf.build();
+        voidStmts := voidStmtsBuf.build();
         var hasGuard := false;
         var guardCode := "";
         var armOpen := -1;
@@ -5867,16 +5867,16 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 winAssignStmts = assignStmts;
                 winVoidStmts = voidStmts;
             } else {
-                tb.append(mut armsCodeBuf, "if (!");
-                tb.append(mut armsCodeBuf, doneVar);
-                tb.append(mut armsCodeBuf, ") { ");
-                tb.append(mut armsCodeBuf, declStmts);
-                tb.append(mut armsCodeBuf, assignStmts);
-                tb.append(mut armsCodeBuf, voidStmts);
-                tb.append(mut armsCodeBuf, doneVar);
-                tb.append(mut armsCodeBuf, " = true; ");
-                tb.append(mut armsCodeBuf, bodyEmit);
-                tb.append(mut armsCodeBuf, " } ");
+                mut armsCodeBuf.append("if (!");
+                mut armsCodeBuf.append(doneVar);
+                mut armsCodeBuf.append(") { ");
+                mut armsCodeBuf.append(declStmts);
+                mut armsCodeBuf.append(assignStmts);
+                mut armsCodeBuf.append(voidStmts);
+                mut armsCodeBuf.append(doneVar);
+                mut armsCodeBuf.append(" = true; ");
+                mut armsCodeBuf.append(bodyEmit);
+                mut armsCodeBuf.append(" } ");
                 if canTernary {
                     if declStmts =!= "" or branch.kind == ir.VALUE_KIND_NEVER {
                         canTernary = false;
@@ -5905,12 +5905,12 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
                 pCheck := if isCTarget { patCond } else { "Boolean(" + patCond + ")" };
                 "if (" + pCheck + ") { " + innerMatch + " }"
             };
-            tb.append(mut armsCodeBuf, "if (!");
-            tb.append(mut armsCodeBuf, doneVar);
-            tb.append(mut armsCodeBuf, ") { ");
-            tb.append(mut armsCodeBuf, declStmts);
-            tb.append(mut armsCodeBuf, armCheck);
-            tb.append(mut armsCodeBuf, " } ");
+            mut armsCodeBuf.append("if (!");
+            mut armsCodeBuf.append(doneVar);
+            mut armsCodeBuf.append(") { ");
+            mut armsCodeBuf.append(declStmts);
+            mut armsCodeBuf.append(armCheck);
+            mut armsCodeBuf.append(" } ");
             emittedRuntimeArms = emittedRuntimeArms + 1;
             if canTernary {
                 if declStmts =!= "" or branch.kind == ir.VALUE_KIND_NEVER {
@@ -5979,7 +5979,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         }
         return (code = winArmsCode, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers, isDirect = false, constant = false, intValue = 0, textValue = "");
     }
-    armsCode := tb.build(armsCodeBuf);
+    armsCode := armsCodeBuf.build();
     if canTernary and ternaryCount >= 1 {
         var tExpr := ctx.assignValueCode(target, finalKind, ternaryKinds[ternaryCount - 1], ternaryVals[ternaryCount - 1]);
         var ti := ternaryCount - 2;
@@ -6623,21 +6623,21 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         }
         if isPass1 {
             passMarkersBuf: mut tb.TextBuilder;
-            tb.append(mut passMarkersBuf, passMarkers);
+            mut passMarkersBuf.append(passMarkers);
             var bIdx := 0;
             var allBranchesNever := passBranchCount > 0;
             loop bIdx < passBranchCount {
                 bKind := passBranchKinds[bIdx];
                 if bKind =!= ir.VALUE_KIND_NEVER {
                     allBranchesNever = false;
-                    tb.append(mut passMarkersBuf, condId.toText());
-                    tb.append(mut passMarkersBuf, "=");
-                    tb.append(mut passMarkersBuf, bKind);
-                    tb.append(mut passMarkersBuf, "\n");
+                    mut passMarkersBuf.append(condId.toText());
+                    mut passMarkersBuf.append("=");
+                    mut passMarkersBuf.append(bKind);
+                    mut passMarkersBuf.append("\n");
                 }
                 bIdx = bIdx + 1;
             }
-            passMarkers = tb.build(passMarkersBuf);
+            passMarkers = passMarkersBuf.build();
             if passHasElse {
                 resolvedPreThenKind = ctx.inferKindFromMarkers(passMarkers, condId, condTagDisplay, source, condParseTagAt, prefix, allBranchesNever);
             } else {
@@ -6678,11 +6678,11 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     if cState == 1 {
                         stmtPart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
                         if emittedCondCount == 0 {
-                            tb.append(mut rawIfBuf, stmtPart);
+                            mut rawIfBuf.append(stmtPart);
                         } else {
-                            tb.append(mut rawIfBuf, " else { ");
-                            tb.append(mut rawIfBuf, stmtPart);
-                            tb.append(mut rawIfBuf, " }");
+                            mut rawIfBuf.append(" else { ");
+                            mut rawIfBuf.append(stmtPart);
+                            mut rawIfBuf.append(" }");
                         }
                         hitConstTrue = true;
                         break;
@@ -6691,11 +6691,11 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                         kwPrefix := if emittedCondCount == 0 { "if (" } else { " else if (" };
                         stmtPart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
                         condExprWrap := if isCCond { passCondCodes[cIdx] } else { "Boolean(" + passCondCodes[cIdx] + ")" };
-                        tb.append(mut rawIfBuf, kwPrefix);
-                        tb.append(mut rawIfBuf, condExprWrap);
-                        tb.append(mut rawIfBuf, ") { ");
-                        tb.append(mut rawIfBuf, stmtPart);
-                        tb.append(mut rawIfBuf, " }");
+                        mut rawIfBuf.append(kwPrefix);
+                        mut rawIfBuf.append(condExprWrap);
+                        mut rawIfBuf.append(") { ");
+                        mut rawIfBuf.append(stmtPart);
+                        mut rawIfBuf.append(" }");
                         emittedCondCount = emittedCondCount + 1;
                     }
                     cIdx = cIdx + 1;
@@ -6703,14 +6703,14 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                 if not hitConstTrue and passHasElse {
                     elsePart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[passBranchCount - 1], passBranchCodes[passBranchCount - 1]);
                     if emittedCondCount == 0 {
-                        tb.append(mut rawIfBuf, elsePart);
+                        mut rawIfBuf.append(elsePart);
                     } else {
-                        tb.append(mut rawIfBuf, " else { ");
-                        tb.append(mut rawIfBuf, elsePart);
-                        tb.append(mut rawIfBuf, " }");
+                        mut rawIfBuf.append(" else { ");
+                        mut rawIfBuf.append(elsePart);
+                        mut rawIfBuf.append(" }");
                     }
                 }
-                rawIfStmt = tb.build(rawIfBuf);
+                rawIfStmt = rawIfBuf.build();
             }
             needsCondTry := not isCCond and condParseTag =!= "" and reach.codeUsesTextCall(rawIfStmt, "lite$throwTransfer(" + condId.toText() + ",");
             if isCCond and condParseTag =!= "" and reach.codeUsesTextCall(rawIfStmt, "goto " + condLabel + ";") {
@@ -9149,22 +9149,22 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         wName := "lt_wrap_" + info.runtime;
                         wRet := types.cValueType(info.result);
                         wParamsBuf: mut tb.TextBuilder;
-                        tb.append(mut wParamsBuf, "void *_env");
+                        mut wParamsBuf.append("void *_env");
                         wArgsBuf: mut tb.TextBuilder;
                         var wi := 0;
                         loop wi < info.count {
                             pK := types.paramKindOf(params[info.first + wi]);
                             aName := "lt_a_" + wi.toText();
-                            tb.append(mut wParamsBuf, ", ");
-                            tb.append(mut wParamsBuf, types.cValueType(pK));
-                            tb.append(mut wParamsBuf, " ");
-                            tb.append(mut wParamsBuf, aName);
-                            if wi > 0 { tb.append(mut wArgsBuf, ", "); }
-                            tb.append(mut wArgsBuf, aName);
+                            mut wParamsBuf.append(", ");
+                            mut wParamsBuf.append(types.cValueType(pK));
+                            mut wParamsBuf.append(" ");
+                            mut wParamsBuf.append(aName);
+                            if wi > 0 { mut wArgsBuf.append(", "); }
+                            mut wArgsBuf.append(aName);
                             wi = wi + 1;
                         }
-                        wParams := tb.build(wParamsBuf);
-                        wArgs := tb.build(wArgsBuf);
+                        wParams := wParamsBuf.build();
+                        wArgs := wArgsBuf.build();
                         wBody := if info.result == ir.VALUE_KIND_UNIT or info.result == ir.VALUE_KIND_NEVER {
                             info.runtime + "(" + wArgs + ");"
                         } else {

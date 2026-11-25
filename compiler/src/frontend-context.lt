@@ -311,17 +311,17 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
             fExpr := "lite$rc." + comp.prop;
             fCloned := self(comp.kind, fExpr);
             if fCloned =!= fExpr {
-                tb.append(mut extraBuf, ", ");
-                tb.append(mut extraBuf, comp.prop);
-                tb.append(mut extraBuf, ": ");
-                tb.append(mut extraBuf, fCloned);
+                mut extraBuf.append(", ");
+                mut extraBuf.append(comp.prop);
+                mut extraBuf.append(": ");
+                mut extraBuf.append(fCloned);
             }
             idx = idx + 1;
         }
-        if extraBuf.length() == 0 {
+        if extraBuf.count() == 0 {
             return "({ ...(" + expr + ") })";
         }
-        return "(((lite$rc: " + types.tsFunctionType(kind) + ") => ({ ...lite$rc" + tb.build(extraBuf) + " }))(" + expr + "))";
+        return "(((lite$rc: " + types.tsFunctionType(kind) + ") => ({ ...lite$rc" + extraBuf.build() + " }))(" + expr + "))";
     }
     expr
 };
@@ -671,28 +671,28 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             var index := 0;
             loop index < count {
                 comp := types.tupleComponent(kind, index);
-                if index > 0 { tb.append(mut cCodeBuf, ", "); }
-                tb.append(mut cCodeBuf, ".");
-                tb.append(mut cCodeBuf, types.cFieldName(comp.prop));
-                tb.append(mut cCodeBuf, " = ");
-                tb.append(mut cCodeBuf, self(target, comp.kind, next).code);
+                if index > 0 { mut cCodeBuf.append(", "); }
+                mut cCodeBuf.append(".");
+                mut cCodeBuf.append(types.cFieldName(comp.prop));
+                mut cCodeBuf.append(" = ");
+                mut cCodeBuf.append(self(target, comp.kind, next).code);
                 index = index + 1;
             }
-            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ " + tb.build(cCodeBuf) + " })", intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ " + cCodeBuf.build() + " })", intValue = 0, textValue = "", constant = false, next = next);
         }
         codeBuf: mut tb.TextBuilder;
-        tb.append(mut codeBuf, "{ ");
+        mut codeBuf.append("{ ");
         var index := 0;
         loop index < count {
             comp := types.tupleComponent(kind, index);
-            if index > 0 { tb.append(mut codeBuf, ", "); }
-            tb.append(mut codeBuf, types.tupleObjectKey(comp.label, index));
-            tb.append(mut codeBuf, ": ");
-            tb.append(mut codeBuf, self(target, comp.kind, next).code);
+            if index > 0 { mut codeBuf.append(", "); }
+            mut codeBuf.append(types.tupleObjectKey(comp.label, index));
+            mut codeBuf.append(": ");
+            mut codeBuf.append(self(target, comp.kind, next).code);
             index = index + 1;
         }
-        tb.append(mut codeBuf, " }");
-        (kind = kind, code = tb.build(codeBuf), intValue = 0, textValue = "", constant = false, next = next)
+        mut codeBuf.append(" }");
+        (kind = kind, code = codeBuf.build(), intValue = 0, textValue = "", constant = false, next = next)
     }
     else if types.isMapKind(kind) {
         if target == ir.TARGET_C and types.cMapTag(kind) =!= "" {
@@ -719,27 +719,27 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             fInitBuf: mut tb.TextBuilder;
             var pi := 0;
             loop pi < ps.length() {
-                if pi > 0 { tb.append(mut fInitBuf, ", "); }
-                tb.append(mut fInitBuf, ".f");
-                tb.append(mut fInitBuf, pi.toText());
-                tb.append(mut fInitBuf, " = ");
-                tb.append(mut fInitBuf, self(target, ps[pi], next).code);
+                if pi > 0 { mut fInitBuf.append(", "); }
+                mut fInitBuf.append(".f");
+                mut fInitBuf.append(pi.toText());
+                mut fInitBuf.append(" = ");
+                mut fInitBuf.append(self(target, ps[pi], next).code);
                 pi = pi + 1;
             }
-            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ .tag = 0, .u = { .c0 = { " + tb.build(fInitBuf) + " } } })", intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ .tag = 0, .u = { .c0 = { " + fInitBuf.build() + " } } })", intValue = 0, textValue = "", constant = false, next = next);
         }
         tsT := types.tsFunctionType(kind);
         tsInitBuf: mut tb.TextBuilder;
-        tb.append(mut tsInitBuf, "_t: 0 as const");
+        mut tsInitBuf.append("_t: 0 as const");
         var pi := 0;
         loop pi < ps.length() {
-            tb.append(mut tsInitBuf, ", _");
-            tb.append(mut tsInitBuf, pi.toText());
-            tb.append(mut tsInitBuf, ": ");
-            tb.append(mut tsInitBuf, self(target, ps[pi], next).code);
+            mut tsInitBuf.append(", _");
+            mut tsInitBuf.append(pi.toText());
+            mut tsInitBuf.append(": ");
+            mut tsInitBuf.append(self(target, ps[pi], next).code);
             pi = pi + 1;
         }
-        (kind = kind, code = "({ " + tb.build(tsInitBuf) + " } as " + tsT + ")", intValue = 0, textValue = "", constant = false, next = next)
+        (kind = kind, code = "({ " + tsInitBuf.build() + " } as " + tsT + ")", intValue = 0, textValue = "", constant = false, next = next)
     }
     else if types.isEnumKind(kind) {
         (kind = kind, code = "0", intValue = 0, textValue = "", constant = true, next = next)
@@ -755,29 +755,29 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             var index := 0;
             loop index < count {
                 comp := types.recordComponent(kind, index);
-                if index > 0 { tb.append(mut cCodeBuf, ", "); }
-                tb.append(mut cCodeBuf, ".");
-                tb.append(mut cCodeBuf, types.cFieldName(comp.prop));
-                tb.append(mut cCodeBuf, " = ");
-                tb.append(mut cCodeBuf, self(target, comp.kind, next).code);
+                if index > 0 { mut cCodeBuf.append(", "); }
+                mut cCodeBuf.append(".");
+                mut cCodeBuf.append(types.cFieldName(comp.prop));
+                mut cCodeBuf.append(" = ");
+                mut cCodeBuf.append(self(target, comp.kind, next).code);
                 index = index + 1;
             }
-            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ " + tb.build(cCodeBuf) + " })", intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ " + cCodeBuf.build() + " })", intValue = 0, textValue = "", constant = false, next = next);
         }
         if count == 0 { return (kind = kind, code = "{}", intValue = 0, textValue = "", constant = false, next = next); }
         codeBuf: mut tb.TextBuilder;
-        tb.append(mut codeBuf, "{ ");
+        mut codeBuf.append("{ ");
         var index := 0;
         loop index < count {
             comp := types.recordComponent(kind, index);
-            if index > 0 { tb.append(mut codeBuf, ", "); }
-            tb.append(mut codeBuf, types.tupleObjectKey(comp.label, index));
-            tb.append(mut codeBuf, ": ");
-            tb.append(mut codeBuf, self(target, comp.kind, next).code);
+            if index > 0 { mut codeBuf.append(", "); }
+            mut codeBuf.append(types.tupleObjectKey(comp.label, index));
+            mut codeBuf.append(": ");
+            mut codeBuf.append(self(target, comp.kind, next).code);
             index = index + 1;
         }
-        tb.append(mut codeBuf, " }");
-        (kind = kind, code = tb.build(codeBuf), intValue = 0, textValue = "", constant = false, next = next)
+        mut codeBuf.append(" }");
+        (kind = kind, code = codeBuf.build(), intValue = 0, textValue = "", constant = false, next = next)
     }
     else if types.isListKind(kind) {
         if target == ir.TARGET_C and types.cListTag(types.listElementKind(kind)) =!= "" {
@@ -818,17 +818,17 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         loop idx < paramCount {
             comp := types.fnParamComponent(kind, idx);
             pName := "lite_" + idx.toText();
-            if idx > 0 { tb.append(mut paramsCodeBuf, ", "); }
-            tb.append(mut paramsCodeBuf, pName);
-            tb.append(mut paramsCodeBuf, ": ");
-            tb.append(mut paramsCodeBuf, types.tsFunctionType(comp.kind));
-            tb.append(mut voidStmtsBuf, "void ");
-            tb.append(mut voidStmtsBuf, pName);
-            tb.append(mut voidStmtsBuf, "; ");
+            if idx > 0 { mut paramsCodeBuf.append(", "); }
+            mut paramsCodeBuf.append(pName);
+            mut paramsCodeBuf.append(": ");
+            mut paramsCodeBuf.append(types.tsFunctionType(comp.kind));
+            mut voidStmtsBuf.append("void ");
+            mut voidStmtsBuf.append(pName);
+            mut voidStmtsBuf.append("; ");
             idx = idx + 1;
         }
-        paramsCode := tb.build(paramsCodeBuf);
-        voidStmts := tb.build(voidStmtsBuf);
+        paramsCode := paramsCodeBuf.build();
+        voidStmts := voidStmtsBuf.build();
         retKind := types.fnResultKind(kind);
         retTs := types.tsFunctionType(retKind);
         bodyCode := if retKind == ir.VALUE_KIND_UNIT {
@@ -943,26 +943,26 @@ pub ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: L
                 };
                 bStmt := cUnwrapIntoVar(cVar, branchKinds[ci], bCode);
                 if ci == 0 {
-                    tb.append(mut stmtBuf, "if (");
-                    tb.append(mut stmtBuf, conditionCodes[0]);
-                    tb.append(mut stmtBuf, ") { ");
-                    tb.append(mut stmtBuf, bStmt);
-                    tb.append(mut stmtBuf, " }");
+                    mut stmtBuf.append("if (");
+                    mut stmtBuf.append(conditionCodes[0]);
+                    mut stmtBuf.append(") { ");
+                    mut stmtBuf.append(bStmt);
+                    mut stmtBuf.append(" }");
                 } else if ci < branchCount - 1 {
-                    tb.append(mut stmtBuf, " else if (");
-                    tb.append(mut stmtBuf, conditionCodes[ci]);
-                    tb.append(mut stmtBuf, ") { ");
-                    tb.append(mut stmtBuf, bStmt);
-                    tb.append(mut stmtBuf, " }");
+                    mut stmtBuf.append(" else if (");
+                    mut stmtBuf.append(conditionCodes[ci]);
+                    mut stmtBuf.append(") { ");
+                    mut stmtBuf.append(bStmt);
+                    mut stmtBuf.append(" }");
                 } else {
-                    tb.append(mut stmtBuf, " else { ");
-                    tb.append(mut stmtBuf, bStmt);
-                    tb.append(mut stmtBuf, " }");
+                    mut stmtBuf.append(" else { ");
+                    mut stmtBuf.append(bStmt);
+                    mut stmtBuf.append(" }");
                 }
                 ci = ci + 1;
             }
             retTok := if cVar == "" { "0" } else { cVar };
-            return "/*@CBLK:" + retTok + "@*/" + declPrefix + tb.build(stmtBuf);
+            return "/*@CBLK:" + retTok + "@*/" + declPrefix + stmtBuf.build();
         }
     }
     var code := ternaryBranchCode(target, resultKind, branchKinds[branchCount - 1], branchCodes[branchCount - 1]);
@@ -1094,8 +1094,8 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
             if semi > lblStart {
                 lbl := tryCode.slice(lblStart, semi).trim();
                 if tryCode.indexOf(lbl + ":", 0) < 0 {
-                    if cursor > flushed { tb.append(mut out, tryCode.slice(flushed, cursor)); }
-                    tb.append(mut out, "{ { " + finCode + " } goto " + lbl + "; }");
+                    if cursor > flushed { mut out.append(tryCode.slice(flushed, cursor)); }
+                    mut out.append("{ { " + finCode + " } goto " + lbl + "; }");
                     cursor = semi + 1;
                     flushed = cursor;
                     continue;
@@ -1131,13 +1131,13 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
             }
             if semi >= 0 {
                 retExpr := tryCode.slice(cursor + 6, semi).trim();
-                if cursor > flushed { tb.append(mut out, tryCode.slice(flushed, cursor)); }
+                if cursor > flushed { mut out.append(tryCode.slice(flushed, cursor)); }
                 if retExpr == "" or fnRetKind == "" or fnRetKind == ir.VALUE_KIND_UNIT or fnRetKind == ir.VALUE_KIND_NEVER {
-                    tb.append(mut out, "{ { " + finCode + " } return; }");
+                    mut out.append("{ { " + finCode + " } return; }");
                 } else {
                     rSeq = rSeq + 1;
                     tmpVar := "lt_fr_" + finId.toText() + "_" + rSeq.toText();
-                    tb.append(mut out, "{ " + types.cValueType(fnRetKind) + " " + tmpVar + " = (" + retExpr + "); { " + finCode + " } return " + tmpVar + "; }");
+                    mut out.append("{ " + types.cValueType(fnRetKind) + " " + tmpVar + " = (" + retExpr + "); { " + finCode + " } return " + tmpVar + "; }");
                 }
                 cursor = semi + 1;
                 flushed = cursor;
@@ -1149,8 +1149,8 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
         }
     }
     if flushed == 0 { return tryCode; }
-    if flushed < size { tb.append(mut out, tryCode.slice(flushed, size)); }
-    tb.build(out)
+    if flushed < size { mut out.append(tryCode.slice(flushed, size)); }
+    out.build()
 };
 
 /** Replaces whole-word occurrences of C identifier `ident` outside quoted strings with `replacement`. */
@@ -1175,8 +1175,8 @@ pub cReplaceIdentToken := fn(code: String, ident: String, replacement: String): 
         } else if ch == firstCh and code.startsWithAt(cursor, ident) and
         (cursor == 0 or not code.at(cursor - 1).isNameContinue()) and
         (cursor + idLen >= size or not code.at(cursor + idLen).isNameContinue()) {
-            if cursor > flushed { tb.append(mut out, code.slice(flushed, cursor)); }
-            tb.append(mut out, replacement);
+            if cursor > flushed { mut out.append(code.slice(flushed, cursor)); }
+            mut out.append(replacement);
             cursor = cursor + idLen;
             flushed = cursor;
         } else {
@@ -1184,8 +1184,8 @@ pub cReplaceIdentToken := fn(code: String, ident: String, replacement: String): 
         }
     }
     if flushed == 0 { return code; }
-    if flushed < size { tb.append(mut out, code.slice(flushed, size)); }
-    tb.build(out)
+    if flushed < size { mut out.append(code.slice(flushed, size)); }
+    out.build()
 };
 
 /** Returns the number of entries in `ctxs`. */
@@ -1380,11 +1380,11 @@ pub filterOtherMarkers := fn(raw: String, excludeId: Int): String {
         endPos := if nlPos < 0 { size } else { nlPos };
         entryId := raw.slice(cursor, eqPos);
         if entryId =!= excludeKey {
-            tb.appendLine(mut kept, raw.slice(cursor, endPos));
+            mut kept.appendLine(raw.slice(cursor, endPos));
         }
         cursor = endPos + 1;
     }
-    tb.build(kept)
+    kept.build()
 };
 
 /** Unifies all inferred exit kinds recorded for `targetId` in `raw` markers, failing on incompatible exit types. */

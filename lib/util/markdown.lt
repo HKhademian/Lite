@@ -47,7 +47,7 @@ pub stripCodeBlocks := fn(source: String): String {
                     cnt := countRepeatedAt(source, pos, lineEnd, ch);
                     if cnt >= 3 {
                         if pos > runStart {
-                            tb.append(mut out, source.slice(runStart, pos));
+                            mut out.append(source.slice(runStart, pos));
                         }
                         inFence = true;
                         fenceChar = ch;
@@ -72,11 +72,11 @@ pub stripCodeBlocks := fn(source: String): String {
     }
 
     if inFence {
-        tb.append(mut out, source.slice(fenceStart, size));
+        mut out.append(source.slice(fenceStart, size));
     } else if runStart < size {
-        tb.append(mut out, source.slice(runStart, size));
+        mut out.append(source.slice(runStart, size));
     }
-    tb.build(out)
+    out.build()
 }
 
 /** True when `source` leaves a fenced code block (with up to 3 leading spaces) unclosed at EOF. */
@@ -169,7 +169,7 @@ stripHtmlTags := fn(source: String): String {
         if open < 0 { break; }
         close := source.indexOf(">", open + 1);
         if close >= 0 {
-            if open > runStart { tb.append(mut out, source.slice(runStart, open)); }
+            if open > runStart { mut out.append(source.slice(runStart, open)); }
             i = close + 1;
             runStart = i;
         } else {
@@ -177,8 +177,8 @@ stripHtmlTags := fn(source: String): String {
         }
     }
     if runStart == 0 { return source; }
-    if runStart < size { tb.append(mut out, source.slice(runStart, size)); }
-    tb.build(out)
+    if runStart < size { mut out.append(source.slice(runStart, size)); }
+    out.build()
 }
 
 isAsciiPrintablePunct := fn(ch: String): Bool {
@@ -199,19 +199,19 @@ pub headingAnchor := fn(heading: String): String {
     loop i < size {
         ch := cleaned.at(i);
         if ch.isWhitespace() {
-            if i > runStart { tb.append(mut out, cleaned.slice(runStart, i)); }
-            tb.append(mut out, "-");
+            if i > runStart { mut out.append(cleaned.slice(runStart, i)); }
+            mut out.append("-");
             runStart = i + 1;
         } else if ch == "_" or ch == "-" or ch.isAsciiLetter() or ch.isDigit() {
         } else if isAsciiPrintablePunct(ch) or isUnicodeNonWordSymbol(ch) {
-            if i > runStart { tb.append(mut out, cleaned.slice(runStart, i)); }
+            if i > runStart { mut out.append(cleaned.slice(runStart, i)); }
             runStart = i + 1;
         }
         i = i + 1;
     }
     if runStart == 0 { return cleaned; }
-    if runStart < size { tb.append(mut out, cleaned.slice(runStart, size)); }
-    tb.build(out)
+    if runStart < size { mut out.append(cleaned.slice(runStart, size)); }
+    out.build()
 }
 
 /** Collects GitHub-style heading anchors (including `-1`, `-2` duplicate suffixes) and explicit HTML `id=`/`name=` anchors. */
@@ -284,7 +284,7 @@ stripInlineCode := fn(proseText: String): String {
         lineEnd := findLineEnd(proseText, tickPos + ticks, size);
         closeAt := proseText.indexOf(closeNeedle, tickPos + ticks);
         if closeAt >= 0 and closeAt + ticks <= lineEnd {
-            if tickPos > runStart { tb.append(mut out, proseText.slice(runStart, tickPos)); }
+            if tickPos > runStart { mut out.append(proseText.slice(runStart, tickPos)); }
             pos = closeAt + ticks;
             runStart = pos;
         } else {
@@ -292,8 +292,8 @@ stripInlineCode := fn(proseText: String): String {
         }
     }
     if runStart == 0 { return proseText; }
-    if runStart < size { tb.append(mut out, proseText.slice(runStart, size)); }
-    tb.build(out)
+    if runStart < size { mut out.append(proseText.slice(runStart, size)); }
+    out.build()
 }
 
 /** Extracts inline Markdown link and image destination targets from code-stripped prose. */

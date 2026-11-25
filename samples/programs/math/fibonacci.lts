@@ -21,7 +21,7 @@ terms := loop .count < 10 { fibIter(.count - 1) }.collected;
 
 b: mut tb.TextBuilder;
 loop terms {
-    tb.append(mut b, (.item).toText());
+    mut b.append((.item).toText());
 }
-io.outputLine("fib(0..9):", tb.buildJoined(b, ", "));
+io.outputLine("fib(0..9):", b.buildJoined(", "));
 io.outputLine("fib(12):", fibIter(12));

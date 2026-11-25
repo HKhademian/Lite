@@ -146,10 +146,10 @@ scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
     loop found as tok {
         entry := tok + "|";
         if existing.indexOf("|" + entry, 0) < 0 {
-            tb.append(mut added, entry);
+            mut added.append(entry);
         }
     }
-    if tb.count(added) == 0 { existing } else { existing + tb.build(added) }
+    if added.count() == 0 { existing } else { existing + added.build() }
 };
 
 /** Collects distinct target helper call names, skipping quoted text and consuming whole identifiers. Existing names avoid duplicate work across items. */
@@ -198,12 +198,12 @@ pub tokenBucketAdd := fn(s: mut TokenBuckets, needle: String): Unit {
 /** Serializes all tokens in `s` into one `|`-delimited string. */
 pub flattenTokenBuckets := fn(s: TokenBuckets): String {
     out: mut tb.TextBuilder;
-    tb.append(mut out, "|");
+    mut out.append("|");
     loop s as tok {
-        tb.append(mut out, tok);
-        tb.append(mut out, "|");
+        mut out.append(tok);
+        mut out.append("|");
     }
-    tb.build(out)
+    out.build()
 };
 
 /** Collects distinct `lite*` / `lt_*` call or value identifier tokens from `code` into `tokens`, pushing newly added tokens onto `queue`. */
@@ -1612,8 +1612,8 @@ replaceParamToken := fn(body: String, paramRt: String, argCode: String): String 
             afterPos := cursor + pLen;
             nextOk := afterPos >= bLen or (not body.at(afterPos).isNameContinue() and body.at(afterPos) =!= "$");
             if prevOk and nextOk {
-                if cursor > flushed { tb.append(mut out, body.slice(flushed, cursor)); }
-                tb.append(mut out, argCode);
+                if cursor > flushed { mut out.append(body.slice(flushed, cursor)); }
+                mut out.append(argCode);
                 cursor = afterPos;
                 flushed = cursor;
                 continue;
@@ -1622,8 +1622,8 @@ replaceParamToken := fn(body: String, paramRt: String, argCode: String): String 
         cursor = cursor + 1;
     }
     if flushed == 0 { return body; }
-    if flushed < bLen { tb.append(mut out, body.slice(flushed, bLen)); }
-    tb.build(out)
+    if flushed < bLen { mut out.append(body.slice(flushed, bLen)); }
+    out.build()
 };
 
 /** Widens TS literal arguments (`2`, `2n`, `true`/`false`) when inlining so strict `tsc` does not flag `TS2367` on comparisons. */
@@ -1810,8 +1810,8 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
                     p2 := leafParams2[fnName];
                     body := leafBodies[fnName];
                     if p1 == "" and rawArgs == "" {
-                        if nextFn > copyFrom { tb.append(mut out, code.slice(copyFrom, nextFn)); }
-                        tb.append(mut out, "(" + body + ")");
+                        if nextFn > copyFrom { mut out.append(code.slice(copyFrom, nextFn)); }
+                        mut out.append("(" + body + ")");
                         copyFrom = scan;
                         cursor = scan;
                         changed = true;
@@ -1819,8 +1819,8 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
                         continue;
                     } else if p1 =!= "" and p2 == "" and commaCount == 0 and isSimpleInlineArg(rawArgs) {
                         subArg := widenInlineArgForTarget(target, rawArgs);
-                        if nextFn > copyFrom { tb.append(mut out, code.slice(copyFrom, nextFn)); }
-                        tb.append(mut out, "(" + replaceParamToken(body, p1, subArg) + ")");
+                        if nextFn > copyFrom { mut out.append(code.slice(copyFrom, nextFn)); }
+                        mut out.append("(" + replaceParamToken(body, p1, subArg) + ")");
                         copyFrom = scan;
                         cursor = scan;
                         changed = true;
@@ -1835,8 +1835,8 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
                             sub2 := widenInlineArgForTarget(target, arg2);
                             step1 := replaceParamToken(body, p1, sub1);
                             step2 := replaceParamToken(step1, p2, sub2);
-                            if nextFn > copyFrom { tb.append(mut out, code.slice(copyFrom, nextFn)); }
-                            tb.append(mut out, "(" + step2 + ")");
+                            if nextFn > copyFrom { mut out.append(code.slice(copyFrom, nextFn)); }
+                            mut out.append("(" + step2 + ")");
                             copyFrom = scan;
                             cursor = scan;
                             changed = true;
@@ -1851,8 +1851,8 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
         nextFn = code.indexOf(fnPrefix, cursor);
     }
     if not changed { return code; }
-    if copyFrom < cLen { tb.append(mut out, code.slice(copyFrom, cLen)); }
-    tb.build(out)
+    if copyFrom < cLen { mut out.append(code.slice(copyFrom, cLen)); }
+    out.build()
 };
 
 /** Extracts reachable runtime tokens (`lite...` / `lt_...`) from `code` outside quoted strings. */

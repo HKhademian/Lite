@@ -84,12 +84,12 @@ pub mergePipeBags := fn(base: String, extra: String): String {
             tok := extra.slice(pos, endPos);
             if not seenAdded.has(tok) and base.indexOf("|" + tok + "|", 0) < 0 {
                 mut seenAdded.add(tok);
-                tb.append(mut added, tok + "|");
+                mut added.append(tok + "|");
             }
         }
         pos = endPos + 1;
     }
-    if tb.count(added) == 0 { base } else { base + tb.build(added) }
+    if added.count() == 0 { base } else { base + added.build() }
 };
 
 /** Extracts the `allBag` portion (`allBag + "\n" + readBag`) from encoded callable dependency metadata. */

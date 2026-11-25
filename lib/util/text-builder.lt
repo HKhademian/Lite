@@ -1,41 +1,41 @@
-/* List-backed O(n) text builder utility. Zero-initialize with `b: mut tb.TextBuilder;`. */
-
-text := import "core/text";
+/* List-backed O(n) nominal text builder utility. Zero-initialize with `b: mut tb.TextBuilder;`. */
 
 /** Buffered string builder backed by a list of chunks and a single final concatenation. */
-pub TextBuilder := alias List<String>;
+pub TextBuilder := record {
+    chunks: List<String>;
+};
 
 /** Appends a non-empty chunk to `b` in amortized O(1). */
-pub append := fn(b: mut TextBuilder, chunk: String): Unit {
+pub TextBuilder.append := fn(b: mut Self, chunk: String): Unit {
     if chunk =!= "" {
-        mut b.pushBack(chunk);
+        mut b.chunks.pushBack(chunk);
     }
 };
 
 /** Appends `line` followed by a newline (`\\n`) to `b` in amortized O(1). */
-pub appendLine := fn(b: mut TextBuilder, line: String): Unit {
+pub TextBuilder.appendLine := fn(b: mut Self, line: String): Unit {
     if line =!= "" {
-        mut b.pushBack(line);
+        mut b.chunks.pushBack(line);
     }
-    (mut b).pushBack("\n");
+    mut b.chunks.pushBack("\n");
 };
 
 /** Materializes all buffered chunks into one String via a single O(n) pass. */
-pub build := fn(b: TextBuilder): String {
-    b.join("")
+pub TextBuilder.build := fn(b: Self): String {
+    b.chunks.join("")
 };
 
 /** Materializes all buffered chunks joined by `separator` via a single O(n) pass. */
-pub buildJoined := fn(b: TextBuilder, separator: String): String {
-    b.join(separator)
+pub TextBuilder.buildJoined := fn(b: Self, separator: String): String {
+    b.chunks.join(separator)
 };
 
 /** Returns the number of buffered chunks currently stored in `b`. */
-pub count := fn(b: TextBuilder): Int {
-    b.length()
+pub TextBuilder.count := fn(b: Self): Int {
+    b.chunks.length()
 };
 
 /** Removes all buffered chunks from `b` so it can be reused. */
-pub clear := fn(b: mut TextBuilder): Unit {
-    mut b.clear();
+pub TextBuilder.clear := fn(b: mut Self): Unit {
+    mut b.chunks.clear();
 };

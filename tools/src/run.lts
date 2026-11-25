@@ -39,15 +39,15 @@ escapeLiteString := fn(raw: String): String {
     loop i < n {
         ch := raw.at(i);
         if ch == "\\" or ch == "\"" {
-            if i > runStart { tb.append(mut out, raw.slice(runStart, i)); }
-            tb.append(mut out, if ch == "\\" { "\\\\" } else { "\\\"" });
+            if i > runStart { mut out.append(raw.slice(runStart, i)); }
+            mut out.append(if ch == "\\" { "\\\\" } else { "\\\"" });
             runStart = i + 1;
         }
         i += 1;
     }
     if runStart == 0 { return raw; }
-    if runStart < n { tb.append(mut out, raw.slice(runStart, n)); }
-    tb.build(out)
+    if runStart < n { mut out.append(raw.slice(runStart, n)); }
+    out.build()
 };
 
 splitLines := fn(source: String): List<String> {

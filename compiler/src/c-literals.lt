@@ -15,7 +15,7 @@ pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
 pub textLiteralCode := fn(value: String): String {
     size := value.length();
     out: mut tb.TextBuilder;
-    tb.append(mut out, "\"");
+    mut out.append("\"");
     var runStart := 0;
     var position := 0;
     loop position < size {
@@ -28,16 +28,16 @@ pub textLiteralCode := fn(value: String): String {
         else if ch == "\r" { esc = "\\r"; }
         else if ch == "\t" { esc = "\\t"; }
         if esc =!= "" {
-            if position > runStart { tb.append(mut out, value.slice(runStart, position)); }
-            tb.append(mut out, esc);
+            if position > runStart { mut out.append(value.slice(runStart, position)); }
+            mut out.append(esc);
             runStart = position + 1;
         }
         position += 1;
     }
     if runStart == 0 { return "\"" + value + "\""; }
-    if runStart < size { tb.append(mut out, value.slice(runStart, size)); }
-    tb.append(mut out, "\"");
-    tb.build(out)
+    if runStart < size { mut out.append(value.slice(runStart, size)); }
+    mut out.append("\"");
+    out.build()
 }
 
 /** Formats a Lite String literal as a compile-time length-prefixed `lt_str` value (`byte_len` via `sizeof`, `cp_len` exact). */

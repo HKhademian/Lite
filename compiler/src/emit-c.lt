@@ -19,7 +19,7 @@ outLine := fn(s: String): Unit {
     if not cOutUseWriter {
         io.outputLine(line);
     } else {
-        tb.appendLine(mut cOutBuf, line);
+        mut cOutBuf.appendLine(line);
     }
 };
 
@@ -28,7 +28,7 @@ outText := fn(s: String): Unit {
     if not cOutUseWriter {
         io.output(s);
     } else {
-        tb.append(mut cOutBuf, s);
+        mut cOutBuf.append(s);
     }
 };
 
@@ -382,14 +382,14 @@ cParameterList := fn(encoded: String): String {
         rawParamKind := entry.slice(eq + 1, entry.length());
         isMutParam := rawParamKind.startsWithAt(0, "mut ");
         paramKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
-        if tb.count(result) > 0 { tb.append(mut result, ", "); }
-        tb.append(mut result, cScalarType(paramKind));
-        tb.append(mut result, if isMutParam { " *lite_" } else { " lite_" });
-        tb.append(mut result, frontend.cSafeIdent(paramName));
+        if result.count() > 0 { mut result.append(", "); }
+        mut result.append(cScalarType(paramKind));
+        mut result.append(if isMutParam { " *lite_" } else { " lite_" });
+        mut result.append(frontend.cSafeIdent(paramName));
         if sep < 0 { break; }
         start = sep + 1;
     }
-    tb.build(result)
+    result.build()
 };
 
 /** Emits `(void)lite_param;` silencing reads for strict C11 warning checks. */
@@ -635,12 +635,12 @@ normalizeCBuiltinCalls := fn(code: String): String {
         }
         if hit == nextAnnot {
             if code.startsWithAt(hit, "/*@CFN_START:") {
-                if hit > flushed { tb.append(mut out, code.slice(flushed, hit)); }
+                if hit > flushed { mut out.append(code.slice(flushed, hit)); }
                 cursor = skipCFnBlock(code, hit);
                 flushed = cursor;
             } else if code.startsWithAt(hit, "/*@T:") or code.startsWithAt(hit, "/*@C:") or code.startsWithAt(hit, "/*@P:") {
                 endTag := code.indexOf("@*/", hit + 5);
-                if hit > flushed { tb.append(mut out, code.slice(flushed, hit)); }
+                if hit > flushed { mut out.append(code.slice(flushed, hit)); }
                 cursor = if endTag >= 0 { endTag + 3 } else { size };
                 flushed = cursor;
             } else {
@@ -651,9 +651,9 @@ normalizeCBuiltinCalls := fn(code: String): String {
             if endName > hit + 5 and endName < size and code.at(endName) == "(" {
                 found := cBuiltinMap.get(code.slice(hit + 5, endName));
                 if found.found {
-                    if hit > flushed { tb.append(mut out, code.slice(flushed, hit)); }
-                    tb.append(mut out, found.value);
-                    tb.append(mut out, "(");
+                    if hit > flushed { mut out.append(code.slice(flushed, hit)); }
+                    mut out.append(found.value);
+                    mut out.append("(");
                     cursor = endName + 1;
                     flushed = cursor;
                     continue;
@@ -663,8 +663,8 @@ normalizeCBuiltinCalls := fn(code: String): String {
         }
     }
     if flushed == 0 { return code; }
-    if flushed < size { tb.append(mut out, code.slice(flushed, size)); }
-    tb.build(out)
+    if flushed < size { mut out.append(code.slice(flushed, size)); }
+    out.build()
 };
 
 /** Builds one checked printf call for an Int*, Float*, String, Bool, Unit or Never report value without a trailing newline. */
@@ -873,7 +873,7 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
     if frontend.isPayloadEnumKind(kind) {
         cc := frontend.enumCaseCount(kind);
         unionFieldsBuf: mut tb.TextBuilder;
-        tb.append(mut unionFieldsBuf, "int _empty; ");
+        mut unionFieldsBuf.append("int _empty; ");
         var ci := 0;
         loop ci < cc {
             pc := frontend.enumCasePayloadCount(kind, ci);
@@ -881,21 +881,21 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
                 sfBuf: mut tb.TextBuilder;
                 var pi := 0;
                 loop pi < pc {
-                    tb.append(mut sfBuf, cScalarType(frontend.enumCasePayloadKind(kind, ci, pi)));
-                    tb.append(mut sfBuf, " f");
-                    tb.append(mut sfBuf, pi.toText());
-                    tb.append(mut sfBuf, "; ");
+                    mut sfBuf.append(cScalarType(frontend.enumCasePayloadKind(kind, ci, pi)));
+                    mut sfBuf.append(" f");
+                    mut sfBuf.append(pi.toText());
+                    mut sfBuf.append("; ");
                     pi = pi + 1;
                 }
-                tb.append(mut unionFieldsBuf, "struct { ");
-                tb.append(mut unionFieldsBuf, tb.build(sfBuf));
-                tb.append(mut unionFieldsBuf, "} c");
-                tb.append(mut unionFieldsBuf, ci.toText());
-                tb.append(mut unionFieldsBuf, "; ");
+                mut unionFieldsBuf.append("struct { ");
+                mut unionFieldsBuf.append(sfBuf.build());
+                mut unionFieldsBuf.append("} c");
+                mut unionFieldsBuf.append(ci.toText());
+                mut unionFieldsBuf.append("; ");
             }
             ci = ci + 1;
         }
-        outLine("typedef struct { int64_t tag; union { " + tb.build(unionFieldsBuf) + "} u; } " + tag + ";");
+        outLine("typedef struct { int64_t tag; union { " + unionFieldsBuf.build() + "} u; } " + tag + ";");
         if needCopy and frontend.cTypeHasListField(kind) {
             outLine("static " + tag + " " + tag + "_copy(" + tag + " src) {");
             outLine("    switch (src.tag) {");
@@ -917,7 +917,7 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
                     initsBuf: mut tb.TextBuilder;
                     var ppi := 0;
                     loop ppi < pc {
-                        if ppi > 0 { tb.append(mut initsBuf, ", "); }
+                        if ppi > 0 { mut initsBuf.append(", "); }
                         pk := frontend.enumCasePayloadKind(kind, cci, ppi);
                         fnm := "src.u.c" + cci.toText() + ".f" + ppi.toText();
                         fVal := if cListTagForKind(pk) =!= "" {
@@ -931,13 +931,13 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
                         } else {
                             fnm
                         };
-                        tb.append(mut initsBuf, ".f");
-                        tb.append(mut initsBuf, ppi.toText());
-                        tb.append(mut initsBuf, " = ");
-                        tb.append(mut initsBuf, fVal);
+                        mut initsBuf.append(".f");
+                        mut initsBuf.append(ppi.toText());
+                        mut initsBuf.append(" = ");
+                        mut initsBuf.append(fVal);
                         ppi = ppi + 1;
                     }
-                    outLine("        case " + cci.toText() + ": return (" + tag + "){ .tag = " + cci.toText() + ", .u = { .c" + cci.toText() + " = { " + tb.build(initsBuf) + " } } };");
+                    outLine("        case " + cci.toText() + ": return (" + tag + "){ .tag = " + cci.toText() + ", .u = { .c" + cci.toText() + " = { " + initsBuf.build() + " } } };");
                 }
                 cci = cci + 1;
             }
@@ -988,13 +988,13 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
         var i := 0;
         loop i < count {
             comp := if isRec { frontend.recordComponent(kind, i) } else { frontend.tupleComponent(kind, i) };
-            tb.append(mut fieldsBuf, cScalarType(comp.kind));
-            tb.append(mut fieldsBuf, " ");
-            tb.append(mut fieldsBuf, frontend.cFieldName(comp.prop));
-            tb.append(mut fieldsBuf, "; ");
+            mut fieldsBuf.append(cScalarType(comp.kind));
+            mut fieldsBuf.append(" ");
+            mut fieldsBuf.append(frontend.cFieldName(comp.prop));
+            mut fieldsBuf.append("; ");
             i = i + 1;
         }
-        outLine("typedef struct { " + tb.build(fieldsBuf) + "} " + tag + ";");
+        outLine("typedef struct { " + fieldsBuf.build() + "} " + tag + ";");
     }
     if needCopy and frontend.cTypeHasListField(kind) {
         outLine("static " + tag + " " + tag + "_copy(" + tag + " src) {");
@@ -1005,7 +1005,7 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
             var ci := 0;
             loop ci < count {
                 comp := if isRec { frontend.recordComponent(kind, ci) } else { frontend.tupleComponent(kind, ci) };
-                if ci > 0 { tb.append(mut initsBuf, ", "); }
+                if ci > 0 { mut initsBuf.append(", "); }
                 fnm := frontend.cFieldName(comp.prop);
                 fVal := if cListTagForKind(comp.kind) =!= "" {
                     "lt_list_" + cListTagForKind(comp.kind) + "_copy(src." + fnm + ")"
@@ -1018,13 +1018,13 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
                 } else {
                     "src." + fnm
                 };
-                tb.append(mut initsBuf, ".");
-                tb.append(mut initsBuf, fnm);
-                tb.append(mut initsBuf, " = ");
-                tb.append(mut initsBuf, fVal);
+                mut initsBuf.append(".");
+                mut initsBuf.append(fnm);
+                mut initsBuf.append(" = ");
+                mut initsBuf.append(fVal);
                 ci = ci + 1;
             }
-            outLine("    return (" + tag + "){ " + tb.build(initsBuf) + " };");
+            outLine("    return (" + tag + "){ " + initsBuf.build() + " };");
         }
         outLine("}");
     }
@@ -1084,7 +1084,7 @@ emitCTupleConvHelper := fn(expectedKind: String, actualKind: String): Unit {
         loop i < count {
             eComp := frontend.tupleComponent(expectedKind, i);
             aComp := frontend.tupleComponent(actualKind, i);
-            if i > 0 { tb.append(mut initsBuf, ", "); }
+            if i > 0 { mut initsBuf.append(", "); }
             aExpr := "v." + frontend.cFieldName(aComp.prop);
             fVal := if cListTagForKind(eComp.kind) =!= "" {
                 "lt_list_" + cListTagForKind(eComp.kind) + "_copy(" + aExpr + ")"
@@ -1093,13 +1093,13 @@ emitCTupleConvHelper := fn(expectedKind: String, actualKind: String): Unit {
             } else {
                 aExpr
             };
-            tb.append(mut initsBuf, ".");
-            tb.append(mut initsBuf, frontend.cFieldName(eComp.prop));
-            tb.append(mut initsBuf, " = ");
-            tb.append(mut initsBuf, fVal);
+            mut initsBuf.append(".");
+            mut initsBuf.append(frontend.cFieldName(eComp.prop));
+            mut initsBuf.append(" = ");
+            mut initsBuf.append(fVal);
             i = i + 1;
         }
-        outLine("    return (" + expTag + "){ " + tb.build(initsBuf) + " };");
+        outLine("    return (" + expTag + "){ " + initsBuf.build() + " };");
     }
     outLine("}");
     outLine("");
@@ -1926,12 +1926,12 @@ injectCFnTemps := fn(code: String): String {
                 tag := if code.startsWithAt(hit, "lt_cmp_") or code.startsWithAt(hit, "lt_arg_f_") { code.at(hit + 7) } else { "i" };
                 typeCode := if tag == "s" { "lt_str " } else if tag == "b" { "bool " }
                 else if tag == "f" { "double " } else { "int64_t " };
-                tb.append(mut decls, typeCode + tName + "; ");
+                mut decls.append(typeCode + tName + "; ");
             }
         }
         cursor = end;
     }
-    code.slice(0, mIdx) + tb.build(decls) + code.slice(mIdx + marker.length(), size)
+    code.slice(0, mIdx) + decls.build() + code.slice(mIdx + marker.length(), size)
 };
 
 /** Emits shortest round-trip binary64 display with decimal/exponent thresholds shared by the TS runtime; source remains statically checked and no locale is selected by generated programs. */
@@ -2450,10 +2450,10 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                     outText(outputWriteCode(firstKind, firstCode, indent, failAction));
                 }
             }
-            else if count > 1 { outText(tb.build(writes)); }
+            else if count > 1 { outText(writes.build()); }
             if item.kind == frontend.ITEM_KIND_END { outLine(indent + "if (printf(\"\\n\") < 0) { " + failAction + " }"); }
             count = 0;
-            tb.clear(mut writes);
+            mut writes.clear();
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP or item.kind == frontend.ITEM_KIND_IMPORT or
         item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or
         item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_PURE_GLOBAL or
@@ -2467,14 +2467,14 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                     firstTemp = "lt_output_" + tempIndex.toText();
                     tempIndex = tempIndex + 1;
                     emitOutputArgument(firstKind, firstCode, firstTemp, indent);
-                    tb.clear(mut writes);
-                    tb.append(mut writes, outputWriteCode(firstKind, if firstKind == frontend.VALUE_KIND_UNIT or firstKind == frontend.VALUE_KIND_NEVER { "0" } else { firstTemp }, indent, failAction));
+                    mut writes.clear();
+                    mut writes.append(outputWriteCode(firstKind, if firstKind == frontend.VALUE_KIND_UNIT or firstKind == frontend.VALUE_KIND_NEVER { "0" } else { firstTemp }, indent, failAction));
                 }
                 temp := "lt_output_" + tempIndex.toText();
                 tempIndex = tempIndex + 1;
                 emitOutputArgument(item.kind, code, temp, indent);
-                tb.append(mut writes, indent + "if (printf(\" \") < 0) { " + failAction + " }\n");
-                tb.append(mut writes, outputWriteCode(item.kind, if item.kind == frontend.VALUE_KIND_UNIT or item.kind == frontend.VALUE_KIND_NEVER { "0" } else { temp }, indent, failAction));
+                mut writes.append(indent + "if (printf(\" \") < 0) { " + failAction + " }\n");
+                mut writes.append(outputWriteCode(item.kind, if item.kind == frontend.VALUE_KIND_UNIT or item.kind == frontend.VALUE_KIND_NEVER { "0" } else { temp }, indent, failAction));
             }
             count = count + 1;
         }
@@ -2742,29 +2742,29 @@ emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
     retC := cScalarType(retKind);
     pCount := frontend.fnParamCount(kind);
     fpParamsBuf: mut tb.TextBuilder;
-    tb.append(mut fpParamsBuf, "void *");
+    mut fpParamsBuf.append("void *");
     callParamsBuf: mut tb.TextBuilder;
-    tb.append(mut callParamsBuf, fTag);
-    tb.append(mut callParamsBuf, " f");
+    mut callParamsBuf.append(fTag);
+    mut callParamsBuf.append(" f");
     callArgsBuf: mut tb.TextBuilder;
-    tb.append(mut callArgsBuf, "f.env");
+    mut callArgsBuf.append("f.env");
     var i := 0;
     loop i < pCount {
         pC := cScalarType(frontend.fnParamComponent(kind, i).kind);
         aName := "a" + i.toText();
-        tb.append(mut fpParamsBuf, ", ");
-        tb.append(mut fpParamsBuf, pC);
-        tb.append(mut callParamsBuf, ", ");
-        tb.append(mut callParamsBuf, pC);
-        tb.append(mut callParamsBuf, " ");
-        tb.append(mut callParamsBuf, aName);
-        tb.append(mut callArgsBuf, ", ");
-        tb.append(mut callArgsBuf, aName);
+        mut fpParamsBuf.append(", ");
+        mut fpParamsBuf.append(pC);
+        mut callParamsBuf.append(", ");
+        mut callParamsBuf.append(pC);
+        mut callParamsBuf.append(" ");
+        mut callParamsBuf.append(aName);
+        mut callArgsBuf.append(", ");
+        mut callArgsBuf.append(aName);
         i = i + 1;
     }
-    fpParams := tb.build(fpParamsBuf);
-    callParams := tb.build(callParamsBuf);
-    callArgs := tb.build(callArgsBuf);
+    fpParams := fpParamsBuf.build();
+    callParams := callParamsBuf.build();
+    callArgs := callArgsBuf.build();
     outLine("typedef struct " + fTag + " { " + retC + " (*fn)(" + fpParams + "); void *env; } " + fTag + ";");
     if usesIntHelper(calls, fTag + "_call(") {
         if retC == "void" {
@@ -5846,9 +5846,9 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
 /** Emits the C program to an explicit `io.Writer` driven by composable `OptConfig`. */
 pub emitProgramToWithConfig := fn(writer: io.Writer, items: frontend.Items, source: String, prefix: String, builtinSpecs: List<String>, config: optCfg.OptConfig): Unit {
     cOutUseWriter = true;
-    tb.clear(mut cOutBuf);
+    mut cOutBuf.clear();
     emitProgramWithConfig(items, source, prefix, builtinSpecs, config);
-    _res := writer.writeText(tb.build(cOutBuf));
-    tb.clear(mut cOutBuf);
+    _res := writer.writeText(cOutBuf.build());
+    mut cOutBuf.clear();
     cOutUseWriter = false;
 };

@@ -408,28 +408,28 @@ hexDigit := fn(n: Int): String {
 /** Formats one string as a valid JSON double-quoted literal. */
 quoteJson := fn(s: String): String {
     out: mut tb.TextBuilder;
-    tb.append(mut out, "\"");
+    mut out.append("\"");
     codePoints := unicode.toCodePoints(s);
     loop codePoints as cp {
-        if cp == 34 { tb.append(mut out, "\\\""); }
-        else if cp == 92 { tb.append(mut out, "\\\\"); }
-        else if cp == 8 { tb.append(mut out, "\\b"); }
-        else if cp == 12 { tb.append(mut out, "\\f"); }
-        else if cp == 10 { tb.append(mut out, "\\n"); }
-        else if cp == 13 { tb.append(mut out, "\\r"); }
-        else if cp == 9 { tb.append(mut out, "\\t"); }
+        if cp == 34 { mut out.append("\\\""); }
+        else if cp == 92 { mut out.append("\\\\"); }
+        else if cp == 8 { mut out.append("\\b"); }
+        else if cp == 12 { mut out.append("\\f"); }
+        else if cp == 10 { mut out.append("\\n"); }
+        else if cp == 13 { mut out.append("\\r"); }
+        else if cp == 9 { mut out.append("\\t"); }
         else if cp < 32 {
-            tb.append(mut out, "\\u00");
-            tb.append(mut out, hexDigit(cp / 16));
-            tb.append(mut out, hexDigit(cp % 16));
+            mut out.append("\\u00");
+            mut out.append(hexDigit(cp / 16));
+            mut out.append(hexDigit(cp % 16));
         } else {
             one: List<Int> = [cp];
             dec := unicode.fromCodePoints(one);
-            if dec.ok { tb.append(mut out, dec.text); }
+            if dec.ok { mut out.append(dec.text); }
         }
     }
-    tb.append(mut out, "\"");
-    tb.build(out)
+    mut out.append("\"");
+    out.build()
 }
 
 /** Serializes `{ files, edges }` trace JSON from `graph` to `tracePath`. */

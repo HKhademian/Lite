@@ -19,15 +19,15 @@ pub escapeHtml := fn(raw: String): String {
         else if ch == ">" { esc = "&gt;"; }
         else if ch == "\"" { esc = "&quot;"; }
         if esc =!= "" {
-            if i > runStart { tb.append(mut out, raw.slice(runStart, i)); }
-            tb.append(mut out, esc);
+            if i > runStart { mut out.append(raw.slice(runStart, i)); }
+            mut out.append(esc);
             runStart = i + 1;
         }
         i += 1;
     }
     if runStart == 0 { return raw; }
-    if runStart < size { tb.append(mut out, raw.slice(runStart, size)); }
-    tb.build(out)
+    if runStart < size { mut out.append(raw.slice(runStart, size)); }
+    out.build()
 };
 
 countCharAt := fn(source: String, start: Int, limit: Int, ch: String): Int {
@@ -233,13 +233,13 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
     loop pos < size {
         ch := line.at(pos);
         if ch == "\\" and pos + 1 < size and isEscapablePunct(line.at(pos + 1)) {
-            if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+            if pos > runStart { mut out.append(line.slice(runStart, pos)); }
             nextCh := line.at(pos + 1);
-            tb.append(mut out, if mode == 2 { nextCh } else { escapeHtml(nextCh) });
+            mut out.append(if mode == 2 { nextCh } else { escapeHtml(nextCh) });
             pos += 2;
             runStart = pos;
         } else if ch == "`" {
-            if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+            if pos > runStart { mut out.append(line.slice(runStart, pos)); }
             ticks := countCharAt(line, pos, size, "`");
             closeTicks := findClosingCodeTicks(line, pos + ticks, ticks);
             if closeTicks >= 0 {
@@ -249,13 +249,13 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
                     body = body.slice(1, bodyLen - 1);
                 }
                 if mode == 2 {
-                    tb.append(mut out, body);
+                    mut out.append(body);
                 } else {
-                    tb.append(mut out, "<code>" + escapeHtml(body) + "</code>");
+                    mut out.append("<code>" + escapeHtml(body) + "</code>");
                 }
                 pos = closeTicks + ticks;
             } else {
-                tb.append(mut out, "`".repeat(ticks));
+                mut out.append("`".repeat(ticks));
                 pos += ticks;
             }
             runStart = pos;
@@ -264,15 +264,15 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
             if altEnd >= 0 and altEnd + 1 < size and line.at(altEnd + 1) == "(" {
                 dest := parseLinkDestination(line, altEnd + 1);
                 if dest.ok {
-                    if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+                    if pos > runStart { mut out.append(line.slice(runStart, pos)); }
                     altText := line.slice(pos + 2, altEnd);
                     if mode == 0 {
                         srcAttr := escapeHtml(dest.href);
                         dataAttr := if isExternalHref(dest.href) { "" } else { " data-md-src=\"" + srcAttr + "\"" };
                         titleAttr := if dest.title == "" { "" } else { " title=\"" + escapeHtml(dest.title) + "\"" };
-                        tb.append(mut out, "<img src=\"" + srcAttr + "\"" + dataAttr + " alt=\"" + escapeHtml(altText) + "\"" + titleAttr + " loading=\"lazy\">");
+                        mut out.append("<img src=\"" + srcAttr + "\"" + dataAttr + " alt=\"" + escapeHtml(altText) + "\"" + titleAttr + " loading=\"lazy\">");
                     } else {
-                        tb.append(mut out, self(altText, mode));
+                        mut out.append(self(altText, mode));
                     }
                     pos = dest.closeParen + 1;
                     runStart = pos;
@@ -287,7 +287,7 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
             if labelEnd >= 0 and labelEnd + 1 < size and line.at(labelEnd + 1) == "(" {
                 dest := parseLinkDestination(line, labelEnd + 1);
                 if dest.ok {
-                    if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+                    if pos > runStart { mut out.append(line.slice(runStart, pos)); }
                     labelRaw := line.slice(pos + 1, labelEnd);
                     if mode == 0 {
                         hrefAttr := escapeHtml(dest.href);
@@ -307,9 +307,9 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
                             ""
                         };
                         titleAttr := if dest.title == "" { "" } else { " title=\"" + escapeHtml(dest.title) + "\"" };
-                        tb.append(mut out, "<a href=\"" + hrefAttr + "\"" + dataAttr + relAttr + titleAttr + ">" + self(labelRaw, 0) + "</a>");
+                        mut out.append("<a href=\"" + hrefAttr + "\"" + dataAttr + relAttr + titleAttr + ">" + self(labelRaw, 0) + "</a>");
                     } else {
-                        tb.append(mut out, self(labelRaw, mode));
+                        mut out.append(self(labelRaw, mode));
                     }
                     pos = dest.closeParen + 1;
                     runStart = pos;
@@ -324,12 +324,12 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
                 if pos + 2 < size and not line.at(pos + 2).isWhitespace() {
                     closeStrong := findClosingEmph(line, pos + 2, true);
                     if closeStrong > pos + 2 {
-                        if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+                        if pos > runStart { mut out.append(line.slice(runStart, pos)); }
                         innerStrong := line.slice(pos + 2, closeStrong);
                         if mode == 2 {
-                            tb.append(mut out, self(innerStrong, 2));
+                            mut out.append(self(innerStrong, 2));
                         } else {
-                            tb.append(mut out, "<strong>" + self(innerStrong, mode) + "</strong>");
+                            mut out.append("<strong>" + self(innerStrong, mode) + "</strong>");
                         }
                         pos = closeStrong + 2;
                         runStart = pos;
@@ -342,12 +342,12 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
             } else if pos + 1 < size and not line.at(pos + 1).isWhitespace() {
                 closeEm := findClosingEmph(line, pos + 1, false);
                 if closeEm > pos + 1 {
-                    if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
+                    if pos > runStart { mut out.append(line.slice(runStart, pos)); }
                     innerEm := line.slice(pos + 1, closeEm);
                     if mode == 2 {
-                        tb.append(mut out, self(innerEm, 2));
+                        mut out.append(self(innerEm, 2));
                     } else {
-                        tb.append(mut out, "<em>" + self(innerEm, mode) + "</em>");
+                        mut out.append("<em>" + self(innerEm, mode) + "</em>");
                     }
                     pos = closeEm + 1;
                     runStart = pos;
@@ -358,11 +358,11 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
                 pos += 1;
             }
         } else if mode =!= 2 and (ch == "&" or ch == "<" or ch == ">" or ch == "\"") {
-            if pos > runStart { tb.append(mut out, line.slice(runStart, pos)); }
-            if ch == "&" { tb.append(mut out, "&amp;"); }
-            else if ch == "<" { tb.append(mut out, "&lt;"); }
-            else if ch == ">" { tb.append(mut out, "&gt;"); }
-            else { tb.append(mut out, "&quot;"); }
+            if pos > runStart { mut out.append(line.slice(runStart, pos)); }
+            if ch == "&" { mut out.append("&amp;"); }
+            else if ch == "<" { mut out.append("&lt;"); }
+            else if ch == ">" { mut out.append("&gt;"); }
+            else { mut out.append("&quot;"); }
             pos += 1;
             runStart = pos;
         } else {
@@ -370,8 +370,8 @@ renderInlineWithMode := fn(line: String, mode: Int): String {
         }
     }
     if runStart == 0 { return line; }
-    if runStart < size { tb.append(mut out, line.slice(runStart, size)); }
-    tb.build(out)
+    if runStart < size { mut out.append(line.slice(runStart, size)); }
+    out.build()
 };
 
 /** Renders inline Markdown formatting (code spans, links, images, emphasis) into HTML. */

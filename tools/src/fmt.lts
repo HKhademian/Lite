@@ -59,16 +59,16 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
             lastChar = "}";
             sawCode = true;
             if i + 1 < lineLen and line.at(i + 1).isAsciiLetter() {
-                tb.append(mut out, line.slice(runStart, i + 1));
-                tb.append(mut out, " ");
+                mut out.append(line.slice(runStart, i + 1));
+                mut out.append(" ");
                 runStart = i + 1;
                 lastChar = " ";
             }
             i = i + 1;
         } else if ch == "{" {
             if lastChar =!= "" and not lastChar.isWhitespace() and lastChar =!= "(" and lastChar =!= "[" {
-                if i > runStart { tb.append(mut out, line.slice(runStart, i)); }
-                tb.append(mut out, " ");
+                if i > runStart { mut out.append(line.slice(runStart, i)); }
+                mut out.append(" ");
                 runStart = i;
             }
             netChange = netChange + 1;
@@ -85,8 +85,8 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
     normalizedRaw := if runStart == 0 {
         line
     } else {
-        if runStart < lineLen { tb.append(mut out, line.slice(runStart, lineLen)); }
-        tb.build(out)
+        if runStart < lineLen { mut out.append(line.slice(runStart, lineLen)); }
+        out.build()
     };
     totalNet := netChange - leadingCloses;
     (leadingCloses = leadingCloses, netChange = totalNet, normalized = normalizedRaw.trimEnd(), inBlockComment = inBlock)

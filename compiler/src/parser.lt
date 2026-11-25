@@ -95,7 +95,7 @@ pub parseType := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: In
     if isSymbol(token, "(") {
         var cursor := index + 1;
         textBuf: mut tb.TextBuilder;
-        tb.append(mut textBuf, "(");
+        mut textBuf.append("(");
         var first := true;
         loop true {
             if isSymbol(tokenAt(tokens, cursor), ")") { break; }
@@ -105,9 +105,9 @@ pub parseType := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: In
                 cursor = cursor + 2;
             }
             component := self(tokens, cursor, prefix);
-            if not first { tb.append(mut textBuf, ", "); }
-            tb.append(mut textBuf, label);
-            tb.append(mut textBuf, component.text);
+            if not first { mut textBuf.append(", "); }
+            mut textBuf.append(label);
+            mut textBuf.append(component.text);
             first = false;
             cursor = component.next;
             if isSymbol(tokenAt(tokens, cursor), ",") {
@@ -117,8 +117,8 @@ pub parseType := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: In
             }
         }
         closed := expectSymbol(tokens, cursor, ")", prefix);
-        tb.append(mut textBuf, ")");
-        return (next = closed, text = tb.build(textBuf));
+        mut textBuf.append(")");
+        return (next = closed, text = textBuf.build());
     }
     parseFail(token, prefix, "expected a type");
     (next = index, text = "")
@@ -131,10 +131,10 @@ quotedText := fn(text: String): String {
     var index := 0;
     loop index < escaped.length() {
         ch := escaped.at(index);
-        if ch == "\"" { tb.append(mut result, "\\\""); } else { tb.append(mut result, ch); }
+        if ch == "\"" { mut result.append("\\\""); } else { mut result.append(ch); }
         index = index + 1;
     }
-    tb.build(result)
+    result.build()
 }
 
 /** Precedence for one binary word or symbol, or 0 when it is not binary. */
@@ -200,13 +200,13 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         cursor = index + 1;
     } else if token.kind == lexer.TOKEN_KIND_STRING {
         valueBuf: mut tb.TextBuilder;
-        tb.append(mut valueBuf, token.text);
+        mut valueBuf.append(token.text);
         cursor = index + 1;
         loop tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_STRING {
-            tb.append(mut valueBuf, tokenAt(tokens, cursor).text);
+            mut valueBuf.append(tokenAt(tokens, cursor).text);
             cursor = cursor + 1;
         }
-        leftText = "\"" + quotedText(tb.build(valueBuf)) + "\"";
+        leftText = "\"" + quotedText(valueBuf.build()) + "\"";
     } else if token.kind == lexer.TOKEN_KIND_BOOL {
         leftText = token.text;
         cursor = index + 1;
@@ -219,18 +219,18 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
             cursor = cursor + 1;
             loop true {
                 if isSymbol(tokenAt(tokens, cursor), ")") { break; }
-                if argCount > 0 { tb.append(mut argBuf, ", "); }
+                if argCount > 0 { mut argBuf.append(", "); }
                 if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD and tokenAt(tokens, cursor).text == "mut" {
-                    tb.append(mut argBuf, "mut ");
+                    mut argBuf.append("mut ");
                     cursor = cursor + 1;
                 }
                 if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_NAME and isSymbol(tokenAt(tokens, cursor + 1), "=") {
-                    tb.append(mut argBuf, tokenAt(tokens, cursor).text);
-                    tb.append(mut argBuf, " = ");
+                    mut argBuf.append(tokenAt(tokens, cursor).text);
+                    mut argBuf.append(" = ");
                     cursor = cursor + 2;
                 }
                 arg := self(tokens, cursor, prefix, 0);
-                tb.append(mut argBuf, arg.text);
+                mut argBuf.append(arg.text);
                 cursor = arg.next;
                 argCount = argCount + 1;
                 if isSymbol(tokenAt(tokens, cursor), ",") {
@@ -240,7 +240,7 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
                 }
             }
             cursor = expectSymbol(tokens, cursor, ")", prefix);
-            leftText = leftText + "(" + tb.build(argBuf) + ")";
+            leftText = leftText + "(" + argBuf.build() + ")";
         }
     } else if isSymbol(token, "(") {
         cursor = index + 1;
@@ -255,19 +255,19 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         cursor = first.next;
         if firstLabel or isSymbol(tokenAt(tokens, cursor), ",") {
             tupleBuf: mut tb.TextBuilder;
-            tb.append(mut tupleBuf, "(");
-            tb.append(mut tupleBuf, firstText);
+            mut tupleBuf.append("(");
+            mut tupleBuf.append(firstText);
             if isSymbol(tokenAt(tokens, cursor), ",") { cursor = cursor + 1; }
             loop true {
                 if isSymbol(tokenAt(tokens, cursor), ")") { break; }
-                tb.append(mut tupleBuf, ", ");
+                mut tupleBuf.append(", ");
                 if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_NAME and isSymbol(tokenAt(tokens, cursor + 1), "=") {
-                    tb.append(mut tupleBuf, tokenAt(tokens, cursor).text);
-                    tb.append(mut tupleBuf, " = ");
+                    mut tupleBuf.append(tokenAt(tokens, cursor).text);
+                    mut tupleBuf.append(" = ");
                     cursor = cursor + 2;
                 }
                 component := self(tokens, cursor, prefix, 0);
-                tb.append(mut tupleBuf, component.text);
+                mut tupleBuf.append(component.text);
                 cursor = component.next;
                 if isSymbol(tokenAt(tokens, cursor), ",") {
                     cursor = cursor + 1;
@@ -276,8 +276,8 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
                 }
             }
             cursor = expectSymbol(tokens, cursor, ")", prefix);
-            tb.append(mut tupleBuf, ")");
-            leftText = tb.build(tupleBuf);
+            mut tupleBuf.append(")");
+            leftText = tupleBuf.build();
         } else {
             cursor = expectSymbol(tokens, cursor, ")", prefix);
             leftText = "(" + firstText + ")";
@@ -285,13 +285,13 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
     } else if isSymbol(token, "[") {
         cursor = index + 1;
         listBuf: mut tb.TextBuilder;
-        tb.append(mut listBuf, "[");
+        mut listBuf.append("[");
         var itemCount := 0;
         loop true {
             if isSymbol(tokenAt(tokens, cursor), "]") { break; }
-            if itemCount > 0 { tb.append(mut listBuf, ", "); }
+            if itemCount > 0 { mut listBuf.append(", "); }
             item := self(tokens, cursor, prefix, 0);
-            tb.append(mut listBuf, item.text);
+            mut listBuf.append(item.text);
             cursor = item.next;
             itemCount = itemCount + 1;
             if isSymbol(tokenAt(tokens, cursor), ",") {
@@ -301,19 +301,19 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
             }
         }
         cursor = expectSymbol(tokens, cursor, "]", prefix);
-        tb.append(mut listBuf, "]");
-        leftText = tb.build(listBuf);
+        mut listBuf.append("]");
+        leftText = listBuf.build();
     } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "if" {
         condition := self(tokens, index + 1, prefix, 0);
         opening := expectSymbol(tokens, condition.next, "{", prefix);
         branchValue := self(tokens, opening, prefix, 0);
         closing := expectSymbol(tokens, branchValue.next, "}", prefix);
         ifBuf: mut tb.TextBuilder;
-        tb.append(mut ifBuf, "if ");
-        tb.append(mut ifBuf, condition.text);
-        tb.append(mut ifBuf, " { ");
-        tb.append(mut ifBuf, branchValue.text);
-        tb.append(mut ifBuf, " }");
+        mut ifBuf.append("if ");
+        mut ifBuf.append(condition.text);
+        mut ifBuf.append(" { ");
+        mut ifBuf.append(branchValue.text);
+        mut ifBuf.append(" }");
         cursor = closing;
         loop true {
             if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD and tokenAt(tokens, cursor).text == "else" {
@@ -323,19 +323,19 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
                     elseOpening := expectSymbol(tokens, elseCondition.next, "{", prefix);
                     elseValue := self(tokens, elseOpening, prefix, 0);
                     elseClosing := expectSymbol(tokens, elseValue.next, "}", prefix);
-                    tb.append(mut ifBuf, " else if ");
-                    tb.append(mut ifBuf, elseCondition.text);
-                    tb.append(mut ifBuf, " { ");
-                    tb.append(mut ifBuf, elseValue.text);
-                    tb.append(mut ifBuf, " }");
+                    mut ifBuf.append(" else if ");
+                    mut ifBuf.append(elseCondition.text);
+                    mut ifBuf.append(" { ");
+                    mut ifBuf.append(elseValue.text);
+                    mut ifBuf.append(" }");
                     cursor = elseClosing;
                 } else {
                     elseOpening := expectSymbol(tokens, afterElse, "{", prefix);
                     elseValue := self(tokens, elseOpening, prefix, 0);
                     elseClosing := expectSymbol(tokens, elseValue.next, "}", prefix);
-                    tb.append(mut ifBuf, " else { ");
-                    tb.append(mut ifBuf, elseValue.text);
-                    tb.append(mut ifBuf, " }");
+                    mut ifBuf.append(" else { ");
+                    mut ifBuf.append(elseValue.text);
+                    mut ifBuf.append(" }");
                     cursor = elseClosing;
                     break;
                 }
@@ -343,14 +343,14 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
                 break;
             }
         }
-        leftText = tb.build(ifBuf);
+        leftText = ifBuf.build();
     } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "match" {
         if not isSymbol(tokenAt(tokens, index + 1), "{") {
             parseFail(token, prefix, "unsupported feature \"match\"");
         }
         cursor = index + 2;
         matchBuf: mut tb.TextBuilder;
-        tb.append(mut matchBuf, "match {");
+        mut matchBuf.append("match {");
         var sawFallback := false;
         loop true {
             if isSymbol(tokenAt(tokens, cursor), ";") { cursor = cursor + 1; continue; }
@@ -398,29 +398,29 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
                 bodyCursor = expectSymbol(tokens, bodyCursor, "}", prefix);
                 armBodyText = armValue.text;
             }
-            tb.append(mut matchBuf, " ");
-            tb.append(mut matchBuf, armHeaderText);
-            tb.append(mut matchBuf, " { ");
-            tb.append(mut matchBuf, armBodyText);
-            tb.append(mut matchBuf, " }");
+            mut matchBuf.append(" ");
+            mut matchBuf.append(armHeaderText);
+            mut matchBuf.append(" { ");
+            mut matchBuf.append(armBodyText);
+            mut matchBuf.append(" }");
             cursor = bodyCursor;
         }
-        tb.append(mut matchBuf, " }");
-        leftText = tb.build(matchBuf);
+        mut matchBuf.append(" }");
+        leftText = matchBuf.build();
     } else {
         parseFail(token, prefix, "expected an expression");
         return (next = index, text = "");
     }
     postfixBuf: mut tb.TextBuilder;
-    tb.append(mut postfixBuf, leftText);
+    mut postfixBuf.append(leftText);
     loop true {
         if cursor > 0 and isSymbol(tokenAt(tokens, cursor - 1), "}") { break; }
         current := tokenAt(tokens, cursor);
         if isSymbol(current, ".") {
             member := tokenAt(tokens, cursor + 1);
             if member.kind == lexer.TOKEN_KIND_NAME or member.kind == lexer.TOKEN_KIND_INT {
-                tb.append(mut postfixBuf, ".");
-                tb.append(mut postfixBuf, member.text);
+                mut postfixBuf.append(".");
+                mut postfixBuf.append(member.text);
                 cursor = cursor + 2;
             } else {
                 parseFail(member, prefix, "expected a field name after .");
@@ -428,15 +428,15 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         } else if isSymbol(current, "[") {
             indexExpr := self(tokens, cursor + 1, prefix, 0);
             closed := expectSymbol(tokens, indexExpr.next, "]", prefix);
-            tb.append(mut postfixBuf, "[");
-            tb.append(mut postfixBuf, indexExpr.text);
-            tb.append(mut postfixBuf, "]");
+            mut postfixBuf.append("[");
+            mut postfixBuf.append(indexExpr.text);
+            mut postfixBuf.append("]");
             cursor = closed;
         } else {
             break;
         }
     }
-    leftText = tb.build(postfixBuf);
+    leftText = postfixBuf.build();
     loop true {
         if cursor > 0 and isSymbol(tokenAt(tokens, cursor - 1), "}") { break; }
         operator := tokenAt(tokens, cursor);
@@ -561,10 +561,10 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
             }
             branch := self(tokens, condition.next, prefix, true);
             branchBuf: mut tb.TextBuilder;
-            tb.append(mut branchBuf, "if ");
-            tb.append(mut branchBuf, condition.text);
-            tb.append(mut branchBuf, " ");
-            tb.append(mut branchBuf, branch.text);
+            mut branchBuf.append("if ");
+            mut branchBuf.append(condition.text);
+            mut branchBuf.append(" ");
+            mut branchBuf.append(branch.text);
             cursor = branch.next;
             loop true {
                 if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD and tokenAt(tokens, cursor).text == "else" {
@@ -575,15 +575,15 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
                             parseFail(tokenAt(tokens, elseCondition.next), prefix, "expected { after else if condition");
                         }
                         elseBranch := self(tokens, elseCondition.next, prefix, true);
-                        tb.append(mut branchBuf, " else if ");
-                        tb.append(mut branchBuf, elseCondition.text);
-                        tb.append(mut branchBuf, " ");
-                        tb.append(mut branchBuf, elseBranch.text);
+                        mut branchBuf.append(" else if ");
+                        mut branchBuf.append(elseCondition.text);
+                        mut branchBuf.append(" ");
+                        mut branchBuf.append(elseBranch.text);
                         cursor = elseBranch.next;
                     } else {
                         elseBranch := self(tokens, afterElse, prefix, true);
-                        tb.append(mut branchBuf, " else ");
-                        tb.append(mut branchBuf, elseBranch.text);
+                        mut branchBuf.append(" else ");
+                        mut branchBuf.append(elseBranch.text);
                         cursor = elseBranch.next;
                         break;
                     }
@@ -592,7 +592,7 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
                 }
             }
             cursor = consumeStatementEnd(tokens, cursor, prefix);
-            itemText = tb.build(branchBuf);
+            itemText = branchBuf.build();
         } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "match" {
             if not isSymbol(tokenAt(tokens, cursor + 1), "{") {
                 parseFail(token, prefix, "unsupported feature \"match\"");
@@ -635,15 +635,15 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
                     armHeaderText = condition.text;
                 }
                 armBranch := self(tokens, armOpen, prefix, true);
-                if armCount > 0 { tb.append(mut armsBuf, " "); }
-                tb.append(mut armsBuf, armHeaderText);
-                tb.append(mut armsBuf, " ");
-                tb.append(mut armsBuf, armBranch.text);
+                if armCount > 0 { mut armsBuf.append(" "); }
+                mut armsBuf.append(armHeaderText);
+                mut armsBuf.append(" ");
+                mut armsBuf.append(armBranch.text);
                 armCount = armCount + 1;
                 armCursor = armBranch.next;
             }
             cursor = consumeStatementEnd(tokens, armCursor, prefix);
-            itemText = "match { " + tb.build(armsBuf) + " }";
+            itemText = "match { " + armsBuf.build() + " }";
         } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "loop" {
             source := parseExpression(tokens, cursor + 1, prefix, 0);
             if tokenAt(tokens, source.next).kind == lexer.TOKEN_KIND_NAME and tokenAt(tokens, source.next).text == "as" {
@@ -702,10 +702,10 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
                 if parameter.kind =!= lexer.TOKEN_KIND_NAME { parseFail(parameter, prefix, "expected a parameter name"); }
                 colon := expectSymbol(tokens, afterName + 1, ":", prefix);
                 parameterType := parseType(tokens, colon, prefix);
-                if parameterCount > 0 { tb.append(mut parametersBuf, ", "); }
-                tb.append(mut parametersBuf, parameter.text);
-                tb.append(mut parametersBuf, ": ");
-                tb.append(mut parametersBuf, parameterType.text);
+                if parameterCount > 0 { mut parametersBuf.append(", "); }
+                mut parametersBuf.append(parameter.text);
+                mut parametersBuf.append(": ");
+                mut parametersBuf.append(parameterType.text);
                 parameterCount = parameterCount + 1;
                 afterName = parameterType.next;
                 if isSymbol(tokenAt(tokens, afterName), ",") {
@@ -714,7 +714,7 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
                     break;
                 }
             }
-            parameters := tb.build(parametersBuf);
+            parameters := parametersBuf.build();
             afterName = expectSymbol(tokens, afterName, ")", prefix);
             resultColon := expectSymbol(tokens, afterName, ":", prefix);
             resultType := parseType(tokens, resultColon, prefix);
@@ -754,11 +754,11 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
             cursor = expression.next;
             cursor = consumeStatementEnd(tokens, cursor, prefix);
         }
-        if itemCount > 0 { tb.append(mut bodyBuf, "; "); }
-        tb.append(mut bodyBuf, itemText);
+        if itemCount > 0 { mut bodyBuf.append("; "); }
+        mut bodyBuf.append(itemText);
         itemCount = itemCount + 1;
     }
-    body := tb.build(bodyBuf);
+    body := bodyBuf.build();
     (next = cursor, text = if closed { "{ " + body + " }" } else { body })
 }
 

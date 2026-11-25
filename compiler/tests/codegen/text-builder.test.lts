@@ -20,18 +20,20 @@ src :=
 "tb := import \"util/text-builder\";\n" +
 "\n" +
 "b: mut tb.TextBuilder;\n" +
-"io.outputLine(tb.count(b), tb.build(b));\n" +
-"tb.append(mut b, \"alpha\");\n" +
-"tb.append(mut b, \"\");\n" +
-"tb.append(mut b, \"beta\");\n" +
-"tb.append(mut b, \"gamma\");\n" +
-"io.outputLine(tb.count(b), tb.build(b), tb.buildJoined(b, \", \"));\n" +
-"tb.clear(mut b);\n" +
-"tb.appendLine(mut b, \"line1\");\n" +
-"tb.appendLine(mut b, \"\");\n" +
-"tb.appendLine(mut b, \"line2\");\n" +
-"io.output(tb.build(b));\n" +
-"io.outputLine(tb.count(b));\n";
+"io.outputLine(b.count(), b.build());\n" +
+"mut b.append(\"alpha\");\n" +
+"mut b.append(\"\");\n" +
+"mut b.append(\"beta\");\n" +
+"mut b.append(\"gamma\");\n" +
+"io.outputLine(b.count(), b.build(), b.buildJoined(\", \"));\n" +
+"mut b.clear();\n" +
+"mut b.appendLine(\"line1\");\n" +
+"mut b.appendLine(\"\");\n" +
+"mut b.appendLine(\"line2\");\n" +
+"snap := b;\n" +
+"mut b.append(\"!\");\n" +
+"io.output(snap.build());\n" +
+"io.outputLine(snap.count(), b.count(), b.build());\n";
 
 expected :=
 "0 \n" +
@@ -39,7 +41,10 @@ expected :=
 "line1\n" +
 "\n" +
 "line2\n" +
-"5\n";
+"5 6 line1\n" +
+"\n" +
+"line2\n" +
+"!\n";
 
 tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
 test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);

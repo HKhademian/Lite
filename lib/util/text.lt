@@ -57,11 +57,11 @@ pub replaceAll := fn(source: String, needle: String, replacement: String): Strin
     var pos := 0;
     var hit := first;
     loop hit >= 0 {
-        if hit > pos { tb.append(mut b, source.slice(pos, hit)); }
-        tb.append(mut b, replacement);
+        if hit > pos { mut b.append(source.slice(pos, hit)); }
+        mut b.append(replacement);
         pos = hit + needleLen;
         hit = source.indexOf(needle, pos);
     }
-    if pos < srcLen { tb.append(mut b, source.slice(pos, srcLen)); }
-    tb.build(b)
+    if pos < srcLen { mut b.append(source.slice(pos, srcLen)); }
+    b.build()
 };

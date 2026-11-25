@@ -454,9 +454,9 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     loop sumFiles as file {
         dRes := crypto.sha256File(path.join(output, file));
         if not dRes.ok { failRelease(work, dRes.error); }
-        tb.appendLine(mut sums, dRes.hex + "  " + file);
+        mut sums.appendLine(dRes.hex + "  " + file);
     }
-    wrSums := fs.writeText(path.join(output, "SHA256SUMS"), tb.build(sums));
+    wrSums := fs.writeText(path.join(output, "SHA256SUMS"), sums.build());
     if not wrSums.ok { failRelease(work, wrSums.error); }
 
     rmWork := fs.remove(work);

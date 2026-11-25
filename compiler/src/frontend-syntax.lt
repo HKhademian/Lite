@@ -100,13 +100,13 @@ sanitizeCommentBody := fn(body: String): String {
     var i := 0;
     loop i < n {
         if i + 1 < n and body.at(i) == "/" and body.at(i + 1) == "*" {
-            if i > runStart { tb.append(mut out, body.slice(runStart, i)); }
-            tb.append(mut out, "/ *");
+            if i > runStart { mut out.append(body.slice(runStart, i)); }
+            mut out.append("/ *");
             i = i + 2;
             runStart = i;
         } else if i + 1 < n and body.at(i) == "*" and body.at(i + 1) == "/" {
-            if i > runStart { tb.append(mut out, body.slice(runStart, i)); }
-            tb.append(mut out, "* /");
+            if i > runStart { mut out.append(body.slice(runStart, i)); }
+            mut out.append("* /");
             i = i + 2;
             runStart = i;
         } else {
@@ -114,8 +114,8 @@ sanitizeCommentBody := fn(body: String): String {
         }
     }
     if runStart == 0 { return body; }
-    if runStart < n { tb.append(mut out, body.slice(runStart, n)); }
-    tb.build(out)
+    if runStart < n { mut out.append(body.slice(runStart, n)); }
+    out.build()
 };
 
 /** Pre-scans standalone leading `/* ... */` and `/** ... */` comments in `source` in O(N) time, skipping string literals. */
@@ -467,7 +467,7 @@ pub parseText := fn(target: String, source: String, position: Int, prefix: Strin
         }
         ch := source.at(cursor);
         if ch == "\"" {
-            if cursor > runStart { tb.append(mut out, source.slice(runStart, cursor)); }
+            if cursor > runStart { mut out.append(source.slice(runStart, cursor)); }
             cursor = cursor + 1;
             next := skipTrivia(source, cursor, prefix);
             if next < size and source.at(next) == "\"" {
@@ -479,18 +479,18 @@ pub parseText := fn(target: String, source: String, position: Int, prefix: Strin
             break;
         }
         if ch == "\\" {
-            if cursor > runStart { tb.append(mut out, source.slice(runStart, cursor)); }
+            if cursor > runStart { mut out.append(source.slice(runStart, cursor)); }
             escapeStart := cursor;
             cursor = cursor + 1;
             if cursor >= size {
                 failAt(source, escapeStart, prefix, "unterminated string escape");
             }
             escaped := source.at(cursor);
-            if escaped == "n" { tb.append(mut out, "\n"); }
-            else if escaped == "t" { tb.append(mut out, "\t"); }
-            else if escaped == "r" { tb.append(mut out, "\r"); }
-            else if escaped == "\"" { tb.append(mut out, "\""); }
-            else if escaped == "\\" { tb.append(mut out, "\\"); }
+            if escaped == "n" { mut out.append("\n"); }
+            else if escaped == "t" { mut out.append("\t"); }
+            else if escaped == "r" { mut out.append("\r"); }
+            else if escaped == "\"" { mut out.append("\""); }
+            else if escaped == "\\" { mut out.append("\\"); }
             else {
                 failAt(source, escapeStart, prefix, "unsupported string escape \\" + escaped);
             }
@@ -500,7 +500,7 @@ pub parseText := fn(target: String, source: String, position: Int, prefix: Strin
             cursor = cursor + 1;
         }
     }
-    value := tb.build(out);
+    value := out.build();
     (kind = ir.VALUE_KIND_STRING, code = ir.targetTextLiteralCode(target, value), intValue = 0, textValue = value, constant = true, next = cursor)
 };
 

@@ -210,22 +210,22 @@ scanString := fn(source: String, position: Int, prefix: String): (text: String, 
         }
         ch := source.at(cursor);
         if ch == "\"" {
-            if cursor > runStart { tb.append(mut out, source.slice(runStart, cursor)); }
-            return (text = tb.build(out), next = cursor + 1);
+            if cursor > runStart { mut out.append(source.slice(runStart, cursor)); }
+            return (text = out.build(), next = cursor + 1);
         }
         if ch == "\\" {
-            if cursor > runStart { tb.append(mut out, source.slice(runStart, cursor)); }
+            if cursor > runStart { mut out.append(source.slice(runStart, cursor)); }
             escapeStart := cursor;
             cursor = cursor + 1;
             if cursor >= size {
                 lexFail(source, escapeStart, prefix, "unterminated string escape");
             }
             escaped := source.at(cursor);
-            if escaped == "n" { tb.append(mut out, "\n"); }
-            else if escaped == "t" { tb.append(mut out, "\t"); }
-            else if escaped == "r" { tb.append(mut out, "\r"); }
-            else if escaped == "\"" { tb.append(mut out, "\""); }
-            else if escaped == "\\" { tb.append(mut out, "\\"); }
+            if escaped == "n" { mut out.append("\n"); }
+            else if escaped == "t" { mut out.append("\t"); }
+            else if escaped == "r" { mut out.append("\r"); }
+            else if escaped == "\"" { mut out.append("\""); }
+            else if escaped == "\\" { mut out.append("\\"); }
             else {
                 lexFail(source, escapeStart, prefix, "unsupported string escape \\" + escaped);
             }
@@ -235,7 +235,7 @@ scanString := fn(source: String, position: Int, prefix: String): (text: String, 
             cursor = cursor + 1;
         }
     }
-    (text = tb.build(out), next = size)
+    (text = out.build(), next = size)
 }
 
 /** Escapes one token's text for a one-line deterministic dump. */
@@ -252,15 +252,15 @@ pub escapedTokenText := fn(text: String): String {
         else if ch == "\r" { esc = "\\r"; }
         else if ch == "\t" { esc = "\\t"; }
         if esc =!= "" {
-            if index > runStart { tb.append(mut out, text.slice(runStart, index)); }
-            tb.append(mut out, esc);
+            if index > runStart { mut out.append(text.slice(runStart, index)); }
+            mut out.append(esc);
             runStart = index + 1;
         }
         index = index + 1;
     }
     if runStart == 0 { return text; }
-    if runStart < size { tb.append(mut out, text.slice(runStart, size)); }
-    tb.build(out)
+    if runStart < size { mut out.append(text.slice(runStart, size)); }
+    out.build()
 }
 
 /** Formats one token as `kind@line:column:offset text`. */
