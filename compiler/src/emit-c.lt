@@ -2607,8 +2607,10 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
 emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: String, config: optCfg.OptConfig): Unit {
     usesArithHelpers := usesIntArithmetic(calls) or usesIntDivision(calls) or usesFloatArithmetic(calls);
     usesCheckedIntFault := config.checkArithmetic and (usesIntArithmetic(calls) or usesIntDivision(calls));
-    usesCheckedFloatFault := (usesFloatArithmetic(calls) and (config.checkArithmetic or config.checkFloatFinite)) or
-    (config.checkFloatFinite and (usesIntHelper(calls, "lt_f32_from_bits(") or usesIntHelper(calls, "lt_f64_from_bits("))) or
+    usesCheckedFloatArith := usesIntHelper(calls, "lt_float_op(") or usesIntHelper(calls, "lt_float32_op(") or usesIntHelper(calls, "lt_float16_op(") or usesIntHelper(calls, "lt_float8_op(") or usesIntHelper(calls, "lt_float_power(");
+    usesCheckedFloatFinite := usesCheckedFloatArith or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_f64_to_f16_checked(") or usesIntHelper(calls, "lt_f64_to_f32_checked(") or usesHelperPrefix(calls, "lt_fma_") or usesIntHelper(calls, "lt_f32_from_bits(") or usesIntHelper(calls, "lt_f64_from_bits(");
+    usesCheckedFloatFault := (config.checkArithmetic and usesCheckedFloatArith) or
+    (config.checkFloatFinite and usesCheckedFloatFinite) or
     (config.checkUnchecked and (usesHelperPrefix(calls, "lt_ufadd_") or usesHelperPrefix(calls, "lt_ufsub_") or usesHelperPrefix(calls, "lt_ufmul_") or usesHelperPrefix(calls, "lt_ufdiv_") or usesHelperPrefix(calls, "lt_ufma_") or usesIntHelper(calls, "lt_f32_ufrom_bits(") or usesIntHelper(calls, "lt_f64_ufrom_bits(")));
     usesUnchIntFault := config.checkUnchecked and usesUncheckedInt(calls);
     usesArith := usesCheckedIntFault or usesCheckedFloatFault or usesUnchIntFault;

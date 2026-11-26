@@ -1,0 +1,347 @@
+/* Phase 6 verification: safety/sanitize presets & flag precedence, unchecked List/Array & float bit casts, and 4-way soft builtins parity. */
+
+fs := import "core/file";
+io := import "core/io";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccInfo := compilerTest.probeCc();
+test.check("cc available", ccInfo.available);
+
+emptyEnv: List<String> = [];
+emptyBytes: List<Int> = [];
+
+compileAndRunCSanitized := fn(cCode: String, cc: String): compilerTest.RunOutput {
+    tmpRes := fs.makeTempDir("lite-run-csan-");
+    test.check("compileAndRunCSanitized makeTempDir: " + tmpRes.error, tmpRes.ok);
+    workDir := tmpRes.path;
+    cPath := path.join(workDir, "artifact.c");
+    exePath := path.join(workDir, "artifact");
+    wC := fs.writeText(cPath, cCode);
+    test.check("compileAndRunCSanitized write artifact.c", wC.ok);
+    ccOut := path.join(workDir, "cc.stdout");
+    ccErr := path.join(workDir, "cc.stderr");
+    ccArgs: List<String> = [
+        "-std=c11", "-Wall", "-Wextra", "-Werror",
+        "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", "-fno-omit-frame-pointer", "-g",
+        cPath, "-o", exePath, "-lm"
+    ];
+    ccRes := proc.runBytes(cc, ccArgs, workDir, emptyEnv, 30000, emptyBytes, ccOut, ccErr);
+    test.check("compileAndRunCSanitized cc error: " + ccRes.error, ccRes.error == "");
+    if ccRes.status =!= 0 {
+        msg := fs.readText(ccErr).text;
+        _rmCc := fs.remove(workDir);
+        test.check("compileAndRunCSanitized cc failed: " + msg, false);
+    }
+    runOut := path.join(workDir, "run.stdout");
+    runErr := path.join(workDir, "run.stderr");
+    ran := proc.runBytes(exePath, emptyEnv, workDir, emptyEnv, 15000, emptyBytes, runOut, runErr);
+    test.check("compileAndRunCSanitized run error: " + ran.error, ran.error == "");
+    outText := fs.readText(runOut).text;
+    errText := fs.readText(runErr).text;
+    _rm := fs.remove(workDir);
+    (status = ran.status, stdout = outText, stderr = errText)
+};
+
+checkParity := fn(label: String, src: String, opts: List<String>, expOut: String): Unit {
+    cTs := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "p6.lts", "", opts);
+    test.check(label + " TS compile: " + cTs.stderr, cTs.status == 0 and cTs.stderr == "");
+    rTs := compilerTest.checkAndRunTs(root, cTs.stdout);
+    test.check(label + " TS run (" + rTs.stderr + ")", rTs.status == 0);
+    test.checkText(label + " TS stdout", expOut, rTs.stdout);
+
+    cC := compilerTest.compileStdinWithOpts(root, cComp, root, src, "p6.lts", "", opts);
+    test.check(label + " C compile: " + cC.stderr, cC.status == 0 and cC.stderr == "");
+    rC := compilerTest.compileAndRunC(cC.stdout, ccInfo.cc, "");
+    test.check(label + " C run (" + rC.stderr + ")", rC.status == 0);
+    test.checkText(label + " C stdout", expOut, rC.stdout);
+};
+
+checkFault := fn(label: String, src: String, opts: List<String>, needle: String): Unit {
+    cTs := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "p6.lts", "", opts);
+    test.check(label + " TS compile: " + cTs.stderr, cTs.status == 0 and cTs.stderr == "");
+    rTs := compilerTest.checkAndRunTs(root, cTs.stdout);
+    test.check(label + " TS faults", rTs.status =!= 0 and rTs.stderr.contains(needle));
+
+    cC := compilerTest.compileStdinWithOpts(root, cComp, root, src, "p6.lts", "", opts);
+    test.check(label + " C compile: " + cC.stderr, cC.status == 0 and cC.stderr == "");
+    rC := compilerTest.compileAndRunC(cC.stdout, ccInfo.cc, "");
+    test.check(label + " C faults", rC.status =!= 0 and rC.stderr.contains(needle));
+};
+
+/* 1. Safety preset & flag precedence matrix (O0, O1..O3, Os, Oc, --sanitize, explicit -f* wins regardless of order). */
+nanUncheckedSrc :=
+"io := import \"core/io\";\n" +
+"bits: UInt32 = 2143289344;\n" +
+"x := Float32.uncheckedFromBits(bits);\n" +
+"io.outputLine((x =!= x).toText());\n";
+
+checkFault("-O0 enables checkUnchecked", nanUncheckedSrc, ["-O0"], "ArithmeticPanic");
+checkFault("--sanitize enables checkUnchecked", nanUncheckedSrc, ["--sanitize"], "ArithmeticPanic");
+checkFault("-O2 --sanitize enables checkUnchecked", nanUncheckedSrc, ["-O2", "--sanitize"], "ArithmeticPanic");
+checkParity("-O1 disables checkUnchecked", nanUncheckedSrc, ["-O1"], "true\n");
+checkParity("-O2 disables checkUnchecked", nanUncheckedSrc, ["-O2"], "true\n");
+checkParity("-O3 disables checkUnchecked", nanUncheckedSrc, ["-O3"], "true\n");
+checkParity("-Os disables checkUnchecked", nanUncheckedSrc, ["-Os"], "true\n");
+checkParity("-Oc disables checkUnchecked", nanUncheckedSrc, ["-Oc"], "true\n");
+checkFault("-O3 -fcheck-unchecked overrides preset", nanUncheckedSrc, ["-O3", "-fcheck-unchecked"], "ArithmeticPanic");
+checkFault("-fcheck-unchecked -O3 still overrides preset", nanUncheckedSrc, ["-fcheck-unchecked", "-O3"], "ArithmeticPanic");
+checkParity("--sanitize -fno-check-unchecked overrides sanitize", nanUncheckedSrc, ["--sanitize", "-fno-check-unchecked"], "true\n");
+checkParity("-fno-check-unchecked --sanitize still overrides sanitize", nanUncheckedSrc, ["-fno-check-unchecked", "--sanitize"], "true\n");
+checkParity("repeated -fcheck-unchecked -fno-check-unchecked last-wins", nanUncheckedSrc, ["-fcheck-unchecked", "-fno-check-unchecked"], "true\n");
+checkFault("repeated -fno-check-unchecked -fcheck-unchecked last-wins", nanUncheckedSrc, ["-fno-check-unchecked", "-fcheck-unchecked"], "ArithmeticPanic");
+
+/* Verify --sanitize -fno-check-unchecked compiles & runs cleanly under ASan/UBSan. */
+sanNoUnchC := compilerTest.compileStdinWithOpts(root, cComp, root, nanUncheckedSrc, "p6.lts", "", ["--sanitize", "-fno-check-unchecked"]);
+test.check("--sanitize -fno-check-unchecked C compiles", sanNoUnchC.status == 0 and sanNoUnchC.stderr == "");
+sanNoUnchRun := compileAndRunCSanitized(sanNoUnchC.stdout, ccInfo.cc);
+test.check("--sanitize -fno-check-unchecked ASan/UBSan ok: " + sanNoUnchRun.stderr, sanNoUnchRun.status == 0);
+test.checkText("--sanitize -fno-check-unchecked stdout", "true\n", sanNoUnchRun.stdout);
+
+/* 2. Individual safety switches: -fno-check-arithmetic, -fno-check-bounds, -fno-check-float-finite, -fdebug-info. */
+arithOvSrc :=
+"io := import \"core/io\";\n" +
+"hi: Int8 = 127;\n" +
+"one: Int8 = 1;\n" +
+"x := hi + one;\n" +
+"io.outputLine(x.toText());\n";
+
+checkFault("default checks Int8 overflow", arithOvSrc, ["-O1"], "ArithmeticPanic");
+checkParity("-fno-check-arithmetic wraps Int8 overflow", arithOvSrc, ["-fno-check-arithmetic"], "-128\n");
+
+boundsValidSrc :=
+"io := import \"core/io\";\n" +
+"xs: mut List<Int> = [10, 20, 30];\n" +
+"xs[1] = 25;\n" +
+"arr: mut [Int; 3] = [1, 2, 3];\n" +
+"arr[2] = 9;\n" +
+"io.outputLine(xs[1].toText() + \":\" + arr[2].toText());\n";
+
+noBoundsTs := compilerTest.compileStdinWithOpts(root, tsComp, root, boundsValidSrc, "p6.lts", "", ["-O1", "-fno-check-bounds"]);
+test.check("-fno-check-bounds TS omits BoundPanic", noBoundsTs.status == 0 and not noBoundsTs.stdout.contains("BoundPanic"));
+checkParity("-fno-check-bounds runs valid indexing on TS & C11", boundsValidSrc, ["-O1", "-fno-check-bounds"], "25:9\n");
+
+floatNonFiniteSrc :=
+"io := import \"core/io\";\n" +
+"a := 1e308;\n" +
+"b := 10.0;\n" +
+"z := a * b;\n" +
+"io.outputLine((z > 1000.0).toText());\n";
+
+checkFault("default checks non-finite float", floatNonFiniteSrc, ["-O1"], "ArithmeticPanic");
+checkParity("-fno-check-float-finite skips finite check", floatNonFiniteSrc, ["-fno-check-float-finite"], "true\n");
+
+debugTsO0 := compilerTest.compileStdinWithOpts(root, tsComp, root, "io := import \"core/io\"; io.outputLine(\"dbg\");\n", "dbg.lts", "", ["-O0"]);
+debugTsO2Sm := compilerTest.compileStdinWithOpts(root, tsComp, root, "io := import \"core/io\"; io.outputLine(\"dbg\");\n", "dbg.lts", "", ["-O2", "--source-map=comments"]);
+debugTsO0NoSm := compilerTest.compileStdinWithOpts(root, tsComp, root, "io := import \"core/io\"; io.outputLine(\"dbg\");\n", "dbg.lts", "", ["-O0", "--source-map=none"]);
+debugCO2Sm := compilerTest.compileStdinWithOpts(root, cComp, root, "io := import \"core/io\"; io.outputLine(\"dbg\");\n", "dbg.lts", "", ["-O2", "--source-map=lines"]);
+debugCO2Dbg := compilerTest.compileStdinWithOpts(root, cComp, root, "io := import \"core/io\"; io.outputLine(\"dbg\");\n", "dbg.lts", "", ["-O2", "-fdebug-info"]);
+test.check("-O0 emits source map", debugTsO0.stdout.contains("// dbg.lts:"));
+test.check("-O2 --source-map=comments emits source map", debugTsO2Sm.stdout.contains("// dbg.lts:"));
+test.check("-O0 --source-map=none suppresses source map", not debugTsO0NoSm.stdout.contains("// dbg.lts:"));
+test.check("-O2 --source-map=lines emits #line in C", debugCO2Sm.stdout.contains("#line "));
+test.checkInt("-O2 -fdebug-info C compiles cleanly", 0, debugCO2Dbg.status);
+
+/* 3. List.uncheckedGet/Set and Array.uncheckedGet/Set (byte-aligned AND bit-packed [Bool; 10] / [Int4; 6]). */
+uncheckedValidSrc :=
+"io := import \"core/io\";\n" +
+"lists := import \"core/list\";\n" +
+"arrs := import \"core/array\";\n" +
+"xs: mut List<Int> = [10, 20, 30];\n" +
+"mut xs.uncheckedSet(1, 77);\n" +
+"arr: mut [Int; 4] = [1, 2, 3, 4];\n" +
+"mut arr.uncheckedSet(2, 88);\n" +
+"bits: mut [Bool; 10] = [false, true, false, false, true, false, false, false, true, false];\n" +
+"mut bits.uncheckedSet(7, true);\n" +
+"nibbles: mut [Int4; 6] = [1, -2, 3, -4, 5, -6];\n" +
+"mut nibbles.uncheckedSet(4, -7);\n" +
+"io.outputLine(\n" +
+"    xs.uncheckedGet(1).toText() + \":\" + arr.uncheckedGet(2).toText() + \":\" +\n" +
+"    bits.uncheckedGet(7).toText() + \":\" + bits.uncheckedGet(0).toText() + \":\" +\n" +
+"    nibbles.uncheckedGet(4).toText() + \":\" + nibbles.uncheckedGet(5).toText()\n" +
+");\n";
+
+checkParity("uncheckedGet/Set -O1", uncheckedValidSrc, ["-O1"], "77:88:true:false:-7:-6\n");
+checkParity("uncheckedGet/Set -O0", uncheckedValidSrc, ["-O0"], "77:88:true:false:-7:-6\n");
+
+sanUnchC := compilerTest.compileStdinWithOpts(root, cComp, root, uncheckedValidSrc, "p6.lts", "", ["--sanitize"]);
+test.check("uncheckedGet/Set --sanitize C compiles", sanUnchC.status == 0 and sanUnchC.stderr == "");
+sanUnchRun := compileAndRunCSanitized(sanUnchC.stdout, ccInfo.cc);
+test.check("uncheckedGet/Set --sanitize ASan/UBSan ok: " + sanUnchRun.stderr, sanUnchRun.status == 0);
+test.checkText("uncheckedGet/Set --sanitize stdout", "77:88:true:false:-7:-6\n", sanUnchRun.stdout);
+
+noUnchIdxC := compilerTest.compileStdinWithOpts(root, cComp, root, uncheckedValidSrc, "p6.lts", "", ["-O2"]);
+test.check("-O2 C uncheckedGet/Set omits lt_bound_fault", not noUnchIdxC.stdout.contains("lt_bound_fault"));
+noUnchIdxTs := compilerTest.compileStdinWithOpts(root, tsComp, root, uncheckedValidSrc, "p6.lts", "", ["-O2"]);
+test.check("-O2 TS uncheckedGet/Set omits BoundPanic", not noUnchIdxTs.stdout.contains("BoundPanic"));
+
+listOobUnchSrc :=
+"io := import \"core/io\";\n" +
+"_ := import \"core/list\";\n" +
+"xs: List<Int> = [1, 2];\n" +
+"io.outputLine(xs.uncheckedGet(5).toText());\n";
+checkFault("List.uncheckedGet OOB faults under -fcheck-unchecked", listOobUnchSrc, ["-O1", "-fcheck-unchecked"], "BoundPanic");
+
+bitsOobUnchSrc :=
+"io := import \"core/io\";\n" +
+"_ := import \"core/array\";\n" +
+"bits: [Bool; 10] = [false; 10];\n" +
+"io.outputLine(bits.uncheckedGet(10).toText());\n";
+checkFault("[Bool; 10].uncheckedGet OOB faults under -O0", bitsOobUnchSrc, ["-O0"], "BoundPanic");
+
+/* 4. Float32/Float64 toBits, fromBits, uncheckedFromBits, and uncheckedFma. */
+floatBitsSrc :=
+"io := import \"core/io\";\n" +
+"f32: Float32 = 1.5;\n" +
+"negZ32: Float32 = -0.0;\n" +
+"b32 := f32.toBits();\n" +
+"rt32 := Float32.fromBits(b32);\n" +
+"u32rt := Float32.uncheckedFromBits(b32);\n" +
+"f64 := 1.5;\n" +
+"negZ64 := -0.0;\n" +
+"b64 := f64.toBits();\n" +
+"rt64 := Float.fromBits(b64);\n" +
+"u64rt := Float.uncheckedFromBits(b64);\n" +
+"fma32 := Float32.uncheckedFma(2.0, 3.0, 1.5);\n" +
+"fma64 := Float.uncheckedFma(2.0, 3.0, 1.5);\n" +
+"io.outputLine(\n" +
+"    b32.toText() + \":\" + negZ32.toBits().toText() + \":\" + (rt32 == f32).toText() + \":\" + (u32rt == f32).toText() + \":\" +\n" +
+"    b64.toText() + \":\" + negZ64.toBits().toText() + \":\" + (rt64 == f64).toText() + \":\" + (u64rt == f64).toText() + \":\" +\n" +
+"    fma32.toBits().toText() + \":\" + fma64.toBits().toText()\n" +
+");\n";
+
+checkParity("Float bit casts & uncheckedFma -O1", floatBitsSrc, ["-O1"], "1069547520:2147483648:true:true:4609434218613702656:9223372036854775808:true:true:1089470464:4620130267728707584\n");
+checkParity("Float bit casts & uncheckedFma -O0", floatBitsSrc, ["-O0"], "1069547520:2147483648:true:true:4609434218613702656:9223372036854775808:true:true:1089470464:4620130267728707584\n");
+
+nanFromBitsSrc :=
+"io := import \"core/io\";\n" +
+"nb: UInt64 = 9221120237041090560;\n" +
+"x := Float.fromBits(nb);\n" +
+"io.outputLine((x =!= x).toText());\n";
+checkFault("Float64.fromBits NaN faults under default", nanFromBitsSrc, ["-O1"], "ArithmeticPanic");
+checkParity("Float64.fromBits NaN allowed under -fno-check-float-finite", nanFromBitsSrc, ["-fno-check-float-finite"], "true\n");
+
+ufmaNanSrc :=
+"io := import \"core/io\";\n" +
+"a: Float = 1e308;\n" +
+"b: Float = 1e10;\n" +
+"c: Float = 0.0;\n" +
+"r := Float.uncheckedFma(a, b, c);\n" +
+"io.outputLine((r > 0.0).toText());\n";
+checkFault("Float64.uncheckedFma Inf faults under -fcheck-unchecked", ufmaNanSrc, ["-O1", "-fcheck-unchecked"], "ArithmeticPanic");
+
+/* 5. All 18 Soft Builtins: full 4-way (TS, C11) x (builtin, pure) parity + --sanitize + fault parity. */
+softAllSrc :=
+"io := import \"core/io\";\n" +
+"_ := import \"core/int\";\n" +
+"lists := import \"core/list\";\n" +
+"z32: UInt32 = 0;\n" +
+"o32: UInt32 = 1;\n" +
+"m32: UInt32 = 2147483648;\n" +
+"v32: UInt32 = 305419896;\n" +
+"z64: UInt64 = 0;\n" +
+"o64: UInt64 = 1;\n" +
+"two64: UInt64 = 2;\n" +
+"max64: UInt64 = 18446744073709551615;\n" +
+"v64: UInt64 = 72623859790382856;\n" +
+"wm1 := UInt64.mulWide(max64, max64);\n" +
+"wm2 := UInt64.mulWide(max64, two64);\n" +
+"ac1 := UInt64.addWithCarry(max64, o64, false);\n" +
+"ac2 := UInt64.addWithCarry(max64, z64, true);\n" +
+"ac3 := UInt64.addWithCarry(two64, two64, true);\n" +
+"sb1 := UInt64.subWithBorrow(z64, o64, false);\n" +
+"sb2 := UInt64.subWithBorrow(two64, two64, true);\n" +
+"sb3 := UInt64.subWithBorrow(two64, o64, true);\n" +
+"buf: mut List<UInt8> = [1, 2, 3, 4, 5, 6];\n" +
+"src: List<UInt8> = [10, 20, 30, 40, 50];\n" +
+"List.fillBytes(mut buf, 1, 3, 9);\n" +
+"List.copyBytes(mut buf, 2, src, 1, 3);\n" +
+"List.copyBytes(mut buf, 0, src, 0, 0);\n" +
+"idxA := List.indexOfByte(buf, 9, -5);\n" +
+"idxB := List.indexOfByte(buf, 30, 2);\n" +
+"idxC := List.indexOfByte(buf, 99, 0);\n" +
+"io.outputLine(\n" +
+"    Int.abs(-42).toText() + \":\" + Int.abs(42).toText() + \":\" +\n" +
+"    Int.min(-3, 7).toText() + \":\" + Int.max(-3, 7).toText() + \":\" +\n" +
+"    Int.clamp(-5, 0, 10).toText() + \":\" + Int.clamp(5, 0, 10).toText() + \":\" + Int.clamp(99, 0, 10).toText() + \"|\" +\n" +
+"    z32.clz().toText() + \":\" + o32.clz().toText() + \":\" + m32.clz().toText() + \":\" +\n" +
+"    z32.ctz().toText() + \":\" + m32.ctz().toText() + \":\" + v32.popcnt().toText() + \":\" + v32.bswap().toText() + \"|\" +\n" +
+"    z64.clz().toText() + \":\" + o64.clz().toText() + \":\" + v64.ctz().toText() + \":\" +\n" +
+"    max64.popcnt().toText() + \":\" + v64.bswap().toText() + \"|\" +\n" +
+"    wm1.lo.toText() + \":\" + wm1.hi.toText() + \":\" + wm2.lo.toText() + \":\" + wm2.hi.toText() + \"|\" +\n" +
+"    ac1.sum.toText() + \":\" + ac1.carry.toText() + \":\" + ac2.sum.toText() + \":\" + ac2.carry.toText() + \":\" + ac3.sum.toText() + \":\" + ac3.carry.toText() + \"|\" +\n" +
+"    sb1.diff.toText() + \":\" + sb1.borrow.toText() + \":\" + sb2.diff.toText() + \":\" + sb2.borrow.toText() + \":\" + sb3.diff.toText() + \":\" + sb3.borrow.toText() + \"|\" +\n" +
+"    buf[0].toText() + \":\" + buf[1].toText() + \":\" + buf[2].toText() + \":\" + buf[3].toText() + \":\" + buf[4].toText() + \":\" + buf[5].toText() + \":\" +\n" +
+"    idxA.toText() + \":\" + idxB.toText() + \":\" + idxC.toText()\n" +
+");\n";
+
+expectedSoftAll :=
+"42:42:-3:7:0:5:10|" +
+"32:31:0:32:31:13:2018915346|" +
+"64:63:3:64:578437695752307201|" +
+"1:18446744073709551614:18446744073709551614:1|" +
+"0:true:0:true:5:false|" +
+"18446744073709551615:true:18446744073709551615:true:0:false|" +
+"1:9:20:30:40:6:1:3:-1\n";
+
+builtinModes: List<String> = ["--builtin-mode=core/int=builtin", "--builtin-mode=core/list=builtin"];
+pureModes: List<String> = ["--builtin-mode=core/int=pure", "--builtin-mode=core/list=pure"];
+checkParity("soft builtins builtin mode", softAllSrc, builtinModes, expectedSoftAll);
+checkParity("soft builtins pure mode", softAllSrc, pureModes, expectedSoftAll);
+
+sanSoftC := compilerTest.compileStdinWithOpts(root, cComp, root, softAllSrc, "p6.lts", "", ["--sanitize"]);
+test.check("soft builtins --sanitize C compiles", sanSoftC.status == 0 and sanSoftC.stderr == "");
+sanSoftRun := compileAndRunCSanitized(sanSoftC.stdout, ccInfo.cc);
+test.check("soft builtins --sanitize ASan/UBSan ok: " + sanSoftRun.stderr, sanSoftRun.status == 0);
+test.checkText("soft builtins --sanitize stdout", expectedSoftAll, sanSoftRun.stdout);
+
+/* Soft builtin fault parity across builtin vs pure modes */
+absMinSrc :=
+"io := import \"core/io\";\n" +
+"_ := import \"core/int\";\n" +
+"m := -9223372036854775807 - 1;\n" +
+"io.outputLine(Int.abs(m).toText());\n";
+checkFault("Int.abs(Int.min) builtin faults", absMinSrc, builtinModes, "ArithmeticPanic");
+checkFault("Int.abs(Int.min) pure faults", absMinSrc, pureModes, "ArithmeticPanic");
+
+fillOobSrc :=
+"_ := import \"core/list\";\n" +
+"buf: mut List<UInt8> = [1, 2, 3];\n" +
+"List.fillBytes(mut buf, 2, 2, 0);\n";
+checkFault("List.fillBytes OOB builtin faults", fillOobSrc, builtinModes, "BoundPanic");
+checkFault("List.fillBytes OOB pure faults", fillOobSrc, pureModes, "BoundPanic");
+
+copyOobSrc :=
+"_ := import \"core/list\";\n" +
+"dst: mut List<UInt8> = [1, 2, 3];\n" +
+"src: List<UInt8> = [4, 5];\n" +
+"List.copyBytes(mut dst, 1, src, 1, 2);\n";
+checkFault("List.copyBytes OOB builtin faults", copyOobSrc, builtinModes, "BoundPanic");
+checkFault("List.copyBytes OOB pure faults", copyOobSrc, pureModes, "BoundPanic");
+
+/* 6. End-to-end CLI smoke check: ./bin/lite run --target c --sanitize and -O2 -fdebug-info */
+tmpCli := fs.makeTempDir("lite-p6-cli-");
+test.check("makeTempDir cli: " + tmpCli.error, tmpCli.ok);
+cliScript := path.join(tmpCli.path, "cli_check.lts");
+_wc := fs.writeText(cliScript, uncheckedValidSrc);
+cliSan := proc.run(path.join(root, "bin/lite"), ["run", "--target", "c", "--sanitize", cliScript], root, emptyEnv, true, "");
+test.check("CLI --target c --sanitize exits 0: " + cliSan.stderr, cliSan.status == 0);
+test.checkText("CLI --target c --sanitize stdout", "77:88:true:false:-7:-6\n", cliSan.stdout);
+cliDbg := proc.run(path.join(root, "bin/lite"), ["run", "--target", "c", "-O2", "-fdebug-info", cliScript], root, emptyEnv, true, "");
+test.check("CLI --target c -O2 -fdebug-info exits 0: " + cliDbg.stderr, cliDbg.status == 0);
+test.checkText("CLI --target c -O2 -fdebug-info stdout", "77:88:true:false:-7:-6\n", cliDbg.stdout);
+_rmCli := fs.remove(tmpCli.path);
+io.outputLine("phase6-safety-and-builtins: ok");

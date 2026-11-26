@@ -482,8 +482,10 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String, co
     hasIdxBounds := config.checkBounds and (usesListIndex(calls) or usesListSet(calls) or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes"));
     hasUnchBounds := config.checkUnchecked and (usesListUncheckedIndex(calls) or usesListUncheckedSet(calls));
     needsIntFaultFn := (config.checkArithmetic and needCheckedHelpers) or (config.checkUnchecked and needUnchHelpers);
-    needsFloatFaultFn := (usesFloatArithmetic(calls) and (config.checkArithmetic or config.checkFloatFinite)) or
-    (config.checkFloatFinite and (usesBuiltin(calls, "f32FromBits") or usesBuiltin(calls, "f64FromBits"))) or
+    hasFloatArithCheck := usesBuiltin(calls, "floatOp") or usesBuiltin(calls, "float32Op") or usesBuiltin(calls, "float16Op") or usesBuiltin(calls, "float8Op") or usesBuiltin(calls, "floatPower");
+    hasFloatFiniteCheck := hasFloatArithCheck or usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "f16Round") or usesBuiltin(calls, "f32Round") or usesBuiltin(calls, "fma8") or usesBuiltin(calls, "fma16") or usesBuiltin(calls, "fma32") or usesBuiltin(calls, "fma64") or usesBuiltin(calls, "f32FromBits") or usesBuiltin(calls, "f64FromBits");
+    needsFloatFaultFn := (config.checkArithmetic and hasFloatArithCheck) or
+    (config.checkFloatFinite and hasFloatFiniteCheck) or
     (config.checkUnchecked and (usesUncheckedFloat(calls) or usesBuiltin(calls, "f32UFromBits") or usesBuiltin(calls, "f64UFromBits")));
     needsFaultFn := hasHardBounds or hasIdxBounds or hasUnchBounds or needsIntFaultFn or needsFloatFaultFn;
     namePrefix := if prefix == "" { "" } else { prefix + ":" };

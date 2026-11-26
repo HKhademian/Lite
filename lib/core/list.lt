@@ -41,6 +41,12 @@ pub List.$getIndex := fn<T>(values: Self<T>, index: Int): T;
 /** Replaces the element at zero-based `index` via `values[index] = value`. */
 pub List.$setIndex := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
 
+/** Returns the element at zero-based `index`, skipping bounds checks when `-fno-check-unchecked` is active. */
+pub List.uncheckedGet := fn<T>(values: Self<T>, index: Int): T;
+
+/** Replaces the element at zero-based `index`, skipping bounds checks when `-fno-check-unchecked` is active. */
+pub List.uncheckedSet := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
+
 /** True when `values` has zero elements. */
 pub List.isEmpty := fn<T>(values: Self<T>): Bool {
     values.length() == 0

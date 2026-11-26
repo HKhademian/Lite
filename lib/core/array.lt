@@ -15,6 +15,12 @@ pub Array.$getIndex := fn<T: Type, N: Int>(values: Self<T, N>, index: Int): T;
 /** Replaces the element at zero-based `index` in fixed-length array `values`, faulting on out-of-bounds access. */
 pub Array.$setIndex := fn<T: Type, N: Int>(values: mut Self<T, N>, index: Int, value: T): Unit;
 
+/** Returns the element at zero-based `index` in fixed-length array `values`, skipping bounds checks when `-fno-check-unchecked` is active. */
+pub Array.uncheckedGet := fn<T: Type, N: Int>(values: Self<T, N>, index: Int): T;
+
+/** Replaces the element at zero-based `index` in fixed-length array `values`, skipping bounds checks when `-fno-check-unchecked` is active. */
+pub Array.uncheckedSet := fn<T: Type, N: Int>(values: mut Self<T, N>, index: Int, value: T): Unit;
+
 /** True when fixed-length array `values` has zero elements. */
 pub Array.isEmpty := fn<T: Type, N: Int>(values: Self<T, N>): Bool {
     values.length() == 0
