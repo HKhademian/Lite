@@ -427,6 +427,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(index.includes('class="btn btn-primary" href="learn/getting-started/hello-lite.html">Run your first program</a>'));
   assert(index.includes('href="docs/design/start-here.html#prepare-the-checkout">Set up locally</a>'));
   assert(index.includes('run language/examples/foundations/io/double-sum.lts</span></code>'));
+  assert(index.includes("printf</span> '7\\n5\\n' | "));
   assert.equal(index.match(/id="sample-double-sum"/g)?.length, 1);
   assert(index.includes('id="sample-type-aliases"'));
   assert(index.includes('Lite Academy'));

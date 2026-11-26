@@ -460,7 +460,7 @@ a:hover { text-decoration: underline; }
   align-items: start;
 }
 @media (max-width: 860px) {
-  .hero { grid-template-columns: 1fr; padding: 2rem 0 1.5rem; }
+  .hero { grid-template-columns: minmax(0, 1fr); padding: 2rem 0 1.5rem; }
 }
 .hero-display {
   display: flex;
@@ -575,6 +575,8 @@ a:hover { text-decoration: underline; }
   line-height: 1.65;
   color: var(--shell-ink);
   overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .quickstart-body code {
   display: block;
