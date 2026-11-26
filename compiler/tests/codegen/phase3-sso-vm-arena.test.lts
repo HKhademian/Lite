@@ -1,0 +1,175 @@
+/* Phase 3 verification: 16B SSO lt_str, lt_vm_arena, generation-safe UTF-8 cache, auto frame temp rewind, and surface.vitals() telemetry. */
+
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+project := import "util/project";
+test := import "core/test";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+builtTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+builtC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + builtC.error, builtC.ok);
+tsComp := builtTs.path;
+cComp := builtC.path;
+
+ccInfo := compilerTest.probeCc();
+
+/* 1. 16B SSO lt_str boundary transitions (0..14 bytes vs >= 15 bytes), UTF-8 SSO, equality, Map/Set, slice/at under strict TS + C11. */
+ssoSrc := [
+    "io := import \"core/io\";",
+    "z: String;",
+    "e := \"\";",
+    "s1 := \"a\";",
+    "s14 := \"12345678901234\";",
+    "s15 := \"123456789012345\";",
+    "u12 := \"😀🎉🚀\";",
+    "u5 := \"héllo\";",
+    "c14 := \"1234567\" + \"8901234\";",
+    "c15 := \"12345678\" + \"9012345\";",
+    "io.outputLine(z == e, s14 == c14, s15 == c15, s14 == s15);",
+    "io.outputLine(s1.length(), s14.length(), s15.length(), u12.length(), u5.length());",
+    "io.outputLine(u12.at(0), u12.at(2), u12.slice(1, 3), u5.at(1), u5.slice(1, 4));",
+    "io.outputLine(c14.slice(0, 7), c14.slice(7, 14), s15.slice(10, 15));",
+    "m: mut Map<String, Int> = [\"alpha\" = 1, \"12345678901234\" = 14, \"123456789012345\" = 15, \"😀🎉🚀\" = 99];",
+    "io.outputLine(m[c14], m[c15], m[\"😀🎉🚀\"], m.has(\"alpha\"), m.has(\"nope\"));",
+    "io.outputLine((42).toText(), (-99).toText());"
+].join("\n");
+
+tsSso := compilerTest.compileCheckRunTs(root, tsComp, ssoSrc, "");
+test.checkInt("ts sso run status: " + tsSso.stderr, 0, tsSso.status);
+
+cSsoComp := compilerTest.compileStdin(root, cComp, ssoSrc, "");
+test.checkInt("c sso compile status: " + cSsoComp.stderr, 0, cSsoComp.status);
+test.check("c sso checks sizeof(lt_str) == 16", cSsoComp.stdout.contains("_Static_assert(sizeof(lt_str) == 16"));
+test.check("c sso emits LT_STR_SSO", cSsoComp.stdout.contains("LT_STR_SSO("));
+test.check("c sso emits lt_vm_arena_alloc", cSsoComp.stdout.contains("lt_vm_arena_alloc("));
+
+if ccInfo.available {
+    cSsoRun := compilerTest.compileAndRunC(cSsoComp.stdout, ccInfo.cc, "");
+    test.checkInt("c sso run status: " + cSsoRun.stderr, 0, cSsoRun.status);
+    test.checkText("c sso parity", tsSso.stdout, cSsoRun.stdout);
+
+    /* 1b. Generation-safe UTF-8 cache after scratchRewind at reused arena offset (exact same 25 byte_len, different code point counts). */
+    tmpRes := fs.makeTempDir("lite-phase3-loop-");
+    test.check("tmpDir: " + tmpRes.error, tmpRes.ok);
+    tmpDir := tmpRes.path;
+
+    genSrc := [
+        "io := import \"core/io\";",
+        "surf := import \"extra/surface\";",
+        "mk := surf.scratchMark();",
+        "p1 := \"éééééééééé\" + \"abcde\";",
+        "len1 := p1.length();",
+        "ch1a := p1.at(2);",
+        "ch1b := p1.at(12);",
+        "surf.scratchRewind(mk);",
+        "p2 := \"aaaaaaa\" + \"éééééééé\";",
+        "len2 := p2.length();",
+        "ch2a := p2.at(2);",
+        "ch2b := p2.at(12);",
+        "io.outputLine(len1, ch1a, ch1b, len2, ch2a, ch2b);"
+    ].join("\n");
+    genTsComp := compilerTest.compileStdin(root, tsComp, genSrc, "");
+    test.checkInt("ts gen compile: " + genTsComp.stderr, 0, genTsComp.status);
+    genTsFile := path.join(tmpDir, "gen.ts");
+    _wg := fs.writeText(genTsFile, genTsComp.stdout);
+    genTsRun := proc.run(project.nodeExecPath(), [genTsFile], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+    test.checkInt("ts gen run: " + genTsRun.stderr, 0, genTsRun.status);
+    genCComp := compilerTest.compileStdin(root, cComp, genSrc, "");
+    test.checkInt("c gen compile: " + genCComp.stderr, 0, genCComp.status);
+    test.check("c gen emits lt_vm_arena_rewind", genCComp.stdout.contains("lt_vm_arena_rewind("));
+    genCRun := compilerTest.compileAndRunC(genCComp.stdout, ccInfo.cc, "");
+    test.checkInt("c gen run: " + genCRun.stderr, 0, genCRun.status);
+    test.checkText("c gen cache parity", genTsRun.stdout, genCRun.stdout);
+
+    /* 2. 10,000-frame auto-rewound frame loop (surface.run AND manual poll/present WITHOUT manual scratchMark/scratchRewind) + vitals() telemetry */
+
+    loopSrc := [
+        "io := import \"core/io\";",
+        "surf := import \"extra/surface\";",
+        "win := surf.Surface.open(\"Phase3Loop\", 64, 48);",
+        "win.uncapFrameRate();",
+        "var frames := 0;",
+        "var warmAllocs := 0;",
+        "var warmLive := 0;",
+        "var warmRss := 0;",
+        "win.run(fn(inp: surf.FrameInput): Bool {",
+        "    if not inp.open { return false; }",
+        "    win.clear(surf.BLACK);",
+        "    hud := \"FRAME=\" + frames.toText() + \" | LONG_HUD_LABEL_OVER_14_BYTES\";",
+        "    win.drawText(hud, surf.point(4.0, 4.0), 7.0, surf.WHITE);",
+        "    if frames == 50 {",
+        "        vw := win.vitals();",
+        "        warmAllocs = vw.heapAllocs;",
+        "        warmLive = vw.liveBytes;",
+        "        warmRss = vw.memoryBytes;",
+        "    }",
+        "    frames += 1;",
+        "    frames < 10000",
+        "});",
+        "ve := win.vitals();",
+        "io.outputLine(\"run:\", frames, ve.heapAllocs - warmAllocs, ve.liveBytes == warmLive, ve.tempPeakBytes > 0 and ve.tempPeakBytes < 65536, ve.memoryBytes - warmRss <= 2097152);",
+        "/* Also verify manual poll -> present loop without manual scratchMark/scratchRewind */",
+        "var m := 0;",
+        "loop m < 1000 {",
+        "    _i := win.poll();",
+        "    win.clear(surf.BLACK);",
+        "    line := \"MANUAL=\" + m.toText() + \" | MANUAL_HUD_OVER_14_BYTES\";",
+        "    win.drawText(line, surf.point(2.0, 2.0), 7.0, surf.GREEN);",
+        "    win.present();",
+        "    m += 1;",
+        "}",
+        "vm := win.vitals();",
+        "io.outputLine(\"manual:\", m, vm.heapAllocs - warmAllocs, vm.liveBytes == warmLive, vm.tempPeakBytes > 0 and vm.tempPeakBytes < 65536);",
+        "win.close();"
+    ].join("\n");
+
+    loopComp := compilerTest.compileStdin(root, cComp, loopSrc, "");
+    test.checkInt("loop c compile: " + loopComp.stderr, 0, loopComp.status);
+    loopCFile := path.join(tmpDir, "loop.c");
+    loopBinVm := path.join(tmpDir, "loop_vm");
+    loopBinSan := path.join(tmpDir, "loop_san");
+    _wl := fs.writeText(loopCFile, loopComp.stdout);
+
+    vmArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", loopCFile, "-o", loopBinVm, "-lm"];
+    sanArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", loopCFile, "-o", loopBinSan, "-lm"];
+    if proc.platform() == "darwin" {
+        mut vmArgs.pushBack("-framework"); mut vmArgs.pushBack("Cocoa");
+        mut vmArgs.pushBack("-framework"); mut vmArgs.pushBack("CoreGraphics");
+        mut sanArgs.pushBack("-framework"); mut sanArgs.pushBack("Cocoa");
+        mut sanArgs.pushBack("-framework"); mut sanArgs.pushBack("CoreGraphics");
+    }
+
+    ccVm := proc.run(ccInfo.cc, vmArgs, tmpDir, [], true, "");
+    test.checkInt("loop vm cc status: " + ccVm.stderr, 0, ccVm.status);
+    runVm := proc.run(loopBinVm, [], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+    test.checkInt("loop vm run status: " + runVm.stderr, 0, runVm.status);
+    expectedLoopOut := "run: 10000 0 true true true\nmanual: 1000 0 true true\n";
+    test.checkText("loop vm output", expectedLoopOut, runVm.stdout);
+
+    ccSan := proc.run(ccInfo.cc, sanArgs, tmpDir, [], true, "");
+    test.checkInt("loop san cc status: " + ccSan.stderr, 0, ccSan.status);
+    runSan := proc.run(loopBinSan, [], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+    test.checkInt("loop san run status: " + runSan.stderr, 0, runSan.status);
+    test.checkText("loop san output", expectedLoopOut, runSan.stdout);
+
+    /* 3. Verify `./bin/lite build --headless --sanitize` builds and runs cleanly with -DLITE_ALLOC_SYSTEM */
+    cliLts := path.join(tmpDir, "cli_check.lts");
+    cliBin := path.join(tmpDir, "cli_check");
+    _wc := fs.writeText(cliLts, "io := import \"core/io\";\na := \"alpha\" + \"_beta_gamma_delta\";\nio.outputLine(a, a.length());\n");
+    cliBuild := proc.run(path.join(root, "bin/lite"), ["build", "--headless", "--sanitize", "-o", cliBin, cliLts], root, [], true, "");
+    test.checkInt("lite build --sanitize status: " + cliBuild.stderr, 0, cliBuild.status);
+    cliRun := proc.run(cliBin, [], tmpDir, [], true, "");
+    test.checkInt("cli_check run status: " + cliRun.stderr, 0, cliRun.status);
+    test.checkText("cli_check output", "alpha_beta_gamma_delta 22\n", cliRun.stdout);
+
+    _rm := fs.remove(tmpDir);
+}
+
+test.done("phase3-sso-vm-arena");

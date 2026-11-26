@@ -419,6 +419,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
     if sanitize {
         mut ccArgs.pushBack("-fsanitize=address,undefined");
+        mut ccArgs.pushBack("-DLITE_ALLOC_SYSTEM");
         mut ccArgs.pushBack("-fno-omit-frame-pointer");
         mut ccArgs.pushBack("-g");
     }

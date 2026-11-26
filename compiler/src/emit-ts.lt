@@ -1865,7 +1865,7 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
         outLine("type LiteCanvasTexture = { handle: bigint; width: bigint; height: bigint };");
     }
     outLine("type LiteCanvasInput = { open: boolean; width: bigint; height: bigint; pointerX: number; pointerY: number; pointerDown: boolean; key: string; deltaMs: bigint };");
-    outLine("type LiteCanvasVitals = { frameCount: bigint; frameTimeMs: number; avgFrameTimeMs: number; fps: number; targetFps: number; cpuTimeMs: number; memoryBytes: bigint };");
+    outLine("type LiteCanvasVitals = { frameCount: bigint; frameTimeMs: number; avgFrameTimeMs: number; fps: number; targetFps: number; cpuTimeMs: number; memoryBytes: bigint; heapAllocs: bigint; liveBytes: bigint; tempPeakBytes: bigint };");
     if usesBuiltin(calls, "extraCanvasBounds") {
         outLine("type LiteCanvasBounds = { x: bigint; y: bigint; width: bigint; height: bigint; fullscreen: boolean };");
     }
@@ -2035,9 +2035,9 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
     outLine("    const hasProc = typeof process !== 'undefined' && typeof (process as any).cpuUsage === 'function' && typeof (process as any).memoryUsage === 'function';");
     outLine("    let cpuMs = 0; let rss = BigInt(s ? s.pixels.byteLength : 0);");
     outLine("    if (hasProc) { const cpu = (process as any).cpuUsage(); cpuMs = (cpu.user + cpu.system) / 1000.0; rss = BigInt((process as any).memoryUsage().rss); }");
-    outLine("    if (!s) return { frameCount: 0n, frameTimeMs: 0, avgFrameTimeMs: 0, fps: 0, targetFps: 0, cpuTimeMs: cpuMs, memoryBytes: rss };");
+    outLine("    if (!s) return { frameCount: 0n, frameTimeMs: 0, avgFrameTimeMs: 0, fps: 0, targetFps: 0, cpuTimeMs: cpuMs, memoryBytes: rss, heapAllocs: 0n, liveBytes: 0n, tempPeakBytes: 0n };");
     outLine("    const fps = s.avgFrameMs > 0 ? 1000.0 / s.avgFrameMs : 0;");
-    outLine("    return { frameCount: BigInt(s.frameCount), frameTimeMs: s.lastFrameMs, avgFrameTimeMs: s.avgFrameMs, fps, targetFps: s.targetFps, cpuTimeMs: cpuMs, memoryBytes: rss };");
+    outLine("    return { frameCount: BigInt(s.frameCount), frameTimeMs: s.lastFrameMs, avgFrameTimeMs: s.avgFrameMs, fps, targetFps: s.targetFps, cpuTimeMs: cpuMs, memoryBytes: rss, heapAllocs: 0n, liveBytes: 0n, tempPeakBytes: 0n };");
     outLine("}");
     outLine("function lite$extraCanvasClose(surface: LiteCanvasSurface): void {");
     outLine("    const id = Number(surface.handle); const s = lite$canvasMap.get(id);");

@@ -138,73 +138,75 @@ emitTextPrimitiveHelpers := fn(calls: Set<String>): Unit {
     outLine("    if ((b & 0xF8u) == 0xF0u && offset + 3u < byte_len) { return 4u; }");
     outLine("    return 1u;");
     outLine("}");
-    outLine("typedef struct { const char *s; uint32_t byte_len; int32_t cp_len; bool ascii; size_t last_b; int64_t last_cp; uint32_t stamp; } lt_utf8_meta;");
-    outLine("static lt_utf8_meta lt_utf8_cache[256];");
-    outLine("static lt_utf8_meta *lt_utf8_last = NULL;");
-    outLine("static uint32_t lt_utf8_clock = 1u;");
+    outLine("typedef struct { const char *s; size_t byte_len; int64_t cp_len; uint64_t gen; bool ascii; size_t last_b; int64_t last_cp; uint32_t stamp; } lt_utf8_meta;");
+    outLine("LT_THREAD_LOCAL lt_utf8_meta lt_utf8_cache[256];");
+    outLine("LT_THREAD_LOCAL lt_utf8_meta *lt_utf8_last = NULL;");
+    outLine("LT_THREAD_LOCAL uint32_t lt_utf8_clock = 1u;");
     outLine("static lt_utf8_meta *lt_utf8_get_meta(lt_str str) {");
-    outLine("    const char *s = lt_text_cstr(str);");
-    outLine("    if (lt_utf8_last != NULL && lt_utf8_last->s == s && lt_utf8_last->byte_len == str.byte_len) { return lt_utf8_last; }");
+    outLine("    const char *s = str.ext.data != NULL ? str.ext.data : \"\";");
+    outLine("    const size_t blen = lt_str_byte_len(str);");
+    outLine("    const uint64_t cur_gen = lt_arena_gen();");
+    outLine("    if (lt_utf8_last != NULL && lt_utf8_last->s == s && lt_utf8_last->byte_len == blen && lt_utf8_last->gen == cur_gen) { return lt_utf8_last; }");
     outLine("    size_t base = ((((size_t)(uintptr_t)s) >> 4) & 63u) << 2;");
     outLine("    for (size_t w = 0u; w < 4u; w += 1u) {");
-    outLine("        if (lt_utf8_cache[base + w].s == s && lt_utf8_cache[base + w].byte_len == str.byte_len) { lt_utf8_cache[base + w].stamp = ++lt_utf8_clock; lt_utf8_last = &lt_utf8_cache[base + w]; return lt_utf8_last; }");
+    outLine("        if (lt_utf8_cache[base + w].s == s && lt_utf8_cache[base + w].byte_len == blen && lt_utf8_cache[base + w].gen == cur_gen) { lt_utf8_cache[base + w].stamp = ++lt_utf8_clock; lt_utf8_last = &lt_utf8_cache[base + w]; return lt_utf8_last; }");
     outLine("    }");
-    outLine("    int32_t cp = str.cp_len;");
-    outLine("    bool ascii = (cp == (int32_t)str.byte_len);");
+    outLine("    int64_t cp = lt_str_cp_len_known(str);");
+    outLine("    bool ascii = (cp == (int64_t)blen);");
     outLine("    if (cp < 0) {");
     outLine("        cp = 0; ascii = true;");
-    outLine("        for (size_t b = 0u; b < (size_t)str.byte_len; ) {");
+    outLine("        for (size_t b = 0u; b < blen; ) {");
     outLine("            if ((unsigned char)s[b] < 0x80u) { b += 1u; cp += 1; }");
-    outLine("            else { ascii = false; b += lt_utf8_step(s, b, (size_t)str.byte_len); cp += 1; }");
+    outLine("            else { ascii = false; b += lt_utf8_step(s, b, blen); cp += 1; }");
     outLine("        }");
     outLine("    }");
     outLine("    size_t victim = base;");
     outLine("    for (size_t w = 0u; w < 4u; w += 1u) {");
     outLine("        lt_utf8_meta *cand = &lt_utf8_cache[base + w];");
-    outLine("        if (cand->s == NULL) { victim = base + w; break; }");
+    outLine("        if (cand->s == NULL || cand->gen != cur_gen) { victim = base + w; break; }");
     outLine("        lt_utf8_meta *cur = &lt_utf8_cache[victim];");
     outLine("        if (cand->byte_len < cur->byte_len && cur->byte_len >= 4096u) { victim = base + w; }");
     outLine("        else if ((cand->byte_len < 4096u) == (cur->byte_len < 4096u) && cand->stamp < cur->stamp) { victim = base + w; }");
     outLine("    }");
     outLine("    lt_utf8_meta *slot = &lt_utf8_cache[victim];");
-    outLine("    slot->s = s; slot->byte_len = str.byte_len; slot->cp_len = cp; slot->ascii = ascii; slot->last_b = 0u; slot->last_cp = 0; slot->stamp = ++lt_utf8_clock;");
+    outLine("    slot->s = s; slot->byte_len = blen; slot->cp_len = cp; slot->gen = cur_gen; slot->ascii = ascii; slot->last_b = 0u; slot->last_cp = 0; slot->stamp = ++lt_utf8_clock;");
     outLine("    lt_utf8_last = slot;");
     outLine("    return slot;");
     outLine("}");
     if hasAt or hasSlice {
-        outLine("static const char lt_ascii_tbl[256] = {");
-        outLine("    0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0,8,0,9,0,10,0,11,0,12,0,13,0,14,0,15,0,");
-        outLine("    16,0,17,0,18,0,19,0,20,0,21,0,22,0,23,0,24,0,25,0,26,0,27,0,28,0,29,0,30,0,31,0,");
-        outLine("    32,0,33,0,34,0,35,0,36,0,37,0,38,0,39,0,40,0,41,0,42,0,43,0,44,0,45,0,46,0,47,0,");
-        outLine("    48,0,49,0,50,0,51,0,52,0,53,0,54,0,55,0,56,0,57,0,58,0,59,0,60,0,61,0,62,0,63,0,");
-        outLine("    64,0,65,0,66,0,67,0,68,0,69,0,70,0,71,0,72,0,73,0,74,0,75,0,76,0,77,0,78,0,79,0,");
-        outLine("    80,0,81,0,82,0,83,0,84,0,85,0,86,0,87,0,88,0,89,0,90,0,91,0,92,0,93,0,94,0,95,0,");
-        outLine("    96,0,97,0,98,0,99,0,100,0,101,0,102,0,103,0,104,0,105,0,106,0,107,0,108,0,109,0,110,0,111,0,");
-        outLine("    112,0,113,0,114,0,115,0,116,0,117,0,118,0,119,0,120,0,121,0,122,0,123,0,124,0,125,0,126,0,127,0");
-        outLine("};");
-        outLine("static inline lt_str lt_ascii_char(unsigned char c) { return (lt_str){ &lt_ascii_tbl[(size_t)c * 2u], 1u, 1 }; }");
-        outLine("static lt_str lt_alloc_text_slice(const char *s, size_t start, size_t end, int32_t cp_len) {");
+        outLine("static inline lt_str lt_ascii_char(unsigned char c) {");
+        outLine("    lt_str r = LT_EMPTY_STR;");
+        outLine("    r.sso.buf[0] = (char)c; r.sso.tag = 1u;");
+        outLine("    return r;");
+        outLine("}");
+        outLine("static lt_str lt_alloc_text_slice(const char *s, size_t start, size_t end, int64_t cp_len) {");
         outLine("    const size_t len = end - start;");
-        outLine("    if (len == 0u) { return LT_ASTR(\"\"); }");
+        outLine("    if (len == 0u) { return LT_EMPTY_STR; }");
         outLine("    if (len == 1u && (unsigned char)s[start] < 128u) { return lt_ascii_char((unsigned char)s[start]); }");
-        outLine("    char *out = lt_str_alloc(len + 1u);");
-        outLine("    memcpy(out, s + start, len);");
-        outLine("    out[len] = '\\0';");
-        outLine("    return (lt_str){ out, (uint32_t)len, cp_len };");
+        outLine("    return lt_str_make(s + start, len, cp_len);");
         outLine("}");
     }
     if hasAt or hasSlice or hasSoftUtf8 {
         outLine("static size_t lt_utf8_byte_at(lt_str str, int64_t target, bool allow_end, bool *ok) {");
-        outLine("    if (str.cp_len == (int32_t)str.byte_len) {");
-        outLine("        if (target < 0 || target > (int64_t)str.byte_len || (!allow_end && target == (int64_t)str.byte_len)) { *ok = false; return 0u; }");
+        outLine("    const size_t sbl = lt_str_byte_len(str);");
+        outLine("    const int64_t known = lt_str_cp_len_known(str);");
+        outLine("    if (known == (int64_t)sbl) {");
+        outLine("        if (target < 0 || target > (int64_t)sbl || (!allow_end && target == (int64_t)sbl)) { *ok = false; return 0u; }");
         outLine("        *ok = true; return (size_t)target;");
         outLine("    }");
+        outLine("    if (!lt_str_is_ext(str)) {");
+        outLine("        if (target < 0) { *ok = false; return 0u; }");
+        outLine("        size_t b = 0u; int64_t c = 0;");
+        outLine("        while (b < sbl && c < target) { b += lt_utf8_step(str.sso.buf, b, sbl); c += 1; }");
+        outLine("        if (c < target || (!allow_end && b >= sbl)) { *ok = false; return 0u; }");
+        outLine("        *ok = true; return b;");
+        outLine("    }");
         outLine("    lt_utf8_meta *m = lt_utf8_get_meta(str);");
-        outLine("    if (target < 0 || target > (int64_t)m->cp_len || (!allow_end && target == (int64_t)m->cp_len)) { *ok = false; return 0u; }");
+        outLine("    if (target < 0 || target > m->cp_len || (!allow_end && target == m->cp_len)) { *ok = false; return 0u; }");
         outLine("    if (m->ascii) { *ok = true; return (size_t)target; }");
-        outLine("    if (target == (int64_t)m->cp_len) { *ok = true; return (size_t)m->byte_len; }");
+        outLine("    if (target == m->cp_len) { *ok = true; return m->byte_len; }");
         outLine("    const char *s = m->s;");
-        outLine("    size_t blen = (size_t)m->byte_len;");
+        outLine("    size_t blen = m->byte_len;");
         outLine("    size_t byte_pos = 0u;");
         outLine("    int64_t count = 0;");
         outLine("    if (target >= m->last_cp) {");
@@ -223,42 +225,70 @@ emitTextPrimitiveHelpers := fn(calls: Set<String>): Unit {
     }
     if hasLen {
         outLine("static inline int64_t lt_text_length(lt_str s) {");
-        outLine("    if (s.cp_len >= 0) { return (int64_t)s.cp_len; }");
-        outLine("    return (int64_t)lt_utf8_get_meta(s)->cp_len;");
+        outLine("    int64_t known = lt_str_cp_len_known(s);");
+        outLine("    if (known >= 0) { return known; }");
+        outLine("    if (!lt_str_is_ext(s)) {");
+        outLine("        size_t bl = (size_t)(s.sso.tag & 0x0Fu);");
+        outLine("        int64_t cp = 0;");
+        outLine("        for (size_t b = 0u; b < bl; ) { b += lt_utf8_step(s.sso.buf, b, bl); cp += 1; }");
+        outLine("        return cp;");
+        outLine("    }");
+        outLine("    return lt_utf8_get_meta(s)->cp_len;");
         outLine("}");
     }
     if hasAt {
         outLine("static lt_str lt_text_at(lt_str s, int64_t position, size_t at) {");
-        outLine("    if (s.cp_len == (int32_t)s.byte_len) {");
-        outLine("        if (position < 0 || position >= (int64_t)s.byte_len) { lt_bound_fault(at, \"textAt index outside text\"); }");
-        outLine("        return lt_ascii_char((unsigned char)s.data[position]);");
+        outLine("    const size_t sbl = lt_str_byte_len(s);");
+        outLine("    const int64_t known = lt_str_cp_len_known(s);");
+        outLine("    if (known == (int64_t)sbl) {");
+        outLine("        if (position < 0 || position >= (int64_t)sbl) { lt_bound_fault(at, \"textAt index outside text\"); }");
+        outLine("        const char *sd = lt_str_data(&s);");
+        outLine("        return lt_ascii_char((unsigned char)sd[position]);");
+        outLine("    }");
+        outLine("    if (!lt_str_is_ext(s)) {");
+        outLine("        bool ok = false;");
+        outLine("        const size_t start = lt_utf8_byte_at(s, position, false, &ok);");
+        outLine("        if (!ok) { lt_bound_fault(at, \"textAt index outside text\"); }");
+        outLine("        return lt_alloc_text_slice(s.sso.buf, start, start + lt_utf8_step(s.sso.buf, start, sbl), 1);");
         outLine("    }");
         outLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
-        outLine("    if (position < 0 || position >= (int64_t)m->cp_len) { lt_bound_fault(at, \"textAt index outside text\"); }");
+        outLine("    if (position < 0 || position >= m->cp_len) { lt_bound_fault(at, \"textAt index outside text\"); }");
         outLine("    if (m->ascii) { return lt_ascii_char((unsigned char)m->s[position]); }");
         outLine("    bool ok = false;");
         outLine("    const size_t start = lt_utf8_byte_at(s, position, false, &ok);");
         outLine("    if (!ok) { lt_bound_fault(at, \"textAt index outside text\"); }");
-        outLine("    return lt_alloc_text_slice(m->s, start, start + lt_utf8_step(m->s, start, (size_t)m->byte_len), 1);");
+        outLine("    return lt_alloc_text_slice(m->s, start, start + lt_utf8_step(m->s, start, m->byte_len), 1);");
         outLine("}");
     }
     if hasSlice {
         outLine("static lt_str lt_text_slice(lt_str s, int64_t start, int64_t end, size_t at) {");
-        outLine("    if (s.cp_len == (int32_t)s.byte_len) {");
-        outLine("        if (start < 0 || end < start || end > (int64_t)s.byte_len) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
-        outLine("        return lt_alloc_text_slice(s.data, (size_t)start, (size_t)end, (int32_t)(end - start));");
+        outLine("    const size_t sbl = lt_str_byte_len(s);");
+        outLine("    const int64_t known = lt_str_cp_len_known(s);");
+        outLine("    if (known == (int64_t)sbl) {");
+        outLine("        if (start < 0 || end < start || end > (int64_t)sbl) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
+        outLine("        return lt_alloc_text_slice(lt_str_data(&s), (size_t)start, (size_t)end, end - start);");
+        outLine("    }");
+        outLine("    if (!lt_str_is_ext(s)) {");
+        outLine("        if (start < 0 || end < start) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
+        outLine("        bool ok = false;");
+        outLine("        const size_t b_start = lt_utf8_byte_at(s, start, true, &ok);");
+        outLine("        if (!ok) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
+        outLine("        size_t b_end = b_start; int64_t remaining = end - start;");
+        outLine("        while (remaining > 0 && b_end < sbl) { b_end += lt_utf8_step(s.sso.buf, b_end, sbl); remaining -= 1; }");
+        outLine("        if (remaining > 0) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
+        outLine("        return lt_alloc_text_slice(s.sso.buf, b_start, b_end, end - start);");
         outLine("    }");
         outLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
-        outLine("    if (start < 0 || end < start || end > (int64_t)m->cp_len) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
-        outLine("    if (m->ascii) { return lt_alloc_text_slice(m->s, (size_t)start, (size_t)end, (int32_t)(end - start)); }");
+        outLine("    if (start < 0 || end < start || end > m->cp_len) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
+        outLine("    if (m->ascii) { return lt_alloc_text_slice(m->s, (size_t)start, (size_t)end, end - start); }");
         outLine("    bool ok = false;");
         outLine("    const size_t b_start = lt_utf8_byte_at(s, start, true, &ok);");
         outLine("    if (!ok) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
         outLine("    size_t b_end = b_start;");
         outLine("    int64_t remaining = end - start;");
-        outLine("    while (remaining > 0 && b_end < (size_t)m->byte_len) { b_end += lt_utf8_step(m->s, b_end, (size_t)m->byte_len); remaining -= 1; }");
+        outLine("    while (remaining > 0 && b_end < m->byte_len) { b_end += lt_utf8_step(m->s, b_end, m->byte_len); remaining -= 1; }");
         outLine("    if (remaining > 0) { lt_bound_fault(at, \"textSlice requires 0 <= start <= end <= textLength(text)\"); }");
-        outLine("    return lt_alloc_text_slice(m->s, b_start, b_end, (int32_t)(end - start));");
+        outLine("    return lt_alloc_text_slice(m->s, b_start, b_end, end - start);");
         outLine("}");
     }
     if hasSliceFrom {
@@ -283,7 +313,8 @@ emitInputHelpers := fn(calls: Set<String>): Unit {
     hasFloat := usesIntHelper(calls, "lite$inputFloat(");
     if not hasAll and not hasLine and not hasInt and not hasFloat { return; }
     outLine("static void lt_input_prompt(lt_str prompt) {");
-    outLine("    if (prompt.data != NULL) { if (prompt.byte_len > 0u) { (void)fwrite(prompt.data, 1u, prompt.byte_len, stdout); } fflush(stdout); }");
+    outLine("    size_t n = lt_str_byte_len(prompt);");
+    outLine("    if (n > 0u) { (void)fwrite(lt_str_data(&prompt), 1u, n, stdout); fflush(stdout); }");
     outLine("}");
     if hasLine or hasInt or hasFloat {
         outLine("static _Noreturn void lt_input_fault(lt_str at, const char *message) {");
@@ -2858,20 +2889,37 @@ emitIntDivisionHelpers := fn(calls: Set<String>): Unit {
     return;
 }
 
-/** Emits the checked UTF-8 byte concatenation helper; each allocated result is intentionally leaked by this bootstrap backend. */
+/** Emits the checked UTF-8 byte concatenation helper backed by SSO (<= 14B) or `lt_vm_arena`. */
 emitStringConcatHelper := fn(): Unit {
     outLine("static lt_str lite_concat(lt_str left, lt_str right) {");
-    outLine("    if (left.byte_len == 0u) { return right; }");
-    outLine("    if (right.byte_len == 0u) { return left; }");
-    outLine("    const size_t left_length = (size_t)left.byte_len;");
-    outLine("    const size_t right_length = (size_t)right.byte_len;");
-    outLine("    const size_t total = left_length + right_length;");
+    outLine("    const size_t ll = lt_str_byte_len(left);");
+    outLine("    if (ll == 0u) { return right; }");
+    outLine("    const size_t rl = lt_str_byte_len(right);");
+    outLine("    if (rl == 0u) { return left; }");
+    outLine("    const size_t total = ll + rl;");
+    outLine("    const char *ld = lt_str_data(&left);");
+    outLine("    const char *rd = lt_str_data(&right);");
+    outLine("    if (total <= 14u) {");
+    outLine("        lt_str r = LT_EMPTY_STR;");
+    outLine("        memcpy(r.sso.buf, ld, ll);");
+    outLine("        memcpy(r.sso.buf + ll, rd, rl);");
+    outLine("        r.sso.tag = (uint8_t)total;");
+    outLine("        return r;");
+    outLine("    }");
+    outLine("    const int64_t lcp = lt_str_cp_len_known(left);");
+    outLine("    const int64_t rcp = lt_str_cp_len_known(right);");
+    outLine("    int64_t cp = (lcp >= 0 && rcp >= 0) ? (lcp + rcp) : -1;");
+    outLine("    if (total >= (size_t)UINT32_MAX) {");
+    outLine("        lt_str r = lt_str_make_jumbo(NULL, total, cp);");
+    outLine("        char *dst = (char *)(uintptr_t)r.ext.data;");
+    outLine("        memcpy(dst, ld, ll); memcpy(dst + ll, rd, rl);");
+    outLine("        return r;");
+    outLine("    }");
     outLine("    char *combined = lt_str_alloc(total + 1u);");
-    outLine("    memcpy(combined, left.data, left_length);");
-    outLine("    memcpy(combined + left_length, right.data, right_length);");
+    outLine("    memcpy(combined, ld, ll);");
+    outLine("    memcpy(combined + ll, rd, rl);");
     outLine("    combined[total] = '\\0';");
-    outLine("    int32_t cp = (left.cp_len >= 0 && right.cp_len >= 0) ? (left.cp_len + right.cp_len) : -1;");
-    outLine("    return (lt_str){ combined, (uint32_t)total, cp };");
+    outLine("    return (lt_str){ .ext = { .data = combined, .byte_len = (uint32_t)total, .meta = lt_str_pack_meta(cp) } };");
     outLine("}");
     outLine("");
 }
@@ -2992,9 +3040,14 @@ isCStaticConstIntCode := fn(code: String): Bool {
     isCAsciiDigits(code, 0, n)
 };
 
-/** True when `code` is a pure C11 `LT_STR_LIT("...", N)` or `LT_ASTR("...")` constant expression. */
+/** True when `code` is a pure C11 `LT_STR_SSO("...", N)`, `LT_STR_LIT("...", N)`, or `LT_ASTR("...")` constant expression. */
 isCStaticConstStrCode := fn(code: String): Bool {
     n := code.length();
+    if code.startsWithAt(0, "LT_STR_SSO(\"") and code.endsWith(")") {
+        strEnd := frontend.skipAliasString(code, 11);
+        if strEnd >= n or not code.startsWithAt(strEnd, ", ") { return false; }
+        return isCAsciiDigits(code, strEnd + 2, n - 1);
+    }
     if code.startsWithAt(0, "LT_STR_LIT(\"") and code.endsWith(")") {
         strEnd := frontend.skipAliasString(code, 11);
         if strEnd >= n or not code.startsWithAt(strEnd, ", ") { return false; }
@@ -3656,9 +3709,11 @@ emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
 emitCUnicodeBuiltinHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lite$unicodeToCodePoints(") {
         outLine("static lt_list_i64 lt_unicode_to_code_points(lt_str text) {");
-        outLine("    const uint8_t *p = (const uint8_t *)lt_text_cstr(text);");
-        outLine("    const uint8_t *end = p + text.byte_len;");
-        outLine("    int64_t len = 0; int64_t cap = text.cp_len > 16 ? (int64_t)text.cp_len : 16;");
+        outLine("    const size_t tlen = lt_str_byte_len(text);");
+        outLine("    const uint8_t *p = (const uint8_t *)lt_str_data(&text);");
+        outLine("    const uint8_t *end = p + tlen;");
+        outLine("    int64_t known_cp = lt_str_cp_len_known(text);");
+        outLine("    int64_t len = 0; int64_t cap = known_cp > 16 ? known_cp : 16;");
         outLine("    int64_t *data = malloc((size_t)cap * sizeof(int64_t));");
         outLine("    if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate code points\\n\"); exit(1); }");
         outLine("    while (p < end) {");
@@ -3690,7 +3745,7 @@ emitCUnicodeBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("            char *msg = malloc(96);");
         outLine("            if (msg == NULL) { return (" + okTextTag + "){ false, LT_ASTR(\"\"), LT_ASTR(\"invalid Unicode scalar code point\") }; }");
         outLine("            snprintf(msg, 96, \"invalid Unicode scalar code point: %\" PRId64, cp);");
-        outLine("            return (" + okTextTag + "){ false, LT_ASTR(\"\"), lt_text_from_cstr(msg) };");
+        outLine("            return (" + okTextTag + "){ false, LT_ASTR(\"\"), lt_text_from_owned_cstr(msg) };");
         outLine("        }");
         outLine("        if (cp < 0x80) { buf[pos++] = (char)cp; }");
         outLine("        else if (cp < 0x800) { buf[pos++] = (char)(0xC0 | (cp >> 6)); buf[pos++] = (char)(0x80 | (cp & 0x3F)); }");
@@ -4059,7 +4114,7 @@ emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("static int lt_cmp_ltstr(const void *a, const void *b) {");
         outLine("    const lt_str *sa = (const lt_str *)a;");
         outLine("    const lt_str *sb = (const lt_str *)b;");
-        outLine("    return strcmp(lt_text_cstr(*sa), lt_text_cstr(*sb));");
+        outLine("    return strcmp(lt_str_data(sa), lt_str_data(sb));");
         outLine("}");
         outLine("static lt_list_str lt_file_list_dir(lt_str path_s) {");
         outLine("    const char *path = lt_text_cstr(path_s);");
@@ -4081,10 +4136,11 @@ emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lite$fileMakeDir(") {
         outLine("static " + okErrTag + " lt_file_make_dir(lt_str path_s) {");
-        outLine("    const char *path = lt_text_cstr(path_s);");
-        outLine("    if (path_s.byte_len == 0u) { return (" + okErrTag + "){ false, LT_ASTR(\"empty path\") }; }");
+        outLine("    const char *path = lt_str_data(&path_s);");
+        outLine("    size_t plen = lt_str_byte_len(path_s);");
+        outLine("    if (plen == 0u) { return (" + okErrTag + "){ false, LT_ASTR(\"empty path\") }; }");
         outLine("    char *tmp = lt_dup_str(path);");
-        outLine("    size_t n = (size_t)path_s.byte_len;");
+        outLine("    size_t n = plen;");
         outLine("    while (n > 1 && tmp[n - 1] == '/') { tmp[--n] = '\\0'; }");
         outLine("    for (size_t i = 1; i < n; i += 1) {");
         outLine("        if (tmp[i] == '/') {");
@@ -4105,7 +4161,8 @@ emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lite$fileRemove(") {
         outLine("static " + okErrTag + " lt_file_remove(lt_str path_s) {");
-        outLine("    const char *path = lt_text_cstr(path_s);");
+        outLine("    const char *path = lt_str_data(&path_s);");
+        outLine("    size_t path_len = lt_str_byte_len(path_s);");
         outLine("    struct stat st;");
         outLine("    if (lstat(path, &st) != 0) {");
         outLine("        if (errno == ENOENT) { return (" + okErrTag + "){ true, LT_ASTR(\"\") }; }");
@@ -4117,7 +4174,7 @@ emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("        struct dirent *ent;");
         outLine("        while ((ent = readdir(d)) != NULL) {");
         outLine("            if (strcmp(ent->d_name, \".\") == 0 || strcmp(ent->d_name, \"..\") == 0) { continue; }");
-        outLine("            size_t clen = (size_t)path_s.byte_len + 1u + strlen(ent->d_name) + 1u;");
+        outLine("            size_t clen = path_len + 1u + strlen(ent->d_name) + 1u;");
         outLine("            char *child = malloc(clen);");
         outLine("            if (child == NULL) { closedir(d); return (" + okErrTag + "){ false, LT_ASTR(\"out of memory\") }; }");
         outLine("            snprintf(child, clen, \"%s/%s\", path, ent->d_name);");
@@ -4135,8 +4192,10 @@ emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lite$fileCopy(") {
         outLine("static " + okErrTag + " lt_file_copy(lt_str from_s, lt_str to_s) {");
-        outLine("    const char *from_path = lt_text_cstr(from_s);");
-        outLine("    const char *to_path = lt_text_cstr(to_s);");
+        outLine("    const char *from_path = lt_str_data(&from_s);");
+        outLine("    const char *to_path = lt_str_data(&to_s);");
+        outLine("    size_t from_len = lt_str_byte_len(from_s);");
+        outLine("    size_t to_len = lt_str_byte_len(to_s);");
         outLine("    struct stat st;");
         outLine("    if (lstat(from_path, &st) != 0) { return (" + okErrTag + "){ false, lt_text_from_cstr(lt_dup_str(strerror(errno))) }; }");
         outLine("    if (S_ISLNK(st.st_mode)) {");
@@ -4155,8 +4214,8 @@ emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("        struct dirent *ent;");
         outLine("        while ((ent = readdir(d)) != NULL) {");
         outLine("            if (strcmp(ent->d_name, \".\") == 0 || strcmp(ent->d_name, \"..\") == 0) { continue; }");
-        outLine("            size_t slen = (size_t)from_s.byte_len + 1u + strlen(ent->d_name) + 1u;");
-        outLine("            size_t dlen = (size_t)to_s.byte_len + 1u + strlen(ent->d_name) + 1u;");
+        outLine("            size_t slen = from_len + 1u + strlen(ent->d_name) + 1u;");
+        outLine("            size_t dlen = to_len + 1u + strlen(ent->d_name) + 1u;");
         outLine("            char *sp = malloc(slen); char *dp = malloc(dlen);");
         outLine("            if (sp == NULL || dp == NULL) { free(sp); free(dp); closedir(d); return (" + okErrTag + "){ false, LT_ASTR(\"out of memory\") }; }");
         outLine("            snprintf(sp, slen, \"%s/%s\", from_path, ent->d_name);");
@@ -4200,23 +4259,23 @@ emitCFileBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("static " + okPathTag + " lt_file_real_path(lt_str path) {");
         outLine("    char *resolved = realpath(lt_text_cstr(path), NULL);");
         outLine("    if (resolved == NULL) { return (" + okPathTag + "){ false, LT_ASTR(\"\"), lt_text_from_cstr(lt_dup_str(strerror(errno))) }; }");
-        outLine("    return (" + okPathTag + "){ true, lt_text_from_cstr(resolved), LT_ASTR(\"\") };");
+        outLine("    return (" + okPathTag + "){ true, lt_text_from_owned_cstr(resolved), LT_ASTR(\"\") };");
         outLine("}");
     }
     if usesIntHelper(calls, "lite$fileMakeTempDir(") {
         outLine("static " + okPathTag + " lt_file_make_temp_dir(lt_str prefix_s) {");
-        outLine("    const char *prefix = lt_text_cstr(prefix_s);");
+        outLine("    const char *prefix = lt_str_data(&prefix_s);");
         outLine("    const char *base = getenv(\"TMPDIR\");");
         outLine("    if (base == NULL || base[0] == '\\0') { base = \"/tmp\"; }");
         outLine("    size_t blen = strlen(base);");
         outLine("    bool need_slash = blen > 0 && base[blen - 1] != '/';");
-        outLine("    size_t plen = (size_t)prefix_s.byte_len;");
+        outLine("    size_t plen = lt_str_byte_len(prefix_s);");
         outLine("    char *tmpl = malloc(blen + (need_slash ? 1 : 0) + plen + 7);");
         outLine("    if (tmpl == NULL) { return (" + okPathTag + "){ false, LT_ASTR(\"\"), LT_ASTR(\"out of memory\") }; }");
         outLine("    snprintf(tmpl, blen + (need_slash ? 1 : 0) + plen + 7, \"%s%s%sXXXXXX\", base, need_slash ? \"/\" : \"\", prefix);");
         outLine("    char *created = mkdtemp(tmpl);");
         outLine("    if (created == NULL) { const char *err = lt_dup_str(strerror(errno)); free(tmpl); return (" + okPathTag + "){ false, LT_ASTR(\"\"), lt_text_from_cstr(err) }; }");
-        outLine("    return (" + okPathTag + "){ true, lt_text_from_cstr(created), LT_ASTR(\"\") };");
+        outLine("    return (" + okPathTag + "){ true, lt_text_from_owned_cstr(created), LT_ASTR(\"\") };");
         outLine("}");
     }
 };
@@ -4227,14 +4286,14 @@ emitCProcessBuiltinHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lite$processCwd(") {
         outLine("static lt_str lt_process_cwd(void) {");
         outLine("    char *d = getcwd(NULL, 0);");
-        outLine("    return d != NULL ? lt_text_from_cstr(d) : LT_ASTR(\"\");");
+        outLine("    return d != NULL ? lt_text_from_owned_cstr(d) : LT_ASTR(\"\");");
         outLine("}");
     }
     if usesIntHelper(calls, "lite$processExecPath(") {
         outLine("static lt_str lt_process_exec_path(void) {");
         outLine("    if (lt_argc <= 0 || lt_argv == NULL || lt_argv[0] == NULL) { return LT_ASTR(\"\"); }");
         outLine("    char *r = realpath(lt_argv[0], NULL);");
-        outLine("    return lt_text_from_cstr(r != NULL ? r : lt_argv[0]);");
+        outLine("    return r != NULL ? lt_text_from_owned_cstr(r) : lt_text_from_cstr(lt_argv[0]);");
         outLine("}");
     }
     if usesIntHelper(calls, "lite$processEntryPath(") {
@@ -4247,7 +4306,7 @@ emitCProcessBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("        if (cwd != NULL) {");
         outLine("            size_t clen = strlen(cwd); size_t alen = strlen(a0);");
         outLine("            char *joined = malloc(clen + 1u + alen + 1u);");
-        outLine("            if (joined != NULL) { snprintf(joined, clen + 1u + alen + 1u, \"%s/%s\", cwd, a0); free(cwd); return lt_text_from_cstr(joined); }");
+        outLine("            if (joined != NULL) { snprintf(joined, clen + 1u + alen + 1u, \"%s/%s\", cwd, a0); free(cwd); return lt_text_from_owned_cstr(joined); }");
         outLine("            free(cwd);");
         outLine("        }");
         outLine("    }");
@@ -4320,11 +4379,10 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
         outLine("    time_t t = time(NULL);");
         outLine("    struct tm tm_buf;");
         outLine("    localtime_r(&t, &tm_buf);");
-        outLine("    char *buf = malloc(16);");
-        outLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate date\\n\"); exit(1); }");
-        outLine("    int n = snprintf(buf, 16, \"%04d-%02d-%02d\", tm_buf.tm_year + 1900, tm_buf.tm_mon + 1, tm_buf.tm_mday);");
+        outLine("    char buf[16];");
+        outLine("    int n = snprintf(buf, sizeof buf, \"%04d-%02d-%02d\", tm_buf.tm_year + 1900, tm_buf.tm_mon + 1, tm_buf.tm_mday);");
         outLine("    if (n < 0) { n = 0; }");
-        outLine("    return lt_text_from_buf(buf, (size_t)n, (int32_t)n);");
+        outLine("    return lt_str_from_sso(buf, (size_t)n);");
         outLine("}");
     }
     if usesIntHelper(calls, "lite$cryptoRandomBytes(") {
@@ -4372,9 +4430,9 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
         outLine("}");
         outLine("static lt_spawn_res lt_spawn_core(const char *command, lt_list_str args, const char *cwd, lt_list_str env_ov, bool capture, int64_t timeout_ms, const uint8_t *in_data, size_t in_len) {");
         outLine("    for (int64_t i = 0; i < env_ov.len; i += 1) {");
-        outLine("        const char *es = lt_text_cstr(env_ov.data[i]);");
+        outLine("        const char *es = lt_str_data(&env_ov.data[i]);");
         outLine("        if (strchr(es, '=') == NULL) {");
-        outLine("            size_t elen = (size_t)env_ov.data[i].byte_len + 40u;");
+        outLine("            size_t elen = lt_str_byte_len(env_ov.data[i]) + 40u;");
         outLine("            char *msg = malloc(elen);");
         outLine("            if (msg != NULL) { snprintf(msg, elen, \"invalid environment override: %s\", es); }");
         outLine("            return (lt_spawn_res){ -1, NULL, 0u, NULL, 0u, msg != NULL ? msg : \"invalid environment override\" };");
@@ -4396,7 +4454,7 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
         outLine("    char **argv = malloc((size_t)(args.len + 2) * sizeof(char *));");
         outLine("    if (argv == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate argv\\n\"); exit(1); }");
         outLine("    argv[0] = (char *)command;");
-        outLine("    for (int64_t i = 0; i < args.len; i += 1) { argv[i + 1] = (char *)lt_text_cstr(args.data[i]); }");
+        outLine("    for (int64_t i = 0; i < args.len; i += 1) { argv[i + 1] = (char *)(uintptr_t)lt_str_data(&args.data[i]); }");
         outLine("    argv[args.len + 1] = NULL;");
         outLine("    fflush(stdout); fflush(stderr);");
         outLine("    pid_t pid = fork();");
@@ -4415,7 +4473,7 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
         outLine("        }");
         outLine("        if (cwd[0] != '\\0' && chdir(cwd) != 0) { int e = errno; ssize_t _w = write(exec_p[1], &e, sizeof(e)); (void)_w; _exit(127); }");
         outLine("        for (int64_t i = 0; i < env_ov.len; i += 1) {");
-        outLine("            const char *es = lt_text_cstr(env_ov.data[i]);");
+        outLine("            const char *es = lt_str_data(&env_ov.data[i]);");
         outLine("            const char *eq = strchr(es, '=');");
         outLine("            if (eq == es) { unsetenv(eq + 1); }");
         outLine("            else if (eq != NULL) {");
@@ -4495,10 +4553,10 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lite$processRun(") {
         runTag := frontend.cStructTag("(status:Int,stdout:String,stderr:String,error:String)");
         outLine("static " + runTag + " lt_process_run(lt_str command, lt_list_str args, lt_str cwd, lt_list_str env_ov, bool capture, lt_str stdin_text) {");
-        outLine("    lt_spawn_res r = lt_spawn_core(lt_text_cstr(command), args, lt_text_cstr(cwd), env_ov, capture, 0, (const uint8_t *)lt_text_cstr(stdin_text), (size_t)stdin_text.byte_len);");
+        outLine("    lt_spawn_res r = lt_spawn_core(lt_text_cstr(command), args, lt_text_cstr(cwd), env_ov, capture, 0, (const uint8_t *)lt_str_data(&stdin_text), lt_str_byte_len(stdin_text));");
         outLine("    lt_str so = LT_ASTR(\"\"); lt_str se = LT_ASTR(\"\");");
-        outLine("    if (r.out != NULL) { char *p = realloc(r.out, r.out_len + 1u); if (p == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } p[r.out_len] = '\\0'; so = lt_text_from_cstr(p); }");
-        outLine("    if (r.err != NULL) { char *p = realloc(r.err, r.err_len + 1u); if (p == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } p[r.err_len] = '\\0'; se = lt_text_from_cstr(p); }");
+        outLine("    if (r.out != NULL) { char *p = realloc(r.out, r.out_len + 1u); if (p == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } p[r.out_len] = '\\0'; so = lt_text_from_owned_cstr(p); }");
+        outLine("    if (r.err != NULL) { char *p = realloc(r.err, r.err_len + 1u); if (p == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } p[r.err_len] = '\\0'; se = lt_text_from_owned_cstr(p); }");
         outLine("    return (" + runTag + "){ r.status, so, se, lt_text_from_cstr(r.error) };");
         outLine("}");
     }
@@ -4514,12 +4572,12 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
         outLine("    lt_spawn_res r = lt_spawn_core(lt_text_cstr(command), args, lt_text_cstr(cwd), env_ov, true, timeout_ms, in_buf, (size_t)stdin_bytes.len);");
         outLine("    free(in_buf);");
         outLine("    const char *werr = \"\";");
-        outLine("    if (stdout_path.byte_len > 0u) {");
+        outLine("    if (lt_str_byte_len(stdout_path) > 0u) {");
         outLine("        int fd = open(lt_text_cstr(stdout_path), O_WRONLY | O_CREAT | O_TRUNC, 0666);");
         outLine("        if (fd < 0) { werr = lt_dup_str(strerror(errno)); }");
         outLine("        else { size_t off = 0u; while (off < r.out_len) { ssize_t w = write(fd, r.out + off, r.out_len - off); if (w < 0) { werr = lt_dup_str(strerror(errno)); break; } off += (size_t)w; } close(fd); }");
         outLine("    }");
-        outLine("    if (werr[0] == '\\0' && stderr_path.byte_len > 0u) {");
+        outLine("    if (werr[0] == '\\0' && lt_str_byte_len(stderr_path) > 0u) {");
         outLine("        int fd = open(lt_text_cstr(stderr_path), O_WRONLY | O_CREAT | O_TRUNC, 0666);");
         outLine("        if (fd < 0) { werr = lt_dup_str(strerror(errno)); }");
         outLine("        else { size_t off = 0u; while (off < r.err_len) { ssize_t w = write(fd, r.err + off, r.err_len - off); if (w < 0) { werr = lt_dup_str(strerror(errno)); break; } off += (size_t)w; } close(fd); }");
@@ -4652,8 +4710,8 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
         outLine("    while (done < total) {");
         outLine("        while (active < limit && next < total) {");
         outLine("            int64_t job = next++;");
-        outLine("            const char *cmd = lt_text_cstr(commands.data[job]);");
-        outLine("            char **argv = lt_pool_parse_argv(cmd, lt_text_cstr(arg_lists_json.data[job]));");
+        outLine("            const char *cmd = lt_str_data(&commands.data[job]);");
+        outLine("            char **argv = lt_pool_parse_argv(cmd, lt_str_data(&arg_lists_json.data[job]));");
         outLine("            int out_p[2] = { -1, -1 }; int err_p[2] = { -1, -1 }; int exec_p[2] = { -1, -1 };");
         outLine("            if (pipe(out_p) != 0 || pipe(err_p) != 0 || pipe(exec_p) != 0) {");
         outLine("                results[job].status = -1; results[job].error = lt_dup_str(strerror(errno));");
@@ -4910,10 +4968,10 @@ applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs:
 emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
     if not usesCSoftBuiltins(calls) { return; }
     if usesIntHelper(calls, "lt_c_text_is_digit(") {
-        outLine("static bool lt_c_text_is_digit(lt_str s) { return s.byte_len == 1u && s.data[0] >= '0' && s.data[0] <= '9'; }");
+        outLine("static bool lt_c_text_is_digit(lt_str s) { const char *d = lt_str_data(&s); return lt_str_byte_len(s) == 1u && d[0] >= '0' && d[0] <= '9'; }");
     }
     if usesIntHelper(calls, "lt_c_text_is_ascii_letter(") {
-        outLine("static bool lt_c_text_is_ascii_letter(lt_str s) { return s.byte_len == 1u && ((s.data[0] >= 'a' && s.data[0] <= 'z') || (s.data[0] >= 'A' && s.data[0] <= 'Z')); }");
+        outLine("static bool lt_c_text_is_ascii_letter(lt_str s) { const char *d = lt_str_data(&s); return lt_str_byte_len(s) == 1u && ((d[0] >= 'a' && d[0] <= 'z') || (d[0] >= 'A' && d[0] <= 'Z')); }");
     }
     usesXidCont := usesIntHelper(calls, "lt_c_text_is_name_continue(") or usesIntHelper(calls, "lt_c_text_skip_while(") or usesIntHelper(calls, "lt_c_text_word_at(");
     usesXidStart := usesIntHelper(calls, "lt_c_text_is_name_start(") or usesXidCont;
@@ -5103,47 +5161,50 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lt_c_text_is_name_start(") {
         outLine("static bool lt_c_text_is_name_start(lt_str s) {");
-        outLine("    if (s.byte_len == 1u) { unsigned char c = (unsigned char)s.data[0]; return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }");
-        outLine("    if (s.byte_len >= 2u && s.byte_len <= 4u) {");
+        outLine("    size_t bl = lt_str_byte_len(s); const char *d = lt_str_data(&s);");
+        outLine("    if (bl == 1u) { unsigned char c = (unsigned char)d[0]; return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }");
+        outLine("    if (bl >= 2u && bl <= 4u) {");
         outLine("        uint32_t cp = 0u;");
-        outLine("        size_t step = lt_utf8_decode_at(s.data, 0u, (size_t)s.byte_len, &cp);");
-        outLine("        return step == (size_t)s.byte_len && lt_is_xid_start_non_ascii(cp);");
+        outLine("        size_t step = lt_utf8_decode_at(d, 0u, bl, &cp);");
+        outLine("        return step == bl && lt_is_xid_start_non_ascii(cp);");
         outLine("    }");
         outLine("    return false;");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_is_name_continue(") {
         outLine("static bool lt_c_text_is_name_continue(lt_str s) {");
-        outLine("    if (s.byte_len == 1u) { unsigned char c = (unsigned char)s.data[0]; return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'); }");
-        outLine("    if (s.byte_len >= 2u && s.byte_len <= 4u) {");
+        outLine("    size_t bl = lt_str_byte_len(s); const char *d = lt_str_data(&s);");
+        outLine("    if (bl == 1u) { unsigned char c = (unsigned char)d[0]; return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'); }");
+        outLine("    if (bl >= 2u && bl <= 4u) {");
         outLine("        uint32_t cp = 0u;");
-        outLine("        size_t step = lt_utf8_decode_at(s.data, 0u, (size_t)s.byte_len, &cp);");
-        outLine("        return step == (size_t)s.byte_len && lt_is_xid_continue_non_ascii(cp);");
+        outLine("        size_t step = lt_utf8_decode_at(d, 0u, bl, &cp);");
+        outLine("        return step == bl && lt_is_xid_continue_non_ascii(cp);");
         outLine("    }");
         outLine("    return false;");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_is_whitespace(") {
-        outLine("static bool lt_c_text_is_whitespace(lt_str s) { return s.byte_len == 1u && (s.data[0] == ' ' || s.data[0] == '\\t' || s.data[0] == '\\r' || s.data[0] == '\\n'); }");
+        outLine("static bool lt_c_text_is_whitespace(lt_str s) { const char *d = lt_str_data(&s); return lt_str_byte_len(s) == 1u && (d[0] == ' ' || d[0] == '\\t' || d[0] == '\\r' || d[0] == '\\n'); }");
     }
     if usesIntHelper(calls, "lt_c_int_text(") {
         outLine("static lt_str lt_c_int_text(int64_t v) {");
         outLine("    char tmp[32];");
         outLine("    int n = snprintf(tmp, sizeof tmp, \"%\" PRId64, v);");
         outLine("    if (n < 0) { n = 0; }");
-        outLine("    char *buf = lt_str_alloc((size_t)n + 1u);");
-        outLine("    memcpy(buf, tmp, (size_t)n + 1u);");
-        outLine("    return (lt_str){ buf, (uint32_t)n, (int32_t)n };");
+        outLine("    return lt_str_make(tmp, (size_t)n, (int64_t)n);");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_skip_while(") {
         outLine("static int64_t lt_c_text_skip_while(lt_str s, int64_t start, bool spaces) {");
         outLine("    if (start < 0) { fprintf(stderr, \"BoundPanic: textAt index outside text\\n\"); exit(1); }");
-        outLine("    if (s.cp_len == (int32_t)s.byte_len) {");
-        outLine("        if (start >= (int64_t)s.byte_len) { return start; }");
+        outLine("    size_t sbl = lt_str_byte_len(s);");
+        outLine("    int64_t known = lt_str_cp_len_known(s);");
+        outLine("    if (known == (int64_t)sbl) {");
+        outLine("        if (start >= (int64_t)sbl) { return start; }");
+        outLine("        const char *sd = lt_str_data(&s);");
         outLine("        size_t b = (size_t)start;");
-        outLine("        while (b < (size_t)s.byte_len) {");
-        outLine("            unsigned char c = (unsigned char)s.data[b];");
+        outLine("        while (b < sbl) {");
+        outLine("            unsigned char c = (unsigned char)sd[b];");
         outLine("            bool keep = spaces ? (c == ' ' || c == '\\t' || c == '\\r' || c == '\\n')");
         outLine("                : ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_');");
         outLine("            if (!keep) { break; }");
@@ -5151,26 +5212,39 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("        }");
         outLine("        return (int64_t)b;");
         outLine("    }");
+        outLine("    if (!lt_str_is_ext(s)) {");
+        outLine("        bool ok = false;");
+        outLine("        size_t b = lt_utf8_byte_at(s, start, true, &ok);");
+        outLine("        if (!ok) { return start; }");
+        outLine("        int64_t cp = start;");
+        outLine("        while (b < sbl) {");
+        outLine("            unsigned char c = (unsigned char)s.sso.buf[b];");
+        outLine("            if (spaces) { if (!(c == ' ' || c == '\\t' || c == '\\r' || c == '\\n')) { break; } b += 1u; cp += 1; }");
+        outLine("            else if (c < 0x80u) { if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')) { break; } b += 1u; cp += 1; }");
+        outLine("            else { uint32_t ucp = 0u; size_t step = lt_utf8_decode_at(s.sso.buf, b, sbl, &ucp); if (step == 0u || !lt_is_xid_continue_non_ascii(ucp)) { break; } b += step; cp += 1; }");
+        outLine("        }");
+        outLine("        return cp;");
+        outLine("    }");
         outLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
-        outLine("    if (start >= (int64_t)m->cp_len) { return start; }");
+        outLine("    if (start >= m->cp_len) { return start; }");
         outLine("    bool ok = false;");
         outLine("    size_t b = lt_utf8_byte_at(s, start, true, &ok);");
         outLine("    int64_t cp = start;");
         outLine("    if (spaces) {");
-        outLine("        while (b < (size_t)m->byte_len) {");
+        outLine("        while (b < m->byte_len) {");
         outLine("            unsigned char c = (unsigned char)m->s[b];");
         outLine("            if (!(c == ' ' || c == '\\t' || c == '\\r' || c == '\\n')) { break; }");
         outLine("            b += 1u; cp += 1;");
         outLine("        }");
         outLine("    } else {");
-        outLine("        while (b < (size_t)m->byte_len) {");
+        outLine("        while (b < m->byte_len) {");
         outLine("            unsigned char c = (unsigned char)m->s[b];");
         outLine("            if (c < 0x80u) {");
         outLine("                if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_')) { break; }");
         outLine("                b += 1u; cp += 1;");
         outLine("            } else {");
         outLine("                uint32_t ucp = 0u;");
-        outLine("                size_t step = lt_utf8_decode_at(m->s, b, (size_t)m->byte_len, &ucp);");
+        outLine("                size_t step = lt_utf8_decode_at(m->s, b, m->byte_len, &ucp);");
         outLine("                if (step == 0u || !lt_is_xid_continue_non_ascii(ucp)) { break; }");
         outLine("                b += step; cp += 1;");
         outLine("            }");
@@ -5182,119 +5256,163 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lt_c_text_starts_with_at(") {
         outLine("static bool lt_c_text_starts_with_at(lt_str s, int64_t pos, lt_str sub) {");
         outLine("    if (pos < 0) { return false; }");
-        outLine("    size_t sub_len = (size_t)sub.byte_len;");
-        outLine("    if (pos == 0) { return sub_len <= (size_t)s.byte_len && (sub_len == 0u || memcmp(s.data, sub.data, sub_len) == 0); }");
-        outLine("    if (s.cp_len == (int32_t)s.byte_len) {");
-        outLine("        if (pos > (int64_t)s.byte_len) { return false; }");
+        outLine("    size_t sbl = lt_str_byte_len(s);");
+        outLine("    size_t sub_len = lt_str_byte_len(sub);");
+        outLine("    const char *sd = lt_str_data(&s);");
+        outLine("    const char *subd = lt_str_data(&sub);");
+        outLine("    if (pos == 0) { return sub_len <= sbl && (sub_len == 0u || memcmp(sd, subd, sub_len) == 0); }");
+        outLine("    if (lt_str_cp_len_known(s) == (int64_t)sbl) {");
+        outLine("        if (pos > (int64_t)sbl) { return false; }");
         outLine("        if (sub_len == 0u) { return true; }");
-        outLine("        return (size_t)pos + sub_len <= (size_t)s.byte_len && memcmp(s.data + pos, sub.data, sub_len) == 0;");
+        outLine("        return (size_t)pos + sub_len <= sbl && memcmp(sd + pos, subd, sub_len) == 0;");
+        outLine("    }");
+        outLine("    if (!lt_str_is_ext(s)) {");
+        outLine("        bool ok = false; size_t b = lt_utf8_byte_at(s, pos, true, &ok);");
+        outLine("        return ok && b + sub_len <= sbl && (sub_len == 0u || memcmp(sd + b, subd, sub_len) == 0);");
         outLine("    }");
         outLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
-        outLine("    if (pos > (int64_t)m->cp_len) { return false; }");
+        outLine("    if (pos > m->cp_len) { return false; }");
         outLine("    if (sub_len == 0u) { return true; }");
-        outLine("    if (m->ascii) { return (size_t)pos + sub_len <= (size_t)m->byte_len && memcmp(m->s + pos, sub.data, sub_len) == 0; }");
+        outLine("    if (m->ascii) { return (size_t)pos + sub_len <= m->byte_len && memcmp(m->s + pos, subd, sub_len) == 0; }");
         outLine("    bool ok = false;");
         outLine("    size_t b = lt_utf8_byte_at(s, pos, true, &ok);");
-        outLine("    return ok && b + sub_len <= (size_t)m->byte_len && memcmp(m->s + b, sub.data, sub_len) == 0;");
+        outLine("    return ok && b + sub_len <= m->byte_len && memcmp(m->s + b, subd, sub_len) == 0;");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_word_at(") {
         outLine("static bool lt_c_text_word_at(lt_str s, int64_t pos, lt_str word) {");
-        outLine("    size_t wlen = (size_t)word.byte_len;");
-        outLine("    if (s.cp_len == (int32_t)s.byte_len) {");
-        outLine("        if (pos < 0 || pos > (int64_t)s.byte_len) { return false; }");
+        outLine("    size_t sbl = lt_str_byte_len(s);");
+        outLine("    size_t wlen = lt_str_byte_len(word);");
+        outLine("    const char *sd = lt_str_data(&s);");
+        outLine("    const char *wd = lt_str_data(&word);");
+        outLine("    if (lt_str_cp_len_known(s) == (int64_t)sbl) {");
+        outLine("        if (pos < 0 || pos > (int64_t)sbl) { return false; }");
         outLine("        size_t b = (size_t)pos;");
-        outLine("        if (b + wlen > (size_t)s.byte_len || (wlen > 0u && memcmp(s.data + b, word.data, wlen) != 0)) { return false; }");
-        outLine("        if (b + wlen >= (size_t)s.byte_len) { return true; }");
-        outLine("        unsigned char c = (unsigned char)s.data[b + wlen];");
+        outLine("        if (b + wlen > sbl || (wlen > 0u && memcmp(sd + b, wd, wlen) != 0)) { return false; }");
+        outLine("        if (b + wlen >= sbl) { return true; }");
+        outLine("        unsigned char c = (unsigned char)sd[b + wlen];");
         outLine("        return !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_');");
         outLine("    }");
+        outLine("    if (!lt_str_is_ext(s)) {");
+        outLine("        bool ok = false; size_t b = lt_utf8_byte_at(s, pos, true, &ok); if (!ok) { return false; }");
+        outLine("        if (b + wlen > sbl || (wlen > 0u && memcmp(sd + b, wd, wlen) != 0)) { return false; }");
+        outLine("        if (b + wlen >= sbl) { return true; }");
+        outLine("        unsigned char c = (unsigned char)sd[b + wlen];");
+        outLine("        if (c < 0x80u) { return !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_'); }");
+        outLine("        uint32_t ucp = 0u; size_t step = lt_utf8_decode_at(sd, b + wlen, sbl, &ucp);");
+        outLine("        return step == 0u || !lt_is_xid_continue_non_ascii(ucp);");
+        outLine("    }");
         outLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
-        outLine("    if (pos < 0 || pos > (int64_t)m->cp_len) { return false; }");
+        outLine("    if (pos < 0 || pos > m->cp_len) { return false; }");
         outLine("    size_t b = 0u;");
         outLine("    if (m->ascii) { b = (size_t)pos; }");
         outLine("    else { bool ok = false; b = lt_utf8_byte_at(s, pos, true, &ok); if (!ok) { return false; } }");
-        outLine("    if (b + wlen > (size_t)m->byte_len || (wlen > 0u && memcmp(m->s + b, word.data, wlen) != 0)) { return false; }");
-        outLine("    if (b + wlen >= (size_t)m->byte_len) { return true; }");
+        outLine("    if (b + wlen > m->byte_len || (wlen > 0u && memcmp(m->s + b, wd, wlen) != 0)) { return false; }");
+        outLine("    if (b + wlen >= m->byte_len) { return true; }");
         outLine("    unsigned char c = (unsigned char)m->s[b + wlen];");
         outLine("    if (c < 0x80u) {");
         outLine("        return !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_');");
         outLine("    }");
         outLine("    uint32_t ucp = 0u;");
-        outLine("    size_t step = lt_utf8_decode_at(m->s, b + wlen, (size_t)m->byte_len, &ucp);");
+        outLine("    size_t step = lt_utf8_decode_at(m->s, b + wlen, m->byte_len, &ucp);");
         outLine("    return step == 0u || !lt_is_xid_continue_non_ascii(ucp);");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_index_of(") {
         outLine("static int64_t lt_c_text_index_of(lt_str s, lt_str needle, int64_t start) {");
         outLine("    if (start < 0) { return -1; }");
-        outLine("    if (s.cp_len == (int32_t)s.byte_len) {");
-        outLine("        if (start > (int64_t)s.byte_len) { return -1; }");
-        outLine("        if (needle.byte_len == 0u) { return start; }");
-        outLine("        if ((size_t)start + (size_t)needle.byte_len > (size_t)s.byte_len) { return -1; }");
-        outLine("        if (needle.byte_len == 1u) {");
-        outLine("            const char *f = memchr(s.data + start, (unsigned char)needle.data[0], (size_t)s.byte_len - (size_t)start);");
-        outLine("            return f == NULL ? -1 : (int64_t)(f - s.data);");
+        outLine("    size_t sbl = lt_str_byte_len(s);");
+        outLine("    size_t nbl = lt_str_byte_len(needle);");
+        outLine("    const char *sd = lt_str_data(&s);");
+        outLine("    const char *nd = lt_str_data(&needle);");
+        outLine("    if (lt_str_cp_len_known(s) == (int64_t)sbl) {");
+        outLine("        if (start > (int64_t)sbl) { return -1; }");
+        outLine("        if (nbl == 0u) { return start; }");
+        outLine("        if ((size_t)start + nbl > sbl) { return -1; }");
+        outLine("        if (nbl == 1u) {");
+        outLine("            const char *f = memchr(sd + start, (unsigned char)nd[0], sbl - (size_t)start);");
+        outLine("            return f == NULL ? -1 : (int64_t)(f - sd);");
         outLine("        }");
-        outLine("        const char *found = strstr(s.data + start, needle.data);");
-        outLine("        return found == NULL ? -1 : (int64_t)(found - s.data);");
+        outLine("        const char *found = strstr(sd + start, nd);");
+        outLine("        return found == NULL ? -1 : (int64_t)(found - sd);");
+        outLine("    }");
+        outLine("    if (!lt_str_is_ext(s)) {");
+        outLine("        bool ok = false; size_t b = lt_utf8_byte_at(s, start, true, &ok); if (!ok) { return -1; }");
+        outLine("        if (nbl == 0u) { return start; }");
+        outLine("        const char *found = (nbl == 1u) ? (const char *)memchr(sd + b, (unsigned char)nd[0], sbl - b) : strstr(sd + b, nd);");
+        outLine("        if (found == NULL) { return -1; }");
+        outLine("        size_t target_b = (size_t)(found - sd); int64_t cp = start;");
+        outLine("        while (b < target_b) { b += lt_utf8_step(sd, b, sbl); cp += 1; }");
+        outLine("        return cp;");
         outLine("    }");
         outLine("    lt_utf8_meta *m = lt_utf8_get_meta(s);");
-        outLine("    if (start > (int64_t)m->cp_len) { return -1; }");
-        outLine("    if (needle.byte_len == 0u) { return start; }");
+        outLine("    if (start > m->cp_len) { return -1; }");
+        outLine("    if (nbl == 0u) { return start; }");
         outLine("    if (m->ascii) {");
-        outLine("        if ((size_t)start + (size_t)needle.byte_len > (size_t)m->byte_len) { return -1; }");
-        outLine("        if (needle.byte_len == 1u) {");
-        outLine("            const char *f = memchr(m->s + start, (unsigned char)needle.data[0], (size_t)m->byte_len - (size_t)start);");
+        outLine("        if ((size_t)start + nbl > m->byte_len) { return -1; }");
+        outLine("        if (nbl == 1u) {");
+        outLine("            const char *f = memchr(m->s + start, (unsigned char)nd[0], m->byte_len - (size_t)start);");
         outLine("            return f == NULL ? -1 : (int64_t)(f - m->s);");
         outLine("        }");
-        outLine("        const char *found = strstr(m->s + start, needle.data);");
+        outLine("        const char *found = strstr(m->s + start, nd);");
         outLine("        return found == NULL ? -1 : (int64_t)(found - m->s);");
         outLine("    }");
         outLine("    bool ok = false;");
         outLine("    size_t b = lt_utf8_byte_at(s, start, true, &ok);");
         outLine("    if (!ok) { return -1; }");
-        outLine("    const char *found = (needle.byte_len == 1u) ? (const char *)memchr(m->s + b, (unsigned char)needle.data[0], (size_t)m->byte_len - b) : strstr(m->s + b, needle.data);");
+        outLine("    const char *found = (nbl == 1u) ? (const char *)memchr(m->s + b, (unsigned char)nd[0], m->byte_len - b) : strstr(m->s + b, nd);");
         outLine("    if (found == NULL) { return -1; }");
         outLine("    size_t target_b = (size_t)(found - m->s);");
         outLine("    int64_t cp = start;");
-        outLine("    while (b < target_b) { b += lt_utf8_step(m->s, b, (size_t)m->byte_len); cp += 1; }");
+        outLine("    while (b < target_b) { b += lt_utf8_step(m->s, b, m->byte_len); cp += 1; }");
         outLine("    return cp;");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_join(") {
         outLine("static lt_str lt_c_text_join(lt_list_str values, lt_str sep) {");
-        outLine("    if (values.len <= 0) { return LT_ASTR(\"\"); }");
+        outLine("    if (values.len <= 0) { return LT_EMPTY_STR; }");
         outLine("    if (values.len == 1) { return values.data[0]; }");
-        outLine("    size_t sep_len = (size_t)sep.byte_len;");
+        outLine("    size_t sep_len = lt_str_byte_len(sep);");
+        outLine("    const char *sep_d = lt_str_data(&sep);");
         outLine("    size_t total = sep_len * (size_t)(values.len - 1);");
-        outLine("    bool cp_known = (sep.cp_len >= 0);");
-        outLine("    int64_t total_cp = cp_known ? (int64_t)sep.cp_len * (values.len - 1) : 0;");
+        outLine("    int64_t sep_cp = lt_str_cp_len_known(sep);");
+        outLine("    bool cp_known = (sep_cp >= 0);");
+        outLine("    int64_t total_cp = cp_known ? sep_cp * (values.len - 1) : 0;");
         outLine("    for (int64_t i = 0; i < values.len; i += 1) {");
-        outLine("        total += (size_t)values.data[i].byte_len;");
-        outLine("        if (cp_known) { if (values.data[i].cp_len >= 0) { total_cp += (int64_t)values.data[i].cp_len; } else { cp_known = false; } }");
+        outLine("        total += lt_str_byte_len(values.data[i]);");
+        outLine("        if (cp_known) { int64_t vcp = lt_str_cp_len_known(values.data[i]); if (vcp >= 0) { total_cp += vcp; } else { cp_known = false; } }");
         outLine("    }");
-        outLine("    if (total == 0u) { return LT_ASTR(\"\"); }");
+        outLine("    if (total == 0u) { return LT_EMPTY_STR; }");
+        outLine("    if (total <= 14u) {");
+        outLine("        lt_str r = LT_EMPTY_STR; size_t pos = 0u;");
+        outLine("        for (int64_t i = 0; i < values.len; i += 1) {");
+        outLine("            if (i > 0 && sep_len > 0u) { memcpy(r.sso.buf + pos, sep_d, sep_len); pos += sep_len; }");
+        outLine("            size_t n = lt_str_byte_len(values.data[i]);");
+        outLine("            if (n > 0u) { memcpy(r.sso.buf + pos, lt_str_data(&values.data[i]), n); pos += n; }");
+        outLine("        }");
+        outLine("        r.sso.tag = (uint8_t)total; return r;");
+        outLine("    }");
         outLine("    char *out = lt_str_alloc(total + 1u);");
         outLine("    size_t pos = 0u;");
         outLine("    for (int64_t i = 0; i < values.len; i += 1) {");
-        outLine("        if (i > 0 && sep_len > 0u) { memcpy(out + pos, sep.data, sep_len); pos += sep_len; }");
-        outLine("        size_t n = (size_t)values.data[i].byte_len;");
-        outLine("        if (n > 0u) { memcpy(out + pos, values.data[i].data, n); pos += n; }");
+        outLine("        if (i > 0 && sep_len > 0u) { memcpy(out + pos, sep_d, sep_len); pos += sep_len; }");
+        outLine("        size_t n = lt_str_byte_len(values.data[i]);");
+        outLine("        if (n > 0u) { memcpy(out + pos, lt_str_data(&values.data[i]), n); pos += n; }");
         outLine("    }");
         outLine("    out[pos] = '\\0';");
-        outLine("    return (lt_str){ out, (uint32_t)total, cp_known ? (int32_t)total_cp : -1 };");
+        outLine("    return (lt_str){ .ext = { .data = out, .byte_len = (uint32_t)total, .meta = lt_str_pack_meta(cp_known ? total_cp : -1) } };");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_to_int(") {
         t2iTag := frontend.cStructTag("(value:Int,ok:Bool)");
         outLine("static " + t2iTag + " lt_c_text_to_int(lt_str str) {");
-        outLine("    if (str.byte_len == 0u) { return (" + t2iTag + "){ 0, false }; }");
-        outLine("    const char *s = str.data;");
+        outLine("    size_t bl = lt_str_byte_len(str);");
+        outLine("    if (bl == 0u) { return (" + t2iTag + "){ 0, false }; }");
+        outLine("    const char *s = lt_str_data(&str);");
         outLine("    size_t i = 0u;");
         outLine("    if (s[0] == '+' || s[0] == '-') { i = 1u; }");
-        outLine("    if (i >= (size_t)str.byte_len) { return (" + t2iTag + "){ 0, false }; }");
-        outLine("    for (size_t j = i; j < (size_t)str.byte_len; j += 1u) { if (s[j] < '0' || s[j] > '9') { return (" + t2iTag + "){ 0, false }; } }");
+        outLine("    if (i >= bl) { return (" + t2iTag + "){ 0, false }; }");
+        outLine("    for (size_t j = i; j < bl; j += 1u) { if (s[j] < '0' || s[j] > '9') { return (" + t2iTag + "){ 0, false }; } }");
         outLine("    errno = 0; char *end = NULL;");
         outLine("    long long v = strtoll(s, &end, 10);");
         outLine("    if (errno == ERANGE || end == NULL || *end != '\\0') { return (" + t2iTag + "){ 0, false }; }");
@@ -5303,51 +5421,67 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lt_c_text_trim(") {
         outLine("static lt_str lt_c_text_trim(lt_str s, bool left, bool right) {");
-        outLine("    size_t len = (size_t)s.byte_len; size_t a = 0u; size_t b = len;");
-        outLine("    if (left) { while (a < b && (s.data[a] == ' ' || s.data[a] == '\\t' || s.data[a] == '\\r' || s.data[a] == '\\n')) { a += 1u; } }");
-        outLine("    if (right) { while (b > a && (s.data[b - 1u] == ' ' || s.data[b - 1u] == '\\t' || s.data[b - 1u] == '\\r' || s.data[b - 1u] == '\\n')) { b -= 1u; } }");
+        outLine("    size_t len = lt_str_byte_len(s); const char *sd = lt_str_data(&s);");
+        outLine("    size_t a = 0u; size_t b = len;");
+        outLine("    if (left) { while (a < b && (sd[a] == ' ' || sd[a] == '\\t' || sd[a] == '\\r' || sd[a] == '\\n')) { a += 1u; } }");
+        outLine("    if (right) { while (b > a && (sd[b - 1u] == ' ' || sd[b - 1u] == '\\t' || sd[b - 1u] == '\\r' || sd[b - 1u] == '\\n')) { b -= 1u; } }");
         outLine("    if (a == 0u && b == len) { return s; }");
         outLine("    size_t n = b - a;");
-        outLine("    if (n == 0u) { return LT_ASTR(\"\"); }");
-        outLine("    char *out = lt_str_alloc(n + 1u);");
-        outLine("    memcpy(out, s.data + a, n);");
-        outLine("    out[n] = '\\0';");
-        outLine("    int32_t cp = s.cp_len >= 0 ? (s.cp_len - (int32_t)(a + (len - b))) : -1;");
-        outLine("    return (lt_str){ out, (uint32_t)n, cp };");
+        outLine("    if (n == 0u) { return LT_EMPTY_STR; }");
+        outLine("    int64_t known = lt_str_cp_len_known(s);");
+        outLine("    int64_t cp = known >= 0 ? (known - (int64_t)(a + (len - b))) : -1;");
+        outLine("    return lt_str_make(sd + a, n, cp);");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_ends_with(") {
         outLine("static bool lt_c_text_ends_with(lt_str s, lt_str suf) {");
-        outLine("    return suf.byte_len <= s.byte_len && (suf.byte_len == 0u || memcmp(s.data + (s.byte_len - suf.byte_len), suf.data, suf.byte_len) == 0);");
+        outLine("    size_t sl = lt_str_byte_len(s); size_t sufl = lt_str_byte_len(suf);");
+        outLine("    return sufl <= sl && (sufl == 0u || memcmp(lt_str_data(&s) + (sl - sufl), lt_str_data(&suf), sufl) == 0);");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_repeat(") {
         outLine("static lt_str lt_c_text_repeat(lt_str s, int64_t count) {");
-        outLine("    if (count <= 0 || s.byte_len == 0u) { return LT_ASTR(\"\"); }");
-        outLine("    size_t sl = (size_t)s.byte_len; size_t total = sl * (size_t)count;");
+        outLine("    size_t sl = lt_str_byte_len(s);");
+        outLine("    if (count <= 0 || sl == 0u) { return LT_EMPTY_STR; }");
+        outLine("    size_t total = sl * (size_t)count;");
+        outLine("    const char *sd = lt_str_data(&s);");
+        outLine("    if (total <= 14u) {");
+        outLine("        lt_str r = LT_EMPTY_STR;");
+        outLine("        for (int64_t i = 0; i < count; i += 1) { memcpy(r.sso.buf + (size_t)i * sl, sd, sl); }");
+        outLine("        r.sso.tag = (uint8_t)total; return r;");
+        outLine("    }");
         outLine("    char *out = lt_str_alloc(total + 1u);");
-        outLine("    for (int64_t i = 0; i < count; i += 1) { memcpy(out + (size_t)i * sl, s.data, sl); }");
+        outLine("    for (int64_t i = 0; i < count; i += 1) { memcpy(out + (size_t)i * sl, sd, sl); }");
         outLine("    out[total] = '\\0';");
-        outLine("    int32_t cp = s.cp_len >= 0 ? (s.cp_len * (int32_t)count) : -1;");
-        outLine("    return (lt_str){ out, (uint32_t)total, cp };");
+        outLine("    int64_t known = lt_str_cp_len_known(s);");
+        outLine("    int64_t cp = known >= 0 ? (known * count) : -1;");
+        outLine("    return (lt_str){ .ext = { .data = out, .byte_len = (uint32_t)total, .meta = lt_str_pack_meta(cp) } };");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_contains(") {
         outLine("static bool lt_c_text_contains(lt_str s, lt_str needle) {");
-        outLine("    if (needle.byte_len == 0u) { return true; }");
-        outLine("    if (needle.byte_len > s.byte_len) { return false; }");
-        outLine("    if (needle.byte_len == 1u) { return memchr(s.data, (unsigned char)needle.data[0], s.byte_len) != NULL; }");
-        outLine("    return strstr(s.data, needle.data) != NULL;");
+        outLine("    size_t sl = lt_str_byte_len(s); size_t nl = lt_str_byte_len(needle);");
+        outLine("    if (nl == 0u) { return true; }");
+        outLine("    if (nl > sl) { return false; }");
+        outLine("    const char *sd = lt_str_data(&s); const char *nd = lt_str_data(&needle);");
+        outLine("    if (nl == 1u) { return memchr(sd, (unsigned char)nd[0], sl) != NULL; }");
+        outLine("    return strstr(sd, nd) != NULL;");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_text_to_lower(") {
         outLine("static lt_str lt_c_text_to_lower(lt_str s) {");
-        outLine("    size_t n = (size_t)s.byte_len;");
-        outLine("    if (n == 0u) { return LT_ASTR(\"\"); }");
+        outLine("    size_t n = lt_str_byte_len(s);");
+        outLine("    if (n == 0u) { return LT_EMPTY_STR; }");
+        outLine("    const char *sd = lt_str_data(&s);");
+        outLine("    if (n <= 14u) {");
+        outLine("        lt_str r = LT_EMPTY_STR;");
+        outLine("        for (size_t i = 0u; i < n; i += 1u) { char c = sd[i]; r.sso.buf[i] = (c >= 'A' && c <= 'Z') ? (char)(c + 32) : c; }");
+        outLine("        r.sso.tag = (uint8_t)n; return r;");
+        outLine("    }");
         outLine("    char *out = lt_str_alloc(n + 1u);");
-        outLine("    for (size_t i = 0u; i < n; i += 1u) { char c = s.data[i]; out[i] = (c >= 'A' && c <= 'Z') ? (char)(c + 32) : c; }");
+        outLine("    for (size_t i = 0u; i < n; i += 1u) { char c = sd[i]; out[i] = (c >= 'A' && c <= 'Z') ? (char)(c + 32) : c; }");
         outLine("    out[n] = '\\0';");
-        outLine("    return (lt_str){ out, (uint32_t)n, s.cp_len };");
+        outLine("    return (lt_str){ .ext = { .data = out, .byte_len = (uint32_t)n, .meta = lt_str_pack_meta(lt_str_cp_len_known(s)) } };");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_c_file_read_text(") {
@@ -5388,9 +5522,9 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("static " + okErrTag + " lt_c_file_put_text(lt_str path_s, lt_str text, int flags) {");
         outLine("    int fd = open(lt_text_cstr(path_s), flags, 0666);");
         outLine("    if (fd < 0) { return (" + okErrTag + "){ false, lt_text_from_cstr(lt_dup_str(strerror(errno))) }; }");
-        outLine("    size_t len = (size_t)text.byte_len; size_t off = 0u;");
+        outLine("    size_t len = lt_str_byte_len(text); size_t off = 0u; const char *td = lt_str_data(&text);");
         outLine("    while (off < len) {");
-        outLine("        ssize_t n = write(fd, text.data + off, len - off);");
+        outLine("        ssize_t n = write(fd, td + off, len - off);");
         outLine("        if (n < 0) { const char *err = lt_dup_str(strerror(errno)); close(fd); return (" + okErrTag + "){ false, lt_text_from_cstr(err) }; }");
         outLine("        off += (size_t)n;");
         outLine("    }");
@@ -5442,11 +5576,12 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lt_c_utf8_encode(") {
         outLine("static lt_list_i64 lt_c_utf8_encode(lt_str text) {");
-        outLine("    if (text.byte_len == 0u) { return (lt_list_i64){ NULL, 0, 0, NULL }; }");
-        outLine("    int64_t n = (int64_t)text.byte_len;");
+        outLine("    size_t bl = lt_str_byte_len(text);");
+        outLine("    if (bl == 0u) { return (lt_list_i64){ NULL, 0, 0, NULL }; }");
+        outLine("    int64_t n = (int64_t)bl; const char *td = lt_str_data(&text);");
         outLine("    int64_t *data = malloc((size_t)n * sizeof(int64_t));");
         outLine("    if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate UTF-8 bytes\\n\"); exit(1); }");
-        outLine("    for (int64_t i = 0; i < n; i += 1) { data[i] = (int64_t)(uint8_t)text.data[i]; }");
+        outLine("    for (int64_t i = 0; i < n; i += 1) { data[i] = (int64_t)(uint8_t)td[i]; }");
         outLine("    return (lt_list_i64){ data, n, n, NULL };");
         outLine("}");
     }
@@ -5464,7 +5599,7 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("            char *msg = malloc(96u);");
         outLine("            if (msg == NULL) { return (" + okTextTag + "){ false, LT_ASTR(\"\"), LT_ASTR(\"byte value outside 0..255\") }; }");
         outLine("            snprintf(msg, 96u, \"byte value outside 0..255: %\" PRId64, b);");
-        outLine("            return (" + okTextTag + "){ false, LT_ASTR(\"\"), lt_text_from_cstr(msg) };");
+        outLine("            return (" + okTextTag + "){ false, LT_ASTR(\"\"), lt_text_from_owned_cstr(msg) };");
         outLine("        }");
         outLine("        buf[i] = (uint8_t)b;");
         outLine("    }");
@@ -5526,12 +5661,13 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
     fHandle := frontend.cFieldName("handle");
     if usesIntHelper(calls, "lt_c_io_from_text(") {
         outLine("static " + shTag + " lt_c_io_from_text(lt_str text) {");
-        outLine("    uint8_t *buf = text.byte_len > 0u ? malloc((size_t)text.byte_len) : NULL;");
-        outLine("    if (text.byte_len > 0u) {");
+        outLine("    size_t bl = lt_str_byte_len(text);");
+        outLine("    uint8_t *buf = bl > 0u ? malloc(bl) : NULL;");
+        outLine("    if (bl > 0u) {");
         outLine("        if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate buffer reader\\n\"); exit(1); }");
-        outLine("        memcpy(buf, text.data, (size_t)text.byte_len);");
+        outLine("        memcpy(buf, lt_str_data(&text), bl);");
         outLine("    }");
-        outLine("    lt_stream_entry e = { 2, -1, buf, (int64_t)text.byte_len, (int64_t)text.byte_len, 0, false, false, \"\" };");
+        outLine("    lt_stream_entry e = { 2, -1, buf, (int64_t)bl, (int64_t)bl, 0, false, false, \"\" };");
         outLine("    return (" + shTag + "){ LT_ASTR(\"buffer\"), lt_alloc_stream(e) };");
         outLine("}");
     }
@@ -5667,7 +5803,8 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("        if (e->closed) { return (" + okErrTag + "){ false, LT_ASTR(\"writer is closed\") }; }");
         outLine("        if (e->error[0] != '\\0') { return (" + okErrTag + "){ false, lt_text_from_cstr(e->error) }; }");
         outLine("        if (e->kind == 3) {");
-        outLine("            size_t add_len = (size_t)text.byte_len + (add_nl ? 1u : 0u);");
+        outLine("            size_t tlen = lt_str_byte_len(text); const char *td = lt_str_data(&text);");
+        outLine("            size_t add_len = tlen + (add_nl ? 1u : 0u);");
         outLine("            if (add_len > 0u) {");
         outLine("                if (e->len + (int64_t)add_len > e->cap) {");
         outLine("                    int64_t ncap = e->cap == 0 ? 64 : e->cap * 2;");
@@ -5676,16 +5813,16 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("                    if (e->buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow buffer writer\\n\"); exit(1); }");
         outLine("                    e->cap = ncap;");
         outLine("                }");
-        outLine("                if (text.byte_len > 0u) { memcpy(e->buf + e->len, text.data, (size_t)text.byte_len); e->len += (int64_t)text.byte_len; }");
+        outLine("                if (tlen > 0u) { memcpy(e->buf + e->len, td, tlen); e->len += (int64_t)tlen; }");
         outLine("                if (add_nl) { e->buf[e->len++] = (uint8_t)'\\n'; }");
         outLine("            }");
         outLine("            return (" + okErrTag + "){ true, LT_ASTR(\"\") };");
         outLine("        }");
         outLine("        target_fd = e->fd;");
         outLine("    }");
-        outLine("    size_t len = (size_t)text.byte_len; size_t off = 0u;");
+        outLine("    size_t len = lt_str_byte_len(text); size_t off = 0u; const char *td = lt_str_data(&text);");
         outLine("    while (off < len) {");
-        outLine("        ssize_t n = write(target_fd, text.data + off, len - off);");
+        outLine("        ssize_t n = write(target_fd, td + off, len - off);");
         outLine("        if (n < 0) { const char *msg = lt_dup_str(strerror(errno)); if (e != NULL) { e->error = msg; } return (" + okErrTag + "){ false, lt_text_from_cstr(msg) }; }");
         outLine("        off += (size_t)n;");
         outLine("    }");
@@ -5737,12 +5874,12 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     ptTag := frontend.cStructTag("(x:Float,y:Float)");
     rcTag := frontend.cStructTag("(x:Float,y:Float,width:Float,height:Float)");
     inpTag := frontend.cStructTag("(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
-    vitTag := frontend.cStructTag("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
+    vitTag := frontend.cStructTag("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int,heapAllocs:Int,liveBytes:Int,tempPeakBytes:Int)");
     bndTag := frontend.cStructTag("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
     okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
-    outLine("typedef struct { int w; int h; int x; int y; bool fullscreen; uint8_t *pixels; bool has_clip; int clip_x0; int clip_y0; int clip_x1; int clip_y1; bool open; double px; double py; bool pdown; bool prev_pdown; bool ppressed; bool preleased; double wheel_y; double pending_wheel_y; char key[16]; char key_out[16]; char keys_down[32][16]; int keys_down_n; char keys_prev[32][16]; int keys_prev_n; char keys_pressed[32][16]; int keys_pressed_n; char keys_released[32][16]; int keys_released_n; int64_t last_ms; int64_t frame_start_ns; int64_t frame_count; double target_fps; double last_frame_ms; double avg_frame_ms; bool headless; void *win; void *view; } lt_canvas_state;");
+    outLine("typedef struct { int w; int h; int x; int y; bool fullscreen; uint8_t *pixels; size_t pixels_bytes; bool has_clip; int clip_x0; int clip_y0; int clip_x1; int clip_y1; bool open; double px; double py; bool pdown; bool prev_pdown; bool ppressed; bool preleased; double wheel_y; double pending_wheel_y; char key[16]; char key_out[16]; char keys_down[32][16]; int keys_down_n; char keys_prev[32][16]; int keys_prev_n; char keys_pressed[32][16]; int keys_pressed_n; char keys_released[32][16]; int keys_released_n; int64_t last_ms; int64_t frame_start_ns; int64_t frame_count; double target_fps; double last_frame_ms; double avg_frame_ms; int64_t auto_frame_mark; bool headless; void *win; void *view; } lt_canvas_state;");
     outLine("static lt_canvas_state lt_canvas_slots[16];");
-    outLine("typedef struct { int w; int h; uint8_t *pixels; } lt_texture_state;");
+    outLine("typedef struct { int w; int h; uint8_t *pixels; size_t pixels_bytes; } lt_texture_state;");
     outLine("static lt_texture_state lt_texture_slots[256];");
     outLine("LT_INLINE int64_t lt_canvas_now_ns(void) { struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return (int64_t)ts.tv_sec * 1000000000LL + (int64_t)ts.tv_nsec; }");
     outLine("LT_INLINE int64_t lt_canvas_now_ms(void) { return lt_canvas_now_ns() / 1000000LL; }");
@@ -5779,14 +5916,18 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("LT_INLINE void lt_canvas_realloc_buf(lt_canvas_state *s, int nw, int nh) {");
     outLine("    if (nw < 1) nw = 1; if (nh < 1) nh = 1;");
     outLine("    if (nw == s->w && nh == s->h) return;");
-    outLine("    uint8_t *nb = calloc((size_t)nw * (size_t)nh * 4u, 1u);");
+    outLine("    size_t nbytes = (size_t)nw * (size_t)nh * 4u;");
+    outLine("    uint8_t *nb = calloc(nbytes, 1u);");
     outLine("    if (!nb) return;");
+    outLine("    lt_tl_ctx.heap_allocs += 1;");
     outLine("    if (s->pixels != NULL) {");
     outLine("        int cw = s->w < nw ? s->w : nw; int ch = s->h < nh ? s->h : nh;");
     outLine("        for (int row = 0; row < ch; row += 1) memcpy(nb + (size_t)row * (size_t)nw * 4u, s->pixels + (size_t)row * (size_t)s->w * 4u, (size_t)cw * 4u);");
     outLine("        free(s->pixels);");
+    outLine("        lt_tl_ctx.live_bytes -= (int64_t)s->pixels_bytes;");
     outLine("    }");
-    outLine("    s->pixels = nb; s->w = nw; s->h = nh; s->has_clip = false;");
+    outLine("    s->pixels = nb; s->pixels_bytes = nbytes; s->w = nw; s->h = nh; s->has_clip = false;");
+    outLine("    lt_tl_ctx.live_bytes += (int64_t)nbytes;");
     outLine("}");
     outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
     outLine("LT_INLINE CGRect lt_objc_rect(id obj, SEL sel) {");
@@ -5810,13 +5951,15 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("LT_INLINE void lt_canvas_sync_bounds(lt_canvas_state *s) { (void)s; }");
     outLine("#endif");
     outLine("LT_INLINE " + surfTag + " lt_canvas_open(lt_str title_s, int64_t width, int64_t height) {");
-    outLine("    const char *title = title_s.byte_len > 0u ? title_s.data : NULL;");
+    outLine("    const char *title = lt_str_byte_len(title_s) > 0u ? lt_str_data(&title_s) : NULL;");
     outLine("    int w = width > 0 ? (int)width : 1; int h = height > 0 ? (int)height : 1;");
     outLine("    int slot = -1; for (int i = 0; i < 16; i += 1) { if (lt_canvas_slots[i].pixels == NULL) { slot = i; break; } }");
     outLine("    if (slot < 0) return (" + surfTag + "){ .f_handle = 0 };");
     outLine("    lt_canvas_state *s = &lt_canvas_slots[slot]; memset(s, 0, sizeof(*s));");
     outLine("    s->w = w; s->h = h; s->x = 120; s->y = 120; s->fullscreen = false; s->open = true; s->last_ms = lt_canvas_now_ms(); s->frame_start_ns = lt_canvas_now_ns(); s->target_fps = 60.0;");
-    outLine("    s->pixels = calloc((size_t)w * (size_t)h * 4u, 1u);");
+    outLine("    s->pixels_bytes = (size_t)w * (size_t)h * 4u;");
+    outLine("    s->pixels = calloc(s->pixels_bytes, 1u);");
+    outLine("    if (s->pixels != NULL) { lt_tl_ctx.heap_allocs += 1; lt_tl_ctx.live_bytes += (int64_t)s->pixels_bytes; }");
     outLine("    const char *hl = getenv(\"LITE_CANVAS_HEADLESS\");");
     outLine("    s->headless = (hl != NULL && strcmp(hl, \"1\") == 0);");
     outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
@@ -5917,9 +6060,11 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("    memcpy(s->keys_prev, s->keys_down, sizeof(s->keys_prev)); s->keys_prev_n = s->keys_down_n;");
     outLine("    s->ppressed = s->pdown && !s->prev_pdown; s->preleased = !s->pdown && s->prev_pdown; s->prev_pdown = s->pdown;");
     outLine("    s->wheel_y = s->pending_wheel_y; s->pending_wheel_y = 0.0;");
+    outLine("    if (!lt_tl_ctx.in_frame && lt_tl_ctx.temp.mark_n == 0 && s->auto_frame_mark == 0) { s->auto_frame_mark = lt_str_slab_mark(); }");
     outLine("    memcpy(s->key_out, s->key, 16);");
-    outLine("    const char *kcopy = s->key_out[0] ? s->key_out : \"\";");
-    outLine("    return (" + inpTag + "){ .f_open = s->open, .f_width = s->w, .f_height = s->h, .f_pointerX = s->px, .f_pointerY = s->py, .f_pointerDown = s->pdown, .f_key = lt_text_from_cstr(kcopy), .f_deltaMs = dt };");
+    outLine("    size_t klen = s->key_out[0] ? strlen(s->key_out) : 0u;");
+    outLine("    lt_str ks = klen > 0u ? lt_str_make(s->key_out, klen, (int64_t)klen) : LT_EMPTY_STR;");
+    outLine("    return (" + inpTag + "){ .f_open = s->open, .f_width = s->w, .f_height = s->h, .f_pointerX = s->px, .f_pointerY = s->py, .f_pointerDown = s->pdown, .f_key = ks, .f_deltaMs = dt };");
     outLine("}");
     outLine("LT_INLINE void lt_canvas_present(" + surfTag + " surf) {");
     outLine("    lt_canvas_state *s = lt_canvas_get(surf.f_handle); if (!s) return;");
@@ -5952,6 +6097,7 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("    s->frame_count += 1;");
     outLine("    s->last_frame_ms = fms;");
     outLine("    s->avg_frame_ms = s->avg_frame_ms <= 0.0 ? fms : s->avg_frame_ms * 0.85 + fms * 0.15;");
+    outLine("    if (s->auto_frame_mark > 0) { lt_str_slab_rewind(s->auto_frame_mark); s->auto_frame_mark = 0; }");
     outLine("}");
     if usesIntHelper(calls, "lite$extraCanvasSetTargetFps(") {
         outLine("LT_INLINE void lt_canvas_set_target_fps(" + surfTag + " surf, double fps) {");
@@ -5972,9 +6118,9 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
         outLine("#else");
         outLine("    rss = (int64_t)ru.ru_maxrss * 1024LL;");
         outLine("#endif");
-        outLine("    if (!s) return (" + vitTag + "){ .f_frameCount = 0, .f_frameTimeMs = 0.0, .f_avgFrameTimeMs = 0.0, .f_fps = 0.0, .f_targetFps = 0.0, .f_cpuTimeMs = cpu_ms, .f_memoryBytes = rss };");
+        outLine("    if (!s) return (" + vitTag + "){ .f_frameCount = 0, .f_frameTimeMs = 0.0, .f_avgFrameTimeMs = 0.0, .f_fps = 0.0, .f_targetFps = 0.0, .f_cpuTimeMs = cpu_ms, .f_memoryBytes = rss, .f_heapAllocs = lt_tl_ctx.heap_allocs, .f_liveBytes = lt_tl_ctx.live_bytes, .f_tempPeakBytes = (int64_t)lt_tl_ctx.temp.peak_bytes };");
         outLine("    double fps = s->avg_frame_ms > 0.0 ? 1000.0 / s->avg_frame_ms : 0.0;");
-        outLine("    return (" + vitTag + "){ .f_frameCount = s->frame_count, .f_frameTimeMs = s->last_frame_ms, .f_avgFrameTimeMs = s->avg_frame_ms, .f_fps = fps, .f_targetFps = s->target_fps, .f_cpuTimeMs = cpu_ms, .f_memoryBytes = rss };");
+        outLine("    return (" + vitTag + "){ .f_frameCount = s->frame_count, .f_frameTimeMs = s->last_frame_ms, .f_avgFrameTimeMs = s->avg_frame_ms, .f_fps = fps, .f_targetFps = s->target_fps, .f_cpuTimeMs = cpu_ms, .f_memoryBytes = rss, .f_heapAllocs = lt_tl_ctx.heap_allocs, .f_liveBytes = lt_tl_ctx.live_bytes, .f_tempPeakBytes = (int64_t)lt_tl_ctx.temp.peak_bytes };");
         outLine("}");
     }
     if usesIntHelper(calls, "lite$extraCanvasBounds(") {
@@ -6023,17 +6169,22 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("#if defined(__APPLE__) && !defined(LITE_CANVAS_NO_GUI)");
     outLine("    if (!s->headless && s->win != NULL) { ((void (*)(id, SEL))objc_msgSend)((id)s->win, sel_registerName(\"close\")); }");
     outLine("#endif");
-    outLine("    free(s->pixels); memset(s, 0, sizeof(*s));");
+    outLine("    if (s->pixels != NULL) { lt_tl_ctx.live_bytes -= (int64_t)s->pixels_bytes; free(s->pixels); }");
+    outLine("    memset(s, 0, sizeof(*s));");
     outLine("}");
     if usesIntHelper(calls, "lite$extraCanvasRun(") {
         runFnTag := frontend.cFnTag("fn(:(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)):Bool");
         outLine("LT_INLINE void lt_canvas_run(" + surfTag + " surf, " + runFnTag + " on_frame) {");
+        outLine("    bool prev_in = lt_tl_ctx.in_frame; lt_tl_ctx.in_frame = true;");
         outLine("    for (;;) {");
+        outLine("        int64_t fmk = lt_str_slab_mark();");
         outLine("        " + inpTag + " inp = lt_canvas_poll(surf);");
-        outLine("        if (!inp.f_open) break;");
-        outLine("        if (!on_frame.fn(on_frame.env, inp)) break;");
+        outLine("        if (!inp.f_open) { lt_str_slab_rewind(fmk); break; }");
+        outLine("        if (!on_frame.fn(on_frame.env, inp)) { lt_str_slab_rewind(fmk); break; }");
         outLine("        lt_canvas_present(surf);");
+        outLine("        lt_str_slab_rewind(fmk);");
         outLine("    }");
+        outLine("    lt_tl_ctx.in_frame = prev_in;");
         outLine("}");
     }
     if usesIntHelper(calls, "lite$extraCanvasClear(") {
@@ -6115,10 +6266,13 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
         outLine("    return g_tbl[uc - 32u];");
         outLine("}");
         outLine("LT_INLINE void lt_canvas_draw_text(" + surfTag + " surf, lt_str content, " + ptTag + " at, double size, " + colTag + " fill) {");
-        outLine("    if (content.byte_len == 0u) return; int scale = (int)floor(size / 7.0 + 0.5); if (scale < 1) scale = 1;");
+        outLine("    size_t bl = lt_str_byte_len(content);");
+        outLine("    if (bl == 0u) return;");
+        outLine("    const char *cd = lt_str_data(&content);");
+        outLine("    int scale = (int)floor(size / 7.0 + 0.5); if (scale < 1) scale = 1;");
         outLine("    int cx = (int)floor(at.f_x), cy = (int)floor(at.f_y);");
-        outLine("    for (uint32_t i = 0u; i < content.byte_len; i += 1u) {");
-        outLine("        const uint8_t *g = lt_canvas_glyph(content.data[i]);");
+        outLine("    for (size_t i = 0u; i < bl; i += 1u) {");
+        outLine("        const uint8_t *g = lt_canvas_glyph(cd[i]);");
         outLine("        for (int row = 0; row < 7; row += 1) for (int col = 0; col < 5; col += 1) {");
         outLine("            if ((g[row] & (16 >> col)) != 0) lt_canvas_fill_rect(surf, (" + rcTag + "){ (double)(cx + col * scale), (double)(cy + row * scale), (double)scale, (double)scale }, fill);");
         outLine("        }");
@@ -6267,8 +6421,10 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
         outLine("    int w = width > 0 ? (int)width : 1; int h = height > 0 ? (int)height : 1;");
         outLine("    int slot = -1; for (int i = 0; i < 256; i += 1) { if (lt_texture_slots[i].pixels == NULL) { slot = i; break; } }");
         outLine("    if (slot < 0) return (" + texTag + "){ .f_handle = 0, .f_width = 0, .f_height = 0 };");
-        outLine("    lt_texture_slots[slot].w = w; lt_texture_slots[slot].h = h;");
-        outLine("    lt_texture_slots[slot].pixels = calloc((size_t)w * (size_t)h * 4u, 1u);");
+        outLine("    size_t nbytes = (size_t)w * (size_t)h * 4u;");
+        outLine("    lt_texture_slots[slot].w = w; lt_texture_slots[slot].h = h; lt_texture_slots[slot].pixels_bytes = nbytes;");
+        outLine("    lt_texture_slots[slot].pixels = calloc(nbytes, 1u);");
+        outLine("    if (lt_texture_slots[slot].pixels != NULL) { lt_tl_ctx.heap_allocs += 1; lt_tl_ctx.live_bytes += (int64_t)nbytes; }");
         outLine("    return (" + texTag + "){ .f_handle = (int64_t)(slot + 1), .f_width = (int64_t)w, .f_height = (int64_t)h };");
         outLine("}");
     }
@@ -6304,19 +6460,13 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
         outLine("}");
     }
     if usesIntHelper(calls, "lite$extraCanvasDestroyTexture(") {
-        outLine("LT_INLINE void lt_canvas_destroy_texture(" + texTag + " tex) { lt_texture_state *t = lt_texture_get(tex.f_handle); if (!t) return; free(t->pixels); memset(t, 0, sizeof(*t)); }");
+        outLine("LT_INLINE void lt_canvas_destroy_texture(" + texTag + " tex) { lt_texture_state *t = lt_texture_get(tex.f_handle); if (!t) return; if (t->pixels != NULL) { lt_tl_ctx.live_bytes -= (int64_t)t->pixels_bytes; free(t->pixels); } memset(t, 0, sizeof(*t)); }");
     }
-    hasUtf8Cache := usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesCTextSoftUtf8(calls);
     if usesIntHelper(calls, "lite$extraCanvasScratchMark(") {
         outLine("LT_INLINE int64_t lt_canvas_scratch_mark(void) { return lt_str_slab_mark(); }");
     }
     if usesIntHelper(calls, "lite$extraCanvasScratchRewind(") {
-        outLine("LT_INLINE void lt_canvas_scratch_rewind(int64_t mark) {");
-        outLine("    lt_str_slab_rewind(mark);");
-        if hasUtf8Cache {
-            outLine("    memset(lt_utf8_cache, 0, sizeof(lt_utf8_cache)); lt_utf8_last = NULL;");
-        }
-        outLine("}");
+        outLine("LT_INLINE void lt_canvas_scratch_rewind(int64_t mark) { lt_str_slab_rewind(mark); }");
     }
     outLine("");
 };
@@ -6631,7 +6781,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         mut seedKinds.pushBack("(x:Float,y:Float)");
         mut seedKinds.pushBack("(x:Float,y:Float,width:Float,height:Float)");
         mut seedKinds.pushBack("(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
-        mut seedKinds.pushBack("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)");
+        mut seedKinds.pushBack("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int,heapAllocs:Int,liveBytes:Int,tempPeakBytes:Int)");
         mut seedKinds.pushBack("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
         mut seedKinds.pushBack("(ok:Bool,error:String)");
         if usesIntHelper(calls, "lite$extraCanvasRun(") {
@@ -6733,10 +6883,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     hasPosixHost := usesPosixHost(calls);
     hasUnicodeHost := usesUnicodeBuiltins(calls);
     hasSoftBuiltins := usesCSoftBuiltins(calls);
-    if hasPosixHost {
+    usesScratch := usesIntHelper(calls, "lite$extraCanvasScratchMark(") or usesIntHelper(calls, "lite$extraCanvasScratchRewind(");
+    usesStringAlloc := usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or usesIntHelper(calls, "lt_c_text_trim(") or usesIntHelper(calls, "lt_c_text_repeat(") or usesIntHelper(calls, "lt_c_text_to_lower(") or hasFloatToText or hasFloat32ToText;
+    usesArena := usesStringAlloc or usesScratch or hasExtraCanvas;
+    if hasPosixHost or usesArena {
         outLine("#if defined(__APPLE__)");
         outLine("#define _DARWIN_C_SOURCE");
         outLine("#else");
+        outLine("#define _DEFAULT_SOURCE");
         outLine("#define _XOPEN_SOURCE 700");
         outLine("#endif");
     }
@@ -6744,7 +6898,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("/* LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics */");
     }
     outLine("#include <stdio.h>");
-    if usesAnyListBounds(calls) or usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns or hasExtraCanvas or usesIntHelper(calls, "calloc(") { outLine("#include <stdlib.h>"); }
+    if usesAnyListBounds(calls) or usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns or hasExtraCanvas or usesArena or usesIntHelper(calls, "calloc(") { outLine("#include <stdlib.h>"); }
     if hasInputInt or hasPosixHost or usesIntHelper(calls, "lt_c_text_to_int(") { outLine("#include <errno.h>"); }
     outLine("#include <inttypes.h>");
     outLine("#include <stdbool.h>");
@@ -6759,67 +6913,156 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             break;
         }
     }
-    needStrCstr := hasReportError or usesTextPrimitives(calls) or usesCTextSoftUtf8(calls) or hasInput or hasPosixHost or hasUnicodeHost or hasExtraCanvas;
     needStrFromCstr := hasInputArgs or hasUnicodeHost or hasPosixHost or hasExtraCanvas or usesIntHelper(calls, "lt_c_utf8_decode_strict(");
     needStrFromBuf := hasInput or hasUnicodeHost or usesStreamBuiltins(calls) or usesTimeBuiltins(calls) or usesCFileSoft(calls) or usesCUtf8Soft(calls);
+    needStrJumbo := needStrFromBuf or needStrFromCstr or usesStringConcat(calls) or usesArena;
     needStrEq := usesIntHelper(calls, "lt_text_eq(") or hasStrMapOrSet;
     needStrHash := hasStrMapOrSet;
-    outLine("typedef struct { const char *data; uint32_t byte_len; int32_t cp_len; } lt_str;");
-    outLine("#define LT_STR_LIT(s, cp) ((lt_str){ (s), (uint32_t)(sizeof(s) - 1u), (int32_t)(cp) })");
-    outLine("#define LT_ASTR(s) ((lt_str){ (s), (uint32_t)(sizeof(s) - 1u), (int32_t)(sizeof(s) - 1u) })");
-    outLine("#define LT_STR(s) ((lt_str){ (s), (uint32_t)(sizeof(s) - 1u), -1 })");
-    outLine("#define LT_NULL_STR ((lt_str){ NULL, 0u, 0 })");
+    outLine("typedef struct { uint64_t byte_len; int64_t cp_len; } lt_str_jumbo_hdr;");
+    outLine("typedef union {");
+    outLine("    struct { char buf[15]; uint8_t tag; } sso;");
+    outLine("    struct {");
+    outLine("        const char *data;");
+    outLine("#if UINTPTR_MAX <= 0xffffffffu");
+    outLine("        uint32_t _ptr_pad;");
+    outLine("#endif");
+    outLine("        uint32_t byte_len;");
+    outLine("        uint32_t meta;");
+    outLine("    } ext;");
+    outLine("    struct { uint64_t w0; uint64_t w1; } raw;");
+    outLine("} lt_str;");
+    outLine("_Static_assert(sizeof(lt_str) == 16, \"lt_str must be 16 bytes\");");
+    outLine("#define LT_STR_SSO(s, len) ((lt_str){ .sso = { s, (uint8_t)(len) } })");
+    outLine("#define LT_STR_LIT(s, cp) ((lt_str){ .ext = { .data = (s), .byte_len = (uint32_t)(sizeof(s) - 1u), .meta = UINT32_C(0x80000000) | (uint32_t)(cp) } })");
+    outLine("#define LT_STR(s) ((lt_str){ .ext = { .data = (s), .byte_len = (uint32_t)(sizeof(s) - 1u), .meta = UINT32_C(0xFFFFFFFF) } })");
+    outLine("#define LT_NULL_STR ((lt_str){ .ext = { .data = NULL, .byte_len = 0u, .meta = UINT32_C(0x80000000) } })");
+    outLine("#define LT_EMPTY_STR ((lt_str){ .raw = { 0u, 0u } })");
     outLine("#if defined(__GNUC__) || defined(__clang__)");
     outLine("#define LT_INLINE static inline __attribute__((unused))");
     outLine("#else");
     outLine("#define LT_INLINE static inline");
     outLine("#endif");
-    if needStrCstr {
-        outLine("LT_INLINE const char *lt_text_cstr(lt_str s) { return s.data != NULL ? s.data : \"\"; }");
+    outLine("#if defined(__STDC_NO_THREADS__)");
+    outLine("#define LT_THREAD_LOCAL static");
+    outLine("#else");
+    outLine("#define LT_THREAD_LOCAL static _Thread_local");
+    outLine("#endif");
+    outLine("LT_INLINE bool lt_str_is_ext(lt_str s) { return (s.sso.tag & 0x80u) != 0u; }");
+    outLine("LT_INLINE size_t lt_str_byte_len(lt_str s) {");
+    outLine("    if (!lt_str_is_ext(s)) { return (size_t)(s.sso.tag & 0x0Fu); }");
+    outLine("    if (s.ext.byte_len == UINT32_MAX) { return (size_t)((const lt_str_jumbo_hdr *)s.ext.data)[-1].byte_len; }");
+    outLine("    return (size_t)s.ext.byte_len;");
+    outLine("}");
+    outLine("LT_INLINE int64_t lt_str_cp_len_known(lt_str s) {");
+    outLine("    if (!lt_str_is_ext(s)) {");
+    outLine("        return ((s.raw.w0 | s.raw.w1) & UINT64_C(0x8080808080808080)) == 0u ? (int64_t)(s.sso.tag & 0x0Fu) : -1;");
+    outLine("    }");
+    outLine("    if (s.ext.byte_len == UINT32_MAX) { return ((const lt_str_jumbo_hdr *)s.ext.data)[-1].cp_len; }");
+    outLine("    uint32_t m = s.ext.meta & UINT32_C(0x7FFFFFFF);");
+    outLine("    return (m == UINT32_C(0x7FFFFFFF)) ? -1 : (int64_t)m;");
+    outLine("}");
+    outLine("LT_INLINE uint32_t lt_str_pack_meta(int64_t cp_len) {");
+    outLine("    if (cp_len < 0 || cp_len >= (int64_t)0x7FFFFFFF) { return UINT32_C(0xFFFFFFFF); }");
+    outLine("    return UINT32_C(0x80000000) | (uint32_t)cp_len;");
+    outLine("}");
+    outLine("LT_INLINE const char *lt_str_data(const lt_str *s) {");
+    outLine("    return lt_str_is_ext(*s) ? (s->ext.data != NULL ? s->ext.data : \"\") : s->sso.buf;");
+    outLine("}");
+    outLine("#define lt_text_cstr(s) lt_str_data((const lt_str[1]){ (s) })");
+    outLine("LT_INLINE lt_str lt_str_from_sso(const char *src, size_t len) {");
+    outLine("    lt_str r = LT_EMPTY_STR;");
+    outLine("    if (len > 0u) { memcpy(r.sso.buf, src, len); }");
+    outLine("    r.sso.tag = (uint8_t)len;");
+    outLine("    return r;");
+    outLine("}");
+    outLine("LT_INLINE lt_str lt_astr_make(const char *s, size_t n) {");
+    outLine("    if (n <= 14u) { return lt_str_from_sso(s, n); }");
+    outLine("    return (lt_str){ .ext = { .data = s, .byte_len = (uint32_t)n, .meta = lt_str_pack_meta((int64_t)n) } };");
+    outLine("}");
+    outLine("#define LT_ASTR(s) lt_astr_make((s), sizeof(s) - 1u)");
+    if needStrJumbo {
+        outLine("LT_INLINE lt_str lt_str_make_jumbo(const char *src, size_t len, int64_t cp_len) {");
+        outLine("    char *blk = malloc(sizeof(lt_str_jumbo_hdr) + len + 1u);");
+        outLine("    if (blk == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("    lt_str_jumbo_hdr *hdr = (lt_str_jumbo_hdr *)blk;");
+        outLine("    hdr->byte_len = (uint64_t)len; hdr->cp_len = cp_len;");
+        outLine("    char *p = blk + sizeof(lt_str_jumbo_hdr);");
+        outLine("    if (len > 0u && src != NULL) { memcpy(p, src, len); }");
+        outLine("    p[len] = '\\0';");
+        outLine("    return (lt_str){ .ext = { .data = p, .byte_len = UINT32_MAX, .meta = UINT32_C(0xFFFFFFFF) } };");
+        outLine("}");
     }
     if needStrFromCstr {
         outLine("LT_INLINE lt_str lt_text_from_cstr(const char *s) {");
-        outLine("    if (s == NULL || s[0] == '\\0') { return (lt_str){ \"\", 0u, 0 }; }");
+        outLine("    if (s == NULL || s[0] == '\\0') { return LT_EMPTY_STR; }");
+        outLine("    size_t n = strlen(s);");
+        outLine("    if (n <= 14u) { return lt_str_from_sso(s, n); }");
         outLine("    const unsigned char *p = (const unsigned char *)s;");
-        outLine("    uint32_t b = 0u; int32_t cp = 0;");
-        outLine("    while (p[b] != 0u) { if ((p[b] & 0xC0u) != 0x80u) { cp += 1; } b += 1u; }");
-        outLine("    return (lt_str){ s, b, cp };");
+        outLine("    int64_t cp = 0;");
+        outLine("    for (size_t i = 0u; i < n; i += 1u) { if ((p[i] & 0xC0u) != 0x80u) { cp += 1; } }");
+        outLine("    if (n >= (size_t)UINT32_MAX) { return lt_str_make_jumbo(s, n, cp); }");
+        outLine("    return (lt_str){ .ext = { .data = s, .byte_len = (uint32_t)n, .meta = lt_str_pack_meta(cp) } };");
+        outLine("}");
+        outLine("LT_INLINE lt_str lt_text_from_owned_cstr(char *s) {");
+        outLine("    if (s == NULL || s[0] == '\\0') { if (s != NULL) { free(s); } return LT_EMPTY_STR; }");
+        outLine("    size_t n = strlen(s);");
+        outLine("    if (n <= 14u) { lt_str r = lt_str_from_sso(s, n); free(s); return r; }");
+        outLine("    lt_str r = lt_text_from_cstr(s);");
+        outLine("    if (n >= (size_t)UINT32_MAX) { free(s); }");
+        outLine("    return r;");
         outLine("}");
     }
     if needStrFromBuf {
-        outLine("LT_INLINE lt_str lt_text_from_buf(const char *s, size_t len, int32_t cp_len) {");
-        outLine("    if (len == 0u || s == NULL) { return (lt_str){ \"\", 0u, 0 }; }");
-        outLine("    return (lt_str){ s, (uint32_t)len, cp_len };");
+        outLine("LT_INLINE lt_str lt_text_from_buf(const char *s, size_t len, int64_t cp_len) {");
+        outLine("    if (len == 0u || s == NULL) { if (s != NULL) { free((void *)(uintptr_t)s); } return LT_EMPTY_STR; }");
+        outLine("    if (len <= 14u) { lt_str r = lt_str_from_sso(s, len); free((void *)(uintptr_t)s); return r; }");
+        outLine("    if (len >= (size_t)UINT32_MAX) { lt_str r = lt_str_make_jumbo(s, len, cp_len); free((void *)(uintptr_t)s); return r; }");
+        outLine("    return (lt_str){ .ext = { .data = s, .byte_len = (uint32_t)len, .meta = lt_str_pack_meta(cp_len) } };");
         outLine("}");
     }
     if needStrEq {
         outLine("LT_INLINE bool lt_text_eq(lt_str a, lt_str b) {");
-        outLine("    if (a.byte_len != b.byte_len) { return false; }");
-        outLine("    if (a.data == b.data || a.byte_len == 0u) { return true; }");
-        outLine("    if (a.data[0] != b.data[0]) { return false; }");
-        outLine("    if (a.byte_len == 1u) { return true; }");
-        outLine("    return memcmp(a.data + 1, b.data + 1, (size_t)(a.byte_len - 1u)) == 0;");
+        outLine("    if (!lt_str_is_ext(a)) { return a.raw.w0 == b.raw.w0 && a.raw.w1 == b.raw.w1; }");
+        outLine("    if (!lt_str_is_ext(b)) { return false; }");
+        outLine("    size_t al = lt_str_byte_len(a); size_t bl = lt_str_byte_len(b);");
+        outLine("    if (al != bl) { return false; }");
+        outLine("    if (a.ext.data == b.ext.data || al == 0u) { return true; }");
+        outLine("    return memcmp(a.ext.data, b.ext.data, al) == 0;");
         outLine("}");
     }
     if needStrHash {
         outLine("LT_INLINE uint64_t lt_text_hash(lt_str s) {");
         outLine("    uint64_t h = UINT64_C(14695981039346656037);");
-        outLine("    const unsigned char *p = (const unsigned char *)s.data;");
-        outLine("    uint32_t i = 0u;");
-        outLine("    while (i + 8u <= s.byte_len) { uint64_t w; memcpy(&w, p + i, 8u); h ^= w; h *= UINT64_C(1099511628211); i += 8u; }");
-        outLine("    while (i < s.byte_len) { h ^= (uint64_t)p[i]; h *= UINT64_C(1099511628211); i += 1u; }");
+        outLine("    const unsigned char *p = (const unsigned char *)lt_str_data(&s);");
+        outLine("    size_t bl = lt_str_byte_len(s);");
+        outLine("    size_t i = 0u;");
+        outLine("    while (i + 8u <= bl) { uint64_t w; memcpy(&w, p + i, 8u); h ^= w; h *= UINT64_C(1099511628211); i += 8u; }");
+        outLine("    while (i < bl) { h ^= (uint64_t)p[i]; h *= UINT64_C(1099511628211); i += 1u; }");
         outLine("    return h ^ (h >> 33);");
         outLine("}");
     }
     outLine("LT_INLINE int lt_print_str(lt_str s) {");
-    outLine("    if (s.byte_len == 0u) { return 0; }");
-    outLine("    return fwrite(s.data, 1u, s.byte_len, stdout) == (size_t)s.byte_len ? 0 : -1;");
+    outLine("    size_t bl = lt_str_byte_len(s);");
+    outLine("    if (bl == 0u) { return 0; }");
+    outLine("    return fwrite(lt_str_data(&s), 1u, bl, stdout) == bl ? 0 : -1;");
     outLine("}");
     if hasPosixHost {
         outLine("#include <fcntl.h>");
         outLine("#include <unistd.h>");
         outLine("#include <sys/stat.h>");
         outLine("#include <dirent.h>");
+    }
+    if usesArena {
+        outLine("#if !defined(LITE_ALLOC_SYSTEM)");
+        outLine("#if defined(_WIN32)");
+        outLine("#include <windows.h>");
+        outLine("#elif defined(__unix__) || defined(__APPLE__)");
+        outLine("#include <sys/mman.h>");
+        if not hasPosixHost {
+            outLine("#include <unistd.h>");
+        }
+        outLine("#endif");
+        outLine("#endif");
     }
     if usesTimeBuiltins(calls) or usesProcessSpawnBuiltins(calls) or hasExtraCanvas { outLine("#include <time.h>"); }
     if usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(") {
@@ -6862,77 +7105,197 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     emitIntBitwiseHelpers(calls);
     emitFloatArithmeticHelpers(calls, float8Values, float16Values, float8Literals, float16Literals);
     emitIntDivisionHelpers(calls);
-    usesScratch := usesIntHelper(calls, "lite$extraCanvasScratchMark(") or usesIntHelper(calls, "lite$extraCanvasScratchRewind(");
-    if usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or usesIntHelper(calls, "lt_c_text_trim(") or usesIntHelper(calls, "lt_c_text_repeat(") or usesIntHelper(calls, "lt_c_text_to_lower(") or hasFloatToText or hasFloat32ToText or usesScratch {
-        if usesScratch {
-            outLine("typedef struct lt_str_slab { struct lt_str_slab *prev; size_t cap; size_t pos; char data[]; } lt_str_slab;");
-            outLine("static lt_str_slab *lt_str_head = NULL;");
-            outLine("LT_INLINE char *lt_str_alloc(size_t n) {");
-            outLine("    if (lt_str_head == NULL || lt_str_head->pos + n > lt_str_head->cap) {");
-            outLine("        size_t cap = n > 16384u ? n : 65536u;");
-            outLine("        lt_str_slab *ns = malloc(sizeof(lt_str_slab) + cap);");
-            outLine("        if (ns == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
-            outLine("        ns->prev = lt_str_head; ns->cap = cap; ns->pos = 0u; lt_str_head = ns;");
-            outLine("    }");
-            outLine("    char *p = lt_str_head->data + lt_str_head->pos;");
-            outLine("    lt_str_head->pos += n;");
-            outLine("    return p;");
-            outLine("}");
-            outLine("typedef struct { int64_t id; lt_str_slab *slab; size_t pos; } lt_str_mark_entry;");
-            outLine("static lt_str_mark_entry lt_str_marks[64];");
-            outLine("static int lt_str_mark_n = 0;");
-            outLine("static int64_t lt_str_mark_seq = 0;");
-            outLine("LT_INLINE int64_t lt_str_slab_mark(void) {");
-            outLine("    int64_t id = ++lt_str_mark_seq;");
-            outLine("    int idx = lt_str_mark_n < 64 ? lt_str_mark_n++ : 63;");
-            outLine("    lt_str_marks[idx].id = id;");
-            outLine("    lt_str_marks[idx].slab = lt_str_head;");
-            outLine("    lt_str_marks[idx].pos = lt_str_head != NULL ? lt_str_head->pos : 0u;");
-            outLine("    return id;");
-            outLine("}");
-            outLine("LT_INLINE void lt_str_slab_rewind(int64_t mark) {");
-            outLine("    for (int i = lt_str_mark_n - 1; i >= 0; i -= 1) {");
-            outLine("        if (lt_str_marks[i].id == mark) {");
-            outLine("            lt_str_slab *target = lt_str_marks[i].slab;");
-            outLine("            while (lt_str_head != NULL && lt_str_head != target) {");
-            outLine("                if (target == NULL && lt_str_head->prev == NULL && lt_str_head->cap <= 65536u) { lt_str_head->pos = 0u; lt_str_mark_n = i; return; }");
-            outLine("                lt_str_slab *prev = lt_str_head->prev; free(lt_str_head); lt_str_head = prev;");
-            outLine("            }");
-            outLine("            if (lt_str_head != NULL) { lt_str_head->pos = lt_str_marks[i].pos; }");
-            outLine("            lt_str_mark_n = i;");
-            outLine("            return;");
-            outLine("        }");
-            outLine("    }");
-            outLine("}");
-        } else {
-            outLine("static char *lt_str_alloc(size_t n) {");
-            outLine("    static char *slab = NULL;");
-            outLine("    static size_t pos = 0u, cap = 0u;");
-            outLine("    if (n > 16384u) {");
-            outLine("        char *p = malloc(n);");
-            outLine("        if (p == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
-            outLine("        return p;");
-            outLine("    }");
-            outLine("    if (pos + n > cap) {");
-            outLine("        cap = 65536u;");
-            outLine("        slab = malloc(cap);");
-            outLine("        if (slab == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
-            outLine("        pos = 0u;");
-            outLine("    }");
-            outLine("    char *p = slab + pos;");
-            outLine("    pos += n;");
-            outLine("    return p;");
-            outLine("}");
-        }
+    if usesArena {
+        outLine("#if defined(__GNUC__) || defined(__clang__)");
+        outLine("#define LT_VM_LIKELY(x) __builtin_expect(!!(x), 1)");
+        outLine("#else");
+        outLine("#define LT_VM_LIKELY(x) (x)");
+        outLine("#endif");
+        outLine("#if defined(LITE_ALLOC_SYSTEM)");
+        outLine("typedef struct lt_vm_sys_node { struct lt_vm_sys_node *prev; size_t size; } lt_vm_sys_node;");
+        outLine("typedef struct { int64_t id; lt_vm_sys_node *head; size_t live; } lt_vm_mark;");
+        outLine("typedef struct { lt_vm_sys_node *head; size_t live_bytes; size_t peak_bytes; uint64_t generation; lt_vm_mark marks[64]; int mark_n; int64_t mark_seq; } lt_vm_arena;");
+        outLine("LT_INLINE void *lt_vm_arena_alloc(lt_vm_arena *a, size_t align, size_t n) {");
+        outLine("    size_t hdr = (sizeof(lt_vm_sys_node) + (align > 16u ? align : 16u) - 1u) & ~((align > 16u ? align : 16u) - 1u);");
+        outLine("    char *raw = malloc(hdr + n);");
+        outLine("    if (raw == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("    lt_vm_sys_node *node = (lt_vm_sys_node *)raw;");
+        outLine("    node->prev = a->head; node->size = n; a->head = node;");
+        outLine("    a->live_bytes += n;");
+        outLine("    if (a->live_bytes > a->peak_bytes) { a->peak_bytes = a->live_bytes; }");
+        outLine("    return raw + hdr;");
+        outLine("}");
+        outLine("LT_INLINE int64_t lt_vm_arena_mark(lt_vm_arena *a) {");
+        outLine("    int64_t id = ++a->mark_seq;");
+        outLine("    int idx = a->mark_n < 64 ? a->mark_n++ : 63;");
+        outLine("    a->marks[idx].id = id; a->marks[idx].head = a->head; a->marks[idx].live = a->live_bytes;");
+        outLine("    return id;");
+        outLine("}");
+        outLine("LT_INLINE void lt_vm_arena_rewind(lt_vm_arena *a, int64_t mark) {");
+        outLine("    for (int i = a->mark_n - 1; i >= 0; i -= 1) {");
+        outLine("        if (a->marks[i].id == mark) {");
+        outLine("            lt_vm_sys_node *target = a->marks[i].head;");
+        outLine("            while (a->head != target) { lt_vm_sys_node *p = a->head->prev; free(a->head); a->head = p; }");
+        outLine("            a->live_bytes = a->marks[i].live;");
+        outLine("            a->mark_n = i;");
+        outLine("            a->generation += 1u;");
+        outLine("            return;");
+        outLine("        }");
+        outLine("    }");
+        outLine("}");
+        outLine("#else");
+        outLine("#define LT_VM_HDR_SZ ((size_t)64u)");
+        outLine("#define LT_VM_HOT_FLOOR ((size_t)(1024u * 1024u))");
+        outLine("#if !defined(_WIN32) && (defined(__unix__) || defined(__APPLE__))");
+        outLine("#if defined(MAP_ANONYMOUS)");
+        outLine("#define LT_MAP_ANON MAP_ANONYMOUS");
+        outLine("#else");
+        outLine("#define LT_MAP_ANON MAP_ANON");
+        outLine("#endif");
+        outLine("#endif");
+        outLine("typedef struct lt_vm_seg { struct lt_vm_seg *prev; size_t reserve; size_t committed; size_t pos; size_t prev_base_bytes; } lt_vm_seg;");
+        outLine("typedef struct { int64_t id; lt_vm_seg *seg; size_t pos; size_t base_bytes; } lt_vm_mark;");
+        outLine("typedef struct { lt_vm_seg *root; lt_vm_seg *cur; size_t page_sz; size_t base_bytes; size_t peak_bytes; uint64_t generation; lt_vm_mark marks[64]; int mark_n; int64_t mark_seq; } lt_vm_arena;");
+        outLine("static void *lt_vm_arena_alloc_slow(lt_vm_arena *a, size_t align, size_t n) {");
+        outLine("    if (align < 8u) { align = 8u; }");
+        outLine("    if (a->page_sz == 0u) {");
+        outLine("#if defined(_WIN32)");
+        outLine("        SYSTEM_INFO si; GetSystemInfo(&si); a->page_sz = (size_t)si.dwPageSize;");
+        outLine("#elif defined(__unix__) || defined(__APPLE__)");
+        outLine("        long psz = sysconf(_SC_PAGESIZE); a->page_sz = psz > 0 ? (size_t)psz : (size_t)4096u;");
+        outLine("#else");
+        outLine("        a->page_sz = (size_t)4096u;");
+        outLine("#endif");
+        outLine("    }");
+        outLine("    lt_vm_seg *seg = a->cur;");
+        outLine("    if (seg != NULL) {");
+        outLine("        size_t off = (seg->pos + align - 1u) & ~(align - 1u);");
+        outLine("        if (n <= seg->reserve && off <= seg->reserve - n) {");
+        outLine("            size_t need = off + n;");
+        outLine("            size_t step = (size_t)65536u; if (step < a->page_sz) { step = a->page_sz; }");
+        outLine("            size_t new_com = ((need + step - 1u) / step) * step;");
+        outLine("            if (new_com > seg->reserve) { new_com = seg->reserve; }");
+        outLine("#if defined(_WIN32)");
+        outLine("            if (VirtualAlloc((char *)seg + seg->committed, new_com - seg->committed, MEM_COMMIT, PAGE_READWRITE) == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("#elif defined(__unix__) || defined(__APPLE__)");
+        outLine("            if (mprotect((char *)seg + seg->committed, new_com - seg->committed, PROT_READ | PROT_WRITE) != 0) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("#endif");
+        outLine("            seg->committed = new_com;");
+        outLine("            seg->pos = need;");
+        outLine("            size_t live = a->base_bytes + (seg->pos - LT_VM_HDR_SZ);");
+        outLine("            if (live > a->peak_bytes) { a->peak_bytes = live; }");
+        outLine("            return (char *)seg + off;");
+        outLine("        }");
+        outLine("    }");
+        outLine("    size_t prev_base = a->cur != NULL ? (a->base_bytes + (a->cur->pos - LT_VM_HDR_SZ)) : 0u;");
+        outLine("    size_t min_blk = LT_VM_HDR_SZ + align + n;");
+        outLine("    size_t reserve = (size_t)(64u * 1024u * 1024u);");
+        outLine("    if (min_blk > reserve) { reserve = ((min_blk + a->page_sz - 1u) / a->page_sz) * a->page_sz; }");
+        outLine("    size_t init_com = (size_t)65536u; if (init_com < a->page_sz) { init_com = a->page_sz; }");
+        outLine("    if (min_blk > init_com) { init_com = ((min_blk + a->page_sz - 1u) / a->page_sz) * a->page_sz; }");
+        outLine("    if (init_com > reserve) { init_com = reserve; }");
+        outLine("#if defined(_WIN32)");
+        outLine("    char *mem = (char *)VirtualAlloc(NULL, reserve, MEM_RESERVE, PAGE_NOACCESS);");
+        outLine("    if (mem == NULL || VirtualAlloc(mem, init_com, MEM_COMMIT, PAGE_READWRITE) == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("#elif defined(__unix__) || defined(__APPLE__)");
+        outLine("    void *rmem = mmap(NULL, reserve, PROT_NONE, MAP_PRIVATE | LT_MAP_ANON, -1, 0);");
+        outLine("    if (rmem == MAP_FAILED) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("    char *mem = (char *)rmem;");
+        outLine("    if (mprotect(mem, init_com, PROT_READ | PROT_WRITE) != 0) { munmap(mem, reserve); fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("#else");
+        outLine("    reserve = init_com;");
+        outLine("    char *mem = malloc(init_com);");
+        outLine("    if (mem == NULL) { fprintf(stderr, \"MemoryFault: out of memory\\n\"); exit(1); }");
+        outLine("#endif");
+        outLine("    lt_vm_seg *ns = (lt_vm_seg *)mem;");
+        outLine("    ns->prev = a->cur; ns->reserve = reserve; ns->committed = init_com; ns->pos = LT_VM_HDR_SZ; ns->prev_base_bytes = prev_base;");
+        outLine("    if (a->root == NULL) { a->root = ns; }");
+        outLine("    a->cur = ns;");
+        outLine("    a->base_bytes = prev_base;");
+        outLine("    size_t off = (ns->pos + align - 1u) & ~(align - 1u);");
+        outLine("    ns->pos = off + n;");
+        outLine("    size_t live = a->base_bytes + (ns->pos - LT_VM_HDR_SZ);");
+        outLine("    if (live > a->peak_bytes) { a->peak_bytes = live; }");
+        outLine("    return mem + off;");
+        outLine("}");
+        outLine("LT_INLINE void *lt_vm_arena_alloc(lt_vm_arena *a, size_t align, size_t n) {");
+        outLine("    if (align < 8u) { align = 8u; }");
+        outLine("    lt_vm_seg *seg = a->cur;");
+        outLine("    if (LT_VM_LIKELY(seg != NULL)) {");
+        outLine("        size_t off = (seg->pos + align - 1u) & ~(align - 1u);");
+        outLine("        if (LT_VM_LIKELY(n <= seg->committed && off <= seg->committed - n)) {");
+        outLine("            seg->pos = off + n;");
+        outLine("            size_t live = a->base_bytes + (seg->pos - LT_VM_HDR_SZ);");
+        outLine("            if (live > a->peak_bytes) { a->peak_bytes = live; }");
+        outLine("            return (char *)seg + off;");
+        outLine("        }");
+        outLine("    }");
+        outLine("    return lt_vm_arena_alloc_slow(a, align, n);");
+        outLine("}");
+        outLine("LT_INLINE int64_t lt_vm_arena_mark(lt_vm_arena *a) {");
+        outLine("    int64_t id = ++a->mark_seq;");
+        outLine("    int idx = a->mark_n < 64 ? a->mark_n++ : 63;");
+        outLine("    a->marks[idx].id = id; a->marks[idx].seg = a->cur; a->marks[idx].pos = a->cur != NULL ? a->cur->pos : LT_VM_HDR_SZ; a->marks[idx].base_bytes = a->base_bytes;");
+        outLine("    return id;");
+        outLine("}");
+        outLine("LT_INLINE void lt_vm_arena_rewind(lt_vm_arena *a, int64_t mark) {");
+        outLine("    for (int i = a->mark_n - 1; i >= 0; i -= 1) {");
+        outLine("        if (a->marks[i].id == mark) {");
+        outLine("            lt_vm_seg *target = a->marks[i].seg;");
+        outLine("            while (a->cur != NULL && a->cur != target) {");
+        outLine("                if (target == NULL && a->cur == a->root) { break; }");
+        outLine("                lt_vm_seg *prev = a->cur->prev;");
+        outLine("#if defined(_WIN32)");
+        outLine("                VirtualFree(a->cur, 0, MEM_RELEASE);");
+        outLine("#elif defined(__unix__) || defined(__APPLE__)");
+        outLine("                munmap(a->cur, a->cur->reserve);");
+        outLine("#else");
+        outLine("                free(a->cur);");
+        outLine("#endif");
+        outLine("                a->cur = prev;");
+        outLine("            }");
+        outLine("            if (a->cur != NULL) {");
+        outLine("                a->cur->pos = target != NULL ? a->marks[i].pos : LT_VM_HDR_SZ;");
+        outLine("#if defined(__unix__) || defined(__APPLE__)");
+        outLine("                if (a->cur == a->root && a->cur->committed > LT_VM_HOT_FLOOR && a->cur->pos <= LT_VM_HOT_FLOOR) {");
+        outLine("                    size_t rel = a->cur->committed - LT_VM_HOT_FLOOR;");
+        outLine("                    madvise((char *)a->cur + LT_VM_HOT_FLOOR, rel, MADV_DONTNEED);");
+        outLine("                    mprotect((char *)a->cur + LT_VM_HOT_FLOOR, rel, PROT_NONE);");
+        outLine("                    a->cur->committed = LT_VM_HOT_FLOOR;");
+        outLine("                }");
+        outLine("#endif");
+        outLine("            }");
+        outLine("            a->base_bytes = a->marks[i].base_bytes;");
+        outLine("            a->mark_n = i;");
+        outLine("            a->generation += 1u;");
+        outLine("            return;");
+        outLine("        }");
+        outLine("    }");
+        outLine("}");
+        outLine("#endif");
+        outLine("typedef struct { lt_vm_arena temp; int64_t heap_allocs; int64_t live_bytes; bool in_frame; } lt_ctx;");
+        outLine("LT_THREAD_LOCAL lt_ctx lt_tl_ctx;");
+        outLine("LT_INLINE uint64_t lt_arena_gen(void) { return lt_tl_ctx.temp.generation; }");
+        outLine("LT_INLINE char *lt_str_alloc(size_t n) { return (char *)lt_vm_arena_alloc(&lt_tl_ctx.temp, 8u, n); }");
+        outLine("LT_INLINE lt_str lt_str_make(const char *src, size_t len, int64_t cp_len) {");
+        outLine("    if (len == 0u) { return LT_EMPTY_STR; }");
+        outLine("    if (len <= 14u) { return lt_str_from_sso(src, len); }");
+        outLine("    if (len >= (size_t)UINT32_MAX) { return lt_str_make_jumbo(src, len, cp_len); }");
+        outLine("    char *buf = lt_str_alloc(len + 1u);");
+        outLine("    memcpy(buf, src, len); buf[len] = '\\0';");
+        outLine("    return (lt_str){ .ext = { .data = buf, .byte_len = (uint32_t)len, .meta = lt_str_pack_meta(cp_len) } };");
+        outLine("}");
+        outLine("LT_INLINE int64_t lt_str_slab_mark(void) { return lt_vm_arena_mark(&lt_tl_ctx.temp); }");
+        outLine("LT_INLINE void lt_str_slab_rewind(int64_t mark) { lt_vm_arena_rewind(&lt_tl_ctx.temp, mark); }");
+    } else if usesTextPrimitives(calls) or usesCTextSoftUtf8(calls) {
+        outLine("#define lt_arena_gen() UINT64_C(0)");
     }
     if hasFloatToText {
         outLine("static lt_str lt_float_to_text(double value) {");
         outLine("    char tmp[64];");
         outLine("    if (!lt_float_format(value, tmp)) { return LT_ASTR(\"0\"); }");
         outLine("    size_t n = strlen(tmp);");
-        outLine("    char *buf = lt_str_alloc(n + 1u);");
-        outLine("    memcpy(buf, tmp, n + 1u);");
-        outLine("    return (lt_str){ buf, (uint32_t)n, (int32_t)n };");
+        outLine("    return lt_str_make(tmp, n, (int64_t)n);");
         outLine("}");
     }
     if hasFloat32ToText {
@@ -6940,9 +7303,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("    char tmp[64];");
         outLine("    if (!lt_float_format((double)value, tmp)) { return LT_ASTR(\"0\"); }");
         outLine("    size_t n = strlen(tmp);");
-        outLine("    char *buf = lt_str_alloc(n + 1u);");
-        outLine("    memcpy(buf, tmp, n + 1u);");
-        outLine("    return (lt_str){ buf, (uint32_t)n, (int32_t)n };");
+        outLine("    return lt_str_make(tmp, n, (int64_t)n);");
         outLine("}");
     }
     if usesStringConcat(calls) { emitStringConcatHelper(); }

@@ -82,7 +82,7 @@ extraHostFunction := fn(moduleIdentity: String, name: String, rawParams: String,
         else if name == "Surface.drawText" and params == "surface=" + dSurf + "|content=String|at=" + pt + "|size=Float|fill=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasDrawText" }
         else if name == "Surface.capture" and params == "surface=" + dSurf + "|outPath=String" and result == "(ok:Bool,error:String)" { "lite$extraCanvasCapture" }
         else if name == "Surface.setTargetFps" and params == "surface=" + dSurf + "|fps=Float" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetTargetFps" }
-        else if name == "Surface.vitals" and params == "surface=" + dSurf and result == "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int)" { "lite$extraCanvasVitals" }
+        else if name == "Surface.vitals" and params == "surface=" + dSurf and result == "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int,heapAllocs:Int,liveBytes:Int,tempPeakBytes:Int)" { "lite$extraCanvasVitals" }
         else if name == "Surface.playTone" and params == "surface=" + dSurf + "|frequency=Int|durationMs=Int|volume=Int" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasPlayTone" }
         else if name == "Surface.bounds" and params == "surface=" + dSurf and result == "(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)" { "lite$extraCanvasBounds" }
         else if name == "Surface.resize" and params == "surface=" + dSurf + "|width=Int|height=Int" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasResize" }

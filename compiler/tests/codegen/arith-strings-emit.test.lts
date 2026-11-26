@@ -36,22 +36,7 @@ test.checkInt("c 42", 0, c42.status);
 test.checkText("c 42 out", ref42C, c42.stdout);
 cSeq := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(42);\nio.outputLine(9);", "");
 test.checkInt("c seq", 0, cSeq.status);
-cPreamble :=
-"#include <stdio.h>\n#include <inttypes.h>\n#include <stdbool.h>\n#include <string.h>\n" +
-"typedef struct { const char *data; uint32_t byte_len; int32_t cp_len; } lt_str;\n" +
-"#define LT_STR_LIT(s, cp) ((lt_str){ (s), (uint32_t)(sizeof(s) - 1u), (int32_t)(cp) })\n" +
-"#define LT_ASTR(s) ((lt_str){ (s), (uint32_t)(sizeof(s) - 1u), (int32_t)(sizeof(s) - 1u) })\n" +
-"#define LT_STR(s) ((lt_str){ (s), (uint32_t)(sizeof(s) - 1u), -1 })\n" +
-"#define LT_NULL_STR ((lt_str){ NULL, 0u, 0 })\n" +
-"#if defined(__GNUC__) || defined(__clang__)\n" +
-"#define LT_INLINE static inline __attribute__((unused))\n" +
-"#else\n" +
-"#define LT_INLINE static inline\n" +
-"#endif\n" +
-"LT_INLINE int lt_print_str(lt_str s) {\n" +
-"    if (s.byte_len == 0u) { return 0; }\n" +
-"    return fwrite(s.data, 1u, s.byte_len, stdout) == (size_t)s.byte_len ? 0 : -1;\n" +
-"}\n";
+cPreamble := ref42C.split("int main(void) {\n")[0];
 expCSeq :=
 cPreamble +
 "int main(void) {\n    int status = 0;\n" +
@@ -254,7 +239,7 @@ expStrValC :=
 cPreamble +
 "int main(void) {\n" +
 "    int status = 0;\n" +
-"    lt_str lite_s = LT_STR_LIT(\"a\\\"b\", 3);\n" +
+"    lt_str lite_s = LT_STR_SSO(\"a\\\"b\", 3);\n" +
 "    (void)lite_s;\n" +
 "    if (lt_print_str(lite_s) < 0) { status = 1; }\n" +
 "    if (printf(\"\\n\") < 0) { status = 1; }\n" +

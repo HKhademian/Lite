@@ -40,8 +40,14 @@ pub textLiteralCode := fn(value: String): String {
     out.build()
 }
 
-/** Formats a Lite String literal as a compile-time length-prefixed `lt_str` value (`byte_len` via `sizeof`, `cp_len` exact). */
+/** Formats a Lite String literal as a 16B SSO `lt_str` value (`<= 14` UTF-8 bytes) or static RODATA `LT_STR_LIT`. */
 pub strLiteralCode := fn(value: String): String {
+    if value.length() <= 14 {
+        utf8Len := value.utf8Encode().length();
+        if utf8Len <= 14 {
+            return "LT_STR_SSO(" + textLiteralCode(value) + ", " + utf8Len.toText() + ")";
+        }
+    }
     "LT_STR_LIT(" + textLiteralCode(value) + ", " + value.length().toText() + ")"
 }
 
