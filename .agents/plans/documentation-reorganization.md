@@ -20,7 +20,7 @@ todos:
     status: completed
   - id: shared-status
     content: "Publish evidence-backed support in CLI and site navigation"
-    status: pending
+    status: completed
   - id: integration
     content: "Verify the final docs, generated references, and runnable examples"
     status: pending
@@ -60,6 +60,8 @@ through tested examples and stable links.
 - Moved contextual construction and defaults to Record initialization and standalone do to Blocks and results. Preserved prior headings as compatibility entry points. The docs check passed.
 
 - Consolidated loop results, separated package-local preload, and documented backend mutation lowering. Kept old headings and historic links. Offline docs and full site validation passed.
+
+- CLI Status and the site now point to the implementation status page. Badges identify registered and checked examples; the module guide delegates signatures to generated docs. All 32 site tests and the offline docs check passed.
 
 ## Baseline inventory
 
@@ -122,19 +124,6 @@ owning topic pages, and these observations describe the baseline compiler.
 - [Atomic commits](../rules/atomic-commits.md) and [documentation rules](../rules/documentation.md)
 
 ## Implementation order
-
-### Step 6 — shared-status
-
-**Depends on** remaining-topics.
-
-**Files** `config/documentation.json`, `site/src/docs.lt`, `site/lite-uri.ts`, and the existing documentation and site tests.
-
-- Add a compact status index linking the rule or feature ID, design decision, and actual TS/C11 or host-specific verification evidence. Reuse the existing case IDs. A registered case alone does not establish a pass.
-- Point the CLI Status navigation and site badges at the same data. Remove the category-driven Handbook badge claim and use an evidence-based label where the data supports it.
-- Extend the `core/text` documentation pattern to modules touched by the migration. Preserve source comments as the API text and generate signatures. Move duplicated handwritten API inventories to the generated reference.
-- Reconcile CLI docs with help output and CLI contract fixtures. Link Handbook, Learn, and Gym examples to the appropriate Playground entries.
-
-**Acceptance** Status, supported targets, and pending design are legible from both CLI and site. Module signatures and public comments come from the same declarations.
 
 ### Step 7 — integration
 

@@ -4,7 +4,6 @@ fs := import "core/file";
 list := import "core/list";
 path := import "core/path";
 text := import "core/text";
-challenges := import "util/challenges";
 json := import "data/json";
 mdHtml := import "util/markdown-html";
 siteLib := import "./library";
@@ -91,25 +90,21 @@ claimOutPath := fn(usedOut: mut Set<String>, preferred: String): String {
 
 loadVerifiedDocsSet := fn(rootDir: String): Set<String> {
     out: mut Set<String>;
-    mut out.add("docs/start-here.md");
-    mut out.add("docs/tour.md");
-    catalogPath := path.join(rootDir, "language/showcases/catalog.json");
-    if fs.kind(catalogPath) =!= fs.FILE_KIND_FILE { return out; }
-    catRead := fs.readText(catalogPath);
-    if not catRead.ok { return out; }
-    catJson := catRead.text;
-    chF := json.findField(catJson, 0, "chapters");
-    if not chF.found { return out; }
-    loop json.arrayOffsets(catJson, chF.valuePos) as cp {
-        topF := json.findField(catJson, cp, "topics");
-        if not topF.found { continue; }
-        loop json.arrayOffsets(catJson, topF.valuePos) as tp {
-            loop challenges.readStringArray(catJson, tp, "docs") as dPath {
-                mut out.add(dPath);
-            }
-        }
+    cfg := fs.readText(path.join(rootDir, "config/documentation.json"));
+    if not cfg.ok { return out; }
+    entries := json.findField(cfg.text, 0, "verifiedExamples");
+    if not entries.found { return out; }
+    loop json.arrayOffsets(cfg.text, entries.valuePos) as entry {
+        doc := json.readFieldString(cfg.text, entry, "document");
+        if doc.found and doc.ok { mut out.add(doc.value); }
     }
     out
+};
+
+verifiedExampleBadge := fn(fromPath: String, verified: Bool): String {
+    if not verified { return ""; }
+    href := relativeHref(fromPath, "docs/design/implementation-status.html") + "#verified-examples";
+    "<a class=\"status-pill status-pill-shipped\" href=\"" + escapeHtml(href) + "\">Verified example</a>"
 };
 
 loadSnippetsJson := fn(rootDir: String): String {
@@ -185,6 +180,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     metaChSlugs: mut List<String> = [];
     metaVerified: mut List<Bool> = [];
 
+    verifiedDocs := loadVerifiedDocsSet(rootDir);
     var hi := 0;
     loop hi < hbSources.length() {
         mut metaSrcs.pushBack(hbSources[hi]);
@@ -194,11 +190,10 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         mut metaNavs.pushBack(hbNavs[hi]);
         mut metaSums.pushBack(hbSums[hi]);
         mut metaChSlugs.pushBack(hbSlugs[hi]);
-        mut metaVerified.pushBack(true);
+        mut metaVerified.pushBack(verifiedDocs.has(hbSources[hi]));
         hi = hi + 1;
     }
 
-    verifiedDocs := loadVerifiedDocsSet(rootDir);
     usedOut: mut Set<String>;
 
     startOrder: List<String> = [
@@ -363,7 +358,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         + ",\"group\":" + json.quoteString(metaGroups[mi])
         + ",\"navLabel\":" + json.quoteString(metaNavs[mi])
         + sumField + slugField
-        + ",\"verifiedInTs\":" + (if metaVerified[mi] { "true" } else { "false" }) + "}");
+        + ",\"hasVerifiedExample\":" + (if metaVerified[mi] { "true" } else { "false" }) + "}");
         mut mapJson.pushBack("{\"sourcePath\":" + json.quoteString(src) + ",\"outPath\":" + json.quoteString(outPath) + "}");
         if includeRendered {
             rRead := fs.readText(path.join(rootDir, src));
@@ -379,7 +374,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
 };
 
 statusPillLabel := fn(layer: String, group: String, rawStatus: String): String {
-    if layer == "handbook" { return "Verified in TS"; }
+    if layer == "handbook" { return "Handbook"; }
     eff := if group == "proposals" { "proposal" } else { rawStatus };
     if eff == "historical" { "Historical" }
     else if eff == "proposal" { "Working Proposal" }
@@ -472,7 +467,7 @@ appendSpecSidebarStart := fn(out: mut tb.TextBuilder, hbIndexHref: String): Unit
     mut out.append("      <div class=\"docs-sidebar-head\">\n");
     mut out.append("        <label class=\"docs-verified-toggle\">\n");
     mut out.append("          <input id=\"docs-verified-only\" type=\"checkbox\">\n");
-    mut out.append("          <span>Verified in TS only</span>\n");
+    mut out.append("          <span>With verified examples</span>\n");
     mut out.append("        </label>\n");
     mut out.append("        <span id=\"docs-sidebar-count\" class=\"code-card-meta\"></span>\n");
     mut out.append("      </div>\n");
@@ -879,6 +874,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     hbSlugs: mut List<String> = [];
     hbTitles: mut List<String> = [];
     hbStatuses: mut List<String> = [];
+    hbVerified: mut List<Bool> = [];
     hbHtmls: mut List<String> = [];
     hbRelated: mut List<String> = [];
     hbTocHtmls: mut List<String> = [];
@@ -915,7 +911,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mSum := if sumR.found and sumR.ok { sumR.value } else { "" };
         slugR := json.readFieldString(inputJson, mp, "chapterSlug");
         mSlug := if slugR.found and slugR.ok { slugR.value } else { "" };
-        mVer := json.readFieldBool(inputJson, mp, "verifiedInTs").value;
+        mVer := json.readFieldBool(inputJson, mp, "hasVerifiedExample").value;
 
         dTitleR := json.readFieldString(inputJson, ep, "title");
         dTitle := if dTitleR.found and dTitleR.ok { dTitleR.value } else { "" };
@@ -967,6 +963,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
             mut hbSlugs.pushBack(mSlug);
             mut hbTitles.pushBack(dTitle);
             mut hbStatuses.pushBack(dStatus);
+            mut hbVerified.pushBack(mVer);
             mut hbHtmls.pushBack(pHtml);
             mut hbRelated.pushBack(mRel);
             mut hbTocHtmls.pushBack(tocHtml);
@@ -1003,7 +1000,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut hbCards.pushBack("<article class=\"portal-card\">\n"
         + "      <div class=\"portal-card-head\">\n"
         + "        <h3><a href=\"" + escapeHtml(href) + "\">" + escapeHtml(hbNavs[hi]) + "</a></h3>\n"
-        + "        <span class=\"status-pill status-pill-shipped\">Verified in TS</span>\n"
+        + "        " + verifiedExampleBadge("docs/index.html", hbVerified[hi]) + "\n"
         + "      </div>\n"
         + "      <p>" + escapeHtml(hbSums[hi]) + "</p>\n"
         + "      <div class=\"portal-card-foot\">\n"
@@ -1041,21 +1038,21 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     docsLandingBody := "<section class=\"page-hero\">\n"
     + "  <h1>Documentation</h1>\n"
     + "  <p class=\"hero-lead\">\n"
-    + "    Structured into two clear layers: the <strong>Shipped Lite Handbook</strong> (100% runnable today) and the full\n"
+    + "    Structured into two clear layers: the <strong>Shipped Lite Handbook</strong> and the full\n"
     + "    <strong>Design Specification &amp; Proposals</strong> archive (" + spCount.toText() + " documents).\n"
     + "  </p>\n"
     + "  <div class=\"hero-actions\">\n"
     + "    <a class=\"btn btn-primary\" href=\"handbook/overview-and-setup.html\">Start Handbook</a>\n"
     + "    <a class=\"btn\" href=\"handbook/single-page.html\">Single-Page Handbook</a>\n"
+    + "    <a class=\"btn\" href=\"design/implementation-status.html\">Implementation status</a>\n"
     + "    <a class=\"btn\" href=\"spec/\">Browse Design Spec (" + spCount.toText() + " docs)</a>\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"handbook\">\n"
     + "  <div class=\"section-head\">\n"
     + "    <h2>Layer 1 — Shipped Lite Handbook</h2>\n"
-    + "    <span class=\"status-pill status-pill-shipped\">Verified in TS</span>\n"
     + "  </div>\n"
-    + "  <p class=\"section-note\">Seven sequential chapters covering every language feature, collection type, and module supported by the compiler right now.</p>\n"
+    + "  <p class=\"section-note\">Guides to shipped language features, library operations, and tools.</p>\n"
     + "  <div class=\"portal-grid\">\n"
     + "    " + hbCards.join("\n") + "\n"
     + "  </div>\n"
@@ -1084,7 +1081,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
             cls := statusPillClass("spec", spGroups[si], spStatuses[si]);
             href := relativeHref("docs/spec/index.html", spOuts[si]);
             ttl := if spTitles[si] =!= "" { spTitles[si] } else { spNavs[si] };
-            vTag := if spVerified[si] { "<span class=\"status-pill status-pill-shipped\">Verified in TS</span>" } else { "" };
+            vTag := verifiedExampleBadge("docs/spec/index.html", spVerified[si]);
             mut startCards.pushBack("<article class=\"portal-card\">\n"
             + "        <div class=\"portal-card-head\">\n"
             + "          <h3><a href=\"" + escapeHtml(href) + "\">" + escapeHtml(ttl) + "</a></h3>\n"
@@ -1129,7 +1126,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut chBlocksOut.append(escapeHtml(chSlug));
         mut chBlocksOut.append("\">\n      <div class=\"portal-card-head\" style=\"margin-bottom: 0.5rem;\">\n        <span class=\"code-card-meta\">Chapter ");
         mut chBlocksOut.append((hi + 1).toText());
-        mut chBlocksOut.append("</span>\n        <span class=\"status-pill status-pill-shipped\">Verified in TS</span>\n      </div>\n      ");
+        mut chBlocksOut.append("</span>\n        " + verifiedExampleBadge("docs/handbook/single-page.html", hbVerified[hi]) + "\n      </div>\n      ");
         mut chBlocksOut.append(rewritten);
         mut chBlocksOut.append("\n    </section>");
 
@@ -1211,7 +1208,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut bodyOut.append(escapeHtml(handbookPartName(hi)));
         mut bodyOut.append("</span>\n      </nav>\n      <div class=\"docs-badge-row\">\n        <span class=\"code-card-meta\">~");
         mut bodyOut.append(readMins.toText());
-        mut bodyOut.append(" min read</span>\n        <span class=\"status-pill status-pill-shipped\">Verified in TS</span>\n      </div>\n    </div>\n    ");
+        mut bodyOut.append(" min read</span>\n        " + verifiedExampleBadge(mOut, hbVerified[hi]) + "\n      </div>\n    </div>\n    ");
         mut bodyOut.append(chapterBodyHtml);
         if hbRelated[hi] =!= "" {
             mut bodyOut.append("\n    ");
@@ -1253,7 +1250,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut searchEntry.append(json.quoteString(mOut));
         mut searchEntry.append(",\"keywords\":");
         mut searchEntry.append(json.quoteString(mSrc + " " + mNav + " " + dTitle));
-        mut searchEntry.append(",\"badge\":\"Verified in TS\"}");
+        mut searchEntry.append(if hbVerified[hi] { ",\"badge\":\"Verified example\"}" } else { ",\"badge\":\"Handbook\"}" });
         mut searchEntriesJson.pushBack(searchEntry.build());
         hi = hi + 1;
     }
@@ -1284,7 +1281,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         }
         lbl := statusPillLabel("spec", mGrp, spStatuses[si]);
         cls := statusPillClass("spec", mGrp, spStatuses[si]);
-        vBadge := if spVerified[si] { "<span class=\"status-pill status-pill-shipped\">Verified in TS</span>" } else { "" };
+        vBadge := verifiedExampleBadge(mOut, spVerified[si]);
         prevLink := if si > 0 {
             "<a class=\"btn\" href=\"" + escapeHtml(relativeHref(mOut, spOuts[si - 1])) + "\" data-pager-prev>&larr; " + escapeHtml(spNavs[si - 1]) + "</a>"
         } else { "<span></span>" };

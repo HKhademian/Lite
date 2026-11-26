@@ -17,6 +17,7 @@ remains reserved.
 
 ## LS-001 — Source, syntax, and evaluation
 
+See [unambiguous meaning](lite://doc/unambiguous-meaning) for the language-wide resolution principle.
 Start with [lexical structure](lite://doc/lexical-structure), the
 [grammar sketch](lite://doc/grammar-sketch), and [operators](lite://doc/operators).
 [Evaluation order](lite://doc/evaluation-order) owns sequencing. See

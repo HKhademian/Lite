@@ -67,7 +67,7 @@ export type GraphDocSeed = Readonly<{
   title: string;
   summary?: string;
   chapterSlug?: string;
-  verifiedInTs: boolean;
+  hasVerifiedExample: boolean;
   anchors?: readonly string[];
 }>;
 
@@ -838,7 +838,7 @@ export function buildLiteAcademyGraph(options: Readonly<{
           subtitle: doc.sourcePath,
           outPath: doc.outPath,
           sourcePath: doc.sourcePath,
-          badge: doc.verifiedInTs ? 'Verified in TS' : doc.group,
+          badge: doc.hasVerifiedExample ? 'Verified example' : doc.group,
         },
         aliases,
       );

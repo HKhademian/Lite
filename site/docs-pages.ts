@@ -21,7 +21,7 @@ export type DocMeta = Readonly<{
   navLabel: string;
   summary?: string;
   chapterSlug?: string;
-  verifiedInTs: boolean;
+  hasVerifiedExample: boolean;
 }>;
 
 export type DiscoverPayload = Readonly<{

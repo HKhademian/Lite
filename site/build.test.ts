@@ -203,7 +203,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const bindingsHbHtml = readFileSync(join(out, 'docs/handbook/bindings-and-mutability.html'), 'utf8');
   assert(bindingsHbHtml.includes('data-play-href="../../playground/?piece=bindings-and-mutability-0"'));
   const playLibItems = JSON.parse(readFileSync(join(out, 'playground/library.json'), 'utf8')) as Array<{ category: string; slug: string }>;
-  const libPieceSlugs = new Set(playLibItems.filter(it => it.category === 'piece').map(it => it.slug));
+  const libraryTargets = new Set(playLibItems.map(it => it.category + '=' + it.slug));
   for (const hbFile of [...readdirSync(join(out, 'docs/handbook')).filter(f => f.endsWith('.html')).map(f => join(out, 'docs/handbook', f))]) {
     const hbHtml = readFileSync(hbFile, 'utf8');
     const preMatches = [...hbHtml.matchAll(/<pre class="code-block"([^>]*)>/g)];
@@ -211,15 +211,22 @@ test('buildSite generates static pages and metadata in dist/site', () => {
       if (pm[1]!.includes('data-runnable="true"')) {
         const hrefMatch = /data-play-href="([^"]+)"/.exec(pm[1]!);
         assert(hrefMatch, `missing data-play-href on runnable block in ${hbFile}`);
-        const qPiece = /\?piece=([a-z0-9-]+)/.exec(hrefMatch[1]!);
-        assert(qPiece && libPieceSlugs.has(qPiece[1]!), `unmapped piece slug ${hrefMatch[1]} in ${hbFile}`);
+        const query = /\?(piece|example)=([a-z0-9-]+)/.exec(hrefMatch[1]!);
+        assert(query && libraryTargets.has(query[1]! + '=' + query[2]!), `unmapped Playground target ${hrefMatch[1]} in ${hbFile}`);
       }
     }
   }
   const startHereHtml = readFileSync(join(out, 'docs/design/start-here.html'), 'utf8');
   assert(startHereHtml.includes('Open in Play &rarr;'));
   assert(startHereHtml.includes('href="../../playground/?sample=double-sum"'));
-  assert(startHereHtml.includes('Verified in TS'));
+  assert(startHereHtml.includes('implementation-status.html#verified-examples'));
+  assert(startHereHtml.includes('Verified example'));
+  assert(!bindingsHbHtml.includes('Verified example'));
+  const stringsHbHtml = readFileSync(join(out, 'docs/handbook/numbers-operators-and-strings.html'), 'utf8');
+  assert(stringsHbHtml.includes('implementation-status.html#verified-examples'));
+  assert(stringsHbHtml.includes('showcase-strings-and-unicode'));
+  const supportHtml = readFileSync(join(out, 'docs/design/implementation-status.html'), 'utf8');
+  assert(supportHtml.includes('id="verified-examples"'));
   const tourHtml = readFileSync(join(out, 'docs/design/tour.html'), 'utf8');
   assert(tourHtml.includes('href="../../playground/?case=mutable-accumulator"'));
   assert(tourHtml.includes('Open in Play &rarr;'));

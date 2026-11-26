@@ -695,6 +695,20 @@ pub checkDocuments := fn(directory: String): List<String> {
                 }
             }
         }
+        evidenceField := json.findField(cfgText, 0, "verifiedExamples");
+        if evidenceField.found {
+            loop json.arrayOffsets(cfgText, evidenceField.valuePos) as evidencePos {
+                doc := json.readFieldString(cfgText, evidencePos, "document").value;
+                manifest := json.readFieldString(cfgText, evidencePos, "manifest").value;
+                id := json.readFieldString(cfgText, evidencePos, "id").value;
+                manifestRead := fs.readText(path.resolve(directory, manifest));
+                if doc == "" or fs.kind(path.resolve(directory, doc)) =!= fs.FILE_KIND_FILE
+                    or manifest == "" or not manifestRead.ok or id == ""
+                    or json.readFieldString(manifestRead.text, 0, "id").value =!= id {
+                    mut failures.pushBack("config/documentation.json: invalid verified example " + doc + " → " + manifest + " (" + id + ")");
+                }
+            }
+        }
         snipField := json.findField(cfgText, 0, "snippets");
         if snipField.found {
             snipItems := json.arrayOffsets(cfgText, snipField.valuePos);

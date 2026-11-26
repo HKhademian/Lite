@@ -22,7 +22,7 @@
     },
     {
       "label": "Status",
-      "path": "compiler/transition-plan.md"
+      "path": "docs/implementation-status.md"
     },
     {
       "label": "Contribute",
@@ -45,6 +45,18 @@
       "document": "language/learn/handbook/foundations/numbers-operators-and-strings.md",
       "source": "language/showcases/foundations/strings/strings-and-unicode.lts",
       "fence": 3
+    }
+  ],
+  "verifiedExamples": [
+    {
+      "document": "docs/start-here.md",
+      "manifest": "language/verifications/artifacts/examples/foundations/io/double-sum.json",
+      "id": "example.foundations.io.double-sum"
+    },
+    {
+      "document": "language/learn/handbook/foundations/numbers-operators-and-strings.md",
+      "manifest": "language/verifications/artifacts/showcases/foundations/strings/strings-and-unicode.json",
+      "id": "showcase.foundations.strings.strings-and-unicode"
     }
   ]
 }

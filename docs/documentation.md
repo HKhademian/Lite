@@ -52,6 +52,15 @@ uses one canonical showcase source. Its Handbook fence is registered in
 [documentation configuration](lite://repo/config/documentation.json), its
 manifest records expected output, and the lesson and exercise link back to it.
 
+## Support evidence
+
+Add a `verifiedExamples` entry in
+[documentation configuration](lite://repo/config/documentation.json) only
+after executing the named manifest. Record the result and targets on the
+[implementation status page](lite://doc/implementation-status).
+The site badge identifies a verified example, and CLI Status opens the same
+support page.
+
 ## Accessibility
 
 Write in plain English with short explanations and concrete examples. Use a
