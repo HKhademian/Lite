@@ -40,6 +40,11 @@
       "source": "language/examples/foundations/io/double-sum.lts",
       "fence": 1,
       "skipLines": 2
+    },
+    {
+      "document": "language/learn/handbook/foundations/numbers-operators-and-strings.md",
+      "source": "language/showcases/foundations/strings/strings-and-unicode.lts",
+      "fence": 3
     }
   ]
 }

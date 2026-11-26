@@ -40,6 +40,18 @@ When changing a contract, search for affected explanations, snippets, examples,
 samples, manifests, editor grammar and CLI help. Update them with the change.
 Provisional diagnostics and unresolved semantics must remain explicitly marked.
 
+## Public API comments and runnable examples
+
+Put the caller contract in the public `/** ... */` comment. Describe
+effects, result fields, and failure behavior where they matter. Keep
+implementation rationale in internal comments. The generated module reference
+takes the declaration and comment from source.
+
+The [UTF-8 round trip](lite://handbook/numbers-operators-and-strings#utf-8-round-trip)
+uses one canonical showcase source. Its Handbook fence is registered in
+[documentation configuration](lite://repo/config/documentation.json), its
+manifest records expected output, and the lesson and exercise link back to it.
+
 ## Accessibility
 
 Write in plain English with short explanations and concrete examples. Use a

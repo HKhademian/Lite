@@ -17,3 +17,5 @@ Strings in Lite store valid Unicode text and separate scalar character indexing 
 2. Append an exclamation mark conditionally using `if not tag.endsWith("!")`.
 
 See [Handbook: Numbers, Operators & Strings](lite://handbook/numbers-operators-and-strings) and [core/text](lite://module/core/text).
+
+See the [verified UTF-8 round trip](lite://handbook/numbers-operators-and-strings#utf-8-round-trip).

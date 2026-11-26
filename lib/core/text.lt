@@ -130,7 +130,9 @@ pub String.fromUtf16Strict := fn(units: List<Int>): (ok: Bool, text: String, err
     String.fromCodePoints(points)
 };
 
-/** Encodes `text` as UTF-8 `0..255` byte values (soft builtin). */
+/** Returns a fresh list of UTF-8 bytes in 0..255. Its length is a byte count.
+ * See the [UTF-8 round trip](lite://handbook/numbers-operators-and-strings#utf-8-round-trip).
+ */
 pub String.utf8Encode := fn(text: Self): List<Int> {
     var out: mut List<Int> = [];
     loop text.toCodePoints() as cp {
@@ -235,7 +237,9 @@ utf8DecodeInternal := fn(bytes: List<Int>, strict: Bool): (ok: Bool, text: Strin
     String.fromCodePoints(points)
 };
 
-/** Decodes raw `0..255` UTF-8 bytes to text, rejecting invalid byte values or invalid UTF-8 sequences (soft builtin). */
+/** Decodes UTF-8 bytes in 0..255. On invalid input, returns ok=false, empty text, and a diagnostic in error.
+ * See the [UTF-8 round trip](lite://handbook/numbers-operators-and-strings#utf-8-round-trip).
+ */
 pub String.fromUtf8Strict := fn(bytes: List<Int>): (ok: Bool, text: String, error: String) {
     utf8DecodeInternal(bytes, true)
 };

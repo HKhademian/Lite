@@ -63,6 +63,41 @@ io.outputLine(msg, msg.length(), msg.at(0), math.clamp(120, 0, 100));
 
 See [Numbers](lite://doc/numbers), [Division](lite://doc/division), [Comparison Chains](lite://doc/comparison-chains), [Strings](lite://doc/strings), and [Math, Vectors & Matrices](lite://handbook/math-vectors-and-matrices).
 
+### UTF-8 round trip
+
+`"Aé🚀"` has three Unicode scalars and occupies seven UTF-8 bytes. Encode
+with [`String.utf8Encode`](lite://module/core/text#String.utf8Encode) and decode
+with [`String.fromUtf8Strict`](lite://module/core/text#String.fromUtf8Strict).
+The decode result reports whether the bytes represent valid UTF-8.
+
+```lite
+/* Showcase 01.03 — Escaped strings, code-point text indexing, and Unicode UTF-8 conversion. */
+
+io := import "core/io";
+
+/* String literals support escapes and concatenation; indexing operates on Unicode code points. */
+raw := "  Hello\t\"Lite\" 🚀  ";
+cleaned := raw.trim();
+firstCh := cleaned.at(0);
+lastCh := cleaned.at(cleaned.length() - 1);
+tag := cleaned + "!";
+
+/* Explicit scalar code-point and UTF-8 encode/decode helpers bridge strings and byte lists. */
+phrase := "Aé🚀";
+scalars := phrase.toCodePoints();
+utf8Bytes := phrase.utf8Encode();
+decoded := String.fromUtf8Strict(utf8Bytes);
+
+io.outputLine("cleaned:", tag, "edges:", firstCh, lastCh, "len:", cleaned.length());
+io.outputLine("scalars:", scalars.map(fn(x: Int): String { x.toText() }).join(","));
+io.outputLine("utf8-bytes:", utf8Bytes.map(fn(x: Int): String { x.toText() }).join(" "), "roundtrip:", decoded.ok, decoded.text);
+```
+
+[Run in Playground](lite://play/example/showcase-strings-and-unicode) ·
+[Expected output](lite://repo/language/verifications/artifacts/showcases/foundations/strings/strings-and-unicode.json) ·
+[Learn walkthrough](lite://learn/strings-and-unicode) ·
+[Practice scalar and byte counts](lite://gym/drills/utf8-roundtrip-count)
+
 ## Next Chapter
 
 Continue to [Conditionals, Match & Loops](lite://handbook/conditionals-match-and-loops).
