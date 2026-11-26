@@ -127,4 +127,92 @@ acceptBothSrc :=
 "io.outputLine(a, b, xs);\n";
 runWithModes("removed-shim-replacements", acceptBothSrc, "3 4 [1, 2]\n", emptyArgs);
 
+/* 4. Scalar .toText() across all 8 built-in primitive scalar types, String.padLeftWith/padRightWith/compare, and C11 io/UTF-8 fast paths. */
+scalarToTextSrc :=
+"io := import \"core/io\";\n" +
+"i64Min: Int = -9223372036854775808;\n" +
+"i64Max: Int = 9223372036854775807;\n" +
+"i8Min: Int8 = -128;\n" +
+"i8Zero: Int8 = 0;\n" +
+"i8Max: Int8 = 127;\n" +
+"i16Min: Int16 = -32768;\n" +
+"i16Zero: Int16 = 0;\n" +
+"i16Max: Int16 = 32767;\n" +
+"i32Min: Int32 = -2147483648;\n" +
+"i32Zero: Int32 = 0;\n" +
+"i32Max: Int32 = 2147483647;\n" +
+"bT := true;\n" +
+"bF := false;\n" +
+"fZero: Float = 0.0;\n" +
+"fNegZero: Float = -0.0;\n" +
+"fVal: Float = 3.5;\n" +
+"fNeg: Float = -12.25;\n" +
+"fSum: Float = 0.1 + 0.2;\n" +
+"f32Zero: Float32 = 0.0;\n" +
+"f32NegZero: Float32 = -0.0;\n" +
+"f32Val: Float32 = 1.5;\n" +
+"f32Tenth: Float32 = 0.1;\n" +
+"io.outputLine((0).toText(), (-42).toText(), i64Min.toText(), i64Max.toText());\n" +
+"io.outputLine(i8Min.toText(), i8Zero.toText(), i8Max.toText(), i16Min.toText(), i16Zero.toText(), i16Max.toText());\n" +
+"io.outputLine(i32Min.toText(), i32Zero.toText(), i32Max.toText());\n" +
+"io.outputLine(bT.toText(), bF.toText(), \"\".toText() == \"\", \"abc\".toText());\n" +
+"io.outputLine(fZero.toText(), fNegZero.toText(), fVal.toText(), fNeg.toText(), fSum.toText() == \"0.30000000000000004\");\n" +
+"io.outputLine(f32Zero.toText(), f32NegZero.toText(), f32Val.toText(), f32Tenth.toText());\n" +
+"io.outputLine(\"7\".padLeftWith(3, \"0\"), \"7\".padLeftWith(4, \"ab\"), \"7\".padLeftWith(1, \"0\"), \"7\".padLeftWith(3, \"\"));\n" +
+"io.outputLine(\"7\".padRightWith(3, \"0\"), \"7\".padRightWith(4, \"ab\"), \"7\".padRightWith(1, \"0\"), \"7\".padRightWith(3, \"\"));\n" +
+"io.outputLine(\"abc\".compare(\"abd\"), \"abc\".compare(\"abc\"), \"abd\".compare(\"abc\"), \"é\".compare(\"ü\"));\n";
+
+scalarToTextExpected :=
+"0 -42 -9223372036854775808 9223372036854775807\n" +
+"-128 0 127 -32768 0 32767\n" +
+"-2147483648 0 2147483647\n" +
+"true false true abc\n" +
+"0 0 3.5 -12.25 true\n" +
+"0 0 1.5 0.10000000149011612\n" +
+"007 aba7 7 7\n" +
+"700 7aba 7 7\n" +
+"-1 0 1 -1\n";
+
+runWithModes("scalar-toText-builtin", scalarToTextSrc, scalarToTextExpected, builtinArgs);
+runWithModes("scalar-toText-pure", scalarToTextSrc, scalarToTextExpected, pureArgs);
+
+ioUtf8Src :=
+"io := import \"core/io\";\n" +
+"rd1 := io.Reader.fromText(\"alpha\\r\\nbeta\\n\\ngamma\");\n" +
+"l1 := rd1.readLine();\n" +
+"l2 := rd1.readLine();\n" +
+"l3 := rd1.readLine();\n" +
+"l4 := rd1.readLine();\n" +
+"l5 := rd1.readLine();\n" +
+"io.outputLine(l1.ok, l1.line, l1.eof, l2.ok, l2.line, l2.eof);\n" +
+"io.outputLine(l3.ok, l3.line == \"\", l3.eof, l4.ok, l4.line, l4.eof, l5.ok, l5.line == \"\", l5.eof);\n" +
+"rd2 := io.Reader.fromText(\"hello \\\"Lite\\\"!\\nline2\");\n" +
+"ra := rd2.readAllText();\n" +
+"io.outputLine(ra.ok, ra.text.length(), rd2.readAll().length());\n" +
+"bw := io.Writer.buffer();\n" +
+"wt1 := bw.writeLine(\"one\");\n" +
+"wt2 := bw.writeText(\"two\");\n" +
+"bwt := bw.text();\n" +
+"io.outputLine(wt1.ok, wt2.ok, bwt.ok, bwt.text == \"one\\ntwo\");\n" +
+"u := \"Aé🙂\".utf8Encode();\n" +
+"stOk := String.fromUtf8Strict(u);\n" +
+"stBadLead := String.fromUtf8Strict([255]);\n" +
+"stBadCont := String.fromUtf8Strict([194, 65]);\n" +
+"stTrunc := String.fromUtf8Strict([226, 130]);\n" +
+"stOob := String.fromUtf8Strict([256]);\n" +
+"io.outputLine(u.length(), stOk.ok, stOk.text, stBadLead.ok, stBadCont.ok, stTrunc.ok, stOob.ok);\n" +
+"rep := String.fromCodePoint(65533).text;\n" +
+"io.outputLine(String.fromUtf8Lossy([65, 255, 194, 66, 226, 130, 256]) == (\"A\" + rep + rep + \"B\" + rep + rep));\n";
+
+ioUtf8Expected :=
+"true alpha false true beta false\n" +
+"true true false true gamma false true true true\n" +
+"true 19 0\n" +
+"true true true true\n" +
+"7 true Aé🙂 false false false false\n" +
+"true\n";
+
+runWithModes("io-utf8-builtin", ioUtf8Src, ioUtf8Expected, builtinArgs);
+runWithModes("io-utf8-pure", ioUtf8Src, ioUtf8Expected, pureArgs);
+
 test.done("core-type-operations");

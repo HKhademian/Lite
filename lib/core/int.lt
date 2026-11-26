@@ -109,4 +109,19 @@ pub Int.toText := fn(value: Self): String {
         remaining = remaining / 10;
     }
     digits
+};
+
+/** Formats one signed 8-bit Int8 as decimal text. */
+pub Int8.toText := fn(value: Self): String {
+    Int.toText(value)
+};
+
+/** Formats one signed 16-bit Int16 as decimal text. */
+pub Int16.toText := fn(value: Self): String {
+    Int.toText(value)
+};
+
+/** Formats one signed 32-bit Int32 as decimal text. */
+pub Int32.toText := fn(value: Self): String {
+    Int.toText(value)
 }

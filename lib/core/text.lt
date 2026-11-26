@@ -50,6 +50,12 @@ pub String.toCodePoints := fn(text: Self): List<Int>;
 /** Encodes UTF-32 Unicode scalar code points into text, rejecting invalid scalar values or surrogates. */
 pub String.fromCodePoints := fn(points: List<Int>): (ok: Bool, text: String, error: String);
 
+/** Formats one 64-bit IEEE-754 Float as shortest round-trip decimal text (`-0.0` formats as `"0"`). */
+pub Float.toText := fn(value: Self): String;
+
+/** Formats one 32-bit IEEE-754 Float32 as shortest round-trip decimal text (`-0.0` formats as `"0"`). */
+pub Float32.toText := fn(value: Self): String;
+
 /* --- Pure Unicode scalar & UTF-8 / UTF-16 helpers --- */
 
 /** Returns true when `point` is a valid Unicode scalar value (`0..0x10FFFF` excluding surrogates `0xD800..0xDFFF`). */
@@ -162,6 +168,9 @@ utf8DecodeInternal := fn(bytes: List<Int>, strict: Bool): (ok: Bool, text: Strin
         if b < 0 or b > BYTE_MAX {
             if strict {
                 return (ok = false, text = "", error = "byte value outside 0..255: " + b.toText());
+            }
+            if needed > 0 {
+                mut points.pushBack(UNICODE_REPLACEMENT_CHAR);
             }
             codePoint = 0;
             needed = 0;
@@ -359,6 +368,16 @@ mapAsciiCodePointRange := fn(source: String, lo: Int, hi: Int, delta: Int): Stri
 };
 
 /* --- Public String text & lexical operations --- */
+
+/** Returns `value` unchanged as a `String`. */
+pub String.toText := fn(value: Self): String {
+    value
+};
+
+/** Formats one `Bool` as `"true"` or `"false"`. */
+pub Bool.toText := fn(value: Self): String {
+    if value { "true" } else { "false" }
+};
 
 /** True when `source` has zero Unicode scalars. */
 pub String.isEmpty := fn(source: Self): Bool {
@@ -587,8 +606,8 @@ pub String.toUpperAscii := fn(source: Self): String {
 
 ASCII_CMP_ORDER := "\t\n\r !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
-/** Lexicographical Unicode code-point comparison (`a <= b`), with a fast ASCII path. */
-pub String.lessOrEqual := fn(a: Self, b: String): Bool {
+/** Lexicographical Unicode code-point three-way comparison (`-1`, `0`, or `1`), with a fast ASCII path. */
+pub String.compare := fn(a: Self, b: String): Int {
     la := a.length();
     lb := b.length();
     limit := if la < lb { la } else { lb };
@@ -599,24 +618,53 @@ pub String.lessOrEqual := fn(a: Self, b: String): Bool {
         if ca =!= cb {
             oa := ASCII_CMP_ORDER.indexOf(ca, 0);
             ob := ASCII_CMP_ORDER.indexOf(cb, 0);
-            if oa >= 0 and ob >= 0 { return oa <= ob; }
-            return ca.codePointAt(0) <= cb.codePointAt(0);
+            if oa >= 0 and ob >= 0 {
+                return if oa < ob { -1 } else { 1 };
+            }
+            pa := ca.codePointAt(0);
+            pb := cb.codePointAt(0);
+            return if pa < pb { -1 } else { 1 };
         }
         i += 1;
     }
-    la <= lb
+    if la < lb { -1 } else if la > lb { 1 } else { 0 }
+};
+
+/** Lexicographical Unicode code-point comparison (`a <= b`), with a fast ASCII path. */
+pub String.lessOrEqual := fn(a: Self, b: String): Bool {
+    a.compare(b) <= 0
+};
+
+/** Returns `value` left-padded with `fill` up to `width` scalars, or unchanged when already at least `width` (or `fill` is empty). */
+pub String.padLeftWith := fn(value: Self, width: Int, fill: String): String {
+    len := value.length();
+    fillLen := fill.length();
+    if len >= width or fillLen == 0 { return value; }
+    need := width - len;
+    reps := (need + fillLen - 1) / fillLen;
+    pad := fill.repeat(reps);
+    if pad.length() > need { pad.slice(0, need) + value } else { pad + value }
+};
+
+/** Returns `value` right-padded with `fill` up to `width` scalars, or unchanged when already at least `width` (or `fill` is empty). */
+pub String.padRightWith := fn(value: Self, width: Int, fill: String): String {
+    len := value.length();
+    fillLen := fill.length();
+    if len >= width or fillLen == 0 { return value; }
+    need := width - len;
+    reps := (need + fillLen - 1) / fillLen;
+    pad := fill.repeat(reps);
+    if pad.length() > need { value + pad.slice(0, need) } else { value + pad }
 };
 
 /** Returns `value` left-padded with spaces up to `width` scalars, or unchanged when already at least `width`. */
 pub String.padLeft := fn(value: Self, width: Int): String {
-    len := value.length();
-    if len >= width { value } else { " ".repeat(width - len) + value }
+    value.padLeftWith(width, " ")
 };
 
 /** Returns `value` right-padded with spaces up to `width` scalars, or unchanged when already at least `width`. */
 pub String.padRight := fn(value: Self, width: Int): String {
-    len := value.length();
-    if len >= width { value } else { value + " ".repeat(width - len) }
+    value.padRightWith(width, " ")
 };
 
 /** Splits `source` on every non-overlapping occurrence of `divider`. When `divider` is empty, splits into Unicode scalars. */
