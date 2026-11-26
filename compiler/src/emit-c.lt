@@ -419,6 +419,14 @@ isCLocalDeclKind := fn(kind: String): Bool {
     kind == frontend.ITEM_KIND_LOCAL_FN or kind == frontend.ITEM_KIND_VAR_FN
 };
 
+/** True when `item.kind` assigns an existing local/mutable variable. */
+isCAssignKind := fn(kind: String): Bool {
+    kind == frontend.ITEM_KIND_ASSIGN_INT or kind == frontend.ITEM_KIND_ASSIGN_STRING or
+    kind == frontend.ITEM_KIND_ASSIGN_BOOL or kind == frontend.ITEM_KIND_ASSIGN_FLOAT or
+    kind == frontend.ITEM_KIND_ASSIGN_RECORD or kind == frontend.ITEM_KIND_ASSIGN_TUPLE or
+    kind == frontend.ITEM_KIND_ASSIGN_LIST or kind == frontend.ITEM_KIND_ASSIGN_FN
+};
+
 /** Skips a balanced CFN_START ... CFN_END hoisted-closure block starting at `start` in `code`. */
 skipCFnBlock := fn(code: String, start: Int): Int {
     size := code.length();
@@ -1794,22 +1802,29 @@ emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: Strin
     usesBounds := usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or
     usesAnyListBounds(calls);
     if not usesArith and not usesBounds { return; }
+    outLine("#if defined(__GNUC__) || defined(__clang__)");
+    outLine("#define LT_UNLIKELY(x) __builtin_expect(!!(x), 0)");
+    outLine("#define LT_COLD __attribute__((cold))");
+    outLine("#else");
+    outLine("#define LT_UNLIKELY(x) (x)");
+    outLine("#define LT_COLD");
+    outLine("#endif");
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     outLine("static const size_t lt_int_lines[] = {" + frontend.lineStartCodes(source) + "};");
     outLine("static const char *lt_int_source = " + cLiteral.textLiteralCode(namePrefix) + ";");
     if usesBounds {
-        outLine("static _Noreturn void lt_fault(const char *category, size_t at, const char *message) {");
+        outLine("static LT_COLD _Noreturn void lt_fault(const char *category, size_t at, const char *message) {");
         outLine("    size_t line = 0;");
         outLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
         outLine("    fprintf(stderr, \"%s%zu:%zu: %s: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, category, message);");
         outLine("    exit(1);");
         outLine("}");
-        outLine("static _Noreturn void lt_bound_fault(size_t at, const char *message) { lt_fault(\"BoundPanic\", at, message); }");
+        outLine("static LT_COLD _Noreturn void lt_bound_fault(size_t at, const char *message) { lt_fault(\"BoundPanic\", at, message); }");
         if usesArith {
-            outLine("static _Noreturn void lt_int_fault(size_t at, const char *message) { lt_fault(\"ArithmeticPanic\", at, message); }");
+            outLine("static LT_COLD _Noreturn void lt_int_fault(size_t at, const char *message) { lt_fault(\"ArithmeticPanic\", at, message); }");
         }
     } else {
-        outLine("static _Noreturn void lt_int_fault(size_t at, const char *message) {");
+        outLine("static LT_COLD _Noreturn void lt_int_fault(size_t at, const char *message) {");
         outLine("    size_t line = 0;");
         outLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
         outLine("    fprintf(stderr, \"%s%zu:%zu: ArithmeticPanic: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, message);");
@@ -1817,19 +1832,36 @@ emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: Strin
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_add(") {
-        outLine("static int64_t lt_checked_add(int64_t left, int64_t right, size_t at) {");
+        outLine("LT_INLINE int64_t lt_checked_add(int64_t left, int64_t right, size_t at) {");
+        outLine("#if defined(__GNUC__) || defined(__clang__)");
+        outLine("    int64_t out = 0;");
+        outLine("    if (LT_UNLIKELY(__builtin_add_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside Int range\"); }");
+        outLine("    return out;");
+        outLine("#else");
         outLine("    if ((right > 0 && left > INT64_MAX - right) || (right < 0 && left < INT64_MIN - right)) { lt_int_fault(at, \"integer outside Int range\"); }");
         outLine("    return left + right;");
+        outLine("#endif");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_subtract(") {
-        outLine("static int64_t lt_checked_subtract(int64_t left, int64_t right, size_t at) {");
+        outLine("LT_INLINE int64_t lt_checked_subtract(int64_t left, int64_t right, size_t at) {");
+        outLine("#if defined(__GNUC__) || defined(__clang__)");
+        outLine("    int64_t out = 0;");
+        outLine("    if (LT_UNLIKELY(__builtin_sub_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside Int range\"); }");
+        outLine("    return out;");
+        outLine("#else");
         outLine("    if ((right < 0 && left > INT64_MAX + right) || (right > 0 && left < INT64_MIN + right)) { lt_int_fault(at, \"integer outside Int range\"); }");
         outLine("    return left - right;");
+        outLine("#endif");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_multiply(") {
-        outLine("static int64_t lt_checked_multiply(int64_t left, int64_t right, size_t at) {");
+        outLine("LT_INLINE int64_t lt_checked_multiply(int64_t left, int64_t right, size_t at) {");
+        outLine("#if defined(__GNUC__) || defined(__clang__)");
+        outLine("    int64_t out = 0;");
+        outLine("    if (LT_UNLIKELY(__builtin_mul_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside Int range\"); }");
+        outLine("    return out;");
+        outLine("#else");
         outLine("    if (left == 0 || right == 0) { return 0; }");
         outLine("    if (left > 0) {");
         outLine("        if (right > 0) { if (left > INT64_MAX / right) { lt_int_fault(at, \"integer outside Int range\"); } }");
@@ -1838,18 +1870,19 @@ emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: Strin
         outLine("        if (left < INT64_MIN / right) { lt_int_fault(at, \"integer outside Int range\"); }");
         outLine("    } else if (right < INT64_MAX / left) { lt_int_fault(at, \"integer outside Int range\"); }");
         outLine("    return left * right;");
+        outLine("#endif");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_negate(") {
-        outLine("static int64_t lt_checked_negate(int64_t value, size_t at) {");
-        outLine("    if (value == INT64_MIN) { lt_int_fault(at, \"integer outside Int range\"); }");
+        outLine("LT_INLINE int64_t lt_checked_negate(int64_t value, size_t at) {");
+        outLine("    if (LT_UNLIKELY(value == INT64_MIN)) { lt_int_fault(at, \"integer outside Int range\"); }");
         outLine("    return -value;");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_narrow_int(") {
-        outLine("static int64_t lt_checked_narrow_int(int64_t value, int bits, const char *name, size_t at) {");
+        outLine("LT_INLINE int64_t lt_checked_narrow_int(int64_t value, int bits, const char *name, size_t at) {");
         outLine("    const int64_t limit = INT64_C(1) << (bits - 1);");
-        outLine("    if (value < -limit || value >= limit) {");
+        outLine("    if (LT_UNLIKELY(value < -limit || value >= limit)) {");
         outLine("        char message[64];");
         outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
         outLine("        lt_int_fault(at, message);");
@@ -2050,9 +2083,9 @@ usesStringConcat := fn(calls: Set<String>): Bool {
 
 /** Emits positioned portable division, guarding undefined C arithmetic. */
 emitIntDivideHelper := fn(): Unit {
-    outLine("static int64_t lite_divide_int(int64_t left, int64_t right, size_t at) {");
-    outLine("    if (right == 0) { lt_int_fault(at, \"division by zero\"); }");
-    outLine("    if (left == INT64_MIN && right == -1) { lt_int_fault(at, \"integer outside Int range\"); }");
+    outLine("LT_INLINE int64_t lite_divide_int(int64_t left, int64_t right, size_t at) {");
+    outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"division by zero\"); }");
+    outLine("    if (LT_UNLIKELY(left == INT64_MIN && right == -1)) { lt_int_fault(at, \"integer outside Int range\"); }");
     outLine("    return left / right;");
     outLine("}");
     outLine("");
@@ -2060,9 +2093,9 @@ emitIntDivideHelper := fn(): Unit {
 
 /** Emits positioned remainder, returning zero before C MIN%-1 would be undefined. */
 emitIntRemainderHelper := fn(): Unit {
-    outLine("static int64_t lite_remainder_int(int64_t left, int64_t right, size_t at) {");
-    outLine("    if (right == 0) { lt_int_fault(at, \"remainder by zero\"); }");
-    outLine("    if (left == INT64_MIN && right == -1) { return 0; }");
+    outLine("LT_INLINE int64_t lite_remainder_int(int64_t left, int64_t right, size_t at) {");
+    outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"remainder by zero\"); }");
+    outLine("    if (LT_UNLIKELY(left == INT64_MIN && right == -1)) { return 0; }");
     outLine("    return left % right;");
     outLine("}");
     outLine("");
@@ -2070,7 +2103,7 @@ emitIntRemainderHelper := fn(): Unit {
 
 /** Emits positioned portable floor division, evaluating its operands once. */
 emitIntFloorDivideHelper := fn(): Unit {
-    outLine("static int64_t lite_floor_divide_int(int64_t left, int64_t right, size_t at) {");
+    outLine("LT_INLINE int64_t lite_floor_divide_int(int64_t left, int64_t right, size_t at) {");
     outLine("    const int64_t quotient = lite_divide_int(left, right, at);");
     outLine("    const int64_t remainder = left % right;");
     outLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? quotient - 1 : quotient;");
@@ -2080,9 +2113,9 @@ emitIntFloorDivideHelper := fn(): Unit {
 
 /** Emits positioned floor modulo with a defined signed-minimum path. */
 emitIntFloorModuloHelper := fn(): Unit {
-    outLine("static int64_t lite_floor_modulo_int(int64_t left, int64_t right, size_t at) {");
-    outLine("    if (right == 0) { lt_int_fault(at, \"modulo by zero\"); }");
-    outLine("    if (left == INT64_MIN && right == -1) { return 0; }");
+    outLine("LT_INLINE int64_t lite_floor_modulo_int(int64_t left, int64_t right, size_t at) {");
+    outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"modulo by zero\"); }");
+    outLine("    if (LT_UNLIKELY(left == INT64_MIN && right == -1)) { return 0; }");
     outLine("    const int64_t remainder = left % right;");
     outLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;");
     outLine("}");
@@ -2204,8 +2237,64 @@ tryUnwrapDirectCLoopBinding := fn(cTypePrefix: String, targetName: String, isHoi
     (ok = true, =declLine, =loopLine)
 };
 
+/** True when `s[start..end)` is a non-empty ASCII decimal digit run. */
+isCAsciiDigits := fn(s: String, start: Int, end: Int): Bool {
+    if end <= start { return false; }
+    var i := start;
+    loop i < end {
+        if not s.at(i).isDigit() { return false; }
+        i += 1;
+    }
+    true
+};
+
+/** True when `code` is a pure C11 compile-time Int64 constant expression (`INT64_C(...)`, `(-INT64_C(...))`, `INT64_MIN`, digits). */
+isCStaticConstIntCode := fn(code: String): Bool {
+    n := code.length();
+    if code == "INT64_MIN" or code == "INT64_MAX" { return true; }
+    if code.startsWithAt(0, "INT64_C(") and code.endsWith(")") {
+        return isCAsciiDigits(code, 8, n - 1);
+    }
+    if code.startsWithAt(0, "(-INT64_C(") and code.endsWith("))") {
+        return isCAsciiDigits(code, 10, n - 2);
+    }
+    if code.startsWithAt(0, "-") {
+        return isCAsciiDigits(code, 1, n);
+    }
+    isCAsciiDigits(code, 0, n)
+};
+
+/** True when `code` is a pure C11 `LT_STR_LIT("...", N)` or `LT_ASTR("...")` constant expression. */
+isCStaticConstStrCode := fn(code: String): Bool {
+    n := code.length();
+    if code.startsWithAt(0, "LT_STR_LIT(\"") and code.endsWith(")") {
+        strEnd := frontend.skipAliasString(code, 11);
+        if strEnd >= n or not code.startsWithAt(strEnd, ", ") { return false; }
+        return isCAsciiDigits(code, strEnd + 2, n - 1);
+    }
+    if code.startsWithAt(0, "LT_ASTR(\"") and code.endsWith(")") {
+        strEnd := frontend.skipAliasString(code, 8);
+        return strEnd == n - 1;
+    }
+    false
+};
+
+/** True when top-level immutable binding `(kind, code)` can be emitted as a file-scope `static const` C11 constant. */
+isCStaticConstScalarInit := fn(kind: String, code: String): Bool {
+    if kind == frontend.ITEM_KIND_LOCAL_BOOL {
+        return code == "true" or code == "false";
+    }
+    if kind == frontend.ITEM_KIND_LOCAL_INT {
+        return isCStaticConstIntCode(code);
+    }
+    if kind == frontend.ITEM_KIND_LOCAL_STRING {
+        return isCStaticConstStrCode(code);
+    }
+    false
+};
+
 /** Emits statements for one C function body (`fnResult != ""`) or `main` (`fnResult == ""`). */
-emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuckets, fnResult: String, failAction: String): Unit {
+emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuckets, constHoistedGlobals: frontend.TokenBuckets, fnResult: String, failAction: String): Unit {
     var indent := "    ";
     var blockDepth := 0;
     var count := 0;
@@ -2272,12 +2361,14 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                     outLine(indent + "{ " + blkBody + " " + item.runtime + " = " + retVar + "; }");
                 }
             } else if fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
-                outLine(indent + item.runtime + " = " + code + ";");
+                if not frontend.tokenBucketHas(constHoistedGlobals, item.runtime) {
+                    outLine(indent + item.runtime + " = " + code + ";");
+                }
             } else {
                 outLine(indent + cDeclTypeItem(item) + item.runtime + " = " + code + ";");
             }
             outLine(indent + "(void)" + item.runtime + ";");
-        } else if item.kind == frontend.ITEM_KIND_ASSIGN_INT or item.kind == frontend.ITEM_KIND_ASSIGN_STRING or item.kind == frontend.ITEM_KIND_ASSIGN_BOOL or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
+        } else if isCAssignKind(item.kind) {
             if code.startsWithAt(0, "/*@CBLK:") {
                 endHdr := code.indexOf("@*/", 8);
                 retVar := code.slice(8, endHdr);
@@ -2500,7 +2591,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
 };
 
 /** Emits one C11 function definition starting at `FUNCTION_START` index `startIndex` and returns the index after `FUNCTION_END`. */
-emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, hoistedGlobals: frontend.TokenBuckets): Int {
+emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, hoistedGlobals: frontend.TokenBuckets, constHoistedGlobals: frontend.TokenBuckets): Int {
     fnItem := reachable[startIndex];
     fnItems: mut frontend.Items = [];
     var idx := startIndex + 1;
@@ -2521,7 +2612,7 @@ emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, h
     outLine("static " + cScalarType(fnItem.code) + " " + fnItem.runtime + "(" + cParameterList(fnItem.textValue) + ") {");
     emitCParameterReads(fnItem.textValue);
     emitArithmeticTemporaries(fnItems);
-    emitCItemStream(fnItems, hoistedGlobals, fnItem.code, "lt_io_status = 1;");
+    emitCItemStream(fnItems, hoistedGlobals, constHoistedGlobals, fnItem.code, "lt_io_status = 1;");
     outLine("}");
     outLine("");
     idx
@@ -6084,8 +6175,15 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     emitCSoftBuiltinHelpers(calls);
     emitCExtraCanvasHelpers(calls);
     hoistedGlobals: mut Set<String>;
+    constHoistedGlobals: mut Set<String>;
+    mutatedGlobals: mut Set<String>;
     if hasFunctions {
         if hasFnOutput { outLine("static int lt_io_status = 0;"); }
+        loop reachable as mItem {
+            if isCAssignKind(mItem.kind) and mItem.runtime =!= "" {
+                mut mutatedGlobals.add(mItem.runtime);
+            }
+        }
         var scanDepth := 0;
         var scanBlocks := 0;
         loop reachable as item {
@@ -6101,7 +6199,13 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 } else if scanBlocks == 0 and isCLocalDeclKind(item.kind) and frontend.tokenBucketHas(fnRefTokens, item.runtime) and
                 not hoistedGlobals.has(item.runtime) {
                     mut hoistedGlobals.add(item.runtime);
-                    outLine("static " + cDeclTypeItem(item) + item.runtime + ";");
+                    normInit := normalizeCBuiltinCalls(item.code);
+                    if not mutatedGlobals.has(item.runtime) and isCStaticConstScalarInit(item.kind, normInit) {
+                        mut constHoistedGlobals.add(item.runtime);
+                        outLine("static const " + cDeclTypeItem(item) + item.runtime + " = " + normInit + ";");
+                    } else {
+                        outLine("static " + cDeclTypeItem(item) + item.runtime + ";");
+                    }
                 }
             }
         }
@@ -6131,7 +6235,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                     }
                     cEmit = cEmit + 1;
                 }
-                fnIdx = emitOneCFunction(reachable, fnIdx, totalItems, hoistedGlobals);
+                fnIdx = emitOneCFunction(reachable, fnIdx, totalItems, hoistedGlobals, constHoistedGlobals);
             } else {
                 fnIdx = fnIdx + 1;
             }
@@ -6183,7 +6287,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("    int status = 0;");
     }
     emitArithmeticTemporaries(mainItems);
-    emitCItemStream(mainItems, hoistedGlobals, "", if hasMainOutput { "status = 1;" } else { "" });
+    emitCItemStream(mainItems, hoistedGlobals, constHoistedGlobals, "", if hasMainOutput { "status = 1;" } else { "" });
     if hasMainOutput and hasFnOutput {
         outLine("    return status ? status : lt_io_status;");
     } else if hasMainOutput {
