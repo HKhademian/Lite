@@ -7339,22 +7339,26 @@ pub emitHookIndexAssignCode := fn(target: String, source: String, opPos: Int, pr
         vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
         return setRuntime + "(&" + entry.runtime + ", " + keyCode + ", " + vCode + ")";
     }
-    isRec := types.isRecordKind(entry.kind);
+    isRec := types.isRecordOrDistinctRecord(entry.kind);
     alreadyBoxed := isRec and entry.runtime.endsWith(".v");
     boxExpr := if alreadyBoxed { entry.runtime.slice(0, entry.runtime.length() - 2) } else { "" };
+    tsRecType := if isRec and not alreadyBoxed { types.tsFunctionType(entry.kind) } else { "" };
+    liveBox := if isRec and not alreadyBoxed {
+        "const lite$ib: { v: " + tsRecType + " } = { get v(): " + tsRecType + " { return " + entry.runtime + "; }, set v(lite$nv: " + tsRecType + ") { " + entry.runtime + " = lite$nv; } };"
+    } else { "" };
     if isCompound {
         tsKeyType := types.tsFunctionType(keyKind);
         curRead := getRuntime + "(" + entry.runtime + ", lite$ck)";
         nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, valKind, "lite$cv", compBaseOp, valParsed);
         if isRec and not alreadyBoxed {
-            return "(() => { const lite$ck: " + tsKeyType + " = " + keyCode + "; const lite$cv = " + curRead + "; const lite$ib = { v: " + entry.runtime + " }; " + setRuntime + "(lite$ib, lite$ck, " + nextVal + "); " + entry.runtime + " = lite$ib.v; })()";
+            return "(() => { const lite$ck: " + tsKeyType + " = " + keyCode + "; const lite$cv = " + curRead + "; " + liveBox + " " + setRuntime + "(lite$ib, lite$ck, " + nextVal + "); })()";
         }
         recvArg := if alreadyBoxed { boxExpr } else { entry.runtime };
         return "(() => { const lite$ck: " + tsKeyType + " = " + keyCode + "; const lite$cv = " + curRead + "; " + setRuntime + "(" + recvArg + ", lite$ck, " + nextVal + "); })()";
     }
     vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
     if isRec and not alreadyBoxed {
-        return "(() => { const lite$ib = { v: " + entry.runtime + " }; " + setRuntime + "(lite$ib, " + keyCode + ", " + vCode + "); " + entry.runtime + " = lite$ib.v; })()";
+        return "(() => { " + liveBox + " " + setRuntime + "(lite$ib, " + keyCode + ", " + vCode + "); })()";
     }
     recvArg := if alreadyBoxed { boxExpr } else { entry.runtime };
     setRuntime + "(" + recvArg + ", " + keyCode + ", " + vCode + ")"
@@ -7455,8 +7459,8 @@ tsFieldWritebackStmt := fn(rootRt: String, fieldPathCsv: String, valueExpr: Stri
     rootRt + " = " + acc + ";"
 };
 
-/** Parses user, type-operation, and indirect function calls with positional, named, and `=name` shorthand arguments, plus optional prepended receiver, generic unification/monomorphization, and TS `mut Record` COW writeback. */
-parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, hasRecv: Bool, recvCode: String, recvWritebackLocal: String, recvWritebackBox: String, recvWritebackStmt: String, recvRootRuntime: String, initGenBindings: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+/** Parses user, type-operation, and indirect function calls with positional, named, and `=name` shorthand arguments, plus optional prepended receiver, generic unification/monomorphization, and TS `mut Record` live accessor boxes. */
+parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, hasRecv: Bool, recvCode: String, recvWritebackLocal: String, recvWritebackBox: String, recvWritebackStmt: String, recvWritebackKind: String, recvRootRuntime: String, initGenBindings: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     size := source.length();
     isGenericCall := isModuleFn and callRuntime.startsWithAt(0, "$gen:");
     genTplKey := if isGenericCall { callRuntime.slice(5, callRuntime.length()) } else { "" };
@@ -7505,6 +7509,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     mutRecBoxNames: mut List<String> = [];
     mutRecLocalRuntimes: mut List<String> = [];
     mutRecWritebackStmts: mut List<String> = [];
+    mutRecKinds: mut List<String> = [];
     mutArgRuntimes: mut List<String> = [];
     if hasRecv and callFirst > 0 and types.paramKindOf(callParams[callFirst - 1]).startsWithAt(0, "mut ") {
         if recvRootRuntime =!= "" {
@@ -7526,6 +7531,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         mut mutRecBoxNames.pushBack(recvWritebackBox);
         mut mutRecLocalRuntimes.pushBack(recvWritebackLocal);
         mut mutRecWritebackStmts.pushBack(recvWritebackStmt);
+        mut mutRecKinds.pushBack(recvWritebackKind);
     }
     var entryCount := 0;
     var cursor := syntax.skipTrivia(source, openParen + 1, prefix);
@@ -7634,6 +7640,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 mut mutRecBoxNames.pushBack(boxName);
                                 mut mutRecLocalRuntimes.pushBack(mEntry.runtime);
                                 mut mutRecWritebackStmts.pushBack("");
+                                mut mutRecKinds.pushBack(mEntry.kind);
                                 mCode = boxName;
                             }
                         }
@@ -7722,6 +7729,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 mut mutRecBoxNames.pushBack(boxName);
                                 mut mutRecLocalRuntimes.pushBack(mEntry.runtime);
                                 mut mutRecWritebackStmts.pushBack("");
+                                mut mutRecKinds.pushBack(mEntry.kind);
                                 mCode = boxName;
                             }
                         }
@@ -7968,23 +7976,25 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             emittedCode = "(() => { " + evalStmts.join(" ") + " " + retStmt + " })()";
         }
     }
-    if target == ir.TARGET_TS and mutRecBoxNames.length() > 0 and emittedResultKind =!= ir.VALUE_KIND_NEVER {
+    if target == ir.TARGET_TS and mutRecBoxNames.length() > 0 {
         wbSetup: mut List<String> = [];
-        wbAssign: mut List<String> = [];
         var bi := 0;
         bCount := mutRecBoxNames.length();
         loop bi < bCount {
             bName := mutRecBoxNames[bi];
             bLoc := mutRecLocalRuntimes[bi];
+            bTsType := types.tsFunctionType(mutRecKinds[bi]);
             wbStmt := mutRecWritebackStmts[bi];
-            mut wbSetup.pushBack("const " + bName + " = { v: " + bLoc + " };");
-            mut wbAssign.pushBack(if wbStmt =!= "" { wbStmt } else { bLoc + " = " + bName + ".v;" });
+            setBody := if wbStmt =!= "" { wbStmt } else { bLoc + " = lite$nv;" };
+            mut wbSetup.pushBack("const " + bName + ": { v: " + bTsType + " } = { get v(): " + bTsType + " { return " + bLoc + "; }, set v(lite$nv: " + bTsType + ") { " + setBody + " } };");
             bi = bi + 1;
         }
-        if emittedResultKind == ir.VALUE_KIND_UNIT {
-            emittedCode = "(() => { " + wbSetup.join(" ") + " void (" + emittedCode + "); " + wbAssign.join(" ") + " return undefined; })()";
+        if emittedResultKind == ir.VALUE_KIND_NEVER {
+            emittedCode = "(((): never => { " + wbSetup.join(" ") + " return " + emittedCode + "; })())";
+        } else if emittedResultKind == ir.VALUE_KIND_UNIT {
+            emittedCode = "(() => { " + wbSetup.join(" ") + " void (" + emittedCode + "); return undefined; })()";
         } else {
-            emittedCode = "(((): " + types.tsFunctionType(emittedResultKind) + " => { " + wbSetup.join(" ") + " const lite$mr = " + emittedCode + "; " + wbAssign.join(" ") + " return lite$mr; })())";
+            emittedCode = "(((): " + types.tsFunctionType(emittedResultKind) + " => { " + wbSetup.join(" ") + " return " + emittedCode + "; })())";
         }
     }
     ctx.withMarkers((kind = emittedResultKind, code = emittedCode, intValue = 0, textValue = "", constant = false, next = cursor), callMarkers)
@@ -7992,7 +8002,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
 
 /** Parses user and indirect function calls with positional, named, and `=name` shorthand arguments. */
 parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
-    parseUserOrIndirectCallWithRecv(target, source, openParen, errPos, isModuleFn, calleeDisplay, callRuntime, callParams, callFirst, callCount, callResult, false, "", "", "", "", "", "", callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
+    parseUserOrIndirectCallWithRecv(target, source, openParen, errPos, isModuleFn, calleeDisplay, callRuntime, callParams, callFirst, callCount, callResult, false, "", "", "", "", "", "", "", callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
 };
 
 /** Parses and lowers a hard-builtin type-attached dot call (`List.*`, `Array.*`, `Map.*`, `Set.*`, `String.length/at/slice`). */
@@ -8411,6 +8421,7 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
     var recvWritebackLocal := "";
     var recvWritebackBox := "";
     var recvWritebackStmt := "";
+    var recvWritebackKind := "";
     var recvRootRt := "";
     if isMutRecv {
         if recvLocalIdx < 0 or not locals[recvLocalIdx].writable {
@@ -8424,13 +8435,15 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
             if recvFieldPath =!= "" {
                 recvWritebackBox = "lite$mb_recv";
                 recvWritebackLocal = receiver.code;
-                recvWritebackStmt = tsFieldWritebackStmt(locEntry.runtime, recvFieldPath, recvWritebackBox + ".v");
+                recvWritebackStmt = tsFieldWritebackStmt(locEntry.runtime, recvFieldPath, "lite$nv");
+                recvWritebackKind = receiver.kind;
                 recvCode = recvWritebackBox;
             } else if locEntry.runtime.endsWith(".v") {
                 recvCode = locEntry.runtime.slice(0, locEntry.runtime.length() - 2);
             } else {
                 recvWritebackBox = "lite$mb_recv";
                 recvWritebackLocal = locEntry.runtime;
+                recvWritebackKind = receiver.kind;
                 recvCode = recvWritebackBox;
             }
         } else {
@@ -8452,7 +8465,7 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
         recvCode = ctx.readOnlyArgWithSnapshot(target, concreteRecvExpected, receiver.kind, receiver.code, recvNeedsSnap);
     }
     calleeDisp := types.displayKind(receiver.kind) + "." + opLabel;
-    callRes := parseUserOrIndirectCallWithRecv(target, source, openParen, labelStart, true, calleeDisp, info.runtime, params, info.first + 1, info.count - 1, info.result, true, recvCode, recvWritebackLocal, recvWritebackBox, recvWritebackStmt, recvRootRt, initGenBindings, callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+    callRes := parseUserOrIndirectCallWithRecv(target, source, openParen, labelStart, true, calleeDisp, info.runtime, params, info.first + 1, info.count - 1, info.result, true, recvCode, recvWritebackLocal, recvWritebackBox, recvWritebackStmt, recvWritebackKind, recvRootRt, initGenBindings, callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     if inferMode {
         return ctx.withMarkers(callRes, ctx.collectParsedMarkers(ctx.collectParsedMarkers("", receiver), callRes));
     }
@@ -9135,7 +9148,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     }
                     explicitBindingsEnc := generics.encodePartialBindings(tpl.genericParams, expMap);
                     left = parseUserOrIndirectCallWithRecv(target, source, callOpenParen, errPos, true, calleeDisplay, info.runtime,
-                    params, info.first, info.count, info.result, false, "", "", "", "", "", explicitBindingsEnc, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                    params, info.first, info.count, info.result, false, "", "", "", "", "", "", explicitBindingsEnc, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else if postPosition >= source.length() or source.at(postPosition) =!= "(" {
                     if info.runtime.startsWithAt(0, "$gen:") {
                         syntax.failAt(source, errPos, prefix, "cannot use generic function " + calleeDisplay + " as a value without calling it");
@@ -9254,7 +9267,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
             if handleUserCall {
                 if preGenBindings =!= "" {
                     left = parseUserOrIndirectCallWithRecv(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
-                    callParams, callFirst, callCount, callResult, false, "", "", "", "", "", preGenBindings, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                    callParams, callFirst, callCount, callResult, false, "", "", "", "", "", "", preGenBindings, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else {
                     left = parseUserOrIndirectCall(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
                     callParams, callFirst, callCount, callResult, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);

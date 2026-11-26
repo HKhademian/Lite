@@ -191,4 +191,23 @@ expectRejectBoth("setIndex-non-unit-return-rejected",
 "P.$setIndex := fn(p: mut Self, i: Int, v: Int): Int { v };\n",
 "$setIndex on P must return Unit");
 
+setIdxPanicSrc :=
+"io := import \"core/io\";\n" +
+"Pair := record { a: Int; }\n" +
+"Pair.$setIndex := fn(p: mut Self, i: Int, v: Int): Unit {\n" +
+"    p.a = v;\n" +
+"    _q := 10 / i;\n" +
+"};\n" +
+"mut pair := Pair { a = 10 };\n" +
+"snap := pair;\n" +
+"{\n" +
+"    pair[0] = 99;\n" +
+"} finally {\n" +
+"    io.outputLine(\"idx-finally\", pair.a, snap.a);\n" +
+"}\n";
+setIdxPanicRun := compilerTest.compileCheckRunTs(root, tsComp, setIdxPanicSrc, "");
+test.checkInt("setIndex panic status", 1, setIdxPanicRun.status);
+test.checkText("setIndex panic stdout", "idx-finally 99 10\n", setIdxPanicRun.stdout);
+test.check("setIndex panic stderr", setIdxPanicRun.stderr.contains("ArithmeticPanic: division by zero"));
+
 test.done("index-operator-hooks");

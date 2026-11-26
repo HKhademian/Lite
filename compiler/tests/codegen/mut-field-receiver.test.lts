@@ -121,4 +121,119 @@ badFieldSrc :=
 compilerTest.assertCompileErrorContains(root, tsComp, "missing field on mut path (ts)", badFieldSrc, "type Box has no field nope");
 compilerTest.assertCompileErrorContains(root, cComp, "missing field on mut path (c)", badFieldSrc, "type Box has no field nope");
 
+/* Completed writes through `mut` record grants remain visible during panic unwinds, callbacks, and Never calls */
+cellDecl :=
+"io := import \"core/io\";\n" +
+"Cell := record { step: Int; };\n" +
+"Cell.advance := fn(c: mut Self, d: Int): Int {\n" +
+"    c.step += 1;\n" +
+"    10 / d\n" +
+"};\n" +
+"Cell.advanceWithHook := fn(c: mut Self, hook: fn(): Unit): Unit {\n" +
+"    c.step += 1;\n" +
+"    hook();\n" +
+"};\n" +
+"Cell.failAfterBump := fn(c: mut Self): Unit {\n" +
+"    c.step += 1;\n" +
+"    io.exit(7);\n" +
+"};\n" +
+"Board := record { cell: Cell; };\n" +
+"Board.advanceCell := fn(b: mut Self, d: Int): Int {\n" +
+"    mut b.cell.advance(d)\n" +
+"};\n" +
+"bumpAndPanic := fn(c: mut Cell, d: Int): Int {\n" +
+"    c.step += 1;\n" +
+"    10 / d\n" +
+"};\n";
+
+reproSrc := cellDecl +
+"mut board := Board { cell = Cell { step = 4 } };\n" +
+"snap := board;\n" +
+"{\n" +
+"    _v := mut board.cell.advance(0);\n" +
+"} finally {\n" +
+"    io.outputLine(\"finally\", board.cell.step, snap.cell.step);\n" +
+"}\n";
+reproRun := compilerTest.compileCheckRunTs(root, tsComp, reproSrc, "");
+test.checkInt("mut-field panic repro status", 1, reproRun.status);
+test.checkText("mut-field panic repro stdout", "finally 5 4\n", reproRun.stdout);
+test.check("mut-field panic repro stderr", reproRun.stderr.contains("ArithmeticPanic: division by zero"));
+
+fwdSrc := cellDecl +
+"mut board := Board { cell = Cell { step = 4 } };\n" +
+"{\n" +
+"    _v := mut board.advanceCell(0);\n" +
+"} finally {\n" +
+"    io.outputLine(\"fwd-finally\", board.cell.step);\n" +
+"}\n";
+fwdRun := compilerTest.compileCheckRunTs(root, tsComp, fwdSrc, "");
+test.checkInt("mut-field forwarded panic status", 1, fwdRun.status);
+test.checkText("mut-field forwarded panic stdout", "fwd-finally 5\n", fwdRun.stdout);
+test.check("mut-field forwarded panic stderr", fwdRun.stderr.contains("ArithmeticPanic: division by zero"));
+
+directRecvSrc := cellDecl +
+"mut c := Cell { step = 4 };\n" +
+"{\n" +
+"    _v := mut c.advance(0);\n" +
+"} finally {\n" +
+"    io.outputLine(\"direct-finally\", c.step);\n" +
+"}\n";
+directRun := compilerTest.compileCheckRunTs(root, tsComp, directRecvSrc, "");
+test.checkInt("mut-local receiver panic status", 1, directRun.status);
+test.checkText("mut-local receiver panic stdout", "direct-finally 5\n", directRun.stdout);
+test.check("mut-local receiver panic stderr", directRun.stderr.contains("ArithmeticPanic: division by zero"));
+
+posArgSrc := cellDecl +
+"mut c := Cell { step = 4 };\n" +
+"{\n" +
+"    _v := bumpAndPanic(mut c, 0);\n" +
+"} finally {\n" +
+"    io.outputLine(\"pos-finally\", c.step);\n" +
+"}\n";
+posRun := compilerTest.compileCheckRunTs(root, tsComp, posArgSrc, "");
+test.checkInt("mut-pos arg panic status", 1, posRun.status);
+test.checkText("mut-pos arg panic stdout", "pos-finally 5\n", posRun.stdout);
+test.check("mut-pos arg panic stderr", posRun.stderr.contains("ArithmeticPanic: division by zero"));
+
+namedArgSrc := cellDecl +
+"mut c := Cell { step = 4 };\n" +
+"{\n" +
+"    _v := bumpAndPanic(d = 0, c = mut c);\n" +
+"} finally {\n" +
+"    io.outputLine(\"named-finally\", c.step);\n" +
+"}\n";
+namedRun := compilerTest.compileCheckRunTs(root, tsComp, namedArgSrc, "");
+test.checkInt("mut-named arg panic status", 1, namedRun.status);
+test.checkText("mut-named arg panic stdout", "named-finally 5\n", namedRun.stdout);
+test.check("mut-named arg panic stderr", namedRun.stderr.contains("ArithmeticPanic: division by zero"));
+
+hookSrc := cellDecl +
+"mut board := Board { cell = Cell { step = 4 } };\n" +
+"mut board.cell.advanceWithHook(fn(): Unit { io.outputLine(\"hook\", board.cell.step); });\n";
+compilerTest.assertCompileRunTs(root, tsComp, "mut-field live callback", hookSrc, "hook 5\n");
+
+neverSrc := cellDecl +
+"mut board := Board { cell = Cell { step = 4 } };\n" +
+"{\n" +
+"    mut board.cell.failAfterBump();\n" +
+"} finally {\n" +
+"    io.outputLine(\"never-finally\", board.cell.step);\n" +
+"}\n";
+neverRun := compilerTest.compileCheckRunTs(root, tsComp, neverSrc, "");
+test.checkInt("mut-field exit callee status", 7, neverRun.status);
+test.checkText("mut-field exit callee stdout", "never-finally 5\n", neverRun.stdout);
+test.checkText("mut-field exit callee stderr", "", neverRun.stderr);
+
+divArgSrc := cellDecl +
+"mut c := Cell { step = 4 };\n" +
+"{\n" +
+"    _v := bumpAndPanic(c = mut c, d = io.exit(9));\n" +
+"} finally {\n" +
+"    io.outputLine(\"divarg-finally\", c.step);\n" +
+"}\n";
+divArgRun := compilerTest.compileCheckRunTs(root, tsComp, divArgSrc, "");
+test.checkInt("mut-arg divergent arg status", 9, divArgRun.status);
+test.checkText("mut-arg divergent arg stdout", "divarg-finally 4\n", divArgRun.stdout);
+test.checkText("mut-arg divergent arg stderr", "", divArgRun.stderr);
+
 test.done("mut-field-receiver");
