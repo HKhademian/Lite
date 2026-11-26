@@ -18,6 +18,11 @@ Use `Vec<T, N>` for any supported numeric component type, or `IVec<N>` and
 `IVec4`, and `FVec4`. All support the same constructors, such as
 `IVec4.from([1, 2, 3, 4])`.
 
+Matrices follow the same naming scheme with independent row and column
+counts. Use `Mat<T, R, C>`, `IMat<R, C>`, or `FMat<R, C>` for a general
+shape, and `Mat2<T>` through `Mat4<T>`, `IMat2` through `IMat4`, or
+`FMat2` through `FMat4` for square matrices.
+
 ## Data Structures (`lib/ds/` — 11 modules)
 
 See [grids](lite://module/ds/grid), [pools](lite://module/ds/pool), and other data structures in the generated reference.

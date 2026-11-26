@@ -8,23 +8,38 @@ pub Mat := record<T: Type<math.Numeric>, R: Int, C: Int> {
     rows: [vec.Vec<T, C>; R];
 }
 
+/** Integer matrix with `R` rows and `C` columns. */
+pub IMat := alias<R: Int, C: Int> Mat<Int, R, C>;
+
+/** Floating-point matrix with `R` rows and `C` columns. */
+pub FMat := alias<R: Int, C: Int> Mat<Float, R, C>;
+
 /** Generic 2x2 matrix alias over `Mat<T, 2, 2>`. */
 pub Mat2 := alias<T: Type<math.Numeric>> Mat<T, 2, 2>;
+
+/** 2x2 `Int` matrix alias. */
+pub IMat2 := alias IMat<2, 2>;
+
+/** 2x2 `Float` matrix alias. */
+pub FMat2 := alias FMat<2, 2>;
 
 /** Generic 3x3 matrix alias over `Mat<T, 3, 3>`. */
 pub Mat3 := alias<T: Type<math.Numeric>> Mat<T, 3, 3>;
 
+/** 3x3 `Int` matrix alias. */
+pub IMat3 := alias IMat<3, 3>;
+
+/** 3x3 `Float` matrix alias. */
+pub FMat3 := alias FMat<3, 3>;
+
 /** Generic 4x4 matrix alias over `Mat<T, 4, 4>`. */
 pub Mat4 := alias<T: Type<math.Numeric>> Mat<T, 4, 4>;
 
-/** 2x2 `Float` matrix alias. */
-pub FMat2 := alias Mat<Float, 2, 2>;
-
-/** 3x3 `Float` matrix alias. */
-pub FMat3 := alias Mat<Float, 3, 3>;
+/** 4x4 `Int` matrix alias. */
+pub IMat4 := alias IMat<4, 4>;
 
 /** 4x4 `Float` matrix alias. */
-pub FMat4 := alias Mat<Float, 4, 4>;
+pub FMat4 := alias FMat<4, 4>;
 
 /** Constructs a generic `Mat<T, R, C>` from row vectors `[Vec<T, C>; R]`. */
 pub Mat.from := fn<T: Type<math.Numeric>, R: Int, C: Int>(rows: [vec.Vec<T, C>; R]): Self<T, R, C> {

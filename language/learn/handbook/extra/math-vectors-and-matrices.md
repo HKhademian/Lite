@@ -35,7 +35,9 @@ io.outputLine(a.length(), a.dot(b), sum.x(), sum.y());
 
 ## N×M, 2×2, 3×3 & 4×4 Matrix Transforms (`math/matrix`)
 
-[math/matrix](lite://module/math/matrix) defines one unified generic row-major matrix record `Mat<T: Type<math.Numeric>, R: Int, C: Int>` backed by `[Vec<T, C>; R]` (`Mat2<T>`, `Mat3<T>`, `Mat4<T>`, `FMat2`, `FMat3`, `FMat4`), with static type constructors (`Mat.from`, `Mat.zeroed`, `Mat.identity`, `FMat2.rotation2`, `FMat3.translate2`/`scale2`/`rotate2`, `FMat4.translate3`/`scale3`/`rotateX`/`rotateY`/`rotateZ`/`perspective`) and `.mul()`, `.mulVec()`, `.transpose()`, `.det()`, `.transformPoint2()`, `.transformPoint3()`:
+[math/matrix](lite://module/math/matrix) defines the row-major record `Mat<T, R, C>` backed by `[Vec<T, C>; R]`. Use `IMat<R, C>` for `Int` or `FMat<R, C>` for `Float`. For square matrices, use `Mat2<T>`, `Mat3<T>`, or `Mat4<T>`, with corresponding `IMat2`–`IMat4` and `FMat2`–`FMat4` aliases.
+
+Construct matrices from rows with `Mat.from` or zero-initialize them with `Mat.zeroed`. Matrix operations include `.mul()`, `.mulVec()`, and `.transpose()`. Floating-point square matrices also support `identity`, `.det()`, and shape-specific transforms such as `FMat3.translate2`.
 
 ```lite
 io := import "core/io";
