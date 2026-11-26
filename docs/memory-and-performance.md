@@ -338,6 +338,22 @@ The selected temporary [var-qualified parameter](lite://doc/slot-parameters) giv
 
 [Mutability, access, and operations](lite://doc/mutability) separates binding reassignment, read/write access to held data, and receiver requirements. A read-only view alone does not guarantee that no other alias can change the object. Any stronger guarantee needs a defined aliasing, borrowing, or frozen-value contract. The explicit mutable-copy declaration above has copy semantics; ordinary access requirements must not silently trigger a detached clone or runtime borrow checking.
 
+## Current C11 runtime allocation behavior (gap)
+
+Status: **implementation gap, tracked 2026-11-26**.
+
+The current generated C11 backend allocates dynamic strings (`lt_str_alloc` bump slab and `malloc`), list/map/set backing storage (`malloc`/`realloc`), and stream buffers without automatic scope-exit freeing or reference-count reclamation. Process memory allocated by C11 programs is currently reclaimed only when the process exits.
+
+The only explicit reclamation facility emitted today is `extra/surface`'s opt-in frame-scoped string slab checkpoint (`scratchMark` / `scratchRewind`) for interactive render loops.
+
+In short-lived CLI commands this behavior stays invisible, while long-running or batch C11 programs (such as `site-docs`, which renders hundreds of HTML pages and serializes JSON) retain intermediate allocations for the process lifetime so peak RSS grows proportionally to total allocated bytes rather than the live working set. Near-term mitigations in stdlib and tools include:
+
+- Using `TextBuilder` instead of chained `+` (`lite_concat`) loops.
+- Avoiding unnecessary `toCodePoints()` and `List<Int>` byte-boxing round-trips via C11 soft-builtin fast paths for UTF-8 and stream I/O.
+- Bounding parallel worker memory and avoiding giant monolithic JSON stdout round-trips.
+
+Automatic C11 scope/ownership reclamation remains a tracked compiler gap. See [C11 heap reclamation](lite://doc/compiler/gaps#topic-queue).
+
 ## Generic collection requirements
 
 The selected [collection API direction](lite://doc/collection-abstractions) separates consumer abilities from storage providers. A common traversal contract should not require object boxing, a heap-allocated iterator, dynamic dispatch, or materialization into List merely to cross the input boundary. Recommend specialization of the concrete provider/element types for the ordinary path; exact compiler and generic mechanisms remain open.
