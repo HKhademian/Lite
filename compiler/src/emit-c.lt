@@ -37,19 +37,20 @@ dedent := fn(indent: String): String {
     indent.slice(0, indent.length() - 4)
 }
 
-/** Returns the C11 scalar list tag (`i64`, `f64`, `bool`, `str`) for a List/Array kind, or `""` if not a C-supported list/array. */
+/** Returns the C11 scalar list tag (`i64`, `f64`, `bool`, `str`) for a List or wildcard Array kind, or `""` for concrete fixed arrays `[T; N]` and other kinds. */
 cListTagForKind := fn(kind: String): String {
     if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind)); }
     if frontend.isListKind(kind) { frontend.cListTag(frontend.listElementKind(kind)) }
-    else if frontend.isArrayKind(kind) { frontend.cListTag(frontend.arrayElementKind(kind)) }
+    else if frontend.isArrayKind(kind) and frontend.cArrayTag(kind) == "" { frontend.cListTag(frontend.arrayElementKind(kind)) }
     else { "" }
 };
 
-/** Maps a restricted Lite scalar, enum, struct, map, set, list/array, or Unit/Never kind to its C11 type. */
+/** Maps a restricted Lite scalar, enum, struct, fixed array, map, set, list, or Unit/Never kind to its C11 type. */
 cScalarType := fn(kind: String): String {
     if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind)); }
     listTag := cListTagForKind(kind);
     if listTag =!= "" { "lt_list_" + listTag }
+    else if frontend.cArrayTag(kind) =!= "" { frontend.cArrayTag(kind) }
     else if frontend.cMapTag(kind) =!= "" { frontend.cMapTag(kind) }
     else if frontend.cSetTag(kind) =!= "" { frontend.cSetTag(kind) }
     else if frontend.cStructTag(kind) =!= "" { frontend.cStructTag(kind) }
@@ -65,7 +66,7 @@ cScalarType := fn(kind: String): String {
 cDeclTypeItem := fn(item: frontend.Item): String {
     kind := item.kind;
     if kind == frontend.ITEM_KIND_LOCAL_LIST or kind == frontend.ITEM_KIND_VAR_LIST {
-        "lt_list_" + cListTagForKind(item.textValue) + " "
+        cScalarType(item.textValue) + " "
     } else if kind == frontend.ITEM_KIND_LOCAL_TUPLE or kind == frontend.ITEM_KIND_VAR_TUPLE {
         frontend.cStructTag(item.textValue) + " "
     } else if kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD or
@@ -86,7 +87,7 @@ checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isRecordKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support record values yet"); }
     if frontend.isPayloadEnumKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support payload enum values yet"); }
     if frontend.isListKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support list values yet"); }
-    if frontend.isArrayKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support array values yet"); }
+    if frontend.isArrayKind(kind) and frontend.cArrayTag(kind) == "" and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support array values yet"); }
     if frontend.isFnKind(kind) and frontend.cFnTag(kind) == "" { diagLib.fail("", "C backend does not support function values yet"); }
 };
 
@@ -463,8 +464,8 @@ unsupportedAggregateCode := fn(code: String): String {
         } else if ch == "/" and (code.startsWithAt(cursor, "/*@T:") or code.startsWithAt(cursor, "/*@C:") or code.startsWithAt(cursor, "/*@P:")) {
             endTag := code.indexOf("@*/", cursor + 5);
             cursor = if endTag >= 0 { endTag + 3 } else { size };
-        } else if ch == "(" and (code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "(const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_")) {
-            isDouble := code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_");
+        } else if ch == "(" and (code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "(const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_") or code.startsWithAt(cursor, "((lt_arr_") or code.startsWithAt(cursor, "((/*@T:") or code.startsWithAt(cursor, "(/*@T:")) {
+            isDouble := code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_") or code.startsWithAt(cursor, "((lt_arr_") or code.startsWithAt(cursor, "((/*@T:");
             var depth := 0;
             loop cursor < size {
                 c2 := code.at(cursor);
@@ -496,6 +497,15 @@ unsupportedAggregateCode := fn(code: String): String {
                     }
                     cursor = cursor + 1;
                 }
+            }
+        } else if ch == "." and code.startsWithAt(cursor, ".data[") {
+            dEnd := cursor + 6;
+            var dCur := dEnd;
+            loop dCur < size and code.at(dCur).isDigit() { dCur = dCur + 1; }
+            if dCur > dEnd and dCur < size and code.at(dCur) == "]" {
+                cursor = dCur + 1;
+            } else {
+                cursor = cursor + 1;
             }
         } else if ch == "[" and code.startsWithAt(cursor, "[0] == '\\0'") {
             cursor = cursor + "[0] == '\\0'".length();
@@ -697,6 +707,7 @@ cCall := fn(kind: String, code: String): String {
             "printf(\"%s\", ((const char *const[]){" + labels.join(", ") + "}[" + code + "]))"
         }
         frontend.isFloatScalarKind(kind) { "lt_print_float((double)(" + code + "))" }
+        frontend.cArrayTag(kind) =!= "" { frontend.cArrayTag(kind) + "_print(" + code + ")" }
         cListTagForKind(kind) =!= "" { "lt_list_" + cListTagForKind(kind) + "_print(" + code + ")" }
         frontend.cMapTag(kind) =!= "" { frontend.cMapTag(kind) + "_print(" + code + ")" }
         frontend.cSetTag(kind) =!= "" { frontend.cSetTag(kind) + "_print(" + code + ")" }
@@ -874,12 +885,18 @@ usesTextPrimitives := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(")
 }
 
-/** True when any list or map bounds helper is called in `calls`. */
+/** True when any list, fixed-array, or map bounds helper is called in `calls`. */
 usesAnyListBounds := fn(calls: Set<String>): Bool {
     loop calls as tok {
         if tok.startsWithAt(0, "lt_list_") and (
         tok.endsWith("_at(") or tok.endsWith("_set(") or
         tok.endsWith("_pop_back(") or tok.endsWith("_pop_front(") or
+        tok.endsWith("_slice(") or tok.endsWith("_slice_from(")
+        ) {
+            return true;
+        }
+        if tok.startsWithAt(0, "lt_arr_") and (
+        tok.endsWith("_at(") or tok.endsWith("_set(") or
         tok.endsWith("_slice(") or tok.endsWith("_slice_from(")
         ) {
             return true;
@@ -931,6 +948,7 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
                 loop pi < pc {
                     pk := frontend.enumCasePayloadKind(kind, cci, pi);
                     if cListTagForKind(pk) =!= "" or frontend.cMapTag(pk) =!= "" or frontend.cSetTag(pk) =!= "" or
+                    (frontend.cArrayTag(pk) =!= "" and frontend.cTypeHasListField(pk)) or
                     (frontend.cStructTag(pk) =!= "" and frontend.cTypeHasListField(pk)) {
                         caseHasHeap = true;
                         break;
@@ -950,6 +968,8 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
                             frontend.cMapTag(pk) + "_copy(" + fnm + ")"
                         } else if frontend.cSetTag(pk) =!= "" {
                             frontend.cSetTag(pk) + "_copy(" + fnm + ")"
+                        } else if frontend.cArrayTag(pk) =!= "" and frontend.cTypeHasListField(pk) {
+                            frontend.cArrayTag(pk) + "_copy(" + fnm + ")"
                         } else if frontend.cStructTag(pk) =!= "" and frontend.cTypeHasListField(pk) {
                             frontend.cStructTag(pk) + "_copy(" + fnm + ")"
                         } else {
@@ -1037,6 +1057,8 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool): Unit {
                     frontend.cMapTag(comp.kind) + "_copy(src." + fnm + ")"
                 } else if frontend.cSetTag(comp.kind) =!= "" {
                     frontend.cSetTag(comp.kind) + "_copy(src." + fnm + ")"
+                } else if frontend.cArrayTag(comp.kind) =!= "" and frontend.cTypeHasListField(comp.kind) {
+                    frontend.cArrayTag(comp.kind) + "_copy(src." + fnm + ")"
                 } else if frontend.cStructTag(comp.kind) =!= "" and frontend.cTypeHasListField(comp.kind) {
                     frontend.cStructTag(comp.kind) + "_copy(src." + fnm + ")"
                 } else {
@@ -1112,6 +1134,8 @@ emitCTupleConvHelper := fn(expectedKind: String, actualKind: String): Unit {
             aExpr := "v." + frontend.cFieldName(aComp.prop);
             fVal := if cListTagForKind(eComp.kind) =!= "" {
                 "lt_list_" + cListTagForKind(eComp.kind) + "_copy(" + aExpr + ")"
+            } else if frontend.cArrayTag(eComp.kind) =!= "" and frontend.cTypeHasListField(eComp.kind) {
+                frontend.cArrayTag(eComp.kind) + "_copy(" + aExpr + ")"
             } else if frontend.cStructTag(eComp.kind) =!= "" and frontend.cTypeHasListField(eComp.kind) {
                 frontend.cStructTag(eComp.kind) + "_copy(" + aExpr + ")"
             } else {
@@ -1141,6 +1165,7 @@ emitCMapHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrin
     vCopy := if cListTagForKind(vKind) =!= "" { "lt_list_" + cListTagForKind(vKind) + "_copy(v)" }
     else if frontend.cMapTag(vKind) =!= "" { frontend.cMapTag(vKind) + "_copy(v)" }
     else if frontend.cSetTag(vKind) =!= "" { frontend.cSetTag(vKind) + "_copy(v)" }
+    else if frontend.cArrayTag(vKind) =!= "" and frontend.cTypeHasListField(vKind) { frontend.cArrayTag(vKind) + "_copy(v)" }
     else if frontend.cStructTag(vKind) =!= "" and frontend.cTypeHasListField(vKind) { frontend.cStructTag(vKind) + "_copy(v)" }
     else { "v" };
     hasFrom := usesIntHelper(calls, mTag + "_from(");
@@ -1620,7 +1645,7 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, nee
     cType := frontend.cListElemType(tag);
     cElemConstPtr := "const " + cType + " *";
     lType := "lt_list_" + tag;
-    elemNeedsDeepCopy := elemKind =!= "" and frontend.cStructTag(elemKind) =!= "" and frontend.cTypeHasListField(elemKind);
+    elemNeedsDeepCopy := elemKind =!= "" and (frontend.cStructTag(elemKind) =!= "" or frontend.cArrayTag(elemKind) =!= "") and frontend.cTypeHasListField(elemKind);
     hasFrom := needFrom or usesIntHelper(calls, lType + "_from(");
     hasRepeat := usesIntHelper(calls, lType + "_repeat(");
     hasCopy := needCopy or usesIntHelper(calls, lType + "_copy(");
@@ -1791,6 +1816,120 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, nee
         outLine("        if (" + elemPrint + " < 0) { return -1; }");
         outLine("    }");
         outLine("    return printf(\"]\");");
+        outLine("}");
+    }
+    outLine("");
+};
+
+/** Emits portable ISO C11 inline fixed-array value struct (`typedef struct { T data[N]; } lt_arr_...`) and only the helper operations used for `kind`. Zero heap allocations. */
+emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool): Unit {
+    aTag := frontend.cArrayTag(kind);
+    elKind := frontend.arrayElementKind(kind);
+    ext := frontend.arrayExtent(kind);
+    cElemType := cScalarType(elKind);
+    extStr := ext.toText();
+    elCopyExpr := if cListTagForKind(elKind) =!= "" {
+        "lt_list_" + cListTagForKind(elKind) + "_copy(val)"
+    } else if frontend.cMapTag(elKind) =!= "" {
+        frontend.cMapTag(elKind) + "_copy(val)"
+    } else if frontend.cSetTag(elKind) =!= "" {
+        frontend.cSetTag(elKind) + "_copy(val)"
+    } else if frontend.cArrayTag(elKind) =!= "" and frontend.cTypeHasListField(elKind) {
+        frontend.cArrayTag(elKind) + "_copy(val)"
+    } else if frontend.cStructTag(elKind) =!= "" and frontend.cTypeHasListField(elKind) {
+        frontend.cStructTag(elKind) + "_copy(val)"
+    } else {
+        "val"
+    };
+    elemNeedsDeepCopy := frontend.cTypeHasListField(elKind);
+    hasRepeat := ext > 0 and usesIntHelper(calls, aTag + "_repeat(");
+    hasCopy := elemNeedsDeepCopy and (needCopy or usesIntHelper(calls, aTag + "_copy("));
+    hasAt := usesIntHelper(calls, aTag + "_at(");
+    hasSet := usesIntHelper(calls, aTag + "_set(");
+    hasSliceFrom := usesIntHelper(calls, aTag + "_slice_from(");
+    hasSlice := usesIntHelper(calls, aTag + "_slice(") or hasSliceFrom;
+    if ext == 0 {
+        outLine("typedef struct { uint8_t _empty; } " + aTag + ";");
+    } else {
+        outLine("typedef struct { " + cElemType + " data[" + extStr + "]; } " + aTag + ";");
+    }
+    if hasRepeat {
+        outLine("static " + aTag + " " + aTag + "_repeat(" + cElemType + " val) {");
+        outLine("    " + aTag + " out;");
+        if elemNeedsDeepCopy {
+            outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) { out.data[i] = " + elCopyExpr + "; }");
+        } else {
+            outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) { out.data[i] = val; }");
+        }
+        outLine("    return out;");
+        outLine("}");
+    }
+    if hasCopy {
+        outLine("static " + aTag + " " + aTag + "_copy(" + aTag + " src) {");
+        if ext == 0 {
+            outLine("    return src;");
+        } else {
+            outLine("    " + aTag + " out;");
+            outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) { " + cElemType + " val = src.data[i]; out.data[i] = " + elCopyExpr + "; }");
+            outLine("    return out;");
+        }
+        outLine("}");
+    }
+    if hasAt {
+        outLine("LT_INLINE " + cElemType + " " + aTag + "_at(" + aTag + " xs, int64_t idx, size_t at) {");
+        if ext == 0 {
+            outLine("    (void)xs; (void)idx;");
+            outLine("    lt_bound_fault(at, \"list index outside its extent\");");
+        } else {
+            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            outLine("    return xs.data[idx];");
+        }
+        outLine("}");
+    }
+    if hasSet {
+        outLine("LT_INLINE void " + aTag + "_set(" + aTag + " *xs, int64_t idx, " + cElemType + " val, size_t at) {");
+        if ext == 0 {
+            outLine("    (void)xs; (void)idx; (void)val;");
+            outLine("    lt_bound_fault(at, \"list index outside its extent\");");
+        } else {
+            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            outLine("    xs->data[idx] = val;");
+        }
+        outLine("}");
+    }
+    if hasSlice {
+        elListTag := frontend.cListTag(elKind);
+        lType := "lt_list_" + elListTag;
+        outLine("static " + lType + " " + aTag + "_slice(" + aTag + " xs, int64_t start, int64_t end, size_t at) {");
+        outLine("    if (LT_UNLIKELY(start < 0 || end < start || end > " + extStr + ")) { lt_bound_fault(at, \"list slice bounds outside its extent\"); }");
+        if ext == 0 {
+            outLine("    (void)xs; (void)start; (void)end;");
+            outLine("    return " + lType + "_from(0, NULL);");
+        } else {
+            outLine("    return " + lType + "_from(end - start, xs.data + start);");
+        }
+        outLine("}");
+    }
+    if hasSliceFrom {
+        elListTag := frontend.cListTag(elKind);
+        lType := "lt_list_" + elListTag;
+        outLine("static " + lType + " " + aTag + "_slice_from(" + aTag + " xs, int64_t start, size_t at) {");
+        outLine("    return " + aTag + "_slice(xs, start, " + extStr + ", at);");
+        outLine("}");
+    }
+    if needPrint {
+        outLine("static int " + aTag + "_print(" + aTag + " xs) {");
+        if ext == 0 {
+            outLine("    (void)xs;");
+            outLine("    return printf(\"[]\");");
+        } else {
+            outLine("    if (printf(\"[\") < 0) { return -1; }");
+            outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) {");
+            outLine("        if (i > 0 && printf(\", \") < 0) { return -1; }");
+            outLine("        if (" + cCall(elKind, "xs.data[i]") + " < 0) { return -1; }");
+            outLine("    }");
+            outLine("    return printf(\"]\");");
+        }
         outLine("}");
     }
     outLine("");
@@ -2516,6 +2655,26 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 blockDepth = blockDepth + 1;
                 mut loopSeqFlags.pushBack(1);
                 mut loopSeqReleases.pushBack("");
+            } else if item.intValue == 6 {
+                /* Fixed array loop: item.textValue is element kind `T`, first `@T:` in item.code is `[T; N]`. */
+                annotsA := extractCTypeAnnotations(item.code);
+                arrKind := if annotsA.length() > 0 and annotsA[0].startsWithAt(0, "T:") { annotsA[0].slice(2, annotsA[0].length()) } else { "" };
+                aTag := frontend.cArrayTag(arrKind);
+                aExt := frontend.arrayExtent(arrKind);
+                seqVar := "lt_seq_" + seqId;
+                idxVar := "lt_sidx_" + seqId;
+                outLine(indent + "{");
+                outLine(indent + "    " + aTag + " " + seqVar + " = " + code + ";");
+                outLine(indent + "    (void)" + seqVar + ";");
+                outLine(indent + "    for (int64_t " + idxVar + " = 0; " + idxVar + " < " + aExt.toText() + "; " + idxVar + " += 1) {");
+                if item.runtime =!= "" {
+                    outLine(indent + "        " + cScalarType(item.textValue) + " " + item.runtime + " = " + seqVar + ".data[" + idxVar + "];");
+                    outLine(indent + "        (void)" + item.runtime + ";");
+                }
+                indent = indent + "        ";
+                blockDepth = blockDepth + 1;
+                mut loopSeqFlags.pushBack(1);
+                mut loopSeqReleases.pushBack("");
             } else {
                 tag := frontend.cListTag(item.textValue);
                 seqVar := "lt_seq_" + seqId;
@@ -2623,6 +2782,13 @@ emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, h
 collectSubKinds := fn(kind: String): List<String> {
     if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind)); }
     out: mut List<String> = [];
+    if frontend.cArrayTag(kind) =!= "" {
+        elKind := frontend.arrayElementKind(kind);
+        sub := self(elKind);
+        loop sub as s { mut out.pushBack(s); }
+        (mut out).pushBack("A|" + kind);
+        return out;
+    }
     if frontend.isListKind(kind) or frontend.isArrayKind(kind) {
         elKind := if frontend.isListKind(kind) { frontend.listElementKind(kind) } else { frontend.arrayElementKind(kind) };
         if frontend.cListTag(elKind) == "" { return out; }
@@ -2715,6 +2881,13 @@ collectTypeFlags := fn(kind: String): List<String> {
     if frontend.isFloatScalarKind(kind) {
         mut out.pushBack("FLOAT");
         if kind == frontend.VALUE_KIND_FLOAT32 { mut out.pushBack("FLOAT32"); }
+        return out;
+    }
+    if frontend.cArrayTag(kind) =!= "" {
+        aTag := frontend.cArrayTag(kind);
+        (mut out).pushBack("A:" + aTag);
+        sub := self(frontend.arrayElementKind(kind));
+        loop sub as s { mut out.pushBack(s); }
         return out;
     }
     if frontend.isListKind(kind) or frontend.isArrayKind(kind) {
@@ -5635,7 +5808,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         }
         isSupportedDistDecl := if frontend.isDistinctKind(item.textValue) {
             base := frontend.distinctBaseKind(item.textValue);
-            frontend.isIntScalarKind(base) or frontend.isFloatScalarKind(base) or base == frontend.VALUE_KIND_BOOL or base == frontend.VALUE_KIND_STRING or frontend.isEnumKind(base) or cListTagForKind(base) =!= "" or frontend.cStructTag(base) =!= "" or frontend.cMapTag(base) =!= "" or frontend.cSetTag(base) =!= "" or frontend.cFnTag(base) =!= ""
+            frontend.isIntScalarKind(base) or frontend.isFloatScalarKind(base) or base == frontend.VALUE_KIND_BOOL or base == frontend.VALUE_KIND_STRING or frontend.isEnumKind(base) or frontend.cArrayTag(base) =!= "" or cListTagForKind(base) =!= "" or frontend.cStructTag(base) =!= "" or frontend.cMapTag(base) =!= "" or frontend.cSetTag(base) =!= "" or frontend.cFnTag(base) =!= ""
         } else { false };
         isUnsupportedRecordDecl := (item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD) and not frontend.isEnumKind(item.textValue) and not isSupportedDistDecl and frontend.cStructTag(item.textValue) == "" and frontend.cMapTag(item.textValue) == "" and frontend.cSetTag(item.textValue) == "";
         if (frontend.isRecordKind(item.kind) and frontend.cStructTag(item.kind) == "") or
@@ -5644,11 +5817,11 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         }
         if (frontend.isListKind(item.kind) and cListTagForKind(item.kind) == "") or
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isListKind(item.name) and cListTagForKind(item.name) == "") or
-        ((item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST) and cListTagForKind(item.textValue) == "") {
+        ((item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST) and frontend.cArrayTag(item.textValue) == "" and cListTagForKind(item.textValue) == "") {
             diagLib.fail("", "C backend does not support list values yet");
         }
-        if (frontend.isArrayKind(item.kind) and cListTagForKind(item.kind) == "") or
-        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isArrayKind(item.name) and cListTagForKind(item.name) == "") {
+        if (frontend.isArrayKind(item.kind) and frontend.cArrayTag(item.kind) == "" and cListTagForKind(item.kind) == "") or
+        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isArrayKind(item.name) and frontend.cArrayTag(item.name) == "" and cListTagForKind(item.name) == "") {
             diagLib.fail("", "C backend does not support array values yet");
         }
         if (frontend.isFnKind(item.kind) and frontend.cFnTag(item.kind) == "") or
@@ -5656,7 +5829,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         ((item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN) and frontend.cFnTag(item.textValue) == "") {
             diagLib.fail("", "C backend does not support function values yet");
         }
-        if item.kind == frontend.ITEM_KIND_LOOP_SEQ and frontend.cListTag(item.textValue) == "" {
+        if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue =!= 6 and frontend.cListTag(item.textValue) == "" {
             diagLib.fail("", "C backend does not support list traversal yet");
         }
         if item.kind =!= frontend.ITEM_KIND_FUNCTION_START and item.kind =!= frontend.ITEM_KIND_FUNCTION_END and
@@ -5737,7 +5910,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     }
     if usesIntHelper(calls, "lite$processEnvGet(") { mut seedKinds.pushBack("(found:Bool,value:String)"); }
     loop reachable as item {
-        if cListTagForKind(item.kind) =!= "" or frontend.cStructTag(item.kind) =!= "" or frontend.cMapTag(item.kind) =!= "" or frontend.cSetTag(item.kind) =!= "" {
+        if frontend.cArrayTag(item.kind) =!= "" or cListTagForKind(item.kind) =!= "" or frontend.cStructTag(item.kind) =!= "" or frontend.cMapTag(item.kind) =!= "" or frontend.cSetTag(item.kind) =!= "" {
             mut seedKinds.pushBack(item.kind);
             pFlags := collectTypeFlags(item.kind);
             loop pFlags as pf {
@@ -5746,18 +5919,23 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 else { mut printTypeKeys.add(pf); }
             }
         }
-        if item.kind == frontend.ITEM_KIND_DISCARD and (cListTagForKind(item.name) =!= "" or frontend.cStructTag(item.name) =!= "" or frontend.cMapTag(item.name) =!= "" or frontend.cSetTag(item.name) =!= "") {
+        if item.kind == frontend.ITEM_KIND_DISCARD and (frontend.cArrayTag(item.name) =!= "" or cListTagForKind(item.name) =!= "" or frontend.cStructTag(item.name) =!= "" or frontend.cMapTag(item.name) =!= "" or frontend.cSetTag(item.name) =!= "") {
             mut seedKinds.pushBack(item.name);
         }
         if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST or
         item.kind == frontend.ITEM_KIND_LOCAL_TUPLE or item.kind == frontend.ITEM_KIND_VAR_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or
         item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or
         item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
-            if cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" or frontend.cFnTag(item.textValue) =!= "" {
+            if frontend.cArrayTag(item.textValue) =!= "" or cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" or frontend.cFnTag(item.textValue) =!= "" {
                 mut seedKinds.pushBack(item.textValue);
             }
         }
-        if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue < 2 and frontend.cListTag(item.textValue) =!= "" {
+        if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue == 6 {
+            annotsA := extractCTypeAnnotations(item.code);
+            if annotsA.length() > 0 and annotsA[0].startsWithAt(0, "T:") {
+                mut seedKinds.pushBack(annotsA[0].slice(2, annotsA[0].length()));
+            }
+        } else if item.kind == frontend.ITEM_KIND_LOOP_SEQ and item.intValue < 2 and frontend.cListTag(item.textValue) =!= "" {
             seqListKind := "List<" + item.textValue + ">";
             mut seedKinds.pushBack(seqListKind);
             if item.intValue =!= 1 {
@@ -5784,7 +5962,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             }
         }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
-            if cListTagForKind(item.code) =!= "" or frontend.cStructTag(item.code) =!= "" or frontend.cMapTag(item.code) =!= "" or frontend.cSetTag(item.code) =!= "" {
+            if frontend.cArrayTag(item.code) =!= "" or cListTagForKind(item.code) =!= "" or frontend.cStructTag(item.code) =!= "" or frontend.cMapTag(item.code) =!= "" or frontend.cSetTag(item.code) =!= "" {
                 mut seedKinds.pushBack(item.code);
             }
             if item.textValue =!= "" {
@@ -5797,7 +5975,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                     if pEq >= 0 {
                         rawPKind := pEntry.slice(pEq + 1, pEntry.length());
                         pKind := if rawPKind.startsWithAt(0, "mut ") { rawPKind.slice(4, rawPKind.length()) } else { rawPKind };
-                        if cListTagForKind(pKind) =!= "" or frontend.cStructTag(pKind) =!= "" or frontend.cMapTag(pKind) =!= "" or frontend.cSetTag(pKind) =!= "" {
+                        if frontend.cArrayTag(pKind) =!= "" or cListTagForKind(pKind) =!= "" or frontend.cStructTag(pKind) =!= "" or frontend.cMapTag(pKind) =!= "" or frontend.cSetTag(pKind) =!= "" {
                             mut seedKinds.pushBack(pKind);
                         }
                     }
@@ -5861,6 +6039,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if hasCallPrefix(calls, "lt_list_bool_") { mut seedKinds.pushBack("List<Bool>"); }
     if hasCallPrefix(calls, "lt_list_str_") { mut seedKinds.pushBack("List<String>"); }
     var hasAnyList := false;
+    arrSliceNeedFrom: mut Set<String>;
     loop seedKinds as sk {
         tFlags := collectTypeFlags(sk);
         loop tFlags as tf {
@@ -5870,11 +6049,28 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         subs := collectSubKinds(sk);
         loop subs as sub {
             isL := sub.startsWithAt(0, "L|");
+            isA := sub.startsWithAt(0, "A|");
             isM := sub.startsWithAt(0, "M|");
             isE := sub.startsWithAt(0, "E|");
             isF := sub.startsWithAt(0, "F|");
             payload := sub.slice(2, sub.length());
+            if isA {
+                aTag := frontend.cArrayTag(payload);
+                if usesIntHelper(calls, aTag + "_slice(") or usesIntHelper(calls, aTag + "_slice_from(") {
+                    elK := frontend.arrayElementKind(payload);
+                    elLTag := frontend.cListTag(elK);
+                    if elLTag =!= "" {
+                        mut arrSliceNeedFrom.add(elLTag);
+                        if not seenTypeKeys.has("L:" + elLTag) {
+                            mut seenTypeKeys.add("L:" + elLTag);
+                            mut orderedEntries.pushBack("L|" + elK);
+                            hasAnyList = true;
+                        }
+                    }
+                }
+            }
             tKey := if isL { "L:" + frontend.cListTag(payload) }
+            else if isA { "A:" + frontend.cArrayTag(payload) }
             else if isM { "M:" + frontend.cMapTag(payload) }
             else if isE { "E:" + frontend.cSetTag(payload) }
             else if isF { "F:" + frontend.cFnTag(payload) }
@@ -5902,6 +6098,26 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                     if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
                 }
             }
+        } else if oe.startsWithAt(0, "A|") {
+            aKind := oe.slice(2, oe.length());
+            aTag := frontend.cArrayTag(aKind);
+            if hasCallPrefix(calls, "lt_list_" + aTag + "_") and not seenTypeKeys.has("L:" + aTag) {
+                mut seenTypeKeys.add("L:" + aTag);
+                mut extraListSeeds.pushBack("L|" + aKind);
+                hasAnyList = true;
+            }
+            if usesIntHelper(calls, aTag + "_copy(") or
+            usesIntHelper(calls, "lt_list_" + aTag + "_copy(") or usesIntHelper(calls, "lt_list_" + aTag + "_repeat(") {
+                cFlags := collectTypeFlags(aKind);
+                loop cFlags as cf {
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
+                }
+            } else if usesIntHelper(calls, aTag + "_repeat(") {
+                cFlags := collectTypeFlags(frontend.arrayElementKind(aKind));
+                loop cFlags as cf {
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
+                }
+            }
         }
     }
     loop extraListSeeds as el { mut orderedEntries.pushBack(el); }
@@ -5924,7 +6140,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("/* LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics */");
     }
     outLine("#include <stdio.h>");
-    if usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns or hasExtraCanvas or usesIntHelper(calls, "calloc(") { outLine("#include <stdlib.h>"); }
+    if usesAnyListBounds(calls) or usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns or hasExtraCanvas or usesIntHelper(calls, "calloc(") { outLine("#include <stdlib.h>"); }
     if hasInputInt or hasPosixHost or usesIntHelper(calls, "lt_c_text_to_int(") { outLine("#include <errno.h>"); }
     outLine("#include <inttypes.h>");
     outLine("#include <stdbool.h>");
@@ -6119,6 +6335,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     emitInputHelpers(calls);
     loop orderedEntries as oe {
         isL := oe.startsWithAt(0, "L|");
+        isA := oe.startsWithAt(0, "A|");
         isM := oe.startsWithAt(0, "M|");
         isE := oe.startsWithAt(0, "E|");
         isF := oe.startsWithAt(0, "F|");
@@ -6127,8 +6344,13 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             lTag := frontend.cListTag(payload);
             lNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "L:" + lTag);
             lNeedPrint := frontend.tokenBucketHas(printTypeKeys, "L:" + lTag);
-            lNeedFrom := hasInputArgs and lTag == "str";
+            lNeedFrom := (hasInputArgs and lTag == "str") or arrSliceNeedFrom.has(lTag);
             emitCListTagHelpers(lTag, payload, calls, lNeedCopy, lNeedPrint, lNeedFrom);
+        } else if isA {
+            aTag := frontend.cArrayTag(payload);
+            aNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "A:" + aTag);
+            aNeedPrint := frontend.tokenBucketHas(printTypeKeys, "A:" + aTag);
+            emitCArrayHelpers(payload, calls, aNeedCopy, aNeedPrint);
         } else if isM {
             mTag := frontend.cMapTag(payload);
             mNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "M:" + mTag);

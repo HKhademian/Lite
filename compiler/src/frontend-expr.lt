@@ -514,7 +514,18 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
                 "[" + elementKind + ";" + repeatCount.toText() + "]"
             };
             elemValCode := elementCodes[0];
-            repCode := if target == ir.TARGET_C and types.cListTag(elementKind) =!= "" {
+            repCode := if target == ir.TARGET_C and types.isArrayKind(repResultKind) and types.cArrayTag(repResultKind) =!= "" {
+                aTag := types.cArrayTag(repResultKind);
+                if repeatCount == 0 {
+                    if element.constant {
+                        "((/*@T:" + repResultKind + "@*/" + aTag + "){ 0 })"
+                    } else {
+                        "((void)(" + elemValCode + "), (/*@T:" + repResultKind + "@*/" + aTag + "){ 0 })"
+                    }
+                } else {
+                    "/*@T:" + repResultKind + "@*/" + aTag + "_repeat(" + elemValCode + ")"
+                }
+            } else if target == ir.TARGET_C and types.cListTag(elementKind) =!= "" {
                 cTag := types.cListTag(elementKind);
                 if repeatCount == 0 {
                     if element.constant {
@@ -586,7 +597,14 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
     } else {
         "[" + elementKind + ";" + count.toText() + "]"
     };
-    listCode := if target == ir.TARGET_C and types.cListTag(elementKind) =!= "" {
+    listCode := if target == ir.TARGET_C and types.isArrayKind(resultKind) and types.cArrayTag(resultKind) =!= "" {
+        aTag := types.cArrayTag(resultKind);
+        if count == 0 {
+            "((/*@T:" + resultKind + "@*/" + aTag + "){ 0 })"
+        } else {
+            "((/*@T:" + resultKind + "@*/" + aTag + "){ { " + elementCodes.join(", ") + " } })"
+        }
+    } else if target == ir.TARGET_C and types.cListTag(elementKind) =!= "" {
         cTag := types.cListTag(elementKind);
         if count == 0 {
             "lt_list_" + cTag + "_from(0, NULL)"
@@ -1393,7 +1411,9 @@ pub resolveAggregateBindings := fn(target: String, shape: String, count: Int, en
             propExpr = tempRuntime + "." + (if target == ir.TARGET_C { types.cFieldName(comp.prop) } else { comp.prop });
         } else {
             srcKind = types.arrayElementKind(rhsKind);
-            if target == ir.TARGET_C and types.cListTag(srcKind) =!= "" {
+            if target == ir.TARGET_C and types.cArrayTag(rhsKind) =!= "" {
+                propExpr = tempRuntime + ".data[" + clIndex.toText() + "]";
+            } else if target == ir.TARGET_C and types.cListTag(srcKind) =!= "" {
                 propExpr = "lt_list_" + types.cListTag(srcKind) + "_at(" + tempRuntime + ", " + clIndex.toText() + ", " + openPos.toText() + ")";
             } else {
                 propExpr = tempRuntime + "[" + clIndex.toText() + "]!";
@@ -2260,6 +2280,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                                 "printf(\"%\" PRId64, (int64_t)(" + outArg.code + "));"
                             } else if numeric.isFloatKind(baseOutKind) {
                                 "/*@P:" + baseOutKind + "@*/lt_print_float(" + outArg.code + ");"
+                            } else if types.isArrayKind(baseOutKind) and types.cArrayTag(baseOutKind) =!= "" {
+                                "/*@P:" + baseOutKind + "@*/" + types.cArrayTag(baseOutKind) + "_print(" + outArg.code + ");"
                             } else if types.isListKind(baseOutKind) or types.isArrayKind(baseOutKind) {
                                 elK := if types.isListKind(baseOutKind) { types.listElementKind(baseOutKind) } else { types.arrayElementKind(baseOutKind) };
                                 "/*@P:" + baseOutKind + "@*/lt_list_" + types.cListTag(elK) + "_print(" + outArg.code + ");"
@@ -2888,6 +2910,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     var loopHeaderPos := afterItemName;
                     var loopCondCode := "";
                     var loopSeqCode := "";
+                    var loopSeqKind := "";
                     var loopItemName := "";
                     var loopItemKind := "";
                     if loopHeaderPos < blockSourceSize and source.at(loopHeaderPos) =!= "{" {
@@ -2908,6 +2931,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             asNameEnd := source.skipName(asNameStart);
                             loopItemName = source.slice(asNameStart, asNameEnd);
                             if syntax.isReservedWord(loopItemName) { syntax.unsupportedFeature(source, asNameStart, loopItemName, prefix); }
+                            loopSeqKind = hdrParsed.kind;
                             if types.isMapKind(hdrParsed.kind) {
                                 loopItemKind = "(key:" + types.mapKeyKind(hdrParsed.kind) + ",value:" + types.mapValueKind(hdrParsed.kind) + ")";
                                 loopSeqCode = "Array.from((" + hdrParsed.code + ").entries(), ([lite$mk, lite$mv]) => ({ key: lite$mk, value: lite$mv }))";
@@ -2921,6 +2945,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             loopHeaderPos = syntax.skipTrivia(source, asNameEnd, prefix);
                             syntax.rejectMisplacedTag(source, loopHeaderPos, prefix, "block tag cannot appear before { in loop");
                         } else if types.isListKind(hdrParsed.kind) or types.isArrayKind(hdrParsed.kind) or types.isMapKind(hdrParsed.kind) or types.isSetKind(hdrParsed.kind) {
+                            loopSeqKind = hdrParsed.kind;
                             if types.isMapKind(hdrParsed.kind) {
                                 loopItemKind = "(key:" + types.mapKeyKind(hdrParsed.kind) + ",value:" + types.mapValueKind(hdrParsed.kind) + ")";
                                 loopSeqCode = "Array.from((" + hdrParsed.code + ").entries(), ([lite$mk, lite$mv]) => ({ key: lite$mk, value: lite$mv }))";
@@ -2959,11 +2984,18 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         mutable = false, writable = false, depth = blockLexDepth, constant = false, code = loopItemCode,
                         intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
                         if target == ir.TARGET_C {
-                            bSeqTag := types.cListTag(loopItemKind);
                             bSeqVar := "lt_bseq_" + loopId.toText() + "_" + itemStart.toText();
                             bSeqI := "lt_bsi_" + loopId.toText() + "_" + itemStart.toText();
-                            loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { " + types.cListElemType(bSeqTag) + " " + loopItemRuntime + " = " + bSeqVar + ".data[" + bSeqI + "]; (void)" + loopItemRuntime + "; ";
-                            loopTailClose = " } if (" + bSeqVar + ".rc != NULL) { if (*(" + bSeqVar + ".rc) <= 1) { free(" + bSeqVar + ".data); free(" + bSeqVar + ".rc); } else { *(" + bSeqVar + ".rc) -= 1; } } }";
+                            if types.isArrayKind(loopSeqKind) and types.cArrayTag(loopSeqKind) =!= "" {
+                                aTag := types.cArrayTag(loopSeqKind);
+                                aExt := types.arrayExtent(loopSeqKind);
+                                loopHeadCode = "{ /*@T:" + loopSeqKind + "@*/" + aTag + " " + bSeqVar + " = " + loopSeqCode + "; (void)" + bSeqVar + "; for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + aExt.toText() + "; " + bSeqI + " += 1) { " + types.cValueType(loopItemKind) + " " + loopItemRuntime + " = " + bSeqVar + ".data[" + bSeqI + "]; (void)" + loopItemRuntime + "; ";
+                                loopTailClose = " } }";
+                            } else {
+                                bSeqTag := types.cListTag(loopItemKind);
+                                loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { " + types.cListElemType(bSeqTag) + " " + loopItemRuntime + " = " + bSeqVar + ".data[" + bSeqI + "]; (void)" + loopItemRuntime + "; ";
+                                loopTailClose = " } if (" + bSeqVar + ".rc != NULL) { if (*(" + bSeqVar + ".rc) <= 1) { free(" + bSeqVar + ".data); free(" + bSeqVar + ".rc); } else { *(" + bSeqVar + ".rc) -= 1; } } }";
+                            }
                         } else {
                             loopHeadCode = "for (const " + loopItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
                         }
@@ -2973,11 +3005,18 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         mutable = false, writable = false, depth = blockLexDepth, constant = false, code = "",
                         intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
                         if target == ir.TARGET_C {
-                            bSeqTag := types.cListTag(loopItemKind);
                             bSeqVar := "lt_bseq_" + loopId.toText() + "_" + itemStart.toText();
                             bSeqI := "lt_bsi_" + loopId.toText() + "_" + itemStart.toText();
-                            loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { ";
-                            loopTailClose = " } if (" + bSeqVar + ".rc != NULL) { if (*(" + bSeqVar + ".rc) <= 1) { free(" + bSeqVar + ".data); free(" + bSeqVar + ".rc); } else { *(" + bSeqVar + ".rc) -= 1; } } }";
+                            if types.isArrayKind(loopSeqKind) and types.cArrayTag(loopSeqKind) =!= "" {
+                                aTag := types.cArrayTag(loopSeqKind);
+                                aExt := types.arrayExtent(loopSeqKind);
+                                loopHeadCode = "{ /*@T:" + loopSeqKind + "@*/" + aTag + " " + bSeqVar + " = " + loopSeqCode + "; (void)" + bSeqVar + "; for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + aExt.toText() + "; " + bSeqI + " += 1) { ";
+                                loopTailClose = " } }";
+                            } else {
+                                bSeqTag := types.cListTag(loopItemKind);
+                                loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { ";
+                                loopTailClose = " } if (" + bSeqVar + ".rc != NULL) { if (*(" + bSeqVar + ".rc) <= 1) { free(" + bSeqVar + ".data); free(" + bSeqVar + ".rc); } else { *(" + bSeqVar + ".rc) -= 1; } } }";
+                            }
                         } else {
                             loopHeadCode = "for (const " + tempItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
                         }
@@ -4185,6 +4224,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         var isUncond := false;
         var condCode := "true";
         var seqCode := "";
+        var seqSrcKind := "";
         var seqItemName := "";
         var seqItemKind := "";
         var beforeLoopOpen := hdrStart;
@@ -4236,6 +4276,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 seqItemName = source.slice(itemNameStart, itemNameEnd);
                 if syntax.isReservedWord(seqItemName) { syntax.unsupportedFeature(source, itemNameStart, seqItemName, prefix); }
                 isSeqLoop = true;
+                seqSrcKind = hdr.kind;
                 if types.isMapKind(hdr.kind) {
                     seqItemKind = "(key:" + types.mapKeyKind(hdr.kind) + ",value:" + types.mapValueKind(hdr.kind) + ")";
                     seqCode = "Array.from((" + hdr.code + ").entries(), ([lite$mk, lite$mv]) => ({ key: lite$mk, value: lite$mv }))";
@@ -4249,6 +4290,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 beforeLoopOpen = syntax.skipTrivia(source, itemNameEnd, prefix);
             } else if types.isListKind(hdr.kind) or types.isArrayKind(hdr.kind) or types.isMapKind(hdr.kind) or types.isSetKind(hdr.kind) {
                 isSeqLoop = true;
+                seqSrcKind = hdr.kind;
                 if types.isMapKind(hdr.kind) {
                     seqItemKind = "(key:" + types.mapKeyKind(hdr.kind) + ",value:" + types.mapValueKind(hdr.kind) + ")";
                     seqCode = "Array.from((" + hdr.code + ").entries(), ([lite$mk, lite$mv]) => ({ key: lite$mk, value: lite$mv }))";
@@ -4409,15 +4451,26 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                         loopIterVar + " " + rangeCmp + " " + rangeEndVar + "; " + loopIterVar + " += 1) { " + metaStep + cBodyWithCont + " }"
                     }
                 } else if isSeqLoop {
-                    seqTag := types.cListTag(seqItemKind);
                     seqVar := "lt_lseq_" + loopIdStr;
                     seqI := "lt_lsi_" + loopIdStr;
-                    elemDecl := if iterUsedInBody {
-                        types.cListElemType(seqTag) + " " + loopIterVar + " = " + seqVar + ".data[" + seqI + "]; "
-                    } else { "" };
-                    "{ lt_list_" + seqTag + " " + seqVar + " = lt_list_" + seqTag + "_copy(" + seqCode + "); " +
-                    "for (int64_t " + seqI + " = 0; " + seqI + " < " + seqVar + ".len; " + seqI + " += 1) { " +
-                    elemDecl + metaStep + cBodyWithCont + " } }"
+                    if types.isArrayKind(seqSrcKind) and types.cArrayTag(seqSrcKind) =!= "" {
+                        aTag := types.cArrayTag(seqSrcKind);
+                        aExt := types.arrayExtent(seqSrcKind);
+                        elemDecl := if iterUsedInBody {
+                            types.cValueType(seqItemKind) + " " + loopIterVar + " = " + seqVar + ".data[" + seqI + "]; "
+                        } else { "" };
+                        "{ /*@T:" + seqSrcKind + "@*/" + aTag + " " + seqVar + " = " + seqCode + "; (void)" + seqVar + "; " +
+                        "for (int64_t " + seqI + " = 0; " + seqI + " < " + aExt.toText() + "; " + seqI + " += 1) { " +
+                        elemDecl + metaStep + cBodyWithCont + " } }"
+                    } else {
+                        seqTag := types.cListTag(seqItemKind);
+                        elemDecl := if iterUsedInBody {
+                            types.cListElemType(seqTag) + " " + loopIterVar + " = " + seqVar + ".data[" + seqI + "]; "
+                        } else { "" };
+                        "{ lt_list_" + seqTag + " " + seqVar + " = lt_list_" + seqTag + "_copy(" + seqCode + "); " +
+                        "for (int64_t " + seqI + " = 0; " + seqI + " < " + seqVar + ".len; " + seqI + " += 1) { " +
+                        elemDecl + metaStep + cBodyWithCont + " } }"
+                    }
                 } else {
                     "while (" + condCode + ") { " + metaStep + cBodyWithCont + " }"
                 }
@@ -5349,7 +5402,9 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 }
                 return (cond = arrCond, bindings = arrBindings, irrefutable = arrIrref, boolMask = 0, enumCases = "", next = aCursor + 1, markers = arrMarkers);
             }
-            elemExpr := if target == ir.TARGET_C and types.cListTag(elemKind) =!= "" {
+            elemExpr := if target == ir.TARGET_C and types.cArrayTag(subjKind) =!= "" {
+                "((" + subjCode + ").data[" + elemIdx.toText() + "])"
+            } else if target == ir.TARGET_C and types.cListTag(elemKind) =!= "" {
                 "lt_list_" + types.cListTag(elemKind) + "_at(" + subjCode + ", " + elemIdx.toText() + ", " + pos.toText() + ")"
             } else {
                 "(" + subjCode + ")[" + elemIdx.toText() + "]!"
@@ -7270,6 +7325,9 @@ emitHookIndexReadCode := fn(target: String, errPos: Int, recvKind: String, recvC
     if getRuntime == "lite$core$list$getIndex:v1" or getRuntime == "lite$core$array$getIndex:v1" {
         elKind := if types.isListKind(recvKind) { types.listElementKind(recvKind) } else { types.arrayElementKind(recvKind) };
         if target == ir.TARGET_C {
+            if types.isArrayKind(recvKind) and types.cArrayTag(recvKind) =!= "" {
+                return "/*@T:" + recvKind + "@*/" + types.cArrayTag(recvKind) + "_at(" + recvCode + ", " + keyCode + ", " + errPos.toText() + ")";
+            }
             return "lt_list_" + types.cListTag(elKind) + "_at(" + recvCode + ", " + keyCode + ", " + errPos.toText() + ")";
         }
         return "lite$listAt(" + recvCode + ", " + keyCode + ", " + errPos.toText() + ")";
@@ -7289,6 +7347,17 @@ pub emitHookIndexAssignCode := fn(target: String, source: String, opPos: Int, pr
     if setRuntime == "lite$core$list$setAt:v1" or setRuntime == "lite$core$array$setIndex:v1" {
         elKind := if types.isListKind(entry.kind) { types.listElementKind(entry.kind) } else { types.arrayElementKind(entry.kind) };
         if target == ir.TARGET_C {
+            if types.isArrayKind(entry.kind) and types.cArrayTag(entry.kind) =!= "" {
+                aTag := types.cArrayTag(entry.kind);
+                if isCompound {
+                    cValType := types.cValueType(elKind);
+                    curRead := "/*@T:" + entry.kind + "@*/" + aTag + "_at(" + entry.runtime + ", lt_ck, " + opPos.toText() + ")";
+                    nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, elKind, "lt_cv", compBaseOp, valParsed);
+                    return "{ /*c-stmt*/ int64_t lt_ck = " + keyCode + "; " + cValType + " lt_cv = " + curRead + "; " + aTag + "_set(&" + entry.runtime + ", lt_ck, " + nextVal + ", " + opPos.toText() + "); }";
+                }
+                vCode := ctx.assignValueCode(target, elKind, valParsed.kind, valParsed.code);
+                return "/*@T:" + entry.kind + "@*/" + aTag + "_set(&" + entry.runtime + ", " + keyCode + ", " + vCode + ", " + opPos.toText() + ")";
+            }
             cTag := types.cListTag(elKind);
             if isCompound {
                 cValType := types.cValueType(elKind);
@@ -8572,7 +8641,9 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         syntax.failAt(source, labelStart, prefix, "array index " + source.slice(labelStart, end) + " out of bounds");
                     }
                     arrElKind := types.arrayElementKind(left.kind);
-                    arrElemCode := if target == ir.TARGET_C and types.cListTag(arrElKind) =!= "" {
+                    arrElemCode := if target == ir.TARGET_C and types.cArrayTag(left.kind) =!= "" {
+                        "((" + left.code + ").data[" + fieldIndex.toText() + "])"
+                    } else if target == ir.TARGET_C and types.cListTag(arrElKind) =!= "" {
                         "lt_list_" + types.cListTag(arrElKind) + "_at(" + left.code + ", " + fieldIndex.toText() + ", " + postPosition.toText() + ")"
                     } else {
                         "(" + left.code + ")[" + fieldIndex.toText() + "]!"
@@ -8988,7 +9059,14 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         intValue = 0, textValue = "", constant = false, next = sliceCloseNext), sliceMarkers);
                     } else {
                         elemKind := elemKindForC;
-                        sliceCode := if cSliceTag =!= "" {
+                        sliceCode := if target == ir.TARGET_C and types.isArrayKind(left.kind) and types.cArrayTag(left.kind) =!= "" {
+                            aTag := types.cArrayTag(left.kind);
+                            if hasSliceEnd {
+                                "/*@T:" + left.kind + "@*//*@T:List<" + elemKind + ">@*/" + aTag + "_slice((" + left.code + "), " + sliceStartCode + ", " + sliceEndCode + ", " + indexStart.toText() + ")"
+                            } else {
+                                "/*@T:" + left.kind + "@*//*@T:List<" + elemKind + ">@*/" + aTag + "_slice_from((" + left.code + "), " + sliceStartCode + ", " + indexStart.toText() + ")"
+                            }
+                        } else if cSliceTag =!= "" {
                             if hasSliceEnd {
                                 "lt_list_" + cSliceTag + "_slice((" + left.code + "), " + sliceStartCode + ", " + sliceEndCode + ", " + indexStart.toText() + ")"
                             } else {

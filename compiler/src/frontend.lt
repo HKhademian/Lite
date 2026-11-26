@@ -394,6 +394,9 @@ parseDigits := fn(text: String, start: Int, end: Int): Int { syntax.parseDigits(
 /** Returns the integer extent from `[ElementKind;Extent]`. */
 pub arrayExtent := fn(kind: String): Int { types.arrayExtent(kind) };
 
+/** Maps a concrete fixed-size `[T; N]` array kind to its inline C11 struct typedef name `lt_arr_...`, or `""`. */
+pub cArrayTag := fn(kind: String): String { types.cArrayTag(kind) };
+
 /** True when `expectedKind` and `actualKind` are callable kinds with matching parameter and return shapes. */
 pub fnShapeMatches := fn(expectedKind: String, actualKind: String): Bool { types.fnShapeMatches(expectedKind, actualKind) };
 
@@ -3038,9 +3041,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         }
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
-                        sequenceCode = parsed.code;
-                        if (target == TARGET_TS or target == TARGET_C) and seqIsImmutableLocal {
-                            loopSeqMode = 1;
+                        if target == TARGET_C and isArrayKind(parsed.kind) and types.cArrayTag(parsed.kind) =!= "" {
+                            sequenceCode = "/*@T:" + parsed.kind + "@*/" + parsed.code;
+                            loopSeqMode = 6;
+                        } else {
+                            sequenceCode = parsed.code;
+                            if (target == TARGET_TS or target == TARGET_C) and seqIsImmutableLocal {
+                                loopSeqMode = 1;
+                            }
                         }
                     }
                     position = skipTrivia(source, itemEnd, prefix);
@@ -3071,9 +3079,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         }
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
-                        sequenceCode = parsed.code;
-                        if (target == TARGET_TS or target == TARGET_C) and seqIsImmutableLocal {
-                            loopSeqMode = 1;
+                        if target == TARGET_C and isArrayKind(parsed.kind) and types.cArrayTag(parsed.kind) =!= "" {
+                            sequenceCode = "/*@T:" + parsed.kind + "@*/" + parsed.code;
+                            loopSeqMode = 6;
+                        } else {
+                            sequenceCode = parsed.code;
+                            if (target == TARGET_TS or target == TARGET_C) and seqIsImmutableLocal {
+                                loopSeqMode = 1;
+                            }
                         }
                     }
                     position = afterParsed;

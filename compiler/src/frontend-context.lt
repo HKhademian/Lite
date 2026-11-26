@@ -195,7 +195,22 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
 pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     if types.isDistinctKind(kind) { return self(target, types.distinctBaseKind(kind), code); }
     if kind == ir.VALUE_KIND_NEVER or (target == ir.TARGET_C and code.startsWithAt(0, "/*@CBLK:")) { code }
-    else if types.isListKind(kind) or types.isArrayKind(kind) {
+    else if types.isArrayKind(kind) and target == ir.TARGET_C and types.cArrayTag(kind) =!= "" {
+        if not types.cTypeHasListField(kind) {
+            code
+        } else {
+            aTag := types.cArrayTag(kind);
+            if code.startsWithAt(0, aTag + "_copy(") or
+            code.startsWithAt(0, aTag + "_repeat(") or
+            code.startsWithAt(0, "/*@T:" + kind + "@*/" + aTag + "_repeat(") or
+            code.startsWithAt(0, "((/*@T:" + kind + "@*/") or
+            code.startsWithAt(0, "/*@CBLK:") {
+                code
+            } else {
+                aTag + "_copy(" + code + ")"
+            }
+        }
+    } else if types.isListKind(kind) or types.isArrayKind(kind) {
         if target == ir.TARGET_C {
             elKind := if types.isListKind(kind) { types.listElementKind(kind) } else { types.arrayElementKind(kind) };
             tag := types.cListTag(elKind);
@@ -789,6 +804,26 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
     else if types.isArrayKind(kind) {
         elemKind := types.arrayElementKind(kind);
         extent := types.arrayExtent(kind);
+        if target == ir.TARGET_C and types.cArrayTag(kind) =!= "" {
+            aTag := types.cArrayTag(kind);
+            if extent == 0 {
+                return (kind = kind, code = "((/*@T:" + kind + "@*/" + aTag + "){ 0 })", intValue = 0, textValue = "", constant = false, next = next);
+            }
+            if numeric.isIntKind(elemKind) or numeric.isFloatKind(elemKind) or elemKind == ir.VALUE_KIND_BOOL or (types.isEnumKind(elemKind) and not types.isPayloadEnumKind(elemKind)) {
+                return (kind = kind, code = "((/*@T:" + kind + "@*/" + aTag + "){ { 0 } })", intValue = 0, textValue = "", constant = false, next = next);
+            }
+            elemZero := self(target, elemKind, next).code;
+            if extent <= 16 {
+                items: mut List<String> = [];
+                var i := 0;
+                loop i < extent {
+                    mut items.pushBack(elemZero);
+                    i = i + 1;
+                }
+                return (kind = kind, code = "((/*@T:" + kind + "@*/" + aTag + "){ { " + items.join(", ") + " } })", intValue = 0, textValue = "", constant = false, next = next);
+            }
+            return (kind = kind, code = "/*@T:" + kind + "@*/" + aTag + "_repeat(" + elemZero + ")", intValue = 0, textValue = "", constant = false, next = next);
+        }
         elemZero := self(target, elemKind, next).code;
         items: mut List<String> = [];
         var i := 0;

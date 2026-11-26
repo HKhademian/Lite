@@ -1227,6 +1227,7 @@ cStructHash := fn(kind: String): String {
 cSupportedCache: mut Map<String, Bool>;
 cFnTagCache: mut Map<String, String>;
 cStructTagCache: mut Map<String, String>;
+cArrayTagCache: mut Map<String, String>;
 cHasListCache: mut Map<String, Bool>;
 cValueTypeCache: mut Map<String, String>;
 containsFnCache: mut Map<String, Bool>;
@@ -1324,10 +1325,13 @@ pub cStructTag := fn(kind: String): String {
     tag
 };
 
-/** True when `kind` is a list/array/map/set or a tuple/record/payload-enum transitively containing one. */
+/** True when `kind` is a list/wildcard-array/map/set or a fixed array/tuple/record/payload-enum transitively containing one. */
 pub cTypeHasListField := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if isListKind(kind) or isArrayKind(kind) or isMapKind(kind) or isSetKind(kind) { return true; }
+    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) { return true; }
+    if isArrayKind(kind) {
+        return if arrayExtent(kind) < 0 { true } else { self(arrayElementKind(kind)) };
+    }
     if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) { return false; }
     cached := cHasListCache.get(kind);
     if cached.found { return cached.value; }
@@ -1360,8 +1364,8 @@ pub cTypeHasListField := fn(kind: String): Bool {
     res
 };
 
-/** Maps a C-supported list element kind (scalar, enum, tuple, record, or payload enum) to its canonical C11 list tag, or `""` if unsupported. */
-pub cListTag := fn(elemKind: String): String {
+/** Maps a non-array C-supported list element kind (scalar, enum, tuple, record, payload enum, or fn) to its canonical C11 tag. */
+cNonArrayListTag := fn(elemKind: String): String {
     if isDistinctKind(elemKind) { return self(distinctBaseKind(elemKind)); }
     if numeric.isIntKind(elemKind) or (isEnumKind(elemKind) and not isPayloadEnumKind(elemKind)) { "i64" }
     else if numeric.isFloatKind(elemKind) { "f64" }
@@ -1370,15 +1374,6 @@ pub cListTag := fn(elemKind: String): String {
     else if isTupleKind(elemKind) or isRecordKind(elemKind) or isPayloadEnumKind(elemKind) { cStructTag(elemKind) }
     else if isFnKind(elemKind) { cFnTag(elemKind) }
     else { "" }
-};
-
-/** Maps a canonical C11 list tag (`i64`, `f64`, `bool`, `str`, or `lt_s_...`) to its C11 element type name. */
-pub cListElemType := fn(tag: String): String {
-    if tag == "i64" { "int64_t" }
-    else if tag == "f64" { "double" }
-    else if tag == "bool" { "bool" }
-    else if tag == "str" { "lt_str" }
-    else { tag }
 };
 
 /** Maps a C-supported map/set key kind to its C11 tag (`i64`, `f64`, `bool`, `str`), or `""`. */
@@ -1391,12 +1386,71 @@ pub cMapKeyTag := fn(kKind: String): String {
     else { "" }
 };
 
+/** Maps a concrete fixed-size `[T; N]` array kind to its inline C11 struct typedef name `lt_arr_<elemTag>_<N>`, or `""` for non-arrays, `[T; *]`, or unsupported element types. */
+pub cArrayTag := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if not isArrayKind(kind) { return ""; }
+    ext := arrayExtent(kind);
+    if ext < 0 { return ""; }
+    cached := cArrayTagCache.get(kind);
+    if cached.found { return cached.value; }
+    elKind := arrayElementKind(kind);
+    baseTag := cNonArrayListTag(elKind);
+    elTag := if baseTag =!= "" { baseTag }
+    else if isArrayKind(elKind) { self(elKind) }
+    else if isListKind(elKind) {
+        inK := listElementKind(elKind);
+        inTag := if isArrayKind(inK) { self(inK) } else { cNonArrayListTag(inK) };
+        if inTag =!= "" { "lt_list_" + inTag } else { "" }
+    } else if isSetKind(elKind) {
+        kTag := cMapKeyTag(setElementKind(elKind));
+        if kTag =!= "" { "lt_set_" + kTag } else { "" }
+    } else if isMapKind(elKind) {
+        kTag := cMapKeyTag(mapKeyKind(elKind));
+        vKind := mapValueKind(elKind);
+        vBase := cNonArrayListTag(vKind);
+        vTag := if vBase =!= "" { vBase }
+        else if isArrayKind(vKind) and self(vKind) =!= "" { self(vKind) }
+        else if isListKind(vKind) {
+            vin := listElementKind(vKind);
+            vinTag := if isArrayKind(vin) { self(vin) } else { cNonArrayListTag(vin) };
+            if vinTag =!= "" { "list_" + vinTag } else { "" }
+        } else if isArrayKind(vKind) {
+            vin := arrayElementKind(vKind);
+            vinTag := if isArrayKind(vin) { self(vin) } else { cNonArrayListTag(vin) };
+            if vinTag =!= "" { "list_" + vinTag } else { "" }
+        } else { "" };
+        if kTag =!= "" and vTag =!= "" { "lt_map_" + kTag + "_" + vTag } else { "" }
+    } else { "" };
+    tag := if elTag =!= "" { "lt_arr_" + elTag + "_" + ext.toText() } else { "" };
+    mut cArrayTagCache.set(kind, tag);
+    tag
+};
+
+/** Maps a C-supported list element kind (scalar, enum, tuple, record, payload enum, fn, or fixed array) to its canonical C11 list tag, or `""` if unsupported. */
+pub cListTag := fn(elemKind: String): String {
+    if isDistinctKind(elemKind) { return self(distinctBaseKind(elemKind)); }
+    base := cNonArrayListTag(elemKind);
+    if base =!= "" { base }
+    else if isArrayKind(elemKind) { cArrayTag(elemKind) }
+    else { "" }
+};
+
+/** Maps a canonical C11 list tag (`i64`, `f64`, `bool`, `str`, `lt_s_...`, or `lt_arr_...`) to its C11 element type name. */
+pub cListElemType := fn(tag: String): String {
+    if tag == "i64" { "int64_t" }
+    else if tag == "f64" { "double" }
+    else if tag == "bool" { "bool" }
+    else if tag == "str" { "lt_str" }
+    else { tag }
+};
+
 /** Maps a C-supported map value kind to its C11 value tag, or `""`. */
 pub cMapValTag := fn(vKind: String): String {
     lt := cListTag(vKind);
     if lt =!= "" { return lt; }
     if isListKind(vKind) and cListTag(listElementKind(vKind)) =!= "" { return "list_" + cListTag(listElementKind(vKind)); }
-    if isArrayKind(vKind) and cListTag(arrayElementKind(vKind)) =!= "" { return "list_" + cListTag(arrayElementKind(vKind)); }
+    if isArrayKind(vKind) and cArrayTag(vKind) == "" and cListTag(arrayElementKind(vKind)) =!= "" { return "list_" + cListTag(arrayElementKind(vKind)); }
     ""
 };
 
@@ -1426,6 +1480,7 @@ pub cValueType := fn(kind: String): String {
     cached := cValueTypeCache.get(kind);
     if cached.found { return cached.value; }
     res := if isListKind(kind) { "lt_list_" + cListTag(listElementKind(kind)) }
+    else if cArrayTag(kind) =!= "" { cArrayTag(kind) }
     else if isArrayKind(kind) { "lt_list_" + cListTag(arrayElementKind(kind)) }
     else if cMapTag(kind) =!= "" { cMapTag(kind) }
     else if cSetTag(kind) =!= "" { cSetTag(kind) }

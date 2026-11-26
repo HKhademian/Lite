@@ -1,0 +1,146 @@
+/* Inline C11 fixed-size [T; N] array value structs, operations, nesting, and zero-malloc codegen parity tests. */
+
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+builtTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+builtC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + builtC.error, builtC.ok);
+tsComp := builtTs.path;
+cComp := builtC.path;
+
+ccProbe := compilerTest.probeCc();
+heavyEnv := proc.envGet("LITE_SKIP_HEAVY");
+skipHeavy := heavyEnv.found and heavyEnv.value == "1";
+
+/* 1. Verify C11 codegen for Vec4 / Mat4 fixed arrays uses inline lt_arr_ structs with zero mallocs or lt_list_ */
+vecMatSrc := [
+    "io := import \"core/io\";",
+    "Vec4 := alias [Float; 4];",
+    "Mat4 := alias [Vec4; 4];",
+    "dot4 := fn(a: Vec4, b: Vec4): Float {",
+    "    var acc := 0.0;",
+    "    loop 0..4 as i {",
+    "        acc += a[i] * b[i];",
+    "    }",
+    "    acc",
+    "};",
+    "vecMat := fn(): Float {",
+    "    v1: Vec4 = [1.0, 2.0, 3.0, 4.0];",
+    "    v2 := [0.5, 1.5, 2.5, 3.5];",
+    "    var m: Mat4 = [[1.0; 4]; 4];",
+    "    m[1] = [1.0, 1.0, 9.0, 1.0];",
+    "    dot4(v1, v2) + m[1][2] + v1.2 + (m.0).3",
+    "};",
+    "io.outputLine(vecMat());"
+].join("\n");
+
+cVecMat := compilerTest.compileStdin(root, cComp, vecMatSrc, "");
+test.checkInt("c vecMat compile status: " + cVecMat.stderr, 0, cVecMat.status);
+test.checkText("c vecMat compile stderr", "", cVecMat.stderr);
+test.check("c vecMat emits inline lt_arr_f64_4", cVecMat.stdout.contains("typedef struct { double data[4]; } lt_arr_f64_4;"));
+test.check("c vecMat emits nested lt_arr_lt_arr_f64_4_4", cVecMat.stdout.contains("typedef struct { lt_arr_f64_4 data[4]; } lt_arr_lt_arr_f64_4_4;"));
+test.check("c vecMat emits zero lt_list_ structs", not cVecMat.stdout.contains("lt_list_"));
+test.check("c vecMat emits zero malloc calls", not cVecMat.stdout.contains("malloc("));
+
+/* 2. Full TS & C11 behavioral parity across literals, repeat, zero-init, nesting, records, lists, maps, destructuring, match, slicing, loops, Array.*, and bounds faults */
+paritySrc := [
+    "io := import \"core/io\";",
+    "_arrMod := import \"core/array\";",
+    "Row := record { items: List<Int>; };",
+    "Box := record {",
+    "    tag: String;",
+    "    coords: [Float; 4];",
+    "    rows: [[Int; 2]; 2];",
+    "};",
+    "bumpFirst := fn(xs: mut [Int; 4], delta: Int): Unit {",
+    "    xs[0] += delta;",
+    "};",
+    "mainWork := fn(): Unit {",
+    "    a: mut [Int; 4] = [10, 20, 30, 40];",
+    "    b := [7; 4];",
+    "    z: [Int; 6];",
+    "    empty: [Int; 0] = [];",
+    "    bumpFirst(mut a, 5);",
+    "    [p, q, r, s] := a;",
+    "    io.outputLine(\"basic:\", a, b, z, empty, empty.length(), p, q, r, s, a.2, b.3);",
+    "    var mat: [[Int; 2]; 2] = [[1, 2], [3, 4]];",
+    "    mat[1] = [99, 4];",
+    "    words: mut [String; 3] = [\"alpha\", \"beta\", \"gamma\"];",
+    "    words[1] = \"BETA\";",
+    "    bx := Box { tag = \"pt\", coords = [1.5, 2.5, 3.5, 4.5], rows = mat };",
+    "    listOfArr: mut List<[Int; 4]> = [a, b];",
+    "    mut listOfArr.pushBack([1, 2, 3, 4]);",
+    "    r0 := Row { items = [1, 2] };",
+    "    r1 := Row { items = [3, 4, 5] };",
+    "    var arrOfRec: [Row; 2] = [r0, r1];",
+    "    mp: mut Map<String, [Int; 3]>;",
+    "    mut mp.set(\"k\", [9, 8, 7]);",
+    "    mut mp.set(\"m\", [6, 5, 4]);",
+    "    io.outputLine(\"nested:\", mat, words, bx, listOfArr, arrOfRec, mp);",
+    "    var sum := 0;",
+    "    loop a as v { sum += v; }",
+    "    var ticks := 0;",
+    "    loop words { ticks += 1; }",
+    "    sq := @l1 loop a as v { v * v } then { @l1.collected };",
+    "    cnt := @l2 loop words { 1 } then { @l2.count };",
+    "    io.outputLine(\"loops:\", sum, ticks, sq, cnt);",
+    "    matched := match [5, 12, 9] {",
+    "        [5, mid, 9] { mid + 1 }",
+    "        _ { -1 }",
+    "    };",
+    "    sl1 := a[1..3];",
+    "    sl2 := a[2..];",
+    "    sl3 := words[..2];",
+    "    io.outputLine(\"sliceMatch:\", matched, sl1, sl2, sl3, a[1..=2]);",
+    "    filled := Array.filled<Int, 4>(3);",
+    "    zeroed := Array.zeroed<Int, 3>();",
+    "    mut mutArr := [1, 2, 3];",
+    "    Array.fill(mut mutArr, 8);",
+    "    mapped := Array.map<Int, Int, 4>(a, fn(x: Int): Int { x + 1 });",
+    "    folded := Array.fold<Int, Int, 4>(a, 0, fn(acc: Int, x: Int): Int { acc + x });",
+    "    io.outputLine(\"coreArray:\", filled, zeroed, mutArr, mapped, folded, Array.toList(a), Array.contains(a, 30), Array.indexOf(a, 40));",
+    "    mut copyArr := arrOfRec;",
+    "    rc0 := copyArr[0];",
+    "    mut it0 := rc0.items;",
+    "    mut it0.pushBack(99);",
+    "    copyArr[0] = Row { items = it0 };",
+    "    io.outputLine(\"deepCopy:\", arrOfRec, copyArr);",
+    "};",
+    "mainWork();"
+].join("\n");
+
+runTs := compilerTest.compileCheckRunTs(root, tsComp, paritySrc, "inline-array-parity.lts");
+test.checkInt("ts parity compile+run status: " + runTs.stderr, 0, runTs.status);
+test.checkText("ts parity stderr", "", runTs.stderr);
+
+if ccProbe.available and not skipHeavy {
+    runC := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, paritySrc, "inline-array-parity.lts", "");
+    test.checkInt("c parity compile+run status: " + runC.stderr, 0, runC.status);
+    test.checkText("c parity stderr", "", runC.stderr);
+    test.checkText("ts vs c parity stdout", runTs.stdout, runC.stdout);
+
+    /* Bounds & slice fault parity */
+    oobSrc := "io := import \"core/io\";\na := [1, 2, 3];\nio.outputLine(a[3]);\n";
+    oobTs := compilerTest.compileCheckRunTs(root, tsComp, oobSrc, "oob.lts");
+    oobC := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, oobSrc, "oob.lts", "");
+    test.checkInt("oob ts status", 1, oobTs.status);
+    test.checkInt("oob c status", 1, oobC.status);
+    test.checkText("oob parity stderr", oobTs.stderr, oobC.stderr);
+
+    zeroOobSrc := "io := import \"core/io\";\na: [Int; 0] = [];\nio.outputLine(a[0]);\n";
+    zTs := compilerTest.compileCheckRunTs(root, tsComp, zeroOobSrc, "zoob.lts");
+    zC := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, zeroOobSrc, "zoob.lts", "");
+    test.checkInt("zero oob ts status", 1, zTs.status);
+    test.checkInt("zero oob c status", 1, zC.status);
+    test.checkText("zero oob parity stderr", zTs.stderr, zC.stderr);
+}
+
+test.done("inline-fixed-arrays");
