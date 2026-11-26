@@ -1725,6 +1725,13 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             };
             return ctx.withMarkers((kind = typeOwnerKey, code = truncCode, intValue = 0, textValue = "", constant = false, next = closeTrunc), if inferMode { ctx.collectParsedMarkers("", truncArg) } else { "" });
         }
+        if isNumericHardBuiltin(typeOwnerKey, memberName, true) {
+            return parseNumericHardBuiltin(
+                target, source, memberStart, prefix, typeOwnerKey, memberName, false,
+                ctx.intParsed("", 0, false, start),
+                locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases
+            );
+        }
         if typeOwnerKey =!= "" {
             opIdx := findTypeOp(functions, typeOwnerKey, memberName);
             if opIdx >= 0 {
@@ -8392,6 +8399,106 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
     ctx.intParsed("", 0, false, openParen)
 };
 
+/** True when `opName` is a hard-builtin numeric method on integer/float type `kind`. */
+isNumericHardBuiltin := fn(kind: String, opName: String, isStatic: Bool): Bool {
+    if numeric.isFloatKind(kind) {
+        return opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" or opName == "fma" or opName == "uncheckedFma";
+    }
+    if not numeric.isIntKind(kind) { return false; }
+    if opName == "uncheckedTruncate" { return isStatic; }
+    opName == "bitAnd" or opName == "bitOr" or opName == "bitXor" or opName == "bitNot" or
+    opName == "shiftLeft" or opName == "shiftRight" or opName == "rotateLeft" or opName == "rotateRight" or
+    opName == "wrappingAdd" or opName == "wrappingSub" or opName == "wrappingMul" or opName == "wrappingNeg" or
+    opName == "saturatingAdd" or opName == "saturatingSub" or opName == "saturatingMul" or
+    opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" or
+    opName == "uncheckedRem" or opName == "uncheckedNeg" or opName == "uncheckedShiftLeft" or opName == "uncheckedShiftRight" or
+    opName == "countOnes" or opName == "leadingZeros" or opName == "trailingZeros" or
+    opName == "byteSwap" or opName == "wideningMul"
+};
+
+/** Parses arguments and lowers one hard-builtin numeric static (`T.op(...)`) or instance (`x.op(...)`) call. */
+parseNumericHardBuiltin := fn(
+    target: String, source: String, memberStart: Int, prefix: String,
+    kind: String, opName: String, hasReceiver: Bool, receiver: Parsed,
+    locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
+    ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>
+): Parsed {
+    if not inferMode and opName == "byteSwap" and numeric.isSubByteIntKind(kind) {
+        syntax.failAt(source, memberStart, prefix, "byteSwap requires an 8-, 16-, 32-, or 64-bit integer type, got " + types.displayKind(kind));
+    }
+    memberEnd := source.skipName(memberStart);
+    openParen := syntax.expectSymbol(source, syntax.skipTrivia(source, memberEnd, prefix), "(", prefix);
+    isUnary := opName == "bitNot" or opName == "wrappingNeg" or opName == "uncheckedNeg" or opName == "uncheckedTruncate" or opName == "countOnes" or opName == "leadingZeros" or opName == "trailingZeros" or opName == "byteSwap";
+    isShift := opName == "shiftLeft" or opName == "shiftRight" or opName == "rotateLeft" or opName == "rotateRight" or opName == "uncheckedShiftLeft" or opName == "uncheckedShiftRight";
+    isFma := opName == "fma" or opName == "uncheckedFma";
+    var cursor := syntax.skipTrivia(source, openParen, prefix);
+    var markers := if inferMode and hasReceiver { ctx.collectParsedMarkers("", receiver) } else { "" };
+    var a0 := if hasReceiver { receiver } else { (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = cursor) };
+    if not hasReceiver {
+        exp0 := if opName == "uncheckedTruncate" { "" } else { kind };
+        p0 := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, exp0, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        a0 = p0;
+        if inferMode { markers = ctx.collectParsedMarkers(markers, a0); }
+        if not inferMode {
+            if opName == "uncheckedTruncate" {
+                if not numeric.isFloatKind(a0.kind) {
+                    syntax.failAt(source, cursor, prefix, kind + ".uncheckedTruncate expects a Float operand, got " + types.displayKind(a0.kind));
+                }
+            } else if not types.isCompatibleKind(kind, a0.kind) {
+                syntax.failAt(source, cursor, prefix, kind + "." + opName + " expects " + types.displayKind(kind) + ", got " + types.displayKind(a0.kind));
+            }
+        }
+        cursor = syntax.skipTrivia(source, a0.next, prefix);
+    }
+    var a1 := (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = cursor);
+    var a2 := (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = cursor);
+    if not isUnary {
+        if not hasReceiver {
+            cursor = syntax.skipTrivia(source, syntax.expectSymbol(source, cursor, ",", prefix), prefix);
+        }
+        exp1 := if isShift { ir.VALUE_KIND_INT } else { kind };
+        p1 := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, exp1, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        a1 = p1;
+        if inferMode { markers = ctx.collectParsedMarkers(markers, a1); }
+        if not inferMode {
+            if isShift {
+                if not numeric.isIntKind(a1.kind) {
+                    syntax.failAt(source, cursor, prefix, opName + " shift amount must be Int, got " + types.displayKind(a1.kind));
+                }
+            } else if not types.isCompatibleKind(kind, a1.kind) {
+                syntax.failAt(source, cursor, prefix, kind + "." + opName + " expects " + types.displayKind(kind) + ", got " + types.displayKind(a1.kind));
+            }
+        }
+        cursor = syntax.skipTrivia(source, a1.next, prefix);
+    }
+    if isFma {
+        cursor = syntax.skipTrivia(source, syntax.expectSymbol(source, cursor, ",", prefix), prefix);
+        p2 := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, kind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        a2 = p2;
+        if inferMode { markers = ctx.collectParsedMarkers(markers, a2); }
+        if not inferMode and not types.isCompatibleKind(kind, a2.kind) {
+            syntax.failAt(source, cursor, prefix, kind + "." + opName + " expects " + types.displayKind(kind) + ", got " + types.displayKind(a2.kind));
+        }
+        cursor = syntax.skipTrivia(source, a2.next, prefix);
+    }
+    closeParen := syntax.expectSymbol(source, cursor, ")", prefix);
+    retKind := if opName == "countOnes" or opName == "leadingZeros" or opName == "trailingZeros" { ir.VALUE_KIND_INT }
+    else if opName == "wideningMul" { "(lo:" + kind + ",hi:" + kind + ")" }
+    else { kind };
+    if inferMode {
+        return ctx.withMarkers((kind = retKind, code = "", intValue = 0, textValue = "", constant = false, next = closeParen), markers);
+    }
+    a0Code := if opName == "uncheckedTruncate" or a0.kind == kind or not numeric.isNumericKind(a0.kind) { a0.code }
+    else { ir.targetNumericCastCode(target, kind, a0.kind, a0.code, memberStart) };
+    a1Code := if isUnary or isShift or a1.kind == kind or not numeric.isNumericKind(a1.kind) { a1.code }
+    else { ir.targetNumericCastCode(target, kind, a1.kind, a1.code, memberStart) };
+    a2Code := if not isFma or a2.kind == kind or not numeric.isNumericKind(a2.kind) { a2.code }
+    else { ir.targetNumericCastCode(target, kind, a2.kind, a2.code, memberStart) };
+    tupleTag := if opName == "wideningMul" and target == ir.TARGET_C { types.cStructTag(retKind) } else { "" };
+    outCode := ir.targetNumericBuiltinCode(target, kind, opName, a0Code, a1Code, a2Code, a0.kind, memberStart, tupleTag);
+    (kind = retKind, code = outCode, intValue = 0, textValue = "", constant = false, next = closeParen)
+};
+
 /** Finds an instance or static type-attached operation registered for `ownerKey.opName`, or -1. */
 findTypeOp := fn(functions: List<FunctionInfo>, ownerKey: String, opName: String): Int {
     inst := sym.findFunction(functions, "$typeop:" + ownerKey + "." + opName);
@@ -8957,6 +9064,15 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     left = ctx.withMarkers((kind = fieldKind, code = "(" + left.code + ")." + rProp,
                     intValue = 0, textValue = "", constant = false, next = labelEnd),
                     if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                } else if isNumericHardBuiltin(left.kind, label, false) {
+                    afterOpLabel := syntax.skipTrivia(source, labelEnd, prefix);
+                    if afterOpLabel >= sourceLen or source.at(afterOpLabel) =!= "(" {
+                        syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(left.kind) + "." + label + " must be called with (...)");
+                    }
+                    left = parseNumericHardBuiltin(
+                        target, source, labelStart, prefix, left.kind, label, true, left,
+                        locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases
+                    );
                 } else {
                     ownerKey := types.typeOpOwnerKey(left.kind);
                     opIdx := if ownerKey =!= "" { findTypeOp(functions, ownerKey, label) } else { -1 };

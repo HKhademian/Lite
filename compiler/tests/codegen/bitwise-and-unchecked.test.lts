@@ -1,0 +1,123 @@
+/* Phase 2c hard-builtin integer & float operations: bitwise, checked shifts, wrapping rotates, wrapping/saturating/unchecked arithmetic, bit manip, wideningMul, and FMA parity tests. */
+
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+builtTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+builtC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + builtC.error, builtC.ok);
+tsComp := builtTs.path;
+cComp := builtC.path;
+
+ccProbe := compilerTest.probeCc();
+heavyEnv := proc.envGet("LITE_SKIP_HEAVY");
+skipHeavy := heavyEnv.found and heavyEnv.value == "1";
+
+/* 1. Verify C11 emits direct inline rotates for UInt32 / UInt64 */
+rotSrc := [
+    "io := import \"core/io\";",
+    "a: UInt32 = 305419896;",
+    "b: UInt64 = 81985529216486895;",
+    "io.outputLine(a.rotateRight(7), UInt64.rotateLeft(b, 13));"
+].join("\n");
+cRot := compilerTest.compileStdin(root, cComp, rotSrc, "");
+test.checkInt("cRot compile status: " + cRot.stderr, 0, cRot.status);
+test.check("cRot emits lt_rotr_u32", cRot.stdout.contains("lt_rotr_u32("));
+test.check("cRot emits lt_rotl_u64", cRot.stdout.contains("lt_rotl_u64("));
+
+/* 2. Full TS & C11 behavioral parity across static and instance forms */
+paritySrc := [
+    "io := import \"core/io\";",
+    "/* Bitwise binary & unary */",
+    "i1: Int1 = -1; i4: Int4 = -8;",
+    "u4: UInt4 = 10; u8: UInt8 = 202; u32: UInt32 = 305419896; u64: UInt64 = 18446744073709551615;",
+    "io.outputLine(\"bit:\", i1.bitNot(), i4.bitXor(7), UInt4.bitAnd(u4, 12), u4.bitNot(), u8.bitOr(5), u8.bitNot(), u32.bitXor(255), u64.bitAnd(255), UInt64.bitNot(0));",
+    "/* Checked shifts (arithmetic on signed, logical on unsigned) */",
+    "neg8: Int8 = -16; neg32: Int32 = -128;",
+    "io.outputLine(\"shift:\", UInt8.shiftLeft(1, 7), neg8.shiftRight(2), Int8.shiftLeft(1, 7), u32.shiftRight(4), neg32.shiftRight(7), Int1.shiftLeft(-1, 0), u64.shiftRight(60));",
+    "/* Wrapping rotates (including >= width and negative counts) */",
+    "r32 := u32.rotateRight(8).rotateLeft(8);",
+    "rNeg := u8.rotateLeft(-2);",
+    "rWrap := UInt32.rotateRight(2147483649, 33);",
+    "rSigned := neg8.rotateRight(1);",
+    "io.outputLine(\"rot:\", r32, rNeg, rWrap, rSigned, u64.rotateLeft(13), Int4.rotateLeft(7, 1));",
+    "/* Wrapping arithmetic */",
+    "intMin := -9223372036854775807 - 1;",
+    "i8max: Int8 = 127; u32max: UInt32 = 4294967295;",
+    "io.outputLine(\"wrap:\", i8max.wrappingAdd(1), Int8.wrappingNeg(-128), intMin.wrappingNeg(), u32max.wrappingAdd(5), UInt32.wrappingSub(0, 1), u4.wrappingMul(3), Int4.wrappingAdd(7, 1));",
+    "/* Saturating arithmetic */",
+    "i8min: Int8 = -128;",
+    "io.outputLine(\"sat:\", i8max.saturatingAdd(50), i8min.saturatingSub(50), i8max.saturatingMul(2), i8min.saturatingMul(2), u8.saturatingAdd(100), UInt8.saturatingSub(3, 10), u4.saturatingMul(10), UInt64.saturatingAdd(u64, 9));",
+    "/* Unchecked arithmetic, shifts & trunc */",
+    "io.outputLine(\"unchk:\", Int.uncheckedAdd(10, 20), u32.uncheckedSub(100), Int.uncheckedNeg(42), UInt32.uncheckedDiv(300, 7), Int.uncheckedRem(-17, 5), u8.uncheckedShiftLeft(1), neg8.uncheckedShiftRight(2), UInt8.uncheckedTruncate(12.9), Int8.uncheckedTruncate(-12.9));",
+    "/* Bit manipulation */",
+    "io.outputLine(\"bits:\", u8.countOnes(), Int1.countOnes(-1), UInt8.leadingZeros(0), UInt8.leadingZeros(1), UInt32.leadingZeros(256), UInt32.trailingZeros(0), UInt32.trailingZeros(40), UInt16.byteSwap(4660), Int32.byteSwap(16909060), UInt64.byteSwap(72623859790382856));",
+    "/* Widening multiply */",
+    "wm64 := UInt64.wideningMul(u64, u64);",
+    "wm64s := Int.wideningMul(intMin, -2);",
+    "wm8 := Int8.wideningMul(-128, -128);",
+    "wmU4 := UInt4.wideningMul(15, 15);",
+    "io.outputLine(\"wmul:\", wm64.lo, wm64.hi, wm64s.lo, wm64s.hi, wm8.lo, wm8.hi, wmU4.lo, wmU4.hi);",
+    "/* Float unchecked & FMA */",
+    "f64a: Float = 2.5; f32a: Float32 = 1.5; f16a: Float16 = 2.0; f8a: Float8 = 1.5;",
+    "io.outputLine(\"fma:\", f64a.fma(4.0, 1.5), Float.uncheckedFma(2.0, 3.0, 4.0), f32a.fma(2.0, 0.5), Float32.uncheckedAdd(1.0, 2.0), f16a.fma(3.0, 1.5), Float16.uncheckedMul(2.0, 3.0), f8a.fma(2.0, 1.0), Float8.uncheckedSub(5.0, 2.0));"
+].join("\n");
+
+runTs := compilerTest.compileCheckRunTs(root, tsComp, paritySrc, "bitwise-parity.lts");
+test.checkInt("ts parity compile+run status: " + runTs.stderr, 0, runTs.status);
+test.checkText("ts parity stderr", "", runTs.stderr);
+
+if ccProbe.available and not skipHeavy {
+    runC := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, paritySrc, "bitwise-parity.lts", "");
+    test.checkInt("c parity compile+run status: " + runC.stderr, 0, runC.status);
+    test.checkText("c parity stderr", "", runC.stderr);
+    test.checkText("ts vs c parity stdout", runTs.stdout, runC.stdout);
+
+    /* 3. Runtime ArithmeticPanic parity on out-of-range shifts and non-finite FMA */
+    panicCases: List<String> = [
+        "io := import \"core/io\"; x: UInt32 = 1; io.outputLine(x.shiftLeft(32));",
+        "io := import \"core/io\"; x: UInt32 = 1; io.outputLine(x.shiftRight(-1));",
+        "io := import \"core/io\"; x: Int8 = 1; io.outputLine(x.shiftLeft(8));",
+        "io := import \"core/io\"; x: Int1 = -1; io.outputLine(x.shiftRight(1));",
+        "io := import \"core/io\"; x: Float8 = 448.0; io.outputLine(x.fma(2.0, 1.0));",
+        "io := import \"core/io\"; x: Float16 = 65504.0; io.outputLine(x.fma(2.0, 0.0));"
+    ];
+    var pi := 0;
+    loop pi < panicCases.length() {
+        pSrc := panicCases[pi];
+        pTs := compilerTest.compileCheckRunTs(root, tsComp, pSrc, "bw-panic-" + pi.toText() + ".lts");
+        pC := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, pSrc, "bw-panic-" + pi.toText() + ".lts", "");
+        test.checkInt("panic case " + pi.toText() + " ts status", 1, pTs.status);
+        test.checkInt("panic case " + pi.toText() + " c status", 1, pC.status);
+        test.check("panic case " + pi.toText() + " ts stderr", pTs.stderr.contains("ArithmeticPanic:"));
+        test.check("panic case " + pi.toText() + " c stderr", pC.stderr.contains("ArithmeticPanic:"));
+        pi += 1;
+    }
+}
+
+/* 4. Compile-time rejections */
+invalidCases: List<(src: String, msg: String)> = [
+    (src = "a: Int4 = 1; b := a.byteSwap();\n", msg = "byteSwap requires"),
+    (src = "a: Int8 = 1; b: UInt8 = 2; c := a.bitAnd(b);\n", msg = "expects Int8"),
+    (src = "a: Int = 1; b := a.uncheckedTruncate(1.5);\n", msg = "has no operation uncheckedTruncate")
+];
+var ii := 0;
+loop ii < invalidCases.length() {
+    ic := invalidCases[ii];
+    rTs := compilerTest.compileStdin(root, tsComp, ic.src, "bw-invalid-" + ii.toText() + ".lts");
+    rC := compilerTest.compileStdin(root, cComp, ic.src, "bw-invalid-" + ii.toText() + ".lts");
+    test.checkInt("invalid " + ii.toText() + " ts reject", 2, rTs.status);
+    test.checkInt("invalid " + ii.toText() + " c reject", 2, rC.status);
+    test.check("invalid " + ii.toText() + " ts msg: " + rTs.stderr, rTs.stderr.contains(ic.msg));
+    test.check("invalid " + ii.toText() + " c msg: " + rC.stderr, rC.stderr.contains(ic.msg));
+    ii += 1;
+}
+
+test.done("bitwise-and-unchecked");

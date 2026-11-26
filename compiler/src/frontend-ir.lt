@@ -542,3 +542,9 @@ pub targetFloatTruncCode := fn(target: String, dstIntKind: String, srcFloatKind:
     if target == TARGET_TS { tsLiteral.floatTruncCode(dstIntKind, srcFloatKind, code, position) }
     else { cLiteral.floatTruncCode(dstIntKind, srcFloatKind, code, position) }
 }
+
+/** Selects the TS or C backend implementation for a hard-builtin numeric operation. */
+pub targetNumericBuiltinCode := fn(target: String, kind: String, opName: String, a0: String, a1: String, a2: String, srcKind: String, position: Int, tupleStructTag: String): String {
+    if target == TARGET_TS { tsLiteral.numericBuiltinCode(kind, opName, a0, a1, a2, srcKind, position) }
+    else { cLiteral.numericBuiltinCode(kind, opName, a0, a1, a2, srcKind, position, tupleStructTag) }
+}

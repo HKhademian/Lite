@@ -326,3 +326,82 @@ pub floatTruncCode := fn(dstIntKind: String, srcFloatKind: String, code: String,
         "lite$truncToInt(" + asNum + ", " + bitsText + "n, " + textLiteralCode(dstIntKind) + ", " + posText + ")"
     }
 }
+
+/** Emits TypeScript code for a hard-builtin integer or float method (`bit*`, `shift*`, `rotate*`, `wrapping*`, `saturating*`, `unchecked*`, bit manip, `wideningMul`, `fma`). */
+pub numericBuiltinCode := fn(kind: String, opName: String, a0: String, a1: String, a2: String, srcKind: String, position: Int): String {
+    posText := position.toText();
+    if numeric.isFloatKind(kind) {
+        if opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" {
+            sym := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else { "/" };
+            expr := "((" + a0 + ") " + sym + " (" + a1 + "))";
+            if kind == numeric.KIND_FLOAT8 { return "lite$f8Round(" + expr + ", 0)"; }
+            if kind == numeric.KIND_FLOAT16 { return "Math.f16round(" + expr + ")"; }
+            if kind == numeric.KIND_FLOAT32 { return "Math.fround(" + expr + ")"; }
+            return expr;
+        }
+        if opName == "fma" {
+            fBits := if kind == numeric.KIND_FLOAT8 { "8" } else if kind == numeric.KIND_FLOAT16 { "16" } else if kind == numeric.KIND_FLOAT32 { "32" } else { "64" };
+            return "lite$fma" + fBits + "(" + a0 + ", " + a1 + ", " + a2 + ", " + posText + ")";
+        }
+        if opName == "uncheckedFma" {
+            expr := "((" + a0 + ") * (" + a1 + ") + (" + a2 + "))";
+            if kind == numeric.KIND_FLOAT8 { return "lite$f8Round(" + expr + ", 0)"; }
+            if kind == numeric.KIND_FLOAT16 { return "Math.f16round(" + expr + ")"; }
+            if kind == numeric.KIND_FLOAT32 { return "Math.fround(" + expr + ")"; }
+            return expr;
+        }
+    }
+    bits := castIntBits(kind);
+    bitsNum := bits.toText();
+    bitsN := bitsNum + "n";
+    isU := numeric.isUnsignedIntKind(kind);
+    wrapFn := if isU { "BigInt.asUintN" } else { "BigInt.asIntN" };
+    if opName == "bitAnd" or opName == "bitOr" or opName == "bitXor" {
+        bSym := if opName == "bitAnd" { "&" } else if opName == "bitOr" { "|" } else { "^" };
+        return wrapFn + "(" + bitsNum + ", (" + a0 + ") " + bSym + " (" + a1 + "))";
+    }
+    if opName == "bitNot" { return wrapFn + "(" + bitsNum + ", ~(" + a0 + "))"; }
+    if opName == "shiftLeft" or opName == "shiftRight" {
+        dir := if opName == "shiftLeft" { "shl" } else { "shr" };
+        fam := if isU { "U" } else { "S" };
+        return "lite$" + dir + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ", " + posText + ")";
+    }
+    if opName == "rotateLeft" or opName == "rotateRight" {
+        dir := if opName == "rotateLeft" { "rotl" } else { "rotr" };
+        fam := if isU { "U" } else { "S" };
+        return "lite$" + dir + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ")";
+    }
+    if opName == "wrappingAdd" or opName == "wrappingSub" or opName == "wrappingMul" {
+        wSym := if opName == "wrappingAdd" { "+" } else if opName == "wrappingSub" { "-" } else { "*" };
+        return wrapFn + "(" + bitsNum + ", (" + a0 + ") " + wSym + " (" + a1 + "))";
+    }
+    if opName == "wrappingNeg" { return wrapFn + "(" + bitsNum + ", -(" + a0 + "))"; }
+    if opName == "saturatingAdd" or opName == "saturatingSub" or opName == "saturatingMul" {
+        sOp := if opName == "saturatingAdd" { "satAdd" } else if opName == "saturatingSub" { "satSub" } else { "satMul" };
+        fam := if isU { "U" } else { "S" };
+        return "lite$" + sOp + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ")";
+    }
+    if opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" or opName == "uncheckedRem" {
+        uSym := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else if opName == "uncheckedDiv" { "/" } else { "%" };
+        return wrapFn + "(" + bitsNum + ", (" + a0 + ") " + uSym + " (" + a1 + "))";
+    }
+    if opName == "uncheckedNeg" { return wrapFn + "(" + bitsNum + ", -(" + a0 + "))"; }
+    if opName == "uncheckedShiftLeft" { return wrapFn + "(" + bitsNum + ", (" + a0 + ") << (" + a1 + "))"; }
+    if opName == "uncheckedShiftRight" { return wrapFn + "(" + bitsNum + ", (" + a0 + ") >> (" + a1 + "))"; }
+    if opName == "uncheckedTruncate" {
+        return wrapFn + "(" + bitsNum + ", BigInt(Math.trunc(" + floatOperandCode(srcKind, a0) + ")))";
+    }
+    if opName == "countOnes" { return "lite$popcnt(" + a0 + ", " + bitsN + ")"; }
+    if opName == "leadingZeros" { return "lite$clz(" + a0 + ", " + bitsN + ")"; }
+    if opName == "trailingZeros" { return "lite$ctz(" + a0 + ", " + bitsN + ")"; }
+    if opName == "byteSwap" {
+        if bits == 8 { return a0; }
+        fam := if isU { "U" } else { "S" };
+        return "lite$bswap" + fam + "(" + a0 + ", " + bitsN + ")";
+    }
+    if opName == "wideningMul" {
+        fam := if isU { "U" } else { "S" };
+        return "lite$wmul" + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ")";
+    }
+    a0
+}

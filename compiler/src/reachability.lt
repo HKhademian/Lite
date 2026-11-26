@@ -119,7 +119,7 @@ scanCodeCallsSet := fn(code: String, seen: mut Set<String>, userFnsOnly: Bool): 
                 (name.startsWithAt(0, "lite$") and not name.startsWithAt(0, "lite$m$")) or
                 name.startsWithAt(0, "lite_") or
                 (name.startsWithAt(0, "lt_") and not name.startsWithAt(0, "lt_fn_") and
-                not name.startsWithAt(0, "lt_m_") and (not name.startsWithAt(0, "lt_s") or name.startsWithAt(0, "lt_s_") or name.startsWithAt(0, "lt_set_")))
+                not name.startsWithAt(0, "lt_m_") and (not name.startsWithAt(0, "lt_s") or name.startsWithAt(0, "lt_s_") or name.startsWithAt(0, "lt_set_") or name.startsWithAt(0, "lt_shl_") or name.startsWithAt(0, "lt_shr_") or name.startsWithAt(0, "lt_sadd_") or name.startsWithAt(0, "lt_ssub_") or name.startsWithAt(0, "lt_smul_")))
             };
             if matched {
                 mut seen.add(name + "(");

@@ -282,7 +282,8 @@ usesIntArithmetic := fn(calls: String): Bool {
     usesBuiltin(calls, "negateInt") or usesBuiltin(calls, "checkedNarrowInt") or usesBuiltin(calls, "uaddInt") or
     usesBuiltin(calls, "usubInt") or usesBuiltin(calls, "umulInt") or usesBuiltin(calls, "udivInt") or
     usesBuiltin(calls, "uremInt") or usesBuiltin(calls, "checkedNarrowUInt") or usesBuiltin(calls, "castI2U") or
-    usesBuiltin(calls, "castU2I") or usesBuiltin(calls, "truncToInt") or usesBuiltin(calls, "truncToUInt")
+    usesBuiltin(calls, "castU2I") or usesBuiltin(calls, "truncToInt") or usesBuiltin(calls, "truncToUInt") or
+    usesBuiltin(calls, "shlS") or usesBuiltin(calls, "shlU") or usesBuiltin(calls, "shrS") or usesBuiltin(calls, "shrU")
 }
 
 /** True when positioned division-family helpers are needed. */
@@ -295,13 +296,15 @@ usesFloatArithmetic := fn(calls: String): Bool {
     usesBuiltin(calls, "floatOp") or usesBuiltin(calls, "float32Op") or
     usesBuiltin(calls, "float16Op") or usesBuiltin(calls, "float8Op") or
     usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "f16Round") or
-    usesBuiltin(calls, "f32Round") or usesBuiltin(calls, "floatPower")
+    usesBuiltin(calls, "f32Round") or usesBuiltin(calls, "floatPower") or
+    usesBuiltin(calls, "fma8") or usesBuiltin(calls, "fma16") or
+    usesBuiltin(calls, "fma32") or usesBuiltin(calls, "fma64")
 }
 
 /** Emits the shared Float/Float32/Float16/Float8 arithmetic helpers without folding operations before execution. */
 emitFloatArithmeticHelpers := fn(calls: String): Unit {
     if not usesFloatArithmetic(calls) { return; }
-    if usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "float8Op") {
+    if usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "float8Op") or usesBuiltin(calls, "fma8") {
         outLine("function lite$f8Round(value: number, at: number): number {");
         outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
         outLine("    if (value === 0) return Object.is(value, -0) ? -0 : 0;");
@@ -328,7 +331,7 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
         outLine("    return lite$f8Round(op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right, at);");
         outLine("}");
     }
-    if usesBuiltin(calls, "f16Round") or usesBuiltin(calls, "float16Op") {
+    if usesBuiltin(calls, "f16Round") or usesBuiltin(calls, "float16Op") or usesBuiltin(calls, "fma16") {
         outLine("function lite$f16Round(value: number, at: number): number {");
         outLine("    const r = Math.f16round(value);");
         outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
@@ -362,6 +365,26 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
         outLine("    const value = Math.fround(op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right);");
         outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
         outLine("    return value;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "fma8") {
+        outLine("function lite$fma8(a: number, b: number, c: number, at: number): number { return lite$f8Round(a * b + c, at); }");
+    }
+    if usesBuiltin(calls, "fma16") {
+        outLine("function lite$fma16(a: number, b: number, c: number, at: number): number { return lite$f16Round(a * b + c, at); }");
+    }
+    if usesBuiltin(calls, "fma32") {
+        outLine("function lite$fma32(a: number, b: number, c: number, at: number): number {");
+        outLine("    const r = Math.fround(a * b + c);");
+        outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        outLine("    return r;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "fma64") {
+        outLine("function lite$fma64(a: number, b: number, c: number, at: number): number {");
+        outLine("    const r = a * b + c;");
+        outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        outLine("    return r;");
         outLine("}");
     }
     if not usesBuiltin(calls, "floatOp") { return; }
@@ -505,6 +528,123 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
         outLine("    const bi = BigInt(t === 0 ? 0 : t);");
         outLine("    if (bi >= lim) lite$intFault(at, \"integer outside \" + name + \" range\");");
         outLine("    return bi;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "shlS") {
+        outLine("function lite$shlS(v: bigint, n: bigint, bits: bigint, at: number): bigint {");
+        outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        outLine("    return BigInt.asIntN(Number(bits), v << n);");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "shlU") {
+        outLine("function lite$shlU(v: bigint, n: bigint, bits: bigint, at: number): bigint {");
+        outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        outLine("    return BigInt.asUintN(Number(bits), v << n);");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "shrS") {
+        outLine("function lite$shrS(v: bigint, n: bigint, bits: bigint, at: number): bigint {");
+        outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        outLine("    return BigInt.asIntN(Number(bits), v >> n);");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "shrU") {
+        outLine("function lite$shrU(v: bigint, n: bigint, bits: bigint, at: number): bigint {");
+        outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        outLine("    return BigInt.asUintN(Number(bits), v >> n);");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "rotlU") or usesBuiltin(calls, "rotlS") {
+        outLine("function lite$rotlU(v: bigint, n: bigint, bits: bigint): bigint {");
+        outLine("    const w = Number(bits); const m = ((n % bits) + bits) % bits;");
+        outLine("    const u = BigInt.asUintN(w, v); if (m === 0n) return u;");
+        outLine("    return BigInt.asUintN(w, (u << m) | (u >> (bits - m)));");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "rotlS") {
+        outLine("function lite$rotlS(v: bigint, n: bigint, bits: bigint): bigint { return BigInt.asIntN(Number(bits), lite$rotlU(v, n, bits)); }");
+    }
+    if usesBuiltin(calls, "rotrU") or usesBuiltin(calls, "rotrS") {
+        outLine("function lite$rotrU(v: bigint, n: bigint, bits: bigint): bigint {");
+        outLine("    const w = Number(bits); const m = ((n % bits) + bits) % bits;");
+        outLine("    const u = BigInt.asUintN(w, v); if (m === 0n) return u;");
+        outLine("    return BigInt.asUintN(w, (u >> m) | (u << (bits - m)));");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "rotrS") {
+        outLine("function lite$rotrS(v: bigint, n: bigint, bits: bigint): bigint { return BigInt.asIntN(Number(bits), lite$rotrU(v, n, bits)); }");
+    }
+    if usesBuiltin(calls, "satAddS") {
+        outLine("function lite$satAddS(a: bigint, b: bigint, bits: bigint): bigint {");
+        outLine("    const lim = 1n << (bits - 1n); const s = a + b;");
+        outLine("    return s < -lim ? -lim : s >= lim ? lim - 1n : s;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "satSubS") {
+        outLine("function lite$satSubS(a: bigint, b: bigint, bits: bigint): bigint {");
+        outLine("    const lim = 1n << (bits - 1n); const s = a - b;");
+        outLine("    return s < -lim ? -lim : s >= lim ? lim - 1n : s;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "satMulS") {
+        outLine("function lite$satMulS(a: bigint, b: bigint, bits: bigint): bigint {");
+        outLine("    const lim = 1n << (bits - 1n); const p = a * b;");
+        outLine("    return p < -lim ? -lim : p >= lim ? lim - 1n : p;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "satAddU") {
+        outLine("function lite$satAddU(a: bigint, b: bigint, bits: bigint): bigint {");
+        outLine("    const maxv = (1n << bits) - 1n; const s = a + b;");
+        outLine("    return s > maxv ? maxv : s;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "satSubU") {
+        outLine("function lite$satSubU(a: bigint, b: bigint, _bits: bigint): bigint { return a <= b ? 0n : a - b; }");
+    }
+    if usesBuiltin(calls, "satMulU") {
+        outLine("function lite$satMulU(a: bigint, b: bigint, bits: bigint): bigint {");
+        outLine("    const maxv = (1n << bits) - 1n; const p = a * b;");
+        outLine("    return p > maxv ? maxv : p;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "popcnt") {
+        outLine("function lite$popcnt(v: bigint, bits: bigint): bigint {");
+        outLine("    let u = BigInt.asUintN(Number(bits), v); let c = 0n;");
+        outLine("    while (u !== 0n) { u &= u - 1n; c += 1n; } return c;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "clz") {
+        outLine("function lite$clz(v: bigint, bits: bigint): bigint {");
+        outLine("    let u = BigInt.asUintN(Number(bits), v); if (u === 0n) return bits;");
+        outLine("    let b = 0n; while (u !== 0n) { u >>= 1n; b += 1n; } return bits - b;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "ctz") {
+        outLine("function lite$ctz(v: bigint, bits: bigint): bigint {");
+        outLine("    let u = BigInt.asUintN(Number(bits), v); if (u === 0n) return bits;");
+        outLine("    let c = 0n; while ((u & 1n) === 0n) { u >>= 1n; c += 1n; } return c;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "bswapU") or usesBuiltin(calls, "bswapS") {
+        outLine("function lite$bswapU(v: bigint, bits: bigint): bigint {");
+        outLine("    let u = BigInt.asUintN(Number(bits), v); const n = Number(bits >> 3n); let out = 0n;");
+        outLine("    for (let i = 0; i < n; i++) { out = (out << 8n) | (u & 255n); u >>= 8n; }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "bswapS") {
+        outLine("function lite$bswapS(v: bigint, bits: bigint): bigint { return BigInt.asIntN(Number(bits), lite$bswapU(v, bits)); }");
+    }
+    if usesBuiltin(calls, "wmulU") {
+        outLine("function lite$wmulU(a: bigint, b: bigint, bits: bigint): { lo: bigint; hi: bigint } {");
+        outLine("    const w = Number(bits); const p = a * b;");
+        outLine("    return { lo: BigInt.asUintN(w, p), hi: BigInt.asUintN(w, p >> bits) };");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "wmulS") {
+        outLine("function lite$wmulS(a: bigint, b: bigint, bits: bigint): { lo: bigint; hi: bigint } {");
+        outLine("    const w = Number(bits); const p = a * b;");
+        outLine("    return { lo: BigInt.asIntN(w, p), hi: BigInt.asIntN(w, p >> bits) };");
         outLine("}");
     }
     outLine("");

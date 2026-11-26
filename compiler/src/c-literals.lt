@@ -377,3 +377,138 @@ pub floatTruncCode := fn(dstIntKind: String, srcFloatKind: String, code: String,
         cIntCastWrap(dstIntKind, "lt_trunc_f64_to_int(" + asDouble + ", " + bitsText + ", " + textLiteralCode(dstIntKind) + ", " + posText + ")")
     }
 }
+
+/** Returns the unsigned C scalar type with the same storage width as integer `kind` (`uint8_t`/`uint16_t`/`uint32_t`/`uint64_t`). */
+cUIntTypeForInt := fn(kind: String): String {
+    bits := castIntBits(kind);
+    if bits <= 8 { "uint8_t" } else if bits == 16 { "uint16_t" } else if bits == 32 { "uint32_t" } else { "uint64_t" }
+}
+
+/** Returns the exact signed/unsigned C scalar type for integer `kind`. */
+cExactIntType := fn(kind: String): String {
+    isU := numeric.isUnsignedIntKind(kind);
+    bits := castIntBits(kind);
+    if bits <= 8 { if isU { "uint8_t" } else { "int8_t" } }
+    else if bits == 16 { if isU { "uint16_t" } else { "int16_t" } }
+    else if bits == 32 { if isU { "uint32_t" } else { "int32_t" } }
+    else { if isU { "uint64_t" } else { "int64_t" } }
+}
+
+/** Masks an unsigned expression to `bits` (`1`, `2`, `4`) when sub-byte, or returns it unchanged. */
+cMaskSubByte := fn(kind: String, expr: String): String {
+    bits := castIntBits(kind);
+    if bits == 1 { "((" + expr + ") & UINT8_C(1))" }
+    else if bits == 2 { "((" + expr + ") & UINT8_C(3))" }
+    else if bits == 4 { "((" + expr + ") & UINT8_C(15))" }
+    else { expr }
+}
+
+/** Returns the short C scalar tag for integer `kind` (`i1`..`i64`, `u1`..`u64`). */
+cIntTag := fn(kind: String): String {
+    prefix := if numeric.isUnsignedIntKind(kind) { "u" } else { "i" };
+    prefix + castIntBits(kind).toText()
+}
+
+/** Emits C11 code for a hard-builtin integer or float method (`bit*`, `shift*`, `rotate*`, `wrapping*`, `saturating*`, `unchecked*`, bit manip, `wideningMul`, `fma`). */
+pub numericBuiltinCode := fn(kind: String, opName: String, a0: String, a1: String, a2: String, srcKind: String, position: Int, tupleStructTag: String): String {
+    posText := position.toText();
+    if numeric.isFloatKind(kind) {
+        if opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" {
+            if kind == numeric.KIND_FLOAT or kind == numeric.KIND_FLOAT32 {
+                sym := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else { "/" };
+                cF := if kind == numeric.KIND_FLOAT32 { "float" } else { "double" };
+                return "((" + cF + ")(((" + cF + ")(" + a0 + ")) " + sym + " ((" + cF + ")(" + a1 + "))))";
+            }
+            if kind == numeric.KIND_FLOAT16 {
+                fnSuffix := if opName == "uncheckedAdd" { "add" } else if opName == "uncheckedSub" { "sub" } else if opName == "uncheckedMul" { "mul" } else { "div" };
+                return "lt_f16_" + fnSuffix + "_raw(" + a0 + ", " + a1 + ")";
+            }
+            sym8 := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else { "/" };
+            return "lt_f64_to_f8(lt_f8_to_f64(" + a0 + ") " + sym8 + " lt_f8_to_f64(" + a1 + "), 0)";
+        }
+        if opName == "fma" {
+            fTag := if kind == numeric.KIND_FLOAT8 { "f8" } else if kind == numeric.KIND_FLOAT16 { "f16" } else if kind == numeric.KIND_FLOAT32 { "f32" } else { "f64" };
+            return "lt_fma_" + fTag + "(" + a0 + ", " + a1 + ", " + a2 + ", " + posText + ")";
+        }
+        if opName == "uncheckedFma" {
+            fTag := if kind == numeric.KIND_FLOAT8 { "f8" } else if kind == numeric.KIND_FLOAT16 { "f16" } else if kind == numeric.KIND_FLOAT32 { "f32" } else { "f64" };
+            return "lt_ufma_" + fTag + "(" + a0 + ", " + a1 + ", " + a2 + ")";
+        }
+    }
+    bits := castIntBits(kind);
+    bitsText := bits.toText();
+    isU := numeric.isUnsignedIntKind(kind);
+    cT := cExactIntType(kind);
+    uT := cUIntTypeForInt(kind);
+    isSub := numeric.isSubByteIntKind(kind);
+    if opName == "bitAnd" or opName == "bitOr" or opName == "bitXor" {
+        bSym := if opName == "bitAnd" { "&" } else if opName == "bitOr" { "|" } else { "^" };
+        return "((" + cT + ")(((" + uT + ")(" + a0 + ")) " + bSym + " ((" + uT + ")(" + a1 + "))))";
+    }
+    if opName == "bitNot" {
+        rawNot := "(~((" + uT + ")(" + a0 + ")))";
+        return "((" + cT + ")(" + (if isU and isSub { cMaskSubByte(kind, rawNot) } else { rawNot }) + "))";
+    }
+    if opName == "shiftLeft" or opName == "shiftRight" {
+        dir := if opName == "shiftLeft" { "shl" } else { "shr" };
+        fam := if isU { "u" } else { "s" };
+        castArg := if isU { "(uint64_t)(" + a0 + ")" } else { "(int64_t)(" + a0 + ")" };
+        return "((" + cT + ")lt_" + dir + "_" + fam + "(" + castArg + ", (int64_t)(" + a1 + "), " + bitsText + ", " + posText + "))";
+    }
+    if opName == "rotateLeft" or opName == "rotateRight" {
+        dir := if opName == "rotateLeft" { "rotl" } else { "rotr" };
+        if isU and bits == 32 { return "lt_" + dir + "_u32((uint32_t)(" + a0 + "), (int64_t)(" + a1 + "))"; }
+        if isU and bits == 64 { return "lt_" + dir + "_u64((uint64_t)(" + a0 + "), (int64_t)(" + a1 + "))"; }
+        fam := if isU { "u" } else { "s" };
+        return "((" + cT + ")lt_" + dir + "_" + fam + "((uint64_t)(" + a0 + "), (int64_t)(" + a1 + "), " + bitsText + "))";
+    }
+    if opName == "wrappingAdd" or opName == "wrappingSub" or opName == "wrappingMul" {
+        wSym := if opName == "wrappingAdd" { "+" } else if opName == "wrappingSub" { "-" } else { "*" };
+        expr := "(((" + uT + ")(" + a0 + ")) " + wSym + " ((" + uT + ")(" + a1 + ")))";
+        if isSub and not isU { return "lt_wrap_s(" + expr + ", " + bitsText + ")"; }
+        if isSub and isU { return "((uint8_t)" + cMaskSubByte(kind, expr) + ")"; }
+        return "((" + cT + ")" + expr + ")";
+    }
+    if opName == "wrappingNeg" {
+        expr := "((" + uT + ")0u - ((" + uT + ")(" + a0 + ")))";
+        if isSub and not isU { return "lt_wrap_s(" + expr + ", " + bitsText + ")"; }
+        if isSub and isU { return "((uint8_t)" + cMaskSubByte(kind, expr) + ")"; }
+        return "((" + cT + ")" + expr + ")";
+    }
+    if opName == "saturatingAdd" or opName == "saturatingSub" or opName == "saturatingMul" {
+        sOp := if opName == "saturatingAdd" { "sadd" } else if opName == "saturatingSub" { "ssub" } else { "smul" };
+        fam := if isU { "u" } else { "s" };
+        castT := if isU { "uint64_t" } else { "int64_t" };
+        return "((" + cT + ")lt_" + sOp + "_" + fam + "((" + castT + ")(" + a0 + "), (" + castT + ")(" + a1 + "), " + bitsText + "))";
+    }
+    if opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" or opName == "uncheckedRem" {
+        uSym := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else if opName == "uncheckedDiv" { "/" } else { "%" };
+        return "((" + cT + ")(((" + cT + ")(" + a0 + ")) " + uSym + " ((" + cT + ")(" + a1 + "))))";
+    }
+    if opName == "uncheckedNeg" {
+        return "((" + cT + ")(-((" + cT + ")(" + a0 + "))))";
+    }
+    if opName == "uncheckedShiftLeft" {
+        return "((" + cT + ")(((" + uT + ")(" + a0 + ")) << (unsigned)(int64_t)(" + a1 + ")))";
+    }
+    if opName == "uncheckedShiftRight" {
+        return "((" + cT + ")(((" + cT + ")(" + a0 + ")) >> (unsigned)(int64_t)(" + a1 + ")))";
+    }
+    if opName == "uncheckedTruncate" {
+        return "((" + cT + ")(" + floatOperandCode(srcKind, a0) + "))";
+    }
+    widthMask := if bits == 64 { "UINT64_MAX" } else { "((UINT64_C(1) << " + bitsText + ") - UINT64_C(1))" };
+    masked := "(((uint64_t)(" + a0 + ")) & " + widthMask + ")";
+    if opName == "countOnes" { return "lt_popcnt(" + masked + ")"; }
+    if opName == "leadingZeros" { return "lt_clz(" + masked + ", " + bitsText + ")"; }
+    if opName == "trailingZeros" { return "lt_ctz(" + masked + ", " + bitsText + ")"; }
+    if opName == "byteSwap" {
+        if bits == 8 { return a0; }
+        return "((" + cT + ")lt_bswap" + bitsText + "((" + uT + ")(" + a0 + ")))";
+    }
+    if opName == "wideningMul" {
+        tupleKind := "(lo:" + kind + ",hi:" + kind + ")";
+        return "/*@T:" + tupleKind + "@*/lt_wmul_" + cIntTag(kind) + "__" + tupleStructTag + "((" + cT + ")(" + a0 + "), (" + cT + ")(" + a1 + "))";
+    }
+    a0
+}
