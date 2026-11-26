@@ -515,8 +515,13 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String, co
     }
     if needsRange {
         outLine("function lite$checkedInt(value: bigint, at: number): bigint {");
-        if config.checkArithmetic { outLine("    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\"); return value;"); }
-        else { outLine("    void at; return BigInt.asIntN(64, value);"); }
+        if config.checkArithmetic {
+            outLine("    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");");
+            outLine("    return value;");
+        } else {
+            outLine("    void at;");
+            outLine("    return BigInt.asIntN(64, value);");
+        }
         outLine("}");
     }
     if usesBuiltin(calls, "addInt") {
@@ -546,8 +551,13 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String, co
     if needURange {
         if config.checkArithmetic { outLine("const lite$uintMax = (1n << 64n) - 1n;"); }
         outLine("function lite$checkedUInt64(value: bigint, at: number): bigint {");
-        if config.checkArithmetic { outLine("    if (value < 0n || value > lite$uintMax) lite$intFault(at, \"integer outside UInt64 range\"); return value;"); }
-        else { outLine("    void at; return BigInt.asUintN(64, value);"); }
+        if config.checkArithmetic {
+            outLine("    if (value < 0n || value > lite$uintMax) lite$intFault(at, \"integer outside UInt64 range\");");
+            outLine("    return value;");
+        } else {
+            outLine("    void at;");
+            outLine("    return BigInt.asUintN(64, value);");
+        }
         outLine("}");
     }
     if usesBuiltin(calls, "uaddInt") { outLine("function lite$uaddInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedUInt64(left + right, at); }"); }

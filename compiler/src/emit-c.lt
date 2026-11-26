@@ -2706,9 +2706,13 @@ emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: Strin
     }
     if usesIntHelper(calls, "lt_checked_negate(") {
         outLine("LT_INLINE int64_t lt_checked_negate(int64_t value, size_t at) {");
-        if config.checkArithmetic { outLine("    if (LT_UNLIKELY(value == INT64_MIN)) { lt_int_fault(at, \"integer outside Int range\"); }"); }
-        else { outLine("    (void)at;"); }
-        outLine("    return (int64_t)(UINT64_C(0) - (uint64_t)value);");
+        if config.checkArithmetic {
+            outLine("    if (LT_UNLIKELY(value == INT64_MIN)) { lt_int_fault(at, \"integer outside Int range\"); }");
+            outLine("    return -value;");
+        } else {
+            outLine("    (void)at;");
+            outLine("    return (int64_t)(UINT64_C(0) - (uint64_t)value);");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_narrow_int(") {
