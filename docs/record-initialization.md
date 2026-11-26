@@ -184,6 +184,85 @@ Independently declared unnamed record types have distinct identity, even with id
 
 The [inline identity rule](lite://doc/record-type-identity#selected-inline-rule-identity-per-declaration) selects distinct types per inline declaration, matching named records. Reuse one named Stats declaration when different outer records should share that field type.
 
+## Established construction forms
+
+```text
+x: User = {}
+y := User {}
+```
+
+Each complete record initializer closes its declaration item. Omit the optional trailing semicolon, both at top level and in nested declarations. Newlines are irrelevant: x: User = {} y := User {} is the same pair of declarations. An assignment or explicit exit ending in the same outer construction follows the same boundary rule. The grammar still permits an optional semicolon; see the [shared style and required exceptions](lite://doc/lexical-structure#semicolon-style-after-closing-braces).
+
+This applies to field declarations with record defaults as well:
+
+```text
+Registration := record {
+    student: Student = {}
+    contact: Contact = {}
+}
+```
+
+These are field declarations, whose full default grammar is still being formalized. In a construction expression, supplied fields are comma-separated instead:
+
+```text
+registration := Registration {
+    student = {},
+    contact = {},
+}
+```
+
+The inner braces do not remove the comma separating student from contact. Similarly, braces inside a call or grouping do not end the enclosing expression. To continue the value of a complete outer record construction, group it:
+
+```text
+name := (User { name = "Ali", }).name;
+```
+
+## Contextual record literals
+
+Design draft **2026-11-26**. Compiler support for the call-argument and assignment forms is pending.
+
+A contextual record literal omits the type name from ordinary
+record construction. In expression position, bare `{ ... }` infers that name
+from a single known, constructible expected type. A named literal such as
+`User { ... }` supplies the type directly. Constructs with their own body
+headers, such as `fn`, `if`, and `loop`, retain their brace bodies.
+
+```text
+user: User = { name = "Ali" };
+saveUser({ name = "Ali" });
+p = { x = 1 };
+```
+
+When `moveTo` expects `Point`, `moveTo({ x = 1 })` resolves to
+`moveTo(Point { x = 1 })`. Both forms construct the same nominal type and
+use the same field checks, defaults, and construction permissions.
+
+The parameter supplies `User` and the assignment target supplies `Point`
+for `p`. The assignment constructs a fresh `Point`, fills omitted fields
+from the type's defaults, and replaces `p`.
+
+**Nested construction is required in the first version.** For example:
+
+```text
+saveUser({
+    name = "Ali",
+    address = {
+        city = "Berlin",
+        country = { code = "DE" },
+    },
+});
+```
+
+The parameter supplies `User`, the `address` field supplies `Address`,
+and `country` supplies `Country`. Each level validates fields and applies
+defaults for its own type. If a literal has no unique constructible record
+type, point to those braces and require an explicit type there. Until
+anonymous record identity is settled, `p := { x = 1 }` requires a type.
+
+Pending TS and C11 cases include typed initializers, call arguments,
+replacement of a previously nondefault field, nested defaults, ambiguous
+or missing expected types. See [standalone executable blocks](lite://doc/blocks-and-results#standalone-executable-blocks) for the companion `do` draft.
+
 ## 7. Standalone inferred record literal: requested direction, grammar pending
 
 ```text

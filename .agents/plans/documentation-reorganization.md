@@ -11,10 +11,10 @@ todos:
     status: completed
   - id: core-text-pilot
     content: "Verify one path from source comments to module docs and Handbook"
-    status: pending
+    status: completed
   - id: records-and-blocks
     content: "Consolidate record and block documentation with stable links"
-    status: pending
+    status: completed
   - id: remaining-topics
     content: "Consolidate remaining high-overlap topics and archive history"
     status: pending
@@ -54,6 +54,10 @@ through tested examples and stable links.
   import implementation status matches the TS and C11 probes.
   `lite docs --check` and the built site checks passed. A comparison retained
   all 375 baseline HTML routes and 11,677 captured anchor IDs.
+
+- Connected the existing UTF-8 showcase to public API comments, Handbook, Learn, Gym, and Playground. Module JSON and both filtered TS/C11 verification runs passed.
+
+- Moved contextual construction and defaults to Record initialization and standalone do to Blocks and results. Preserved prior headings as compatibility entry points. The docs check passed.
 
 ## Baseline inventory
 
@@ -116,33 +120,6 @@ owning topic pages, and these observations describe the baseline compiler.
 - [Atomic commits](../rules/atomic-commits.md) and [documentation rules](../rules/documentation.md)
 
 ## Implementation order
-
-### Step 3 — core-text-pilot
-
-**Depends on** reconcile.
-
-**Files** `lib/core/text.lt`, `lib/README.md`, `lib/util/docgen.lt`, `docs/strings.md`, `language/learn/handbook/foundations/numbers-operators-and-strings.md`, and the relevant Unicode example, manifest, and Learn/Gym links.
-
-- Audit public doc comments for the UTF-8 operations, keeping effects, failure modes, and return values beside the declarations. Use internal comments for implementation rationale.
-- Generate the module reference and inspect signatures, attached operations, symbol ownership, and links for Unicode helpers. Keep the namespace guide short and link to generated API detail.
-- Reuse one verified UTF-8 round trip in the Handbook and link to it from the relevant Learn, Gym, and Playground surfaces. Keep the language rule on fresh string literals with its spec owner.
-- Write down the comment format and example-linking pattern in `docs/documentation.md` after verifying the pilot.
-
-**Acceptance** The same operation is discoverable from source, generated API output, Handbook, and its executable case. The API shows the source signature and the verified example demonstrates the stated result.
-
-**Verify** `./bin/lite docs --modules-json`, the focused Unicode fixture or verification manifest registered by the pilot, and `./bin/lite docs --check`.
-
-### Step 4 — records-and-blocks
-
-**Depends on** core-text-pilot.
-
-**Files** `docs/records.md`, `docs/record-initialization.md`, `docs/record-type-identity.md`, `docs/record-literal-boundaries.md`, `docs/blocks-and-results.md`, and affected grammar and index links.
-
-- Consolidate the current construction rules and defaults under one Record construction chapter. Preserve the contextual literal's equivalence to the explicitly named constructor and the required nested propagation. Mark pending syntax at the rule and example.
-- Keep executable blocks and the `do` draft together. Link the construction chapter from the relevant brace grammar.
-- Keep old `lite://` URLs and fragments working through registered aliases or short forwarding pages.
-
-**Acceptance** One construction chapter explains explicit, contextual, and nested forms. Old links resolve and the Handbook shows only supported forms as runnable examples.
 
 ### Step 5 — remaining-topics
 

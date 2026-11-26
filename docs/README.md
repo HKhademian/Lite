@@ -117,7 +117,7 @@ See [generic notation](lite://doc/generic-notation) for current parameter forms 
 - [Slices](lite://doc/slices): proposed borrowed contiguous views, read-only defaults, mutable access, lifetime/invalidation, and initialized bounds.
 
 - [Types and inference](lite://doc/types-and-inference): static contracts, general safe widening, component-wise tuple value widening, complete-contract proofs for generic widening, and the intended type-system scope.
-- [Record literal boundaries](lite://doc/record-literal-boundaries): optional semicolons after record initializers and unresolved inferred-literal versus executable-block classification.
+- [Record literal boundaries](lite://doc/record-literal-boundaries): compatibility links and earlier anonymous record sketches.
 - [Records](lite://doc/records): selected record declarations, contextual construction, and destination-first deconstruction; full inference and memory contracts remain open.
 - [Record type identity](lite://doc/record-type-identity): selected distinct identity per declaration, including inline types; explicit reconstruction, shared type reuse, and reference comparisons.
 - [Aliases and distinct type declarations](lite://doc/type-aliases) describes names for structural types and existing symbols, fresh type identity, and the compiler migration status.

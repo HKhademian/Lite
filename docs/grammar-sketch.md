@@ -108,7 +108,7 @@ The exact expression productions implementing this classification remain part of
 grouped_block_value := "(" block_value_construct ")"
 ```
 
-`block_value_construct` denotes an expression-producing block, conditional, match, loop, or function literal. The same grouping requirement applies to record construction, including contextual initialization where its expected type is established. See [record literal boundaries](lite://doc/record-literal-boundaries); standalone inferred literals still need syntactic disambiguation. Continuing that value with an operator, call, member access, or indexing requires the grouped form. Grouping allows ordinary expression continuation and ordinary item separators:
+`block_value_construct` denotes an expression-producing block, conditional, match, loop, or function literal. The same grouping requirement applies to record construction, including contextual initialization where its expected type is established. See [record literal boundaries](lite://doc/record-initialization#established-construction-forms); standalone inferred literals still need syntactic disambiguation. Continuing that value with an operator, call, member access, or indexing requires the grouped form. Grouping allows ordinary expression continuation and ordinary item separators:
 
 ```text
 answer := ({ calculate() }) + 1;
@@ -120,7 +120,7 @@ Without grouping, a completed block item ends before any following suffix; the f
 
 ## Body-opening braces
 
-A construct that owns a braced body consumes the first outer-level ungrouped `{` after its header as the body opener. This covers `if`/`else if`, `loop`, `fn`/lambda bodies, and attached `then`, `finally`, and `else` clauses. A record construction, block value, or conditional used as a source, condition, or match subject must be grouped, so the opening brace cannot be reinterpreted through type checking, whitespace, name lookup, or capitalization. The subjectless `match { ... }` form is the deliberate exception: a brace immediately after `match` selects it, while a brace-starting match subject must be grouped. No trailing-closure call form is selected; `f() { ... }` is not a call with a trailing lambda body, and a lambda argument uses its own parenthesized header and braced body. See [record literal boundaries](lite://doc/record-literal-boundaries) and [matches](lite://doc/match).
+A construct that owns a braced body consumes the first outer-level ungrouped `{` after its header as the body opener. This covers `if`/`else if`, `loop`, `fn`/lambda bodies, and attached `then`, `finally`, and `else` clauses. A record construction, block value, or conditional used as a source, condition, or match subject must be grouped, so the opening brace cannot be reinterpreted through type checking, whitespace, name lookup, or capitalization. The subjectless `match { ... }` form is the deliberate exception: a brace immediately after `match` selects it, while a brace-starting match subject must be grouped. No trailing-closure call form is selected; `f() { ... }` is not a call with a trailing lambda body, and a lambda argument uses its own parenthesized header and braced body. See [record literal boundaries](lite://doc/record-initialization#established-construction-forms) and [matches](lite://doc/match).
 
 ## Declarations
 

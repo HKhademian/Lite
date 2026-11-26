@@ -24,10 +24,21 @@ An executable block groups items, introduces lexical scope, and produces its fin
 
 Bodies always use braces. Optional single-statement bodies and earlier `do/end` or `then/endif` block systems are superseded.
 
-The current [contextual record and block draft](lite://doc/record-literal-boundaries#contextual-record-literals-and-executable-blocks)
-uses `do { ... }` for a standalone executable block expression. This
-draft retains brace bodies for constructs such as `if`, `loop`, and `fn`.
+## Standalone executable blocks
 
+Design draft **2026-11-26**. A standalone executable block expression uses
+`do { ... }`. Like Mini's always-entered `if true` block, it opens a scope
+unconditionally. In Lite, its ordinary block result is the value of the
+expression. Constructs such as `if`, `loop`, and `fn` keep their brace bodies.
+
+```text
+saveUser(do { loadUser() });
+```
+
+In `do { x = 1 }`, assignment updates the existing `x` and the result is
+`Unit`. See [contextual record literals](lite://doc/record-initialization#contextual-record-literals)
+for record braces in expression position. Compiler support and recovery
+attachment remain pending.
 
 ## Item boundaries
 
@@ -48,7 +59,7 @@ answer := { 42 } use(answer);
 
 The closing body separates the declaration from use(answer), even on the same line. An optional semicolon would not change the block's value; omitting it is the documentation/formatter style, not a syntax ban.
 
-Record construction also ends an outer initializer item: `x: User = {}` and `x := User {}` need no trailing semicolon. Its braces construct data rather than execute a block; sharing a boundary rule does not give it block-result semantics. See [record literal boundaries](lite://doc/record-literal-boundaries) for the requested inferred form and remaining disambiguation.
+Record construction also ends an outer initializer item: `x: User = {}` and `x := User {}` need no trailing semicolon. Its braces construct data rather than execute a block; sharing a boundary rule does not give it block-result semantics. See [record construction](lite://doc/record-initialization#established-construction-forms) for initializer boundaries.
 
 To continue a block's or record construction's value with an operator, call, member access, or indexing, parenthesize the construct:
 
