@@ -1,6 +1,6 @@
 # C11 Memory, Raw Values, Numeric Ladder, and Codegen Architecture Plan
 
-Status: **owner-confirmed architecture plan, 2026-11-26** (design locked; Phase 0 documentation & cross-links landed, Phases 1–5 queued for incremental delivery).
+Status: **Phases 0–5 complete at `e6de4a64`. Phases 6–11 and the syntax review queue describe planned work as of 2026-11-26.**
 
 This document records the settled architecture for bringing Lite's C11 backend to predictable real-time performance (~1.00× hand-written C on math/crypto/frame loops, faster and smaller than idiomatic C/Rust/Go on string- and allocation-heavy workloads) with zero hidden allocations, zero `rc` leaks, and full value-semantic safety.
 
@@ -82,3 +82,55 @@ All random system `malloc`/`calloc`/`realloc`/`free` calls in user and stdlib ru
 | **Phase 3** *(completed)* | `lt_vm_arena`, 16 B immutable SSO `lt_str` (+ jumbo header), generation-safe `lt_utf8_cache`, auto Frame Temp Stack rewind + `surface.vitals()` counters | 10,000-frame native game/HUD loop = 0 persistent allocs/frame, flat RSS, ASan/UBSan clean |
 | **Phase 4** *(completed)* | Compile-time exclusivity (`foo(xs, mut xs)`), `rc`-free `List`/`Map`/`Set`, inferred `const *` borrow, move-on-last-use, scope/overwrite cleanup, `lt_heap`, Scope Data Stack escape promotion | ASan/LSan = 0 leaks across native suite, 10,000-frame game loops, and batch `site-docs`; Gen1/Gen2/Gen3 bootstrap |
 | **Phase 5** *(completed)* | Explicit 8 B [core/rc](lite://module/core/rc) `Rc<T>` wrapper (TS+C11 parity, `isUnique`/`makeUnique`/`replace`/`reset`), packed `UInt8` + `lt_vm_arena`-backed `VmArena` in [ds/arena](lite://module/ds/arena), packed `UInt32` generational `SlotPool`/`Pool<T>` in [ds/pool](lite://module/ds/pool) | `phase5-rc-pools-dogfood.test.lts` (`Rc<T>` ASan/leak churn, 3-module 2,000-frame zero-alloc game dogfood, `particle-pool.lts` C11 `-Werror`) + full release/corpus parity + bootstrap |
+
+## 6. Phases 6–11
+
+### Phase 6 — Safety flags, unchecked indexing, and builtin boundaries
+
+Extend [OptConfig](lite://repo/compiler/src/opt-config.lt) with independent unchecked, arithmetic, bounds, float-finiteness, and debug-info switches. Before implementation, specify defaults for all six presets and how the Lite checks interact with native sanitizers. Proposed precedence is preset defaults, then `--sanitize` defaults, then explicit per-flag overrides. Test both argument orders for `-O3` and `-fcheck-unchecked` and define what repeated overrides do. Keep regular arithmetic and bounds checks enabled by default across presets.
+
+Add unchecked get and set for lists and fixed arrays. Specify the fault with checks enabled and the valid input domain with checks disabled. Cover ordinary positional access, packed array indexing, and valid unchecked operations on TS and C11.
+
+Use the existing [builtin ABI and selection](lite://repo/compiler/src/builtins-abi.lt) for soft builtins. Each soft builtin needs a verified Lite implementation and can have an optional native override. Candidates include bit counts, byte swap, wide multiplication, carry and borrow operations, scalar helpers, bulk copy and fill, and search. Reserve hard builtins for primitives whose semantics require compiler or runtime support, such as unchecked access, float bit reinterpretation, single-rounding `fma`, `VmArena`, and `Rc<T>`.
+
+### Phase 7 — Borrowed slices
+
+Add non-escaping, allocation-free read-only and mutable [slices](lite://doc/slices) over addressable list and fixed-array storage, plus read-only `String.bytes()`. Use half-open `xs[a..b]`, `xs[..b]`, `xs[a..]`, and `xs[..]`, with `mut xs[a..b]` granting mutable access. Start with `$getSlice` and `$getMutSlice`. Packed backing storage needs a separate representation and write contract.
+
+Include mutable `splitAt(mid)` and suspend access through the parent mutable view while either child borrow is live. Verify empty end slices, disjoint child writes, rejection of owner invalidation and escaping captures, and diagnostics for invalid bounds. Specify how `.toList()` creates owned elements when the element type has single-owner semantics.
+
+### Phase 8 — Native layout and data-oriented types
+
+- Emit C11 `restrict` only when the compiler can prove the required non-aliasing for the accessed storage. Include overlapping views and disjoint `splitAt` halves in the cases.
+- Use spare representations to pack `Option<T>` and fall back to a tagged layout when no valid niche exists. Define `-fniche-opt` preset defaults and agreement on layout at package and FFI boundaries. Settle per-type opt-out spelling with the layout attributes. Keep float options tagged until the finite-value invariant is enforced at all relevant ingress points, including bit casts and FFI.
+- Add fixed-width `Simd<T, N>`, common aliases, and a compile-time target lane count for `SimdNative<T>`. Specify portable lane behavior first, with scalar fallback on both targets and native vector lowering where supported. Check lane order, integer overflow, and floating-point rounding against the scalar path.
+- Add `SoA<R>` with parallel field storage. Define row reads and writes, ownership of moved fields, cleanup, and invalidation when capacity grows.
+
+### Phase 9 — Interfaces
+
+Design [open interface contracts](lite://doc/composition-and-interfaces) before contexts and overloading. Use `Allocator`, `Logger`, and `Index` to exercise conformance, implementation lookup, generic dispatch, and interface-valued dispatch.
+
+### Phase 10 — Lexical contexts
+
+Use `pub context` declarations in a package's `$context.lt`, trailing `context(...)` requirements after `fn(...)` and before the result type, and `context (...) { ... }` for lexical overrides. A default can declare its slot type or infer it from the initializer. `mut` governs access to the supplied value in all three forms. [Package preload](lite://doc/packages-and-preload) remains the owning specification for implicit imports.
+
+The proposed lookup order is the innermost lexical override, the enclosing function's declared slot, then the calling package's default. Match by slot name and validate type and mutability. A function declares each capability it forwards. Closures capture providers lexically under ordinary lifetime and exclusivity rules, and function values retain their context requirements in their types.
+
+The proposed C boundary passes one pointer to a projection containing only the required slots. Functions with no requirements need no extra parameter. Validate cross-package provider selection, mutable reborrows, indirect calls, and escaping versus non-escaping captures before fixing the ABI. Keep generic specialization available where static dispatch is needed.
+
+### Phase 11 — Overloading
+
+Specify direct calls, named arguments, and callable values using the Phase 9 and 10 contracts. The proposed rule selects the callable from explicit arguments and type constraints before resolving its context requirements. Migrate the provisional slice hooks to `Index` and test the migration against the Phase 7 behavior.
+
+## 7. Syntax review implementation queue
+
+The [Start Lite syntax review](codex://threads/01a1dfd6-dfa7-7383-bb03-d90c7c98479b) proposed the following increments. They can proceed alongside the numbered phases as their contracts are confirmed and verified on TS and C11. The review confirmed contextual record literals in calls, assignments, and nested initializers on both targets.
+
+1. **Standalone `do` blocks.** Reuse ordinary executable block semantics and decide how existing standalone brace blocks migrate before introducing standalone inferred records. [Blocks and results](lite://doc/blocks-and-results#standalone-executable-blocks)
+2. **Pattern binding in `if`.** Start with `if .Some(n) := source { ... }`, then cover `and n > 0`. Evaluate `source` once and scope `n` to the successful condition and branch. [Pattern contexts](lite://doc/pattern-contexts)
+3. **Definite initialization for partial expressions.** Resolve `a := if ready { 42 };` before expanding region-based initialization. The review observed a zero value on the false path. The intended unwritten path needs a diagnostic when later code reads `a` without proof of initialization. [First initialization](lite://doc/first-initialization#conditional-reservation)
+4. **Dependent record defaults.** Start with `end: Int = start + 10`. Verify supplied entries in written order, then omitted defaults in declaration order. Leave broader dependency scheduling and its effect order for a separate increment. [Record initialization](lite://doc/record-initialization)
+5. **Union values and basic fallible functions.** Start with storing and narrowing `Int | String`, and a returned error in a `T ! E` function that can be handled or forwarded with postfix `!`. Aggregate failure transport can follow separately. [Union values](lite://doc/union-values-and-access) · [Fallible types](lite://doc/fallible-types-and-error-composition)
+6. **Standalone inferred records.** Add fixed labels with individual inferred or explicit types after the standalone brace grammar is settled. A candidate case is `scores := { "alice": Float = 10, "bob": UserID = 25, "carl" = "test" };`. [Structured data review](lite://repo/research/investigations/language-review/structured-data-like.md#typed-entries-and-inferred-field-shapes)
+
+Carry definite-initialization checks into Phase 7's rule that slices expose initialized elements only. The basic fallible-function work informs Phase 10's inputs, outputs, errors, and contexts contract. Reuse the [callable variance](lite://doc/callable-value-variance) and [callable defaults](lite://doc/callable-default-contracts) reviews when specifying context requirements and overload selection for typed function values. Whole-use literal inference, field-by-field initialization, custom collection providers, and effectful `comptime` remain follow-up items from the syntax review.
