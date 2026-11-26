@@ -150,6 +150,7 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
         if types.isListKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare list values"); }
         if types.isMapKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare map values"); }
         if types.isSetKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare set values"); }
+        if types.isRcKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare Rc values"); }
         if types.isFnKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare function values"); }
         if numeric.isFloatKind(baseKind) {
             fCodes: List<String> = [left.code, right.code];
@@ -191,6 +192,9 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     if types.isSetKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare set values");
     }
+    if types.isRcKind(left.kind) {
+        syntax.failAt(source, at, prefix, "cannot compare Rc values");
+    }
     if types.isFnKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare function values");
     }
@@ -211,7 +215,7 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
 };
 
 /** True when C11 expression `code` already evaluates to a freshly created owned rvalue that needs no `_copy`. */
-isCFreshOwnedExpr := fn(code: String): Bool {
+pub isCFreshOwnedExpr := fn(code: String): Bool {
     var c := code.trim();
     loop c.startsWithAt(0, "/*@T:") or c.startsWithAt(0, "/*@LTMP:") or c.startsWithAt(0, "/*@CSTK:") {
         endM := if c.startsWithAt(0, "/*@T:") { c.indexOf("@*/", 5) } else { c.indexOf("*/", 2) };
@@ -234,6 +238,7 @@ isCFreshOwnedExpr := fn(code: String): Bool {
     c.startsWithAt(0, "lt_mk_") or c.startsWithAt(0, "lt_wrap_") or
     c.startsWithAt(0, "lt_list_") or c.startsWithAt(0, "lt_map_") or
     c.startsWithAt(0, "lt_set_") or c.startsWithAt(0, "lt_arr_") or
+    c.startsWithAt(0, "lt_rc_") or c.startsWithAt(0, "(lt_rc_") or
     c.startsWithAt(0, "lt_s_") or c.startsWithAt(0, "lt_c_") {
         return true;
     }
@@ -305,8 +310,8 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             }
         } else {
             elKind := if types.isListKind(kind) { types.listElementKind(kind) } else { types.arrayElementKind(kind) };
-            if code == "[]" {
-                "[]"
+            if code == "[]" or code.startsWithAt(0, "[") {
+                code
             } else if types.cTypeHasListField(elKind) {
                 tsDeepCloneValueCode(kind, code)
             } else {
@@ -346,6 +351,20 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             code
         }
     }
+    else if types.isRcKind(kind) {
+        if target == ir.TARGET_C {
+            rTag := types.cRcTag(kind);
+            if rTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, rTag + "_new(") and not code.startsWithAt(0, rTag + "_copy(") and not code.startsWithAt(0, rTag + "_move(") {
+                rTag + "_copy(" + code + ")"
+            } else {
+                code
+            }
+        } else if target == ir.TARGET_TS and not code.startsWithAt(0, "lite$rcCreate(") and not code.startsWithAt(0, "lite$rcShare(") and not code.startsWithAt(0, "({ box: null }") and not code.startsWithAt(0, "/*@R*/") {
+            "lite$rcShare(" + code + ")"
+        } else {
+            code
+        }
+    }
     else if target == ir.TARGET_C and types.isFnKind(kind) {
         fTag := types.cFnTag(kind);
         if fTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, "((/*@T:") and not code.startsWithAt(0, fTag + "_copy(") and not code.startsWithAt(0, fTag + "_move(") and not code.startsWithAt(0, "lt_mk_") {
@@ -363,7 +382,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
         }
     }
     else if target == ir.TARGET_TS and (types.isTupleKind(kind) or types.isRecordKind(kind)) and types.cTypeHasListField(kind) {
-        if not code.startsWithAt(0, "(((lite$rc:") {
+        if not code.startsWithAt(0, "(((lite$rc:") and not code.startsWithAt(0, "{ ") and code =!= "{}" {
             tsDeepCloneValueCode(kind, code)
         } else {
             code
@@ -394,6 +413,9 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
     }
     if types.isSetKind(kind) {
         return "new Set(" + expr + ")";
+    }
+    if types.isRcKind(kind) {
+        return "lite$rcShare(" + expr + ")";
     }
     if types.isRecordKind(kind) or types.isTupleKind(kind) {
         isRec := types.isRecordKind(kind);
@@ -823,6 +845,13 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         eTs := types.tsFunctionType(types.setElementKind(kind));
         (kind = kind, code = "new Set<" + eTs + ">()", intValue = 0, textValue = "", constant = false, next = next)
     }
+    else if types.isRcKind(kind) {
+        if target == ir.TARGET_C and types.cRcTag(kind) =!= "" {
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + types.cRcTag(kind) + "){ .box = NULL })", intValue = 0, textValue = "", constant = false, next = next);
+        }
+        elTs := types.tsFunctionType(types.rcElementKind(kind));
+        (kind = kind, code = "({ box: null } as { box: { count: number; value: " + elTs + " } | null })", intValue = 0, textValue = "", constant = false, next = next)
+    }
     else if types.isPayloadEnumKind(kind) {
         ps := types.enumCasePayloads(kind, 0);
         if target == ir.TARGET_C {
@@ -1106,6 +1135,12 @@ pub ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: L
         condExpr := if target == ir.TARGET_TS { "Boolean(" + conditionCodes[index] + ")" } else { "(" + conditionCodes[index] + ")" };
         code = "(" + condExpr + " ? " + branchCode + " : " + code + ")";
         index = index - 1;
+    }
+    if target == ir.TARGET_C and branchCount >= 2 and types.cDropFnForKind(resultKind) =!= "" {
+        return "/*@T:" + resultKind + "@*/" + code;
+    }
+    if target == ir.TARGET_TS and branchCount >= 2 and types.isRcKind(resultKind) {
+        return "/*@R*/" + code;
     }
     code
 };
@@ -1918,7 +1953,7 @@ pub storageKind := fn(kind: String): String {
     match {
         types.isListKind(kind) or types.isArrayKind(kind) { "List" }
         types.isTupleKind(kind) { "Tuple" }
-        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { "Record" }
+        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) { "Record" }
         types.isFnKind(kind) { "Fn" }
         numeric.isIntKind(kind) { ir.VALUE_KIND_INT }
         numeric.isFloatKind(kind) { ir.VALUE_KIND_FLOAT }
@@ -1928,7 +1963,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

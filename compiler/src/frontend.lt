@@ -289,6 +289,8 @@ pub isTupleKind := fn(kind: String): Bool { types.isTupleKind(kind) };
 pub isMapKind := fn(kind: String): Bool { types.isMapKind(kind) };
 /** True when `kind` is a `Set<T>` type kind. */
 pub isSetKind := fn(kind: String): Bool { types.isSetKind(kind) };
+/** True when `kind` is an `Rc<T>` type kind. */
+pub isRcKind := fn(kind: String): Bool { types.isRcKind(kind) };
 /** True when `kind` is a nominal `enum` type kind. */
 pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
 /** True when `kind` is a payload-bearing nominal `enum` type kind. */
@@ -335,12 +337,16 @@ pub cMapValTag := fn(vKind: String): String { types.cMapValTag(vKind) };
 pub cMapTag := fn(kind: String): String { types.cMapTag(kind) };
 /** Returns the C11 set typedef tag for `kind`. */
 pub cSetTag := fn(kind: String): String { types.cSetTag(kind) };
+/** Returns the C11 ref-counted box typedef tag for `kind`. */
+pub cRcTag := fn(kind: String): String { types.cRcTag(kind) };
 /** Extracts the key kind from a `Map<K, V>` kind. */
 pub mapKeyKind := fn(kind: String): String { types.mapKeyKind(kind) };
 /** Extracts the value kind from a `Map<K, V>` kind. */
 pub mapValueKind := fn(kind: String): String { types.mapValueKind(kind) };
 /** Extracts the element kind from a `Set<T>` kind. */
 pub setElementKind := fn(kind: String): String { types.setElementKind(kind) };
+/** Extracts the element kind from an `Rc<T>` kind. */
+pub rcElementKind := fn(kind: String): String { types.rcElementKind(kind) };
 /** Returns the user-facing display name for a nominal record `kind`. */
 pub recordDisplayName := fn(kind: String): String { types.recordDisplayName(kind) };
 /** Returns the number of fields in a nominal record `kind`. */
@@ -1390,7 +1396,11 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     fnName == "remove" or fnName == "size" or fnName == "clear" or fnName == "keys" or fnName == "values")) or
                     (moduleIdentity == "lite.core.set.v1" and
                     (fnName == "add" or fnName == "has" or fnName == "remove" or
-                    fnName == "size" or fnName == "clear" or fnName == "values"));
+                    fnName == "size" or fnName == "clear" or fnName == "values")) or
+                    (moduleIdentity == "lite.core.rc.v1" and
+                    (fnName == "create" or fnName == "get" or fnName == "share" or
+                    fnName == "isEmpty" or fnName == "strongCount" or fnName == "ptrEqual" or
+                    fnName == "makeUnique" or fnName == "replace" or fnName == "reset"));
                     if canPreParseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic) {
                         header := parseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic);
                         afterHdr := skipTrivia(source, header.next, prefix);
@@ -3293,6 +3303,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         if isListKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for List"); }
                         if types.isMapKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Map"); }
                         if types.isSetKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Set"); }
+                        if types.isRcKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Rc"); }
                         declInitState = if hasBlockDecl(blockAssignedDecls, depth, localName) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                         parsed = zeroParsed(target, typed.kind, reservedEnd);
                     } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
@@ -3795,7 +3806,11 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 name == "remove" or name == "size" or name == "clear" or name == "keys" or name == "values")) or
                 (moduleIdentity == "lite.core.set.v1" and
                 (name == "add" or name == "has" or name == "remove" or
-                name == "size" or name == "clear" or name == "values"));
+                name == "size" or name == "clear" or name == "values")) or
+                (moduleIdentity == "lite.core.rc.v1" and
+                (name == "create" or name == "get" or name == "share" or
+                name == "isEmpty" or name == "strongCount" or name == "ptrEqual" or
+                name == "makeUnique" or name == "replace" or name == "reset"));
                 header := parseFunctionHeader(source, position, prefix, aliases, listIntrinsic);
                 position = skipTrivia(source, header.next, prefix);
                 rejectMisplacedTag(source, position, prefix, "unexpected block tag in function header");
@@ -4016,6 +4031,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if isListKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for List"); }
                     if types.isMapKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Map"); }
                     if types.isSetKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Set"); }
+                    if types.isRcKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Rc"); }
                     declInitState = if hasBlockDecl(blockAssignedDecls, depth, name) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                     parsed = zeroParsed(target, typed.kind, reservedEnd);
                 } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {

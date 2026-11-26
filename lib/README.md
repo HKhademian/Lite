@@ -4,9 +4,9 @@
 declaration carries a `/** ... */` doc comment and is published automatically to
 the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
-## Core Modules (`lib/core/` — 15 modules)
+## Core Modules (`lib/core/` — 16 modules)
 
-Core facilities cover [I/O](lite://module/core/io), [text](lite://module/core/text), [numbers](lite://module/core/int), and [collections](lite://module/core/list). Check each generated module page for its environment and operations.
+Core facilities cover [I/O](lite://module/core/io), [text](lite://module/core/text), [numbers](lite://module/core/int), [collections](lite://module/core/list), and explicit [reference-counted handles](lite://module/core/rc). Check each generated module page for its environment and operations.
 
 ## Math Modules (`lib/math/` — 5 modules)
 

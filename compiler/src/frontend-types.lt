@@ -551,10 +551,10 @@ pub distinctBaseKind := fn(kind: String): String {
     cur
 };
 
-/** True when `kind` (or its distinct base representation) is a mutable List, Array, Map, Set, or nominal record. */
+/** True when `kind` (or its distinct base representation) is a mutable List, Array, Map, Set, Rc, or nominal record. */
 pub isMutContainerKind := fn(kind: String): Bool {
     base := distinctBaseKind(kind);
-    isListKind(base) or isArrayKind(base) or isMapKind(base) or isSetKind(base) or isRecordKind(base)
+    isListKind(base) or isArrayKind(base) or isMapKind(base) or isSetKind(base) or isRcKind(base) or isRecordKind(base)
 };
 
 /** True when `kind` is a nominal record or distinct type whose base representation is a nominal record. */
@@ -579,6 +579,18 @@ pub isSetKind := fn(kind: String): Bool {
 pub setElementKind := fn(kind: String): String {
     if not isSetKind(kind) { return ""; }
     kind.slice(4, kind.length() - 1)
+};
+
+/** True when `kind` is canonical `Rc<T>`. */
+pub isRcKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 4 and kind.startsWithAt(0, "Rc<") and kind.at(size - 1) == ">"
+};
+
+/** Returns the payload element type `T` from canonical `Rc<T>`, or `""` otherwise. */
+pub rcElementKind := fn(kind: String): String {
+    if not isRcKind(kind) { return ""; }
+    kind.slice(3, kind.length() - 1)
 };
 
 /** True when `kind` is a canonical closed-union type set `Union<K1,K2,...>`. */
@@ -862,6 +874,7 @@ pub typeOpOwnerKey := fn(kind: String): String {
     if isListKind(kind) { return "List"; }
     if isMapKind(kind) { return "Map"; }
     if isSetKind(kind) { return "Set"; }
+    if isRcKind(kind) { return "Rc"; }
     if isArrayKind(kind) { return "Array"; }
     if kind == ir.VALUE_KIND_STRING or kind == ir.VALUE_KIND_BOOL or numeric.isNumericKind(kind) {
         return kind;
@@ -899,6 +912,7 @@ pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String
     if moduleIdentity == "lite.core.list.v1" and typeName == "List" { return "List"; }
     if moduleIdentity == "lite.core.map.v1" and typeName == "Map" { return "Map"; }
     if moduleIdentity == "lite.core.set.v1" and typeName == "Set" { return "Set"; }
+    if moduleIdentity == "lite.core.rc.v1" and typeName == "Rc" { return "Rc"; }
     if moduleIdentity == "lite.core.text.v1" and
     (typeName == "String" or typeName == "Bool" or numeric.isFloatKind(typeName)) {
         return typeName;
@@ -912,7 +926,7 @@ pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String
 
 /** True when `typeName` is a generic built-in type family requiring explicit `Self<...>` arguments. */
 pub isGenericCoreOwner := fn(typeName: String): Bool {
-    typeName == "List" or typeName == "Map" or typeName == "Set" or typeName == "Array"
+    typeName == "List" or typeName == "Map" or typeName == "Set" or typeName == "Rc" or typeName == "Array"
 };
 
 /** Returns the backing scalar kind of canonical enum kind `kind`, or `""` for a plain or payload enum. */
@@ -1245,6 +1259,7 @@ cIsSupportedElem := fn(kind: String): Bool {
     else if isArrayKind(kind) { ok = self(arrayElementKind(kind)); }
     else if isMapKind(kind) { ok = isMapKeyKind(mapKeyKind(kind)) and self(mapValueKind(kind)); }
     else if isSetKind(kind) { ok = isMapKeyKind(setElementKind(kind)); }
+    else if isRcKind(kind) { ok = self(rcElementKind(kind)); }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         ok = true;
@@ -1325,10 +1340,10 @@ pub cStructTag := fn(kind: String): String {
     tag
 };
 
-/** True when `kind` is a list/wildcard-array/map/set or a fixed array/tuple/record/payload-enum transitively containing one. */
+/** True when `kind` is a list/wildcard-array/map/set/rc or a fixed array/tuple/record/payload-enum transitively containing one. */
 pub cTypeHasListField := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) { return true; }
+    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isRcKind(kind) { return true; }
     if isArrayKind(kind) {
         return if arrayExtent(kind) < 0 { true } else { self(arrayElementKind(kind)) };
     }
@@ -1364,10 +1379,10 @@ pub cTypeHasListField := fn(kind: String): Bool {
     res
 };
 
-/** True when C11 representation of `kind` owns heap memory or closure environments requiring drop/copy (`List`, `Map`, `Set`, `fn`, or composites containing them). */
+/** True when C11 representation of `kind` owns heap memory or closure environments requiring drop/copy (`List`, `Map`, `Set`, `Rc`, `fn`, or composites containing them). */
 pub cTypeNeedsDrop := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isFnKind(kind) { return true; }
+    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isRcKind(kind) or isFnKind(kind) { return true; }
     if isArrayKind(kind) {
         return if arrayExtent(kind) < 0 { true } else { self(arrayElementKind(kind)) };
     }
@@ -1420,6 +1435,8 @@ pub cDropFnForKind := fn(kind: String): String {
         cMapTag(kind) + "_drop"
     } else if cSetTag(kind) =!= "" {
         cSetTag(kind) + "_drop"
+    } else if cRcTag(kind) =!= "" {
+        cRcTag(kind) + "_drop"
     } else if cArrayTag(kind) =!= "" and cTypeNeedsDrop(kind) {
         cArrayTag(kind) + "_drop"
     } else if cStructTag(kind) =!= "" and cTypeNeedsDrop(kind) {
@@ -1469,11 +1486,23 @@ cScalarTag := fn(kind: String): String {
     else { "" }
 };
 
-/** Maps a non-array C-supported list element kind (scalar, enum, tuple, record, payload enum, or fn) to its canonical C11 tag. */
+/** Maps a C-supported `Rc<T>` kind to its C11 pointer-sized typedef name `lt_rc_<tag>`, or `""`. */
+pub cRcTag := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if not isRcKind(kind) { return ""; }
+    el := rcElementKind(kind);
+    if not cIsSupportedElem(el) { return ""; }
+    elBase := distinctBaseKind(el);
+    s := cScalarTag(elBase);
+    if s =!= "" { "lt_rc_" + s } else { "lt_rc_" + cStructHash(elBase) }
+};
+
+/** Maps a non-array C-supported list element kind (scalar, enum, tuple, record, payload enum, rc, or fn) to its canonical C11 tag. */
 cNonArrayListTag := fn(elemKind: String): String {
     if isDistinctKind(elemKind) { return self(distinctBaseKind(elemKind)); }
     sTag := cScalarTag(elemKind);
     if sTag =!= "" { sTag }
+    else if isRcKind(elemKind) { cRcTag(elemKind) }
     else if isTupleKind(elemKind) or isRecordKind(elemKind) or isPayloadEnumKind(elemKind) { cStructTag(elemKind) }
     else if isFnKind(elemKind) { cFnTag(elemKind) }
     else { "" }
@@ -1591,6 +1620,7 @@ pub cValueType := fn(kind: String): String {
     else if isArrayKind(kind) { "lt_list_" + cListTag(arrayElementKind(kind)) }
     else if cMapTag(kind) =!= "" { cMapTag(kind) }
     else if cSetTag(kind) =!= "" { cSetTag(kind) }
+    else if cRcTag(kind) =!= "" { cRcTag(kind) }
     else if cStructTag(kind) =!= "" { cStructTag(kind) }
     else if cFnTag(kind) =!= "" { cFnTag(kind) }
     else { "lt_str" };
@@ -1770,6 +1800,7 @@ pub containsFnKind := fn(kind: String): Bool {
     if isListKind(kind) { res = self(listElementKind(kind)); }
     else if isMapKind(kind) { res = self(mapKeyKind(kind)) or self(mapValueKind(kind)); }
     else if isSetKind(kind) { res = self(setElementKind(kind)); }
+    else if isRcKind(kind) { res = self(rcElementKind(kind)); }
     else if isArrayKind(kind) { res = self(arrayElementKind(kind)); }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
@@ -1996,6 +2027,7 @@ pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
     if isAnyParamName(genericParams, kind) { return true; }
     if isListKind(kind) { return self(genericParams, listElementKind(kind)); }
     if isSetKind(kind) { return self(genericParams, setElementKind(kind)); }
+    if isRcKind(kind) { return self(genericParams, rcElementKind(kind)); }
     if isMapKind(kind) { return self(genericParams, mapKeyKind(kind)) or self(genericParams, mapValueKind(kind)); }
     if isArrayKind(kind) {
         return self(genericParams, arrayElementKind(kind)) or valueParamKind(genericParams, arrayExtentText(kind)) =!= "";
@@ -2057,6 +2089,9 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
     }
     if isSetKind(pattern) {
         return "Set<" + self(genericParams, setElementKind(pattern), bindings) + ">";
+    }
+    if isRcKind(pattern) {
+        return "Rc<" + self(genericParams, rcElementKind(pattern), bindings) + ">";
     }
     if isMapKind(pattern) {
         return "Map<" + self(genericParams, mapKeyKind(pattern), bindings) + "," +
@@ -2180,6 +2215,13 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         elem := setElementKind(kind);
         if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isMapKeyKind(elem) {
             return "unsupported set element type " + displayKind(elem);
+        }
+        return self(elem, allowGenericParams);
+    }
+    if isRcKind(kind) {
+        elem := rcElementKind(kind);
+        if elem == ir.VALUE_KIND_UNIT or elem == ir.VALUE_KIND_NEVER {
+            return "unsupported Rc element type " + displayKind(elem);
         }
         return self(elem, allowGenericParams);
     }
@@ -2362,7 +2404,7 @@ pub scanComptimeTypeParams := fn(source: String, start: Int, prefix: String): (o
                 cursor = afterKind;
             } else if kindText == ir.VALUE_KIND_FLOAT or kindText == ir.VALUE_KIND_FLOAT32 or kindText == "Float64" or
             kindText == ir.VALUE_KIND_UNIT or kindText == ir.VALUE_KIND_NEVER or kindText == "List" or
-            kindText == "Map" or kindText == "Set" or kindText == "Array" or syntax.isReservedWord(kindText) or
+            kindText == "Map" or kindText == "Set" or kindText == "Rc" or kindText == "Array" or syntax.isReservedWord(kindText) or
             numeric.isNarrowNumericKind(kindText) or numeric.numericAliasKind(kindText) =!= "" {
                 return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = kindStart, errPos = kindStart, errMsg = "unsupported comptime parameter kind " + kindText + "; only Type, Int, Bool, String, and payload-free enums are supported");
             } else {
@@ -2460,6 +2502,7 @@ pub tsFunctionType := fn(kind: String): String {
     } else if isListKind(kind) { out = self(listElementKind(kind)) + "[]"; }
     else if isMapKind(kind) { out = "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">"; }
     else if isSetKind(kind) { out = "Set<" + self(setElementKind(kind)) + ">"; }
+    else if isRcKind(kind) { out = "{ box: { count: number; value: " + self(rcElementKind(kind)) + " } | null }"; }
     else if isArrayKind(kind) { out = self(arrayElementKind(kind)) + "[]"; }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
@@ -2542,6 +2585,10 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
         elemKind := setElementKind(kind);
         return "(\"{\" + Array.from((" + code + ").values()).map((v: " + tsFunctionType(elemKind) + ") => " +
         self(elemKind, "v") + ").join(\", \") + \"}\")";
+    }
+    if isRcKind(kind) {
+        elemKind := rcElementKind(kind);
+        return "((r: " + tsFunctionType(kind) + "): string => r.box === null ? \"Rc(empty)\" : (\"Rc(\" + ((v: " + tsFunctionType(elemKind) + "): string => " + self(elemKind, "v") + ")(r.box.value) + \")\"))(" + code + ")";
     }
     if isPayloadEnumKind(kind) {
         enumName := enumDisplayName(kind);
@@ -2677,6 +2724,7 @@ pub displayKind := fn(kind: String): String {
     if isListKind(kind) { return "List<" + self(listElementKind(kind)) + ">"; }
     if isMapKind(kind) { return "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">"; }
     if isSetKind(kind) { return "Set<" + self(setElementKind(kind)) + ">"; }
+    if isRcKind(kind) { return "Rc<" + self(rcElementKind(kind)) + ">"; }
     if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + arrayExtentText(kind) + "]"; }
     if isFnKind(kind) {
         count := fnParamCount(kind);
@@ -2951,7 +2999,7 @@ resolveDiscreteType := fn(aliases: List<AliasDecl>, rawTypeName: String, prefix:
         if tgt == "" or tgt.startsWithAt(0, "@recraw:") or tgt.startsWithAt(0, "@distraw:") or
         tgt.startsWithAt(0, "@genraw:") or tgt.startsWithAt(0, "@gentpl:") or tgt.startsWithAt(0, "$Val:") or
         isRecordKind(tgt) or isDistinctKind(tgt) or isTupleKind(tgt) or isListKind(tgt) or
-        isArrayKind(tgt) or isMapKind(tgt) or isSetKind(tgt) or isFnKind(tgt) or
+        isArrayKind(tgt) or isMapKind(tgt) or isSetKind(tgt) or isRcKind(tgt) or isFnKind(tgt) or
         tgt.startsWithAt(0, "(") or tgt.startsWithAt(0, "[") or tgt.startsWithAt(0, "fn") {
             return (ok = false, kind = "", error = "unsupported comptime parameter type " + rawTypeName + "; only Int, Bool, String, and payload-free enums are supported");
         }
@@ -3558,6 +3606,21 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in set type" });
         }
         return (kind = "Set<" + elemParsed.kind + ">", next = close + 1);
+    }
+    if resolvedName == "Rc" and afterName < size and source.at(afterName) == "<" {
+        elemStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if elemStart >= size or source.at(elemStart) == ">" {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected an Rc payload type");
+        }
+        elemParsed := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "Rc payload", genericType, seen);
+        if elemParsed.kind == ir.VALUE_KIND_UNIT or elemParsed.kind == ir.VALUE_KIND_NEVER {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported Rc element type " + displayKind(elemParsed.kind));
+        }
+        close := syntax.skipTrivia(source, elemParsed.next, prefix);
+        if close >= size or source.at(close) =!= ">" {
+            syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in Rc type" });
+        }
+        return (kind = "Rc<" + elemParsed.kind + ">", next = close + 1);
     }
     if isGenericParamName(genericType, name) { return (kind = name, next = after); }
     if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT or numeric.isNarrowNumericKind(name) {
@@ -5046,6 +5109,21 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = close);
         }
         return (ok = true, kind = "Set<" + elemRes.kind + ">", next = close + 1);
+    }
+    if resolvedName == "Rc" {
+        afterRc := syntax.skipTrivia(source, afterName, prefix);
+        if afterRc >= size or source.at(afterRc) =!= "<" {
+            return (ok = false, kind = "", next = afterRc);
+        }
+        elemRes := self(source, afterRc + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        if not elemRes.ok or elemRes.kind == ir.VALUE_KIND_UNIT or elemRes.kind == ir.VALUE_KIND_NEVER {
+            return (ok = false, kind = "", next = afterRc + 1);
+        }
+        close := syntax.skipTrivia(source, elemRes.next, prefix);
+        if close >= size or source.at(close) =!= ">" {
+            return (ok = false, kind = "", next = close);
+        }
+        return (ok = true, kind = "Rc<" + elemRes.kind + ">", next = close + 1);
     }
     if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT {
         return (ok = true, kind = name, next = afterName);

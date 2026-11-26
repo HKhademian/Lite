@@ -398,7 +398,7 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
 
 /** True when positioned bounds faults may be raised by text or list helpers. */
 usesBounds := fn(calls: String): Bool {
-    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesListSet(calls) or usesListSlice(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls)
+    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesListSet(calls) or usesListSlice(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet")
 }
 
 /** True when runtime faults or input failures may require construct-level `finally` unwinding. */
@@ -2799,6 +2799,126 @@ emitMapIndexHelper := fn(): Unit {
     outLine("");
 }
 
+/** Emits the explicit reference-counted `Rc<T>` TS runtime helpers actually referenced by `calls`. */
+emitRcHelpers := fn(calls: String): Unit {
+    needCreate := usesBuiltin(calls, "rcCreate");
+    needShare := usesBuiltin(calls, "rcShare");
+    needGet := usesBuiltin(calls, "rcGet");
+    needUnique := usesBuiltin(calls, "rcMakeUnique");
+    needUniqueClone := usesBuiltin(calls, "rcMakeUniqueClone");
+    needReplace := usesBuiltin(calls, "rcReplace");
+    needReset := usesBuiltin(calls, "rcReset");
+    if not needCreate and not needShare and not needGet and not needUnique and not needUniqueClone and not needReplace and not needReset {
+        return;
+    }
+    outLine("type Lite$RcBox<T> = { count: number; value: T };");
+    outLine("type Lite$Rc<T> = { box: Lite$RcBox<T> | null };");
+    if needCreate {
+        outLine("function lite$rcCreate<T>(value: T): Lite$Rc<T> { return { box: { count: 1, value } }; }");
+    }
+    if needShare {
+        outLine("function lite$rcShare<T>(r: Lite$Rc<T>): Lite$Rc<T> { if (r.box !== null) r.box.count += 1; return { box: r.box }; }");
+    }
+    if needGet {
+        outLine("function lite$rcGet<T>(r: Lite$Rc<T>, at: number): T {");
+        outLine("    if (r.box === null) { lite$fault(\"NullPointerPanic\", at, \"Rc.get on empty Rc\"); }");
+        outLine("    return r.box.value;");
+        outLine("}");
+    }
+    if needUnique {
+        outLine("function lite$rcMakeUnique<T>(r: Lite$Rc<T>): void {");
+        outLine("    if (r.box !== null && r.box.count > 1) { r.box.count -= 1; r.box = { count: 1, value: r.box.value }; }");
+        outLine("}");
+    }
+    if needUniqueClone {
+        outLine("function lite$rcMakeUniqueClone<T>(r: Lite$Rc<T>, cloneVal: (v: T) => T): void {");
+        outLine("    if (r.box !== null && r.box.count > 1) { const cloned = cloneVal(r.box.value); r.box.count -= 1; r.box = { count: 1, value: cloned }; }");
+        outLine("}");
+    }
+    if needReplace {
+        outLine("function lite$rcReplace<T>(r: Lite$Rc<T>, value: T): void {");
+        outLine("    if (r.box === null) { r.box = { count: 1, value }; }");
+        outLine("    else if (r.box.count <= 1) { r.box.value = value; }");
+        outLine("    else { r.box.count -= 1; r.box = { count: 1, value }; }");
+        outLine("}");
+    }
+    if needReset {
+        outLine("function lite$rcReset<T>(r: Lite$Rc<T>): void {");
+        outLine("    if (r.box !== null) { r.box.count -= 1; r.box = null; }");
+        outLine("}");
+    }
+    outLine("");
+};
+
+/** Emits the `ds/arena` virtual-memory arena TS helpers when referenced by `calls`. */
+emitVmArenaHelpers := fn(calls: String): Unit {
+    needCreate := usesBuiltin(calls, "vmArenaCreate");
+    needWb := usesBuiltin(calls, "vmArenaWriteByte");
+    needRb := usesBuiltin(calls, "vmArenaReadByte");
+    needWi := usesBuiltin(calls, "vmArenaWriteInt32");
+    needRi := usesBuiltin(calls, "vmArenaReadInt32");
+    needReset := usesBuiltin(calls, "vmArenaReset");
+    needDestroy := usesBuiltin(calls, "vmArenaDestroy");
+    if not needCreate and not needWb and not needRb and not needWi and not needRi and not needReset and not needDestroy {
+        return;
+    }
+    outLine("const lite$vmArenas: ({ buf: Uint8Array; view: DataView; active: boolean })[] = [];");
+    if needCreate {
+        outLine("function lite$vmArenaCreate(capacityBytes: bigint): bigint {");
+        outLine("    if (capacityBytes <= 0n) return 0n;");
+        outLine("    const n = Number(capacityBytes);");
+        outLine("    const buf = new Uint8Array(n);");
+        outLine("    const view = new DataView(buf.buffer);");
+        outLine("    for (let i = 0; i < lite$vmArenas.length; i += 1) {");
+        outLine("        const slot = lite$vmArenas[i];");
+        outLine("        if (!slot || !slot.active) { lite$vmArenas[i] = { buf, view, active: true }; return BigInt(i + 1); }");
+        outLine("    }");
+        outLine("    lite$vmArenas.push({ buf, view, active: true });");
+        outLine("    return BigInt(lite$vmArenas.length);");
+        outLine("}");
+    }
+    if needWb {
+        outLine("function lite$vmArenaWriteByte(handle: bigint, offset: bigint, value: bigint): boolean {");
+        outLine("    const s = lite$vmArenas[Number(handle) - 1];");
+        outLine("    if (!s || !s.active || offset < 0n || offset >= BigInt(s.buf.length) || value < 0n || value > 255n) return false;");
+        outLine("    s.buf[Number(offset)] = Number(value);");
+        outLine("    return true;");
+        outLine("}");
+    }
+    if needRb {
+        outLine("function lite$vmArenaReadByte(handle: bigint, offset: bigint): bigint {");
+        outLine("    const s = lite$vmArenas[Number(handle) - 1];");
+        outLine("    if (!s || !s.active || offset < 0n || offset >= BigInt(s.buf.length)) return -1n;");
+        outLine("    return BigInt(s.buf[Number(offset)] ?? 0);");
+        outLine("}");
+    }
+    if needWi {
+        outLine("function lite$vmArenaWriteInt32(handle: bigint, offset: bigint, value: bigint): boolean {");
+        outLine("    const s = lite$vmArenas[Number(handle) - 1];");
+        outLine("    if (!s || !s.active || offset < 0n || offset + 4n > BigInt(s.buf.length) || value < -2147483648n || value > 2147483647n) return false;");
+        outLine("    s.view.setInt32(Number(offset), Number(value), true);");
+        outLine("    return true;");
+        outLine("}");
+    }
+    if needRi {
+        outLine("function lite$vmArenaReadInt32(handle: bigint, offset: bigint): bigint {");
+        outLine("    const s = lite$vmArenas[Number(handle) - 1];");
+        outLine("    if (!s || !s.active || offset < 0n || offset + 4n > BigInt(s.buf.length)) return 0n;");
+        outLine("    return BigInt(s.view.getInt32(Number(offset), true));");
+        outLine("}");
+    }
+    if needReset {
+        outLine("function lite$vmArenaReset(handle: bigint): void { void handle; }");
+    }
+    if needDestroy {
+        outLine("function lite$vmArenaDestroy(handle: bigint): void {");
+        outLine("    const s = lite$vmArenas[Number(handle) - 1];");
+        outLine("    if (s) { s.active = false; s.buf = new Uint8Array(0); s.view = new DataView(s.buf.buffer); }");
+        outLine("}");
+    }
+    outLine("");
+};
+
 /** Emits the single-lookup `core/map` `get` helper. */
 emitMapGetHelper := fn(): Unit {
     outLine("function lite$mapGet<K, V>(entries: ReadonlyMap<K, V>, key: K, zero: V): { found: boolean; value: V } {");
@@ -3209,6 +3329,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("");
     }
     emitBuiltinHelpers(calls);
+    emitRcHelpers(calls);
+    emitVmArenaHelpers(calls);
     if usesListIndex(calls) { emitListIndexHelper(); }
     if usesListSet(calls) { emitListSetHelper(); }
     if usesListSlice(calls) { emitListSliceHelper(); }

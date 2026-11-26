@@ -54,6 +54,7 @@ cScalarType := fn(kind: String): String {
     else if frontend.cArrayTag(kind) =!= "" { frontend.cArrayTag(kind) }
     else if frontend.cMapTag(kind) =!= "" { frontend.cMapTag(kind) }
     else if frontend.cSetTag(kind) =!= "" { frontend.cSetTag(kind) }
+    else if frontend.cRcTag(kind) =!= "" { frontend.cRcTag(kind) }
     else if frontend.cStructTag(kind) =!= "" { frontend.cStructTag(kind) }
     else if frontend.cFnTag(kind) =!= "" { frontend.cFnTag(kind) }
     else if kind == frontend.VALUE_KIND_UNIT or kind == frontend.VALUE_KIND_NEVER { "void" }
@@ -109,6 +110,7 @@ checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isTupleKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support tuple values yet"); }
     if frontend.isMapKind(kind) and frontend.cMapTag(kind) == "" { diagLib.fail("", "C backend does not support map values yet"); }
     if frontend.isSetKind(kind) and frontend.cSetTag(kind) == "" { diagLib.fail("", "C backend does not support set values yet"); }
+    if frontend.isRcKind(kind) and frontend.cRcTag(kind) == "" { diagLib.fail("", "C backend does not support Rc values yet"); }
     if frontend.isRecordKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support record values yet"); }
     if frontend.isPayloadEnumKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support payload enum values yet"); }
     if frontend.isListKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support list values yet"); }
@@ -691,6 +693,13 @@ ensureCBuiltinMap := fn(): Unit {
     mut cBuiltinMap.set("extraCanvasDestroyTexture", "lt_canvas_destroy_texture");
     mut cBuiltinMap.set("extraCanvasScratchMark", "lt_canvas_scratch_mark");
     mut cBuiltinMap.set("extraCanvasScratchRewind", "lt_canvas_scratch_rewind");
+    mut cBuiltinMap.set("vmArenaCreate", "lt_vm_user_create");
+    mut cBuiltinMap.set("vmArenaWriteByte", "lt_vm_user_write_byte");
+    mut cBuiltinMap.set("vmArenaReadByte", "lt_vm_user_read_byte");
+    mut cBuiltinMap.set("vmArenaWriteInt32", "lt_vm_user_write_i32");
+    mut cBuiltinMap.set("vmArenaReadInt32", "lt_vm_user_read_i32");
+    mut cBuiltinMap.set("vmArenaReset", "lt_vm_user_reset");
+    mut cBuiltinMap.set("vmArenaDestroy", "lt_vm_user_destroy");
 };
 
 /** Rewrites registered `lite$...(` builtin calls via O(1) map lookup and strips internal `/*@T:...*/`/`/*@C:...*/`/`/*@P:...*/`/`/*@CFN_START:...*/` markers outside quoted strings. */
@@ -779,6 +788,7 @@ cCall := fn(kind: String, code: String): String {
         cListTagForKind(kind) =!= "" { "lt_list_" + cListTagForKind(kind) + "_print(" + code + ")" }
         frontend.cMapTag(kind) =!= "" { frontend.cMapTag(kind) + "_print(" + code + ")" }
         frontend.cSetTag(kind) =!= "" { frontend.cSetTag(kind) + "_print(" + code + ")" }
+        frontend.cRcTag(kind) =!= "" { frontend.cRcTag(kind) + "_print(" + code + ")" }
         frontend.cStructTag(kind) =!= "" { frontend.cStructTag(kind) + "_print(" + code + ")" }
         frontend.isIntScalarKind(kind) { "printf(\"%\" PRId64, (int64_t)(" + code + "))" }
         kind == frontend.VALUE_KIND_BOOL { "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))" }
@@ -1923,6 +1933,101 @@ emitCSetHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrin
         outLine("}");
     }
     outLine("");
+};
+
+/** Emits portable ISO C11 pointer-sized `Rc<T>` reference-counted box wrapper and operations for `kind`. */
+emitCRcHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool): Unit {
+    eKind := frontend.rcElementKind(kind);
+    rTag := frontend.cRcTag(kind);
+    eType := cScalarType(eKind);
+    ops := cKindOps(eKind);
+    hasNew := usesIntHelper(calls, rTag + "_new(");
+    hasCopy := needCopy or usesIntHelper(calls, rTag + "_copy(");
+    hasGet := usesIntHelper(calls, rTag + "_get(");
+    hasCount := usesIntHelper(calls, rTag + "_count(");
+    hasUnique := usesIntHelper(calls, rTag + "_make_unique(");
+    hasReplace := usesIntHelper(calls, rTag + "_replace(");
+    outLine("typedef struct { void *box; } " + rTag + ";");
+    outLine("#if UINTPTR_MAX > 0xffffffffu");
+    outLine("_Static_assert(sizeof(" + rTag + ") == 8, \"lt_rc must be 8 bytes\");");
+    outLine("#endif");
+    outLine("LT_INLINE void " + rTag + "_drop(" + rTag + " *r) {");
+    outLine("    if (r->box != NULL) {");
+    outLine("        if (lt_box_dec(r->box)) {");
+    if ops.dropFn =!= "" {
+        outLine("            " + ops.dropFn + "((" + eType + " *)r->box);");
+    }
+    outLine("            lt_box_free_raw(r->box);");
+    outLine("        }");
+    outLine("        r->box = NULL;");
+    outLine("    }");
+    outLine("}");
+    outLine("LT_INLINE " + rTag + " " + rTag + "_move(" + rTag + " *r) { " + rTag + " out = *r; r->box = NULL; return out; }");
+    if hasNew or hasUnique or hasReplace {
+        outLine("LT_INLINE " + rTag + " " + rTag + "_new(" + eType + " v) {");
+        outLine("    " + eType + " *p = (" + eType + " *)lt_box_alloc(sizeof(" + eType + "));");
+        outLine("    *p = v;");
+        outLine("    return (" + rTag + "){ .box = p };");
+        outLine("}");
+    }
+    if hasCopy {
+        outLine("LT_INLINE " + rTag + " " + rTag + "_copy(" + rTag + " r) {");
+        outLine("    return (" + rTag + "){ .box = lt_box_retain(r.box) };");
+        outLine("}");
+    }
+    if hasCount {
+        outLine("LT_INLINE int64_t " + rTag + "_count(" + rTag + " r) {");
+        outLine("    if (r.box == NULL) { return 0; }");
+        outLine("    return ((const lt_box_hdr *)((const char *)r.box - sizeof(lt_box_hdr)))->rc;");
+        outLine("}");
+    }
+    if hasGet {
+        outLine("LT_INLINE " + eType + " " + rTag + "_get(" + rTag + " r) {");
+        outLine("    if (r.box == NULL) { fprintf(stderr, \"NullPointerPanic: Rc.get on empty Rc\\n\"); exit(1); }");
+        if ops.copyFn =!= "" {
+            outLine("    return " + ops.copyFn + "(*((const " + eType + " *)r.box));");
+        } else {
+            outLine("    return *((const " + eType + " *)r.box);");
+        }
+        outLine("}");
+    }
+    if hasUnique {
+        outLine("LT_INLINE void " + rTag + "_make_unique(" + rTag + " *r) {");
+        outLine("    if (r->box == NULL) { return; }");
+        outLine("    lt_box_hdr *h = (lt_box_hdr *)((char *)r->box - sizeof(lt_box_hdr));");
+        outLine("    if (h->rc <= 1) { return; }");
+        if ops.copyFn =!= "" {
+            outLine("    " + eType + " copy = " + ops.copyFn + "(*((const " + eType + " *)r->box));");
+        } else {
+            outLine("    " + eType + " copy = *((const " + eType + " *)r->box);");
+        }
+        outLine("    h->rc -= 1;");
+        outLine("    r->box = " + rTag + "_new(copy).box;");
+        outLine("}");
+    }
+    if hasReplace {
+        outLine("LT_INLINE void " + rTag + "_replace(" + rTag + " *r, " + eType + " v) {");
+        outLine("    if (r->box == NULL) { r->box = " + rTag + "_new(v).box; return; }");
+        outLine("    lt_box_hdr *h = (lt_box_hdr *)((char *)r->box - sizeof(lt_box_hdr));");
+        outLine("    if (h->rc <= 1) {");
+        if ops.dropFn =!= "" {
+            outLine("        " + ops.dropFn + "((" + eType + " *)r->box);");
+        }
+        outLine("        *((" + eType + " *)r->box) = v;");
+        outLine("        return;");
+        outLine("    }");
+        outLine("    h->rc -= 1;");
+        outLine("    r->box = " + rTag + "_new(v).box;");
+        outLine("}");
+    }
+    if needPrint {
+        outLine("static int " + rTag + "_print(" + rTag + " r) {");
+        outLine("    if (r.box == NULL) { return printf(\"Rc(empty)\"); }");
+        outLine("    if (printf(\"Rc(\") < 0) { return -1; }");
+        outLine("    if (" + cCall(eKind, "*((const " + eType + " *)r.box)") + " < 0) { return -1; }");
+        outLine("    return printf(\")\");");
+        outLine("}");
+    }
 };
 
 /** Emits portable ISO C11 16 B `rc`-free list struct and helpers for `tag`. */
@@ -4045,6 +4150,14 @@ collectSubKinds := fn(kind: String): List<String> {
         (mut out).pushBack("E|" + kind);
         return out;
     }
+    if frontend.isRcKind(kind) {
+        if frontend.cRcTag(kind) == "" { return out; }
+        eKind := frontend.rcElementKind(kind);
+        subE := self(eKind);
+        loop subE as s { mut out.pushBack(s); }
+        (mut out).pushBack("R|" + kind);
+        return out;
+    }
     if frontend.isPayloadEnumKind(kind) {
         if frontend.cStructTag(kind) == "" { return out; }
         cc := frontend.enumCaseCount(kind);
@@ -4137,6 +4250,14 @@ collectTypeFlags := fn(kind: String): List<String> {
         if tag == "" { return out; }
         (mut out).pushBack("E:" + tag);
         subE := self(frontend.setElementKind(kind));
+        loop subE as s { mut out.pushBack(s); }
+        return out;
+    }
+    if frontend.isRcKind(kind) {
+        tag := frontend.cRcTag(kind);
+        if tag == "" { return out; }
+        (mut out).pushBack("R:" + tag);
+        subE := self(frontend.rcElementKind(kind));
         loop subE as s { mut out.pushBack(s); }
         return out;
     }
@@ -6433,6 +6554,89 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
     }
 };
 
+/** True when any emitted item calls a `ds/arena` virtual-memory arena builtin. */
+usesVmArenaBuiltins := fn(calls: Set<String>): Bool {
+    usesIntHelper(calls, "lite$vmArenaCreate(") or usesIntHelper(calls, "lite$vmArenaWriteByte(") or
+    usesIntHelper(calls, "lite$vmArenaReadByte(") or usesIntHelper(calls, "lite$vmArenaWriteInt32(") or
+    usesIntHelper(calls, "lite$vmArenaReadInt32(") or usesIntHelper(calls, "lite$vmArenaReset(") or
+    usesIntHelper(calls, "lite$vmArenaDestroy(")
+};
+
+/** Emits C11 `lt_vm_arena`-backed user `VmArena` slot helpers for demand-paged bump arenas. */
+emitCVmArenaHelpers := fn(calls: Set<String>): Unit {
+    if not usesVmArenaBuiltins(calls) { return; }
+    outLine("typedef struct { lt_vm_arena arena; uint8_t *base; size_t cap; bool active; } lt_vm_user_slot;");
+    outLine("static lt_vm_user_slot lt_vm_user_slots[256];");
+    outLine("LT_INLINE lt_vm_user_slot *lt_vm_user_lookup(int64_t handle) {");
+    outLine("    if (handle < 1 || handle > 256) { return NULL; }");
+    outLine("    lt_vm_user_slot *s = &lt_vm_user_slots[handle - 1];");
+    outLine("    return (s->active && s->base != NULL) ? s : NULL;");
+    outLine("}");
+    outLine("static int64_t lt_vm_user_create(int64_t cap_bytes) {");
+    outLine("    if (cap_bytes <= 0) { return 0; }");
+    outLine("    for (int i = 0; i < 256; i += 1) {");
+    outLine("        if (!lt_vm_user_slots[i].active) {");
+    outLine("            lt_vm_user_slot *s = &lt_vm_user_slots[i];");
+    outLine("            memset(&s->arena, 0, sizeof(s->arena));");
+    outLine("            s->cap = (size_t)cap_bytes;");
+    outLine("            s->base = (uint8_t *)lt_vm_arena_alloc(&s->arena, 8u, s->cap);");
+    outLine("#if defined(LITE_ALLOC_SYSTEM)");
+    outLine("            memset(s->base, 0, s->cap);");
+    outLine("#endif");
+    outLine("            s->active = true;");
+    outLine("            return (int64_t)(i + 1);");
+    outLine("        }");
+    outLine("    }");
+    outLine("    return 0;");
+    outLine("}");
+    if usesIntHelper(calls, "lite$vmArenaWriteByte(") {
+        outLine("LT_INLINE bool lt_vm_user_write_byte(int64_t handle, int64_t offset, int64_t value) {");
+        outLine("    lt_vm_user_slot *s = lt_vm_user_lookup(handle);");
+        outLine("    if (s == NULL || offset < 0 || (size_t)offset >= s->cap || value < 0 || value > 255) { return false; }");
+        outLine("    s->base[(size_t)offset] = (uint8_t)value;");
+        outLine("    return true;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$vmArenaReadByte(") {
+        outLine("LT_INLINE int64_t lt_vm_user_read_byte(int64_t handle, int64_t offset) {");
+        outLine("    lt_vm_user_slot *s = lt_vm_user_lookup(handle);");
+        outLine("    if (s == NULL || offset < 0 || (size_t)offset >= s->cap) { return -1; }");
+        outLine("    return (int64_t)s->base[(size_t)offset];");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$vmArenaWriteInt32(") {
+        outLine("LT_INLINE bool lt_vm_user_write_i32(int64_t handle, int64_t offset, int64_t value) {");
+        outLine("    lt_vm_user_slot *s = lt_vm_user_lookup(handle);");
+        outLine("    if (s == NULL || offset < 0 || (size_t)offset > s->cap - 4u || s->cap < 4u || value < -2147483648LL || value > 2147483647LL) { return false; }");
+        outLine("    uint32_t u = (uint32_t)(int32_t)value;");
+        outLine("    uint8_t *p = s->base + (size_t)offset;");
+        outLine("    p[0] = (uint8_t)(u & 0xFFu); p[1] = (uint8_t)((u >> 8) & 0xFFu);");
+        outLine("    p[2] = (uint8_t)((u >> 16) & 0xFFu); p[3] = (uint8_t)((u >> 24) & 0xFFu);");
+        outLine("    return true;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$vmArenaReadInt32(") {
+        outLine("LT_INLINE int64_t lt_vm_user_read_i32(int64_t handle, int64_t offset) {");
+        outLine("    lt_vm_user_slot *s = lt_vm_user_lookup(handle);");
+        outLine("    if (s == NULL || offset < 0 || s->cap < 4u || (size_t)offset > s->cap - 4u) { return 0; }");
+        outLine("    const uint8_t *p = s->base + (size_t)offset;");
+        outLine("    uint32_t u = (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);");
+        outLine("    return (int64_t)(int32_t)u;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lite$vmArenaReset(") {
+        outLine("LT_INLINE void lt_vm_user_reset(int64_t handle) { (void)handle; }");
+    }
+    if usesIntHelper(calls, "lite$vmArenaDestroy(") {
+        outLine("LT_INLINE void lt_vm_user_destroy(int64_t handle) {");
+        outLine("    lt_vm_user_slot *s = lt_vm_user_lookup(handle);");
+        outLine("    if (s == NULL) { return; }");
+        outLine("    lt_vm_arena_destroy(&s->arena);");
+        outLine("    s->base = NULL; s->cap = 0u; s->active = false;");
+        outLine("}");
+    }
+};
+
 /** True when any emitted item calls an `extra/canvas` surface or drawing builtin. */
 usesExtraCanvasBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$extraCanvasOpen(") or usesIntHelper(calls, "lite$extraCanvasPoll(") or
@@ -7149,11 +7353,16 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isSetKind(item.name) and frontend.cSetTag(item.name) == "") {
             diagLib.fail("", "C backend does not support set values yet");
         }
+        if (frontend.isRcKind(item.kind) and frontend.cRcTag(item.kind) == "") or
+        (frontend.isRcKind(item.textValue) and frontend.cRcTag(item.textValue) == "") or
+        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isRcKind(item.name) and frontend.cRcTag(item.name) == "") {
+            diagLib.fail("", "C backend does not support Rc values yet");
+        }
         isSupportedDistDecl := if frontend.isDistinctKind(item.textValue) {
             base := frontend.distinctBaseKind(item.textValue);
-            frontend.isIntScalarKind(base) or frontend.isFloatScalarKind(base) or base == frontend.VALUE_KIND_BOOL or base == frontend.VALUE_KIND_STRING or frontend.isEnumKind(base) or frontend.cArrayTag(base) =!= "" or cListTagForKind(base) =!= "" or frontend.cStructTag(base) =!= "" or frontend.cMapTag(base) =!= "" or frontend.cSetTag(base) =!= "" or frontend.cFnTag(base) =!= ""
+            frontend.isIntScalarKind(base) or frontend.isFloatScalarKind(base) or base == frontend.VALUE_KIND_BOOL or base == frontend.VALUE_KIND_STRING or frontend.isEnumKind(base) or frontend.cArrayTag(base) =!= "" or cListTagForKind(base) =!= "" or frontend.cStructTag(base) =!= "" or frontend.cMapTag(base) =!= "" or frontend.cSetTag(base) =!= "" or frontend.cRcTag(base) =!= "" or frontend.cFnTag(base) =!= ""
         } else { false };
-        isUnsupportedRecordDecl := (item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD) and not frontend.isEnumKind(item.textValue) and not isSupportedDistDecl and frontend.cStructTag(item.textValue) == "" and frontend.cMapTag(item.textValue) == "" and frontend.cSetTag(item.textValue) == "";
+        isUnsupportedRecordDecl := (item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD) and not frontend.isEnumKind(item.textValue) and not isSupportedDistDecl and frontend.cStructTag(item.textValue) == "" and frontend.cMapTag(item.textValue) == "" and frontend.cSetTag(item.textValue) == "" and frontend.cRcTag(item.textValue) == "";
         if (frontend.isRecordKind(item.kind) and frontend.cStructTag(item.kind) == "") or
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isRecordKind(item.name) and frontend.cStructTag(item.name) == "") or isUnsupportedRecordDecl {
             diagLib.fail("", "C backend does not support record values yet");
@@ -7253,7 +7462,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     }
     if usesIntHelper(calls, "lite$processEnvGet(") { mut seedKinds.pushBack("(found:Bool,value:String)"); }
     loop reachable as item {
-        if frontend.cArrayTag(item.kind) =!= "" or cListTagForKind(item.kind) =!= "" or frontend.cStructTag(item.kind) =!= "" or frontend.cMapTag(item.kind) =!= "" or frontend.cSetTag(item.kind) =!= "" or frontend.cFnTag(item.kind) =!= "" {
+        if frontend.cArrayTag(item.kind) =!= "" or cListTagForKind(item.kind) =!= "" or frontend.cStructTag(item.kind) =!= "" or frontend.cMapTag(item.kind) =!= "" or frontend.cSetTag(item.kind) =!= "" or frontend.cRcTag(item.kind) =!= "" or frontend.cFnTag(item.kind) =!= "" {
             mut seedKinds.pushBack(item.kind);
             pFlags := collectTypeFlags(item.kind);
             loop pFlags as pf {
@@ -7262,14 +7471,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 else { mut printTypeKeys.add(pf); }
             }
         }
-        if item.kind == frontend.ITEM_KIND_DISCARD and (frontend.cArrayTag(item.name) =!= "" or cListTagForKind(item.name) =!= "" or frontend.cStructTag(item.name) =!= "" or frontend.cMapTag(item.name) =!= "" or frontend.cSetTag(item.name) =!= "" or frontend.cFnTag(item.name) =!= "") {
+        if item.kind == frontend.ITEM_KIND_DISCARD and (frontend.cArrayTag(item.name) =!= "" or cListTagForKind(item.name) =!= "" or frontend.cStructTag(item.name) =!= "" or frontend.cMapTag(item.name) =!= "" or frontend.cSetTag(item.name) =!= "" or frontend.cRcTag(item.name) =!= "" or frontend.cFnTag(item.name) =!= "") {
             mut seedKinds.pushBack(item.name);
         }
         if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST or
         item.kind == frontend.ITEM_KIND_LOCAL_TUPLE or item.kind == frontend.ITEM_KIND_VAR_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or
         item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or
         item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
-            if frontend.cArrayTag(item.textValue) =!= "" or cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" or frontend.cFnTag(item.textValue) =!= "" {
+            if frontend.cArrayTag(item.textValue) =!= "" or cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" or frontend.cRcTag(item.textValue) =!= "" or frontend.cFnTag(item.textValue) =!= "" {
                 mut seedKinds.pushBack(item.textValue);
             }
         }
@@ -7305,7 +7514,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             }
         }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
-            if frontend.cArrayTag(item.code) =!= "" or cListTagForKind(item.code) =!= "" or frontend.cStructTag(item.code) =!= "" or frontend.cMapTag(item.code) =!= "" or frontend.cSetTag(item.code) =!= "" or frontend.cFnTag(item.code) =!= "" {
+            if frontend.cArrayTag(item.code) =!= "" or cListTagForKind(item.code) =!= "" or frontend.cStructTag(item.code) =!= "" or frontend.cMapTag(item.code) =!= "" or frontend.cSetTag(item.code) =!= "" or frontend.cRcTag(item.code) =!= "" or frontend.cFnTag(item.code) =!= "" {
                 mut seedKinds.pushBack(item.code);
             }
             if item.textValue =!= "" {
@@ -7318,7 +7527,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                     if pEq >= 0 {
                         rawPKind := pEntry.slice(pEq + 1, pEntry.length());
                         pKind := if rawPKind.startsWithAt(0, "mut ") { rawPKind.slice(4, rawPKind.length()) } else { rawPKind };
-                        if frontend.cArrayTag(pKind) =!= "" or cListTagForKind(pKind) =!= "" or frontend.cStructTag(pKind) =!= "" or frontend.cMapTag(pKind) =!= "" or frontend.cSetTag(pKind) =!= "" or frontend.cFnTag(pKind) =!= "" {
+                        if frontend.cArrayTag(pKind) =!= "" or cListTagForKind(pKind) =!= "" or frontend.cStructTag(pKind) =!= "" or frontend.cMapTag(pKind) =!= "" or frontend.cSetTag(pKind) =!= "" or frontend.cRcTag(pKind) =!= "" or frontend.cFnTag(pKind) =!= "" {
                             mut seedKinds.pushBack(pKind);
                         }
                     }
@@ -7382,6 +7591,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if hasCallPrefix(calls, "lt_list_bool_") { mut seedKinds.pushBack("List<Bool>"); }
     if hasCallPrefix(calls, "lt_list_str_") { mut seedKinds.pushBack("List<String>"); }
     var hasAnyList := false;
+    var hasAnyRc := false;
     var hasFnTypes := false;
     arrSliceNeedFrom: mut Set<String>;
     loop seedKinds as sk {
@@ -7396,6 +7606,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             isA := sub.startsWithAt(0, "A|");
             isM := sub.startsWithAt(0, "M|");
             isE := sub.startsWithAt(0, "E|");
+            isR := sub.startsWithAt(0, "R|");
             isF := sub.startsWithAt(0, "F|");
             payload := sub.slice(2, sub.length());
             if isA {
@@ -7417,12 +7628,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             else if isA { "A:" + frontend.cArrayTag(payload) }
             else if isM { "M:" + frontend.cMapTag(payload) }
             else if isE { "E:" + frontend.cSetTag(payload) }
+            else if isR { "R:" + frontend.cRcTag(payload) }
             else if isF { "F:" + frontend.cFnTag(payload) }
             else { "S:" + frontend.cStructTag(payload) };
             if not seenTypeKeys.has(tKey) {
                 mut seenTypeKeys.add(tKey);
                 mut orderedEntries.pushBack(sub);
                 if isL or isM or isE { hasAnyList = true; }
+                if isR { hasAnyRc = true; }
                 if isF { hasFnTypes = true; }
             }
         }
@@ -7463,6 +7676,16 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                     if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
                 }
             }
+        } else if oe.startsWithAt(0, "R|") {
+            rKind := oe.slice(2, oe.length());
+            rTag := frontend.cRcTag(rKind);
+            eKind := frontend.rcElementKind(rKind);
+            if frontend.cTypeNeedsDrop(eKind) and (usesIntHelper(calls, rTag + "_get(") or usesIntHelper(calls, rTag + "_make_unique(")) {
+                cFlags := collectTypeFlags(eKind);
+                loop cFlags as cf {
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
+                }
+            }
         }
     }
     loop extraListSeeds as el { mut orderedEntries.pushBack(el); }
@@ -7476,10 +7699,10 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     hasSoftBuiltins := usesCSoftBuiltins(calls);
     usesScratch := usesIntHelper(calls, "lite$extraCanvasScratchMark(") or usesIntHelper(calls, "lite$extraCanvasScratchRewind(");
     usesStringAlloc := usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or usesIntHelper(calls, "lt_c_text_trim(") or usesIntHelper(calls, "lt_c_text_repeat(") or usesIntHelper(calls, "lt_c_text_to_lower(") or hasFloatToText or hasFloat32ToText;
-    usesArena := usesStringAlloc or usesScratch or hasExtraCanvas;
+    usesArena := usesStringAlloc or usesScratch or hasExtraCanvas or usesVmArenaBuiltins(calls);
     needStrFromCstr := hasInputArgs or hasUnicodeHost or hasPosixHost or hasExtraCanvas or usesIntHelper(calls, "lt_c_utf8_decode_strict(");
     needStrFromBuf := hasInput or hasUnicodeHost or usesStreamBuiltins(calls) or usesTimeBuiltins(calls) or usesCFileSoft(calls) or usesCUtf8Soft(calls);
-    usesBoxAlloc := usesIntHelper(calls, "lt_box_alloc(");
+    usesBoxAlloc := usesIntHelper(calls, "lt_box_alloc(") or hasAnyRc;
     usesHeap := hasAnyList or hasHoistedFns or hasFnTypes or hasInputArgs or usesBoxAlloc or usesIntHelper(calls, "calloc(");
     usesRuntimeCtx := usesArena or usesHeap or needStrFromCstr or needStrFromBuf;
     if hasPosixHost or usesRuntimeCtx {
@@ -8185,6 +8408,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         isA := oe.startsWithAt(0, "A|");
         isM := oe.startsWithAt(0, "M|");
         isE := oe.startsWithAt(0, "E|");
+        isR := oe.startsWithAt(0, "R|");
         isF := oe.startsWithAt(0, "F|");
         payload := oe.slice(2, oe.length());
         if isL {
@@ -8208,6 +8432,11 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             eNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "E:" + eTag);
             eNeedPrint := frontend.tokenBucketHas(printTypeKeys, "E:" + eTag);
             emitCSetHelpers(payload, calls, eNeedCopy, eNeedPrint);
+        } else if isR {
+            rTag := frontend.cRcTag(payload);
+            rNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "R:" + rTag);
+            rNeedPrint := frontend.tokenBucketHas(printTypeKeys, "R:" + rTag);
+            emitCRcHelpers(payload, calls, rNeedCopy, rNeedPrint);
         } else if isF {
             emitCFnTypeHelper(payload, calls);
         } else {
@@ -8303,6 +8532,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     emitCHostBuiltinHelpers(calls);
     emitCSoftBuiltinHelpers(calls);
     emitCExtraCanvasHelpers(calls);
+    emitCVmArenaHelpers(calls);
     hoistedGlobals: mut Set<String>;
     constHoistedGlobals: mut Set<String>;
     mutatedGlobals: mut Set<String>;

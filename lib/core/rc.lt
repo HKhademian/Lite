@@ -1,0 +1,33 @@
+/* Core explicit reference-counted shared wrapper (`Rc<T>`). */
+
+/** Allocates a reference-counted heap box holding `value` with `strongCount() == 1`. */
+pub Rc.create := fn<T>(value: T): Self<T>;
+
+/** Returns a clone/value copy of the payload inside `r`, faulting if `r` is empty. */
+pub Rc.get := fn<T>(r: Self<T>): T;
+
+/** Returns a new handle sharing the same heap allocation and incrementing `strongCount`. */
+pub Rc.share := fn<T>(r: Self<T>): Self<T>;
+
+/** True when `r` points to no allocation (default zero state or after `reset`). */
+pub Rc.isEmpty := fn<T>(r: Self<T>): Bool;
+
+/** Returns the current strong reference count (`0` when empty). */
+pub Rc.strongCount := fn<T>(r: Self<T>): Int;
+
+/** True when `r` has exactly one strong owner (`strongCount() == 1`). */
+pub Rc.isUnique := fn<T>(r: Self<T>): Bool {
+    r.strongCount() == 1
+};
+
+/** True when `a` and `b` share the exact same underlying heap cell (or are both empty). */
+pub Rc.ptrEqual := fn<T>(a: Self<T>, b: Self<T>): Bool;
+
+/** Detaches `r` into a fresh unique copy (`strongCount() == 1`) when shared (`strongCount() > 1`). */
+pub Rc.makeUnique := fn<T>(r: mut Self<T>): Unit;
+
+/** Replaces the payload held by `r` with `value` (allocating a new unique box when empty). */
+pub Rc.replace := fn<T>(r: mut Self<T>, value: T): Unit;
+
+/** Drops this handle's reference and resets `r` to empty. */
+pub Rc.reset := fn<T>(r: mut Self<T>): Unit;

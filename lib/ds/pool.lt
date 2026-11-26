@@ -1,257 +1,234 @@
-/** Generational slot pools (`ds/pool`) for O(1) object reuse with safe stale-handle detection. */
+/* Fixed-capacity generational slot and typed object pools with O(1) packed free-list reuse. */
 
-/** Generational handle identifying a single slot inside a pool. */
+/** Generational handle identifying a slot inside a `SlotPool` or `Pool<T>`. */
 pub Handle := record {
     index: Int;
     generation: Int;
-}
+};
 
-/** Sentinel invalid handle returned when a pool is full or has no slot. */
+/** Sentinel invalid handle (`index = -1, generation = 0`). */
 pub INVALID_HANDLE := Handle { index = -1, generation = 0 };
 
-/** True when `h` has a non-negative index and positive generation. */
+/** True when `h` references a valid non-negative slot index and positive generation. */
 pub Handle.isValid := fn(h: Self): Bool {
     h.index >= 0 and h.generation > 0
 };
 
-/** True when `a` and `b` refer to the exact same slot index and generation. */
+/** True when `a` and `b` carry identical slot index and generation. */
 pub Handle.equals := fn(a: Self, b: Self): Bool {
     a.index == b.index and a.generation == b.generation
 };
 
-/** Outcome of reading a `Pool<T>` entry by handle. */
+/** Optional slot lookup result returned by `Pool.get`. */
 pub PoolItem := enum<T: Type> {
     Empty;
     Some(T);
-}
+};
 
-/** True when `item` holds a value `.Some(...)`. */
+/** True when `item` holds a `Some` value. */
 pub PoolItem.isSome := fn<T: Type>(item: Self<T>): Bool {
     match item {
-        .Empty { false }
-        .Some { true }
+        PoolItem<T>.Empty { false }
+        PoolItem<T>.Some(_) { true }
     }
 };
 
-/** Returns the wrapped value when `.Some(v)`, or `fallback` when `.Empty`. */
+/** Unwraps `item` or returns `fallback` when `Empty`. */
 pub PoolItem.unwrapOr := fn<T: Type>(item: Self<T>, fallback: T): T {
     match item {
-        .Empty { fallback }
-        .Some(v) { v }
+        PoolItem<T>.Empty { fallback }
+        PoolItem<T>.Some(v) { v }
     }
 };
 
-/** Fixed-capacity generational slot allocator (pairs with user-owned parallel arrays). */
+/** Fixed-capacity generational handle allocator backed by packed 32-bit metadata and LIFO free list. */
 pub SlotPool := record {
-    slotGen: List<Int>;
-    slotAlive: List<Bool>;
-    freeList: List<Int>;
+    slotMeta: List<UInt32>;
+    freeList: List<UInt32>;
     cap: Int;
     liveCount: Int;
-}
+};
 
-/** Generic fixed-capacity generational pool storing `T` values per live slot. */
+/** Fixed-capacity generational typed object pool (`values` + packed 32-bit slot metadata). */
 pub Pool := record<T: Type> {
     values: List<T>;
-    slotGen: List<Int>;
-    slotAlive: List<Bool>;
-    freeList: List<Int>;
+    slotMeta: List<UInt32>;
+    freeList: List<UInt32>;
     cap: Int;
     liveCount: Int;
-}
+};
 
-/** Generational pool storing `Int` values. */
+/** Convenience alias for a pool of `Int` values. */
 pub IntPool := alias Pool<Int>;
 
-/** Generational pool storing `String` values. */
+/** Convenience alias for a pool of `String` values. */
 pub TextPool := alias Pool<String>;
 
-/* ============================================================================
- * SlotPool
- * ============================================================================ */
-
-/** Creates a fixed-capacity generational `SlotPool` with O(1) acquire and release. */
-pub SlotPool.create := fn(capacity: Int): Self {
-    cap := if capacity < 0 { 0 } else { capacity };
-    gens: mut List<Int> = [];
-    alive: mut List<Bool> = [];
-    free: mut List<Int> = [];
-    loop 0..cap as i {
-        mut gens.pushBack(1);
-        mut alive.pushBack(false);
-        mut free.pushBack(cap - 1 - i);
-    }
-    Self { slotGen = gens, slotAlive = alive, freeList = free, cap = cap, liveCount = 0 }
+packMeta := fn(gen: Int, alive: Bool): UInt32 {
+    masked := gen.bitAnd(2147483647);
+    cast<UInt32>(if alive { masked.bitOr(2147483648) } else { masked })
 };
 
-/** Acquires a slot in O(1), returning its generational `Handle` or `INVALID_HANDLE` if full. */
+metaGen := fn(meta: UInt32): Int {
+    cast<Int>(meta).bitAnd(2147483647)
+};
+
+metaAlive := fn(meta: UInt32): Bool {
+    cast<Int>(meta).bitAnd(2147483648) =!= 0
+};
+
+bumpGeneration := fn(gen: Int): Int {
+    if gen >= 2147483647 { 1 } else { gen + 1 }
+};
+
+/** Creates a `SlotPool` pre-populated with `capacity` recyclable generational slots. */
+pub SlotPool.create := fn(capacity: Int): Self {
+    meta: mut List<UInt32> = [];
+    free: mut List<UInt32> = [];
+    if capacity <= 0 {
+        return SlotPool { slotMeta = meta, freeList = free, cap = 0, liveCount = 0 };
+    }
+    var i := 0;
+    loop i < capacity {
+        mut meta.pushBack(packMeta(1, false));
+        mut free.pushBack(cast<UInt32>(capacity - 1 - i));
+        i = i + 1;
+    }
+    SlotPool { slotMeta = meta, freeList = free, cap = capacity, liveCount = 0 }
+};
+
+/** Acquires one free slot handle in O(1), or `INVALID_HANDLE` when full. */
 pub SlotPool.acquire := fn(p: mut Self): Handle {
     if p.freeList.length() == 0 { return INVALID_HANDLE; }
-    fl: mut List<Int> = p.freeList;
-    idx := mut fl.popBack();
-    al: mut List<Bool> = p.slotAlive;
-    mut al.setAt(idx, true);
-    p.freeList = fl;
-    p.slotAlive = al;
+    slotIdx := cast<Int>(mut p.freeList.popBack());
+    gen := metaGen(p.slotMeta[slotIdx]);
+    mut p.slotMeta.setAt(slotIdx, packMeta(gen, true));
     p.liveCount = p.liveCount + 1;
-    Handle { index = idx, generation = p.slotGen[idx] }
+    Handle { index = slotIdx, generation = gen }
 };
 
-/** True when `h` points to a currently allocated slot with matching generation in `p`. */
+/** True when `h` matches an currently live slot inside `p`. */
 pub SlotPool.isAlive := fn(p: Self, h: Handle): Bool {
-    if h.index < 0 or h.index >= p.cap { return false; }
-    p.slotAlive[h.index] and p.slotGen[h.index] == h.generation
+    if h.index < 0 or h.index >= p.cap or h.generation <= 0 { return false; }
+    m := p.slotMeta[h.index];
+    metaAlive(m) and metaGen(m) == h.generation
 };
 
-/** Releases slot `h` in O(1) and bumps its generation; returns `false` if already released/stale. */
+/** Releases `h` back to the free list and bumps its slot generation. */
 pub SlotPool.release := fn(p: mut Self, h: Handle): Bool {
     if not p.isAlive(h) { return false; }
-    idx := h.index;
-    al: mut List<Bool> = p.slotAlive;
-    gs: mut List<Int> = p.slotGen;
-    fl: mut List<Int> = p.freeList;
-    mut al.setAt(idx, false);
-    mut gs.setAt(idx, gs[idx] + 1);
-    mut fl.pushBack(idx);
-    p.slotAlive = al;
-    p.slotGen = gs;
-    p.freeList = fl;
+    nextGen := bumpGeneration(metaGen(p.slotMeta[h.index]));
+    mut p.slotMeta.setAt(h.index, packMeta(nextGen, false));
+    mut p.freeList.pushBack(cast<UInt32>(h.index));
     p.liveCount = p.liveCount - 1;
     true
 };
 
-/** Returns the number of currently live slots in `p`. */
+/** Returns number of currently live handles. */
 pub SlotPool.count := fn(p: Self): Int { p.liveCount };
-
-/** Returns the total slot capacity of `p`. */
+/** Returns total slot capacity of `p`. */
 pub SlotPool.capacity := fn(p: Self): Int { p.cap };
-
-/** Returns the number of free slots remaining in `p`. */
+/** Returns remaining free slot count in `p`. */
 pub SlotPool.freeCount := fn(p: Self): Int { p.cap - p.liveCount };
 
-/** Releases all live slots and bumps their generations in O(capacity). */
+/** Invalidates all live handles in-place and resets the free list without reallocating. */
 pub SlotPool.clear := fn(p: mut Self): Unit {
-    al: mut List<Bool> = p.slotAlive;
-    gs: mut List<Int> = p.slotGen;
-    fl: mut List<Int> = [];
-    loop 0..p.cap as i {
-        if al[i] {
-            mut al.setAt(i, false);
-            mut gs.setAt(i, gs[i] + 1);
-        }
-        mut fl.pushBack(p.cap - 1 - i);
+    mut p.freeList.clear();
+    var i := 0;
+    loop i < p.cap {
+        nextGen := bumpGeneration(metaGen(p.slotMeta[i]));
+        mut p.slotMeta.setAt(i, packMeta(nextGen, false));
+        i = i + 1;
     }
-    p.slotAlive = al;
-    p.slotGen = gs;
-    p.freeList = fl;
+    var j := 0;
+    loop j < p.cap {
+        mut p.freeList.pushBack(cast<UInt32>(p.cap - 1 - j));
+        j = j + 1;
+    }
     p.liveCount = 0;
 };
 
-/* ============================================================================
- * Generic Pool<T>
- * ============================================================================ */
-
-/** Creates a fixed-capacity generic `Pool<T>` storing `T` payloads per slot. */
+/** Creates a typed object pool with capacity `capacity` and dense value storage. */
 pub Pool.create := fn<T: Type>(capacity: Int): Self<T> {
-    cap := if capacity < 0 { 0 } else { capacity };
     vals: mut List<T> = [];
-    gens: mut List<Int> = [];
-    alive: mut List<Bool> = [];
-    free: mut List<Int> = [];
-    z: T;
-    loop 0..cap as i {
-        mut vals.pushBack(z);
-        mut gens.pushBack(1);
-        mut alive.pushBack(false);
-        mut free.pushBack(cap - 1 - i);
+    meta: mut List<UInt32> = [];
+    free: mut List<UInt32> = [];
+    if capacity <= 0 {
+        return Pool<T> { values = vals, slotMeta = meta, freeList = free, cap = 0, liveCount = 0 };
     }
-    Self<T> { values = vals, slotGen = gens, slotAlive = alive, freeList = free, cap = cap, liveCount = 0 }
+    var i := 0;
+    loop i < capacity {
+        mut meta.pushBack(packMeta(1, false));
+        mut free.pushBack(cast<UInt32>(capacity - 1 - i));
+        i = i + 1;
+    }
+    Pool<T> { values = vals, slotMeta = meta, freeList = free, cap = capacity, liveCount = 0 }
 };
 
-/** Allocates a slot in `p` initialized with `value`, returning `Handle` or `INVALID_HANDLE` if full. */
+/** Acquires a slot storing `value` in O(1), or returns `INVALID_HANDLE` when full. */
 pub Pool.acquire := fn<T: Type>(p: mut Self<T>, value: T): Handle {
     if p.freeList.length() == 0 { return INVALID_HANDLE; }
-    fl: mut List<Int> = p.freeList;
-    idx := mut fl.popBack();
-    vs: mut List<T> = p.values;
-    al: mut List<Bool> = p.slotAlive;
-    mut vs.setAt(idx, value);
-    mut al.setAt(idx, true);
-    p.freeList = fl;
-    p.values = vs;
-    p.slotAlive = al;
+    slotIdx := cast<Int>(mut p.freeList.popBack());
+    loop p.values.length() <= slotIdx {
+        mut p.values.pushBack(value);
+    }
+    mut p.values.setAt(slotIdx, value);
+    gen := metaGen(p.slotMeta[slotIdx]);
+    mut p.slotMeta.setAt(slotIdx, packMeta(gen, true));
     p.liveCount = p.liveCount + 1;
-    Handle { index = idx, generation = p.slotGen[idx] }
+    Handle { index = slotIdx, generation = gen }
 };
 
-/** True when `h` points to a currently live slot in `p`. */
+/** True when `h` points to a live slot in `p`. */
 pub Pool.isAlive := fn<T: Type>(p: Self<T>, h: Handle): Bool {
-    if h.index < 0 or h.index >= p.cap { return false; }
-    p.slotAlive[h.index] and p.slotGen[h.index] == h.generation
+    if h.index < 0 or h.index >= p.cap or h.generation <= 0 { return false; }
+    m := p.slotMeta[h.index];
+    metaAlive(m) and metaGen(m) == h.generation
 };
 
-/** Reads the `T` value at `h`, or `.Empty` when stale/invalid. */
+/** Returns `PoolItem.Some(value)` if `h` is alive, otherwise `PoolItem.Empty`. */
 pub Pool.get := fn<T: Type>(p: Self<T>, h: Handle): PoolItem<T> {
-    if not p.isAlive(h) { .Empty } else { .Some(p.values[h.index]) }
+    if not p.isAlive(h) { return PoolItem<T>.Empty; }
+    PoolItem<T>.Some(p.values[h.index])
 };
 
-/** Overwrites the `T` value at `h`; returns `false` when stale/invalid. */
+/** Overwrites a live slot's stored value in-place; returns `false` for stale/invalid handles. */
 pub Pool.set := fn<T: Type>(p: mut Self<T>, h: Handle, value: T): Bool {
     if not p.isAlive(h) { return false; }
-    vs: mut List<T> = p.values;
-    mut vs.setAt(h.index, value);
-    p.values = vs;
+    mut p.values.setAt(h.index, value);
     true
 };
 
-/** Releases slot `h` in O(1), clearing its payload to zero and bumping its generation. */
+/** Releases `h` and returns it to the free list while incrementing generation. */
 pub Pool.release := fn<T: Type>(p: mut Self<T>, h: Handle): Bool {
     if not p.isAlive(h) { return false; }
-    idx := h.index;
-    z: T;
-    vs: mut List<T> = p.values;
-    al: mut List<Bool> = p.slotAlive;
-    gs: mut List<Int> = p.slotGen;
-    fl: mut List<Int> = p.freeList;
-    mut vs.setAt(idx, z);
-    mut al.setAt(idx, false);
-    mut gs.setAt(idx, gs[idx] + 1);
-    mut fl.pushBack(idx);
-    p.values = vs;
-    p.slotAlive = al;
-    p.slotGen = gs;
-    p.freeList = fl;
+    nextGen := bumpGeneration(metaGen(p.slotMeta[h.index]));
+    mut p.slotMeta.setAt(h.index, packMeta(nextGen, false));
+    mut p.freeList.pushBack(cast<UInt32>(h.index));
     p.liveCount = p.liveCount - 1;
     true
 };
 
-/** Returns the number of live slots in `p`. */
+/** Returns number of live objects held in `p`. */
 pub Pool.count := fn<T: Type>(p: Self<T>): Int { p.liveCount };
-
-/** Returns the total slot capacity of `p`. */
+/** Returns total slot capacity of `p`. */
 pub Pool.capacity := fn<T: Type>(p: Self<T>): Int { p.cap };
-
-/** Returns the number of free slots remaining in `p`. */
+/** Returns remaining free slot count in `p`. */
 pub Pool.freeCount := fn<T: Type>(p: Self<T>): Int { p.cap - p.liveCount };
 
-/** Releases all live slots in `p`, resetting payloads to zero and bumping generations. */
+/** Clears all live objects in-place and bumps every slot's generation. */
 pub Pool.clear := fn<T: Type>(p: mut Self<T>): Unit {
-    z: T;
-    vs: mut List<T> = p.values;
-    al: mut List<Bool> = p.slotAlive;
-    gs: mut List<Int> = p.slotGen;
-    fl: mut List<Int> = [];
-    loop 0..p.cap as i {
-        if al[i] {
-            mut vs.setAt(i, z);
-            mut al.setAt(i, false);
-            mut gs.setAt(i, gs[i] + 1);
-        }
-        mut fl.pushBack(p.cap - 1 - i);
+    mut p.freeList.clear();
+    var i := 0;
+    loop i < p.cap {
+        nextGen := bumpGeneration(metaGen(p.slotMeta[i]));
+        mut p.slotMeta.setAt(i, packMeta(nextGen, false));
+        i = i + 1;
     }
-    p.values = vs;
-    p.slotAlive = al;
-    p.slotGen = gs;
-    p.freeList = fl;
+    var j := 0;
+    loop j < p.cap {
+        mut p.freeList.pushBack(cast<UInt32>(p.cap - 1 - j));
+        j = j + 1;
+    }
     p.liveCount = 0;
 };

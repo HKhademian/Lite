@@ -231,6 +231,26 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Set.clear" and params == "s=mut Set<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$set$clear:v1" }
         else if name == "Set.values" and params == "s=Set<T>" and result == "List<T>" { "lite$core$set$values:v1" }
         else { "" }
+    } else if moduleIdentity == "lite.core.rc.v1" {
+        if name == "Rc.create" and params == "value=T" and result == "Rc<T>" { "lite$core$rc$create:v1" }
+        else if name == "Rc.get" and params == "r=Rc<T>" and result == "T" { "lite$core$rc$get:v1" }
+        else if name == "Rc.share" and params == "r=Rc<T>" and result == "Rc<T>" { "lite$core$rc$share:v1" }
+        else if name == "Rc.isEmpty" and params == "r=Rc<T>" and result == ir.VALUE_KIND_BOOL { "lite$core$rc$isEmpty:v1" }
+        else if name == "Rc.strongCount" and params == "r=Rc<T>" and result == ir.VALUE_KIND_INT { "lite$core$rc$strongCount:v1" }
+        else if name == "Rc.ptrEqual" and params == "a=Rc<T>|b=Rc<T>" and result == ir.VALUE_KIND_BOOL { "lite$core$rc$ptrEqual:v1" }
+        else if name == "Rc.makeUnique" and params == "r=mut Rc<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$rc$makeUnique:v1" }
+        else if name == "Rc.replace" and params == "r=mut Rc<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$rc$replace:v1" }
+        else if name == "Rc.reset" and params == "r=mut Rc<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$rc$reset:v1" }
+        else { "" }
+    } else if moduleIdentity == "lite.ds.arena.v1" {
+        if name == "vmArenaCreate" and params == "capacityBytes=Int" and result == ir.VALUE_KIND_INT { "lite$vmArenaCreate" }
+        else if name == "vmArenaWriteByte" and params == "handle=Int|offset=Int|value=Int" and result == ir.VALUE_KIND_BOOL { "lite$vmArenaWriteByte" }
+        else if name == "vmArenaReadByte" and params == "handle=Int|offset=Int" and result == ir.VALUE_KIND_INT { "lite$vmArenaReadByte" }
+        else if name == "vmArenaWriteInt32" and params == "handle=Int|offset=Int|value=Int" and result == ir.VALUE_KIND_BOOL { "lite$vmArenaWriteInt32" }
+        else if name == "vmArenaReadInt32" and params == "handle=Int|offset=Int" and result == ir.VALUE_KIND_INT { "lite$vmArenaReadInt32" }
+        else if name == "vmArenaReset" and params == "handle=Int" and result == ir.VALUE_KIND_UNIT { "lite$vmArenaReset" }
+        else if name == "vmArenaDestroy" and params == "handle=Int" and result == ir.VALUE_KIND_UNIT { "lite$vmArenaDestroy" }
+        else { "" }
     } else if moduleIdentity == "lite.core.file.v1" {
         if name == "kind" and params == "path=String" and result == ir.VALUE_KIND_STRING { "lite$fileKind" }
         else if name == "openReader" and params == "path=String" and result == "Reader@(kind:String,handle:Int)" { "lite$fileOpenReader" }

@@ -1,0 +1,430 @@
+/* Phase 5 verification: explicit Rc<T> wrapper, packed ds/arena + VM-backed VmArena,
+   packed generational ds/pool, multi-file 3-module game dogfood (0 heap allocs/frame over
+   2,000 headless frames), backward-compatibility of ds tests, particle-pool C11 build,
+   and ASan+UBSan+LITE_CHECK_LEAKS=1 parity. */
+
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+project := import "util/project";
+test := import "core/test";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+builtTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+builtC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + builtC.error, builtC.ok);
+tsComp := builtTs.path;
+cComp := builtC.path;
+
+ccInfo := compilerTest.probeCc();
+
+/* 1. Compile-time Rc diagnostics: no `?` reserved storage, no `==` comparison, `mut` required for makeUnique/replace/reset. */
+compilerTest.assertCompileErrorContains(root, cComp, "Rc rejects reserved storage", "r: Rc<Int> = ?;", "reserved storage is not supported for Rc");
+compilerTest.assertCompileErrorContains(root, tsComp, "Rc TS rejects ==", "a := Rc.create(1); b := Rc.create(1); _ := a == b;", "cannot compare Rc values");
+compilerTest.assertCompileErrorContains(root, cComp, "Rc C rejects ==", "a := Rc.create(1); b := Rc.create(1); _ := a == b;", "cannot compare Rc values");
+compilerTest.assertCompileErrorContains(root, cComp, "Rc replace requires mut", "mut r := Rc.create(1); r.replace(2);", "requires mut at call site");
+compilerTest.assertCompileErrorContains(root, cComp, "Rc makeUnique requires mut", "r := Rc.create(1); r.makeUnique();", "cannot call mutating operation makeUnique on read-only value");
+
+/* 2. Comprehensive Rc<T> + packed Arena/VmArena/SlotPool/Pool<T> behavioral & churn parity. */
+rcMemSrc := [
+    "io := import \"core/io\";",
+    "arenaMod := import \"ds/arena\";",
+    "poolMod := import \"ds/pool\";",
+    "BoxRec := record { tag: String; nums: List<Int>; };",
+    "Holder := record { item: Rc<Int>; };",
+    "",
+    "borrowSum := fn(r: Rc<List<Int>>): Int {",
+    "    xs := r.get();",
+    "    var s := 0;",
+    "    loop xs as v { s += v; }",
+    "    s",
+    "};",
+    "",
+    "mutateInFn := fn(r: mut Rc<Int>, v: Int): Unit {",
+    "    mut r.makeUnique();",
+    "    mut r.replace(v);",
+    "};",
+    "",
+    "/* Basic create forms, share, counts, equality, zero value, print */",
+    "a := Rc.create(42);",
+    "b := Rc<Int>.create(100);",
+    "c := Rc.create<Int>(7);",
+    "mut a2 := a.share();",
+    "io.outputLine(\"rc_init\", a.get(), b.get(), c.get(), a.strongCount(), a.isUnique(), a.ptrEqual(a2), Rc.ptrEqual(a, b));",
+    "io.outputLine(\"rc_print\", a, (fn(): Rc<Int> { var z: Rc<Int> = 0; z })());",
+    "",
+    "mut a2.makeUnique();",
+    "mut a2.replace(99);",
+    "io.outputLine(\"rc_detach\", a.get(), a.strongCount(), a2.get(), a2.strongCount(), a.ptrEqual(a2));",
+    "mut a2.replace(123);",
+    "mut a2.reset();",
+    "io.outputLine(\"rc_reset\", a2.isEmpty(), a2.strongCount(), a2.isUnique(), a.get(), a.strongCount());",
+    "",
+    "/* mut Rc param + mut record-field Rc */",
+    "mut hm := Holder { item = Rc.create(5) };",
+    "hmSnap := hm.item;",
+    "mut hm.item.makeUnique();",
+    "mut hm.item.replace(44);",
+    "mut rMut := Rc.create(10);",
+    "mutateInFn(mut rMut, 55);",
+    "io.outputLine(\"rc_field\", hmSnap.get(), hmSnap.strongCount(), hm.item.get(), hm.item.strongCount(), rMut.get(), rMut.strongCount());",
+    "",
+    "/* Containers & nested payloads inside Rc and containers holding Rc */",
+    "rList := Rc<List<Int>>.create([1, 2, 3, 4]);",
+    "mut rList2 := rList.share();",
+    "rRec := Rc.create(BoxRec { tag = \"mesh_a\", nums = [10, 20] });",
+    "rNested := Rc.create(Rc.create(\"hello-nested-rc-world\"));",
+    "rcVec: List<Rc<Int>> = [a, b, c];",
+    "rcArr: [Rc<Int>; 2] = [a, b];",
+    "rcMap: Map<String, Rc<Int>> = [ \"k1\" = a, \"k2\" = b ];",
+    "mut rList2.makeUnique();",
+    "io.outputLine(\"rc_comp\", borrowSum(rList), borrowSum(rList2), rRec.get().tag, rRec.get().nums.length(), rNested.get().get(), rcVec[1].get(), rcArr[0].get(), rcMap.getOr(\"k1\", b).get(), a.strongCount());",
+    "",
+    "/* 10,000-iteration Rc share/makeUnique/replace/reset churn */",
+    "var churnAcc := 0;",
+    "var ci := 0;",
+    "loop ci < 10000 {",
+    "    p1 := Rc<List<Int>>.create([ci, ci + 1]);",
+    "    mut p2 := p1.share();",
+    "    if ci % 2 == 0 {",
+    "        mut p2.makeUnique();",
+    "        mut p2.replace([ci + 10, ci + 20, ci + 30]);",
+    "    } else {",
+    "        mut p2.reset();",
+    "    }",
+    "    churnAcc += borrowSum(p1);",
+    "    ci += 1;",
+    "}",
+    "io.outputLine(\"rc_churn\", churnAcc);",
+    "",
+    "/* Packed UInt8 Arena + VmArena parity & stress */",
+    "mut ar := arenaMod.Arena.create(256);",
+    "s0 := (mut ar).allocAligned(3, 1);",
+    "s1 := (mut ar).allocAligned(8, 16);",
+    "s2 := (mut ar).allocAligned(4, 4);",
+    "wOk := (mut ar).writeByte(s0.offset, 250) and (mut ar).writeInt32(s1.offset, -123456) and (mut ar).writeInt32(s2.offset, 987654);",
+    "mk := ar.mark();",
+    "_s3 := (mut ar).allocAligned(16, 8);",
+    "rwOk := (mut ar).rewind(mk);",
+    "io.outputLine(\"arena\", ar.isValid(), s0.offset, s1.offset, s2.offset, wOk, rwOk, ar.readByte(s0.offset), ar.readInt32(s1.offset), ar.readInt32(s2.offset), ar.usedBytes(), ar.peakBytes());",
+    "(mut ar).reset();",
+    "(mut ar).destroy();",
+    "",
+    "mut vm := arenaMod.VmArena.create(65536);",
+    "vs0 := (mut vm).allocAligned(4, 16);",
+    "vs1 := (mut vm).allocAligned(4, 4);",
+    "vwOk := (mut vm).writeByte(vs0.offset, 200) and (mut vm).writeInt32(vs1.offset, -7654321);",
+    "vmk := vm.mark();",
+    "_vs2 := (mut vm).alloc(1024);",
+    "vrwOk := (mut vm).rewind(vmk);",
+    "var vmFrameSum := 0;",
+    "var vi := 0;",
+    "loop vi < 1000 {",
+    "    (mut vm).reset();",
+    "    fSlice := (mut vm).allocAligned(8, 8);",
+    "    _ := (mut vm).writeInt32(fSlice.offset, vi);",
+    "    vmFrameSum += vm.readInt32(fSlice.offset);",
+    "    vi += 1;",
+    "}",
+    "io.outputLine(\"vmarena\", vm.isValid(), vwOk, vrwOk, vm.readByte(0), vmFrameSum, vm.peakBytes(), vm.resetCount());",
+    "(mut vm).destroy();",
+    "",
+    "/* Packed UInt32 SlotPool + Pool<T> parity & churn */",
+    "mut sp := poolMod.SlotPool.create(8);",
+    "h0 := (mut sp).acquire();",
+    "h1 := (mut sp).acquire();",
+    "relOk := (mut sp).release(h0);",
+    "h2 := (mut sp).acquire();",
+    "io.outputLine(\"slotpool\", h0.index, h0.generation, h2.index, h2.generation, sp.isAlive(h0), sp.isAlive(h2), relOk, sp.count());",
+    "",
+    "mut tp := poolMod.Pool.create<Int>(16);",
+    "var poolSum := 0;",
+    "var pi := 0;",
+    "loop pi < 5000 {",
+    "    ha := (mut tp).acquire(pi);",
+    "    _setOk := (mut tp).set(ha, pi * 2);",
+    "    poolSum += tp.get(ha).unwrapOr(-1);",
+    "    _relOk2 := (mut tp).release(ha);",
+    "    pi += 1;",
+    "}",
+    "io.outputLine(\"pool\", poolSum, tp.count(), tp.freeCount());"
+].join("\n");
+
+tsRc := compilerTest.compileCheckRunTs(root, tsComp, rcMemSrc, "phase5-rc-mem.lts");
+test.checkInt("ts rc+ds run status: " + tsRc.stderr, 0, tsRc.status);
+test.checkText("ts rc+ds stderr", "", tsRc.stderr);
+test.check("ts rc_init output", tsRc.stdout.contains("rc_init 42 100 7 2 false true false\n"));
+test.check("ts rc_detach output", tsRc.stdout.contains("rc_detach 42 1 99 1 false\n"));
+test.check("ts rc_reset output", tsRc.stdout.contains("rc_reset true 0 false 42 1\n"));
+test.check("ts arena output", tsRc.stdout.contains("arena true 0 16 24 true true 250 -123456 987654 28 48\n"));
+
+cRc := compilerTest.compileStdin(root, cComp, rcMemSrc, "");
+test.checkInt("c rc+ds compile status: " + cRc.stderr, 0, cRc.status);
+cRcOut := cRc.stdout;
+test.check("c emits 8-byte Rc assert", cRcOut.contains("_Static_assert(sizeof(lt_rc_") and cRcOut.contains("== 8, \"lt_rc must be 8 bytes\")"));
+test.check("c emits lt_list_u8 for Arena", cRcOut.contains("lt_list_u8"));
+test.check("c emits lt_list_u32 for Pool", cRcOut.contains("lt_list_u32"));
+test.check("c emits lt_vm_arena for VmArena", cRcOut.contains("lt_vm_user_create("));
+test.check("c lists remain rc-free", not cRcOut.contains("lt_list_i64_rc") and not cRcOut.contains("uint32_t rc;"));
+
+/* NullPointerPanic parity on empty Rc.get() */
+emptyGetSrc := [
+    "io := import \"core/io\";",
+    "mut r := Rc.create(10);",
+    "mut r.reset();",
+    "io.outputLine(r.get());"
+].join("\n");
+tsEmptyGet := compilerTest.compileCheckRunTs(root, tsComp, emptyGetSrc, "phase5-empty-get.lts");
+test.checkInt("ts empty Rc.get exits 1", 1, tsEmptyGet.status);
+test.check("ts empty Rc.get NullPointerPanic", tsEmptyGet.stderr.contains("NullPointerPanic:"));
+
+if ccInfo.available {
+    cEmptyGet := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, emptyGetSrc, "phase5-empty-get.lts", "");
+    test.checkInt("c empty Rc.get exits 1", 1, cEmptyGet.status);
+    test.check("c empty Rc.get NullPointerPanic", cEmptyGet.stderr.contains("NullPointerPanic:"));
+
+    tmpRes := fs.makeTempDir("lite-phase5-");
+    test.check("tmpDir: " + tmpRes.error, tmpRes.ok);
+    tmpDir := tmpRes.path;
+
+    rcCFile := path.join(tmpDir, "rc_mem.c");
+    rcBinVm := path.join(tmpDir, "rc_mem_vm");
+    rcBinSan := path.join(tmpDir, "rc_mem_san");
+    _wf := fs.writeText(rcCFile, cRcOut);
+
+    ccVm := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", rcCFile, "-o", rcBinVm, "-lm"], tmpDir, [], true, "");
+    test.checkInt("rc_mem vm cc: " + ccVm.stderr, 0, ccVm.status);
+    runVm := proc.run(rcBinVm, [], tmpDir, ["LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("rc_mem vm run: " + runVm.stderr, 0, runVm.status);
+    test.checkText("rc_mem vm parity", tsRc.stdout, runVm.stdout);
+
+    ccSan := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", rcCFile, "-o", rcBinSan, "-lm"], tmpDir, [], true, "");
+    test.checkInt("rc_mem san cc: " + ccSan.stderr, 0, ccSan.status);
+    runSan := proc.run(rcBinSan, [], tmpDir, ["LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("rc_mem san run: " + runSan.stderr, 0, runSan.status);
+    test.checkText("rc_mem san parity", tsRc.stdout, runSan.stdout);
+
+    /* 3. Verify TypedArena, IntArena, FloatArena, IntPool, TextPool, ds/intern, ds/lru under fresh TS & C11 ASan */
+    dsExtraSrc := [
+        "io := import \"core/io\";",
+        "arenaMod := import \"ds/arena\";",
+        "poolMod := import \"ds/pool\";",
+        "internMod := import \"ds/intern\";",
+        "lruMod := import \"ds/lru\";",
+        "ia: mut arenaMod.IntArena = arenaMod.TypedArena.create<Int>(8);",
+        "i0 := (mut ia).alloc(10);",
+        "sp := (mut ia).allocSpan(3, 7);",
+        "setOk := (mut ia).set(i0, 99);",
+        "io.outputLine(\"typed_arena\", ia.isValid(), setOk, ia.get(i0), ia.get(sp.offset), ia.used(), ia.peakUsed());",
+        "(mut ia).reset();",
+        "(mut ia).destroy();",
+        "fa: mut arenaMod.FloatArena = arenaMod.TypedArena.create<Float>(4);",
+        "f0 := (mut fa).alloc(2.5);",
+        "io.outputLine(\"float_arena\", f0, fa.get(f0));",
+        "(mut fa).destroy();",
+        "tpool: mut poolMod.TextPool = poolMod.Pool.create<String>(4);",
+        "th := (mut tpool).acquire(\"alpha\");",
+        "_ := (mut tpool).set(th, \"beta\");",
+        "io.outputLine(\"text_pool\", tpool.get(th).unwrapOr(\"none\"), tpool.count(), (mut tpool).release(th));",
+        "ipool: mut poolMod.IntPool = poolMod.Pool.create<Int>(4);",
+        "ih := (mut ipool).acquire(77);",
+        "io.outputLine(\"int_pool\", ipool.get(ih).unwrapOr(-1), ipool.count());",
+        "mut poolIntern := internMod.Interner.create();",
+        "sym1 := (mut poolIntern).intern(\"hero\");",
+        "sym2 := (mut poolIntern).intern(\"hero\");",
+        "io.outputLine(\"intern\", sym1 == sym2, poolIntern.resolveOr(sym1, \"\"));",
+        "mut lru := lruMod.Lru.create<String, Int>(2);",
+        "_p1 := (mut lru).put(\"a\", 1);",
+        "_p2 := (mut lru).put(\"b\", 2);",
+        "io.outputLine(\"lru\", lru.peek(\"a\").unwrapOr(-1), lru.count());"
+    ].join("\n");
+    dsExtTs := compilerTest.compileCheckRunTs(root, tsComp, dsExtraSrc, "phase5-ds-extra.lts");
+    test.checkInt("ds-extra fresh TS run: " + dsExtTs.stderr, 0, dsExtTs.status);
+    dsExtC := compilerTest.compileStdin(root, cComp, dsExtraSrc, "");
+    test.checkInt("ds-extra fresh C compile: " + dsExtC.stderr, 0, dsExtC.status);
+    extCFile := path.join(tmpDir, "ds_extra.c");
+    extBin := path.join(tmpDir, "ds_extra_san");
+    _we := fs.writeText(extCFile, dsExtC.stdout);
+    ccExt := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", extCFile, "-o", extBin, "-lm"], tmpDir, [], true, "");
+    test.checkInt("ds-extra fresh C san cc: " + ccExt.stderr, 0, ccExt.status);
+    runExtC := proc.run(extBin, [], tmpDir, ["LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("ds-extra fresh C san run: " + runExtC.stderr, 0, runExtC.status);
+    test.checkText("ds-extra ts vs c parity", dsExtTs.stdout, runExtC.stdout);
+
+    /* 4. Multi-file 3-module game dogfood: assets.lt + world.lt + main.lts over 2,000 headless frames with 0 heap allocs/frame */
+    dogDir := path.join(tmpDir, "dogfood_game");
+    _mkDog := fs.makeDir(dogDir);
+    assetsSrc := [
+        "pub MeshAsset := record { name: String; radius: Float; coords: List<Float32>; };",
+        "pub PaletteAsset := record { tintR: Float; tintG: Float; tintB: Float; };",
+        "pub AssetBank := record { heroMesh: Rc<MeshAsset>; sparkMesh: Rc<MeshAsset>; palette: Rc<PaletteAsset>; };",
+        "pub createAssetBank := fn(): AssetBank {",
+        "    hCoords: List<Float32> = [0.0, 0.0, 8.0, 8.0];",
+        "    sCoords: List<Float32> = [0.0, 0.0, 3.0, 3.0];",
+        "    AssetBank {",
+        "        heroMesh = Rc.create(MeshAsset { name = \"hero\", radius = 6.0, coords = hCoords }),",
+        "        sparkMesh = Rc.create(MeshAsset { name = \"spark\", radius = 2.0, coords = sCoords }),",
+        "        palette = Rc.create(PaletteAsset { tintR = 0.25, tintG = 0.75, tintB = 0.95 })",
+        "    }",
+        "};"
+    ].join("\n");
+    worldSrc := [
+        "arenaMod := import \"ds/arena\";",
+        "poolMod := import \"ds/pool\";",
+        "assets := import \"./assets\";",
+        "pub Entity := record { px: Int; py: Int; vx: Int; vy: Int; mesh: Rc<assets.MeshAsset>; };",
+        "pub World := record {",
+        "    bank: assets.AssetBank;",
+        "    entities: poolMod.Pool<Entity>;",
+        "    handles: List<poolMod.Handle>;",
+        "    scratch: arenaMod.VmArena;",
+        "    cmdArena: arenaMod.Arena;",
+        "    tick: Int;",
+        "    checksum: Int;",
+        "};",
+        "pub createWorld := fn(count: Int): World {",
+        "    bank := assets.createAssetBank();",
+        "    mut entities := poolMod.Pool.create<Entity>(count);",
+        "    handles: mut List<poolMod.Handle> = [];",
+        "    var i := 0;",
+        "    loop i < count {",
+        "        m := if i % 4 == 0 { bank.heroMesh.share() } else { bank.sparkMesh.share() };",
+        "        h := mut entities.acquire(Entity { px = (i * 11) % 60, py = (i * 7) % 44, vx = (i % 3) + 1, vy = (i % 2) + 1, mesh = m });",
+        "        mut handles.pushBack(h);",
+        "        i += 1;",
+        "    }",
+        "    World {",
+        "        bank = bank,",
+        "        entities = entities,",
+        "        handles = handles,",
+        "        scratch = arenaMod.VmArena.create(4096),",
+        "        cmdArena = arenaMod.Arena.create(512),",
+        "        tick = 0,",
+        "        checksum = 0",
+        "    }",
+        "};",
+        "pub stepWorld := fn(w: mut World): Unit {",
+        "    mut w.scratch.reset();",
+        "    mut w.cmdArena.reset();",
+        "    var acc := 0;",
+        "    var hi := 0;",
+        "    hLen := w.handles.length();",
+        "    loop hi < hLen {",
+        "        h := w.handles[hi];",
+        "        match w.entities.get(h) {",
+        "            poolMod.PoolItem<Entity>.Empty { }",
+        "            poolMod.PoolItem<Entity>.Some(ent) {",
+        "                nx := (ent.px + ent.vx) % 60;",
+        "                ny := (ent.py + ent.vy) % 44;",
+        "                sl := mut w.scratch.allocAligned(4, 4);",
+        "                _wb1 := mut w.scratch.writeInt32(sl.offset, nx + ny);",
+        "                cs := mut w.cmdArena.allocAligned(4, 4);",
+        "                _wb2 := mut w.cmdArena.writeInt32(cs.offset, nx);",
+        "                _setE := mut w.entities.set(h, Entity { px = nx, py = ny, vx = ent.vx, vy = ent.vy, mesh = ent.mesh });",
+        "                acc += w.scratch.readInt32(sl.offset) + w.cmdArena.readInt32(cs.offset);",
+        "            }",
+        "        }",
+        "        hi += 1;",
+        "    }",
+        "    w.tick = w.tick + 1;",
+        "    w.checksum = (w.checksum + acc) % 1000000007;",
+        "};",
+        "pub destroyWorld := fn(w: mut World): Unit {",
+        "    mut w.scratch.destroy();",
+        "    mut w.cmdArena.destroy();",
+        "};"
+    ].join("\n");
+    gameMainSrc := [
+        "io := import \"core/io\";",
+        "surf := import \"extra/surface\";",
+        "assets := import \"./assets\";",
+        "world := import \"./world\";",
+        "mut gWorld := world.createWorld(16);",
+        "win := surf.Surface.open(\"Phase5GameDogfood\", 64, 48);",
+        "win.uncapFrameRate();",
+        "pal := gWorld.bank.palette.get();",
+        "col := cast<surf.Color>((r = pal.tintR, g = pal.tintG, b = pal.tintB, a = 1.0));",
+        "var frames := 0;",
+        "var warmAllocs := 0;",
+        "var warmLive := 0;",
+        "win.run(fn(inp: surf.FrameInput): Bool {",
+        "    if not inp.open { return false; }",
+        "    world.stepWorld(mut gWorld);",
+        "    win.clear(surf.BLACK);",
+        "    win.fillRect(surf.rect(cast<Float>(frames % 48), 12.0, 6.0, 6.0), col);",
+        "    if frames == 50 {",
+        "        vw := win.vitals();",
+        "        warmAllocs = vw.heapAllocs;",
+        "        warmLive = vw.liveBytes;",
+        "    }",
+        "    frames += 1;",
+        "    frames < 2000",
+        "});",
+        "ve := win.vitals();",
+        "world.destroyWorld(mut gWorld);",
+        "win.close();",
+        "io.outputLine(\"game_dogfood\", frames, gWorld.tick, gWorld.checksum, gWorld.bank.heroMesh.get().name, not gWorld.bank.heroMesh.isUnique() and gWorld.bank.heroMesh.strongCount() >= 5, ve.heapAllocs - warmAllocs, ve.liveBytes == warmLive);"
+    ].join("\n");
+
+    _wa := fs.writeText(path.join(dogDir, "assets.lt"), assetsSrc);
+    _ww := fs.writeText(path.join(dogDir, "world.lt"), worldSrc);
+    dogMain := path.join(dogDir, "main.lts");
+    _wm := fs.writeText(dogMain, gameMainSrc);
+
+    /* TS dogfood check */
+    dogTs := compilerTest.compileFile(tsComp, dogDir, [dogMain]);
+    test.checkInt("dogfood ts compile: " + dogTs.stderr, 0, dogTs.status);
+    dogTsFile := path.join(tmpDir, "dogfood.ts");
+    _wdt := fs.writeText(dogTsFile, dogTs.stdout);
+    runDogTs := proc.run(proc.execPath(), [dogTsFile], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+    test.checkInt("dogfood ts run: " + runDogTs.stderr, 0, runDogTs.status);
+
+    /* C11 VM lt_heap + ASan/UBSan + LITE_CHECK_LEAKS=1 dogfood check */
+    dogC := compilerTest.compileFile(cComp, dogDir, [dogMain]);
+    test.checkInt("dogfood c compile: " + dogC.stderr, 0, dogC.status);
+    dogCFile := path.join(tmpDir, "dogfood.c");
+    dogBinVm := path.join(tmpDir, "dogfood_vm");
+    dogBinSan := path.join(tmpDir, "dogfood_san");
+    _wdc := fs.writeText(dogCFile, dogC.stdout);
+
+    dvmArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", dogCFile, "-o", dogBinVm, "-lm"];
+    dsanArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", dogCFile, "-o", dogBinSan, "-lm"];
+    if proc.platform() == "darwin" {
+        mut dvmArgs.pushBack("-framework"); mut dvmArgs.pushBack("Cocoa");
+        mut dvmArgs.pushBack("-framework"); mut dvmArgs.pushBack("CoreGraphics");
+        mut dsanArgs.pushBack("-framework"); mut dsanArgs.pushBack("Cocoa");
+        mut dsanArgs.pushBack("-framework"); mut dsanArgs.pushBack("CoreGraphics");
+    }
+    ccDvm := proc.run(ccInfo.cc, dvmArgs, tmpDir, [], true, "");
+    test.checkInt("dogfood vm cc: " + ccDvm.stderr, 0, ccDvm.status);
+    runDvm := proc.run(dogBinVm, [], root, ["LITE_CANVAS_HEADLESS=1", "LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("dogfood vm run: " + runDvm.stderr, 0, runDvm.status);
+    test.check("dogfood 2000 frames 0 allocs", runDvm.stdout.contains(" 2000 2000 2586312 hero true 0 true\n"));
+    test.checkText("dogfood ts vs c vm parity", runDogTs.stdout, runDvm.stdout);
+
+    ccDsan := proc.run(ccInfo.cc, dsanArgs, tmpDir, [], true, "");
+    test.checkInt("dogfood san cc: " + ccDsan.stderr, 0, ccDsan.status);
+    runDsan := proc.run(dogBinSan, [], root, ["LITE_CANVAS_HEADLESS=1", "LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("dogfood san run: " + runDsan.stderr, 0, runDsan.status);
+    test.checkText("dogfood ts vs c san parity", runDogTs.stdout, runDsan.stdout);
+
+    /* 5. Existing particle-pool sample compiles cleanly under C11 -std=c11 -Wall -Wextra -Werror */
+    samplePath := path.join(root, "samples/graphics/interactive/particle-pool.lts");
+    sampleC := compilerTest.compileFile(cComp, root, [samplePath]);
+    test.checkInt("particle-pool C compile: " + sampleC.stderr, 0, sampleC.status);
+    sampleCFile := path.join(tmpDir, "particle_pool.c");
+    sampleObj := path.join(tmpDir, "particle_pool.o");
+    _wsp := fs.writeText(sampleCFile, sampleC.stdout);
+    ccSample := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-DLITE_CANVAS_NO_GUI", "-c", sampleCFile, "-o", sampleObj], tmpDir, [], true, "");
+    test.checkInt("particle-pool C cc -Werror: " + ccSample.stderr, 0, ccSample.status);
+
+    _rm := fs.remove(tmpDir);
+}
+
+io := import "core/io";
+io.outputLine("phase5-rc-pools-dogfood: ok");
