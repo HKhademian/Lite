@@ -1,6 +1,7 @@
 /** Generic function template registry, type unification/substitution, and on-demand monomorphization queue. */
 
 textLib := import "core/text";
+numeric := import "./numeric-literals";
 ir := import "./frontend-ir";
 types := import "./frontend-types";
 
@@ -232,8 +233,7 @@ hashHex32 := fn(text: String): String {
 
 /** Produces a readable, TS/C11-safe deterministic mangled token for one concrete canonical type kind. */
 mangleOneKind := fn(kind: String): String {
-    if kind == ir.VALUE_KIND_INT or kind == ir.VALUE_KIND_INT8 or kind == ir.VALUE_KIND_INT16 or kind == ir.VALUE_KIND_INT32 or
-    kind == ir.VALUE_KIND_FLOAT or kind == ir.VALUE_KIND_FLOAT32 or kind == ir.VALUE_KIND_STRING or
+    if numeric.isNumericKind(kind) or kind == ir.VALUE_KIND_STRING or
     kind == ir.VALUE_KIND_BOOL or kind == ir.VALUE_KIND_UNIT {
         return kind;
     }

@@ -481,17 +481,34 @@ contextualNumericLiteralType := fn(text: String, expectedType: String): String {
     literal := parser.tokenTextAt(tokens, first);
     scanned := numeric.scanNumericLiteral(literal, 0);
     if kind == lexer.TOKEN_KIND_FLOAT {
+        digits := literal.slice(0, scanned.integerEnd) + literal.slice(scanned.fractionStart, scanned.fractionEnd);
+        frac := scanned.fractionEnd - scanned.fractionStart;
+        if expectedType == numeric.KIND_FLOAT8 {
+            if numeric.finiteFloat8Digits(digits, frac, scanned.exponent) { return numeric.KIND_FLOAT8; }
+            return "Float";
+        }
+        if expectedType == numeric.KIND_FLOAT16 {
+            if numeric.finiteFloat16Digits(digits, frac, scanned.exponent) { return numeric.KIND_FLOAT16; }
+            return "Float";
+        }
         if expectedType == numeric.KIND_FLOAT32 {
-            digits := literal.slice(0, scanned.integerEnd) + literal.slice(scanned.fractionStart, scanned.fractionEnd);
-            if numeric.finiteFloat32Digits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) { return numeric.KIND_FLOAT32; }
+            if numeric.finiteFloat32Digits(digits, frac, scanned.exponent) { return numeric.KIND_FLOAT32; }
             return "Float";
         }
         return "";
     }
     if kind =!= lexer.TOKEN_KIND_INT { return ""; }
-    if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) { return ""; }
+    if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) {
+        if not negative and expectedType == numeric.KIND_UINT64 and numeric.uint64DigitsFit(literal) {
+            return numeric.KIND_UINT64;
+        }
+        return "";
+    }
     value := if negative { scanned.magnitude } else { 0 - scanned.magnitude };
     if numeric.isNarrowIntKind(expectedType) and numeric.intKindFits(expectedType, value) { return expectedType; }
+    if expectedType == numeric.KIND_UINT64 and value >= 0 { return numeric.KIND_UINT64; }
+    if expectedType == numeric.KIND_FLOAT8 and numeric.intExactlyFloat8(value) { return numeric.KIND_FLOAT8; }
+    if expectedType == numeric.KIND_FLOAT16 and numeric.intExactlyFloat16(value) { return numeric.KIND_FLOAT16; }
     if expectedType == numeric.KIND_FLOAT32 and numeric.intExactlyFloat32(value) { return numeric.KIND_FLOAT32; }
     if expectedType == numeric.KIND_FLOAT and numeric.intExactlyFloat(value) { return numeric.KIND_FLOAT; }
     ""

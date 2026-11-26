@@ -45,15 +45,30 @@ pub strLiteralCode := fn(value: String): String {
     "LT_STR_LIT(" + textLiteralCode(value) + ", " + value.length().toText() + ")"
 }
 
+/** Formats a checked unsigned Int value as a C unsigned 64-bit literal (`UINT64_C`). */
+pub uintLiteralCode := fn(digits: String): String {
+    if digits == "0" or digits == "" { "UINT64_C(0)" } else { "UINT64_C(" + digits + ")" }
+}
+
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
 pub floatLiteralCode := fn(digits: String, negative: Bool): String {
     parsed := "lt_float_literal(" + textLiteralCode(digits) + ")";
     if negative { "(-" + parsed + ")" } else { parsed }
 }
 
-/** Encodes a finite decimal Float32 token parsed as binary32 float and promoted to binary64 storage for uniform C emission. */
+/** Encodes a finite decimal Float8 token parsed and encoded into OCP E4M3 uint8_t storage. */
+pub float8LiteralCode := fn(digits: String, negative: Bool): String {
+    "lt_float8_literal(" + textLiteralCode((if negative { "-" } else { "" }) + digits) + ")"
+}
+
+/** Encodes a finite decimal Float16 token parsed as IEEE binary16 `lt_f16`. */
+pub float16LiteralCode := fn(digits: String, negative: Bool): String {
+    "lt_float16_literal(" + textLiteralCode((if negative { "-" } else { "" }) + digits) + ")"
+}
+
+/** Encodes a finite decimal Float32 token parsed as binary32 float. */
 pub float32LiteralCode := fn(digits: String, negative: Bool): String {
-    parsed := "((double)lt_float32_literal(" + textLiteralCode(digits) + "))";
+    parsed := "lt_float32_literal(" + textLiteralCode(digits) + ")";
     if negative { "(-" + parsed + ")" } else { parsed }
 }
 
@@ -109,21 +124,45 @@ pub comparisonCode := fn(op: String, kind: String, left: String, right: String):
     }
 }
 
-/** Converts an Int* operand only at a mixed Float operation, retaining original values for later comparison-chain pairs. */
+/** Converts any numeric operand to `double` (`Float8`/`Float16` decode cleanly). */
 pub floatOperandCode := fn(kind: String, code: String): String {
-    if numeric.isIntKind(kind) { "((double)(" + code + "))" } else { code }
+    if kind == numeric.KIND_FLOAT8 { "lt_f8_to_f64(" + code + ")" }
+    else if kind == numeric.KIND_FLOAT16 { "lt_f16_to_f64(" + code + ")" }
+    else if numeric.isIntKind(kind) or kind == numeric.KIND_FLOAT32 { "((double)(" + code + "))" }
+    else { code }
 }
 
-/** Converts an Int* or Float operand into a binary32 value (held as double) when targeting Float32. */
+/** Converts any numeric operand into OCP E4M3 `uint8_t` (`Float8`) representation. */
+pub float8OperandCode := fn(kind: String, code: String): String {
+    if kind == numeric.KIND_FLOAT8 { code }
+    else { "((uint8_t)lt_f64_to_f8(" + floatOperandCode(kind, code) + ", 0))" }
+}
+
+/** Converts any numeric operand into IEEE binary16 `lt_f16` representation. */
+pub float16OperandCode := fn(kind: String, code: String): String {
+    if kind == numeric.KIND_FLOAT16 { code }
+    else { "lt_f64_to_f16_unchecked(" + floatOperandCode(kind, code) + ")" }
+}
+
+/** Converts an Int* or Float operand into a binary32 value (`float`) when targeting Float32. */
 pub float32OperandCode := fn(kind: String, code: String): String {
-    if numeric.isIntKind(kind) or kind == numeric.KIND_FLOAT { "((double)((float)(" + code + ")))" } else { code }
+    if kind == numeric.KIND_FLOAT32 { code }
+    else if kind == numeric.KIND_FLOAT8 or kind == numeric.KIND_FLOAT16 { "((float)" + floatOperandCode(kind, code) + ")" }
+    else if numeric.isIntKind(kind) or kind == numeric.KIND_FLOAT { "((float)(" + code + "))" }
+    else { code }
 }
 
 /** Emits one numeric comparison using the pair's common family. */
 comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: String, right: String): String {
     if numeric.isFloatKind(leftKind) or numeric.isFloatKind(rightKind) {
         comparisonCode(op, numeric.KIND_FLOAT, floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
-    } else { comparisonCode(op, leftKind, left, right) }
+    } else if numeric.isUnsignedIntKind(leftKind) or numeric.isUnsignedIntKind(rightKind) {
+        comparisonCode(op, numeric.KIND_UINT64, "((uint64_t)(" + left + "))", "((uint64_t)(" + right + "))")
+    } else if numeric.isIntKind(leftKind) or numeric.isIntKind(rightKind) {
+        comparisonCode(op, leftKind, "((int64_t)(" + left + "))", "((int64_t)(" + right + "))")
+    } else {
+        comparisonCode(op, leftKind, left, right)
+    }
 }
 
 /** Encodes the arithmetic operator tag expected by runtime float helpers. */
@@ -142,9 +181,19 @@ pub floatBinaryCode := fn(op: String, left: String, right: String, position: Int
     floatBinaryCall("lt_float_op", op, left, right, position)
 }
 
+/** Sequences operands into binary64 temporaries before the checked Float8 E4M3 operation. */
+pub float8BinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    floatBinaryCall("lt_float8_op", op, floatOperandCode(numeric.KIND_FLOAT8, left), floatOperandCode(numeric.KIND_FLOAT8, right), position)
+}
+
+/** Sequences operands into binary64 temporaries before the checked Float16 operation. */
+pub float16BinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    floatBinaryCall("lt_float16_op", op, floatOperandCode(numeric.KIND_FLOAT16, left), floatOperandCode(numeric.KIND_FLOAT16, right), position)
+}
+
 /** Sequences operands into temporaries before the checked binary32 operation. */
 pub float32BinaryCode := fn(op: String, left: String, right: String, position: Int): String {
-    floatBinaryCall("lt_float32_op", op, left, right, position)
+    floatBinaryCall("lt_float32_op", op, floatOperandCode(numeric.KIND_FLOAT32, left), floatOperandCode(numeric.KIND_FLOAT32, right), position)
 }
 
 /** Sequences both operands before the selected Float-default power checkpoint. */
@@ -209,15 +258,40 @@ pub intNegateCode := fn(value: String, position: Int): String {
     "lt_checked_negate(" + value + ", " + position.toText() + ")"
 }
 
+/** Emits a positioned unsigned Int helper call with operands evaluated once, from left to right. */
+uintBinaryCallCode := fn(name: String, left: String, right: String, position: Int): String {
+    id := position.toText();
+    "(lt_arg_u_left_" + id + " = (uint64_t)(" + left + "), lt_arg_u_right_" + id + " = (uint64_t)(" + right + "), " + name + "(lt_arg_u_left_" + id + ", lt_arg_u_right_" + id + ", " + id + "))"
+}
+
+/** Emits a checked uint64_t binary operation (`+`, `-`, `*`, `/`, `%`, `:/`, `:%`). */
+pub uintBinaryCode := fn(operator: String, left: String, right: String, position: Int): String {
+    if operator == "+" { uintBinaryCallCode("lt_checked_uadd", left, right, position) }
+    else if operator == "-" { uintBinaryCallCode("lt_checked_usub", left, right, position) }
+    else if operator == "*" { uintBinaryCallCode("lt_checked_umul", left, right, position) }
+    else if operator == "/" or operator == ":/" { uintBinaryCallCode("lt_checked_udiv", left, right, position) }
+    else { uintBinaryCallCode("lt_checked_urem", left, right, position) }
+}
+
 /** Emits a checked signed range check for narrow integer arithmetic results. */
 pub checkedNarrowIntCode := fn(kind: String, value: String, position: Int): String {
     bits: Int = numeric.narrowIntBits(kind);
     "lt_checked_narrow_int(" + value + ", " + bits.toText() + ", " + textLiteralCode(kind) + ", " + position.toText() + ")"
 }
 
+/** Emits a checked unsigned range check for narrow unsigned integer arithmetic results. */
+pub checkedNarrowUIntCode := fn(kind: String, value: String, position: Int): String {
+    bits: Int = numeric.narrowIntBits(kind);
+    "lt_checked_narrow_uint(" + value + ", " + bits.toText() + ", " + textLiteralCode(kind) + ", " + position.toText() + ")"
+}
+
 /** Names a typed, source-position-hygienic C comparison operand temporary. */
 comparisonTemp := fn(kind: String, position: Int, index: Int): String {
-    tag := if kind == numeric.KIND_STRING { "s" } else if kind == numeric.KIND_BOOL { "b" } else if numeric.isFloatKind(kind) { "f" } else { "i" };
+    tag := if kind == numeric.KIND_STRING { "s" }
+    else if kind == numeric.KIND_BOOL { "b" }
+    else if numeric.isFloatKind(kind) { "f" }
+    else if numeric.isUnsignedIntKind(kind) { "u" }
+    else { "i" };
     "lt_cmp_" + tag + "_" + position.toText() + "_" + index.toText()
 }
 
@@ -244,4 +318,64 @@ pub comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operator
         index += 1;
     }
     result + ")"
+}
+
+
+/** Returns the exact integer bit width for any signed or unsigned integer kind. */
+castIntBits := fn(kind: String): Int {
+    if kind == numeric.KIND_INT or kind == numeric.KIND_UINT64 { 64 }
+    else { numeric.narrowIntBits(kind) }
+}
+
+/** Wraps an integer expression in the exact C scalar type for `kind`. */
+cIntCastWrap := fn(kind: String, expr: String): String {
+    if kind == numeric.KIND_INT1 or kind == numeric.KIND_INT2 or kind == numeric.KIND_INT4 or kind == numeric.KIND_INT8 { "((int8_t)(" + expr + "))" }
+    else if kind == numeric.KIND_INT16 { "((int16_t)(" + expr + "))" }
+    else if kind == numeric.KIND_INT32 { "((int32_t)(" + expr + "))" }
+    else if kind == numeric.KIND_UINT1 or kind == numeric.KIND_UINT2 or kind == numeric.KIND_UINT4 or kind == numeric.KIND_UINT8 { "((uint8_t)(" + expr + "))" }
+    else if kind == numeric.KIND_UINT16 { "((uint16_t)(" + expr + "))" }
+    else if kind == numeric.KIND_UINT32 { "((uint32_t)(" + expr + "))" }
+    else if numeric.isUnsignedIntKind(kind) { "((uint64_t)(" + expr + "))" }
+    else { "((int64_t)(" + expr + "))" }
+}
+
+/** Emits a checked C numeric conversion `cast<Dst>(src)` for integers or floats. */
+pub numericCastCode := fn(dstKind: String, srcKind: String, code: String, position: Int): String {
+    if dstKind == srcKind { return code; }
+    posText := position.toText();
+    if numeric.isIntKind(dstKind) and numeric.isIntKind(srcKind) {
+        dstUnsigned := numeric.isUnsignedIntKind(dstKind);
+        srcUnsigned := numeric.isUnsignedIntKind(srcKind);
+        dstBits := castIntBits(dstKind);
+        if srcUnsigned and not dstUnsigned {
+            return cIntCastWrap(dstKind, "lt_cast_u2i((uint64_t)(" + code + "), " + dstBits.toText() + ", " + textLiteralCode(dstKind) + ", " + posText + ")");
+        }
+        if not srcUnsigned and dstUnsigned {
+            return cIntCastWrap(dstKind, "lt_cast_i2u((int64_t)(" + code + "), " + dstBits.toText() + ", " + textLiteralCode(dstKind) + ", " + posText + ")");
+        }
+        if numeric.numericWidens(dstKind, srcKind) {
+            return cIntCastWrap(dstKind, code);
+        }
+        if dstUnsigned {
+            return cIntCastWrap(dstKind, checkedNarrowUIntCode(dstKind, "((uint64_t)(" + code + "))", position));
+        }
+        return cIntCastWrap(dstKind, checkedNarrowIntCode(dstKind, "((int64_t)(" + code + "))", position));
+    }
+    asDouble := floatOperandCode(srcKind, code);
+    if dstKind == numeric.KIND_FLOAT8 { return "((uint8_t)lt_f64_to_f8(" + asDouble + ", " + posText + "))"; }
+    if dstKind == numeric.KIND_FLOAT16 { return "lt_f64_to_f16_checked(" + asDouble + ", " + posText + ")"; }
+    if dstKind == numeric.KIND_FLOAT32 { return "lt_f64_to_f32_checked(" + asDouble + ", " + posText + ")"; }
+    asDouble
+}
+
+/** Emits a checked C float-to-integer truncation `<IntType>.trunc(floatExpr)`. */
+pub floatTruncCode := fn(dstIntKind: String, srcFloatKind: String, code: String, position: Int): String {
+    asDouble := floatOperandCode(srcFloatKind, code);
+    bitsText := castIntBits(dstIntKind).toText();
+    posText := position.toText();
+    if numeric.isUnsignedIntKind(dstIntKind) {
+        cIntCastWrap(dstIntKind, "lt_trunc_f64_to_uint(" + asDouble + ", " + bitsText + ", " + textLiteralCode(dstIntKind) + ", " + posText + ")")
+    } else {
+        cIntCastWrap(dstIntKind, "lt_trunc_f64_to_int(" + asDouble + ", " + bitsText + ", " + textLiteralCode(dstIntKind) + ", " + posText + ")")
+    }
 }

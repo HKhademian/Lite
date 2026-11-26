@@ -47,9 +47,25 @@ pub textLiteralCode := fn(value: String): String {
     out.build()
 }
 
+/** Formats a checked unsigned Int value as a TypeScript BigInt literal. */
+pub uintLiteralCode := fn(digits: String): String {
+    if digits == "0" or digits == "" { "0n" } else { digits + "n" }
+}
+
 /** Encodes a finite decimal Float token through the target's correctly rounded binary64 parser, preserving signed zero and gradual underflow. */
 pub floatLiteralCode := fn(digits: String, negative: Bool): String {
     parsed := "Number(" + textLiteralCode(digits) + ")";
+    if negative { "(-" + parsed + ")" } else { parsed }
+}
+
+/** Encodes a finite decimal Float8 token rounded to OCP E4M3 precision, preserving signed zero. */
+pub float8LiteralCode := fn(digits: String, negative: Bool): String {
+    "lite$f8Round(" + floatLiteralCode(digits, negative) + ", 0)"
+}
+
+/** Encodes a finite decimal Float16 token rounded to IEEE-754 binary16 precision, preserving signed zero. */
+pub float16LiteralCode := fn(digits: String, negative: Bool): String {
+    parsed := "Math.f16round(Number(" + textLiteralCode(digits) + "))";
     if negative { "(-" + parsed + ")" } else { parsed }
 }
 
@@ -119,6 +135,18 @@ pub floatOperandCode := fn(kind: String, code: String): String {
     if numeric.isIntKind(kind) { "Number(" + code + ")" } else { code }
 }
 
+/** Converts an Int* or Float* operand into a Float8 (E4M3) value when targeting Float8. */
+pub float8OperandCode := fn(kind: String, code: String): String {
+    if kind == numeric.KIND_FLOAT8 { code } else { "lite$f8Round(" + floatOperandCode(kind, code) + ", 0)" }
+}
+
+/** Converts an Int* or Float* operand into a binary16 value when targeting Float16. */
+pub float16OperandCode := fn(kind: String, code: String): String {
+    if numeric.isIntKind(kind) { "Math.f16round(Number(" + code + "))" }
+    else if kind == numeric.KIND_FLOAT or kind == numeric.KIND_FLOAT32 { "Math.f16round(" + code + ")" }
+    else { code }
+}
+
 /** Converts an Int* or Float operand into a binary32 value when targeting Float32. */
 pub float32OperandCode := fn(kind: String, code: String): String {
     if numeric.isIntKind(kind) { "Math.fround(Number(" + code + "))" }
@@ -141,6 +169,16 @@ floatOpTag := fn(op: String): String {
 /** Emits checked binary64 arithmetic; target calls evaluate operands once in source order. */
 pub floatBinaryCode := fn(op: String, left: String, right: String, position: Int): String {
     "lite$floatOp(" + left + ", " + right + ", " + floatOpTag(op) + ", " + position.toText() + ")"
+}
+
+/** Emits checked Float8 E4M3 arithmetic; target calls evaluate operands once in source order. */
+pub float8BinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    "lite$float8Op(" + left + ", " + right + ", " + floatOpTag(op) + ", " + position.toText() + ")"
+}
+
+/** Emits checked binary16 arithmetic; target calls evaluate operands once in source order. */
+pub float16BinaryCode := fn(op: String, left: String, right: String, position: Int): String {
+    "lite$float16Op(" + left + ", " + right + ", " + floatOpTag(op) + ", " + position.toText() + ")"
 }
 
 /** Emits checked binary32 arithmetic; target calls evaluate operands once in source order. */
@@ -203,10 +241,25 @@ pub intNegateCode := fn(value: String, position: Int): String {
     "lite$negateInt(" + value + ", " + position.toText() + ")"
 }
 
+/** Emits checked unsigned BigInt arithmetic/division calls. */
+pub uintBinaryCode := fn(operator: String, left: String, right: String, position: Int): String {
+    if operator == "+" { "lite$uaddInt(" + left + ", " + right + ", " + position.toText() + ")" }
+    else if operator == "-" { "lite$usubInt(" + left + ", " + right + ", " + position.toText() + ")" }
+    else if operator == "*" { "lite$umulInt(" + left + ", " + right + ", " + position.toText() + ")" }
+    else if operator == "/" or operator == ":/" { "lite$udivInt(" + left + ", " + right + ", " + position.toText() + ")" }
+    else { "lite$uremInt(" + left + ", " + right + ", " + position.toText() + ")" }
+}
+
 /** Emits a checked signed range check for narrow integer arithmetic results. */
 pub checkedNarrowIntCode := fn(kind: String, value: String, position: Int): String {
     bits: Int = numeric.narrowIntBits(kind);
     "lite$checkedNarrowInt(" + value + ", " + bits.toText() + "n, " + textLiteralCode(kind) + ", " + position.toText() + ")"
+}
+
+/** Emits a checked unsigned range check for narrow unsigned integer arithmetic results. */
+pub checkedNarrowUIntCode := fn(kind: String, value: String, position: Int): String {
+    bits: Int = numeric.narrowIntBits(kind);
+    "lite$checkedNarrowUInt(" + value + ", " + bits.toText() + "n, " + textLiteralCode(kind) + ", " + position.toText() + ")"
 }
 
 /** Emits a chain with one evaluation per operand and lazy later operands in a private expression scope. */
@@ -224,4 +277,52 @@ pub comparisonChainCode := fn(codes: List<String>, kinds: List<String>, operator
         index += 1;
     }
     result + "})()"
+}
+
+
+/** Returns the exact integer bit width for any signed or unsigned integer kind. */
+castIntBits := fn(kind: String): Int {
+    if kind == numeric.KIND_INT or kind == numeric.KIND_UINT64 { 64 }
+    else { numeric.narrowIntBits(kind) }
+}
+
+/** Emits a checked TypeScript numeric conversion `cast<Dst>(src)` for integers or floats. */
+pub numericCastCode := fn(dstKind: String, srcKind: String, code: String, position: Int): String {
+    if dstKind == srcKind { return code; }
+    posText := position.toText();
+    if numeric.isIntKind(dstKind) and numeric.isIntKind(srcKind) {
+        dstUnsigned := numeric.isUnsignedIntKind(dstKind);
+        srcUnsigned := numeric.isUnsignedIntKind(srcKind);
+        dstBits := castIntBits(dstKind);
+        if srcUnsigned and not dstUnsigned {
+            return "lite$castU2I(" + code + ", " + dstBits.toText() + "n, " + textLiteralCode(dstKind) + ", " + posText + ")";
+        }
+        if not srcUnsigned and dstUnsigned {
+            return "lite$castI2U(" + code + ", " + dstBits.toText() + "n, " + textLiteralCode(dstKind) + ", " + posText + ")";
+        }
+        if numeric.numericWidens(dstKind, srcKind) {
+            return code;
+        }
+        if dstUnsigned {
+            return checkedNarrowUIntCode(dstKind, code, position);
+        }
+        return checkedNarrowIntCode(dstKind, code, position);
+    }
+    asNum := floatOperandCode(srcKind, code);
+    if dstKind == numeric.KIND_FLOAT8 { return "lite$f8Round(" + asNum + ", " + posText + ")"; }
+    if dstKind == numeric.KIND_FLOAT16 { return "lite$f16Round(" + asNum + ", " + posText + ")"; }
+    if dstKind == numeric.KIND_FLOAT32 { return "lite$f32Round(" + asNum + ", " + posText + ")"; }
+    asNum
+}
+
+/** Emits a checked TypeScript float-to-integer truncation `<IntType>.trunc(floatExpr)`. */
+pub floatTruncCode := fn(dstIntKind: String, srcFloatKind: String, code: String, position: Int): String {
+    asNum := floatOperandCode(srcFloatKind, code);
+    bitsText := castIntBits(dstIntKind).toText();
+    posText := position.toText();
+    if numeric.isUnsignedIntKind(dstIntKind) {
+        "lite$truncToUInt(" + asNum + ", " + bitsText + "n, " + textLiteralCode(dstIntKind) + ", " + posText + ")"
+    } else {
+        "lite$truncToInt(" + asNum + ", " + bitsText + "n, " + textLiteralCode(dstIntKind) + ", " + posText + ")"
+    }
 }

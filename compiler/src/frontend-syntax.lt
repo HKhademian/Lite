@@ -379,11 +379,29 @@ syntaxTypedIntParsed := fn(kind: String, code: String, value: Int, constant: Boo
 /** Validates standalone integer literals against expected scalar width/float targets when no binary operator follows. */
 pub contextualIntegerParsed := fn(target: String, source: String, position: Int, prefix: String, expected: String, minimum: Int, value: Int, code: String, next: Int): Parsed {
     if expected =!= "" and expected =!= ir.VALUE_KIND_INT and not binaryFollows(source, next, prefix, minimum) {
-        if numeric.isNarrowIntKind(expected) {
+        if numeric.isUnsignedIntKind(expected) {
+            if not numeric.intKindFits(expected, value) {
+                failAt(source, position, prefix, "integer literal outside " + expected + " range");
+            }
+            return syntaxTypedIntParsed(expected, ir.targetUIntLiteralCode(target, value.toText()), value, true, next);
+        }
+        if numeric.isNarrowSignedIntKind(expected) {
             if not numeric.intKindFits(expected, value) {
                 failAt(source, position, prefix, "integer literal outside " + expected + " range");
             }
             return syntaxTypedIntParsed(expected, code, value, true, next);
+        }
+        if expected == ir.VALUE_KIND_FLOAT8 {
+            if not numeric.intExactlyFloat8(value) {
+                failAt(source, position, prefix, "integer literal is not exactly representable in Float8");
+            }
+            return (kind = ir.VALUE_KIND_FLOAT8, code = ir.targetFloat8OperandCode(target, ir.VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
+        }
+        if expected == ir.VALUE_KIND_FLOAT16 {
+            if not numeric.intExactlyFloat16(value) {
+                failAt(source, position, prefix, "integer literal is not exactly representable in Float16");
+            }
+            return (kind = ir.VALUE_KIND_FLOAT16, code = ir.targetFloat16OperandCode(target, ir.VALUE_KIND_INT, code), intValue = 0, textValue = "", constant = false, next = next);
         }
         if expected == ir.VALUE_KIND_FLOAT32 {
             if not numeric.intExactlyFloat32(value) {
@@ -431,6 +449,18 @@ pub parseNumber := fn(target: String, source: String, position: Int, prefix: Str
         digits := source.slice(start, integerEnd) + source.slice(scanned.fractionStart, scanned.fractionEnd);
         fractionCount := scanned.fractionEnd - scanned.fractionStart;
         raw := source.slice(digitStart, cursor);
+        if expected == ir.VALUE_KIND_FLOAT8 and not binaryFollows(source, cursor, prefix, minimum) {
+            if not numeric.finiteFloat8Digits(digits, fractionCount, scanned.exponent) {
+                failAt(source, position, prefix, "floating literal outside Float8 range");
+            }
+            return (kind = ir.VALUE_KIND_FLOAT8, code = ir.targetFloat8LiteralCode(target, raw, negative), intValue = 0, textValue = "", constant = false, next = cursor);
+        }
+        if expected == ir.VALUE_KIND_FLOAT16 and not binaryFollows(source, cursor, prefix, minimum) {
+            if not numeric.finiteFloat16Digits(digits, fractionCount, scanned.exponent) {
+                failAt(source, position, prefix, "floating literal outside Float16 range");
+            }
+            return (kind = ir.VALUE_KIND_FLOAT16, code = ir.targetFloat16LiteralCode(target, raw, negative), intValue = 0, textValue = "", constant = false, next = cursor);
+        }
         if expected == ir.VALUE_KIND_FLOAT32 and not binaryFollows(source, cursor, prefix, minimum) {
             if not numeric.finiteFloat32Digits(digits, fractionCount, scanned.exponent) {
                 failAt(source, position, prefix, "floating literal outside Float32 range");
@@ -444,7 +474,14 @@ pub parseNumber := fn(target: String, source: String, position: Int, prefix: Str
         return (kind = ir.VALUE_KIND_FLOAT, code = code, intValue = 0, textValue = "", constant = false, next = cursor);
     }
     if scanned.outsideInt or (not negative and scanned.magnitude == -9223372036854775808) {
-        if numeric.isNarrowIntKind(expected) and not binaryFollows(source, cursor, prefix, minimum) {
+        if not negative and expected == ir.VALUE_KIND_UINT64 and not binaryFollows(source, cursor, prefix, minimum) {
+            rawDigits := source.slice(digitStart, cursor);
+            if not numeric.uint64DigitsFit(rawDigits) {
+                failAt(source, position, prefix, "integer literal outside UInt64 range");
+            }
+            return (kind = ir.VALUE_KIND_UINT64, code = ir.targetUIntLiteralCode(target, rawDigits), intValue = 0, textValue = rawDigits, constant = false, next = cursor);
+        }
+        if (numeric.isNarrowIntKind(expected) or expected == ir.VALUE_KIND_UINT64) and not binaryFollows(source, cursor, prefix, minimum) {
             failAt(source, position, prefix, "integer literal outside " + expected + " range");
         }
         failAt(source, position, prefix, "integer literal outside signed 64-bit range");

@@ -276,10 +276,13 @@ usesHostOs := fn(calls: String): Bool {
     usesFile(calls) or usesStreamRuntime(calls) or usesProcess(calls) or usesCrypto(calls) or usesCryptoBuffer(calls) or usesTime(calls) or usesExternal(calls) or usesExtraCanvas(calls)
 }
 
-/** True when a program needs checked dynamic Int* arithmetic or narrow range guards. */
+/** True when a program needs checked dynamic Int or UInt arithmetic, narrow range guards, or numeric casts. */
 usesIntArithmetic := fn(calls: String): Bool {
     usesBuiltin(calls, "addInt") or usesBuiltin(calls, "subtractInt") or usesBuiltin(calls, "multiplyInt") or
-    usesBuiltin(calls, "negateInt") or usesBuiltin(calls, "checkedNarrowInt")
+    usesBuiltin(calls, "negateInt") or usesBuiltin(calls, "checkedNarrowInt") or usesBuiltin(calls, "uaddInt") or
+    usesBuiltin(calls, "usubInt") or usesBuiltin(calls, "umulInt") or usesBuiltin(calls, "udivInt") or
+    usesBuiltin(calls, "uremInt") or usesBuiltin(calls, "checkedNarrowUInt") or usesBuiltin(calls, "castI2U") or
+    usesBuiltin(calls, "castU2I") or usesBuiltin(calls, "truncToInt") or usesBuiltin(calls, "truncToUInt")
 }
 
 /** True when positioned division-family helpers are needed. */
@@ -287,12 +290,64 @@ usesIntDivision := fn(calls: String): Bool {
     usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "remainderInt") or usesBuiltin(calls, "floorDivideInt") or usesBuiltin(calls, "floorModuloInt")
 }
 
-/** True when binary64/binary32 operations need finite-result and zero-divisor guards. */
-usesFloatArithmetic := fn(calls: String): Bool { usesBuiltin(calls, "floatOp") or usesBuiltin(calls, "float32Op") or usesBuiltin(calls, "floatPower") }
+/** True when Float8/Float16/Float32/Float operations need finite-result and zero-divisor guards. */
+usesFloatArithmetic := fn(calls: String): Bool {
+    usesBuiltin(calls, "floatOp") or usesBuiltin(calls, "float32Op") or
+    usesBuiltin(calls, "float16Op") or usesBuiltin(calls, "float8Op") or
+    usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "f16Round") or
+    usesBuiltin(calls, "f32Round") or usesBuiltin(calls, "floatPower")
+}
 
-/** Emits the shared Float and Float32 arithmetic helpers without folding operations before execution. */
+/** Emits the shared Float/Float32/Float16/Float8 arithmetic helpers without folding operations before execution. */
 emitFloatArithmeticHelpers := fn(calls: String): Unit {
     if not usesFloatArithmetic(calls) { return; }
+    if usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "float8Op") {
+        outLine("function lite$f8Round(value: number, at: number): number {");
+        outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        outLine("    if (value === 0) return Object.is(value, -0) ? -0 : 0;");
+        outLine("    const sign = value < 0 ? -1 : 1;");
+        outLine("    const ax = Math.abs(value);");
+        outLine("    if (ax >= 464) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        outLine("    if (ax < 0.015625) {");
+        outLine("        const scaled = ax * 512; const fl = Math.floor(scaled); const rem = scaled - fl; let m = fl;");
+        outLine("        if (rem > 0.5 || (rem === 0.5 && (m & 1) !== 0)) m += 1;");
+        outLine("        return sign * (m / 512);");
+        outLine("    }");
+        outLine("    let e = Math.floor(Math.log2(ax)); let p = Math.pow(2, e);");
+        outLine("    if (p > ax) { e -= 1; p *= 0.5; }");
+        outLine("    if (ax >= 2 * p) { e += 1; p *= 2; }");
+        outLine("    const scaled = (ax / p - 1) * 8; const fl = Math.floor(scaled); const rem = scaled - fl; let m = fl;");
+        outLine("    if (rem > 0.5 || (rem === 0.5 && (m & 1) !== 0)) m += 1;");
+        outLine("    if (m === 8) { m = 0; p *= 2; }");
+        outLine("    return sign * p * (1 + m / 8);");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "float8Op") {
+        outLine("function lite$float8Op(left: number, right: number, op: number, at: number): number {");
+        outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
+        outLine("    return lite$f8Round(op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right, at);");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "f16Round") or usesBuiltin(calls, "float16Op") {
+        outLine("function lite$f16Round(value: number, at: number): number {");
+        outLine("    const r = Math.f16round(value);");
+        outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        outLine("    return r;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "float16Op") {
+        outLine("function lite$float16Op(left: number, right: number, op: number, at: number): number {");
+        outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
+        outLine("    return lite$f16Round(op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right, at);");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "f32Round") {
+        outLine("function lite$f32Round(value: number, at: number): number {");
+        outLine("    const r = Math.fround(value);");
+        outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        outLine("    return r;");
+        outLine("}");
+    }
     if usesBuiltin(calls, "floatPower") {
         outLine("function lite$floatPower(left: number, right: number, at: number): number {");
         outLine("    if (left === 0 && right < 0) lite$fault(\"ArithmeticPanic\", at, \"zero cannot be raised to a negative power\");");
@@ -385,6 +440,71 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
         outLine("    const limit = 1n << (bits - 1n);");
         outLine("    if (value < -limit || value >= limit) lite$intFault(at, \"integer outside \" + name + \" range\");");
         outLine("    return value;");
+        outLine("}");
+    }
+    needURange := usesBuiltin(calls, "uaddInt") or usesBuiltin(calls, "usubInt") or usesBuiltin(calls, "umulInt");
+    if needURange {
+        outLine("const lite$uintMax = (1n << 64n) - 1n;");
+        outLine("function lite$checkedUInt64(value: bigint, at: number): bigint {");
+        outLine("    if (value < 0n || value > lite$uintMax) lite$intFault(at, \"integer outside UInt64 range\");");
+        outLine("    return value;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "uaddInt") { outLine("function lite$uaddInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedUInt64(left + right, at); }"); }
+    if usesBuiltin(calls, "usubInt") { outLine("function lite$usubInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedUInt64(left - right, at); }"); }
+    if usesBuiltin(calls, "umulInt") { outLine("function lite$umulInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedUInt64(left * right, at); }"); }
+    if usesBuiltin(calls, "udivInt") {
+        outLine("function lite$udivInt(left: bigint, right: bigint, at: number): bigint {");
+        outLine("    if (right === 0n) lite$intFault(at, \"division by zero\");");
+        outLine("    return left / right;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "uremInt") {
+        outLine("function lite$uremInt(left: bigint, right: bigint, at: number): bigint {");
+        outLine("    if (right === 0n) lite$intFault(at, \"division by zero\");");
+        outLine("    return left % right;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "checkedNarrowUInt") {
+        outLine("function lite$checkedNarrowUInt(value: bigint, bits: bigint, name: string, at: number): bigint {");
+        outLine("    const limit = 1n << bits;");
+        outLine("    if (value < 0n || value >= limit) lite$intFault(at, \"integer outside \" + name + \" range\");");
+        outLine("    return value;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "castI2U") {
+        outLine("function lite$castI2U(value: bigint, bits: bigint, name: string, at: number): bigint {");
+        outLine("    const limit = 1n << bits;");
+        outLine("    if (value < 0n || value >= limit) lite$intFault(at, \"integer outside \" + name + \" range\");");
+        outLine("    return value;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "castU2I") {
+        outLine("function lite$castU2I(value: bigint, bits: bigint, name: string, at: number): bigint {");
+        outLine("    const maxv = (1n << (bits - 1n)) - 1n;");
+        outLine("    if (value > maxv) lite$intFault(at, \"integer outside \" + name + \" range\");");
+        outLine("    return value;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "truncToInt") {
+        outLine("function lite$truncToInt(value: number, bits: bigint, name: string, at: number): bigint {");
+        outLine("    if (!Number.isFinite(value)) lite$intFault(at, \"non-finite floating value\");");
+        outLine("    const t = Math.trunc(value);");
+        outLine("    const lim = 1n << (bits - 1n);");
+        outLine("    const bi = BigInt(t === 0 ? 0 : t);");
+        outLine("    if (bi < -lim || bi >= lim) lite$intFault(at, \"integer outside \" + name + \" range\");");
+        outLine("    return bi;");
+        outLine("}");
+    }
+    if usesBuiltin(calls, "truncToUInt") {
+        outLine("function lite$truncToUInt(value: number, bits: bigint, name: string, at: number): bigint {");
+        outLine("    if (!Number.isFinite(value)) lite$intFault(at, \"non-finite floating value\");");
+        outLine("    const t = Math.trunc(value);");
+        outLine("    if (t < 0) lite$intFault(at, \"integer outside \" + name + \" range\");");
+        outLine("    const lim = 1n << bits;");
+        outLine("    const bi = BigInt(t === 0 ? 0 : t);");
+        outLine("    if (bi >= lim) lite$intFault(at, \"integer outside \" + name + \" range\");");
+        outLine("    return bi;");
         outLine("}");
     }
     outLine("");

@@ -97,10 +97,22 @@ pub DECL_TAG_VAR_VAL := "varval";
 pub DECL_TAG_VAR_MUT := "varmut";
 pub DECL_TAG_MUT_VAL := "mutval";
 
+pub VALUE_KIND_INT1 := numeric.KIND_INT1;
+pub VALUE_KIND_INT2 := numeric.KIND_INT2;
+pub VALUE_KIND_INT4 := numeric.KIND_INT4;
 pub VALUE_KIND_INT8 := numeric.KIND_INT8;
 pub VALUE_KIND_INT16 := numeric.KIND_INT16;
 pub VALUE_KIND_INT32 := numeric.KIND_INT32;
 pub VALUE_KIND_INT := numeric.KIND_INT;
+pub VALUE_KIND_UINT1 := numeric.KIND_UINT1;
+pub VALUE_KIND_UINT2 := numeric.KIND_UINT2;
+pub VALUE_KIND_UINT4 := numeric.KIND_UINT4;
+pub VALUE_KIND_UINT8 := numeric.KIND_UINT8;
+pub VALUE_KIND_UINT16 := numeric.KIND_UINT16;
+pub VALUE_KIND_UINT32 := numeric.KIND_UINT32;
+pub VALUE_KIND_UINT64 := numeric.KIND_UINT64;
+pub VALUE_KIND_FLOAT8 := numeric.KIND_FLOAT8;
+pub VALUE_KIND_FLOAT16 := numeric.KIND_FLOAT16;
 pub VALUE_KIND_FLOAT32 := numeric.KIND_FLOAT32;
 pub VALUE_KIND_FLOAT := numeric.KIND_FLOAT;
 pub VALUE_KIND_STRING := numeric.KIND_STRING;
@@ -234,11 +246,23 @@ pub targetConcatCode := fn(target: String, left: String, right: String): String 
 /** Selects the TS or C backend implementation for one Float64 binary operation. */
 pub targetFloatBinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.floatBinaryCode(op, left, right, position) } else { cLiteral.floatBinaryCode(op, left, right, position) } }
 
+/** Selects the TS or C backend implementation for one Float8 binary operation. */
+pub targetFloat8BinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.float8BinaryCode(op, left, right, position) } else { cLiteral.float8BinaryCode(op, left, right, position) } }
+
+/** Selects the TS or C backend implementation for one Float16 binary operation. */
+pub targetFloat16BinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.float16BinaryCode(op, left, right, position) } else { cLiteral.float16BinaryCode(op, left, right, position) } }
+
 /** Selects the TS or C backend implementation for one Float32 binary operation. */
 pub targetFloat32BinaryCode := fn(target: String, op: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.float32BinaryCode(op, left, right, position) } else { cLiteral.float32BinaryCode(op, left, right, position) } }
 
 /** Selects the TS or C backend implementation for one Float64 literal. */
 pub targetFloatLiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.floatLiteralCode(digits, negative) } else { cLiteral.floatLiteralCode(digits, negative) } }
+
+/** Selects the TS or C backend implementation for one Float8 literal. */
+pub targetFloat8LiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.float8LiteralCode(digits, negative) } else { cLiteral.float8LiteralCode(digits, negative) } }
+
+/** Selects the TS or C backend implementation for one Float16 literal. */
+pub targetFloat16LiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.float16LiteralCode(digits, negative) } else { cLiteral.float16LiteralCode(digits, negative) } }
 
 /** Selects the TS or C backend implementation for one Float32 literal. */
 pub targetFloat32LiteralCode := fn(target: String, digits: String, negative: Bool): String { if target == TARGET_TS { tsLiteral.float32LiteralCode(digits, negative) } else { cLiteral.float32LiteralCode(digits, negative) } }
@@ -246,11 +270,26 @@ pub targetFloat32LiteralCode := fn(target: String, digits: String, negative: Boo
 /** Selects the TS or C backend implementation for promoting an operand to Float64. */
 pub targetFloatOperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.floatOperandCode(kind, code) } else { cLiteral.floatOperandCode(kind, code) } }
 
+/** Selects the TS or C backend implementation for promoting an operand to Float8. */
+pub targetFloat8OperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.float8OperandCode(kind, code) } else { cLiteral.float8OperandCode(kind, code) } }
+
+/** Selects the TS or C backend implementation for promoting an operand to Float16. */
+pub targetFloat16OperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.float16OperandCode(kind, code) } else { cLiteral.float16OperandCode(kind, code) } }
+
 /** Selects the TS or C backend implementation for promoting an operand to Float32. */
 pub targetFloat32OperandCode := fn(target: String, kind: String, code: String): String { if target == TARGET_TS { tsLiteral.float32OperandCode(kind, code) } else { cLiteral.float32OperandCode(kind, code) } }
 
 /** Selects the TS or C backend implementation for checked narrow integer arithmetic. */
 pub targetCheckedNarrowIntCode := fn(target: String, kind: String, value: String, position: Int): String { if target == TARGET_TS { tsLiteral.checkedNarrowIntCode(kind, value, position) } else { cLiteral.checkedNarrowIntCode(kind, value, position) } }
+
+/** Selects the TS or C backend implementation for checked narrow unsigned integer arithmetic. */
+pub targetCheckedNarrowUIntCode := fn(target: String, kind: String, value: String, position: Int): String { if target == TARGET_TS { tsLiteral.checkedNarrowUIntCode(kind, value, position) } else { cLiteral.checkedNarrowUIntCode(kind, value, position) } }
+
+/** Selects the TS or C backend implementation for one unsigned integer literal. */
+pub targetUIntLiteralCode := fn(target: String, digits: String): String { if target == TARGET_TS { tsLiteral.uintLiteralCode(digits) } else { cLiteral.uintLiteralCode(digits) } }
+
+/** Selects the TS or C backend implementation for checked unsigned integer arithmetic/division. */
+pub targetUIntBinaryCode := fn(target: String, operator: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.uintBinaryCode(operator, left, right, position) } else { cLiteral.uintBinaryCode(operator, left, right, position) } }
 
 /** Selects the TS or C backend implementation for exponentiation. */
 pub targetFloatPowerCode := fn(target: String, left: String, right: String, position: Int): String { if target == TARGET_TS { tsLiteral.floatPowerCode(left, right, position) } else { cLiteral.floatPowerCode(left, right, position) } }
@@ -490,3 +529,16 @@ pub localRuntimeName := fn(target: String, locals: List<Local>, name: String, mo
     }
     base
 };
+
+
+/** Selects the TS or C backend implementation for checked numeric `cast<Dst>(src)`. */
+pub targetNumericCastCode := fn(target: String, dstKind: String, srcKind: String, code: String, position: Int): String {
+    if target == TARGET_TS { tsLiteral.numericCastCode(dstKind, srcKind, code, position) }
+    else { cLiteral.numericCastCode(dstKind, srcKind, code, position) }
+}
+
+/** Selects the TS or C backend implementation for checked `<IntType>.trunc(floatExpr)`. */
+pub targetFloatTruncCode := fn(target: String, dstIntKind: String, srcFloatKind: String, code: String, position: Int): String {
+    if target == TARGET_TS { tsLiteral.floatTruncCode(dstIntKind, srcFloatKind, code, position) }
+    else { cLiteral.floatTruncCode(dstIntKind, srcFloatKind, code, position) }
+}

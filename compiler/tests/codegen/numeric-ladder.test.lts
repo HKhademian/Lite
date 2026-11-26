@@ -1,0 +1,163 @@
+/* Phase 2b Full Numeric Ladder, Checked Cast/Trunc, Bit-Packed Sub-Byte Arrays, Float8 E4M3 & Float16 parity tests. */
+
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+builtTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+builtC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + builtC.error, builtC.ok);
+tsComp := builtTs.path;
+cComp := builtC.path;
+
+ccProbe := compilerTest.probeCc();
+heavyEnv := proc.envGet("LITE_SKIP_HEAVY");
+skipHeavy := heavyEnv.found and heavyEnv.value == "1";
+
+/* 1. Verify C11 structs for bit-packed sub-byte arrays & compact float arrays */
+layoutSrc := [
+    "io := import \"core/io\";",
+    "a1: [Int1; 64] = [-1; 64];",
+    "a2: [Int2; 32] = [-2; 32];",
+    "a4: [Int4; 16] = [-8; 16];",
+    "u1: [UInt1; 64] = [1; 64];",
+    "u2: [UInt2; 32] = [3; 32];",
+    "u4: [UInt4; 16] = [15; 16];",
+    "f8s: [Float8; 4] = [0.5, 1.5, -2.0, 448.0];",
+    "f16s: [Float16; 4] = [0.25, 1.5, -3.5, 65504.0];",
+    "f32s: [Float32; 4] = [0.5, 1.5, -2.5, 3.5];",
+    "io.outputLine(a1[0], a2[1], a4[2], u1[63], u2[31], u4[15], f8s[3], f16s[3], f32s[2]);"
+].join("\n");
+
+cLayout := compilerTest.compileStdin(root, cComp, layoutSrc, "");
+test.checkInt("c layout compile status: " + cLayout.stderr, 0, cLayout.status);
+test.checkText("c layout compile stderr", "", cLayout.stderr);
+test.check("c layout packs [Int1; 64] to 8 bytes", cLayout.stdout.contains("typedef struct { uint8_t data[8]; } lt_arr_i1_64;"));
+test.check("c layout packs [Int2; 32] to 8 bytes", cLayout.stdout.contains("typedef struct { uint8_t data[8]; } lt_arr_i2_32;"));
+test.check("c layout packs [Int4; 16] to 8 bytes", cLayout.stdout.contains("typedef struct { uint8_t data[8]; } lt_arr_i4_16;"));
+test.check("c layout packs [UInt1; 64] to 8 bytes", cLayout.stdout.contains("typedef struct { uint8_t data[8]; } lt_arr_u1_64;"));
+test.check("c layout packs [UInt2; 32] to 8 bytes", cLayout.stdout.contains("typedef struct { uint8_t data[8]; } lt_arr_u2_32;"));
+test.check("c layout packs [UInt4; 16] to 8 bytes", cLayout.stdout.contains("typedef struct { uint8_t data[8]; } lt_arr_u4_16;"));
+test.check("c layout uses float[4] for [Float32; 4]", cLayout.stdout.contains("typedef struct { float data[4]; } lt_arr_f32_4;"));
+test.check("c layout uses lt_f16[4] for [Float16; 4]", cLayout.stdout.contains("typedef struct { lt_f16 data[4]; } lt_arr_f16_4;"));
+test.check("c layout uses uint8_t[4] + LUT for [Float8; 4]", cLayout.stdout.contains("typedef struct { uint8_t data[4]; } lt_arr_f8_4;") and cLayout.stdout.contains("lt_f8_lut[256]"));
+
+/* 2. Full TS & C11 behavioral parity across all 18 numeric types, casts, trunc, comparisons, and sub-byte arrays */
+paritySrc := [
+    "io := import \"core/io\";",
+    "i1a: Int1 = -1; i1b: Int1 = 0;",
+    "i2a: Int2 = -2; i2b: Int2 = 1;",
+    "i4a: Int4 = -8; i4b: Int4 = 7;",
+    "i8a: Int8 = -128; i8b: Int8 = 127;",
+    "i16a: Int16 = -32768; i16b: Int16 = 32767;",
+    "i32a: Int32 = -2147483648; i32b: Int32 = 2147483647;",
+    "i64a: Int64 = -1000000000000; i64b: Int = 1000000000000;",
+    "u1b: UInt1 = 1;",
+    "u2b: UInt2 = 3;",
+    "u4b: UInt4 = 15;",
+    "u8b: UInt8 = 255;",
+    "u16b: UInt16 = 65535;",
+    "u32b: UInt32 = 4294967295;",
+    "u64max: UInt64 = 18446744073709551615;",
+    "u64big: UInt64 = 10000000000000000000;",
+    "f8a: Float8 = 1.5; f8b: Float8 = -448.0;",
+    "f16a: Float16 = 0.5; f16b: Float16 = 65504.0;",
+    "f32a: Float32 = 1.25;",
+    "f64a: Float64 = 2.5;",
+    "dbl: Double = 3.5;",
+    "io.outputLine(\"ints:\", i1a, i1b, i2a, i2b, i4a, i4b, i8a, i8b, i16a, i16b, i32a, i32b, i64a, i64b);",
+    "io.outputLine(\"uints:\", u1b, u2b, u4b, u8b, u16b, u32b, u64max, u64big - 123);",
+    "io.outputLine(\"floats:\", f8a, f8b, f8a + 0.5, -f8a, f16a, f16b, f16a + 1.5, -f16a, f32a, f64a, dbl);",
+    "/* Checked casts & widening */",
+    "wU64: UInt64 = u8b;",
+    "wF64: Float = f8a;",
+    "cU8 := cast<UInt8>(i8b);",
+    "cI16 := cast<Int16>(u8b);",
+    "cU4 := cast<UInt4>(cast<Int32>(15));",
+    "cF16 := cast<Float16>(cast<UInt16>(65504));",
+    "cF8 := cast<Float8>(448.0);",
+    "io.outputLine(\"casts:\", wU64, wF64, cU8, cI16, cU4, cF16, cF8);",
+    "/* Checked float -> int truncation */",
+    "tI := Int.trunc(3.9);",
+    "tNeg := Int.trunc(-3.9);",
+    "tU8 := UInt8.trunc(255.9);",
+    "tNegZero := UInt8.trunc(-0.5);",
+    "tI4 := Int4.trunc(-8.9);",
+    "io.outputLine(\"trunc:\", tI, tNeg, tU8, tNegZero, tI4);",
+    "/* Bit-packed sub-byte array ops: literal, repeat, index, mutate, dot, loop, destructure, match, slice */",
+    "var nibbles: [Int4; 4] = [-8, -1, 0, 7];",
+    "nibbles[1] = 5;",
+    "var bits: [UInt1; 4] = [1; 4];",
+    "bits[2] = 0;",
+    "[d0, d1, d2, d3] := nibbles;",
+    "var sumN := 0;",
+    "loop nibbles as v {",
+    "    sumN += cast<Int>(v);",
+    "}",
+    "mVal := match nibbles { [-8, 5, 0, 7] { 1 } _ { 0 } };",
+    "sliced := nibbles[1..4];",
+    "io.outputLine(\"subbyte:\", nibbles, nibbles.0, d0, d1, d2, d3, sumN, mVal, sliced, bits);"
+].join("\n");
+
+runTs := compilerTest.compileCheckRunTs(root, tsComp, paritySrc, "numeric-ladder-parity.lts");
+test.checkInt("ts parity compile+run status: " + runTs.stderr, 0, runTs.status);
+test.checkText("ts parity stderr", "", runTs.stderr);
+
+if ccProbe.available and not skipHeavy {
+    runC := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, paritySrc, "numeric-ladder-parity.lts", "");
+    test.checkInt("c parity compile+run status: " + runC.stderr, 0, runC.status);
+    test.checkText("c parity stderr", "", runC.stderr);
+    test.checkText("ts vs c parity stdout", runTs.stdout, runC.stdout);
+
+    /* 3. Runtime ArithmeticPanic parity cases */
+    panicCases: List<String> = [
+        "io := import \"core/io\"; a: UInt8 = 0; io.outputLine(a - 1);",
+        "io := import \"core/io\"; a: UInt64 = 18446744073709551615; io.outputLine(a + 1);",
+        "io := import \"core/io\"; a: Int1 = -1; b: Int1 = -1; io.outputLine(a + b);",
+        "io := import \"core/io\"; io.outputLine(cast<Int1>(-2));",
+        "io := import \"core/io\"; a: Float8 = 448.0; io.outputLine(a * 2.0);",
+        "io := import \"core/io\"; a: Float16 = 65504.0; io.outputLine(a * 2.0);",
+        "io := import \"core/io\"; x := UInt8.trunc(-1.0); io.outputLine(x);",
+        "io := import \"core/io\"; x := cast<UInt8>(-1); io.outputLine(x);",
+        "io := import \"core/io\"; u: UInt16 = 65535; x := cast<Float16>(u); io.outputLine(x);",
+        "io := import \"core/io\"; x := cast<Int8>(cast<UInt8>(200)); io.outputLine(x);"
+    ];
+    var pi := 0;
+    loop pi < panicCases.length() {
+        pSrc := panicCases[pi];
+        pTs := compilerTest.compileCheckRunTs(root, tsComp, pSrc, "panic-" + pi.toText() + ".lts");
+        pC := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, pSrc, "panic-" + pi.toText() + ".lts", "");
+        test.checkInt("panic case " + pi.toText() + " ts status", 1, pTs.status);
+        test.checkInt("panic case " + pi.toText() + " c status", 1, pC.status);
+        test.check("panic case " + pi.toText() + " ts stderr", pTs.stderr.contains("ArithmeticPanic:"));
+        test.check("panic case " + pi.toText() + " c stderr", pC.stderr.contains("ArithmeticPanic:"));
+        pi += 1;
+    }
+}
+
+/* 4. Compile-time rejections: Float->Int cast, mixed signed/unsigned, unary negate unsigned */
+invalidCases: List<(src: String, msg: String)> = [
+    (src = "n: Int = cast(3.2);\n", msg = "cannot cast Float to Int"),
+    (src = "a: Int8 = 1; b: UInt8 = 2; c := a + b;\n", msg = "cannot mix signed Int8 and unsigned UInt8"),
+    (src = "a: Int = 1; b: UInt64 = 1; eq := a == b;\n", msg = "cannot mix signed and unsigned integers"),
+    (src = "a: UInt8 = 1; b := -a;\n", msg = "cannot negate unsigned integer")
+];
+var ii := 0;
+loop ii < invalidCases.length() {
+    ic := invalidCases[ii];
+    rTs := compilerTest.compileStdin(root, tsComp, ic.src, "invalid-" + ii.toText() + ".lts");
+    rC := compilerTest.compileStdin(root, cComp, ic.src, "invalid-" + ii.toText() + ".lts");
+    test.checkInt("invalid " + ii.toText() + " ts reject", 2, rTs.status);
+    test.checkInt("invalid " + ii.toText() + " c reject", 2, rC.status);
+    test.check("invalid " + ii.toText() + " ts msg: " + rTs.stderr, rTs.stderr.contains(ic.msg));
+    test.check("invalid " + ii.toText() + " c msg: " + rC.stderr, rC.stderr.contains(ic.msg));
+    ii += 1;
+}
+
+test.done("numeric-ladder");

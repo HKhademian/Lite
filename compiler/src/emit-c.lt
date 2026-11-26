@@ -1,4 +1,5 @@
 frontend := import "./frontend";
+numeric := import "./numeric-literals";
 cLiteral := import "./c-literals";
 emitFmt := import "./emit-format";
 optCfg := import "./opt-config";
@@ -56,6 +57,15 @@ cScalarType := fn(kind: String): String {
     else if frontend.cStructTag(kind) =!= "" { frontend.cStructTag(kind) }
     else if frontend.cFnTag(kind) =!= "" { frontend.cFnTag(kind) }
     else if kind == frontend.VALUE_KIND_UNIT or kind == frontend.VALUE_KIND_NEVER { "void" }
+    else if kind == frontend.VALUE_KIND_INT1 or kind == frontend.VALUE_KIND_INT2 or kind == frontend.VALUE_KIND_INT4 or kind == frontend.VALUE_KIND_INT8 { "int8_t" }
+    else if kind == frontend.VALUE_KIND_INT16 { "int16_t" }
+    else if kind == frontend.VALUE_KIND_INT32 { "int32_t" }
+    else if kind == frontend.VALUE_KIND_UINT1 or kind == frontend.VALUE_KIND_UINT2 or kind == frontend.VALUE_KIND_UINT4 or kind == frontend.VALUE_KIND_UINT8 or kind == frontend.VALUE_KIND_FLOAT8 { "uint8_t" }
+    else if kind == frontend.VALUE_KIND_UINT16 { "uint16_t" }
+    else if kind == frontend.VALUE_KIND_UINT32 { "uint32_t" }
+    else if kind == frontend.VALUE_KIND_UINT64 { "uint64_t" }
+    else if kind == frontend.VALUE_KIND_FLOAT16 { "lt_f16" }
+    else if kind == frontend.VALUE_KIND_FLOAT32 { "float" }
     else if frontend.isIntScalarKind(kind) or (frontend.isEnumKind(kind) and not frontend.isPayloadEnumKind(kind)) { "int64_t" }
     else if kind == frontend.VALUE_KIND_BOOL { "bool" }
     else if frontend.isFloatScalarKind(kind) { "double" }
@@ -72,9 +82,11 @@ cDeclTypeItem := fn(item: frontend.Item): String {
     } else if kind == frontend.ITEM_KIND_LOCAL_RECORD or kind == frontend.ITEM_KIND_VAR_RECORD or
     kind == frontend.ITEM_KIND_LOCAL_FN or kind == frontend.ITEM_KIND_VAR_FN {
         cScalarType(item.textValue) + " "
-    } else if kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT { "int64_t " }
-    else if kind == frontend.ITEM_KIND_LOCAL_FLOAT or kind == frontend.ITEM_KIND_VAR_FLOAT { "double " }
-    else if kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL { "bool " }
+    } else if kind == frontend.ITEM_KIND_LOCAL_INT or kind == frontend.ITEM_KIND_VAR_INT {
+        if item.textValue =!= "" { cScalarType(item.textValue) + " " } else { "int64_t " }
+    } else if kind == frontend.ITEM_KIND_LOCAL_FLOAT or kind == frontend.ITEM_KIND_VAR_FLOAT {
+        if item.textValue =!= "" { cScalarType(item.textValue) + " " } else { "double " }
+    } else if kind == frontend.ITEM_KIND_LOCAL_BOOL or kind == frontend.ITEM_KIND_VAR_BOOL { "bool " }
     else { "lt_str " }
 };
 
@@ -706,7 +718,10 @@ cCall := fn(kind: String, code: String): String {
             }
             "printf(\"%s\", ((const char *const[]){" + labels.join(", ") + "}[" + code + "]))"
         }
+        kind == frontend.VALUE_KIND_FLOAT8 { "lt_print_float(lt_f8_to_f64(" + code + "))" }
+        kind == frontend.VALUE_KIND_FLOAT16 { "lt_print_float(lt_f16_to_f64(" + code + "))" }
         frontend.isFloatScalarKind(kind) { "lt_print_float((double)(" + code + "))" }
+        numeric.isUnsignedIntKind(kind) { "printf(\"%\" PRIu64, (uint64_t)(" + code + "))" }
         frontend.cArrayTag(kind) =!= "" { frontend.cArrayTag(kind) + "_print(" + code + ")" }
         cListTagForKind(kind) =!= "" { "lt_list_" + cListTagForKind(kind) + "_print(" + code + ")" }
         frontend.cMapTag(kind) =!= "" { frontend.cMapTag(kind) + "_print(" + code + ")" }
@@ -837,20 +852,133 @@ usesIntDivision := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite_floor_divide_int(") or usesIntHelper(calls, "lite_floor_modulo_int(")
 }
 
-/** True when a program needs checked dynamic Int* arithmetic or narrow range guards. */
+/** True when a program needs checked dynamic Int or UInt arithmetic, narrow range guards, or numeric casts. */
 usesIntArithmetic := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_checked_add(") or usesIntHelper(calls, "lt_checked_subtract(") or
     usesIntHelper(calls, "lt_checked_multiply(") or usesIntHelper(calls, "lt_checked_negate(") or
-    usesIntHelper(calls, "lt_checked_narrow_int(")
+    usesIntHelper(calls, "lt_checked_narrow_int(") or usesIntHelper(calls, "lt_checked_uadd(") or
+    usesIntHelper(calls, "lt_checked_usub(") or usesIntHelper(calls, "lt_checked_umul(") or
+    usesIntHelper(calls, "lt_checked_udiv(") or usesIntHelper(calls, "lt_checked_urem(") or
+    usesIntHelper(calls, "lt_checked_narrow_uint(") or usesIntHelper(calls, "lt_cast_i2u(") or
+    usesIntHelper(calls, "lt_cast_u2i(") or usesIntHelper(calls, "lt_trunc_f64_to_int(") or
+    usesIntHelper(calls, "lt_trunc_f64_to_uint(")
 }
 
-/** True when binary64/binary32 operations need finite-result and zero-divisor guards. */
+/** True when Float/Float32/Float16/Float8 operations need finite-result and zero-divisor guards. */
 usesFloatArithmetic := fn(calls: Set<String>): Bool {
-    usesIntHelper(calls, "lt_float_op(") or usesIntHelper(calls, "lt_float32_op(") or usesIntHelper(calls, "lt_float_power(")
+    usesIntHelper(calls, "lt_float_op(") or usesIntHelper(calls, "lt_float32_op(") or
+    usesIntHelper(calls, "lt_float16_op(") or usesIntHelper(calls, "lt_float8_op(") or
+    usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_f64_to_f16_checked(") or
+    usesIntHelper(calls, "lt_f64_to_f32_checked(") or usesIntHelper(calls, "lt_float_power(")
 }
 
-/** Emits checked binary64/binary32 operations; caller temporaries preserve left-to-right operand effects. */
-emitFloatArithmeticHelpers := fn(calls: Set<String>): Unit {
+/** Emits checked Float8/Float16/Float32/Float operations; caller temporaries preserve left-to-right operand effects. */
+emitFloatArithmeticHelpers := fn(calls: Set<String>, float8Values: Bool, float16Values: Bool, float8Literals: Bool, float16Literals: Bool): Unit {
+    needF8 := float8Values or float8Literals or usesIntHelper(calls, "lt_f8_to_f64(") or usesIntHelper(calls, "lt_f8_neg(") or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_float8_op(");
+    needF16 := float16Values or float16Literals or usesIntHelper(calls, "lt_f16_to_f64(") or usesIntHelper(calls, "lt_f16_neg(") or usesIntHelper(calls, "lt_f64_to_f16") or usesIntHelper(calls, "lt_float16_op(");
+    if needF8 {
+        lutBuf: mut tb.TextBuilder;
+        var b := 0;
+        loop b < 256 {
+            s := b / 128;
+            em := b % 128;
+            e := em / 8;
+            m := em % 8;
+            sign := if s =!= 0 { "-" } else { "" };
+            entry := if e == 15 and m == 7 { "0.0f" }
+            else if e == 0 and m == 0 { sign + "0.0f" }
+            else if e == 0 { sign + "0x" + m.toText() + "p-9f" }
+            else {
+                mantHex := "0123456789abcdef".at(8 + m);
+                sign + "0x" + mantHex + "p" + (e - 10).toText() + "f"
+            };
+            if b > 0 { mut lutBuf.append(", "); }
+            mut lutBuf.append(entry);
+            b = b + 1;
+        }
+        outLine("static const float lt_f8_lut[256] = { " + lutBuf.build() + " };");
+        outLine("LT_INLINE double lt_f8_to_f64(uint8_t b) { return (double)lt_f8_lut[b]; }");
+        outLine("LT_INLINE uint8_t lt_f8_neg(uint8_t b) { return (uint8_t)(b ^ 0x80u); }");
+        if float8Literals or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_float8_op(") {
+            outLine("static uint8_t lt_f64_to_f8(double x, size_t at) {");
+            outLine("    if (!isfinite(x)) { lt_int_fault(at, \"non-finite floating value\"); }");
+            outLine("    uint8_t sign = signbit(x) ? 0x80u : 0u;");
+            outLine("    double ax = fabs(x);");
+            outLine("    if (ax == 0.0) { return sign; }");
+            outLine("    if (ax >= 464.0) { lt_int_fault(at, \"non-finite floating value\"); }");
+            outLine("    if (ax < 0x1p-6) {");
+            outLine("        double scaled = ax * 512.0; double fl = floor(scaled); double rem = scaled - fl; uint8_t m = (uint8_t)fl;");
+            outLine("        if (rem > 0.5 || (rem == 0.5 && (m & 1u) != 0u)) { m += 1u; }");
+            outLine("        return (uint8_t)(sign | (m == 8u ? 0x08u : m));");
+            outLine("    }");
+            outLine("    int e2 = 0; double f = frexp(ax, &e2); int e = (e2 - 1) + 7;");
+            outLine("    double scaled = (2.0 * f - 1.0) * 8.0; double fl = floor(scaled); double rem = scaled - fl; uint8_t m = (uint8_t)fl;");
+            outLine("    if (rem > 0.5 || (rem == 0.5 && (m & 1u) != 0u)) { m += 1u; }");
+            outLine("    if (m == 8u) { m = 0u; e += 1; }");
+            outLine("    return (uint8_t)(sign | (uint8_t)(e << 3) | m);");
+            outLine("}");
+        }
+        if float8Literals { outLine("static uint8_t lt_float8_literal(const char *text) { return lt_f64_to_f8(strtod(text, NULL), 0); }"); }
+        if usesIntHelper(calls, "lt_float8_op(") {
+            outLine("static uint8_t lt_float8_op(double left, double right, int op, size_t at) {");
+            outLine("    if (op == 3 && right == 0.0) { lt_int_fault(at, \"division by zero\"); }");
+            outLine("    double value = op == 0 ? left + right : op == 1 ? left - right : op == 2 ? left * right : left / right;");
+            outLine("    return lt_f64_to_f8(value, at);");
+            outLine("}");
+        }
+    }
+    if needF16 {
+        outLine("#if defined(__FLT16_MANT_DIG__)");
+        outLine("LT_INLINE double lt_f16_to_f64(lt_f16 v) { return (double)v; }");
+        outLine("LT_INLINE lt_f16 lt_f64_to_f16_unchecked(double v) { return (lt_f16)v; }");
+        outLine("LT_INLINE lt_f16 lt_f16_neg(lt_f16 v) { return -v; }");
+        outLine("#else");
+        outLine("LT_INLINE double lt_f16_to_f64(lt_f16 h) {");
+        outLine("    uint32_t s = (h >> 15) & 1u; int32_t e = (h >> 10) & 0x1fu; uint32_t m = h & 0x3ffu;");
+        outLine("    double v = (e == 0) ? ldexp((double)m, -24) : (e == 31) ? (m ? NAN : INFINITY) : ldexp((double)(0x400u + m), e - 25);");
+        outLine("    return s ? -v : v;");
+        outLine("}");
+        outLine("static lt_f16 lt_f64_to_f16_unchecked(double x) {");
+        outLine("    if (isnan(x)) { return 0x7e00u; }");
+        outLine("    uint16_t sign = signbit(x) ? 0x8000u : 0u;");
+        outLine("    double ax = fabs(x);");
+        outLine("    if (ax == 0.0) { return sign; }");
+        outLine("    if (isinf(ax) || ax >= 65520.0) { return (uint16_t)(sign | 0x7c00u); }");
+        outLine("    if (ax < 0x1p-14) {");
+        outLine("        double scaled = ldexp(ax, 24); double fl = floor(scaled); double rem = scaled - fl; uint16_t m = (uint16_t)fl;");
+        outLine("        if (rem > 0.5 || (rem == 0.5 && (m & 1u) != 0u)) { m += 1u; }");
+        outLine("        return (uint16_t)(sign | (m == 1024u ? 0x0400u : m));");
+        outLine("    }");
+        outLine("    int e2 = 0; double f = frexp(ax, &e2); int e = (e2 - 1) + 15;");
+        outLine("    double scaled = (2.0 * f - 1.0) * 1024.0; double fl = floor(scaled); double rem = scaled - fl; uint16_t m = (uint16_t)fl;");
+        outLine("    if (rem > 0.5 || (rem == 0.5 && (m & 1u) != 0u)) { m += 1u; }");
+        outLine("    if (m == 1024u) { m = 0u; e += 1; }");
+        outLine("    return (uint16_t)(sign | (uint16_t)(e << 10) | m);");
+        outLine("}");
+        outLine("LT_INLINE lt_f16 lt_f16_neg(lt_f16 h) { return (lt_f16)(h ^ 0x8000u); }");
+        outLine("#endif");
+        if usesIntHelper(calls, "lt_f64_to_f16_checked(") or usesIntHelper(calls, "lt_float16_op(") {
+            outLine("static lt_f16 lt_f64_to_f16_checked(double v, size_t at) {");
+            outLine("    if (!isfinite(v) || fabs(v) >= 65520.0) { lt_int_fault(at, \"non-finite floating value\"); }");
+            outLine("    return lt_f64_to_f16_unchecked(v);");
+            outLine("}");
+        }
+        if float16Literals { outLine("static lt_f16 lt_float16_literal(const char *text) { return lt_f64_to_f16_unchecked(strtod(text, NULL)); }"); }
+        if usesIntHelper(calls, "lt_float16_op(") {
+            outLine("static lt_f16 lt_float16_op(double left, double right, int op, size_t at) {");
+            outLine("    if (op == 3 && right == 0.0) { lt_int_fault(at, \"division by zero\"); }");
+            outLine("    double value = op == 0 ? left + right : op == 1 ? left - right : op == 2 ? left * right : left / right;");
+            outLine("    return lt_f64_to_f16_checked(value, at);");
+            outLine("}");
+        }
+    }
+    if usesIntHelper(calls, "lt_f64_to_f32_checked(") {
+        outLine("static float lt_f64_to_f32_checked(double v, size_t at) {");
+        outLine("    float r = (float)v;");
+        outLine("    if (!isfinite(r)) { lt_int_fault(at, \"non-finite floating value\"); }");
+        outLine("    return r;");
+        outLine("}");
+    }
     if not usesFloatArithmetic(calls) { return; }
     if usesIntHelper(calls, "lt_float_power(") {
         outLine("static double lt_float_power(double left, double right, size_t at) {");
@@ -861,13 +989,13 @@ emitFloatArithmeticHelpers := fn(calls: Set<String>): Unit {
         outLine("}");
     }
     if usesIntHelper(calls, "lt_float32_op(") {
-        outLine("static double lt_float32_op(double left, double right, int op, size_t at) {");
+        outLine("static float lt_float32_op(double left, double right, int op, size_t at) {");
         outLine("    const float l = (float)left;");
         outLine("    const float r = (float)right;");
         outLine("    if (op == 3 && r == 0.0f) { lt_int_fault(at, \"division by zero\"); }");
         outLine("    float value = op == 0 ? l + r : op == 1 ? l - r : op == 2 ? l * r : l / r;");
         outLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
-        outLine("    return (double)value;");
+        outLine("    return value;");
         outLine("}");
     }
     if not usesIntHelper(calls, "lt_float_op(") { return; }
@@ -1161,7 +1289,10 @@ emitCMapHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrin
     kTag := frontend.cMapKeyTag(kKind);
     kType := cScalarType(kKind);
     vType := cScalarType(vKind);
-    kEq := if kTag == "str" { "lt_text_eq(a, b)" } else { "a == b" };
+    kEq := if kTag == "str" { "lt_text_eq(a, b)" }
+    else if kTag == "f8" { "lt_f8_to_f64(a) == lt_f8_to_f64(b)" }
+    else if kTag == "f16" { "lt_f16_to_f64(a) == lt_f16_to_f64(b)" }
+    else { "a == b" };
     vCopy := if cListTagForKind(vKind) =!= "" { "lt_list_" + cListTagForKind(vKind) + "_copy(v)" }
     else if frontend.cMapTag(vKind) =!= "" { frontend.cMapTag(vKind) + "_copy(v)" }
     else if frontend.cSetTag(vKind) =!= "" { frontend.cSetTag(vKind) + "_copy(v)" }
@@ -1189,7 +1320,16 @@ emitCMapHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrin
         if kTag == "str" {
             outLine("    return lt_text_hash(k);");
         } else {
-            outLine("    uint64_t x = (uint64_t)k;");
+            if kTag == "f64" or kTag == "f16" {
+                dExpr := if kTag == "f16" { "lt_f16_to_f64(k)" } else { "k" };
+                outLine("    double d = " + dExpr + "; double c = (d == 0.0) ? 0.0 : d; uint64_t x = 0; memcpy(&x, &c, sizeof(x));");
+            } else if kTag == "f32" {
+                outLine("    float c = (k == 0.0f) ? 0.0f : k; uint32_t b = 0; memcpy(&b, &c, sizeof(b)); uint64_t x = (uint64_t)b;");
+            } else if kTag == "f8" {
+                outLine("    uint64_t x = (k == 0x80u) ? UINT64_C(0) : (uint64_t)k;");
+            } else {
+                outLine("    uint64_t x = (uint64_t)k;");
+            }
             outLine("    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);");
             outLine("    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);");
             outLine("    return x ^ (x >> 31);");
@@ -1437,7 +1577,10 @@ emitCSetHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrin
     kTag := frontend.cMapKeyTag(eKind);
     eType := cScalarType(eKind);
     eConstPtr := "const " + eType + " *";
-    kEq := if kTag == "str" { "lt_text_eq(a, b)" } else { "a == b" };
+    kEq := if kTag == "str" { "lt_text_eq(a, b)" }
+    else if kTag == "f8" { "lt_f8_to_f64(a) == lt_f8_to_f64(b)" }
+    else if kTag == "f16" { "lt_f16_to_f64(a) == lt_f16_to_f64(b)" }
+    else { "a == b" };
     hasFrom := usesIntHelper(calls, sTag + "_from(");
     hasCopy := needCopy or usesIntHelper(calls, sTag + "_copy(");
     hasAdd := usesIntHelper(calls, sTag + "_add(");
@@ -1454,7 +1597,16 @@ emitCSetHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrin
         if kTag == "str" {
             outLine("    return lt_text_hash(k);");
         } else {
-            outLine("    uint64_t x = (uint64_t)k;");
+            if kTag == "f64" or kTag == "f16" {
+                dExpr := if kTag == "f16" { "lt_f16_to_f64(k)" } else { "k" };
+                outLine("    double d = " + dExpr + "; double c = (d == 0.0) ? 0.0 : d; uint64_t x = 0; memcpy(&x, &c, sizeof(x));");
+            } else if kTag == "f32" {
+                outLine("    float c = (k == 0.0f) ? 0.0f : k; uint32_t b = 0; memcpy(&b, &c, sizeof(b)); uint64_t x = (uint64_t)b;");
+            } else if kTag == "f8" {
+                outLine("    uint64_t x = (k == 0x80u) ? UINT64_C(0) : (uint64_t)k;");
+            } else {
+                outLine("    uint64_t x = (uint64_t)k;");
+            }
             outLine("    x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);");
             outLine("    x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);");
             outLine("    return x ^ (x >> 31);");
@@ -1808,8 +1960,11 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, nee
         outLine("    if (printf(\"[\") < 0) { return -1; }");
         outLine("    for (int64_t i = 0; i < xs.len; i += 1) {");
         outLine("        if (i > 0 && printf(\", \") < 0) { return -1; }");
-        elemPrint := if tag == "i64" { "printf(\"%\" PRId64, xs.data[i])" }
-        else if tag == "f64" { "lt_print_float(xs.data[i])" }
+        elemPrint := if tag == "i64" or tag == "i32" or tag == "i16" or tag == "i8" or tag == "i4" or tag == "i2" or tag == "i1" { "printf(\"%\" PRId64, (int64_t)xs.data[i])" }
+        else if tag == "u64" or tag == "u32" or tag == "u16" or tag == "u8" or tag == "u4" or tag == "u2" or tag == "u1" { "printf(\"%\" PRIu64, (uint64_t)xs.data[i])" }
+        else if tag == "f64" or tag == "f32" { "lt_print_float((double)xs.data[i])" }
+        else if tag == "f8" { "lt_print_float(lt_f8_to_f64(xs.data[i]))" }
+        else if tag == "f16" { "lt_print_float(lt_f16_to_f64(xs.data[i]))" }
         else if tag == "bool" { "printf(\"%s\", xs.data[i] ? \"true\" : \"false\")" }
         else if tag == "str" { "lt_print_str(xs.data[i])" }
         else { tag + "_print(xs.data[i])" };
@@ -1842,26 +1997,76 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
         "val"
     };
     elemNeedsDeepCopy := frontend.cTypeHasListField(elKind);
+    isSubByte := ext > 0 and numeric.isSubByteIntKind(elKind);
+    subBits := if isSubByte { numeric.narrowIntBits(elKind) } else { 0 };
+    hasFrom := isSubByte and usesIntHelper(calls, aTag + "_from(");
     hasRepeat := ext > 0 and usesIntHelper(calls, aTag + "_repeat(");
     hasCopy := elemNeedsDeepCopy and (needCopy or usesIntHelper(calls, aTag + "_copy("));
     hasAt := usesIntHelper(calls, aTag + "_at(");
     hasSet := usesIntHelper(calls, aTag + "_set(");
     hasSliceFrom := usesIntHelper(calls, aTag + "_slice_from(");
     hasSlice := usesIntHelper(calls, aTag + "_slice(") or hasSliceFrom;
+    hasGetRaw := isSubByte and (needPrint or hasAt or hasSlice or usesIntHelper(calls, aTag + "_get_raw("));
+    hasSetRaw := isSubByte and (hasFrom or hasRepeat or hasSet);
     if ext == 0 {
         outLine("typedef struct { uint8_t _empty; } " + aTag + ";");
+    } else if isSubByte {
+        byteCount := (ext * subBits + 7) :/ 8;
+        outLine("typedef struct { uint8_t data[" + byteCount.toText() + "]; } " + aTag + ";");
     } else {
         outLine("typedef struct { " + cElemType + " data[" + extStr + "]; } " + aTag + ";");
     }
+    if hasGetRaw {
+        maskHex := if subBits == 1 { "1u" } else if subBits == 2 { "3u" } else { "0x0fu" };
+        shiftExpr := if subBits == 1 { "(unsigned)((size_t)idx & 7u)" } else if subBits == 2 { "(unsigned)(((size_t)idx & 3u) << 1)" } else { "(unsigned)(((size_t)idx & 1u) << 2)" };
+        byteShift := if subBits == 1 { "3" } else if subBits == 2 { "2" } else { "1" };
+        outLine("LT_INLINE " + cElemType + " " + aTag + "_get_raw(" + aTag + " xs, int64_t idx) {");
+        outLine("    uint8_t b = (uint8_t)((xs.data[(size_t)idx >> " + byteShift + "] >> " + shiftExpr + ") & " + maskHex + ");");
+        if numeric.isSignedIntKind(elKind) {
+            if subBits == 1 {
+                outLine("    return (int8_t)(b ? -1 : 0);");
+            } else if subBits == 2 {
+                outLine("    return (int8_t)b - (int8_t)((b & 2u) << 1);");
+            } else {
+                outLine("    return (int8_t)b - (int8_t)((b & 8u) << 1);");
+            }
+        } else {
+            outLine("    return b;");
+        }
+        outLine("}");
+    }
+    if hasSetRaw {
+        maskHex := if subBits == 1 { "1u" } else if subBits == 2 { "3u" } else { "0x0fu" };
+        shiftExpr := if subBits == 1 { "(unsigned)((size_t)idx & 7u)" } else if subBits == 2 { "(unsigned)(((size_t)idx & 3u) << 1)" } else { "(unsigned)(((size_t)idx & 1u) << 2)" };
+        byteShift := if subBits == 1 { "3" } else if subBits == 2 { "2" } else { "1" };
+        outLine("LT_INLINE void " + aTag + "_set_raw(" + aTag + " *xs, int64_t idx, " + cElemType + " val) {");
+        outLine("    size_t bi = (size_t)idx >> " + byteShift + ";");
+        outLine("    unsigned sh = " + shiftExpr + ";");
+        outLine("    xs->data[bi] = (uint8_t)((xs->data[bi] & ~(uint8_t)(" + maskHex + " << sh)) | (uint8_t)(((uint8_t)val & " + maskHex + ") << sh));");
+        outLine("}");
+    }
+    if hasFrom {
+        outLine("static " + aTag + " " + aTag + "_from(const " + cElemType + " *vals) {");
+        outLine("    " + aTag + " out = { 0 };");
+        outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) { " + aTag + "_set_raw(&out, i, vals[i]); }");
+        outLine("    return out;");
+        outLine("}");
+    }
     if hasRepeat {
         outLine("static " + aTag + " " + aTag + "_repeat(" + cElemType + " val) {");
-        outLine("    " + aTag + " out;");
-        if elemNeedsDeepCopy {
-            outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) { out.data[i] = " + elCopyExpr + "; }");
+        if isSubByte {
+            outLine("    " + aTag + " out = { 0 };");
+            outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) { " + aTag + "_set_raw(&out, i, val); }");
+            outLine("    return out;");
         } else {
-            outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) { out.data[i] = val; }");
+            outLine("    " + aTag + " out;");
+            if elemNeedsDeepCopy {
+                outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) { out.data[i] = " + elCopyExpr + "; }");
+            } else {
+                outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) { out.data[i] = val; }");
+            }
+            outLine("    return out;");
         }
-        outLine("    return out;");
         outLine("}");
     }
     if hasCopy {
@@ -1880,6 +2085,9 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
         if ext == 0 {
             outLine("    (void)xs; (void)idx;");
             outLine("    lt_bound_fault(at, \"list index outside its extent\");");
+        } else if isSubByte {
+            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            outLine("    return " + aTag + "_get_raw(xs, idx);");
         } else {
             outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
             outLine("    return xs.data[idx];");
@@ -1891,6 +2099,9 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
         if ext == 0 {
             outLine("    (void)xs; (void)idx; (void)val;");
             outLine("    lt_bound_fault(at, \"list index outside its extent\");");
+        } else if isSubByte {
+            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            outLine("    " + aTag + "_set_raw(xs, idx, val);");
         } else {
             outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
             outLine("    xs->data[idx] = val;");
@@ -1905,6 +2116,15 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
         if ext == 0 {
             outLine("    (void)xs; (void)start; (void)end;");
             outLine("    return " + lType + "_from(0, NULL);");
+        } else if isSubByte {
+            outLine("    int64_t n = end - start;");
+            outLine("    if (n == 0) { return " + lType + "_from(0, NULL); }");
+            outLine("    " + cElemType + " *tmp = malloc((size_t)n * sizeof(" + cElemType + "));");
+            outLine("    if (tmp == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate slice\\n\"); exit(1); }");
+            outLine("    for (int64_t i = 0; i < n; i += 1) { tmp[i] = " + aTag + "_get_raw(xs, start + i); }");
+            outLine("    " + lType + " out = " + lType + "_from(n, tmp);");
+            outLine("    free(tmp);");
+            outLine("    return out;");
         } else {
             outLine("    return " + lType + "_from(end - start, xs.data + start);");
         }
@@ -1923,10 +2143,11 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
             outLine("    (void)xs;");
             outLine("    return printf(\"[]\");");
         } else {
+            elemExpr := if isSubByte { aTag + "_get_raw(xs, i)" } else { "xs.data[i]" };
             outLine("    if (printf(\"[\") < 0) { return -1; }");
             outLine("    for (int64_t i = 0; i < " + extStr + "; i += 1) {");
             outLine("        if (i > 0 && printf(\", \") < 0) { return -1; }");
-            outLine("        if (" + cCall(elKind, "xs.data[i]") + " < 0) { return -1; }");
+            outLine("        if (" + cCall(elKind, elemExpr) + " < 0) { return -1; }");
             outLine("    }");
             outLine("    return printf(\"]\");");
         }
@@ -2020,6 +2241,7 @@ emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: Strin
     }
     if usesIntHelper(calls, "lt_checked_narrow_int(") {
         outLine("LT_INLINE int64_t lt_checked_narrow_int(int64_t value, int bits, const char *name, size_t at) {");
+        outLine("    if (bits >= 64) { return value; }");
         outLine("    const int64_t limit = INT64_C(1) << (bits - 1);");
         outLine("    if (LT_UNLIKELY(value < -limit || value >= limit)) {");
         outLine("        char message[64];");
@@ -2027,6 +2249,107 @@ emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: Strin
         outLine("        lt_int_fault(at, message);");
         outLine("    }");
         outLine("    return value;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_checked_uadd(") {
+        outLine("LT_INLINE uint64_t lt_checked_uadd(uint64_t left, uint64_t right, size_t at) {");
+        outLine("#if defined(__GNUC__) || defined(__clang__)");
+        outLine("    uint64_t out = 0;");
+        outLine("    if (LT_UNLIKELY(__builtin_add_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+        outLine("    return out;");
+        outLine("#else");
+        outLine("    if (LT_UNLIKELY(left > UINT64_MAX - right)) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+        outLine("    return left + right;");
+        outLine("#endif");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_checked_usub(") {
+        outLine("LT_INLINE uint64_t lt_checked_usub(uint64_t left, uint64_t right, size_t at) {");
+        outLine("    if (LT_UNLIKELY(left < right)) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+        outLine("    return left - right;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_checked_umul(") {
+        outLine("LT_INLINE uint64_t lt_checked_umul(uint64_t left, uint64_t right, size_t at) {");
+        outLine("#if defined(__GNUC__) || defined(__clang__)");
+        outLine("    uint64_t out = 0;");
+        outLine("    if (LT_UNLIKELY(__builtin_mul_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+        outLine("    return out;");
+        outLine("#else");
+        outLine("    if (left != 0 && right > UINT64_MAX / left) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+        outLine("    return left * right;");
+        outLine("#endif");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_checked_udiv(") {
+        outLine("LT_INLINE uint64_t lt_checked_udiv(uint64_t left, uint64_t right, size_t at) {");
+        outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"division by zero\"); }");
+        outLine("    return left / right;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_checked_urem(") {
+        outLine("LT_INLINE uint64_t lt_checked_urem(uint64_t left, uint64_t right, size_t at) {");
+        outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"division by zero\"); }");
+        outLine("    return left % right;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_checked_narrow_uint(") {
+        outLine("LT_INLINE uint64_t lt_checked_narrow_uint(uint64_t value, int bits, const char *name, size_t at) {");
+        outLine("    if (bits >= 64) { return value; }");
+        outLine("    const uint64_t limit = UINT64_C(1) << (bits & 63);");
+        outLine("    if (LT_UNLIKELY(value >= limit)) {");
+        outLine("        char message[64];");
+        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+        outLine("        lt_int_fault(at, message);");
+        outLine("    }");
+        outLine("    return value;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_cast_i2u(") {
+        outLine("LT_INLINE uint64_t lt_cast_i2u(int64_t value, int bits, const char *name, size_t at) {");
+        outLine("    if (LT_UNLIKELY(value < 0 || (bits < 64 && (uint64_t)value >= (UINT64_C(1) << (bits & 63))))) {");
+        outLine("        char message[64];");
+        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+        outLine("        lt_int_fault(at, message);");
+        outLine("    }");
+        outLine("    return (uint64_t)value;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_cast_u2i(") {
+        outLine("LT_INLINE int64_t lt_cast_u2i(uint64_t value, int bits, const char *name, size_t at) {");
+        outLine("    const uint64_t maxv = (UINT64_C(1) << (bits - 1)) - UINT64_C(1);");
+        outLine("    if (LT_UNLIKELY(value > maxv)) {");
+        outLine("        char message[64];");
+        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+        outLine("        lt_int_fault(at, message);");
+        outLine("    }");
+        outLine("    return (int64_t)value;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_trunc_f64_to_int(") {
+        outLine("LT_INLINE int64_t lt_trunc_f64_to_int(double value, int bits, const char *name, size_t at) {");
+        outLine("    if (LT_UNLIKELY(!isfinite(value))) { lt_int_fault(at, \"non-finite floating value\"); }");
+        outLine("    double t = trunc(value);");
+        outLine("    bool oob = (bits == 64) ? (t < -9223372036854775808.0 || t >= 9223372036854775808.0) : (t < -(double)(UINT64_C(1) << (bits - 1)) || t >= (double)(UINT64_C(1) << (bits - 1)));");
+        outLine("    if (LT_UNLIKELY(oob)) {");
+        outLine("        char message[64];");
+        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+        outLine("        lt_int_fault(at, message);");
+        outLine("    }");
+        outLine("    return (int64_t)t;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_trunc_f64_to_uint(") {
+        outLine("LT_INLINE uint64_t lt_trunc_f64_to_uint(double value, int bits, const char *name, size_t at) {");
+        outLine("    if (LT_UNLIKELY(!isfinite(value))) { lt_int_fault(at, \"non-finite floating value\"); }");
+        outLine("    double t = trunc(value);");
+        outLine("    bool oob = (t < 0.0) || ((bits == 64) ? (t >= 18446744073709551616.0) : (t >= (double)(UINT64_C(1) << (bits & 63))));");
+        outLine("    if (LT_UNLIKELY(oob)) {");
+        outLine("        char message[64];");
+        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+        outLine("        lt_int_fault(at, message);");
+        outLine("    }");
+        outLine("    return (uint64_t)t;");
         outLine("}");
     }
     outLine("");
@@ -2066,9 +2389,9 @@ emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
                 tName := code.slice(hit, end);
                 if not seen.has(tName) {
                     mut seen.add(tName);
-                    tag := if code.startsWithAt(hit, "lt_cmp_") or code.startsWithAt(hit, "lt_arg_f_") { code.at(hit + 7) } else { "i" };
+                    tag := if code.startsWithAt(hit, "lt_cmp_") or code.startsWithAt(hit, "lt_arg_f_") or code.startsWithAt(hit, "lt_arg_u_") { code.at(hit + 7) } else { "i" };
                     typeCode := if tag == "s" { "lt_str " } else if tag == "b" { "bool " }
-                    else if tag == "f" { "double " } else { "int64_t " };
+                    else if tag == "f" { "double " } else if tag == "u" { "uint64_t " } else { "int64_t " };
                     outLine("    " + typeCode + tName + ";");
                 }
             }
@@ -2111,9 +2434,9 @@ injectCFnTemps := fn(code: String): String {
             tName := code.slice(hit, end);
             if not seen.has(tName) {
                 mut seen.add(tName);
-                tag := if code.startsWithAt(hit, "lt_cmp_") or code.startsWithAt(hit, "lt_arg_f_") { code.at(hit + 7) } else { "i" };
+                tag := if code.startsWithAt(hit, "lt_cmp_") or code.startsWithAt(hit, "lt_arg_f_") or code.startsWithAt(hit, "lt_arg_u_") { code.at(hit + 7) } else { "i" };
                 typeCode := if tag == "s" { "lt_str " } else if tag == "b" { "bool " }
-                else if tag == "f" { "double " } else { "int64_t " };
+                else if tag == "f" { "double " } else if tag == "u" { "uint64_t " } else { "int64_t " };
                 mut decls.append(typeCode + tName + "; ");
             }
         }
@@ -2394,6 +2717,9 @@ isCStaticConstIntCode := fn(code: String): Bool {
     if code.startsWithAt(0, "INT64_C(") and code.endsWith(")") {
         return isCAsciiDigits(code, 8, n - 1);
     }
+    if code.startsWithAt(0, "UINT64_C(") and code.endsWith(")") {
+        return isCAsciiDigits(code, 9, n - 1);
+    }
     if code.startsWithAt(0, "(-INT64_C(") and code.endsWith("))") {
         return isCAsciiDigits(code, 10, n - 2);
     }
@@ -2668,7 +2994,12 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 outLine(indent + "    (void)" + seqVar + ";");
                 outLine(indent + "    for (int64_t " + idxVar + " = 0; " + idxVar + " < " + aExt.toText() + "; " + idxVar + " += 1) {");
                 if item.runtime =!= "" {
-                    outLine(indent + "        " + cScalarType(item.textValue) + " " + item.runtime + " = " + seqVar + ".data[" + idxVar + "];");
+                    elemRead := if numeric.isSubByteIntKind(item.textValue) {
+                        aTag + "_get_raw(" + seqVar + ", " + idxVar + ")"
+                    } else {
+                        seqVar + ".data[" + idxVar + "]"
+                    };
+                    outLine(indent + "        " + cScalarType(item.textValue) + " " + item.runtime + " = " + elemRead + ";");
                     outLine(indent + "        (void)" + item.runtime + ";");
                 }
                 indent = indent + "        ";
@@ -5757,11 +6088,15 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     var hasFnOutput := false;
     var hasUnreachable := false;
     floatLiterals := usesIntHelper(calls, "lt_float_literal(");
+    float8Literals := usesIntHelper(calls, "lt_float8_literal(");
+    float16Literals := usesIntHelper(calls, "lt_float16_literal(");
     float32Literals := usesIntHelper(calls, "lt_float32_literal(");
     hasFloatToText := usesIntHelper(calls, "lite$floatToText(");
     hasFloat32ToText := usesIntHelper(calls, "lite$float32ToText(");
-    var float32Values := float32Literals or hasFloat32ToText or usesIntHelper(calls, "lt_float32_op(");
-    var floatValues := floatLiterals or float32Values or hasFloatToText or usesFloatArithmetic(calls);
+    var float8Values := float8Literals or usesIntHelper(calls, "lt_f8_") or usesIntHelper(calls, "lt_float8_") or usesIntHelper(calls, "lt_f64_to_f8(");
+    var float16Values := float16Literals or usesIntHelper(calls, "lt_f16_") or usesIntHelper(calls, "lt_float16_") or usesIntHelper(calls, "lt_f64_to_f16");
+    var float32Values := float32Literals or hasFloat32ToText or usesIntHelper(calls, "lt_float32_op(") or usesIntHelper(calls, "lt_f64_to_f32_checked(");
+    var floatValues := floatLiterals or float8Values or float16Values or float32Values or hasFloatToText or usesFloatArithmetic(calls);
     fnRefTokens: mut Set<String>;
     var fnDepth := 0;
     loop reachable as item {
@@ -5771,6 +6106,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         if frontend.isFloatScalarKind(baseItemKind) or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or
         (frontend.isDistinctKind(item.textValue) and frontend.isFloatScalarKind(frontend.distinctBaseKind(item.textValue))) or
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isFloatScalarKind(baseDiscardKind)) { floatValues = true; }
+        if baseItemKind == frontend.VALUE_KIND_FLOAT8 or (item.kind == frontend.ITEM_KIND_DISCARD and baseDiscardKind == frontend.VALUE_KIND_FLOAT8) or item.textValue == frontend.VALUE_KIND_FLOAT8 or item.textValue.indexOf("Float8", 0) >= 0 or item.code.indexOf("Float8", 0) >= 0 { float8Values = true; floatValues = true; }
+        if baseItemKind == frontend.VALUE_KIND_FLOAT16 or (item.kind == frontend.ITEM_KIND_DISCARD and baseDiscardKind == frontend.VALUE_KIND_FLOAT16) or item.textValue == frontend.VALUE_KIND_FLOAT16 or item.textValue.indexOf("Float16", 0) >= 0 or item.code.indexOf("Float16", 0) >= 0 { float16Values = true; floatValues = true; }
         if baseItemKind == frontend.VALUE_KIND_FLOAT32 or (item.kind == frontend.ITEM_KIND_DISCARD and baseDiscardKind == frontend.VALUE_KIND_FLOAT32) { float32Values = true; }
         if item.kind == frontend.ITEM_KIND_UNREACHABLE { hasUnreachable = true; }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
@@ -6147,6 +6484,9 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     outLine("#include <string.h>");
     var hasStrMapOrSet := false;
     loop orderedEntries as oe {
+        if oe.indexOf("Float8", 0) >= 0 { float8Values = true; floatValues = true; }
+        if oe.indexOf("Float16", 0) >= 0 { float16Values = true; floatValues = true; }
+        if oe.indexOf("Float32", 0) >= 0 { float32Values = true; floatValues = true; }
         if oe.startsWithAt(0, "M|Map<String,") or oe == "E|Set<String>" {
             hasStrMapOrSet = true;
             break;
@@ -6220,7 +6560,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("#include <poll.h>");
         outLine("#include <sys/wait.h>");
     }
-    if usesFloatArithmetic(calls) or hasInputFloat or hasExtraCanvas { outLine("#include <math.h>"); }
+    if usesFloatArithmetic(calls) or floatValues or hasInputFloat or hasExtraCanvas or usesIntHelper(calls, "lt_trunc_f64_to_int(") or usesIntHelper(calls, "lt_trunc_f64_to_uint(") { outLine("#include <math.h>"); }
     if hasExtraCanvas {
         outLine("#include <sys/resource.h>");
         outLine("#if defined(__APPLE__)");
@@ -6239,13 +6579,20 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if float32Values {
         outLine("_Static_assert(FLT_RADIX == 2 && FLT_MANT_DIG == 24 && FLT_MAX_EXP == 128, \"Float32 requires binary32 float\");");
     }
+    if float16Values {
+        outLine("#if defined(__FLT16_MANT_DIG__)");
+        outLine("typedef _Float16 lt_f16;");
+        outLine("#else");
+        outLine("typedef uint16_t lt_f16;");
+        outLine("#endif");
+    }
     if floatLiterals { outLine("static double lt_float_literal(const char *text) { return strtod(text, NULL); }"); }
     if float32Literals { outLine("static float lt_float32_literal(const char *text) { return strtof(text, NULL); }"); }
     if floatOutput or hasFloatToText or hasFloat32ToText { emitFloatOutputHelpers(floatOutput); }
     if hasReportError { outLine("static void lt_report_error(lt_str text) { fprintf(stderr, \"%s\\n\", lt_text_cstr(text)); }"); }
     if hasExit { outLine("static _Noreturn void lt_exit(int64_t status) { fflush(stdout); exit((int)status); }"); }
     emitIntArithmeticHelpers(calls, source, prefix);
-    emitFloatArithmeticHelpers(calls);
+    emitFloatArithmeticHelpers(calls, float8Values, float16Values, float8Literals, float16Literals);
     emitIntDivisionHelpers(calls);
     usesScratch := usesIntHelper(calls, "lite$extraCanvasScratchMark(") or usesIntHelper(calls, "lite$extraCanvasScratchRewind(");
     if usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or usesIntHelper(calls, "lt_c_text_trim(") or usesIntHelper(calls, "lt_c_text_repeat(") or usesIntHelper(calls, "lt_c_text_to_lower(") or hasFloatToText or hasFloat32ToText or usesScratch {

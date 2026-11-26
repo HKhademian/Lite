@@ -68,10 +68,17 @@ pub runtimeIntegerCode := fn(target: String, operator: String, left: String, rig
     ir.targetIntFloorModuloCode(target, left, right, position)
 };
 
-/** Lowers a checked integer operation at `kind`, adding a runtime range guard for narrow integer widths outside remainders. */
+/** Lowers a checked integer operation at `kind` (signed or unsigned), adding a runtime range guard for narrow integer widths outside divisions/remainders. */
 pub runtimeTypedIntegerCode := fn(target: String, kind: String, operator: String, left: String, right: String, position: Int): String {
+    if numeric.isUnsignedIntKind(kind) {
+        rawU := ir.targetUIntBinaryCode(target, operator, left, right, position);
+        if numeric.isNarrowUnsignedIntKind(kind) and operator =!= "%" and operator =!= ":%" and operator =!= "/" and operator =!= ":/" {
+            return ir.targetCheckedNarrowUIntCode(target, kind, rawU, position);
+        }
+        return rawU;
+    }
     raw := runtimeIntegerCode(target, operator, left, right, position);
-    if numeric.isNarrowIntKind(kind) and operator =!= "%" and operator =!= ":%" {
+    if numeric.isNarrowSignedIntKind(kind) and operator =!= "%" and operator =!= ":%" {
         return ir.targetCheckedNarrowIntCode(target, kind, raw, position);
     }
     raw
@@ -103,12 +110,26 @@ pub compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
 
 /** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
 pub compareParsed := fn(target: String, source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
-    if numeric.isIntKind(left.kind) and numeric.isIntKind(right.kind) {
+    if numeric.isSignedIntKind(left.kind) and numeric.isSignedIntKind(right.kind) {
         if left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
             return boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
         }
-        return boolParsed(ir.targetComparisonCode(target, operator, ir.VALUE_KIND_INT, left.code, right.code), false, false, right.next);
+        return boolParsed(ir.targetComparisonCode(target, operator, ir.VALUE_KIND_INT,
+        if target == ir.TARGET_C { "((int64_t)(" + left.code + "))" } else { left.code },
+        if target == ir.TARGET_C { "((int64_t)(" + right.code + "))" } else { right.code }), false, false, right.next);
+    }
+    if numeric.isUnsignedIntKind(left.kind) and numeric.isUnsignedIntKind(right.kind) {
+        if left.constant and right.constant {
+            value := compareIntegers(operator, left.intValue, right.intValue);
+            return boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
+        }
+        return boolParsed(ir.targetComparisonCode(target, operator, ir.VALUE_KIND_UINT64,
+        if target == ir.TARGET_C { "((uint64_t)(" + left.code + "))" } else { left.code },
+        if target == ir.TARGET_C { "((uint64_t)(" + right.code + "))" } else { right.code }), false, false, right.next);
+    }
+    if (numeric.isIntKind(left.kind) and numeric.isIntKind(right.kind)) {
+        syntax.failAt(source, at, prefix, "cannot mix signed and unsigned integers; use explicit cast");
     }
     if numeric.isNumericKind(left.kind) and numeric.isNumericKind(right.kind) {
         codes: List<String> = [left.code, right.code];
@@ -341,14 +362,20 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
     expr
 };
 
-/** Converts compatible tuples or widening integer-to-float values on assignment/call/return, or copies lists when needed; `Never` passes through unchanged. */
+/** Converts compatible tuples or widening integer/float values on assignment/call/return, or copies lists when needed; `Never` passes through unchanged. */
 pub assignValueCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
     if actualKind == ir.VALUE_KIND_NEVER {
         actualCode
-    } else if expectedKind == ir.VALUE_KIND_FLOAT32 and numeric.isIntKind(actualKind) {
+    } else if expectedKind == ir.VALUE_KIND_FLOAT8 and actualKind =!= ir.VALUE_KIND_FLOAT8 and numeric.isNumericKind(actualKind) {
+        ir.targetFloat8OperandCode(target, actualKind, actualCode)
+    } else if expectedKind == ir.VALUE_KIND_FLOAT16 and actualKind =!= ir.VALUE_KIND_FLOAT16 and numeric.isNumericKind(actualKind) {
+        ir.targetFloat16OperandCode(target, actualKind, actualCode)
+    } else if expectedKind == ir.VALUE_KIND_FLOAT32 and (numeric.isIntKind(actualKind) or actualKind == ir.VALUE_KIND_FLOAT8 or actualKind == ir.VALUE_KIND_FLOAT16) {
         ir.targetFloat32OperandCode(target, actualKind, actualCode)
-    } else if expectedKind == ir.VALUE_KIND_FLOAT and numeric.isIntKind(actualKind) {
+    } else if expectedKind == ir.VALUE_KIND_FLOAT and (numeric.isIntKind(actualKind) or actualKind == ir.VALUE_KIND_FLOAT8 or actualKind == ir.VALUE_KIND_FLOAT16 or actualKind == ir.VALUE_KIND_FLOAT32) {
         ir.targetFloatOperandCode(target, actualKind, actualCode)
+    } else if expectedKind =!= actualKind and numeric.isIntKind(expectedKind) and numeric.isIntKind(actualKind) and target == ir.TARGET_C {
+        "((" + types.cValueType(expectedKind) + ")(" + actualCode + "))"
     } else if expectedKind =!= actualKind and types.tupleShapeMatches(expectedKind, actualKind) {
         types.convertTupleValueForTarget(target, expectedKind, actualKind, actualCode)
     } else {
@@ -360,10 +387,16 @@ pub assignValueCode := fn(target: String, expectedKind: String, actualKind: Stri
 pub assignReadOnlyArgCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
     if actualKind == ir.VALUE_KIND_NEVER {
         actualCode
-    } else if expectedKind == ir.VALUE_KIND_FLOAT32 and numeric.isIntKind(actualKind) {
+    } else if expectedKind == ir.VALUE_KIND_FLOAT8 and actualKind =!= ir.VALUE_KIND_FLOAT8 and numeric.isNumericKind(actualKind) {
+        ir.targetFloat8OperandCode(target, actualKind, actualCode)
+    } else if expectedKind == ir.VALUE_KIND_FLOAT16 and actualKind =!= ir.VALUE_KIND_FLOAT16 and numeric.isNumericKind(actualKind) {
+        ir.targetFloat16OperandCode(target, actualKind, actualCode)
+    } else if expectedKind == ir.VALUE_KIND_FLOAT32 and (numeric.isIntKind(actualKind) or actualKind == ir.VALUE_KIND_FLOAT8 or actualKind == ir.VALUE_KIND_FLOAT16) {
         ir.targetFloat32OperandCode(target, actualKind, actualCode)
-    } else if expectedKind == ir.VALUE_KIND_FLOAT and numeric.isIntKind(actualKind) {
+    } else if expectedKind == ir.VALUE_KIND_FLOAT and (numeric.isIntKind(actualKind) or actualKind == ir.VALUE_KIND_FLOAT8 or actualKind == ir.VALUE_KIND_FLOAT16 or actualKind == ir.VALUE_KIND_FLOAT32) {
         ir.targetFloatOperandCode(target, actualKind, actualCode)
+    } else if expectedKind =!= actualKind and numeric.isIntKind(expectedKind) and numeric.isIntKind(actualKind) and target == ir.TARGET_C {
+        "((" + types.cValueType(expectedKind) + ")(" + actualCode + "))"
     } else if expectedKind =!= actualKind and types.tupleShapeMatches(expectedKind, actualKind) {
         types.convertTupleValueForTarget(target, expectedKind, actualKind, actualCode)
     } else {
@@ -498,9 +531,17 @@ pub compoundAssignCode := fn(target: String, source: String, opPos: Int, prefix:
     if entryKind == ir.VALUE_KIND_STRING and rhs.kind == ir.VALUE_KIND_STRING and baseOp == "+" {
         return ir.targetConcatCode(target, lhsCode, rhs.code);
     }
-    if entryKind == ir.VALUE_KIND_FLOAT32 and (numeric.isIntKind(rhs.kind) or rhs.kind == ir.VALUE_KIND_FLOAT32) and
-    (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
-        return ir.targetFloat32BinaryCode(target, baseOp, lhsCode, ir.targetFloat32OperandCode(target, rhs.kind, rhs.code), opPos);
+    if entryKind == ir.VALUE_KIND_FLOAT8 and (numeric.isIntKind(rhs.kind) or rhs.kind == ir.VALUE_KIND_FLOAT8) and
+    numeric.numericWidens(entryKind, rhs.kind) and (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
+        return ir.targetFloat8BinaryCode(target, baseOp, ir.targetFloatOperandCode(target, entryKind, lhsCode), ir.targetFloatOperandCode(target, rhs.kind, rhs.code), opPos);
+    }
+    if entryKind == ir.VALUE_KIND_FLOAT16 and (numeric.isIntKind(rhs.kind) or rhs.kind == ir.VALUE_KIND_FLOAT8 or rhs.kind == ir.VALUE_KIND_FLOAT16) and
+    numeric.numericWidens(entryKind, rhs.kind) and (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
+        return ir.targetFloat16BinaryCode(target, baseOp, ir.targetFloatOperandCode(target, entryKind, lhsCode), ir.targetFloatOperandCode(target, rhs.kind, rhs.code), opPos);
+    }
+    if entryKind == ir.VALUE_KIND_FLOAT32 and (numeric.isIntKind(rhs.kind) or rhs.kind == ir.VALUE_KIND_FLOAT8 or rhs.kind == ir.VALUE_KIND_FLOAT16 or rhs.kind == ir.VALUE_KIND_FLOAT32) and
+    numeric.numericWidens(entryKind, rhs.kind) and (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
+        return ir.targetFloat32BinaryCode(target, baseOp, ir.targetFloat32OperandCode(target, entryKind, lhsCode), ir.targetFloat32OperandCode(target, rhs.kind, rhs.code), opPos);
     }
     if entryKind == ir.VALUE_KIND_FLOAT and numeric.isNumericKind(rhs.kind) and
     (baseOp == "+" or baseOp == "-" or baseOp == "*" or baseOp == "/") {
@@ -1638,7 +1679,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

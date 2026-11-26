@@ -159,9 +159,9 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
         scanned := numeric.scanNumericLiteral(source, start);
         if scanned.exponentMissingAt >= 0 { return (kind = "", next = start); }
         if scanned.floating {
-            leftKind = if expected == ir.VALUE_KIND_FLOAT32 { ir.VALUE_KIND_FLOAT32 } else { ir.VALUE_KIND_FLOAT };
+            leftKind = if numeric.isFloatKind(expected) { expected } else { ir.VALUE_KIND_FLOAT };
         } else {
-            leftKind = if numeric.isNarrowNumericKind(expected) or expected == ir.VALUE_KIND_FLOAT or expected == ir.VALUE_KIND_FLOAT32 {
+            leftKind = if numeric.isNumericKind(expected) {
                 expected
             } else {
                 ir.VALUE_KIND_INT

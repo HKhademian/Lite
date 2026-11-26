@@ -900,11 +900,10 @@ pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String
     if moduleIdentity == "lite.core.map.v1" and typeName == "Map" { return "Map"; }
     if moduleIdentity == "lite.core.set.v1" and typeName == "Set" { return "Set"; }
     if moduleIdentity == "lite.core.text.v1" and
-    (typeName == "String" or typeName == "Bool" or typeName == "Float" or typeName == "Float32") {
+    (typeName == "String" or typeName == "Bool" or numeric.isFloatKind(typeName)) {
         return typeName;
     }
-    if moduleIdentity == "lite.core.int.v1" and
-    (typeName == "Int" or typeName == "Int8" or typeName == "Int16" or typeName == "Int32") {
+    if moduleIdentity == "lite.core.int.v1" and numeric.isIntKind(typeName) {
         return typeName;
     }
     if moduleIdentity == "lite.core.array.v1" and typeName == "Array" { return "Array"; }
@@ -1364,26 +1363,46 @@ pub cTypeHasListField := fn(kind: String): Bool {
     res
 };
 
+/** Maps a scalar or payload-free enum kind to its canonical C11 width tag (`i1..i64`, `u1..u64`, `f8..f64`, `bool`, `str`), or `""`. */
+cScalarTag := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if kind == ir.VALUE_KIND_INT1 { "i1" }
+    else if kind == ir.VALUE_KIND_INT2 { "i2" }
+    else if kind == ir.VALUE_KIND_INT4 { "i4" }
+    else if kind == ir.VALUE_KIND_INT8 { "i8" }
+    else if kind == ir.VALUE_KIND_INT16 { "i16" }
+    else if kind == ir.VALUE_KIND_INT32 { "i32" }
+    else if kind == ir.VALUE_KIND_INT or (isEnumKind(kind) and not isPayloadEnumKind(kind)) { "i64" }
+    else if kind == ir.VALUE_KIND_UINT1 { "u1" }
+    else if kind == ir.VALUE_KIND_UINT2 { "u2" }
+    else if kind == ir.VALUE_KIND_UINT4 { "u4" }
+    else if kind == ir.VALUE_KIND_UINT8 { "u8" }
+    else if kind == ir.VALUE_KIND_UINT16 { "u16" }
+    else if kind == ir.VALUE_KIND_UINT32 { "u32" }
+    else if kind == ir.VALUE_KIND_UINT64 { "u64" }
+    else if kind == ir.VALUE_KIND_FLOAT8 { "f8" }
+    else if kind == ir.VALUE_KIND_FLOAT16 { "f16" }
+    else if kind == ir.VALUE_KIND_FLOAT32 { "f32" }
+    else if kind == ir.VALUE_KIND_FLOAT { "f64" }
+    else if kind == ir.VALUE_KIND_BOOL { "bool" }
+    else if kind == ir.VALUE_KIND_STRING { "str" }
+    else { "" }
+};
+
 /** Maps a non-array C-supported list element kind (scalar, enum, tuple, record, payload enum, or fn) to its canonical C11 tag. */
 cNonArrayListTag := fn(elemKind: String): String {
     if isDistinctKind(elemKind) { return self(distinctBaseKind(elemKind)); }
-    if numeric.isIntKind(elemKind) or (isEnumKind(elemKind) and not isPayloadEnumKind(elemKind)) { "i64" }
-    else if numeric.isFloatKind(elemKind) { "f64" }
-    else if elemKind == ir.VALUE_KIND_BOOL { "bool" }
-    else if elemKind == ir.VALUE_KIND_STRING { "str" }
+    sTag := cScalarTag(elemKind);
+    if sTag =!= "" { sTag }
     else if isTupleKind(elemKind) or isRecordKind(elemKind) or isPayloadEnumKind(elemKind) { cStructTag(elemKind) }
     else if isFnKind(elemKind) { cFnTag(elemKind) }
     else { "" }
 };
 
-/** Maps a C-supported map/set key kind to its C11 tag (`i64`, `f64`, `bool`, `str`), or `""`. */
+/** Maps a C-supported map/set key kind to its C11 tag (`i1..i64`, `u1..u64`, `f8..f64`, `bool`, `str`), or `""`. */
 pub cMapKeyTag := fn(kKind: String): String {
     if isDistinctKind(kKind) { return self(distinctBaseKind(kKind)); }
-    if numeric.isIntKind(kKind) or (isEnumKind(kKind) and not isPayloadEnumKind(kKind)) { "i64" }
-    else if numeric.isFloatKind(kKind) { "f64" }
-    else if kKind == ir.VALUE_KIND_BOOL { "bool" }
-    else if kKind == ir.VALUE_KIND_STRING { "str" }
-    else { "" }
+    cScalarTag(kKind)
 };
 
 /** Maps a concrete fixed-size `[T; N]` array kind to its inline C11 struct typedef name `lt_arr_<elemTag>_<N>`, or `""` for non-arrays, `[T; *]`, or unsupported element types. */
@@ -1436,9 +1455,19 @@ pub cListTag := fn(elemKind: String): String {
     else { "" }
 };
 
-/** Maps a canonical C11 list tag (`i64`, `f64`, `bool`, `str`, `lt_s_...`, or `lt_arr_...`) to its C11 element type name. */
+/** Maps a canonical C11 list/scalar tag (`i1..i64`, `u1..u64`, `f8..f64`, `bool`, `str`, `lt_s_...`, or `lt_arr_...`) to its C11 element type name. */
 pub cListElemType := fn(tag: String): String {
-    if tag == "i64" { "int64_t" }
+    if tag == "i1" or tag == "i2" or tag == "i4" or tag == "i8" { "int8_t" }
+    else if tag == "i16" { "int16_t" }
+    else if tag == "i32" { "int32_t" }
+    else if tag == "i64" { "int64_t" }
+    else if tag == "u1" or tag == "u2" or tag == "u4" or tag == "u8" { "uint8_t" }
+    else if tag == "u16" { "uint16_t" }
+    else if tag == "u32" { "uint32_t" }
+    else if tag == "u64" { "uint64_t" }
+    else if tag == "f8" { "uint8_t" }
+    else if tag == "f16" { "lt_f16" }
+    else if tag == "f32" { "float" }
     else if tag == "f64" { "double" }
     else if tag == "bool" { "bool" }
     else if tag == "str" { "lt_str" }
@@ -1472,11 +1501,9 @@ pub cSetTag := fn(kind: String): String {
 /** Maps any C11-supported Lite value kind to its C11 type name. */
 pub cValueType := fn(kind: String): String {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if kind == ir.VALUE_KIND_INT or numeric.isIntKind(kind) or (isEnumKind(kind) and not isPayloadEnumKind(kind)) { return "int64_t"; }
-    if kind == ir.VALUE_KIND_STRING { return "lt_str"; }
-    if kind == ir.VALUE_KIND_BOOL { return "bool"; }
+    sTag := cScalarTag(kind);
+    if sTag =!= "" { return cListElemType(sTag); }
     if kind == ir.VALUE_KIND_UNIT or kind == ir.VALUE_KIND_NEVER { return "void"; }
-    if numeric.isFloatKind(kind) { return "double"; }
     cached := cValueTypeCache.get(kind);
     if cached.found { return cached.value; }
     res := if isListKind(kind) { "lt_list_" + cListTag(listElementKind(kind)) }
@@ -2643,9 +2670,7 @@ parseEnumCaseLiteral := fn(rawText: String, expectedBacking: String, prefix: Str
     isSign := ch == "-" or ch == "+";
     numPos := if isSign { syntax.skipTrivia(rawText, pos + 1, prefix) } else { pos };
     if numPos < size and rawText.at(numPos).isDigit() {
-        hintKind := if expectedBacking == ir.VALUE_KIND_FLOAT32 or expectedBacking == ir.VALUE_KIND_FLOAT {
-            expectedBacking
-        } else if numeric.isIntKind(expectedBacking) {
+        hintKind := if numeric.isNumericKind(expectedBacking) {
             expectedBacking
         } else {
             ""

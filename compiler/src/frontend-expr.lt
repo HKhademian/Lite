@@ -316,7 +316,14 @@ parseUnarySignExpr := fn(target: String, source: String, start: Int, ch: String,
     if not numeric.isNumericKind(operand.kind) {
         syntax.failAt(source, start, prefix, "unary " + ch + " requires an Int or Float operand");
     }
-    code := if ch == "-" { "(-" + operand.code + ")" } else { "(" + operand.code + ")" };
+    if ch == "-" and numeric.isUnsignedIntKind(operand.kind) {
+        syntax.failAt(source, start, prefix, "cannot negate unsigned integer " + types.displayKind(operand.kind));
+    }
+    code := if ch == "-" {
+        if target == ir.TARGET_C and operand.kind == ir.VALUE_KIND_FLOAT8 { "lt_f8_neg(" + operand.code + ")" }
+        else if target == ir.TARGET_C and operand.kind == ir.VALUE_KIND_FLOAT16 { "lt_f16_neg(" + operand.code + ")" }
+        else { "(-" + operand.code + ")" }
+    } else { "(" + operand.code + ")" };
     if numeric.isFloatKind(operand.kind) {
         return ctx.withMarkers((kind = operand.kind, code = code, intValue = 0, textValue = "", constant = false, next = operand.next),
         if inferMode { ctx.collectParsedMarkers("", operand) } else { "" });
@@ -599,8 +606,11 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
     };
     listCode := if target == ir.TARGET_C and types.isArrayKind(resultKind) and types.cArrayTag(resultKind) =!= "" {
         aTag := types.cArrayTag(resultKind);
+        elKind := types.arrayElementKind(resultKind);
         if count == 0 {
             "((/*@T:" + resultKind + "@*/" + aTag + "){ 0 })"
+        } else if numeric.isSubByteIntKind(elKind) {
+            "/*@T:" + resultKind + "@*/" + aTag + "_from((const " + types.cValueType(elKind) + "[]){ " + elementCodes.join(", ") + " })"
         } else {
             "((/*@T:" + resultKind + "@*/" + aTag + "){ { " + elementCodes.join(", ") + " } })"
         }
@@ -1412,7 +1422,11 @@ pub resolveAggregateBindings := fn(target: String, shape: String, count: Int, en
         } else {
             srcKind = types.arrayElementKind(rhsKind);
             if target == ir.TARGET_C and types.cArrayTag(rhsKind) =!= "" {
-                propExpr = tempRuntime + ".data[" + clIndex.toText() + "]";
+                if numeric.isSubByteIntKind(srcKind) {
+                    propExpr = types.cArrayTag(rhsKind) + "_get_raw(" + tempRuntime + ", " + clIndex.toText() + ")";
+                } else {
+                    propExpr = tempRuntime + ".data[" + clIndex.toText() + "]";
+                }
             } else if target == ir.TARGET_C and types.cListTag(srcKind) =!= "" {
                 propExpr = "lt_list_" + types.cListTag(srcKind) + "_at(" + tempRuntime + ", " + clIndex.toText() + ", " + openPos.toText() + ")";
             } else {
@@ -1588,22 +1602,28 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             }
             syntax.failAt(source, nameStart, prefix, "cast requires an explicit type argument cast<Type>(value) or an expected target type");
         }
+        var castConst := false;
         if not inferMode {
             isWrap := types.isDistinctKind(targetKind) and types.distinctUnderlyingKind(targetKind) == arg.kind;
             isUnwrap := types.isDistinctKind(arg.kind) and types.distinctUnderlyingKind(arg.kind) == targetKind;
-            if not isWrap and not isUnwrap {
+            isIntCast := numeric.isIntKind(targetKind) and numeric.isIntKind(arg.kind);
+            isFloatCast := numeric.isFloatKind(targetKind) and numeric.isNumericKind(arg.kind);
+            if not isWrap and not isUnwrap and not isIntCast and not isFloatCast {
                 syntax.failAt(source, nameStart, prefix, "cannot cast " + types.displayKind(arg.kind) + " to " + types.displayKind(targetKind) + "; cast only converts directly between a distinct type and its underlying type");
             }
+            castConst = (isWrap or isUnwrap) and arg.constant;
         }
-        castCode := if target == ir.TARGET_C and (arg.code.startsWithAt(0, "/*@CBLK:") or arg.code.startsWithAt(0, "/*@T:")) {
+        castCode := if numeric.isNumericKind(targetKind) and numeric.isNumericKind(arg.kind) {
+            ir.targetNumericCastCode(target, targetKind, arg.kind, arg.code, nameStart)
+        } else if target == ir.TARGET_C and (arg.code.startsWithAt(0, "/*@CBLK:") or arg.code.startsWithAt(0, "/*@T:")) {
             arg.code
         } else {
             "(" + arg.code + ")"
         };
-        return ctx.withMarkers((kind = targetKind, code = castCode, intValue = arg.intValue, textValue = arg.textValue, constant = arg.constant, next = closeParen), argMarkers);
+        return ctx.withMarkers((kind = targetKind, code = castCode, intValue = if castConst { arg.intValue } else { 0 }, textValue = if castConst { arg.textValue } else { "" }, constant = castConst, next = closeParen), argMarkers);
     }
     if afterName < source.length() and (source.at(afterName) == "." or source.at(afterName) == "<") and
-    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or (source.at(afterName) == "." and (name == "String" or name == "Int"))) {
+    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or (source.at(afterName) == "." and (name == "String" or numeric.isNumericKind(name)))) {
         var resolvedType := "";
         var typeOwnerKey := "";
         var aliasParamsCsv := "";
@@ -1641,7 +1661,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                 }
                 syntax.failAt(source, dotPos, prefix, "expected { or . after type " + types.displayKind(resolvedType));
             }
-        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or name == "Int" {
+        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or numeric.isNumericKind(name) {
             typeOwnerKey = name;
         } else if inferMode {
             genInfo := types.genericAliasTemplateInfo(source, nameStart, prefix, aliases, name);
@@ -1692,6 +1712,18 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             if caseIdx >= 0 {
                 return parseEnumCaseConstruct(target, source, resolvedType, memberName, caseIdx, memberEnd, memberStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
             }
+        }
+        if numeric.isIntKind(typeOwnerKey) and memberName == "trunc" {
+            openTrunc := syntax.expectSymbol(source, syntax.skipTrivia(source, memberEnd, prefix), "(", prefix);
+            truncArg := parseBinaryCtx(target, source, openTrunc, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+            closeTrunc := syntax.expectSymbol(source, syntax.skipTrivia(source, truncArg.next, prefix), ")", prefix);
+            if not inferMode and not numeric.isFloatKind(truncArg.kind) {
+                syntax.failAt(source, memberStart, prefix, typeOwnerKey + ".trunc expects a Float operand, got " + types.displayKind(truncArg.kind));
+            }
+            truncCode := if inferMode or not numeric.isFloatKind(truncArg.kind) { "" } else {
+                ir.targetFloatTruncCode(target, typeOwnerKey, truncArg.kind, truncArg.code, memberStart)
+            };
+            return ctx.withMarkers((kind = typeOwnerKey, code = truncCode, intValue = 0, textValue = "", constant = false, next = closeTrunc), if inferMode { ctx.collectParsedMarkers("", truncArg) } else { "" });
         }
         if typeOwnerKey =!= "" {
             opIdx := findTypeOp(functions, typeOwnerKey, memberName);
@@ -2276,10 +2308,12 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                                 "printf(\"%s\", (" + outArg.code + ") ? \"true\" : \"false\");"
                             } else if baseOutKind == ir.VALUE_KIND_STRING {
                                 "lt_print_str(" + outArg.code + ");"
+                            } else if numeric.isUnsignedIntKind(baseOutKind) {
+                                "printf(\"%\" PRIu64, (uint64_t)(" + outArg.code + "));"
                             } else if numeric.isIntKind(baseOutKind) {
                                 "printf(\"%\" PRId64, (int64_t)(" + outArg.code + "));"
                             } else if numeric.isFloatKind(baseOutKind) {
-                                "/*@P:" + baseOutKind + "@*/lt_print_float(" + outArg.code + ");"
+                                "/*@P:" + baseOutKind + "@*/lt_print_float(" + ir.targetFloatOperandCode(target, baseOutKind, outArg.code) + ");"
                             } else if types.isArrayKind(baseOutKind) and types.cArrayTag(baseOutKind) =!= "" {
                                 "/*@P:" + baseOutKind + "@*/" + types.cArrayTag(baseOutKind) + "_print(" + outArg.code + ");"
                             } else if types.isListKind(baseOutKind) or types.isArrayKind(baseOutKind) {
@@ -2989,7 +3023,12 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             if types.isArrayKind(loopSeqKind) and types.cArrayTag(loopSeqKind) =!= "" {
                                 aTag := types.cArrayTag(loopSeqKind);
                                 aExt := types.arrayExtent(loopSeqKind);
-                                loopHeadCode = "{ /*@T:" + loopSeqKind + "@*/" + aTag + " " + bSeqVar + " = " + loopSeqCode + "; (void)" + bSeqVar + "; for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + aExt.toText() + "; " + bSeqI + " += 1) { " + types.cValueType(loopItemKind) + " " + loopItemRuntime + " = " + bSeqVar + ".data[" + bSeqI + "]; (void)" + loopItemRuntime + "; ";
+                                itemRead := if numeric.isSubByteIntKind(loopItemKind) {
+                                    aTag + "_get_raw(" + bSeqVar + ", " + bSeqI + ")"
+                                } else {
+                                    bSeqVar + ".data[" + bSeqI + "]"
+                                };
+                                loopHeadCode = "{ /*@T:" + loopSeqKind + "@*/" + aTag + " " + bSeqVar + " = " + loopSeqCode + "; (void)" + bSeqVar + "; for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + aExt.toText() + "; " + bSeqI + " += 1) { " + types.cValueType(loopItemKind) + " " + loopItemRuntime + " = " + itemRead + "; (void)" + loopItemRuntime + "; ";
                                 loopTailClose = " } }";
                             } else {
                                 bSeqTag := types.cListTag(loopItemKind);
@@ -4456,8 +4495,13 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                     if types.isArrayKind(seqSrcKind) and types.cArrayTag(seqSrcKind) =!= "" {
                         aTag := types.cArrayTag(seqSrcKind);
                         aExt := types.arrayExtent(seqSrcKind);
+                        elemAccess := if numeric.isSubByteIntKind(seqItemKind) {
+                            aTag + "_get_raw(" + seqVar + ", " + seqI + ")"
+                        } else {
+                            seqVar + ".data[" + seqI + "]"
+                        };
                         elemDecl := if iterUsedInBody {
-                            types.cValueType(seqItemKind) + " " + loopIterVar + " = " + seqVar + ".data[" + seqI + "]; "
+                            types.cValueType(seqItemKind) + " " + loopIterVar + " = " + elemAccess + "; "
                         } else { "" };
                         "{ /*@T:" + seqSrcKind + "@*/" + aTag + " " + seqVar + " = " + seqCode + "; (void)" + seqVar + "; " +
                         "for (int64_t " + seqI + " = 0; " + seqI + " < " + aExt.toText() + "; " + seqI + " += 1) { " +
@@ -5088,11 +5132,13 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
     if ch.isDigit() or ((ch == "-" or ch == "+") and pos + 1 < size and source.at(syntax.skipTrivia(source, pos + 1, prefix)).isDigit()) {
         isNeg := ch == "-";
         numPos := if ch == "-" or ch == "+" { syntax.skipTrivia(source, pos + 1, prefix) } else { pos };
-        lit := syntax.parseNumber(target, source, numPos, prefix, subjKind, 10);
-        signedLit := if isNeg {
-            (kind = lit.kind, code = "(-(" + lit.code + "))", intValue = 0 - lit.intValue, textValue = lit.textValue, constant = lit.constant, next = lit.next)
+        signedLit := if (ch == "-" or ch == "+") and numPos == pos + 1 {
+            syntax.parseNumber(target, source, pos, prefix, subjKind, 10)
         } else {
-            lit
+            lit := syntax.parseNumber(target, source, numPos, prefix, subjKind, 10);
+            if isNeg {
+                (kind = lit.kind, code = "(-(" + lit.code + "))", intValue = 0 - lit.intValue, textValue = lit.textValue, constant = lit.constant, next = lit.next)
+            } else { lit }
         };
         leftFake := (kind = subjKind, code = subjCode, intValue = subjConst.intValue, textValue = subjConst.textValue, constant = subjConst.constant, next = pos);
         cmp := ctx.compareParsed(target, source, pos, "==", leftFake, signedLit, prefix);
@@ -5403,7 +5449,11 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                 return (cond = arrCond, bindings = arrBindings, irrefutable = arrIrref, boolMask = 0, enumCases = "", next = aCursor + 1, markers = arrMarkers);
             }
             elemExpr := if target == ir.TARGET_C and types.cArrayTag(subjKind) =!= "" {
-                "((" + subjCode + ").data[" + elemIdx.toText() + "])"
+                if numeric.isSubByteIntKind(elemKind) {
+                    types.cArrayTag(subjKind) + "_get_raw(" + subjCode + ", " + elemIdx.toText() + ")"
+                } else {
+                    "((" + subjCode + ").data[" + elemIdx.toText() + "])"
+                }
             } else if target == ir.TARGET_C and types.cListTag(elemKind) =!= "" {
                 "lt_list_" + types.cListTag(elemKind) + "_at(" + subjCode + ", " + elemIdx.toText() + ", " + pos.toText() + ")"
             } else {
@@ -8642,7 +8692,11 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     }
                     arrElKind := types.arrayElementKind(left.kind);
                     arrElemCode := if target == ir.TARGET_C and types.cArrayTag(left.kind) =!= "" {
-                        "((" + left.code + ").data[" + fieldIndex.toText() + "])"
+                        if numeric.isSubByteIntKind(arrElKind) {
+                            types.cArrayTag(left.kind) + "_get_raw(" + left.code + ", " + fieldIndex.toText() + ")"
+                        } else {
+                            "((" + left.code + ").data[" + fieldIndex.toText() + "])"
+                        }
                     } else if target == ir.TARGET_C and types.cListTag(arrElKind) =!= "" {
                         "lt_list_" + types.cListTag(arrElKind) + "_at(" + left.code + ", " + fieldIndex.toText() + ", " + postPosition.toText() + ")"
                     } else {
@@ -9382,7 +9436,10 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
             }
         }
         rightMinimum := if operator.text == "**" { level } else { level + 1 };
-        rightExpected := if (operator.text == "==" or operator.text == "=!=") and (types.isEnumKind(left.kind) or types.isDistinctKind(left.kind)) { left.kind } else { "" };
+        rightExpected := if (operator.text == "==" or operator.text == "=!=") and (types.isEnumKind(left.kind) or types.isDistinctKind(left.kind)) { left.kind }
+        else if operator.text =!= "**" and numeric.isUnsignedIntKind(left.kind) { left.kind }
+        else if operator.text =!= "**" and (left.kind == ir.VALUE_KIND_FLOAT8 or left.kind == ir.VALUE_KIND_FLOAT16) { left.kind }
+        else { "" };
         right := parseBinaryCtx(target, source, operatorPosition + operator.width, prefix, locals, functions, params, currentName, rightExpected, rightMinimum, ctxs, iifeDepth, inferMode, "", aliases);
         var opMarkers := if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), right) } else { "" };
         leftLoopId := types.loopValMarkerId(left.kind);
@@ -9532,6 +9589,8 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
             }
             code := ir.targetFloatPowerCode(target, ir.targetFloatOperandCode(target, left.kind, left.code), ir.targetFloatOperandCode(target, right.kind, right.code), operatorPosition);
             left = (kind = ir.VALUE_KIND_FLOAT, code = code, intValue = 0, textValue = "", constant = false, next = right.next);
+        } else if (numeric.isSignedIntKind(left.kind) and numeric.isUnsignedIntKind(right.kind)) or (numeric.isUnsignedIntKind(left.kind) and numeric.isSignedIntKind(right.kind)) {
+            syntax.failAt(source, operatorPosition, prefix, "cannot mix signed " + types.displayKind(left.kind) + " and unsigned " + types.displayKind(right.kind) + "; use explicit cast");
         } else if numeric.isIntKind(left.kind) and numeric.isIntKind(right.kind) {
             promoted := numeric.promoteNumericKind(left.kind, right.kind);
             if left.constant and right.constant {
@@ -9539,9 +9598,11 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
                 if folded.ok and numeric.intKindFits(promoted, folded.value) {
                     code := if (operator.text == "%" or operator.text == ":%") and left.intValue == integer.intMin and right.intValue == -1 {
                         ir.targetIntLiteralCode(target, 0, false, "0")
-                    } else if operator.text == ":/" { ir.targetFloorDivCode(target, left.code, right.code) }
-                    else if operator.text == ":%" { ir.targetFloorModCode(target, left.code, right.code) }
-                    else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
+                    } else if operator.text == ":/" {
+                        if numeric.isUnsignedIntKind(promoted) { "(" + left.code + " / " + right.code + ")" } else { ir.targetFloorDivCode(target, left.code, right.code) }
+                    } else if operator.text == ":%" {
+                        if numeric.isUnsignedIntKind(promoted) { "(" + left.code + " % " + right.code + ")" } else { ir.targetFloorModCode(target, left.code, right.code) }
+                    } else { "(" + left.code + " " + operator.text + " " + right.code + ")" };
                     left = ctx.typedIntParsed(promoted, code, folded.value, true, right.next);
                 } else {
                     left = ctx.typedIntParsed(promoted, ctx.runtimeTypedIntegerCode(target, promoted, operator.text, left.code, right.code, operatorPosition), 0, false, right.next);
@@ -9574,7 +9635,11 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
             }
             promotedFloat := numeric.promoteNumericKind(left.kind, right.kind);
             floatKind := if promotedFloat =!= "" { promotedFloat } else if numeric.isFloatKind(left.kind) { left.kind } else { right.kind };
-            code := if floatKind == ir.VALUE_KIND_FLOAT32 {
+            code := if floatKind == ir.VALUE_KIND_FLOAT8 {
+                ir.targetFloat8BinaryCode(target, operator.text, ir.targetFloat8OperandCode(target, left.kind, left.code), ir.targetFloat8OperandCode(target, right.kind, right.code), operatorPosition)
+            } else if floatKind == ir.VALUE_KIND_FLOAT16 {
+                ir.targetFloat16BinaryCode(target, operator.text, ir.targetFloat16OperandCode(target, left.kind, left.code), ir.targetFloat16OperandCode(target, right.kind, right.code), operatorPosition)
+            } else if floatKind == ir.VALUE_KIND_FLOAT32 {
                 ir.targetFloat32BinaryCode(target, operator.text, ir.targetFloat32OperandCode(target, left.kind, left.code), ir.targetFloat32OperandCode(target, right.kind, right.code), operatorPosition)
             } else {
                 ir.targetFloatBinaryCode(target, operator.text, ir.targetFloatOperandCode(target, left.kind, left.code), ir.targetFloatOperandCode(target, right.kind, right.code), operatorPosition)
