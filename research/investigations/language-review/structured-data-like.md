@@ -281,6 +281,14 @@ distinguish this shape from the existing `[key = value]` map literal without
 relying on inferred types or the presence of a field annotation. Quoted labels,
 access syntax, anonymous type identity, and the final delimiters remain open.
 
+For an unannotated field, the user prefers `"carl" = "test"` over
+`"carl" := "test"`. The outer `scores := ...` declares an inferred binding.
+Inside the literal, `=` supplies a field value, as in a labeled tuple or a
+record initializer. Omitting the field type lets the compiler infer it from
+the expression. A typed entry such as `"alice": Float = 10` adds a type
+constraint and uses the same value-supply syntax. This preference leaves the
+grammar boundary with executable blocks open.
+
 ## Separate choices
 
 1. **Lite-native data expressions.** Existing or future Lite record, tuple,
