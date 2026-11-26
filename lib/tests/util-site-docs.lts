@@ -28,8 +28,9 @@ test.checkBool("build ok", true, built.ok);
 test.checkBool("build valid json", true, json.validate(built.jsonText).ok);
 test.checkInt("handbookCount", 1, json.readFieldInt(built.jsonText, 0, "handbookCount").value);
 test.checkInt("specCount", 1, json.readFieldInt(built.jsonText, 0, "specCount").value);
-test.checkInt("docsPageCount", 5, json.readFieldInt(built.jsonText, 0, "docsPageCount").value);
+test.checkInt("docsPageCount", 6, json.readFieldInt(built.jsonText, 0, "docsPageCount").value);
 test.checkBool("single-page prefixes ids", true, built.jsonText.indexOf("h1-sec", 0) >= 0);
 test.checkBool("has docs/index.html", true, built.jsonText.indexOf("\"relPath\":\"docs/index.html\"", 0) >= 0);
+test.checkBool("has docs/reference.html", true, built.jsonText.indexOf("\"relPath\":\"docs/reference.html\"", 0) >= 0);
 
 test.done("util-site-docs");
