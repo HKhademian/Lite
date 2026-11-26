@@ -1,100 +1,27 @@
 # Loop type inference from both directions
 
-Status: **body type `T`, final result type `R`, destination-side expectations, and the no-contributor `Unit` default are selected; full numeric/operator and inference algorithms remain open**.
-
-Normative page for body `T` and final `R` inference. `.value` type/commits are in [loop value](lite://doc/loop-value); loop forms are in [loops](lite://doc/loops); completion is in [loop completion](lite://doc/loop-completion).
+Status: **compatibility links**. See [Loop result inference](lite://doc/loop-completion#loop-result-inference).
 
 ## Body and destination cooperate
 
-A loop's value type is inferred from its body together with the expected type of the surrounding expression. The destination may be an annotated binding, a function result, an argument position, or another established expression context; there is no new loop receiver syntax.
-
-```text
-x: Long = loop my_ints {
-    .value + .item
-}
-```
-
-Without then, the loop's normal result is its .value. Therefore the Long expectation constrains .value to Long before its initial zero and arithmetic are typed. The compiler must not first force an Int accumulator solely from the element type and then treat the entire completed loop as an unchecked cast.
-
-Long is the user's illustrative explicit numeric type name, not a new selection of its bit width or primitive naming scheme. The source item's declared type does not change. If it is a fixed Int while .value is Long, addition must obey the eventual numeric compatibility/promotion rules. Destination-side inference does not independently authorize every implicit cast, numeric narrowing, or a special loop-only arithmetic overload.
+See [the current section](lite://doc/loop-completion#body-and-destination-cooperate).
 
 ## A value-only body can be inferred
 
-```text
-x: Long = loop source {
-    .value
-}
-```
-
-The destination supplies the missing type: .value is Long, its initial value is that type's zero, and each entry recommits it. No arbitrary default type is needed.
-
-With no independent constraint, x := loop source { .value } remains ambiguous. Knowing that every type has a zero does not decide which type the programmer meant. Require ordinary type information rather than inventing a type or choosing an arbitrary union alternative.
-
-This is a circular contribution (`T` is constrained only by an expression whose type is also `T`), not a no-contributor loop. The `Unit` default applies only when there is no value-producing path; it must not silently resolve a self-referential `.value` tail.
+See [the current section](lite://doc/loop-completion#a-value-only-body-can-be-inferred).
 
 ## Completion can have a different result type
 
-```text
-label: String = loop numbers as number {
-    .value + number
-} then {
-    format_total(.value)
-}
-```
-
-Assume numbers has Int elements and format_total accepts Int and returns String. Here the body's value type T is Int while the final result R is String. The destination constrains R; then and its operations can transmit constraints to T. A String destination does not force an unrelated body accumulator to become String.
-
-When then simply returns .value, T and R are directly connected and the destination can constrain both. When then returns a constant unrelated to .value, the body still needs its own T constraints.
-
-The expected type reaches the type variable it constrains:
-
-```text
-body_value: Long = loop items { continue }
-then_value: Long = loop items { continue } then { .value }
-finished: String = loop items { continue } then { "Finished" }
-```
-
-In the first example there is no `then`, so the expected loop result constrains `T`. In the second, `then` reads `.value`, connecting `R` back to `T`. In the third, the expected type constrains only `R`; since the body has no contribution, `T` remains its `Unit` default. An independent `then` result must not choose the hidden `.value` type.
+See [the current section](lite://doc/loop-completion#completion-can-have-a-different-result-type).
 
 ## Search loops and noncontributing paths
 
-```text
-found: Option<User> = loop users as user {
-    if matches(user) {
-        break Some(user)
-    }
-}
-```
-
-The explicit destination types the loop result and `.value` as `Option<User>`. A matching `break value` commits `Some(user)` and stops the loop. On a non-match, the final `if` contributes nothing, so `.value` remains its default `Option<User>.None`. No explicit `continue` or `None` body is needed.
-
-This is a noncontributing path, not a zero-contribution. A prior committed value is preserved. A declaration such as `x := if cond { value }; x` is different: `x` is zero-initialized on no match, and the tail `x` contributes that zero. Put the conditional itself in tail position, or use `else { ? }`/`continue`, to skip the contribution. An explicit `else` can contribute a replacement value.
-
-A tagged return contributes its payload as the target's T. With no then, T is also the target's result type; with then, the target's then determines R from the committed T. The example in [control flow](lite://doc/control-flow#loop-distinction) shows a targeted search without then. Exact unannotated inference for targeted-result-only searches remains formalization work, especially when zero(T) and an independent then result are involved.
+See [the current section](lite://doc/loop-completion#search-loops-and-noncontributing-paths).
 
 ## Loops with no contributing path
 
-An action-only body that normally completes with `Unit` gives T an ordinary type. A body whose paths all end in plain `continue` or bare `break` has no contribution expression; those exits preserve `.value` rather than supplying T. When no path contributes and nothing else constrains T, T defaults to `Unit`. An expected type can override that default.
-
-```text
-status := loop items {
-    continue
-} then {
-    "Finished"
-}
-```
-
-Here `then` establishes R as `String`, but it does not constrain T because it never reads `.value`. The type of the zero-initialized storage is unobservable in this example. If `then` instead returns `.value`, T and R become connected: without an expected type, T defaults to `Unit` and R follows; with an expected type, that constraint can override the default. With no `then`, the loop result is `.value`, so a context such as `status: Int = loop items { continue }` can provide T.
-
-In the example above, T is `Unit` and R is `String`. The same default applies when paths end only in bare `break`. A targeted return is different: its payload contributes a T value, and the named target's `then` runs if present.
+See [the current section](lite://doc/loop-completion#loops-with-no-contributing-path).
 
 ## All paths must agree with their contracts
 
-- Body tail expressions, continue value, and break value must satisfy the selected body type T.
-- Then tail expressions must satisfy final result R. A `return @loop value` must satisfy T; the named loop's `then` produces R when present, and without `then` T is the loop result.
-- Bare break and plain continue preserve .value without inventing new value types. Break value commits before completion; it is not a direct R-return path.
-- Assignment/declaration tails produce Unit; a Long destination does not silently turn such a body into a numeric sum.
-- Conditional/match branches retain their ordinary type/union rules; inference cannot erase incompatible operations.
-- Types and zero representations are determined at compile time, before runtime source checks or body execution.
-
-Full overload resolution, literal polymorphism, numeric promotion, unions, ownership, and the inference algorithm for targeted-result-only searches remain separate formalization work. See [numbers](lite://doc/numbers), [loop value](lite://doc/loop-value), [completion](lite://doc/loop-completion), and [general inference](lite://doc/types-and-inference).
+See [the current section](lite://doc/loop-completion#all-paths-must-agree-with-their-contracts).
