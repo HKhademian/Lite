@@ -69,6 +69,8 @@ See [Numbers](lite://doc/numbers), [Division](lite://doc/division), [Comparison 
 with [`String.utf8Encode`](lite://module/core/text#String.utf8Encode) and decode
 with [`String.fromUtf8Strict`](lite://module/core/text#String.fromUtf8Strict).
 The decode result reports whether the bytes represent valid UTF-8.
+Use the encoded list's length for buffer sizes and `String.length` when
+counting code points. See the [string properties rule](lite://doc/strings#string-properties).
 
 ```lite
 /* Showcase 01.03 — Escaped strings, code-point text indexing, and Unicode UTF-8 conversion. */

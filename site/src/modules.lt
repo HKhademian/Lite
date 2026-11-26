@@ -5,6 +5,7 @@ path := import "core/path";
 text := import "core/text";
 collections := import "util/collections";
 json := import "data/json";
+mdHtml := import "util/markdown-html";
 siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;
@@ -54,7 +55,7 @@ isHost: Bool, docText: String, line: Int, repoUrl: String
     } else {
         "<span class=\"code-card-meta\">L" + line.toText() + "</span>"
     };
-    docHtml := if docText =!= "" { "<p class=\"module-sym-doc\">" + formatInlineDoc(docText) + "</p>" } else { "" };
+    docHtml := if docText =!= "" { "<p class=\"module-sym-doc\">" + mdHtml.renderInline(docText) + "</p>" } else { "" };
     eName := escapeHtml(name);
     "<article class=\"portal-card module-symbol-card\" id=\"" + eName + "\">\n"
     + "  <div class=\"portal-card-head\">\n"

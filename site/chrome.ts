@@ -170,6 +170,19 @@ export function renderFooter(rev: SourceRevision, repoUrl: string): string {
 </footer>`;
 }
 
+function renderDocsNavigation(basePath: string): string {
+  const destinations = [
+    ['docs/', 'Docs home'],
+    ['learn/', 'Tutorial'],
+    ['docs/reference.html', 'Language Reference'],
+    ['modules/', 'Library API'],
+    ['gallery/#start-with-these', 'Samples'],
+    ['docs/design/spec-overview.html', 'Specification'],
+  ];
+  const links = destinations.map(([path, label]) => `<a href="${basePath}${path}">${label}</a>`);
+  return `<nav class="docs-destinations" aria-label="Documentation sections"><div class="container">${links.join('')}</div></nav>`;
+}
+
 export function renderPage(options: Readonly<{
   title: string;
   description?: string;
@@ -186,6 +199,7 @@ export function renderPage(options: Readonly<{
   const baseAttr = ` data-base-path="${escapeHtml(options.basePath)}"`;
   const mainAttr = ` class="${escapeHtml(options.mainClass ?? 'container')}"`;
   const lightSwitchShine = options.lightSwitchShine ?? true;
+  const docsNav = ['docs', 'modules', 'tools'].includes(options.active) ? renderDocsNavigation(options.basePath) : '';
   const description = options.description ?? 'Lite is a small, explicit language and self-hosted compiler designed for low runtime weight, clear consequences, and readable code.';
   return `<!doctype html>
 <html lang="en">
@@ -213,6 +227,7 @@ export function renderPage(options: Readonly<{
 </head>
 <body${classAttr}${baseAttr}>
 ${renderHeader(options.basePath, options.active, options.repoUrl, lightSwitchShine)}
+${docsNav}
 <main${mainAttr}>
 ${options.body}
 </main>

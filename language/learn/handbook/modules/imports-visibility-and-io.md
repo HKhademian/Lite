@@ -37,6 +37,11 @@ stats := import "./helpers/math-stats.lts";
 
 Note that `.lts` extension scripts and `.lt` module files contain no hidden prelude—every module declares its own imports cleanly.
 
+[Open the complete two-file example in Play](lite://play/example/showcase-modules-and-visibility)
+to run the caller and inspect its helper. The
+[source import rules](lite://doc/modules-and-packages#source-imports)
+cover how relative paths and public symbols resolve.
+
 ## Browser-Safe Core, Math, DS, Extra & Host OS Modules
 
 All 39 modules documented in [Modules](lite://module) (`15 core/*` + `5 math/*` + `11 ds/*` + `2 data/*` + `6 extra/*`) fall into three runtime environments:

@@ -166,7 +166,7 @@ renderCardGrid := fn(src: String, subsetOffs: List<Int>): String {
     cards.join("\n")
 };
 
-renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>): String {
+renderGymIndexBody := fn(src: String, itemOffs: List<Int>): String {
     totalCount := itemOffs.length();
     totalStr := totalCount.toText();
 
@@ -248,7 +248,7 @@ renderGymIndexBody := fn(src: String, description: String, itemOffs: List<Int>):
     "<section class=\"page-hero\">",
     "  <h1>Lite Gym</h1>",
     "  <p class=\"hero-lead\">",
-    "    " + escapeHtml(description) + " Every exercise compiles and grades inside your browser using verified test suites.",
+    "    Try a quick drill or settle in with a longer puzzle. Run your work in the browser to see which tests pass.",
     "  </p>",
     "  <div class=\"learn-progress-banner\">",
     "    <div class=\"learn-progress-stats\">",
@@ -1231,7 +1231,6 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
     if not valid.ok {
         return (ok = false, jsonText = "", error = "site-gym: invalid input JSON: " + valid.error);
     }
-    description := readOptStr(inputJson, 0, "description");
     itemsField := json.findField(inputJson, 0, "items");
     if not itemsField.found {
         return (ok = false, jsonText = "", error = "site-gym: input JSON requires items");
@@ -1252,7 +1251,7 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
     }
 
     pagesJson: mut List<String> = [];
-    indexBody := renderGymIndexBody(inputJson, description, itemOffs);
+    indexBody := renderGymIndexBody(inputJson, itemOffs);
     indexPageObj := "{"
     + "\"relPath\":\"gym/index.html\","
     + "\"title\":\"Lite Gym — Interactive Coding Dojo\","

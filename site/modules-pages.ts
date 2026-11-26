@@ -4,7 +4,7 @@ import type { ModuleApiDoc } from './docs-client.ts';
 import { renderPage, rootDir, type SourceRevision } from './chrome.ts';
 import type { ShowcaseSample } from './groups.ts';
 import { highlightLite } from './highlight.ts';
-import { renderAcademyCrosslinks, type LiteAcademyGraph } from './lite-uri.ts';
+import { renderAcademyCrosslinks, rewriteLiteUriHtml, type LiteAcademyGraph } from './lite-uri.ts';
 import type { PlayGroup, PlaySample } from './play-samples.ts';
 import type { SearchEntry } from './search.ts';
 
@@ -85,6 +85,8 @@ export function buildModulesSection(options: Readonly<{
 
   const files = new Map<string, string>();
   for (const page of payload.pages) {
+    const modulePath = /^modules\/(.+)\.html$/.exec(page.relPath)?.[1];
+    const fromUri = modulePath === undefined || modulePath === 'index' ? undefined : `lite://module/${modulePath}`;
     files.set(
       page.relPath,
       renderPage({
@@ -94,7 +96,7 @@ export function buildModulesSection(options: Readonly<{
         active: 'modules',
         repoUrl,
         rev,
-        body: page.body,
+        body: graph ? rewriteLiteUriHtml({ html: page.body, outPath: page.relPath, graph, ...(fromUri ? { fromUri } : {}) }) : page.body,
         lightSwitchShine,
       }),
     );

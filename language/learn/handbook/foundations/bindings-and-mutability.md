@@ -71,6 +71,10 @@ For growable collections (`List<T>`), `mut` grants **in-place element/length mut
 - `xs: mut List<Int> = [1, 2];` — fixed variable pointing to a mutable list.
 - `var mut xs: List<Int> = [1, 2];` — mutable list that can also be rebound with `xs = other`.
 
+Try [Growable Lists in Play](lite://play/growable-lists) to see a `mut` call
+change a list while a saved value stays the same. See the
+[receiver permission rule](lite://doc/mutability#3-operation-receiver-requirements).
+
 ## Block Shadowing vs Re-Declaration
 
 Re-declaring the same name inside the **same** `{ ... }` block is rejected by the compiler. Inner blocks may shadow an outer name cleanly; an eager right-hand side (`x := x + 1;`) reads the **outer** binding before introducing the inner shadow.

@@ -164,7 +164,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     "Expression if/else, subjectless match, sequence loops, .index/.count/.value/.collected, then, @tag, and finally.",
     "Unnamed/named/mixed tuples, records, enums, [T; N] arrays, List<T>, Map<K, V>, Set<T>, and type aliases.",
     "Final-item block values, DCE pruning, parallel wiring, execution trace safety, self, and closures.",
-    "Namespace imports, pub boundaries, all 41 core/*, math/*, ds/*, data/*, and extra/* modules, and core/io streams.",
+    "Namespace imports, public symbols, library modules, and core/io streams.",
     "extra/canvas, extra/surface desktop windows, extra/color, extra/audio, extra/board, extra/timer, and ./bin/lite play.",
     "math/scalar, math/random, Vec<T, N> and Vec2..4 math/vector, math/matrix transforms, math/geom primitives, and ds/grid.",
     "ds/arena, ds/pool, ds/intern, ds/lru, ds/ring, ds/deque, ds/heap, ds/bitset, ds/sparse, ds/spatial, data/json, and data/csv.",
@@ -902,6 +902,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
 
     emptyStrs: List<String> = [];
 
+    referenceChapters: mut List<String> = [];
     loop entryOffs as ep {
         mF := json.findField(inputJson, ep, "meta");
         mp := mF.valuePos;
@@ -927,6 +928,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         curHbIdx := hbOuts.length();
         tocItemsHtml: mut List<String> = [];
         tocL2Parts: mut List<String> = [];
+        referenceTopics: mut List<String> = [];
         tocF := json.findField(inputJson, ep, "toc");
         if tocF.found {
             loop json.arrayOffsets(inputJson, tocF.valuePos) as tp {
@@ -936,6 +938,10 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
                 labelHtmlR := json.readFieldString(inputJson, tp, "labelHtml");
                 tocLabel := if labelHtmlR.found and labelHtmlR.ok and labelHtmlR.value =!= "" { labelHtmlR.value } else { escapeHtml(ttxt) };
                 skipNextChapter := mLayer == "handbook" and ttxt == "Next Chapter";
+                if mLayer == "handbook" and (lvl == 2 or lvl == 3) and not skipNextChapter {
+                    href := relativeHref("docs/reference.html", mOut) + "#" + tid;
+                    mut referenceTopics.pushBack("<li><a href=\"" + escapeHtml(href) + "\">" + tocLabel + "</a></li>");
+                }
                 if (lvl == 2 or lvl == 3) and not skipNextChapter {
                     mut tocItemsHtml.pushBack("<li class=\"toc-l" + lvl.toText() + "\"><a href=\"#" + escapeHtml(tid) + "\">" + tocLabel + "</a></li>");
                 }
@@ -959,6 +965,8 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         tocHtml := if tocItemsHtml.length() > 0 { tocItemsHtml.join("\n      ") } else { "<li><a href=\"#top\">Top of page</a></li>" };
 
         if mLayer == "handbook" {
+            chapterLink := relativeHref("docs/reference.html", mOut);
+            mut referenceChapters.pushBack("<section class=\"portal-card reference-chapter\"><h2><a href=\"" + escapeHtml(chapterLink) + "\">" + escapeHtml(dTitle) + "</a></h2><ul>" + referenceTopics.join("\n") + "</ul></section>");
             mut hbSrcs.pushBack(mSrc);
             mut hbOuts.pushBack(mOut);
             mut hbNavs.pushBack(mNav);
@@ -992,9 +1000,16 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
 
     pagesJson: mut List<String> = [];
     searchEntriesJson: mut List<String> = [
+    "{\"kind\":\"handbook\",\"title\":\"Lite Language Reference\",\"subtitle\":\"Find a syntax rule or example by topic\",\"href\":\"docs/reference.html\",\"keywords\":\"language reference syntax handbook topics\"}",
     "{\"kind\":\"handbook\",\"title\":\"Single-Page Lite Handbook\",\"subtitle\":\"All " + hbCount.toText() + " Shipped Handbook chapters on one searchable page\",\"href\":\"docs/handbook/single-page.html\",\"keywords\":\"handbook single page complete shipped guide\",\"badge\":\"Handbook\"}",
     "{\"kind\":\"doc\",\"title\":\"Design Specification Index\",\"subtitle\":\"All design documents, LP proposals, and compiler architecture pages\",\"href\":\"docs/spec/\",\"keywords\":\"design spec proposals compiler index\",\"badge\":\"Spec\"}"
     ];
+
+    referenceBody := "<section class=\"page-hero\"><h1>Language Reference</h1>"
+    + "<p class=\"hero-lead\">Find a language feature and jump straight to its Handbook explanation and examples.</p>"
+    + "<p><a href=\"handbook/single-page.html\">Read the full Handbook on one page</a> or <a href=\"design/spec-overview.html\">look up the exact language rules</a>.</p></section>"
+    + "<div class=\"portal-grid reference-topics\">" + referenceChapters.join("\n") + "</div>";
+    mut pagesJson.pushBack("{\"relPath\":\"docs/reference.html\",\"title\":\"Language Reference — Lite\",\"description\":\"Browse the language by topic and jump to Handbook examples.\",\"basePath\":\"../\",\"body\":" + json.quoteString(referenceBody) + "}");
 
     hbCards: mut List<String> = [];
     var hi := 0;
@@ -1038,17 +1053,24 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         si = si + 1;
     }
 
-    docsLandingBody := "<section class=\"page-hero\">\n"
+    docsLandingBody := "<section class=\"page-hero docs-welcome\">\n"
     + "  <h1>Documentation</h1>\n"
     + "  <p class=\"hero-lead\">\n"
-    + "    Run your first program, learn the Lite you can use today, and look up library functions or commands.\n"
+    + "    Write your first few lines of Lite, find an example to make your own, or look up a detail as you go.\n"
     + "  </p>\n"
     + "  <div class=\"hero-actions\">\n"
     + "    <a class=\"btn btn-primary\" href=\"design/start-here.html\">Start here</a>\n"
     + "    <a class=\"btn\" href=\"design/tour.html\">Take the syntax tour</a>\n"
-    + "    <a class=\"btn\" href=\"handbook/overview-and-setup.html\">Read the Handbook</a>\n"
     + "  </div>\n"
-    + "  <p><a href=\"../modules/\">Module reference</a> &middot; <a href=\"../tools/#cli\">CLI reference</a></p>\n"
+    + "</section>\n"
+    + "<section class=\"section docs-paths\" aria-label=\"Ways to use the documentation\"><div class=\"portal-grid\">\n"
+    + "  <article class=\"portal-card\"><h2><a href=\"../learn/\">Tutorial</a></h2><p>Learn by editing short programs and building a project in Lite Academy.</p></article>\n"
+    + "  <article class=\"portal-card\"><h2><a href=\"reference.html\">Language Reference</a></h2><p>Find syntax and examples in the Handbook, topic by topic.</p></article>\n"
+    + "  <article class=\"portal-card\"><h2><a href=\"../modules/\">Library API</a></h2><p>Find an import, check a function signature, or see where a module runs.</p></article>\n"
+    + "  <article class=\"portal-card\"><h2><a href=\"../gallery/#start-with-these\">Samples</a></h2><p>Try a few small programs, then explore the Gallery for bigger ideas.</p></article>\n"
+    + "  <article class=\"portal-card\"><h2><a href=\"design/spec-overview.html\">Specification</a></h2><p>Read the precise rules and see which designs are still taking shape.</p></article>\n"
+    + "  <article class=\"portal-card\"><h2><a href=\"../tools/#cli\">CLI reference</a></h2><p>Look up commands to run, check, format, and build your code.</p></article>\n"
+    + "</div>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"handbook\">\n"
     + "  <div class=\"section-head\">\n"

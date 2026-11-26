@@ -739,6 +739,7 @@ export function buildLiteAcademyGraph(options: Readonly<{
   graph.registerNode({ uri: 'lite://handbook', kind: 'handbook', title: 'Shipped Lite Handbook', outPath: 'docs/#handbook' });
   graph.registerNode({ uri: 'lite://handbook/single-page', kind: 'handbook', title: 'Single-Page Handbook', outPath: 'docs/handbook/single-page.html' });
   graph.registerNode({ uri: 'lite://doc', kind: 'doc', title: 'Lite Documentation', outPath: 'docs/index.html' }, ['lite://doc/index']);
+  graph.registerNode({ uri: 'lite://doc/language-reference', kind: 'handbook', title: 'Language Reference', outPath: 'docs/reference.html' });
   graph.registerNode({ uri: 'lite://doc/spec', kind: 'doc', title: 'Design Specification Index', outPath: 'docs/spec/index.html' }, ['lite://doc/spec/index']);
   graph.registerNode({ uri: 'lite://learn', kind: 'learn', title: 'Learn Lite', outPath: 'learn/' });
   graph.registerNode({ uri: 'lite://gym', kind: 'gym', title: 'Lite Gym', outPath: 'gym/' });
