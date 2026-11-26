@@ -527,6 +527,8 @@ ensureCBuiltinMap := fn(): Unit {
     mut cBuiltinMap.set("inputFloat", "lt_input_float");
     mut cBuiltinMap.set("unicodeToCodePoints", "lt_unicode_to_code_points");
     mut cBuiltinMap.set("unicodeFromCodePoints", "lt_unicode_from_code_points");
+    mut cBuiltinMap.set("floatToText", "lt_float_to_text");
+    mut cBuiltinMap.set("float32ToText", "lt_float32_to_text");
     mut cBuiltinMap.set("ioStdinReader", "lt_io_stdin_reader");
     mut cBuiltinMap.set("ioStdoutWriter", "lt_io_stdout_writer");
     mut cBuiltinMap.set("ioStderrWriter", "lt_io_stderr_writer");
@@ -746,7 +748,7 @@ usesStreamBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioCloseReader(") or
     usesIntHelper(calls, "lite$ioWriterOk(") or usesIntHelper(calls, "lite$ioWriterError(") or
     usesIntHelper(calls, "lite$ioWrite(") or usesIntHelper(calls, "lite$ioFlush(") or
-    usesIntHelper(calls, "lite$ioCloseWriter(")
+    usesIntHelper(calls, "lite$ioCloseWriter(") or usesCIoSoft(calls)
 };
 
 /** True when any emitted item calls a core/file non-stream filesystem builtin. */
@@ -777,9 +779,23 @@ usesCFileSoft := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_c_file_append_text(") or usesIntHelper(calls, "lt_c_sha256_file(")
 };
 
+/** True when any emitted item calls a C11 soft-builtin `core/text` UTF-8 helper. */
+usesCUtf8Soft := fn(calls: Set<String>): Bool {
+    usesIntHelper(calls, "lt_c_utf8_encode(") or
+    usesIntHelper(calls, "lt_c_utf8_decode_strict(") or
+    usesIntHelper(calls, "lt_c_utf8_decode_lossy(")
+};
+
+/** True when any emitted item calls a C11 soft-builtin `core/io` stream helper. */
+usesCIoSoft := fn(calls: Set<String>): Bool {
+    usesIntHelper(calls, "lt_c_io_from_text(") or usesIntHelper(calls, "lt_c_io_read_all(") or
+    usesIntHelper(calls, "lt_c_io_read_all_text(") or usesIntHelper(calls, "lt_c_io_read_line(") or
+    usesIntHelper(calls, "lt_c_io_write_text(") or usesIntHelper(calls, "lt_c_io_write_line(")
+};
+
 /** True when any emitted item calls any C11 soft-builtin fast-path helper. */
 usesCSoftBuiltins := fn(calls: Set<String>): Bool {
-    usesCTextSoftUtf8(calls) or usesCFileSoft(calls) or
+    usesCTextSoftUtf8(calls) or usesCFileSoft(calls) or usesCUtf8Soft(calls) or usesCIoSoft(calls) or
     usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or
     usesIntHelper(calls, "lt_c_text_to_int(") or usesIntHelper(calls, "lt_c_text_trim(") or
     usesIntHelper(calls, "lt_c_text_ends_with(") or usesIntHelper(calls, "lt_c_text_repeat(") or
@@ -1935,7 +1951,7 @@ injectCFnTemps := fn(code: String): String {
 };
 
 /** Emits shortest round-trip binary64 display with decimal/exponent thresholds shared by the TS runtime; source remains statically checked and no locale is selected by generated programs. */
-emitFloatOutputHelpers := fn(): Unit {
+emitFloatOutputHelpers := fn(needPrint: Bool): Unit {
     outLine("/* Split printf's positive finite decimal into significant digits and its first-digit exponent. */");
     outLine("static int lt_float_digits(const char *text, char *digits, int *exponent) {");
     outLine("    int size = 0, before = 0, dot = 0;");
@@ -2018,11 +2034,13 @@ emitFloatOutputHelpers := fn(): Unit {
     outLine("    out[at] = '\\0';");
     outLine("    return 1;");
     outLine("}");
-    outLine("static int lt_print_float(double value) {");
-    outLine("    char text[64];");
-    outLine("    if (!lt_float_format(value, text)) return -1;");
-    outLine("    return printf(\"%s\", text);");
-    outLine("}");
+    if (needPrint) {
+        outLine("static int lt_print_float(double value) {");
+        outLine("    char text[64];");
+        outLine("    if (!lt_float_format(value, text)) return -1;");
+        outLine("    return printf(\"%s\", text);");
+        outLine("}");
+    }
 }
 
 /** True when any emitted item concatenates dynamic Strings through the checked helper. */
@@ -2837,16 +2855,20 @@ emitCStreamBuiltinHelpers := fn(calls: Set<String>): Unit {
     fKind := frontend.cFieldName("kind");
     fHandle := frontend.cFieldName("handle");
     needFileOpen := usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or usesIntHelper(calls, "lite$fileOpenAppender(");
-    needAlloc := needFileOpen or usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioBufferWriter(");
+    needAlloc := needFileOpen or usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioBufferWriter(") or usesIntHelper(calls, "lt_c_io_from_text(");
     needLookup := usesIntHelper(calls, "lite$ioReaderOk(") or usesIntHelper(calls, "lite$ioReaderAtEof(") or
     usesIntHelper(calls, "lite$ioReaderError(") or usesIntHelper(calls, "lite$ioRead(") or
     usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioWriterOk(") or
     usesIntHelper(calls, "lite$ioWriterError(") or usesIntHelper(calls, "lite$ioWrite(") or
     usesIntHelper(calls, "lite$ioFlush(") or usesIntHelper(calls, "lite$ioCloseWriter(") or
     usesIntHelper(calls, "lite$ioWriterBytes(") or usesIntHelper(calls, "lite$ioWriterText(") or
-    usesIntHelper(calls, "lite$ioClearWriter(");
+    usesIntHelper(calls, "lite$ioClearWriter(") or usesIntHelper(calls, "lt_c_io_read_all(") or
+    usesIntHelper(calls, "lt_c_io_read_all_text(") or usesIntHelper(calls, "lt_c_io_read_line(") or
+    usesIntHelper(calls, "lt_c_io_write_text(") or usesIntHelper(calls, "lt_c_io_write_line(");
     needStdinState := usesIntHelper(calls, "lite$ioReaderOk(") or usesIntHelper(calls, "lite$ioReaderAtEof(") or
-    usesIntHelper(calls, "lite$ioReaderError(") or usesIntHelper(calls, "lite$ioRead(");
+    usesIntHelper(calls, "lite$ioReaderError(") or usesIntHelper(calls, "lite$ioRead(") or
+    usesIntHelper(calls, "lt_c_io_read_all(") or usesIntHelper(calls, "lt_c_io_read_all_text(") or
+    usesIntHelper(calls, "lt_c_io_read_line(");
     if needAlloc or needLookup {
         outLine("typedef struct { int kind; int fd; uint8_t *buf; int64_t len; int64_t cap; int64_t pos; bool eof; bool closed; const char *error; } lt_stream_entry;");
         outLine("static lt_stream_entry *lt_streams = NULL;");
@@ -3895,7 +3917,10 @@ emitCHostBuiltinHelpers := fn(calls: Set<String>): Unit {
     usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lite$fileMakeDir(") or
     usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
     usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lite$fileRealPath(") or
-    usesIntHelper(calls, "lite$fileMakeTempDir(") or usesCFileSoft(calls) or usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(");
+    usesIntHelper(calls, "lite$fileMakeTempDir(") or usesCFileSoft(calls) or usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(") or
+    usesIntHelper(calls, "lt_c_io_read_all(") or usesIntHelper(calls, "lt_c_io_read_all_text(") or
+    usesIntHelper(calls, "lt_c_io_read_line(") or usesIntHelper(calls, "lt_c_io_write_text(") or
+    usesIntHelper(calls, "lt_c_io_write_line(");
     if needDupStr {
         outLine("static char *lt_dup_str(const char *s) {");
         outLine("    size_t n = strlen(s);");
@@ -3965,6 +3990,16 @@ cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Stri
         if fnName == "String.isNameStart" { return "lt_c_text_is_name_start(" + arg0 + ")"; }
         if fnName == "String.isNameContinue" { return "lt_c_text_is_name_continue(" + arg0 + ")"; }
         if fnName == "String.isWhitespace" { return "lt_c_text_is_whitespace(" + arg0 + ")"; }
+        if fnName == "String.utf8Encode" { return "lt_c_utf8_encode(" + arg0 + ")"; }
+        if fnName == "String.fromUtf8Strict" { return "lt_c_utf8_decode_strict(" + arg0 + ")"; }
+        if fnName == "String.fromUtf8Lossy" { return "lt_c_utf8_decode_lossy(" + arg0 + ")"; }
+    } else if moduleName == "lib/core/io" {
+        if fnName == "Reader.fromText" { return "lt_c_io_from_text(" + arg0 + ")"; }
+        if fnName == "Reader.readAll" { return "lt_c_io_read_all(" + arg0 + ")"; }
+        if fnName == "Reader.readAllText" { return "lt_c_io_read_all_text(" + arg0 + ")"; }
+        if fnName == "Reader.readLine" { return "lt_c_io_read_line(" + arg0 + ")"; }
+        if fnName == "Writer.writeText" { return "lt_c_io_write_text(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "Writer.writeLine" { return "lt_c_io_write_line(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
     } else if moduleName == "lib/core/file" {
         if fnName == "readText" { return "lt_c_file_read_text(" + arg0 + ")"; }
         if fnName == "writeText" { return "lt_c_file_write_text(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
@@ -4512,6 +4547,304 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lt_c_file_append_text(") {
         okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
         outLine("static " + okErrTag + " lt_c_file_append_text(lt_str path, lt_str text) { return lt_c_file_put_text(path, text, O_WRONLY | O_CREAT | O_APPEND); }");
+    }
+    needUtf8Val := usesIntHelper(calls, "lt_c_utf8_decode_strict(") or
+    usesIntHelper(calls, "lt_c_io_read_all_text(") or usesIntHelper(calls, "lt_c_io_read_line(");
+    if needUtf8Val {
+        outLine("static bool lt_c_utf8_validate_buf(const uint8_t *buf, size_t len, int32_t *out_cp, const char **out_err) {");
+        outLine("    int32_t cp = 0;");
+        outLine("    for (size_t i = 0u; i < len; ) {");
+        outLine("        uint8_t b0 = buf[i];");
+        outLine("        if (b0 < 0x80u) { i += 1u; cp += 1; }");
+        outLine("        else if (b0 >= 0xC2u && b0 <= 0xDFu) {");
+        outLine("            if (i + 1u >= len) { *out_err = \"truncated UTF-8 sequence\"; return false; }");
+        outLine("            if ((buf[i + 1u] & 0xC0u) != 0x80u) { *out_err = \"invalid UTF-8 continuation byte\"; return false; }");
+        outLine("            i += 2u; cp += 1;");
+        outLine("        } else if (b0 >= 0xE0u && b0 <= 0xEFu) {");
+        outLine("            if (i + 1u >= len) { *out_err = \"truncated UTF-8 sequence\"; return false; }");
+        outLine("            uint8_t b1 = buf[i + 1u];");
+        outLine("            if ((b1 & 0xC0u) != 0x80u || (b0 == 0xE0u && b1 < 0xA0u) || (b0 == 0xEDu && b1 >= 0xA0u)) { *out_err = \"invalid UTF-8 continuation byte\"; return false; }");
+        outLine("            if (i + 2u >= len) { *out_err = \"truncated UTF-8 sequence\"; return false; }");
+        outLine("            if ((buf[i + 2u] & 0xC0u) != 0x80u) { *out_err = \"invalid UTF-8 continuation byte\"; return false; }");
+        outLine("            i += 3u; cp += 1;");
+        outLine("        } else if (b0 >= 0xF0u && b0 <= 0xF4u) {");
+        outLine("            if (i + 1u >= len) { *out_err = \"truncated UTF-8 sequence\"; return false; }");
+        outLine("            uint8_t b1 = buf[i + 1u];");
+        outLine("            if ((b1 & 0xC0u) != 0x80u || (b0 == 0xF0u && b1 < 0x90u) || (b0 == 0xF4u && b1 >= 0x90u)) { *out_err = \"invalid UTF-8 continuation byte\"; return false; }");
+        outLine("            if (i + 2u >= len) { *out_err = \"truncated UTF-8 sequence\"; return false; }");
+        outLine("            if ((buf[i + 2u] & 0xC0u) != 0x80u) { *out_err = \"invalid UTF-8 continuation byte\"; return false; }");
+        outLine("            if (i + 3u >= len) { *out_err = \"truncated UTF-8 sequence\"; return false; }");
+        outLine("            if ((buf[i + 3u] & 0xC0u) != 0x80u) { *out_err = \"invalid UTF-8 continuation byte\"; return false; }");
+        outLine("            i += 4u; cp += 1;");
+        outLine("        } else { *out_err = \"invalid UTF-8 lead byte\"; return false; }");
+        outLine("    }");
+        outLine("    *out_cp = cp;");
+        outLine("    return true;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_utf8_encode(") {
+        outLine("static lt_list_i64 lt_c_utf8_encode(lt_str text) {");
+        outLine("    if (text.byte_len == 0u) { return (lt_list_i64){ NULL, 0, 0, NULL }; }");
+        outLine("    int64_t n = (int64_t)text.byte_len;");
+        outLine("    int64_t *data = malloc((size_t)n * sizeof(int64_t));");
+        outLine("    if (data == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate UTF-8 bytes\\n\"); exit(1); }");
+        outLine("    for (int64_t i = 0; i < n; i += 1) { data[i] = (int64_t)(uint8_t)text.data[i]; }");
+        outLine("    return (lt_list_i64){ data, n, n, NULL };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_utf8_decode_strict(") {
+        okTextTag := frontend.cStructTag("(ok:Bool,text:String,error:String)");
+        outLine("static " + okTextTag + " lt_c_utf8_decode_strict(lt_list_i64 bytes) {");
+        outLine("    if (bytes.len <= 0) { return (" + okTextTag + "){ true, LT_ASTR(\"\"), LT_ASTR(\"\") }; }");
+        outLine("    size_t n = (size_t)bytes.len;");
+        outLine("    uint8_t *buf = malloc(n + 1u);");
+        outLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate text\\n\"); exit(1); }");
+        outLine("    for (int64_t i = 0; i < bytes.len; i += 1) {");
+        outLine("        int64_t b = bytes.data[i];");
+        outLine("        if (b < 0 || b > 255) {");
+        outLine("            free(buf);");
+        outLine("            char *msg = malloc(96u);");
+        outLine("            if (msg == NULL) { return (" + okTextTag + "){ false, LT_ASTR(\"\"), LT_ASTR(\"byte value outside 0..255\") }; }");
+        outLine("            snprintf(msg, 96u, \"byte value outside 0..255: %\" PRId64, b);");
+        outLine("            return (" + okTextTag + "){ false, LT_ASTR(\"\"), lt_text_from_cstr(msg) };");
+        outLine("        }");
+        outLine("        buf[i] = (uint8_t)b;");
+        outLine("    }");
+        outLine("    int32_t cp = 0; const char *err = \"\";");
+        outLine("    if (!lt_c_utf8_validate_buf(buf, n, &cp, &err)) { free(buf); return (" + okTextTag + "){ false, LT_ASTR(\"\"), lt_text_from_cstr(err) }; }");
+        outLine("    buf[n] = 0u;");
+        outLine("    return (" + okTextTag + "){ true, lt_text_from_buf((const char *)buf, n, cp), LT_ASTR(\"\") };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_utf8_decode_lossy(") {
+        outLine("static lt_str lt_c_utf8_decode_lossy(lt_list_i64 bytes) {");
+        outLine("    if (bytes.len <= 0) { return LT_ASTR(\"\"); }");
+        outLine("    size_t cap = (size_t)bytes.len + 16u; size_t out_len = 0u; int32_t cp_count = 0;");
+        outLine("    uint8_t *out = malloc(cap + 1u);");
+        outLine("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate text\\n\"); exit(1); }");
+        outLine("    int needed = 0; int seen = 0; uint32_t cp = 0u; uint8_t lo = 0x80u; uint8_t hi = 0xBFu;");
+        outLine("    for (int64_t i = 0; i < bytes.len; ) {");
+        outLine("        if (out_len + 4u > cap) { cap *= 2u; uint8_t *nb = realloc(out, cap + 1u); if (nb == NULL) { fprintf(stderr, \"MemoryFault: cannot grow text\\n\"); exit(1); } out = nb; }");
+        outLine("        int64_t raw = bytes.data[i];");
+        outLine("        if (raw < 0 || raw > 255) {");
+        outLine("            needed = 0; seen = 0; cp = 0u; lo = 0x80u; hi = 0xBFu;");
+        outLine("            out[out_len++] = 0xEFu; out[out_len++] = 0xBFu; out[out_len++] = 0xBDu; cp_count += 1; i += 1;");
+        outLine("            continue;");
+        outLine("        }");
+        outLine("        uint8_t b = (uint8_t)raw;");
+        outLine("        if (needed == 0) {");
+        outLine("            if (b < 0x80u) { out[out_len++] = b; cp_count += 1; }");
+        outLine("            else if (b >= 0xC2u && b <= 0xDFu) { needed = 1; cp = (uint32_t)(b - 0xC0u); }");
+        outLine("            else if (b >= 0xE0u && b <= 0xEFu) { if (b == 0xE0u) { lo = 0xA0u; } if (b == 0xEDu) { hi = 0x9Fu; } needed = 2; cp = (uint32_t)(b - 0xE0u); }");
+        outLine("            else if (b >= 0xF0u && b <= 0xF4u) { if (b == 0xF0u) { lo = 0x90u; } if (b == 0xF4u) { hi = 0x8Fu; } needed = 3; cp = (uint32_t)(b - 0xF0u); }");
+        outLine("            else { out[out_len++] = 0xEFu; out[out_len++] = 0xBFu; out[out_len++] = 0xBDu; cp_count += 1; }");
+        outLine("            i += 1;");
+        outLine("        } else if (b < lo || b > hi) {");
+        outLine("            needed = 0; seen = 0; cp = 0u; lo = 0x80u; hi = 0xBFu;");
+        outLine("            out[out_len++] = 0xEFu; out[out_len++] = 0xBFu; out[out_len++] = 0xBDu; cp_count += 1;");
+        outLine("        } else {");
+        outLine("            lo = 0x80u; hi = 0xBFu; cp = (cp << 6) | (uint32_t)(b & 0x3Fu); seen += 1;");
+        outLine("            if (seen == needed) {");
+        outLine("                if (cp < 0x80u) { out[out_len++] = (uint8_t)cp; }");
+        outLine("                else if (cp < 0x800u) { out[out_len++] = (uint8_t)(0xC0u | (cp >> 6)); out[out_len++] = (uint8_t)(0x80u | (cp & 0x3Fu)); }");
+        outLine("                else if (cp < 0x10000u) { out[out_len++] = (uint8_t)(0xE0u | (cp >> 12)); out[out_len++] = (uint8_t)(0x80u | ((cp >> 6) & 0x3Fu)); out[out_len++] = (uint8_t)(0x80u | (cp & 0x3Fu)); }");
+        outLine("                else { out[out_len++] = (uint8_t)(0xF0u | (cp >> 18)); out[out_len++] = (uint8_t)(0x80u | ((cp >> 12) & 0x3Fu)); out[out_len++] = (uint8_t)(0x80u | ((cp >> 6) & 0x3Fu)); out[out_len++] = (uint8_t)(0x80u | (cp & 0x3Fu)); }");
+        outLine("                cp_count += 1; needed = 0; seen = 0; cp = 0u;");
+        outLine("            }");
+        outLine("            i += 1;");
+        outLine("        }");
+        outLine("    }");
+        outLine("    if (needed > 0) {");
+        outLine("        if (out_len + 3u > cap) { cap += 4u; uint8_t *nb = realloc(out, cap + 1u); if (nb == NULL) { fprintf(stderr, \"MemoryFault: cannot grow text\\n\"); exit(1); } out = nb; }");
+        outLine("        out[out_len++] = 0xEFu; out[out_len++] = 0xBFu; out[out_len++] = 0xBDu; cp_count += 1;");
+        outLine("    }");
+        outLine("    out[out_len] = 0u;");
+        outLine("    return lt_text_from_buf((const char *)out, out_len, cp_count);");
+        outLine("}");
+    }
+    shTag := frontend.cStructTag("(kind:String,handle:Int)");
+    fKind := frontend.cFieldName("kind");
+    fHandle := frontend.cFieldName("handle");
+    if usesIntHelper(calls, "lt_c_io_from_text(") {
+        outLine("static " + shTag + " lt_c_io_from_text(lt_str text) {");
+        outLine("    uint8_t *buf = text.byte_len > 0u ? malloc((size_t)text.byte_len) : NULL;");
+        outLine("    if (text.byte_len > 0u) {");
+        outLine("        if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate buffer reader\\n\"); exit(1); }");
+        outLine("        memcpy(buf, text.data, (size_t)text.byte_len);");
+        outLine("    }");
+        outLine("    lt_stream_entry e = { 2, -1, buf, (int64_t)text.byte_len, (int64_t)text.byte_len, 0, false, false, \"\" };");
+        outLine("    return (" + shTag + "){ LT_ASTR(\"buffer\"), lt_alloc_stream(e) };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_io_read_all(") or usesIntHelper(calls, "lt_c_io_read_all_text(") {
+        outLine("static bool lt_c_io_read_all_raw(" + shTag + " reader, uint8_t **out_buf, size_t *out_len, const char **out_err) {");
+        outLine("    *out_buf = NULL; *out_len = 0u; *out_err = \"\";");
+        outLine("    int fd = -1; lt_stream_entry *e = NULL;");
+        outLine("    if (strcmp(lt_text_cstr(reader." + fKind + "), \"stdin\") == 0 && reader." + fHandle + " == 0) {");
+        outLine("        if (lt_stdin_err[0] != '\\0') { *out_err = lt_stdin_err; return false; }");
+        outLine("        if (lt_stdin_eof) { return true; }");
+        outLine("        fd = 0;");
+        outLine("    } else {");
+        outLine("        e = lt_lookup_stream(reader." + fHandle + ");");
+        outLine("        if (e == NULL) { *out_err = \"invalid reader handle\"; return false; }");
+        outLine("        if (e->kind == 3) { *out_err = \"handle is a writer, not a reader\"; return false; }");
+        outLine("        if (e->error[0] != '\\0') { *out_err = e->error; return false; }");
+        outLine("        if (e->closed) { *out_err = \"reader is closed\"; return false; }");
+        outLine("        if (e->eof) { return true; }");
+        outLine("        if (e->kind == 2) {");
+        outLine("            int64_t avail = e->len - e->pos;");
+        outLine("            if (avail <= 0) { e->eof = true; return true; }");
+        outLine("            uint8_t *buf = malloc((size_t)avail + 1u);");
+        outLine("            if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate read buffer\\n\"); exit(1); }");
+        outLine("            memcpy(buf, e->buf + e->pos, (size_t)avail);");
+        outLine("            e->pos = e->len; e->eof = true;");
+        outLine("            *out_buf = buf; *out_len = (size_t)avail;");
+        outLine("            return true;");
+        outLine("        }");
+        outLine("        fd = e->fd;");
+        outLine("    }");
+        outLine("    size_t cap = 65536u; size_t len = 0u;");
+        outLine("    uint8_t *buf = malloc(cap + 1u);");
+        outLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate read buffer\\n\"); exit(1); }");
+        outLine("    for (;;) {");
+        outLine("        if (len >= cap) { cap *= 2u; uint8_t *nb = realloc(buf, cap + 1u); if (nb == NULL) { free(buf); fprintf(stderr, \"MemoryFault: cannot grow read buffer\\n\"); exit(1); } buf = nb; }");
+        outLine("        ssize_t n = read(fd, buf + len, cap - len);");
+        outLine("        if (n < 0) { const char *msg = lt_dup_str(strerror(errno)); if (e != NULL) { e->error = msg; } else { lt_stdin_err = msg; } free(buf); *out_err = msg; return false; }");
+        outLine("        if (n == 0) { if (e != NULL) { e->eof = true; } else { lt_stdin_eof = true; } break; }");
+        outLine("        len += (size_t)n;");
+        outLine("    }");
+        outLine("    if (len == 0u) { free(buf); return true; }");
+        outLine("    *out_buf = buf; *out_len = len;");
+        outLine("    return true;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_io_read_all(") {
+        outLine("static lt_list_i64 lt_c_io_read_all(" + shTag + " reader) {");
+        outLine("    lt_list_i64 empty = { NULL, 0, 0, NULL };");
+        outLine("    uint8_t *buf = NULL; size_t len = 0u; const char *err = \"\";");
+        outLine("    if (!lt_c_io_read_all_raw(reader, &buf, &len, &err) || len == 0u) { free(buf); return empty; }");
+        outLine("    int64_t *data = malloc(len * sizeof(int64_t));");
+        outLine("    if (data == NULL) { free(buf); fprintf(stderr, \"MemoryFault: cannot allocate bytes\\n\"); exit(1); }");
+        outLine("    for (size_t i = 0u; i < len; i += 1u) { data[i] = (int64_t)buf[i]; }");
+        outLine("    free(buf);");
+        outLine("    return (lt_list_i64){ data, (int64_t)len, (int64_t)len, NULL };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_io_read_all_text(") {
+        okTextTag := frontend.cStructTag("(ok:Bool,text:String,error:String)");
+        outLine("static " + okTextTag + " lt_c_io_read_all_text(" + shTag + " reader) {");
+        outLine("    uint8_t *buf = NULL; size_t len = 0u; const char *err = \"\";");
+        outLine("    if (!lt_c_io_read_all_raw(reader, &buf, &len, &err)) { return (" + okTextTag + "){ false, LT_ASTR(\"\"), lt_text_from_cstr(err) }; }");
+        outLine("    if (len == 0u) { free(buf); return (" + okTextTag + "){ true, LT_ASTR(\"\"), LT_ASTR(\"\") }; }");
+        outLine("    int32_t cp = 0; const char *uerr = \"\";");
+        outLine("    if (!lt_c_utf8_validate_buf(buf, len, &cp, &uerr)) { free(buf); return (" + okTextTag + "){ false, LT_ASTR(\"\"), lt_text_from_cstr(uerr) }; }");
+        outLine("    buf[len] = 0u;");
+        outLine("    return (" + okTextTag + "){ true, lt_text_from_buf((const char *)buf, len, cp), LT_ASTR(\"\") };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_io_read_line(") {
+        lineTag := frontend.cStructTag("(ok:Bool,line:String,eof:Bool,error:String)");
+        outLine("static " + lineTag + " lt_c_io_read_line(" + shTag + " reader) {");
+        outLine("    int fd = -1; lt_stream_entry *e = NULL;");
+        outLine("    if (strcmp(lt_text_cstr(reader." + fKind + "), \"stdin\") == 0 && reader." + fHandle + " == 0) {");
+        outLine("        if (lt_stdin_err[0] != '\\0') { return (" + lineTag + "){ false, LT_ASTR(\"\"), false, lt_text_from_cstr(lt_stdin_err) }; }");
+        outLine("        if (lt_stdin_eof) { return (" + lineTag + "){ true, LT_ASTR(\"\"), true, LT_ASTR(\"\") }; }");
+        outLine("        fd = 0;");
+        outLine("    } else {");
+        outLine("        e = lt_lookup_stream(reader." + fHandle + ");");
+        outLine("        if (e == NULL) { return (" + lineTag + "){ false, LT_ASTR(\"\"), false, LT_ASTR(\"invalid reader handle\") }; }");
+        outLine("        if (e->kind == 3) { return (" + lineTag + "){ false, LT_ASTR(\"\"), false, LT_ASTR(\"handle is a writer, not a reader\") }; }");
+        outLine("        if (e->error[0] != '\\0') { return (" + lineTag + "){ false, LT_ASTR(\"\"), false, lt_text_from_cstr(e->error) }; }");
+        outLine("        if (e->closed) { return (" + lineTag + "){ false, LT_ASTR(\"\"), false, LT_ASTR(\"reader is closed\") }; }");
+        outLine("        if (e->eof) { return (" + lineTag + "){ true, LT_ASTR(\"\"), true, LT_ASTR(\"\") }; }");
+        outLine("        if (e->kind == 2) {");
+        outLine("            if (e->pos >= e->len) { e->eof = true; return (" + lineTag + "){ true, LT_ASTR(\"\"), true, LT_ASTR(\"\") }; }");
+        outLine("            const uint8_t *start = e->buf + e->pos; size_t rem = (size_t)(e->len - e->pos);");
+        outLine("            const uint8_t *nl = memchr(start, '\\n', rem);");
+        outLine("            size_t line_len = nl != NULL ? (size_t)(nl - start) : rem;");
+        outLine("            if (nl != NULL) { e->pos += (int64_t)line_len + 1; if (line_len > 0u && start[line_len - 1u] == '\\r') { line_len -= 1u; } }");
+        outLine("            else { e->pos = e->len; e->eof = true; }");
+        outLine("            if (line_len == 0u) { return (" + lineTag + "){ true, LT_ASTR(\"\"), false, LT_ASTR(\"\") }; }");
+        outLine("            int32_t cp = 0; const char *uerr = \"\";");
+        outLine("            if (!lt_c_utf8_validate_buf(start, line_len, &cp, &uerr)) { return (" + lineTag + "){ false, LT_ASTR(\"\"), false, lt_text_from_cstr(uerr) }; }");
+        outLine("            char *out = malloc(line_len + 1u);");
+        outLine("            if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate line\\n\"); exit(1); }");
+        outLine("            memcpy(out, start, line_len); out[line_len] = '\\0';");
+        outLine("            return (" + lineTag + "){ true, lt_text_from_buf(out, line_len, cp), false, LT_ASTR(\"\") };");
+        outLine("        }");
+        outLine("        fd = e->fd;");
+        outLine("    }");
+        outLine("    size_t cap = 128u; size_t len = 0u; bool got_nl = false;");
+        outLine("    uint8_t *buf = malloc(cap + 1u);");
+        outLine("    if (buf == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate line\\n\"); exit(1); }");
+        outLine("    for (;;) {");
+        outLine("        uint8_t ch = 0u;");
+        outLine("        ssize_t n = read(fd, &ch, 1u);");
+        outLine("        if (n < 0) { const char *msg = lt_dup_str(strerror(errno)); if (e != NULL) { e->error = msg; } else { lt_stdin_err = msg; } free(buf); return (" + lineTag + "){ false, LT_ASTR(\"\"), false, lt_text_from_cstr(msg) }; }");
+        outLine("        if (n == 0) { if (e != NULL) { e->eof = true; } else { lt_stdin_eof = true; } break; }");
+        outLine("        if (ch == (uint8_t)'\\n') { got_nl = true; if (len > 0u && buf[len - 1u] == (uint8_t)'\\r') { len -= 1u; } break; }");
+        outLine("        if (len >= cap) { cap *= 2u; uint8_t *nb = realloc(buf, cap + 1u); if (nb == NULL) { free(buf); fprintf(stderr, \"MemoryFault: cannot grow line\\n\"); exit(1); } buf = nb; }");
+        outLine("        buf[len++] = ch;");
+        outLine("    }");
+        outLine("    if (!got_nl && len == 0u) { free(buf); return (" + lineTag + "){ true, LT_ASTR(\"\"), true, LT_ASTR(\"\") }; }");
+        outLine("    if (len == 0u) { free(buf); return (" + lineTag + "){ true, LT_ASTR(\"\"), false, LT_ASTR(\"\") }; }");
+        outLine("    int32_t cp = 0; const char *uerr = \"\";");
+        outLine("    if (!lt_c_utf8_validate_buf(buf, len, &cp, &uerr)) { free(buf); return (" + lineTag + "){ false, LT_ASTR(\"\"), false, lt_text_from_cstr(uerr) }; }");
+        outLine("    buf[len] = 0u;");
+        outLine("    return (" + lineTag + "){ true, lt_text_from_buf((const char *)buf, len, cp), false, LT_ASTR(\"\") };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_io_write_text(") or usesIntHelper(calls, "lt_c_io_write_line(") {
+        okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
+        outLine("static " + okErrTag + " lt_c_io_write_str_raw(" + shTag + " writer, lt_str text, bool add_nl) {");
+        outLine("    int target_fd = -1; lt_stream_entry *e = NULL;");
+        outLine("    if (strcmp(lt_text_cstr(writer." + fKind + "), \"stdout\") == 0 && writer." + fHandle + " == 1) { target_fd = 1; }");
+        outLine("    else if (strcmp(lt_text_cstr(writer." + fKind + "), \"stderr\") == 0 && writer." + fHandle + " == 2) { target_fd = 2; }");
+        outLine("    else {");
+        outLine("        e = lt_lookup_stream(writer." + fHandle + ");");
+        outLine("        if (e == NULL) { return (" + okErrTag + "){ false, LT_ASTR(\"invalid writer handle\") }; }");
+        outLine("        if (e->kind == 4) { return (" + okErrTag + "){ false, lt_text_from_cstr(e->error) }; }");
+        outLine("        if (e->kind == 2) { return (" + okErrTag + "){ false, LT_ASTR(\"handle is a reader, not a writer\") }; }");
+        outLine("        if (e->closed) { return (" + okErrTag + "){ false, LT_ASTR(\"writer is closed\") }; }");
+        outLine("        if (e->error[0] != '\\0') { return (" + okErrTag + "){ false, lt_text_from_cstr(e->error) }; }");
+        outLine("        if (e->kind == 3) {");
+        outLine("            size_t add_len = (size_t)text.byte_len + (add_nl ? 1u : 0u);");
+        outLine("            if (add_len > 0u) {");
+        outLine("                if (e->len + (int64_t)add_len > e->cap) {");
+        outLine("                    int64_t ncap = e->cap == 0 ? 64 : e->cap * 2;");
+        outLine("                    while (ncap < e->len + (int64_t)add_len) { ncap *= 2; }");
+        outLine("                    e->buf = realloc(e->buf, (size_t)ncap);");
+        outLine("                    if (e->buf == NULL) { fprintf(stderr, \"MemoryFault: cannot grow buffer writer\\n\"); exit(1); }");
+        outLine("                    e->cap = ncap;");
+        outLine("                }");
+        outLine("                if (text.byte_len > 0u) { memcpy(e->buf + e->len, text.data, (size_t)text.byte_len); e->len += (int64_t)text.byte_len; }");
+        outLine("                if (add_nl) { e->buf[e->len++] = (uint8_t)'\\n'; }");
+        outLine("            }");
+        outLine("            return (" + okErrTag + "){ true, LT_ASTR(\"\") };");
+        outLine("        }");
+        outLine("        target_fd = e->fd;");
+        outLine("    }");
+        outLine("    size_t len = (size_t)text.byte_len; size_t off = 0u;");
+        outLine("    while (off < len) {");
+        outLine("        ssize_t n = write(target_fd, text.data + off, len - off);");
+        outLine("        if (n < 0) { const char *msg = lt_dup_str(strerror(errno)); if (e != NULL) { e->error = msg; } return (" + okErrTag + "){ false, lt_text_from_cstr(msg) }; }");
+        outLine("        off += (size_t)n;");
+        outLine("    }");
+        outLine("    if (add_nl) {");
+        outLine("        uint8_t nl = (uint8_t)'\\n';");
+        outLine("        ssize_t n = write(target_fd, &nl, 1u);");
+        outLine("        if (n < 0) { const char *msg = lt_dup_str(strerror(errno)); if (e != NULL) { e->error = msg; } return (" + okErrTag + "){ false, lt_text_from_cstr(msg) }; }");
+        outLine("    }");
+        outLine("    return (" + okErrTag + "){ true, LT_ASTR(\"\") };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_io_write_text(") {
+        okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
+        outLine("static " + okErrTag + " lt_c_io_write_text(" + shTag + " writer, lt_str text) { return lt_c_io_write_str_raw(writer, text, false); }");
+    }
+    if usesIntHelper(calls, "lt_c_io_write_line(") {
+        okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
+        outLine("static " + okErrTag + " lt_c_io_write_line(" + shTag + " writer, lt_str text) { return lt_c_io_write_str_raw(writer, text, true); }");
     }
 };
 
@@ -5160,8 +5493,10 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     var hasUnreachable := false;
     floatLiterals := usesIntHelper(calls, "lt_float_literal(");
     float32Literals := usesIntHelper(calls, "lt_float32_literal(");
-    var float32Values := float32Literals or usesIntHelper(calls, "lt_float32_op(");
-    var floatValues := floatLiterals or float32Values or usesFloatArithmetic(calls);
+    hasFloatToText := usesIntHelper(calls, "lite$floatToText(");
+    hasFloat32ToText := usesIntHelper(calls, "lite$float32ToText(");
+    var float32Values := float32Literals or hasFloat32ToText or usesIntHelper(calls, "lt_float32_op(");
+    var floatValues := floatLiterals or float32Values or hasFloatToText or usesFloatArithmetic(calls);
     fnRefTokens: mut Set<String>;
     var fnDepth := 0;
     loop reachable as item {
@@ -5280,21 +5615,27 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(") or
     usesIntHelper(calls, "lite$ioBufferReader(") or usesIntHelper(calls, "lite$ioWriterBytes(") or
     usesIntHelper(calls, "lite$ioRead(") or usesIntHelper(calls, "lite$ioWrite(") or
-    usesIntHelper(calls, "lite$cryptoRandomBytes(") or usesIntHelper(calls, "lite$processRunBytes(") {
+    usesIntHelper(calls, "lite$cryptoRandomBytes(") or usesIntHelper(calls, "lite$processRunBytes(") or
+    usesCUtf8Soft(calls) or usesIntHelper(calls, "lt_c_io_read_all(") {
         mut seedKinds.pushBack("List<Int>");
     }
     if usesIntHelper(calls, "lite$processRun(") { mut seedKinds.pushBack("(status:Int,stdout:String,stderr:String,error:String)"); }
     if usesIntHelper(calls, "lite$processRunBytes(") { mut seedKinds.pushBack("(status:Int,error:String)"); }
     if usesStreamBuiltins(calls) { mut seedKinds.pushBack("(kind:String,handle:Int)"); }
     if usesIntHelper(calls, "lite$unicodeFromCodePoints(") or usesIntHelper(calls, "lite$ioWriterText(") or
-    usesIntHelper(calls, "lt_c_file_read_text(") {
+    usesIntHelper(calls, "lt_c_file_read_text(") or usesIntHelper(calls, "lt_c_utf8_decode_strict(") or
+    usesIntHelper(calls, "lt_c_io_read_all_text(") {
         mut seedKinds.pushBack("(ok:Bool,text:String,error:String)");
+    }
+    if usesIntHelper(calls, "lt_c_io_read_line(") {
+        mut seedKinds.pushBack("(ok:Bool,line:String,eof:Bool,error:String)");
     }
     if usesIntHelper(calls, "lite$ioCloseReader(") or usesIntHelper(calls, "lite$ioFlush(") or
     usesIntHelper(calls, "lite$ioCloseWriter(") or usesIntHelper(calls, "lite$fileMakeDir(") or
     usesIntHelper(calls, "lite$fileRemove(") or usesIntHelper(calls, "lite$fileCopy(") or
     usesIntHelper(calls, "lite$fileSymlink(") or usesIntHelper(calls, "lt_c_file_write_text(") or
-    usesIntHelper(calls, "lt_c_file_append_text(") {
+    usesIntHelper(calls, "lt_c_file_append_text(") or usesIntHelper(calls, "lt_c_io_write_text(") or
+    usesIntHelper(calls, "lt_c_io_write_line(") {
         mut seedKinds.pushBack("(ok:Bool,error:String)");
     }
     if usesIntHelper(calls, "lt_c_text_to_int(") { mut seedKinds.pushBack("(value:Int,ok:Bool)"); }
@@ -5504,8 +5845,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         }
     }
     needStrCstr := hasReportError or usesTextPrimitives(calls) or usesCTextSoftUtf8(calls) or hasInput or hasPosixHost or hasUnicodeHost or hasExtraCanvas;
-    needStrFromCstr := hasInputArgs or hasUnicodeHost or hasPosixHost or hasExtraCanvas;
-    needStrFromBuf := hasInput or hasUnicodeHost or usesStreamBuiltins(calls) or usesTimeBuiltins(calls) or usesCFileSoft(calls);
+    needStrFromCstr := hasInputArgs or hasUnicodeHost or hasPosixHost or hasExtraCanvas or usesIntHelper(calls, "lt_c_utf8_decode_strict(");
+    needStrFromBuf := hasInput or hasUnicodeHost or usesStreamBuiltins(calls) or usesTimeBuiltins(calls) or usesCFileSoft(calls) or usesCUtf8Soft(calls);
     needStrEq := usesIntHelper(calls, "lt_text_eq(") or hasStrMapOrSet;
     needStrHash := hasStrMapOrSet;
     outLine("typedef struct { const char *data; uint32_t byte_len; int32_t cp_len; } lt_str;");
@@ -5592,14 +5933,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     }
     if floatLiterals { outLine("static double lt_float_literal(const char *text) { return strtod(text, NULL); }"); }
     if float32Literals { outLine("static float lt_float32_literal(const char *text) { return strtof(text, NULL); }"); }
-    if floatOutput { emitFloatOutputHelpers(); }
+    if floatOutput or hasFloatToText or hasFloat32ToText { emitFloatOutputHelpers(floatOutput); }
     if hasReportError { outLine("static void lt_report_error(lt_str text) { fprintf(stderr, \"%s\\n\", lt_text_cstr(text)); }"); }
     if hasExit { outLine("static _Noreturn void lt_exit(int64_t status) { fflush(stdout); exit((int)status); }"); }
     emitIntArithmeticHelpers(calls, source, prefix);
     emitFloatArithmeticHelpers(calls);
     emitIntDivisionHelpers(calls);
     usesScratch := usesIntHelper(calls, "lite$extraCanvasScratchMark(") or usesIntHelper(calls, "lite$extraCanvasScratchRewind(");
-    if usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or usesIntHelper(calls, "lt_c_text_trim(") or usesIntHelper(calls, "lt_c_text_repeat(") or usesIntHelper(calls, "lt_c_text_to_lower(") or usesScratch {
+    if usesStringConcat(calls) or usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or usesIntHelper(calls, "lt_c_int_text(") or usesIntHelper(calls, "lt_c_text_join(") or usesIntHelper(calls, "lt_c_text_trim(") or usesIntHelper(calls, "lt_c_text_repeat(") or usesIntHelper(calls, "lt_c_text_to_lower(") or hasFloatToText or hasFloat32ToText or usesScratch {
         if usesScratch {
             outLine("typedef struct lt_str_slab { struct lt_str_slab *prev; size_t cap; size_t pos; char data[]; } lt_str_slab;");
             outLine("static lt_str_slab *lt_str_head = NULL;");
@@ -5660,6 +6001,26 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             outLine("    return p;");
             outLine("}");
         }
+    }
+    if hasFloatToText {
+        outLine("static lt_str lt_float_to_text(double value) {");
+        outLine("    char tmp[64];");
+        outLine("    if (!lt_float_format(value, tmp)) { return LT_ASTR(\"0\"); }");
+        outLine("    size_t n = strlen(tmp);");
+        outLine("    char *buf = lt_str_alloc(n + 1u);");
+        outLine("    memcpy(buf, tmp, n + 1u);");
+        outLine("    return (lt_str){ buf, (uint32_t)n, (int32_t)n };");
+        outLine("}");
+    }
+    if hasFloat32ToText {
+        outLine("static lt_str lt_float32_to_text(float value) {");
+        outLine("    char tmp[64];");
+        outLine("    if (!lt_float_format((double)value, tmp)) { return LT_ASTR(\"0\"); }");
+        outLine("    size_t n = strlen(tmp);");
+        outLine("    char *buf = lt_str_alloc(n + 1u);");
+        outLine("    memcpy(buf, tmp, n + 1u);");
+        outLine("    return (lt_str){ buf, (uint32_t)n, (int32_t)n };");
+        outLine("}");
     }
     if usesStringConcat(calls) { emitStringConcatHelper(); }
     emitTextPrimitiveHelpers(calls);

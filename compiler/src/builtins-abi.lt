@@ -191,6 +191,8 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "String.slice" and params == "text=String|start=Int|end=Int" and result == ir.VALUE_KIND_STRING { "lite$textSlice" }
         else if name == "String.toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
         else if name == "String.fromCodePoints" and params == "points=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeFromCodePoints" }
+        else if name == "Float.toText" and params == "value=Float" and result == ir.VALUE_KIND_STRING { "lite$floatToText" }
+        else if name == "Float32.toText" and params == "value=Float32" and result == ir.VALUE_KIND_STRING { "lite$float32ToText" }
         else { "" }
     } else if moduleIdentity == "lite.core.list.v1" {
         if name == "List.pushBack" and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushBack:v1" }

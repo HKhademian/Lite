@@ -2142,6 +2142,18 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         outLine("}");
         outLine("");
     }
+    if usesBuiltin(calls, "floatToText") {
+        outLine("function lite$floatToText(value: number): string {");
+        outLine("    return value.toString();");
+        outLine("}");
+        outLine("");
+    }
+    if usesBuiltin(calls, "float32ToText") {
+        outLine("function lite$float32ToText(value: number): string {");
+        outLine("    return Math.fround(value).toString();");
+        outLine("}");
+        outLine("");
+    }
     if usesBuiltin(calls, "textLength") {
         outLine("function lite$textLength(text: string): bigint {");
         outLine("    if (lite$isBmp(text)) return BigInt(text.length);");

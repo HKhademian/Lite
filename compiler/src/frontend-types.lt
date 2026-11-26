@@ -899,8 +899,14 @@ pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String
     if moduleIdentity == "lite.core.list.v1" and typeName == "List" { return "List"; }
     if moduleIdentity == "lite.core.map.v1" and typeName == "Map" { return "Map"; }
     if moduleIdentity == "lite.core.set.v1" and typeName == "Set" { return "Set"; }
-    if moduleIdentity == "lite.core.text.v1" and typeName == "String" { return "String"; }
-    if moduleIdentity == "lite.core.int.v1" and typeName == "Int" { return "Int"; }
+    if moduleIdentity == "lite.core.text.v1" and
+    (typeName == "String" or typeName == "Bool" or typeName == "Float" or typeName == "Float32") {
+        return typeName;
+    }
+    if moduleIdentity == "lite.core.int.v1" and
+    (typeName == "Int" or typeName == "Int8" or typeName == "Int16" or typeName == "Int32") {
+        return typeName;
+    }
     if moduleIdentity == "lite.core.array.v1" and typeName == "Array" { return "Array"; }
     ""
 };
