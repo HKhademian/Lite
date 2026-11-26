@@ -20,6 +20,7 @@ export type RenderedDocument = Readonly<{
 
 export type ModuleSymbolDoc = Readonly<{
   kind: 'type' | 'fn' | 'const';
+  functionKind?: 'module' | 'static' | 'instance';
   name: string;
   signature: string;
   isHostDeclaration: boolean;

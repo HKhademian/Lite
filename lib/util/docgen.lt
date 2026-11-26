@@ -139,6 +139,20 @@ skipInlineTrivia := fn(source: String, start: Int, startLine: Int): (next: Int, 
     (next = pos, nextLine = line)
 };
 
+/** A named first parameter with explicit Self or mut Self is a value receiver. */
+firstParameterIsReceiver := fn(source: String, paramsAt: Int, line: Int): Bool {
+    if paramsAt < 0 { return false; }
+    param := skipInlineTrivia(source, paramsAt + 1, line);
+    nameEnd := source.skipName(param.next);
+    colon := skipInlineTrivia(source, nameEnd, param.nextLine);
+    if nameEnd == param.next or not source.startsWithAt(colon.next, ":") { return false; }
+    annotation := skipInlineTrivia(source, colon.next + 1, colon.nextLine);
+    receiver := if source.wordAt(annotation.next, "mut") {
+        skipInlineTrivia(source, annotation.next + 3, annotation.nextLine)
+    } else { annotation };
+    source.wordAt(receiver.next, "Self")
+};
+
 /** Classifies a module namespace and name into `"universal"`, `"play"`, or `"cli"`. */
 classifyEnvironment := fn(namespace: String, name: String): String {
     if namespace == "extra" {
@@ -227,6 +241,9 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
                 var scanPos := rhsStart;
                 var scanLine := rhsProbe.nextLine;
                 var scanParen := 0;
+                var genericDepth := 0;
+                var paramsAt := -1;
+                typeFunction := declName.contains(".") and source.wordAt(rhsStart, "fn");
                 var stoppedAt := "";
                 loop scanPos < size {
                     sc := source.at(scanPos);
@@ -240,7 +257,16 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
                         sBlk := skipBlockComment(source, scanPos, scanLine);
                         scanPos = sBlk.next;
                         scanLine = sBlk.nextLine;
+                    } else if typeFunction and paramsAt < 0 and sc == "<" {
+                        genericDepth += 1;
+                        scanPos += 1;
+                    } else if typeFunction and paramsAt < 0 and sc == ">" and genericDepth > 0 {
+                        genericDepth -= 1;
+                        scanPos += 1;
                     } else if sc == "(" {
+                        if typeFunction and paramsAt < 0 and genericDepth == 0 {
+                            paramsAt = scanPos;
+                        }
                         scanParen += 1;
                         scanPos += 1;
                     } else if sc == ")" {
@@ -263,13 +289,18 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
                     kind = "fn";
                 }
                 isHost := kind == "fn" and stoppedAt == ";";
+                functionKind := if kind =!= "fn" { "" }
+                else if not typeFunction { "module" }
+                else if firstParameterIsReceiver(source, paramsAt, rhsProbe.nextLine) { "instance" }
+                else { "static" };
                 sig := "pub " + declName + " := " + normRhs + (if stoppedAt == ";" { ";" } else { "" });
                 symJson := "{\"kind\":" + json.quoteString(kind) +
                 ",\"name\":" + json.quoteString(declName) +
                 ",\"signature\":" + json.quoteString(sig) +
                 ",\"isHostDeclaration\":" + (if isHost { "true" } else { "false" }) +
                 ",\"doc\":" + json.quoteString(pendingDoc) +
-                ",\"line\":" + declLine.toText() + "}";
+                ",\"line\":" + declLine.toText() +
+                (if functionKind == "" { "" } else { ",\"functionKind\":" + json.quoteString(functionKind) }) + "}";
                 mut symbolsJson.pushBack(symJson);
                 pendingDoc = "";
                 pos = scanPos;

@@ -18,6 +18,23 @@ test.checkBool("host decl normalized", true, modJson.contains("\"signature\":\"p
 test.checkBool("impl fn not host", true, modJson.contains("\"signature\":\"pub add := fn(x: Int, y: Int): Int\",\"isHostDeclaration\":false"));
 test.checkBool("private omitted", false, modJson.contains("\"priv\""));
 
+opsSource := "pub make := fn(): Int { 0 }\n"
+    + "pub Vec.empty := fn<T: Type<math.Numeric>>(): Self<T, 2> { 0 }\n"
+    + "pub Vec.from := fn<T: Type<math.Numeric>>(values: [T; 2]): Self<T, 2> { 0 }\n"
+    + "pub Vec.copy := fn<T: Type<math.Numeric>>(value: Vec<T, 2>): Self<T, 2> { 0 }\n"
+    + "pub Vec.dim := fn<T: Type<math.Numeric>>(v: Self<T, 2>): Int { 2 }\n"
+    + "pub Vec.set := fn<T: Type<math.Numeric>>(v: /* lease */ mut /* receiver */ Self<T, 2>, n: Int): Unit { }\n";
+opsJson := docgen.extractModuleJson(opsSource, "math", "vec", "lib/math/vec.lt");
+opsField := json.findField(opsJson, 0, "symbols");
+opsOffsets := json.arrayOffsets(opsJson, opsField.valuePos);
+expectedKinds: List<String> = ["module", "static", "static", "static", "instance", "instance"];
+test.checkInt("function count", expectedKinds.length(), opsOffsets.length());
+loop 0..opsOffsets.length() as i {
+    op := opsOffsets[i];
+    opName := json.readFieldString(opsJson, op, "name").value;
+    test.checkText(opName + " function kind", expectedKinds[i], json.readFieldString(opsJson, op, "functionKind").value);
+}
+
 rootDir := project.findRepoRoot();
 test.checkBool("repo root found", true, rootDir =!= "");
 allJson := docgen.extractAllModulesJson(rootDir);

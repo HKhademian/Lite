@@ -155,6 +155,16 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(coreTextHtml.includes('Used Across Lite Academy'));
   const coreIoHtml = readFileSync(join(out, 'modules/core/io.html'), 'utf8');
   assert(coreIoHtml.includes('Used in Showcases &amp; Gallery'));
+  const vectorHtml = readFileSync(join(out, 'modules/math/vector.html'), 'utf8');
+  for (const [symbol, label] of [
+    ['vec2', 'Module function'],
+    ['Vec.from', 'Static type function'],
+    ['Vec.dim', 'Instance type function'],
+    ['Vec.set', 'Instance type function'],
+  ]) {
+    const card = vectorHtml.split(`id="${symbol}"`)[1]?.split('</article>')[0];
+    assert(card?.includes(`<span class="status-pill">${label}</span>`), `incorrect function kind for ${symbol}`);
+  }
   const coreFileHtml = readFileSync(join(out, 'modules/core/file.html'), 'utf8');
   assert(coreFileHtml.includes('CLI / Host OS'));
   const extraCanvasHtml = readFileSync(join(out, 'modules/extra/canvas.html'), 'utf8');

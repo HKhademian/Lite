@@ -392,6 +392,8 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         typeCards: mut List<String> = [];
         constCards: mut List<String> = [];
         fnCards: mut List<String> = [];
+        fnGroups: mut List<Int> = [];
+        fnLabels: List<String> = ["Module function", "Static type function", "Instance type function"];
         typeToc: mut List<String> = [];
         constToc: mut List<String> = [];
         fnToc: mut List<String> = [];
@@ -399,6 +401,9 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         symsF := json.findField(inputJson, mp, "symbols");
         loop json.arrayOffsets(inputJson, symsF.valuePos) as sPos {
             sKind := json.readFieldString(inputJson, sPos, "kind").value;
+            sFnKind := json.readFieldString(inputJson, sPos, "functionKind").value;
+            fnGroup := if sFnKind == "static" { 1 } else if sFnKind == "instance" { 2 } else { 0 };
+            label := if sKind == "fn" { fnLabels[fnGroup] } else { sKind };
             sName := json.readFieldString(inputJson, sPos, "name").value;
             sSig := json.readFieldString(inputJson, sPos, "signature").value;
             sSigHtmlR := json.readFieldString(inputJson, sPos, "signatureHtml");
@@ -408,7 +413,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
             sDoc := if sDocR.found and sDocR.ok { sDocR.value } else { "" };
             sLine := json.readFieldInt(inputJson, sPos, "line").value;
 
-            card := renderSymbolCard(mFile, sKind, sName, sSigHtml, sIsHost, sDoc, sLine, repoUrl);
+            card := renderSymbolCard(mFile, label, sName, sSigHtml, sIsHost, sDoc, sLine, repoUrl);
             tocLi := "<li class=\"toc-l3\"><a href=\"#" + escapeHtml(sName) + "\">" + escapeHtml(sName) + "</a></li>";
             if sKind == "type" {
                 mut typeCards.pushBack(card);
@@ -418,6 +423,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
                 mut constToc.pushBack(tocLi);
             } else {
                 mut fnCards.pushBack(card);
+                mut fnGroups.pushBack(fnGroup);
                 mut fnToc.pushBack(tocLi);
             }
 
@@ -425,7 +431,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
             + ",\"subtitle\":" + json.quoteString(if sDoc =!= "" { sDoc } else { sSig })
             + ",\"href\":" + json.quoteString(relPath + "#" + sName)
             + ",\"keywords\":" + json.quoteString(mId + " " + sName + " " + sSig + " " + sDoc)
-            + ",\"badge\":" + json.quoteString(sKind) + "}");
+            + ",\"badge\":" + json.quoteString(label) + "}");
         }
 
         usageCards: mut List<String> = [];
@@ -460,9 +466,22 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
             loop constToc as tl { mut tocItems.pushBack(tl); }
         }
         if fnCards.length() > 0 {
-            mut secHtml.pushBack("<section class=\"section\" id=\"functions\">\n      <div class=\"section-head\">\n        <h2>Functions</h2>\n        <span class=\"code-card-meta\">" + fnCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + fnCards.join("\n") + "\n      </div>\n    </section>");
             mut tocItems.pushBack("<li><a href=\"#functions\">Functions</a></li>");
-            loop fnToc as tl { mut tocItems.pushBack(tl); }
+            sections: mut List<String> = [];
+            groupTitles: List<String> = ["Module functions", "Static type functions", "Instance type functions"];
+            loop 0..groupTitles.length() as gi {
+                cards: mut List<String> = [];
+                loop 0..fnCards.length() as fi {
+                    if fnGroups[fi] == gi {
+                        mut cards.pushBack(fnCards[fi]);
+                        mut tocItems.pushBack(fnToc[fi]);
+                    }
+                }
+                if cards.length() > 0 {
+                    mut sections.pushBack("<h3>" + groupTitles[gi] + "</h3><div class=\"module-symbol-list\">" + cards.join("\n") + "</div>");
+                }
+            }
+            mut secHtml.pushBack("<section class=\"section\" id=\"functions\"><h2>Functions</h2>" + sections.join("\n") + "</section>");
         }
 
         usagesSection := if usageCards.length() > 0 {
