@@ -3934,44 +3934,37 @@ cParamRuntimeAt := fn(encoded: String, targetIndex: Int): String {
 };
 
 /** Returns a C11 native fast-path return expression for a registered soft-builtin function, or `""`. */
-cSoftBuiltinExpr := fn(moduleName: String, rawFnName: String, params: String): String {
-    fnName := if rawFnName == "Int.toText" { "intText" }
-    else if rawFnName == "String.toInt" { "textToInt" }
-    else if rawFnName == "String.repeat" { "repeatText" }
-    else if rawFnName == "String.contains" { "containsText" }
-    else if rawFnName.startsWithAt(0, "String.") { rawFnName.slice(7, rawFnName.length()) }
-    else { rawFnName };
+cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): String {
     arg0 := cParamRuntimeAt(params, 0);
     if moduleName == "lib/core/int" {
-        if fnName == "intText" { return "lt_c_int_text(" + arg0 + ")"; }
+        if fnName == "Int.toText" { return "lt_c_int_text(" + arg0 + ")"; }
     } else if moduleName == "lib/core/list" {
         if fnName == "List.join" { return "lt_c_text_join(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
     } else if moduleName == "lib/core/text" {
-        if fnName == "skipSpaces" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", true)"; }
-        if fnName == "skipName" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", false)"; }
-        if fnName == "indexOf" {
+        if fnName == "String.skipSpaces" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", true)"; }
+        if fnName == "String.skipName" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", false)"; }
+        if fnName == "String.indexOf" {
             return "lt_c_text_index_of(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
         }
-        if fnName == "startsWithAt" {
+        if fnName == "String.startsWithAt" {
             return "lt_c_text_starts_with_at(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
         }
-        if fnName == "wordAt" {
+        if fnName == "String.wordAt" {
             return "lt_c_text_word_at(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
         }
-        if fnName == "joinTexts" { return "lt_c_text_join(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
-        if fnName == "textToInt" { return "lt_c_text_to_int(" + arg0 + ")"; }
-        if fnName == "trimStart" { return "lt_c_text_trim(" + arg0 + ", true, false)"; }
-        if fnName == "trimEnd" { return "lt_c_text_trim(" + arg0 + ", false, true)"; }
-        if fnName == "trim" { return "lt_c_text_trim(" + arg0 + ", true, true)"; }
-        if fnName == "endsWith" { return "lt_c_text_ends_with(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
-        if fnName == "repeatText" { return "lt_c_text_repeat(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
-        if fnName == "containsText" { return "lt_c_text_contains(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
-        if fnName == "toLowerAscii" { return "lt_c_text_to_lower(" + arg0 + ")"; }
-        if fnName == "isDigit" { return "lt_c_text_is_digit(" + arg0 + ")"; }
-        if fnName == "isAsciiLetter" { return "lt_c_text_is_ascii_letter(" + arg0 + ")"; }
-        if fnName == "isNameStart" { return "lt_c_text_is_name_start(" + arg0 + ")"; }
-        if fnName == "isNameContinue" { return "lt_c_text_is_name_continue(" + arg0 + ")"; }
-        if fnName == "isWhitespace" { return "lt_c_text_is_whitespace(" + arg0 + ")"; }
+        if fnName == "String.toInt" { return "lt_c_text_to_int(" + arg0 + ")"; }
+        if fnName == "String.trimStart" { return "lt_c_text_trim(" + arg0 + ", true, false)"; }
+        if fnName == "String.trimEnd" { return "lt_c_text_trim(" + arg0 + ", false, true)"; }
+        if fnName == "String.trim" { return "lt_c_text_trim(" + arg0 + ", true, true)"; }
+        if fnName == "String.endsWith" { return "lt_c_text_ends_with(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "String.repeat" { return "lt_c_text_repeat(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "String.contains" { return "lt_c_text_contains(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "String.toLowerAscii" { return "lt_c_text_to_lower(" + arg0 + ")"; }
+        if fnName == "String.isDigit" { return "lt_c_text_is_digit(" + arg0 + ")"; }
+        if fnName == "String.isAsciiLetter" { return "lt_c_text_is_ascii_letter(" + arg0 + ")"; }
+        if fnName == "String.isNameStart" { return "lt_c_text_is_name_start(" + arg0 + ")"; }
+        if fnName == "String.isNameContinue" { return "lt_c_text_is_name_continue(" + arg0 + ")"; }
+        if fnName == "String.isWhitespace" { return "lt_c_text_is_whitespace(" + arg0 + ")"; }
     } else if moduleName == "lib/core/file" {
         if fnName == "readText" { return "lt_c_file_read_text(" + arg0 + ")"; }
         if fnName == "writeText" { return "lt_c_file_write_text(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
