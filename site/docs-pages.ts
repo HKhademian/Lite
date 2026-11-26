@@ -342,7 +342,7 @@ export function buildDocsSection(options: Readonly<{
           { kind: 'module', label: 'Module', limit: 8 },
           { kind: 'play', label: 'Play', limit: 4 },
           { kind: 'handbook', label: 'Handbook', limit: 4 },
-          { kind: 'doc', label: 'Design Spec', limit: 4 },
+          { kind: 'doc', label: 'Docs', limit: 4 },
           { kind: 'brand', label: 'Brand', limit: 4 },
         ],
       });

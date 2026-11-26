@@ -105,11 +105,14 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   ]) {
     assert(existsSync(join(out, rel)), `missing generated site file: ${rel}`);
   }
-  const searchIndex = JSON.parse(readFileSync(join(out, 'search-index.json'), 'utf8')) as Array<{ kind: string; title: string; href: string; keywords: string }>;
+  const searchIndex = JSON.parse(readFileSync(join(out, 'search-index.json'), 'utf8')) as Array<{ kind: string; title: string; href: string; keywords: string; subtitle: string; badge?: string }>;
   assert(searchIndex.length > showcaseSamples.length + 100);
   assert(searchIndex.some((entry) => entry.kind === 'module' && entry.href === 'modules/core/text.html'));
   assert(searchIndex.some((entry) => entry.kind === 'symbol' && entry.title === 'extra/canvas.fillRect'));
   assert(searchIndex.some((entry) => entry.kind === 'tool' && entry.title === 'lite fmt'));
+  const quickstartEntry = searchIndex.find(entry => entry.href === 'docs/design/start-here.html');
+  assert(quickstartEntry?.subtitle.includes('Quickstart, local setup'));
+  assert.equal(quickstartEntry.badge, 'Guide');
   for (const sid of ['persian-bookshelf', 'unicode-scripts', 'utf8-char-inspector']) {
     const entry = searchIndex.find((e) => e.kind === 'gallery' && e.href === `playground/?sample=${sid}`);
     assert(entry, `missing search-index entry for ${sid}`);
@@ -139,7 +142,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   }
   const modulesIndex = readFileSync(join(out, 'modules/index.html'), 'utf8');
   assert(modulesIndex.includes('Standard &amp; Play Modules'));
-  assert(modulesIndex.includes('Provisional Module Surface'));
+  assert(modulesIndex.includes('Module APIs are provisional.'));
+  assert(modulesIndex.includes('href="core/io.html"><code>core/io</code></a> for input and output'));
+  assert(modulesIndex.includes('href="../docs/handbook/imports-visibility-and-io.html">how imports work</a>'));
   assert(modulesIndex.includes('Browser + CLI'));
   assert(modulesIndex.includes('Lite Play'));
   assert(modulesIndex.includes('CLI / Host OS'));
@@ -167,6 +172,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(toolsHtml.includes('editors/vscode'));
   assert(toolsHtml.includes('node compiler/scripts/self-host.ts'));
   assert(toolsHtml.includes('onCanvasUpdate'));
+  assert(toolsHtml.includes('href="../docs/design/start-here.html#prepare-the-checkout">local setup</a>'));
 
   for (const docRel of [
     'docs/index.html',
@@ -194,8 +200,15 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   ]) {
     assert(existsSync(join(out, docRel)), `missing docs page: ${docRel}`);
   }
+  const docsIndex = readFileSync(join(out, 'docs/index.html'), 'utf8');
+  assert(docsIndex.includes('class="btn btn-primary" href="design/start-here.html">Start here</a>'));
+  assert(docsIndex.includes('href="design/tour.html">Take the syntax tour</a>'));
+  assert(docsIndex.includes('href="handbook/overview-and-setup.html">Read the Handbook</a>'));
+  assert(docsIndex.includes('href="../modules/">Module reference</a>'));
+  assert(docsIndex.includes('href="../tools/#cli">CLI reference</a>'));
   const handbookSingle = readFileSync(join(out, 'docs/handbook/single-page.html'), 'utf8');
   assert(handbookSingle.includes('The Lite Handbook (Single-Page Edition)'));
+  assert(handbookSingle.includes('All 11 Handbook chapters on one page'));
   assert(handbookSingle.includes('id="chapter-bindings-and-mutability"'));
   assert(handbookSingle.includes('Continue to <a href="#chapter-bindings-and-mutability"'));
   assert(handbookSingle.includes('#h5-nominal-record-types--name-shorthand'));
@@ -217,11 +230,14 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     }
   }
   const startHereHtml = readFileSync(join(out, 'docs/design/start-here.html'), 'utf8');
+  assert(startHereHtml.includes('Docs</a> / Getting started'));
+  assert(startHereHtml.includes('href="../../learn/getting-started/hello-lite.html" data-lite-kind="learn">Hello Lite</a>'));
+  assert(startHereHtml.includes('id="prepare-the-checkout"'));
   assert(startHereHtml.includes('Open in Play &rarr;'));
   assert(startHereHtml.includes('href="../../playground/?sample=double-sum"'));
   assert(startHereHtml.includes('implementation-status.html#verified-examples'));
   assert(startHereHtml.includes('Verified example'));
-  assert(!bindingsHbHtml.includes('Verified example'));
+  assert.doesNotMatch(bindingsHbHtml, /<a class="status-pill status-pill-shipped"[^>]*>Verified example<\/a>/);
   const stringsHbHtml = readFileSync(join(out, 'docs/handbook/numbers-operators-and-strings.html'), 'utf8');
   assert(stringsHbHtml.includes('implementation-status.html#verified-examples'));
   assert(stringsHbHtml.includes('showcase-strings-and-unicode'));
@@ -322,6 +338,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(orbPage.includes('class="docs-crosslinks"'));
   const helloLearnHtml = readFileSync(join(out, 'learn/getting-started/hello-lite.html'), 'utf8');
   assert(helloLearnHtml.includes('id="ln-open-play" class="btn" href="../../playground/?piece=hello-lite"'));
+  assert(helloLearnHtml.includes('href="../../docs/design/start-here.html#prepare-the-checkout" data-lite-kind="doc">local setup</a>'));
 
   const gymIndex = readFileSync(join(out, 'gym/index.html'), 'utf8');
   assert(gymIndex.includes('0 / 56 solved'));
@@ -377,6 +394,11 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(!gallery.includes('<details class="gallery-code" open>'));
   const index = readFileSync(join(out, 'index.html'), 'utf8');
   assert(index.includes('is light.'));
+  assert(index.includes('class="btn btn-primary" href="learn/getting-started/hello-lite.html">Run your first program</a>'));
+  assert(index.includes('href="docs/design/start-here.html#prepare-the-checkout">Set up locally</a>'));
+  assert(index.includes('run language/examples/foundations/io/double-sum.lts</span></code>'));
+  assert.equal(index.match(/id="sample-double-sum"/g)?.length, 1);
+  assert(index.includes('id="sample-type-aliases"'));
   assert(index.includes('Lite Academy'));
   assert(index.includes('Start Learning'));
   assert(index.includes('Enter Gym'));

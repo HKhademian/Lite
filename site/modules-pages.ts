@@ -49,7 +49,7 @@ export function buildModulesSection(options: Readonly<{
             { kind: 'handbook', label: 'Handbook', limit: 6 },
             { kind: 'learn', label: 'Learn', badgeKind: 'lesson', limit: 8 },
             { kind: 'gym', label: 'Lite Gym', badgeKind: 'gym', limit: 8 },
-            { kind: 'doc', label: 'Design Spec', limit: 6 },
+            { kind: 'doc', label: 'Docs', limit: 6 },
             { kind: 'play', label: 'Play & Sketches', limit: 6 },
           ],
         })

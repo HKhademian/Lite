@@ -18,9 +18,11 @@ consequential operations visible in the program text.
 ## Prepare Your Checkout
 
 Follow [local setup](lite://doc/start-here#prepare-the-checkout) for the clone
-and run commands. The [CLI reference](lite://tool) covers checking, formatting,
-and compiling. See [the contributor guide](lite://doc/contributing) for editor
-tests and repository development.
+and run commands. Use [`lite check`](lite://tool/check) to catch errors before
+running, [`lite fmt`](lite://tool/fmt) to format, and
+[`lite build`](lite://tool/build) to build a native executable. The
+[CLI reference](lite://tool) lists the other commands. See
+[the contributor guide](lite://doc/contributing) for repository development.
 
 ## Your First Program
 
@@ -38,7 +40,8 @@ total = total * 2;
 io.outputLine(total);
 ```
 
-Enter `7` and `5` at the prompts to print `24`. Look up the calls in
+Enter `7` and `5` at the prompts to print `24`. To edit the program on its
+own, [open double-sum in the Playground](lite://play/double-sum). Look up the calls in
 [`core/io`](lite://module/core/io) or open the
 [I/O chapter](lite://handbook/imports-visibility-and-io) when you need to parse
 arguments or import from another file.

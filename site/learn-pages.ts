@@ -239,7 +239,7 @@ export function buildLearnSection(options: Readonly<{
             { kind: 'handbook', label: 'Handbook', limit: 6 },
             { kind: 'module', label: 'Module', limit: 8 },
             { kind: 'play', label: 'Play', limit: 4 },
-            { kind: 'doc', label: 'Design Spec', limit: 4 },
+            { kind: 'doc', label: 'Docs', limit: 4 },
           ],
         })
       : '';

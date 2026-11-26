@@ -214,7 +214,10 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
             mut metaLayers.pushBack("spec");
             mut metaGroups.pushBack("start");
             mut metaNavs.pushBack(siteLib.posixBasename(src, ".md"));
-            mut metaSums.pushBack("");
+            summary := if src == "docs/start-here.md" { "Quickstart, local setup, and your first Lite program in the browser or terminal" }
+            else if src == "docs/tour.md" { "A short syntax tour with runnable examples of bindings, loops, functions, and types" }
+            else { "" };
+            mut metaSums.pushBack(summary);
             mut metaChSlugs.pushBack("");
             mut metaVerified.pushBack(verifiedDocs.has(src));
         }
@@ -1038,19 +1041,19 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     docsLandingBody := "<section class=\"page-hero\">\n"
     + "  <h1>Documentation</h1>\n"
     + "  <p class=\"hero-lead\">\n"
-    + "    Structured into two clear layers: the <strong>Shipped Lite Handbook</strong> and the full\n"
-    + "    <strong>Design Specification &amp; Proposals</strong> archive (" + spCount.toText() + " documents).\n"
+    + "    Run your first program, learn the Lite you can use today, and look up library functions or commands.\n"
     + "  </p>\n"
     + "  <div class=\"hero-actions\">\n"
-    + "    <a class=\"btn btn-primary\" href=\"handbook/overview-and-setup.html\">Start Handbook</a>\n"
-    + "    <a class=\"btn\" href=\"handbook/single-page.html\">Single-Page Handbook</a>\n"
-    + "    <a class=\"btn\" href=\"design/implementation-status.html\">Implementation status</a>\n"
-    + "    <a class=\"btn\" href=\"spec/\">Browse Design Spec (" + spCount.toText() + " docs)</a>\n"
+    + "    <a class=\"btn btn-primary\" href=\"design/start-here.html\">Start here</a>\n"
+    + "    <a class=\"btn\" href=\"design/tour.html\">Take the syntax tour</a>\n"
+    + "    <a class=\"btn\" href=\"handbook/overview-and-setup.html\">Read the Handbook</a>\n"
     + "  </div>\n"
+    + "  <p><a href=\"../modules/\">Module reference</a> &middot; <a href=\"../tools/#cli\">CLI reference</a></p>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"handbook\">\n"
     + "  <div class=\"section-head\">\n"
-    + "    <h2>Layer 1 — Shipped Lite Handbook</h2>\n"
+    + "    <h2>Lite Handbook</h2>\n"
+    + "    <a href=\"handbook/single-page.html\">Read all chapters on one page</a>\n"
     + "  </div>\n"
     + "  <p class=\"section-note\">Guides to shipped language features, library operations, and tools.</p>\n"
     + "  <div class=\"portal-grid\">\n"
@@ -1059,10 +1062,11 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     + "</section>\n\n"
     + "<section class=\"section\" id=\"design-spec\">\n"
     + "  <div class=\"section-head\">\n"
-    + "    <h2>Layer 2 — Design Specification, Proposals &amp; Compiler</h2>\n"
+    + "    <h2>Language design and compiler</h2>\n"
     + "    <a href=\"spec/\">All " + spCount.toText() + " spec docs &rarr;</a>\n"
     + "  </div>\n"
     + "  <p class=\"section-note\">\n"
+    + "    See <a href=\"design/implementation-status.html\">implementation status</a> for what the compiler supports.\n"
     + "    Normative language contracts (<span class=\"status-pill status-pill-selected\">Selected Design</span>),\n"
     + "    pending designs (<span class=\"status-pill status-pill-proposal\">Working Proposal</span>),\n"
     + "    open questions (<span class=\"status-pill status-pill-open\">Open Question</span>), and dated archives (<span class=\"status-pill status-pill-historical\">Historical</span>).\n"
@@ -1071,7 +1075,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     + "    " + specHighlights.join("\n") + "\n"
     + "  </div>\n"
     + "</section>";
-    mut pagesJson.pushBack("{\"relPath\":\"docs/index.html\",\"title\":\"Docs — Lite\",\"description\":\"Two-layer Lite documentation portal: Shipped Lite Handbook and full Design Specification & Proposals.\",\"basePath\":\"../\",\"body\":" + json.quoteString(docsLandingBody) + "}");
+    mut pagesJson.pushBack("{\"relPath\":\"docs/index.html\",\"title\":\"Docs — Lite\",\"description\":\"Start using Lite, learn the language in the Handbook, and find module, CLI, and design references.\",\"basePath\":\"../\",\"body\":" + json.quoteString(docsLandingBody) + "}");
 
     startCards: mut List<String> = [];
     si = 0;
@@ -1141,7 +1145,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     singleBodyOut: mut tb.TextBuilder;
     mut singleBodyOut.append("<div class=\"portal-layout\" id=\"top\">\n  ");
     mut singleBodyOut.append(renderDocsSidebar("handbook", "docs/handbook/single-page.html", hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, emptyStrs, emptyStrs, emptyStrs, emptyStrs, emptyBools));
-    mut singleBodyOut.append("\n  <article class=\"md-prose\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters &amp; Topics</button>\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">Chapters Jump</button>\n    </div>\n    <div class=\"hb-kicker-bar\">\n      <nav class=\"hb-breadcrumbs\" aria-label=\"Breadcrumb\">\n        <a href=\"../\">Docs</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <a href=\"overview-and-setup.html\">Handbook</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <span class=\"hb-kicker-chapter\">Single-Page View</span>\n      </nav>\n      <div class=\"docs-badge-row\"><span class=\"status-pill status-pill-shipped\">100% Runnable in TS</span></div>\n    </div>\n    <h1>The Lite Handbook (Single-Page Edition)</h1>\n    <p class=\"hero-lead\">All seven Shipped Handbook chapters on one page for fast reading, search, or printing.</p>\n    ");
+    mut singleBodyOut.append("\n  <article class=\"md-prose\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters &amp; Topics</button>\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">Chapters Jump</button>\n    </div>\n    <div class=\"hb-kicker-bar\">\n      <nav class=\"hb-breadcrumbs\" aria-label=\"Breadcrumb\">\n        <a href=\"../\">Docs</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <a href=\"overview-and-setup.html\">Handbook</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <span class=\"hb-kicker-chapter\">Single-Page View</span>\n      </nav>\n      <div class=\"docs-badge-row\"><span class=\"status-pill status-pill-shipped\">100% Runnable in TS</span></div>\n    </div>\n    <h1>The Lite Handbook (Single-Page Edition)</h1>\n    <p class=\"hero-lead\">All " + hbCount.toText() + " Handbook chapters on one page for reading, searching, or printing.</p>\n    ");
     mut singleBodyOut.append(chBlocksOut.build());
     mut singleBodyOut.append("\n  </article>\n  <aside class=\"portal-toc\" aria-label=\"Chapters\">\n    <p class=\"portal-toc-title\">Chapters</p>\n    <ul>\n      ");
     mut singleBodyOut.append(singleTocOut.build());
@@ -1266,6 +1270,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mNav := spNavs[si];
         mSum := spSums[si];
         dTitle := spTitles[si];
+        isGuide := mSrc == "docs/start-here.md" or mSrc == "docs/tour.md";
         mDir := siteLib.posixDirname(mOut);
         var dirIdx := specDirIndex.getOr(mDir, -1);
         if dirIdx < 0 {
@@ -1279,8 +1284,8 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
                 ti = ti + 1;
             }
         }
-        lbl := statusPillLabel("spec", mGrp, spStatuses[si]);
-        cls := statusPillClass("spec", mGrp, spStatuses[si]);
+        lbl := if isGuide { "Guide" } else { statusPillLabel("spec", mGrp, spStatuses[si]) };
+        cls := if isGuide { "status-pill-shipped" } else { statusPillClass("spec", mGrp, spStatuses[si]) };
         vBadge := verifiedExampleBadge(mOut, spVerified[si]);
         prevLink := if si > 0 {
             "<a class=\"btn\" href=\"" + escapeHtml(relativeHref(mOut, spOuts[si - 1])) + "\" data-pager-prev>&larr; " + escapeHtml(spNavs[si - 1]) + "</a>"
@@ -1298,7 +1303,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut spBodyOut.append(renderSpecSidebarFromTemplates(mOut, mGrp, specDirTmpls, dirIdx * 5));
         mut spBodyOut.append("\n  <article class=\"md-prose\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">On This Page</button>\n    </div>\n    <div class=\"portal-card-head\" style=\"margin-bottom: 0.65rem;\">\n      <span class=\"code-card-meta\"><a href=\"");
         mut spBodyOut.append(escapeHtml(relativeHref(mOut, "docs/index.html")));
-        mut spBodyOut.append("\">Docs</a> / Design Spec</span>\n      <div class=\"docs-badge-row\">");
+        mut spBodyOut.append("\">Docs</a> / " + (if isGuide { "Getting started" } else { "Design Spec" }) + "</span>\n      <div class=\"docs-badge-row\">");
         mut spBodyOut.append(vBadge);
         mut spBodyOut.append("<span class=\"status-pill ");
         mut spBodyOut.append(cls);
@@ -1320,7 +1325,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut spBodyOut.append(spTocHtmls[si]);
         mut spBodyOut.append("\n    </ul>\n  </aside>\n</div>");
         dispTitle := if dTitle =!= "" { dTitle } else { mNav };
-        pTitle := dispTitle + " — Design Spec — Lite";
+        pTitle := dispTitle + (if isGuide { " — Guide — Lite" } else { " — Design Spec — Lite" });
         pDesc := if mSum =!= "" { mSum } else { dTitle + " (" + mSrc + ")" };
         spPageEntry: mut tb.TextBuilder;
         mut spPageEntry.append("{\"relPath\":");

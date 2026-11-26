@@ -53,13 +53,13 @@ export const sampleGroups: readonly SampleGroup[] = [
 ];
 
 export const heroSample: ShowcaseSample = {
-  id: 'type-aliases',
-  group: 'types',
-  title: 'Type aliases and lists',
-  note: 'Named type aliases, mutable lists, and loop iteration.',
-  file: 'language/examples/types/aliases/type-aliases.lts',
+  id: 'double-sum',
+  group: 'basics',
+  title: 'Double sum',
+  note: 'Read two integers with explicit prompts and print twice their sum.',
+  file: 'language/examples/foundations/io/double-sum.lts',
   args: [],
-  stdin: '',
+  stdin: '7\n5\n',
   showOutput: true,
 };
 
@@ -76,16 +76,7 @@ export const playgroundDefaultSample: ShowcaseSample = {
 
 export const showcaseSamples: readonly ShowcaseSample[] = [
   playgroundDefaultSample,
-  {
-    id: 'double-sum',
-    group: 'basics',
-    title: 'Double sum',
-    note: 'Read two integers with explicit prompts and print twice their sum.',
-    file: 'language/examples/foundations/io/double-sum.lts',
-    args: [],
-    stdin: '7\n5\n',
-    showOutput: true,
-  },
+  heroSample,
   {
     id: 'factorial',
     group: 'basics',
@@ -163,7 +154,16 @@ export const showcaseSamples: readonly ShowcaseSample[] = [
     stdin: '',
     showOutput: true,
   },
-  heroSample,
+  {
+    id: 'type-aliases',
+    group: 'types',
+    title: 'Type aliases and lists',
+    note: 'Named type aliases, mutable lists, and loop iteration.',
+    file: 'language/examples/types/aliases/type-aliases.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
   {
     id: 'numeric-widths',
     group: 'types',

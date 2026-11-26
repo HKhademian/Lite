@@ -835,7 +835,7 @@ export function buildLiteAcademyGraph(options: Readonly<{
           uri,
           kind: 'doc',
           title: doc.title || doc.navLabel,
-          subtitle: doc.sourcePath,
+          subtitle: doc.summary || doc.sourcePath,
           outPath: doc.outPath,
           sourcePath: doc.sourcePath,
           badge: doc.hasVerifiedExample ? 'Verified example' : doc.group,
@@ -1067,7 +1067,7 @@ const DEFAULT_CROSSLINK_SECTIONS: readonly CrosslinkSectionSpec[] = [
   { kind: 'gym', label: 'Lite Gym', badgeKind: 'gym', limit: 8 },
   { kind: 'module', label: 'Module', limit: 10 },
   { kind: 'play', label: 'Play', limit: 6 },
-  { kind: 'doc', label: 'Design Spec', limit: 6 },
+  { kind: 'doc', label: 'Docs', limit: 6 },
   { kind: 'brand', label: 'Brand', limit: 4 },
 ];
 

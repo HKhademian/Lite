@@ -142,7 +142,7 @@ export function buildGymSection(options: Readonly<{
             { kind: 'handbook', label: 'Handbook', limit: 6 },
             { kind: 'learn', label: 'Learn', badgeKind: 'lesson', limit: 6 },
             { kind: 'module', label: 'Module', limit: 8 },
-            { kind: 'doc', label: 'Design Spec', limit: 4 },
+            { kind: 'doc', label: 'Docs', limit: 4 },
           ],
         })
       : '';
