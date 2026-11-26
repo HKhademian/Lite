@@ -710,9 +710,6 @@ runPostIgniteVerify := fn(rootDir: String, quiet: Bool): (ok: Bool, error: Strin
     docArgs: List<String> = [liteBin, "doctor"];
     docStep := runStep("lite doctor", nodeBin, docArgs, rootDir, quiet);
     if not docStep.ok { return docStep; }
-    covArgs: List<String> = [liteBin, "verify", "--coverage"];
-    covStep := runStep("lite verify --coverage", nodeBin, covArgs, rootDir, quiet);
-    if not covStep.ok { return covStep; }
     testArgs: List<String> = [liteBin, "test", "--full"];
     runStep("lite test --full", nodeBin, testArgs, rootDir, quiet)
 };

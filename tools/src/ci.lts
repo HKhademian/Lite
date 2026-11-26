@@ -166,17 +166,13 @@ runSelfHost := fn(root: String): Unit {
         failCi(linkRes.error);
     }
 
-    step1: List<String> = ["bin/lite", "test", "--full"];
-    step2: List<String> = ["compiler/scripts/build.ts"];
-    step3: List<String> = ["compiler/scripts/self-host.ts", "--out", "dist/ladder"];
-    step4: List<String> = ["compiler/scripts/corpus-parity.ts", "--artifact", "dist/ladder/generation-3.ts"];
-    step5: List<String> = ["bin/lite", "bootstrap", "verify"];
+    step1: List<String> = ["bin/lite", "test", "--fast"];
+    step2: List<String> = ["bin/lite", "bootstrap", "verify"];
+    step3: List<String> = ["compiler/scripts/corpus-parity.ts"];
     nodeBin := project.nodeExecPath();
     invokeIn(work, nodeBin, step1, work);
     invokeIn(work, nodeBin, step2, work);
     invokeIn(work, nodeBin, step3, work);
-    invokeIn(work, nodeBin, step4, work);
-    invokeIn(work, nodeBin, step5, work);
     cleanup := fs.remove(work);
     if not cleanup.ok { io.errorLine(cleanup.error); }
 };

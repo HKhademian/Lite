@@ -18,8 +18,7 @@ Start with the [contributor guide](lite://doc/contributing). Follow the
 4. Update affected reference pages, samples, examples, verification cases, editor
    grammar and editor version in the same coherent feature change. Simplify consumers
    when the feature replaces an earlier workaround.
-5. Run focused checks and the applicable project gates. Record failures, pending
-   cases and deferred targets separately; registration and self-builds are not coverage.
+5. Run focused checks (`./bin/lite test --fast`) during iteration and `./bin/lite test --full` as the minimal non-overlapping completion gate before committing (covers Node suites, all Lite unit tests, `verify --coverage`, `verify --all`, and `docs --check` once each). Record failures, pending cases and deferred targets separately; registration and self-builds are not coverage.
 6. Commit the coherent increment. Prepare independent component versions in a
    separate release commit, tag the verified revision, and publish commits and tags
    to the configured remote by default under the owner's 2026-11-03 authorization.

@@ -55,6 +55,23 @@ readGeneratedTestFiles := fn(root: String): List<String> {
     files
 };
 
+runPostTestGate := fn(nodeExe: String, args: List<String>, root: String, emptyEnv: List<String>, outputMode: String, quiet: Bool): Unit {
+    res := proc.run(nodeExe, args, root, emptyEnv, quiet, "");
+    if res.error =!= "" {
+        if outputMode =!= "--silence" {
+            io.errorLine(res.error);
+        }
+        io.exit(1);
+    }
+    if res.status =!= 0 {
+        if outputMode == "--mute" {
+            io.output(res.stdout);
+            project.errorText(res.stderr);
+        }
+        io.exit(res.status);
+    }
+};
+
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "tester", "test");
     args: mut List<String> = rawArgs;
@@ -149,6 +166,18 @@ run := fn(rawArgs: List<String>): Unit {
         if unitExit =!= 0 {
             io.exit(unitExit);
         }
+    }
+    if mode == "--full" {
+        liteBin := if root == "" { "bin/lite" } else { path.join(root, "bin/lite") };
+        nodeExe := project.nodeExecPath();
+        emptyEnv: List<String> = [];
+        gateRoot := if root == "" { "." } else { root };
+        covArgs: List<String> = [liteBin, "verify", "--coverage"];
+        allArgs: List<String> = [liteBin, "verify", "--all"];
+        docsArgs: List<String> = [liteBin, "docs", "--check"];
+        runPostTestGate(nodeExe, covArgs, gateRoot, emptyEnv, outputMode, quiet);
+        runPostTestGate(nodeExe, allArgs, gateRoot, emptyEnv, outputMode, quiet);
+        runPostTestGate(nodeExe, docsArgs, gateRoot, emptyEnv, outputMode, quiet);
     }
     io.exit(res.status);
 };

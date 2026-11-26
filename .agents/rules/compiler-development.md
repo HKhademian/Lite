@@ -128,14 +128,15 @@ compiler actually runs it. Verification executes generated TS. Historical
 targets metadata does not establish a C pass or permit fallback. A test present on disk, a coverage
 registry entry or a skipped backend is not evidence of generated support.
 
-During implementation run the focused cases and `./lite test --fast`. Before
-declaring an implementation complete, run `./lite test --full`,
-`./lite verify --coverage` and `./lite verify --all`, plus the repository's strict
-TS checks and affected editor grammar checks. When changing compiler source or
-seeds, also verify generated rebuilds, determinism, the relevant fixed-point
-ladder and corpus parity. Record commands, case names, results, skips and target
-gaps; the [bootstrap seed guide](../../compiler/bootstrap/README.md) describes the
-current build and recorded-contract paths. Documentation-only edits need link and
+During implementation run the focused cases and `./bin/lite test --fast`. Before
+declaring an implementation complete, run `./bin/lite test --full` (the minimal
+non-overlapping default completion gate: Node suites, all Lite unit tests,
+`verify --coverage`, `verify --all`, and `docs --check` once each), plus any
+affected editor grammar checks. When changing compiler source or seeds, also
+run `./bin/lite bootstrap verify` and `./bin/lite corpus-parity`. Record commands,
+case names, results, skips and target gaps; the
+[bootstrap seed guide](../../compiler/bootstrap/README.md) describes the current
+build and recorded-contract paths. Documentation-only edits need link and
 consistency review rather than a compiler rebuild.
 
 ## Syntax investigations and feature flags
