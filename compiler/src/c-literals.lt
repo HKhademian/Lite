@@ -158,8 +158,6 @@ comparisonPairCode := fn(op: String, leftKind: String, rightKind: String, left: 
         comparisonCode(op, numeric.KIND_FLOAT, floatOperandCode(leftKind, left), floatOperandCode(rightKind, right))
     } else if numeric.isUnsignedIntKind(leftKind) or numeric.isUnsignedIntKind(rightKind) {
         comparisonCode(op, numeric.KIND_UINT64, "((uint64_t)(" + left + "))", "((uint64_t)(" + right + "))")
-    } else if numeric.isIntKind(leftKind) or numeric.isIntKind(rightKind) {
-        comparisonCode(op, leftKind, "((int64_t)(" + left + "))", "((int64_t)(" + right + "))")
     } else {
         comparisonCode(op, leftKind, left, right)
     }
