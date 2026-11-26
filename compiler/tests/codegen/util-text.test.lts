@@ -17,6 +17,7 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
+"text := import \"core/text\";\n" +
 "\n" +
 "io.outputLine(\"hello world\".startsWith(\"hello\"), \"hello\".startsWith(\"world\"), \"\".startsWith(\"\"));\n" +
 "parts := \"a,b,,c\".split(\",\");\n" +
@@ -28,7 +29,10 @@ src :=
 "io.outputLine(\"foo bar foo baz foo\".replaceAll(\"foo\", \"QUX\"));\n" +
 "io.outputLine(\"no match\".replaceAll(\"xyz\", \"123\"));\n" +
 "io.outputLine(\"abcXYZ\".toLowerAscii(), \"abcXYZ\".toUpperAscii());\n" +
-"io.outputLine(\"[\"+ \"hi\".padLeft(4) +\"]\", \"[\" + \"hi\".padRight(4) + \"]\", \"actual\".lessOrEqual(\"book\"), \"é\".lessOrEqual(\"ü\"));\n";
+"io.outputLine(\"[\"+ \"hi\".padLeft(4) +\"]\", \"[\" + \"hi\".padRight(4) + \"]\", \"actual\".lessOrEqual(\"book\"), \"é\".lessOrEqual(\"ü\"));\n" +
+"io.outputLine(text.earliestIndex(-1, -2), text.earliestIndex(-1, -1), text.earliestIndex(-1, 5), text.earliestIndex(5, -1), text.earliestIndex(3, 5), text.earliestIndex(5, 3), text.earliestIndex(0, 4));\n" +
+"emptyNeedles: List<String> = [];\n" +
+"io.outputLine(\"hello<world>&!\".indexOfAny([\"&\", \"<\", \">\"], 0), \"hello<world>&!\".indexOfAny([\"&\", \"<\", \">\"], 6), \"hello\".indexOfAny([\"&\", \"<\"], 0), \"hello\".indexOfAny(emptyNeedles, 0));\n";
 
 expected :=
 "true false true\n" +
@@ -38,7 +42,9 @@ expected :=
 "QUX bar QUX baz QUX\n" +
 "no match\n" +
 "abcxyz ABCXYZ\n" +
-"[  hi] [hi  ] true true\n";
+"[  hi] [hi  ] true true\n" +
+"-1 -1 5 5 3 3 0\n" +
+"5 11 -1 -1\n";
 
 tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, "");
 test.checkInt("ts status: " + tsRes.stderr, 0, tsRes.status);

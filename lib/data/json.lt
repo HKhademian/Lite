@@ -55,12 +55,6 @@ skipSpaces := fn(source: String, start: Int): Int {
     source.skipSpaces(if start < 0 { 0 } else { start })
 };
 
-minNonNeg := fn(a: Int, b: Int): Int {
-    if a < 0 { return b; }
-    if b < 0 or a <= b { return a; }
-    b
-};
-
 isHexDigit := fn(ch: String): Bool {
     ch.isDigit() or
     ch == "a" or ch == "b" or ch == "c" or ch == "d" or ch == "e" or ch == "f" or
@@ -131,7 +125,7 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
         var segRunStart := 0;
         var escapedQuote := false;
         loop segPos < segLen {
-            hit := minNonNeg(segSlash, minNonNeg(segLf, minNonNeg(segCr, segTab)));
+            hit := text.earliestIndex(segSlash, text.earliestIndex(segLf, text.earliestIndex(segCr, segTab)));
             if hit < 0 { break; }
             if hit =!= segSlash {
                 return JsonString { ok = false, value = "", next = pos + hit, error = "unescaped control character in string" };
@@ -636,7 +630,7 @@ pub quoteString := fn(value: String): String {
     mut out.append("\"");
     var runStart := 0;
     loop true {
-        hit := minNonNeg(nextQuote, minNonNeg(nextSlash, minNonNeg(nextLf, minNonNeg(nextCr, nextTab))));
+        hit := text.earliestIndex(nextQuote, text.earliestIndex(nextSlash, text.earliestIndex(nextLf, text.earliestIndex(nextCr, nextTab))));
         if hit < 0 { break; }
         if hit > runStart { mut out.append(value.slice(runStart, hit)); }
         if hit == nextQuote {

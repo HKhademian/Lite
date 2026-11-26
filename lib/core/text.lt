@@ -413,6 +413,22 @@ pub String.indexOf := fn(source: Self, needle: String, start: Int): Int {
     -1
 };
 
+/** Returns the smaller non-negative index of `a` and `b`, or `-1` when both are negative. */
+pub earliestIndex := fn(a: Int, b: Int): Int {
+    if a >= 0 and (b < 0 or a <= b) { a }
+    else if b >= 0 { b }
+    else { -1 }
+};
+
+/** Returns the earliest position at or after `start` where any string in `needles` occurs, or `-1`. */
+pub String.indexOfAny := fn(source: Self, needles: List<String>, start: Int): Int {
+    var best := -1;
+    loop needles as needle {
+        best = earliestIndex(best, source.indexOf(needle, start));
+    }
+    best
+};
+
 /** True when `text` is exactly one ASCII decimal digit (soft builtin). */
 pub String.isDigit := fn(text: Self): Bool {
     or text == "0" or text == "1" or text == "2" or text == "3" or text == "4"

@@ -4,12 +4,6 @@ text := import "core/text";
 json := import "data/json";
 tb := import "util/text-builder";
 
-minNonNeg := fn(a: Int, b: Int): Int {
-    if a < 0 { return b; }
-    if b < 0 or a <= b { return a; }
-    b
-};
-
 /** Escapes HTML special characters (`&`, `<`, `>`, `"`, `'`). */
 pub escapeSiteHtml := fn(raw: String): String {
     var nextAmp := raw.indexOf("&", 0);
@@ -24,7 +18,7 @@ pub escapeSiteHtml := fn(raw: String): String {
     out: mut tb.TextBuilder;
     var runStart := 0;
     loop true {
-        hit := minNonNeg(nextAmp, minNonNeg(nextLt, minNonNeg(nextGt, minNonNeg(nextQuot, nextApos))));
+        hit := text.earliestIndex(nextAmp, text.earliestIndex(nextLt, text.earliestIndex(nextGt, text.earliestIndex(nextQuot, nextApos))));
         if hit < 0 { break; }
         if hit > runStart { mut out.append(raw.slice(runStart, hit)); }
         if hit == nextAmp {
