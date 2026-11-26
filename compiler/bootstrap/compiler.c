@@ -148,7 +148,36 @@ LT_INLINE int64_t lt_checked_negate(int64_t value, size_t at) {
     if (LT_UNLIKELY(value == INT64_MIN)) { lt_int_fault(at, "integer outside Int range"); }
     return -value;
 }
+LT_INLINE uint64_t lt_cast_i2u(int64_t value, int bits, const char *name, size_t at) {
+    if (LT_UNLIKELY(value < 0 || (bits < 64 && (uint64_t)value >= (UINT64_C(1) << (bits & 63))))) {
+        char message[64];
+        snprintf(message, sizeof message, "integer outside %s range", name);
+        lt_int_fault(at, message);
+    }
+    return (uint64_t)value;
+}
+LT_INLINE int64_t lt_cast_u2i(uint64_t value, int bits, const char *name, size_t at) {
+    const uint64_t maxv = (UINT64_C(1) << (bits - 1)) - UINT64_C(1);
+    if (LT_UNLIKELY(value > maxv)) {
+        char message[64];
+        snprintf(message, sizeof message, "integer outside %s range", name);
+        lt_int_fault(at, message);
+    }
+    return (int64_t)value;
+}
 
+LT_INLINE uint64_t lt_shl_u(uint64_t v, int64_t n, int bits, size_t at) {
+    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, "shift count out of range"); }
+    uint64_t r = v << (unsigned)n;
+    if (bits < 64) { r &= (UINT64_C(1) << (bits & 63)) - UINT64_C(1); }
+    return r;
+}
+LT_INLINE uint64_t lt_shr_u(uint64_t v, int64_t n, int bits, size_t at) {
+    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, "shift count out of range"); }
+    if (bits < 64) { v &= (UINT64_C(1) << (bits & 63)) - UINT64_C(1); }
+    return v >> (unsigned)n;
+}
+LT_INLINE uint32_t lt_rotr_u32(uint32_t v, int64_t n) { uint32_t s = (uint32_t)(uint64_t)n & 31u; return (v >> s) | (v << ((32u - s) & 31u)); }
 LT_INLINE int64_t lite_divide_int(int64_t left, int64_t right, size_t at) {
     if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, "division by zero"); }
     if (LT_UNLIKELY(left == INT64_MIN && right == -1)) {
@@ -592,11 +621,6 @@ static void lt_list_i64_grow(lt_list_i64 *xs, int64_t need) {
 static void lt_list_i64_push_back(lt_list_i64 *xs, int64_t val) {
     lt_list_i64_grow(xs, xs->len + 1);
     xs->data[xs->len++] = val;
-}
-static void lt_list_i64_push_front(lt_list_i64 *xs, int64_t val) {
-    lt_list_i64_grow(xs, xs->len + 1);
-    if (xs->len > 0) { memmove(xs->data + 1, xs->data, (size_t)xs->len * sizeof(int64_t)); }
-    xs->data[0] = val; xs->len += 1;
 }
 static int64_t lt_list_i64_pop_back(lt_list_i64 *xs, size_t at) {
     if (xs->len <= 0) { lt_bound_fault(at, "cannot pop from an empty list"); }
@@ -1075,7 +1099,17 @@ static void lt_map_i64_i64_clear(lt_map_i64_i64 *m) {
 
 typedef struct { int64_t f_openPos; bool f_isSubject; } lt_s_493506707_558705555;
 
-typedef struct { int64_t f_h0; int64_t f_h1; int64_t f_h2; int64_t f_h3; int64_t f_h4; int64_t f_h5; int64_t f_h6; int64_t f_h7; } lt_s_636182801_889164149;
+typedef struct { uint32_t data[64]; } lt_arr_u32_64;
+LT_INLINE uint32_t lt_arr_u32_64_at(lt_arr_u32_64 xs, int64_t idx, size_t at) {
+    if (LT_UNLIKELY(idx < 0 || idx >= 64)) { lt_bound_fault(at, "list index outside its extent"); }
+    return xs.data[idx];
+}
+LT_INLINE void lt_arr_u32_64_set(lt_arr_u32_64 *xs, int64_t idx, uint32_t val, size_t at) {
+    if (LT_UNLIKELY(idx < 0 || idx >= 64)) { lt_bound_fault(at, "list index outside its extent"); }
+    xs->data[idx] = val;
+}
+
+typedef struct { uint32_t f_h0; uint32_t f_h1; uint32_t f_h2; uint32_t f_h3; uint32_t f_h4; uint32_t f_h5; uint32_t f_h6; uint32_t f_h7; } lt_s_43550529_298059828;
 
 typedef struct { bool f_ok; lt_str f_hex; lt_str f_error; } lt_s_388836977_2312347;
 
@@ -4693,10 +4727,7 @@ static lt_str lt_m_frontend_d_syntax__braceIndexSource;
 static bool lt_m_frontend_d_syntax__braceIndexComplete;
 static lt_map_i64_i64 lt_m_frontend_d_syntax__braceIndexMap;
 static const lt_str lt_m_lib_s_core_s_crypto__hexAlphabet = LT_STR_LIT("0123456789abcdef", 16);
-static const int64_t lt_m_lib_s_core_s_crypto__pow32 = INT64_C(4294967296);
-static lt_list_i64 lt_m_lib_s_core_s_crypto__xor4;
-static lt_list_i64 lt_m_lib_s_core_s_crypto__and4;
-static lt_list_i64 lt_m_lib_s_core_s_crypto__k256;
+static lt_arr_u32_64 lt_m_lib_s_core_s_crypto__k256;
 static lt_map_str_i64 lt_m_symbol_d_table__localByName;
 static lt_map_str_i64 lt_m_symbol_d_table__runtimeByName;
 static lt_set_str lt_m_symbol_d_table__unreadyRuntimes;
@@ -5182,13 +5213,9 @@ static int64_t lt_fn_frontend_d_syntax__scanValueMatchEnd(lt_str lite_source, in
 static int64_t lt_fn_frontend_d_syntax__scanRawLoopEnd(lt_str lite_source, int64_t lite_position, lt_str lite_prefix);
 static bool lt_fn_frontend_d_syntax__loopNeedsExprLowering(lt_str lite_source, int64_t lite_position, lt_str lite_prefix);
 static lt_str lt_fn_frontend_d_syntax__lineStartCodes(lt_str lite_source);
-static lt_list_i64 lt_fn_lib_s_core_s_crypto__buildNibbleTable(bool lite_isXor);
-static int64_t lt_fn_lib_s_core_s_crypto__xor3_32(int64_t lite_a, int64_t lite_b, int64_t lite_c);
-static int64_t lt_fn_lib_s_core_s_crypto__ch32(int64_t lite_e, int64_t lite_f, int64_t lite_g);
-static int64_t lt_fn_lib_s_core_s_crypto__maj32(int64_t lite_a, int64_t lite_b, int64_t lite_c);
-static lt_str lt_fn_lib_s_core_s_crypto__word32Hex(int64_t lite_word);
-static lt_s_636182801_889164149 lt_fn_lib_s_core_s_crypto__sha256Compress(int64_t lite_h0In, int64_t lite_h1In, int64_t lite_h2In, int64_t lite_h3In, int64_t lite_h4In, int64_t lite_h5In, int64_t lite_h6In, int64_t lite_h7In, lt_list_i64 lite_block, int64_t lite_offset);
-static lt_str lt_fn_lib_s_core_s_crypto__sha256FinalizeTail(int64_t lite_h0In, int64_t lite_h1In, int64_t lite_h2In, int64_t lite_h3In, int64_t lite_h4In, int64_t lite_h5In, int64_t lite_h6In, int64_t lite_h7In, lt_list_i64 lite_tail, int64_t lite_totalBytes);
+static lt_str lt_fn_lib_s_core_s_crypto__word32Hex(uint32_t lite_word);
+static lt_s_43550529_298059828 lt_fn_lib_s_core_s_crypto__sha256Compress(uint32_t lite_h0In, uint32_t lite_h1In, uint32_t lite_h2In, uint32_t lite_h3In, uint32_t lite_h4In, uint32_t lite_h5In, uint32_t lite_h6In, uint32_t lite_h7In, lt_list_i64 lite_block, int64_t lite_offset);
+static lt_str lt_fn_lib_s_core_s_crypto__sha256FinalizeTail(uint32_t lite_h0In, uint32_t lite_h1In, uint32_t lite_h2In, uint32_t lite_h3In, uint32_t lite_h4In, uint32_t lite_h5In, uint32_t lite_h6In, uint32_t lite_h7In, lt_list_i64 lite_tail, int64_t lite_totalBytes);
 static lt_s_388836977_2312347 lt_fn_lib_s_core_s_crypto__sha256Reader(lt_s_677744100_863061398 lite_reader);
 static lt_s_388836977_2312347 lt_fn_lib_s_core_s_crypto__sha256File(lt_str lite_path);
 static bool lt_fn_symbol_d_table__sameLocalSlot(lt_s_59984397_34215745 lite_a, lt_s_189872741_884894431 lite_u);
@@ -12346,291 +12373,28 @@ static lt_str lt_fn_frontend_d_syntax__lineStartCodes(lt_str lite_source) {
     return lt_fn_lib_s_core_s_list__tp_List_op_join(lite_parts, LT_STR_LIT(", ", 2));
 }
 
-static lt_list_i64 lt_fn_lib_s_core_s_crypto__buildNibbleTable(bool lite_isXor) {
-    (void)lite_isXor;
-    int64_t lt_arg_left_1216;
-    int64_t lt_arg_right_1216;
-    int64_t lt_arg_left_1245;
-    int64_t lt_arg_right_1245;
-    int64_t lt_arg_left_1355;
-    int64_t lt_arg_right_1355;
-    int64_t lt_arg_left_1383;
-    int64_t lt_arg_right_1383;
-    int64_t lt_arg_left_1407;
-    int64_t lt_arg_right_1407;
-    int64_t lt_arg_left_1433;
-    int64_t lt_arg_right_1433;
-    int64_t lt_arg_left_1457;
-    int64_t lt_arg_right_1457;
-    int64_t lt_arg_left_1528;
-    int64_t lt_arg_right_1528;
-    int64_t lt_arg_left_1554;
-    int64_t lt_arg_right_1554;
-    lt_list_i64 lite_out = lt_list_i64_from(0, NULL);
-    (void)lite_out;
-    int64_t lite_a = INT64_C(0);
-    (void)lite_a;
-    while ((lite_a) < (INT64_C(16))) {
-        int64_t lite_b = INT64_C(0);
-        (void)lite_b;
-        while ((lite_b) < (INT64_C(16))) {
-            int64_t lite_x = lite_a;
-            (void)lite_x;
-            int64_t lite_y = lite_b;
-            (void)lite_y;
-            int64_t lite_res = INT64_C(0);
-            (void)lite_res;
-            int64_t lite_bit = INT64_C(1);
-            (void)lite_bit;
-            int64_t lite_k = INT64_C(0);
-            (void)lite_k;
-            while ((lite_k) < (INT64_C(4))) {
-                int64_t lite_ax = (lt_arg_left_1216 = lite_x, lt_arg_right_1216 = INT64_C(2), lite_remainder_int(lt_arg_left_1216, lt_arg_right_1216, 1216));
-                (void)lite_ax;
-                int64_t lite_by = (lt_arg_left_1245 = lite_y, lt_arg_right_1245 = INT64_C(2), lite_remainder_int(lt_arg_left_1245, lt_arg_right_1245, 1245));
-                (void)lite_by;
-                bool lite_hit = ((lite_isXor) ? (lite_ax) != (lite_by) : (((lite_ax) == (INT64_C(1))) && ((lite_by) == (INT64_C(1)))));
-                (void)lite_hit;
-                if (lite_hit) {
-                    lite_res = (lt_arg_left_1355 = lite_res, lt_arg_right_1355 = lite_bit, lt_checked_add(lt_arg_left_1355, lt_arg_right_1355, 1355));
-                }
-                lite_x = (lt_arg_left_1383 = lite_x, lt_arg_right_1383 = INT64_C(2), lite_divide_int(lt_arg_left_1383, lt_arg_right_1383, 1383));
-                lite_y = (lt_arg_left_1407 = lite_y, lt_arg_right_1407 = INT64_C(2), lite_divide_int(lt_arg_left_1407, lt_arg_right_1407, 1407));
-                lite_bit = (lt_arg_left_1433 = lite_bit, lt_arg_right_1433 = INT64_C(2), lt_checked_multiply(lt_arg_left_1433, lt_arg_right_1433, 1433));
-                lite_k = (lt_arg_left_1457 = lite_k, lt_arg_right_1457 = INT64_C(1), lt_checked_add(lt_arg_left_1457, lt_arg_right_1457, 1457));
-            }
-            (void)(lt_list_i64_push_back(&lite_out, lite_res));
-            lite_b = (lt_arg_left_1528 = lite_b, lt_arg_right_1528 = INT64_C(1), lt_checked_add(lt_arg_left_1528, lt_arg_right_1528, 1528));
-        }
-        lite_a = (lt_arg_left_1554 = lite_a, lt_arg_right_1554 = INT64_C(1), lt_checked_add(lt_arg_left_1554, lt_arg_right_1554, 1554));
-    }
-    return lt_list_i64_copy(lite_out);
-}
-
-static int64_t lt_fn_lib_s_core_s_crypto__xor3_32(int64_t lite_a, int64_t lite_b, int64_t lite_c) {
-    (void)lite_a;
-    (void)lite_b;
-    (void)lite_c;
-    int64_t lt_arg_left_4634;
-    int64_t lt_arg_left_4629;
-    int64_t lt_arg_left_4623;
-    int64_t lt_arg_right_4623;
-    int64_t lt_arg_right_4629;
-    int64_t lt_arg_right_4634;
-    int64_t lt_arg_left_4639;
-    int64_t lt_arg_right_4639;
-    int64_t lt_arg_left_4659;
-    int64_t lt_arg_right_4659;
-    int64_t lt_arg_left_4687;
-    int64_t lt_arg_left_4675;
-    int64_t lt_arg_left_4670;
-    int64_t lt_arg_right_4670;
-    int64_t lt_arg_right_4675;
-    int64_t lt_arg_left_4680;
-    int64_t lt_arg_right_4680;
-    int64_t lt_arg_right_4687;
-    int64_t lt_arg_left_4704;
-    int64_t lt_arg_right_4704;
-    int64_t lt_arg_left_4721;
-    int64_t lt_arg_right_4721;
-    int64_t lt_arg_left_4738;
-    int64_t lt_arg_right_4738;
-    int64_t lt_arg_left_4757;
-    int64_t lt_arg_right_4757;
-    int64_t lt_arg_left_4777;
-    int64_t lt_arg_right_4777;
-    int64_t lite_x = lite_a;
-    (void)lite_x;
-    int64_t lite_y = lite_b;
-    (void)lite_y;
-    int64_t lite_z = lite_c;
-    (void)lite_z;
-    int64_t lite_acc = INT64_C(0);
-    (void)lite_acc;
-    int64_t lite_mul = INT64_C(1);
-    (void)lite_mul;
-    int64_t lite_step = INT64_C(0);
-    (void)lite_step;
-    while ((lite_step) < (INT64_C(8))) {
-        int64_t lite_xy = lt_list_i64_at(lt_m_lib_s_core_s_crypto__xor4, (lt_arg_left_4634 = (lt_arg_left_4629 = ((lt_arg_left_4623 = lite_x, lt_arg_right_4623 = INT64_C(16), lite_remainder_int(lt_arg_left_4623, lt_arg_right_4623, 4623))), lt_arg_right_4629 = INT64_C(16), lt_checked_multiply(lt_arg_left_4629, lt_arg_right_4629, 4629)), lt_arg_right_4634 = ((lt_arg_left_4639 = lite_y, lt_arg_right_4639 = INT64_C(16), lite_remainder_int(lt_arg_left_4639, lt_arg_right_4639, 4639))), lt_checked_add(lt_arg_left_4634, lt_arg_right_4634, 4634)), 4620);
-        (void)lite_xy;
-        lite_acc = (lt_arg_left_4659 = lite_acc, lt_arg_right_4659 = (lt_arg_left_4687 = lt_list_i64_at(lt_m_lib_s_core_s_crypto__xor4, (lt_arg_left_4675 = (lt_arg_left_4670 = lite_xy, lt_arg_right_4670 = INT64_C(16), lt_checked_multiply(lt_arg_left_4670, lt_arg_right_4670, 4670)), lt_arg_right_4675 = ((lt_arg_left_4680 = lite_z, lt_arg_right_4680 = INT64_C(16), lite_remainder_int(lt_arg_left_4680, lt_arg_right_4680, 4680))), lt_checked_add(lt_arg_left_4675, lt_arg_right_4675, 4675)), 4667), lt_arg_right_4687 = lite_mul, lt_checked_multiply(lt_arg_left_4687, lt_arg_right_4687, 4687)), lt_checked_add(lt_arg_left_4659, lt_arg_right_4659, 4659));
-        lite_x = (lt_arg_left_4704 = lite_x, lt_arg_right_4704 = INT64_C(16), lite_divide_int(lt_arg_left_4704, lt_arg_right_4704, 4704));
-        lite_y = (lt_arg_left_4721 = lite_y, lt_arg_right_4721 = INT64_C(16), lite_divide_int(lt_arg_left_4721, lt_arg_right_4721, 4721));
-        lite_z = (lt_arg_left_4738 = lite_z, lt_arg_right_4738 = INT64_C(16), lite_divide_int(lt_arg_left_4738, lt_arg_right_4738, 4738));
-        lite_mul = (lt_arg_left_4757 = lite_mul, lt_arg_right_4757 = INT64_C(16), lt_checked_multiply(lt_arg_left_4757, lt_arg_right_4757, 4757));
-        lite_step = (lt_arg_left_4777 = lite_step, lt_arg_right_4777 = INT64_C(1), lt_checked_add(lt_arg_left_4777, lt_arg_right_4777, 4777));
-    }
-    return lite_acc;
-}
-
-static int64_t lt_fn_lib_s_core_s_crypto__ch32(int64_t lite_e, int64_t lite_f, int64_t lite_g) {
-    (void)lite_e;
-    (void)lite_f;
-    (void)lite_g;
-    int64_t lt_arg_left_5060;
-    int64_t lt_arg_right_5060;
-    int64_t lt_arg_left_5083;
-    int64_t lt_arg_right_5083;
-    int64_t lt_arg_left_5106;
-    int64_t lt_arg_right_5106;
-    int64_t lt_arg_left_5141;
-    int64_t lt_arg_left_5136;
-    int64_t lt_arg_right_5136;
-    int64_t lt_arg_right_5141;
-    int64_t lt_arg_left_5160;
-    int64_t lt_arg_right_5160;
-    int64_t lt_arg_left_5200;
-    int64_t lt_arg_left_5176;
-    int64_t lt_arg_left_5171;
-    int64_t lt_arg_right_5171;
-    int64_t lt_arg_right_5176;
-    int64_t lt_arg_left_5191;
-    int64_t lt_arg_left_5186;
-    int64_t lt_arg_right_5186;
-    int64_t lt_arg_right_5191;
-    int64_t lt_arg_right_5200;
-    int64_t lt_arg_left_5218;
-    int64_t lt_arg_right_5218;
-    int64_t lt_arg_left_5236;
-    int64_t lt_arg_right_5236;
-    int64_t lt_arg_left_5254;
-    int64_t lt_arg_right_5254;
-    int64_t lt_arg_left_5273;
-    int64_t lt_arg_right_5273;
-    int64_t lt_arg_left_5293;
-    int64_t lt_arg_right_5293;
-    int64_t lite_ve = lite_e;
-    (void)lite_ve;
-    int64_t lite_vf = lite_f;
-    (void)lite_vf;
-    int64_t lite_vg = lite_g;
-    (void)lite_vg;
-    int64_t lite_acc = INT64_C(0);
-    (void)lite_acc;
-    int64_t lite_mul = INT64_C(1);
-    (void)lite_mul;
-    int64_t lite_step = INT64_C(0);
-    (void)lite_step;
-    while ((lite_step) < (INT64_C(8))) {
-        int64_t lite_ne = (lt_arg_left_5060 = lite_ve, lt_arg_right_5060 = INT64_C(16), lite_remainder_int(lt_arg_left_5060, lt_arg_right_5060, 5060));
-        (void)lite_ne;
-        int64_t lite_nf = (lt_arg_left_5083 = lite_vf, lt_arg_right_5083 = INT64_C(16), lite_remainder_int(lt_arg_left_5083, lt_arg_right_5083, 5083));
-        (void)lite_nf;
-        int64_t lite_ng = (lt_arg_left_5106 = lite_vg, lt_arg_right_5106 = INT64_C(16), lite_remainder_int(lt_arg_left_5106, lt_arg_right_5106, 5106));
-        (void)lite_ng;
-        int64_t lite_fxor = lt_list_i64_at(lt_m_lib_s_core_s_crypto__xor4, (lt_arg_left_5141 = (lt_arg_left_5136 = lite_nf, lt_arg_right_5136 = INT64_C(16), lt_checked_multiply(lt_arg_left_5136, lt_arg_right_5136, 5136)), lt_arg_right_5141 = lite_ng, lt_checked_add(lt_arg_left_5141, lt_arg_right_5141, 5141)), 5133);
-        (void)lite_fxor;
-        lite_acc = (lt_arg_left_5160 = lite_acc, lt_arg_right_5160 = (lt_arg_left_5200 = lt_list_i64_at(lt_m_lib_s_core_s_crypto__xor4, (lt_arg_left_5176 = (lt_arg_left_5171 = lite_ng, lt_arg_right_5171 = INT64_C(16), lt_checked_multiply(lt_arg_left_5171, lt_arg_right_5171, 5171)), lt_arg_right_5176 = lt_list_i64_at(lt_m_lib_s_core_s_crypto__and4, (lt_arg_left_5191 = (lt_arg_left_5186 = lite_ne, lt_arg_right_5186 = INT64_C(16), lt_checked_multiply(lt_arg_left_5186, lt_arg_right_5186, 5186)), lt_arg_right_5191 = lite_fxor, lt_checked_add(lt_arg_left_5191, lt_arg_right_5191, 5191)), 5183), lt_checked_add(lt_arg_left_5176, lt_arg_right_5176, 5176)), 5168), lt_arg_right_5200 = lite_mul, lt_checked_multiply(lt_arg_left_5200, lt_arg_right_5200, 5200)), lt_checked_add(lt_arg_left_5160, lt_arg_right_5160, 5160));
-        lite_ve = (lt_arg_left_5218 = lite_ve, lt_arg_right_5218 = INT64_C(16), lite_divide_int(lt_arg_left_5218, lt_arg_right_5218, 5218));
-        lite_vf = (lt_arg_left_5236 = lite_vf, lt_arg_right_5236 = INT64_C(16), lite_divide_int(lt_arg_left_5236, lt_arg_right_5236, 5236));
-        lite_vg = (lt_arg_left_5254 = lite_vg, lt_arg_right_5254 = INT64_C(16), lite_divide_int(lt_arg_left_5254, lt_arg_right_5254, 5254));
-        lite_mul = (lt_arg_left_5273 = lite_mul, lt_arg_right_5273 = INT64_C(16), lt_checked_multiply(lt_arg_left_5273, lt_arg_right_5273, 5273));
-        lite_step = (lt_arg_left_5293 = lite_step, lt_arg_right_5293 = INT64_C(1), lt_checked_add(lt_arg_left_5293, lt_arg_right_5293, 5293));
-    }
-    return lite_acc;
-}
-
-static int64_t lt_fn_lib_s_core_s_crypto__maj32(int64_t lite_a, int64_t lite_b, int64_t lite_c) {
-    (void)lite_a;
-    (void)lite_b;
-    (void)lite_c;
-    int64_t lt_arg_left_5580;
-    int64_t lt_arg_right_5580;
-    int64_t lt_arg_left_5603;
-    int64_t lt_arg_right_5603;
-    int64_t lt_arg_left_5626;
-    int64_t lt_arg_right_5626;
-    int64_t lt_arg_left_5662;
-    int64_t lt_arg_left_5657;
-    int64_t lt_arg_right_5657;
-    int64_t lt_arg_right_5662;
-    int64_t lt_arg_left_5699;
-    int64_t lt_arg_left_5694;
-    int64_t lt_arg_right_5694;
-    int64_t lt_arg_right_5699;
-    int64_t lt_arg_left_5718;
-    int64_t lt_arg_right_5718;
-    int64_t lt_arg_left_5762;
-    int64_t lt_arg_left_5737;
-    int64_t lt_arg_left_5732;
-    int64_t lt_arg_right_5732;
-    int64_t lt_arg_right_5737;
-    int64_t lt_arg_left_5752;
-    int64_t lt_arg_left_5747;
-    int64_t lt_arg_right_5747;
-    int64_t lt_arg_right_5752;
-    int64_t lt_arg_right_5762;
-    int64_t lt_arg_left_5780;
-    int64_t lt_arg_right_5780;
-    int64_t lt_arg_left_5798;
-    int64_t lt_arg_right_5798;
-    int64_t lt_arg_left_5816;
-    int64_t lt_arg_right_5816;
-    int64_t lt_arg_left_5835;
-    int64_t lt_arg_right_5835;
-    int64_t lt_arg_left_5855;
-    int64_t lt_arg_right_5855;
-    int64_t lite_va = lite_a;
-    (void)lite_va;
-    int64_t lite_vb = lite_b;
-    (void)lite_vb;
-    int64_t lite_vc = lite_c;
-    (void)lite_vc;
-    int64_t lite_acc = INT64_C(0);
-    (void)lite_acc;
-    int64_t lite_mul = INT64_C(1);
-    (void)lite_mul;
-    int64_t lite_step = INT64_C(0);
-    (void)lite_step;
-    while ((lite_step) < (INT64_C(8))) {
-        int64_t lite_na = (lt_arg_left_5580 = lite_va, lt_arg_right_5580 = INT64_C(16), lite_remainder_int(lt_arg_left_5580, lt_arg_right_5580, 5580));
-        (void)lite_na;
-        int64_t lite_nb = (lt_arg_left_5603 = lite_vb, lt_arg_right_5603 = INT64_C(16), lite_remainder_int(lt_arg_left_5603, lt_arg_right_5603, 5603));
-        (void)lite_nb;
-        int64_t lite_nc = (lt_arg_left_5626 = lite_vc, lt_arg_right_5626 = INT64_C(16), lite_remainder_int(lt_arg_left_5626, lt_arg_right_5626, 5626));
-        (void)lite_nc;
-        int64_t lite_abAnd = lt_list_i64_at(lt_m_lib_s_core_s_crypto__and4, (lt_arg_left_5662 = (lt_arg_left_5657 = lite_na, lt_arg_right_5657 = INT64_C(16), lt_checked_multiply(lt_arg_left_5657, lt_arg_right_5657, 5657)), lt_arg_right_5662 = lite_nb, lt_checked_add(lt_arg_left_5662, lt_arg_right_5662, 5662)), 5654);
-        (void)lite_abAnd;
-        int64_t lite_abXor = lt_list_i64_at(lt_m_lib_s_core_s_crypto__xor4, (lt_arg_left_5699 = (lt_arg_left_5694 = lite_na, lt_arg_right_5694 = INT64_C(16), lt_checked_multiply(lt_arg_left_5694, lt_arg_right_5694, 5694)), lt_arg_right_5699 = lite_nb, lt_checked_add(lt_arg_left_5699, lt_arg_right_5699, 5699)), 5691);
-        (void)lite_abXor;
-        lite_acc = (lt_arg_left_5718 = lite_acc, lt_arg_right_5718 = (lt_arg_left_5762 = lt_list_i64_at(lt_m_lib_s_core_s_crypto__xor4, (lt_arg_left_5737 = (lt_arg_left_5732 = lite_abAnd, lt_arg_right_5732 = INT64_C(16), lt_checked_multiply(lt_arg_left_5732, lt_arg_right_5732, 5732)), lt_arg_right_5737 = lt_list_i64_at(lt_m_lib_s_core_s_crypto__and4, (lt_arg_left_5752 = (lt_arg_left_5747 = lite_nc, lt_arg_right_5747 = INT64_C(16), lt_checked_multiply(lt_arg_left_5747, lt_arg_right_5747, 5747)), lt_arg_right_5752 = lite_abXor, lt_checked_add(lt_arg_left_5752, lt_arg_right_5752, 5752)), 5744), lt_checked_add(lt_arg_left_5737, lt_arg_right_5737, 5737)), 5726), lt_arg_right_5762 = lite_mul, lt_checked_multiply(lt_arg_left_5762, lt_arg_right_5762, 5762)), lt_checked_add(lt_arg_left_5718, lt_arg_right_5718, 5718));
-        lite_va = (lt_arg_left_5780 = lite_va, lt_arg_right_5780 = INT64_C(16), lite_divide_int(lt_arg_left_5780, lt_arg_right_5780, 5780));
-        lite_vb = (lt_arg_left_5798 = lite_vb, lt_arg_right_5798 = INT64_C(16), lite_divide_int(lt_arg_left_5798, lt_arg_right_5798, 5798));
-        lite_vc = (lt_arg_left_5816 = lite_vc, lt_arg_right_5816 = INT64_C(16), lite_divide_int(lt_arg_left_5816, lt_arg_right_5816, 5816));
-        lite_mul = (lt_arg_left_5835 = lite_mul, lt_arg_right_5835 = INT64_C(16), lt_checked_multiply(lt_arg_left_5835, lt_arg_right_5835, 5835));
-        lite_step = (lt_arg_left_5855 = lite_step, lt_arg_right_5855 = INT64_C(1), lt_checked_add(lt_arg_left_5855, lt_arg_right_5855, 5855));
-    }
-    return lite_acc;
-}
-
-static lt_str lt_fn_lib_s_core_s_crypto__word32Hex(int64_t lite_word) {
+static lt_str lt_fn_lib_s_core_s_crypto__word32Hex(uint32_t lite_word) {
     (void)lite_word;
-    int64_t lt_arg_left_6105;
-    int64_t lt_arg_left_6098;
-    int64_t lt_arg_right_6098;
-    int64_t lt_arg_right_6105;
-    int64_t lt_arg_left_6159;
-    int64_t lt_arg_right_6159;
-    int64_t lt_arg_left_6179;
-    int64_t lt_arg_right_6179;
+    int64_t lt_arg_left_3516;
+    int64_t lt_arg_right_3516;
+    int64_t lt_arg_left_3523;
+    int64_t lt_arg_right_3523;
+    int64_t lt_arg_left_3590;
+    int64_t lt_arg_right_3590;
     lt_str lite_out = LT_STR_LIT("", 0);
     (void)lite_out;
-    int64_t lite_div = INT64_C(268435456);
-    (void)lite_div;
     int64_t lite_step = INT64_C(0);
     (void)lite_step;
     while ((lite_step) < (INT64_C(8))) {
-        int64_t lite_nib = (lt_arg_left_6105 = ((lt_arg_left_6098 = lite_word, lt_arg_right_6098 = lite_div, lite_divide_int(lt_arg_left_6098, lt_arg_right_6098, 6098))), lt_arg_right_6105 = INT64_C(16), lite_remainder_int(lt_arg_left_6105, lt_arg_right_6105, 6105));
+        int64_t lite_nib = ((int64_t)(lt_cast_u2i((uint64_t)(((uint32_t)(((uint32_t)(((uint32_t)lt_shr_u((uint64_t)(lite_word), (int64_t)((lt_arg_left_3516 = INT64_C(28), lt_arg_right_3516 = (lt_arg_left_3523 = lite_step, lt_arg_right_3523 = INT64_C(4), lt_checked_multiply(lt_arg_left_3523, lt_arg_right_3523, 3523)), lt_checked_subtract(lt_arg_left_3516, lt_arg_right_3516, 3516))), 32, 3502)))) & ((uint32_t)(UINT64_C(15)))))), 64, "Int", 3487)));
         (void)lite_nib;
-        lite_out = lite_concat(lite_out, lt_text_at(lt_m_lib_s_core_s_crypto__hexAlphabet, lite_nib, 6138));
-        lite_div = (lt_arg_left_6159 = lite_div, lt_arg_right_6159 = INT64_C(16), lite_divide_int(lt_arg_left_6159, lt_arg_right_6159, 6159));
-        lite_step = (lt_arg_left_6179 = lite_step, lt_arg_right_6179 = INT64_C(1), lt_checked_add(lt_arg_left_6179, lt_arg_right_6179, 6179));
+        lite_out = lite_concat(lite_out, lt_text_at(lt_m_lib_s_core_s_crypto__hexAlphabet, lite_nib, 3568));
+        lite_step = (lt_arg_left_3590 = lite_step, lt_arg_right_3590 = INT64_C(1), lt_checked_add(lt_arg_left_3590, lt_arg_right_3590, 3590));
     }
     return lite_out;
 }
 
-static lt_s_636182801_889164149 lt_fn_lib_s_core_s_crypto__sha256Compress(int64_t lite_h0In, int64_t lite_h1In, int64_t lite_h2In, int64_t lite_h3In, int64_t lite_h4In, int64_t lite_h5In, int64_t lite_h6In, int64_t lite_h7In, lt_list_i64 lite_block, int64_t lite_offset) {
+static lt_s_43550529_298059828 lt_fn_lib_s_core_s_crypto__sha256Compress(uint32_t lite_h0In, uint32_t lite_h1In, uint32_t lite_h2In, uint32_t lite_h3In, uint32_t lite_h4In, uint32_t lite_h5In, uint32_t lite_h6In, uint32_t lite_h7In, lt_list_i64 lite_block, int64_t lite_offset) {
     (void)lite_h0In;
     (void)lite_h1In;
     (void)lite_h2In;
@@ -12641,255 +12405,97 @@ static lt_s_636182801_889164149 lt_fn_lib_s_core_s_crypto__sha256Compress(int64_
     (void)lite_h7In;
     (void)lite_block;
     (void)lite_offset;
-    int64_t lt_arg_left_6581;
-    int64_t lt_arg_right_6581;
-    int64_t lt_arg_left_6585;
-    int64_t lt_arg_right_6585;
-    int64_t lt_arg_left_6677;
-    int64_t lt_arg_left_6656;
-    int64_t lt_arg_left_6633;
-    int64_t lt_arg_left_6622;
-    int64_t lt_arg_right_6622;
-    int64_t lt_arg_right_6633;
-    int64_t lt_arg_left_6648;
-    int64_t lt_arg_left_6643;
-    int64_t lt_arg_right_6643;
-    int64_t lt_arg_right_6648;
-    int64_t lt_arg_right_6656;
-    int64_t lt_arg_left_6671;
-    int64_t lt_arg_left_6666;
-    int64_t lt_arg_right_6666;
-    int64_t lt_arg_right_6671;
-    int64_t lt_arg_right_6677;
-    int64_t lt_arg_left_6687;
-    int64_t lt_arg_right_6687;
-    int64_t lt_arg_left_6704;
-    int64_t lt_arg_right_6704;
-    int64_t lt_arg_left_6753;
-    int64_t lt_arg_right_6753;
-    int64_t lt_arg_left_6803;
-    int64_t lt_arg_left_6796;
-    int64_t lt_arg_right_6796;
-    int64_t lt_arg_right_6803;
-    int64_t lt_arg_left_6817;
-    int64_t lt_arg_left_6810;
-    int64_t lt_arg_right_6810;
-    int64_t lt_arg_right_6817;
-    int64_t lt_arg_left_6852;
-    int64_t lt_arg_left_6842;
-    int64_t lt_arg_right_6842;
-    int64_t lt_arg_right_6852;
-    int64_t lt_arg_left_6869;
-    int64_t lt_arg_left_6859;
-    int64_t lt_arg_right_6859;
-    int64_t lt_arg_right_6869;
-    int64_t lt_arg_left_6890;
-    int64_t lt_arg_right_6890;
-    int64_t lt_arg_left_6923;
-    int64_t lt_arg_right_6923;
-    int64_t lt_arg_left_6974;
-    int64_t lt_arg_left_6964;
-    int64_t lt_arg_right_6964;
-    int64_t lt_arg_right_6974;
-    int64_t lt_arg_left_6990;
-    int64_t lt_arg_left_6980;
-    int64_t lt_arg_right_6980;
-    int64_t lt_arg_right_6990;
-    int64_t lt_arg_left_7021;
-    int64_t lt_arg_left_7011;
-    int64_t lt_arg_right_7011;
-    int64_t lt_arg_right_7021;
-    int64_t lt_arg_left_7037;
-    int64_t lt_arg_left_7027;
-    int64_t lt_arg_right_7027;
-    int64_t lt_arg_right_7037;
-    int64_t lt_arg_left_7056;
-    int64_t lt_arg_right_7056;
-    int64_t lt_arg_left_7130;
-    int64_t lt_arg_left_7124;
-    int64_t lt_arg_left_7113;
-    int64_t lt_arg_left_7108;
-    int64_t lt_arg_left_7102;
-    int64_t lt_arg_right_7102;
-    int64_t lt_arg_right_7108;
-    int64_t lt_arg_right_7113;
-    int64_t lt_arg_left_7119;
-    int64_t lt_arg_right_7119;
-    int64_t lt_arg_right_7124;
-    int64_t lt_arg_right_7130;
-    int64_t lt_arg_left_7150;
-    int64_t lt_arg_right_7150;
-    int64_t lt_arg_left_7392;
-    int64_t lt_arg_left_7386;
-    int64_t lt_arg_right_7386;
-    int64_t lt_arg_right_7392;
-    int64_t lt_arg_left_7403;
-    int64_t lt_arg_left_7397;
-    int64_t lt_arg_right_7397;
-    int64_t lt_arg_right_7403;
-    int64_t lt_arg_left_7434;
-    int64_t lt_arg_left_7426;
-    int64_t lt_arg_right_7426;
-    int64_t lt_arg_right_7434;
-    int64_t lt_arg_left_7447;
-    int64_t lt_arg_left_7439;
-    int64_t lt_arg_right_7439;
-    int64_t lt_arg_right_7447;
-    int64_t lt_arg_left_7481;
-    int64_t lt_arg_left_7469;
-    int64_t lt_arg_right_7469;
-    int64_t lt_arg_right_7481;
-    int64_t lt_arg_left_7498;
-    int64_t lt_arg_left_7486;
-    int64_t lt_arg_right_7486;
-    int64_t lt_arg_right_7498;
-    int64_t lt_arg_left_7595;
-    int64_t lt_arg_left_7587;
-    int64_t lt_arg_left_7577;
-    int64_t lt_arg_left_7572;
-    int64_t lt_arg_left_7564;
-    int64_t lt_arg_right_7564;
-    int64_t lt_arg_right_7572;
-    int64_t lt_arg_right_7577;
-    int64_t lt_arg_right_7587;
-    int64_t lt_arg_right_7595;
-    int64_t lt_arg_left_7646;
-    int64_t lt_arg_left_7641;
-    int64_t lt_arg_right_7641;
-    int64_t lt_arg_right_7646;
-    int64_t lt_arg_left_7656;
-    int64_t lt_arg_left_7651;
-    int64_t lt_arg_right_7651;
-    int64_t lt_arg_right_7656;
-    int64_t lt_arg_left_7689;
-    int64_t lt_arg_left_7681;
-    int64_t lt_arg_right_7681;
-    int64_t lt_arg_right_7689;
-    int64_t lt_arg_left_7702;
-    int64_t lt_arg_left_7694;
-    int64_t lt_arg_right_7694;
-    int64_t lt_arg_right_7702;
-    int64_t lt_arg_left_7734;
-    int64_t lt_arg_left_7723;
-    int64_t lt_arg_right_7723;
-    int64_t lt_arg_right_7734;
-    int64_t lt_arg_left_7750;
-    int64_t lt_arg_left_7739;
-    int64_t lt_arg_right_7739;
-    int64_t lt_arg_right_7750;
-    int64_t lt_arg_left_7830;
-    int64_t lt_arg_left_7823;
-    int64_t lt_arg_right_7823;
-    int64_t lt_arg_right_7830;
-    int64_t lt_arg_left_7908;
-    int64_t lt_arg_left_7899;
-    int64_t lt_arg_right_7899;
-    int64_t lt_arg_right_7908;
-    int64_t lt_arg_left_7990;
-    int64_t lt_arg_left_7981;
-    int64_t lt_arg_right_7981;
-    int64_t lt_arg_right_7990;
-    int64_t lt_arg_left_8009;
-    int64_t lt_arg_right_8009;
-    int64_t lt_arg_left_8047;
-    int64_t lt_arg_left_8042;
-    int64_t lt_arg_right_8042;
-    int64_t lt_arg_right_8047;
-    int64_t lt_arg_left_8076;
-    int64_t lt_arg_left_8071;
-    int64_t lt_arg_right_8071;
-    int64_t lt_arg_right_8076;
-    int64_t lt_arg_left_8105;
-    int64_t lt_arg_left_8100;
-    int64_t lt_arg_right_8100;
-    int64_t lt_arg_right_8105;
-    int64_t lt_arg_left_8134;
-    int64_t lt_arg_left_8129;
-    int64_t lt_arg_right_8129;
-    int64_t lt_arg_right_8134;
-    int64_t lt_arg_left_8163;
-    int64_t lt_arg_left_8158;
-    int64_t lt_arg_right_8158;
-    int64_t lt_arg_right_8163;
-    int64_t lt_arg_left_8192;
-    int64_t lt_arg_left_8187;
-    int64_t lt_arg_right_8187;
-    int64_t lt_arg_right_8192;
-    int64_t lt_arg_left_8221;
-    int64_t lt_arg_left_8216;
-    int64_t lt_arg_right_8216;
-    int64_t lt_arg_right_8221;
-    int64_t lt_arg_left_8250;
-    int64_t lt_arg_left_8245;
-    int64_t lt_arg_right_8245;
-    int64_t lt_arg_right_8250;
-    lt_list_i64 lite_w = lt_list_i64_from(0, NULL);
+    int64_t lt_arg_left_4393;
+    int64_t lt_arg_right_4393;
+    int64_t lt_arg_left_4397;
+    int64_t lt_arg_right_4397;
+    int64_t lt_arg_left_4490;
+    int64_t lt_arg_right_4490;
+    int64_t lt_arg_left_4547;
+    int64_t lt_arg_right_4547;
+    int64_t lt_arg_left_4603;
+    int64_t lt_arg_right_4603;
+    int64_t lt_arg_left_4621;
+    int64_t lt_arg_right_4621;
+    int64_t lt_arg_left_4670;
+    int64_t lt_arg_right_4670;
+    int64_t lt_arg_left_4783;
+    int64_t lt_arg_right_4783;
+    int64_t lt_arg_left_4895;
+    int64_t lt_arg_right_4895;
+    int64_t lt_arg_left_4933;
+    int64_t lt_arg_right_4933;
+    int64_t lt_arg_left_4966;
+    int64_t lt_arg_right_4966;
+    int64_t lt_arg_left_5770;
+    int64_t lt_arg_right_5770;
+    lt_arr_u32_64 lite_w = ((lt_arr_u32_64){ { 0 } });
     (void)lite_w;
     int64_t lite_i = INT64_C(0);
     (void)lite_i;
     while ((lite_i) < (INT64_C(16))) {
-        int64_t lite_p = (lt_arg_left_6581 = lite_offset, lt_arg_right_6581 = (lt_arg_left_6585 = lite_i, lt_arg_right_6585 = INT64_C(4), lt_checked_multiply(lt_arg_left_6585, lt_arg_right_6585, 6585)), lt_checked_add(lt_arg_left_6581, lt_arg_right_6581, 6581));
+        int64_t lite_p = (lt_arg_left_4393 = lite_offset, lt_arg_right_4393 = (lt_arg_left_4397 = lite_i, lt_arg_right_4397 = INT64_C(4), lt_checked_multiply(lt_arg_left_4397, lt_arg_right_4397, 4397)), lt_checked_add(lt_arg_left_4393, lt_arg_right_4393, 4393));
         (void)lite_p;
-        (void)(lt_list_i64_push_back(&lite_w, (lt_arg_left_6677 = (lt_arg_left_6656 = (lt_arg_left_6633 = (lt_arg_left_6622 = lt_list_i64_at(lite_block, lite_p, 6619), lt_arg_right_6622 = INT64_C(16777216), lt_checked_multiply(lt_arg_left_6622, lt_arg_right_6622, 6622)), lt_arg_right_6633 = (lt_arg_left_6648 = lt_list_i64_at(lite_block, (lt_arg_left_6643 = lite_p, lt_arg_right_6643 = INT64_C(1), lt_checked_add(lt_arg_left_6643, lt_arg_right_6643, 6643)), 6641), lt_arg_right_6648 = INT64_C(65536), lt_checked_multiply(lt_arg_left_6648, lt_arg_right_6648, 6648)), lt_checked_add(lt_arg_left_6633, lt_arg_right_6633, 6633)), lt_arg_right_6656 = (lt_arg_left_6671 = lt_list_i64_at(lite_block, (lt_arg_left_6666 = lite_p, lt_arg_right_6666 = INT64_C(2), lt_checked_add(lt_arg_left_6666, lt_arg_right_6666, 6666)), 6664), lt_arg_right_6671 = INT64_C(256), lt_checked_multiply(lt_arg_left_6671, lt_arg_right_6671, 6671)), lt_checked_add(lt_arg_left_6656, lt_arg_right_6656, 6656)), lt_arg_right_6677 = lt_list_i64_at(lite_block, (lt_arg_left_6687 = lite_p, lt_arg_right_6687 = INT64_C(3), lt_checked_add(lt_arg_left_6687, lt_arg_right_6687, 6687)), 6685), lt_checked_add(lt_arg_left_6677, lt_arg_right_6677, 6677))));
-        lite_i = (lt_arg_left_6704 = lite_i, lt_arg_right_6704 = INT64_C(1), lt_checked_add(lt_arg_left_6704, lt_arg_right_6704, 6704));
+        (void)(lt_arr_u32_64_set(&lite_w, lite_i, ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)lt_shl_u((uint64_t)(((uint32_t)(lt_cast_i2u((int64_t)(lt_list_i64_at(lite_block, lite_p, 4436)), 32, "UInt32", 4417)))), (int64_t)(INT64_C(24)), 32, 4440)))) | ((uint32_t)(((uint32_t)lt_shl_u((uint64_t)(((uint32_t)(lt_cast_i2u((int64_t)(lt_list_i64_at(lite_block, (lt_arg_left_4490 = lite_p, lt_arg_right_4490 = INT64_C(1), lt_checked_add(lt_arg_left_4490, lt_arg_right_4490, 4490)), 4488)), 32, "UInt32", 4469)))), (int64_t)(INT64_C(16)), 32, 4496)))))))) | ((uint32_t)(((uint32_t)lt_shl_u((uint64_t)(((uint32_t)(lt_cast_i2u((int64_t)(lt_list_i64_at(lite_block, (lt_arg_left_4547 = lite_p, lt_arg_right_4547 = INT64_C(2), lt_checked_add(lt_arg_left_4547, lt_arg_right_4547, 4547)), 4545)), 32, "UInt32", 4526)))), (int64_t)(INT64_C(8)), 32, 4553)))))))) | ((uint32_t)(((uint32_t)(lt_cast_i2u((int64_t)(lt_list_i64_at(lite_block, (lt_arg_left_4603 = lite_p, lt_arg_right_4603 = INT64_C(3), lt_checked_add(lt_arg_left_4603, lt_arg_right_4603, 4603)), 4601)), 32, "UInt32", 4582))))))), 4415));
+        lite_i = (lt_arg_left_4621 = lite_i, lt_arg_right_4621 = INT64_C(1), lt_checked_add(lt_arg_left_4621, lt_arg_right_4621, 4621));
     }
     while ((lite_i) < (INT64_C(64))) {
-        int64_t lite_w15 = lt_list_i64_at(lite_w, (lt_arg_left_6753 = lite_i, lt_arg_right_6753 = INT64_C(15), lt_checked_subtract(lt_arg_left_6753, lt_arg_right_6753, 6753)), 6751);
+        uint32_t lite_w15 = lt_arr_u32_64_at(lite_w, (lt_arg_left_4670 = lite_i, lt_arg_right_4670 = INT64_C(15), lt_checked_subtract(lt_arg_left_4670, lt_arg_right_4670, 4670)), 4668);
         (void)lite_w15;
-        int64_t lite_s0 = lt_fn_lib_s_core_s_crypto__xor3_32((lt_arg_left_6803 = ((lt_arg_left_6796 = lite_w15, lt_arg_right_6796 = INT64_C(128), lite_divide_int(lt_arg_left_6796, lt_arg_right_6796, 6796))), lt_arg_right_6803 = (lt_arg_left_6817 = ((lt_arg_left_6810 = lite_w15, lt_arg_right_6810 = INT64_C(128), lite_remainder_int(lt_arg_left_6810, lt_arg_right_6810, 6810))), lt_arg_right_6817 = INT64_C(33554432), lt_checked_multiply(lt_arg_left_6817, lt_arg_right_6817, 6817)), lt_checked_add(lt_arg_left_6803, lt_arg_right_6803, 6803)), (lt_arg_left_6852 = ((lt_arg_left_6842 = lite_w15, lt_arg_right_6842 = INT64_C(262144), lite_divide_int(lt_arg_left_6842, lt_arg_right_6842, 6842))), lt_arg_right_6852 = (lt_arg_left_6869 = ((lt_arg_left_6859 = lite_w15, lt_arg_right_6859 = INT64_C(262144), lite_remainder_int(lt_arg_left_6859, lt_arg_right_6859, 6859))), lt_arg_right_6869 = INT64_C(16384), lt_checked_multiply(lt_arg_left_6869, lt_arg_right_6869, 6869)), lt_checked_add(lt_arg_left_6852, lt_arg_right_6852, 6852)), (lt_arg_left_6890 = lite_w15, lt_arg_right_6890 = INT64_C(8), lite_divide_int(lt_arg_left_6890, lt_arg_right_6890, 6890)));
+        uint32_t lite_s0 = ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(lt_rotr_u32((uint32_t)(lite_w15), (int64_t)(INT64_C(7))))) ^ ((uint32_t)(lt_rotr_u32((uint32_t)(lite_w15), (int64_t)(INT64_C(18))))))))) ^ ((uint32_t)(((uint32_t)lt_shr_u((uint64_t)(lite_w15), (int64_t)(INT64_C(3)), 32, 4749))))));
         (void)lite_s0;
-        int64_t lite_w2 = lt_list_i64_at(lite_w, (lt_arg_left_6923 = lite_i, lt_arg_right_6923 = INT64_C(2), lt_checked_subtract(lt_arg_left_6923, lt_arg_right_6923, 6923)), 6921);
+        uint32_t lite_w2 = lt_arr_u32_64_at(lite_w, (lt_arg_left_4783 = lite_i, lt_arg_right_4783 = INT64_C(2), lt_checked_subtract(lt_arg_left_4783, lt_arg_right_4783, 4783)), 4781);
         (void)lite_w2;
-        int64_t lite_s1 = lt_fn_lib_s_core_s_crypto__xor3_32((lt_arg_left_6974 = ((lt_arg_left_6964 = lite_w2, lt_arg_right_6964 = INT64_C(131072), lite_divide_int(lt_arg_left_6964, lt_arg_right_6964, 6964))), lt_arg_right_6974 = (lt_arg_left_6990 = ((lt_arg_left_6980 = lite_w2, lt_arg_right_6980 = INT64_C(131072), lite_remainder_int(lt_arg_left_6980, lt_arg_right_6980, 6980))), lt_arg_right_6990 = INT64_C(32768), lt_checked_multiply(lt_arg_left_6990, lt_arg_right_6990, 6990)), lt_checked_add(lt_arg_left_6974, lt_arg_right_6974, 6974)), (lt_arg_left_7021 = ((lt_arg_left_7011 = lite_w2, lt_arg_right_7011 = INT64_C(524288), lite_divide_int(lt_arg_left_7011, lt_arg_right_7011, 7011))), lt_arg_right_7021 = (lt_arg_left_7037 = ((lt_arg_left_7027 = lite_w2, lt_arg_right_7027 = INT64_C(524288), lite_remainder_int(lt_arg_left_7027, lt_arg_right_7027, 7027))), lt_arg_right_7037 = INT64_C(8192), lt_checked_multiply(lt_arg_left_7037, lt_arg_right_7037, 7037)), lt_checked_add(lt_arg_left_7021, lt_arg_right_7021, 7021)), (lt_arg_left_7056 = lite_w2, lt_arg_right_7056 = INT64_C(1024), lite_divide_int(lt_arg_left_7056, lt_arg_right_7056, 7056)));
+        uint32_t lite_s1 = ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(lt_rotr_u32((uint32_t)(lite_w2), (int64_t)(INT64_C(17))))) ^ ((uint32_t)(lt_rotr_u32((uint32_t)(lite_w2), (int64_t)(INT64_C(19))))))))) ^ ((uint32_t)(((uint32_t)lt_shr_u((uint64_t)(lite_w2), (int64_t)(INT64_C(10)), 32, 4859))))));
         (void)lite_s1;
-        (void)(lt_list_i64_push_back(&lite_w, (lt_arg_left_7130 = ((lt_arg_left_7124 = (lt_arg_left_7113 = (lt_arg_left_7108 = lt_list_i64_at(lite_w, (lt_arg_left_7102 = lite_i, lt_arg_right_7102 = INT64_C(16), lt_checked_subtract(lt_arg_left_7102, lt_arg_right_7102, 7102)), 7100), lt_arg_right_7108 = lite_s0, lt_checked_add(lt_arg_left_7108, lt_arg_right_7108, 7108)), lt_arg_right_7113 = lt_list_i64_at(lite_w, (lt_arg_left_7119 = lite_i, lt_arg_right_7119 = INT64_C(7), lt_checked_subtract(lt_arg_left_7119, lt_arg_right_7119, 7119)), 7117), lt_checked_add(lt_arg_left_7113, lt_arg_right_7113, 7113)), lt_arg_right_7124 = lite_s1, lt_checked_add(lt_arg_left_7124, lt_arg_right_7124, 7124))), lt_arg_right_7130 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_7130, lt_arg_right_7130, 7130))));
-        lite_i = (lt_arg_left_7150 = lite_i, lt_arg_right_7150 = INT64_C(1), lt_checked_add(lt_arg_left_7150, lt_arg_right_7150, 7150));
+        (void)(lt_arr_u32_64_set(&lite_w, lite_i, ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(lt_arr_u32_64_at(lite_w, (lt_arg_left_4895 = lite_i, lt_arg_right_4895 = INT64_C(16), lt_checked_subtract(lt_arg_left_4895, lt_arg_right_4895, 4895)), 4893))) + ((uint32_t)(lite_s0)))))) + ((uint32_t)(lt_arr_u32_64_at(lite_w, (lt_arg_left_4933 = lite_i, lt_arg_right_4933 = INT64_C(7), lt_checked_subtract(lt_arg_left_4933, lt_arg_right_4933, 4933)), 4931))))))) + ((uint32_t)(lite_s1)))), 4889));
+        lite_i = (lt_arg_left_4966 = lite_i, lt_arg_right_4966 = INT64_C(1), lt_checked_add(lt_arg_left_4966, lt_arg_right_4966, 4966));
     }
-    int64_t lite_a = lite_h0In;
+    uint32_t lite_a = lite_h0In;
     (void)lite_a;
-    int64_t lite_b = lite_h1In;
+    uint32_t lite_b = lite_h1In;
     (void)lite_b;
-    int64_t lite_c = lite_h2In;
+    uint32_t lite_c = lite_h2In;
     (void)lite_c;
-    int64_t lite_d = lite_h3In;
+    uint32_t lite_d = lite_h3In;
     (void)lite_d;
-    int64_t lite_e = lite_h4In;
+    uint32_t lite_e = lite_h4In;
     (void)lite_e;
-    int64_t lite_f = lite_h5In;
+    uint32_t lite_f = lite_h5In;
     (void)lite_f;
-    int64_t lite_g = lite_h6In;
+    uint32_t lite_g = lite_h6In;
     (void)lite_g;
-    int64_t lite_h = lite_h7In;
+    uint32_t lite_h = lite_h7In;
     (void)lite_h;
     int64_t lite_r = INT64_C(0);
     (void)lite_r;
     while ((lite_r) < (INT64_C(64))) {
-        int64_t lite_capS1 = lt_fn_lib_s_core_s_crypto__xor3_32((lt_arg_left_7392 = ((lt_arg_left_7386 = lite_e, lt_arg_right_7386 = INT64_C(64), lite_divide_int(lt_arg_left_7386, lt_arg_right_7386, 7386))), lt_arg_right_7392 = (lt_arg_left_7403 = ((lt_arg_left_7397 = lite_e, lt_arg_right_7397 = INT64_C(64), lite_remainder_int(lt_arg_left_7397, lt_arg_right_7397, 7397))), lt_arg_right_7403 = INT64_C(67108864), lt_checked_multiply(lt_arg_left_7403, lt_arg_right_7403, 7403)), lt_checked_add(lt_arg_left_7392, lt_arg_right_7392, 7392)), (lt_arg_left_7434 = ((lt_arg_left_7426 = lite_e, lt_arg_right_7426 = INT64_C(2048), lite_divide_int(lt_arg_left_7426, lt_arg_right_7426, 7426))), lt_arg_right_7434 = (lt_arg_left_7447 = ((lt_arg_left_7439 = lite_e, lt_arg_right_7439 = INT64_C(2048), lite_remainder_int(lt_arg_left_7439, lt_arg_right_7439, 7439))), lt_arg_right_7447 = INT64_C(2097152), lt_checked_multiply(lt_arg_left_7447, lt_arg_right_7447, 7447)), lt_checked_add(lt_arg_left_7434, lt_arg_right_7434, 7434)), (lt_arg_left_7481 = ((lt_arg_left_7469 = lite_e, lt_arg_right_7469 = INT64_C(33554432), lite_divide_int(lt_arg_left_7469, lt_arg_right_7469, 7469))), lt_arg_right_7481 = (lt_arg_left_7498 = ((lt_arg_left_7486 = lite_e, lt_arg_right_7486 = INT64_C(33554432), lite_remainder_int(lt_arg_left_7486, lt_arg_right_7486, 7486))), lt_arg_right_7498 = INT64_C(128), lt_checked_multiply(lt_arg_left_7498, lt_arg_right_7498, 7498)), lt_checked_add(lt_arg_left_7481, lt_arg_right_7481, 7481)));
+        uint32_t lite_capS1 = ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(lt_rotr_u32((uint32_t)(lite_e), (int64_t)(INT64_C(6))))) ^ ((uint32_t)(lt_rotr_u32((uint32_t)(lite_e), (int64_t)(INT64_C(11))))))))) ^ ((uint32_t)(lt_rotr_u32((uint32_t)(lite_e), (int64_t)(INT64_C(25)))))));
         (void)lite_capS1;
-        int64_t lite_ch = lt_fn_lib_s_core_s_crypto__ch32(lite_e, lite_f, lite_g);
+        uint32_t lite_ch = ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(lite_e)) & ((uint32_t)(lite_f)))))) ^ ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)((~((uint32_t)(lite_e))))))) & ((uint32_t)(lite_g))))))));
         (void)lite_ch;
-        int64_t lite_temp1 = (lt_arg_left_7595 = ((lt_arg_left_7587 = (lt_arg_left_7577 = (lt_arg_left_7572 = (lt_arg_left_7564 = lite_h, lt_arg_right_7564 = lite_capS1, lt_checked_add(lt_arg_left_7564, lt_arg_right_7564, 7564)), lt_arg_right_7572 = lite_ch, lt_checked_add(lt_arg_left_7572, lt_arg_right_7572, 7572)), lt_arg_right_7577 = lt_list_i64_at(lt_m_lib_s_core_s_crypto__k256, lite_r, 7584), lt_checked_add(lt_arg_left_7577, lt_arg_right_7577, 7577)), lt_arg_right_7587 = lt_list_i64_at(lite_w, lite_r, 7591), lt_checked_add(lt_arg_left_7587, lt_arg_right_7587, 7587))), lt_arg_right_7595 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_7595, lt_arg_right_7595, 7595));
+        uint32_t lite_temp1 = ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(lite_h)) + ((uint32_t)(lite_capS1)))))) + ((uint32_t)(lite_ch)))))) + ((uint32_t)(lt_arr_u32_64_at(lt_m_lib_s_core_s_crypto__k256, lite_r, 5379))))))) + ((uint32_t)(lt_arr_u32_64_at(lite_w, lite_r, 5397)))));
         (void)lite_temp1;
-        int64_t lite_capS0 = lt_fn_lib_s_core_s_crypto__xor3_32((lt_arg_left_7646 = ((lt_arg_left_7641 = lite_a, lt_arg_right_7641 = INT64_C(4), lite_divide_int(lt_arg_left_7641, lt_arg_right_7641, 7641))), lt_arg_right_7646 = (lt_arg_left_7656 = ((lt_arg_left_7651 = lite_a, lt_arg_right_7651 = INT64_C(4), lite_remainder_int(lt_arg_left_7651, lt_arg_right_7651, 7651))), lt_arg_right_7656 = INT64_C(1073741824), lt_checked_multiply(lt_arg_left_7656, lt_arg_right_7656, 7656)), lt_checked_add(lt_arg_left_7646, lt_arg_right_7646, 7646)), (lt_arg_left_7689 = ((lt_arg_left_7681 = lite_a, lt_arg_right_7681 = INT64_C(8192), lite_divide_int(lt_arg_left_7681, lt_arg_right_7681, 7681))), lt_arg_right_7689 = (lt_arg_left_7702 = ((lt_arg_left_7694 = lite_a, lt_arg_right_7694 = INT64_C(8192), lite_remainder_int(lt_arg_left_7694, lt_arg_right_7694, 7694))), lt_arg_right_7702 = INT64_C(524288), lt_checked_multiply(lt_arg_left_7702, lt_arg_right_7702, 7702)), lt_checked_add(lt_arg_left_7689, lt_arg_right_7689, 7689)), (lt_arg_left_7734 = ((lt_arg_left_7723 = lite_a, lt_arg_right_7723 = INT64_C(4194304), lite_divide_int(lt_arg_left_7723, lt_arg_right_7723, 7723))), lt_arg_right_7734 = (lt_arg_left_7750 = ((lt_arg_left_7739 = lite_a, lt_arg_right_7739 = INT64_C(4194304), lite_remainder_int(lt_arg_left_7739, lt_arg_right_7739, 7739))), lt_arg_right_7750 = INT64_C(1024), lt_checked_multiply(lt_arg_left_7750, lt_arg_right_7750, 7750)), lt_checked_add(lt_arg_left_7734, lt_arg_right_7734, 7734)));
+        uint32_t lite_capS0 = ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(lt_rotr_u32((uint32_t)(lite_a), (int64_t)(INT64_C(2))))) ^ ((uint32_t)(lt_rotr_u32((uint32_t)(lite_a), (int64_t)(INT64_C(13))))))))) ^ ((uint32_t)(lt_rotr_u32((uint32_t)(lite_a), (int64_t)(INT64_C(22)))))));
         (void)lite_capS0;
-        int64_t lite_maj = lt_fn_lib_s_core_s_crypto__maj32(lite_a, lite_b, lite_c);
+        uint32_t lite_maj = ((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(((uint32_t)(lite_a)) & ((uint32_t)(lite_b)))))) ^ ((uint32_t)(((uint32_t)(((uint32_t)(lite_a)) & ((uint32_t)(lite_c)))))))))) ^ ((uint32_t)(((uint32_t)(((uint32_t)(lite_b)) & ((uint32_t)(lite_c))))))));
         (void)lite_maj;
-        int64_t lite_temp2 = (lt_arg_left_7830 = ((lt_arg_left_7823 = lite_capS0, lt_arg_right_7823 = lite_maj, lt_checked_add(lt_arg_left_7823, lt_arg_right_7823, 7823))), lt_arg_right_7830 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_7830, lt_arg_right_7830, 7830));
+        uint32_t lite_temp2 = ((uint32_t)(((uint32_t)(lite_capS0)) + ((uint32_t)(lite_maj))));
         (void)lite_temp2;
         lite_h = lite_g;
         lite_g = lite_f;
         lite_f = lite_e;
-        lite_e = (lt_arg_left_7908 = ((lt_arg_left_7899 = lite_d, lt_arg_right_7899 = lite_temp1, lt_checked_add(lt_arg_left_7899, lt_arg_right_7899, 7899))), lt_arg_right_7908 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_7908, lt_arg_right_7908, 7908));
+        lite_e = ((uint32_t)(((uint32_t)(lite_d)) + ((uint32_t)(lite_temp1))));
         lite_d = lite_c;
         lite_c = lite_b;
         lite_b = lite_a;
-        lite_a = (lt_arg_left_7990 = ((lt_arg_left_7981 = lite_temp1, lt_arg_right_7981 = lite_temp2, lt_checked_add(lt_arg_left_7981, lt_arg_right_7981, 7981))), lt_arg_right_7990 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_7990, lt_arg_right_7990, 7990));
-        lite_r = (lt_arg_left_8009 = lite_r, lt_arg_right_8009 = INT64_C(1), lt_checked_add(lt_arg_left_8009, lt_arg_right_8009, 8009));
+        lite_a = ((uint32_t)(((uint32_t)(lite_temp1)) + ((uint32_t)(lite_temp2))));
+        lite_r = (lt_arg_left_5770 = lite_r, lt_arg_right_5770 = INT64_C(1), lt_checked_add(lt_arg_left_5770, lt_arg_right_5770, 5770));
     }
-    return ((lt_s_636182801_889164149){ .f_h0 = (lt_arg_left_8047 = ((lt_arg_left_8042 = lite_h0In, lt_arg_right_8042 = lite_a, lt_checked_add(lt_arg_left_8042, lt_arg_right_8042, 8042))), lt_arg_right_8047 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_8047, lt_arg_right_8047, 8047)), .f_h1 = (lt_arg_left_8076 = ((lt_arg_left_8071 = lite_h1In, lt_arg_right_8071 = lite_b, lt_checked_add(lt_arg_left_8071, lt_arg_right_8071, 8071))), lt_arg_right_8076 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_8076, lt_arg_right_8076, 8076)), .f_h2 = (lt_arg_left_8105 = ((lt_arg_left_8100 = lite_h2In, lt_arg_right_8100 = lite_c, lt_checked_add(lt_arg_left_8100, lt_arg_right_8100, 8100))), lt_arg_right_8105 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_8105, lt_arg_right_8105, 8105)), .f_h3 = (lt_arg_left_8134 = ((lt_arg_left_8129 = lite_h3In, lt_arg_right_8129 = lite_d, lt_checked_add(lt_arg_left_8129, lt_arg_right_8129, 8129))), lt_arg_right_8134 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_8134, lt_arg_right_8134, 8134)), .f_h4 = (lt_arg_left_8163 = ((lt_arg_left_8158 = lite_h4In, lt_arg_right_8158 = lite_e, lt_checked_add(lt_arg_left_8158, lt_arg_right_8158, 8158))), lt_arg_right_8163 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_8163, lt_arg_right_8163, 8163)), .f_h5 = (lt_arg_left_8192 = ((lt_arg_left_8187 = lite_h5In, lt_arg_right_8187 = lite_f, lt_checked_add(lt_arg_left_8187, lt_arg_right_8187, 8187))), lt_arg_right_8192 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_8192, lt_arg_right_8192, 8192)), .f_h6 = (lt_arg_left_8221 = ((lt_arg_left_8216 = lite_h6In, lt_arg_right_8216 = lite_g, lt_checked_add(lt_arg_left_8216, lt_arg_right_8216, 8216))), lt_arg_right_8221 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_8221, lt_arg_right_8221, 8221)), .f_h7 = (lt_arg_left_8250 = ((lt_arg_left_8245 = lite_h7In, lt_arg_right_8245 = lite_h, lt_checked_add(lt_arg_left_8245, lt_arg_right_8245, 8245))), lt_arg_right_8250 = lt_m_lib_s_core_s_crypto__pow32, lite_remainder_int(lt_arg_left_8250, lt_arg_right_8250, 8250)) });
+    return ((lt_s_43550529_298059828){ .f_h0 = ((uint32_t)(((uint32_t)(lite_h0In)) + ((uint32_t)(lite_a)))), .f_h1 = ((uint32_t)(((uint32_t)(lite_h1In)) + ((uint32_t)(lite_b)))), .f_h2 = ((uint32_t)(((uint32_t)(lite_h2In)) + ((uint32_t)(lite_c)))), .f_h3 = ((uint32_t)(((uint32_t)(lite_h3In)) + ((uint32_t)(lite_d)))), .f_h4 = ((uint32_t)(((uint32_t)(lite_h4In)) + ((uint32_t)(lite_e)))), .f_h5 = ((uint32_t)(((uint32_t)(lite_h5In)) + ((uint32_t)(lite_f)))), .f_h6 = ((uint32_t)(((uint32_t)(lite_h6In)) + ((uint32_t)(lite_g)))), .f_h7 = ((uint32_t)(((uint32_t)(lite_h7In)) + ((uint32_t)(lite_h)))) });
 }
 
-static lt_str lt_fn_lib_s_core_s_crypto__sha256FinalizeTail(int64_t lite_h0In, int64_t lite_h1In, int64_t lite_h2In, int64_t lite_h3In, int64_t lite_h4In, int64_t lite_h5In, int64_t lite_h6In, int64_t lite_h7In, lt_list_i64 lite_tail, int64_t lite_totalBytes) {
+static lt_str lt_fn_lib_s_core_s_crypto__sha256FinalizeTail(uint32_t lite_h0In, uint32_t lite_h1In, uint32_t lite_h2In, uint32_t lite_h3In, uint32_t lite_h4In, uint32_t lite_h5In, uint32_t lite_h6In, uint32_t lite_h7In, lt_list_i64 lite_tail, int64_t lite_totalBytes) {
     (void)lite_h0In;
     (void)lite_h1In;
     (void)lite_h2In;
@@ -12900,33 +12506,31 @@ static lt_str lt_fn_lib_s_core_s_crypto__sha256FinalizeTail(int64_t lite_h0In, i
     (void)lite_h7In;
     (void)lite_tail;
     (void)lite_totalBytes;
-    int64_t lt_arg_left_8833;
-    int64_t lt_arg_right_8833;
-    int64_t lt_arg_left_8915;
-    int64_t lt_arg_right_8915;
-    int64_t lt_arg_left_9025;
-    int64_t lt_arg_right_9025;
-    int64_t lt_arg_left_9048;
-    int64_t lt_arg_right_9048;
-    int64_t lt_arg_left_9066;
-    int64_t lt_arg_right_9066;
-    int64_t lt_arg_left_9425;
-    int64_t lt_arg_right_9425;
-    int64_t lite_h0 = lite_h0In;
+    int64_t lt_arg_left_6626;
+    int64_t lt_arg_right_6626;
+    int64_t lt_arg_left_6824;
+    int64_t lt_arg_right_6824;
+    int64_t lt_arg_left_6828;
+    int64_t lt_arg_right_6828;
+    int64_t lt_arg_left_6858;
+    int64_t lt_arg_right_6858;
+    int64_t lt_arg_left_7152;
+    int64_t lt_arg_right_7152;
+    uint32_t lite_h0 = lite_h0In;
     (void)lite_h0;
-    int64_t lite_h1 = lite_h1In;
+    uint32_t lite_h1 = lite_h1In;
     (void)lite_h1;
-    int64_t lite_h2 = lite_h2In;
+    uint32_t lite_h2 = lite_h2In;
     (void)lite_h2;
-    int64_t lite_h3 = lite_h3In;
+    uint32_t lite_h3 = lite_h3In;
     (void)lite_h3;
-    int64_t lite_h4 = lite_h4In;
+    uint32_t lite_h4 = lite_h4In;
     (void)lite_h4;
-    int64_t lite_h5 = lite_h5In;
+    uint32_t lite_h5 = lite_h5In;
     (void)lite_h5;
-    int64_t lite_h6 = lite_h6In;
+    uint32_t lite_h6 = lite_h6In;
     (void)lite_h6;
-    int64_t lite_h7 = lite_h7In;
+    uint32_t lite_h7 = lite_h7In;
     (void)lite_h7;
     lt_list_i64 lite_padded = lt_list_i64_from(0, NULL);
     (void)lite_padded;
@@ -12939,42 +12543,23 @@ static lt_str lt_fn_lib_s_core_s_crypto__sha256FinalizeTail(int64_t lite_h0In, i
         }
     }
     (void)(lt_list_i64_push_back(&lite_padded, INT64_C(128)));
-    while ((((lt_arg_left_8833 = ((lite_padded).len), lt_arg_right_8833 = INT64_C(64), lite_remainder_int(lt_arg_left_8833, lt_arg_right_8833, 8833)))) != (INT64_C(56))) {
+    while ((((lt_arg_left_6626 = ((lite_padded).len), lt_arg_right_6626 = INT64_C(64), lite_remainder_int(lt_arg_left_6626, lt_arg_right_6626, 6626)))) != (INT64_C(56))) {
         (void)(lt_list_i64_push_back(&lite_padded, INT64_C(0)));
     }
-    int64_t lite_bitLen = (lt_arg_left_8915 = lite_totalBytes, lt_arg_right_8915 = INT64_C(8), lt_checked_multiply(lt_arg_left_8915, lt_arg_right_8915, 8915));
+    uint64_t lite_bitLen = ((uint64_t)lt_shl_u((uint64_t)(((uint64_t)(lt_cast_i2u((int64_t)(lite_totalBytes), 64, "UInt64", 6693)))), (int64_t)(INT64_C(3)), 64, 6718));
     (void)lite_bitLen;
-    lt_list_i64 lite_lenBytes = lt_list_i64_from(0, NULL);
-    (void)lite_lenBytes;
     int64_t lite_k = INT64_C(0);
     (void)lite_k;
     while ((lite_k) < (INT64_C(8))) {
-        (void)(lt_list_i64_push_front(&lite_lenBytes, (lt_arg_left_9025 = lite_bitLen, lt_arg_right_9025 = INT64_C(256), lite_remainder_int(lt_arg_left_9025, lt_arg_right_9025, 9025))));
-        lite_bitLen = (lt_arg_left_9048 = lite_bitLen, lt_arg_right_9048 = INT64_C(256), lite_divide_int(lt_arg_left_9048, lt_arg_right_9048, 9048));
-        lite_k = (lt_arg_left_9066 = lite_k, lt_arg_right_9066 = INT64_C(1), lt_checked_add(lt_arg_left_9066, lt_arg_right_9066, 9066));
-    }
-    {
-        lt_list_i64 lt_seq_1 = lt_list_i64_copy(lite_lenBytes);
-        for (int64_t lt_sidx_1 = 0; lt_sidx_1 < lt_seq_1.len; lt_sidx_1 += 1) {
-            int64_t lite_lb = lt_seq_1.data[lt_sidx_1];
-            (void)lite_lb;
-            (void)(lt_list_i64_push_back(&lite_padded, lite_lb));
-        }
-        if (lt_seq_1.rc != NULL) {
-            if (*(lt_seq_1.rc) <= 1) {
-                free(lt_seq_1.data);
-                free(lt_seq_1.rc);
-            } else {
-                *(lt_seq_1.rc) -= 1;
-            }
-        }
+        (void)(lt_list_i64_push_back(&lite_padded, ((int64_t)(lt_cast_u2i((uint64_t)(((uint64_t)(((uint64_t)(((uint64_t)lt_shr_u((uint64_t)(lite_bitLen), (int64_t)((lt_arg_left_6824 = INT64_C(56), lt_arg_right_6824 = (lt_arg_left_6828 = lite_k, lt_arg_right_6828 = INT64_C(8), lt_checked_multiply(lt_arg_left_6828, lt_arg_right_6828, 6828)), lt_checked_subtract(lt_arg_left_6824, lt_arg_right_6824, 6824))), 64, 6810)))) & ((uint64_t)(UINT64_C(255)))))), 64, "Int", 6793)))));
+        lite_k = (lt_arg_left_6858 = lite_k, lt_arg_right_6858 = INT64_C(1), lt_checked_add(lt_arg_left_6858, lt_arg_right_6858, 6858));
     }
     int64_t lite_totalPadded = ((lite_padded).len);
     (void)lite_totalPadded;
     int64_t lite_pos = INT64_C(0);
     (void)lite_pos;
     while ((lite_pos) < (lite_totalPadded)) {
-        lt_s_636182801_889164149 lite_st = lt_fn_lib_s_core_s_crypto__sha256Compress(lite_h0, lite_h1, lite_h2, lite_h3, lite_h4, lite_h5, lite_h6, lite_h7, lite_padded, lite_pos);
+        lt_s_43550529_298059828 lite_st = lt_fn_lib_s_core_s_crypto__sha256Compress(lite_h0, lite_h1, lite_h2, lite_h3, lite_h4, lite_h5, lite_h6, lite_h7, lite_padded, lite_pos);
         (void)lite_st;
         lite_h0 = (lite_st).f_h0;
         lite_h1 = (lite_st).f_h1;
@@ -12984,41 +12569,41 @@ static lt_str lt_fn_lib_s_core_s_crypto__sha256FinalizeTail(int64_t lite_h0In, i
         lite_h5 = (lite_st).f_h5;
         lite_h6 = (lite_st).f_h6;
         lite_h7 = (lite_st).f_h7;
-        lite_pos = (lt_arg_left_9425 = lite_pos, lt_arg_right_9425 = INT64_C(64), lt_checked_add(lt_arg_left_9425, lt_arg_right_9425, 9425));
+        lite_pos = (lt_arg_left_7152 = lite_pos, lt_arg_right_7152 = INT64_C(64), lt_checked_add(lt_arg_left_7152, lt_arg_right_7152, 7152));
     }
     return lite_concat(lite_concat(lite_concat(lite_concat(lite_concat(lite_concat(lite_concat(lt_fn_lib_s_core_s_crypto__word32Hex(lite_h0), lt_fn_lib_s_core_s_crypto__word32Hex(lite_h1)), lt_fn_lib_s_core_s_crypto__word32Hex(lite_h2)), lt_fn_lib_s_core_s_crypto__word32Hex(lite_h3)), lt_fn_lib_s_core_s_crypto__word32Hex(lite_h4)), lt_fn_lib_s_core_s_crypto__word32Hex(lite_h5)), lt_fn_lib_s_core_s_crypto__word32Hex(lite_h6)), lt_fn_lib_s_core_s_crypto__word32Hex(lite_h7));
 }
 
 static lt_s_388836977_2312347 lt_fn_lib_s_core_s_crypto__sha256Reader(lt_s_677744100_863061398 lite_reader) {
     (void)lite_reader;
-    int64_t lt_arg_left_10427;
-    int64_t lt_arg_right_10427;
-    int64_t lt_arg_left_10617;
-    int64_t lt_arg_right_10617;
-    int64_t lt_arg_left_10949;
-    int64_t lt_arg_right_10949;
-    int64_t lt_arg_left_11182;
-    int64_t lt_arg_right_11182;
-    int64_t lt_arg_left_11288;
-    int64_t lt_arg_right_11288;
+    int64_t lt_arg_left_8210;
+    int64_t lt_arg_right_8210;
+    int64_t lt_arg_left_8400;
+    int64_t lt_arg_right_8400;
+    int64_t lt_arg_left_8732;
+    int64_t lt_arg_right_8732;
+    int64_t lt_arg_left_8965;
+    int64_t lt_arg_right_8965;
+    int64_t lt_arg_left_9071;
+    int64_t lt_arg_right_9071;
     if ((!(lt_io_reader_ok(lite_reader)))) {
         return ((lt_s_388836977_2312347){ .f_ok = false, .f_hex = LT_STR_LIT("", 0), .f_error = lt_io_reader_error(lite_reader) });
     }
-    int64_t lite_h0 = INT64_C(1779033703);
+    uint32_t lite_h0 = UINT64_C(1779033703);
     (void)lite_h0;
-    int64_t lite_h1 = INT64_C(3144134277);
+    uint32_t lite_h1 = UINT64_C(3144134277);
     (void)lite_h1;
-    int64_t lite_h2 = INT64_C(1013904242);
+    uint32_t lite_h2 = UINT64_C(1013904242);
     (void)lite_h2;
-    int64_t lite_h3 = INT64_C(2773480762);
+    uint32_t lite_h3 = UINT64_C(2773480762);
     (void)lite_h3;
-    int64_t lite_h4 = INT64_C(1359893119);
+    uint32_t lite_h4 = UINT64_C(1359893119);
     (void)lite_h4;
-    int64_t lite_h5 = INT64_C(2600822924);
+    uint32_t lite_h5 = UINT64_C(2600822924);
     (void)lite_h5;
-    int64_t lite_h6 = INT64_C(528734635);
+    uint32_t lite_h6 = UINT64_C(528734635);
     (void)lite_h6;
-    int64_t lite_h7 = INT64_C(1541459225);
+    uint32_t lite_h7 = UINT64_C(1541459225);
     (void)lite_h7;
     int64_t lite_totalBytes = INT64_C(0);
     (void)lite_totalBytes;
@@ -13038,16 +12623,16 @@ static lt_s_388836977_2312347 lt_fn_lib_s_core_s_crypto__sha256Reader(lt_s_67774
             }
             continue;
         }
-        lite_totalBytes = (lt_arg_left_10427 = lite_totalBytes, lt_arg_right_10427 = lite_chunkLen, lt_checked_add(lt_arg_left_10427, lt_arg_right_10427, 10427));
+        lite_totalBytes = (lt_arg_left_8210 = lite_totalBytes, lt_arg_right_8210 = lite_chunkLen, lt_checked_add(lt_arg_left_8210, lt_arg_right_8210, 8210));
         int64_t lite_pos = INT64_C(0);
         (void)lite_pos;
         if ((((lite_tail).len)) > (INT64_C(0))) {
             while ((((((lite_tail).len)) < (INT64_C(64))) && ((lite_pos) < (lite_chunkLen)))) {
-                (void)(lt_list_i64_push_back(&lite_tail, lt_list_i64_at(lite_chunk, lite_pos, 10590)));
-                lite_pos = (lt_arg_left_10617 = lite_pos, lt_arg_right_10617 = INT64_C(1), lt_checked_add(lt_arg_left_10617, lt_arg_right_10617, 10617));
+                (void)(lt_list_i64_push_back(&lite_tail, lt_list_i64_at(lite_chunk, lite_pos, 8373)));
+                lite_pos = (lt_arg_left_8400 = lite_pos, lt_arg_right_8400 = INT64_C(1), lt_checked_add(lt_arg_left_8400, lt_arg_right_8400, 8400));
             }
             if ((((lite_tail).len)) == (INT64_C(64))) {
-                lt_s_636182801_889164149 lite_st = lt_fn_lib_s_core_s_crypto__sha256Compress(lite_h0, lite_h1, lite_h2, lite_h3, lite_h4, lite_h5, lite_h6, lite_h7, lite_tail, INT64_C(0));
+                lt_s_43550529_298059828 lite_st = lt_fn_lib_s_core_s_crypto__sha256Compress(lite_h0, lite_h1, lite_h2, lite_h3, lite_h4, lite_h5, lite_h6, lite_h7, lite_tail, INT64_C(0));
                 (void)lite_st;
                 lite_h0 = (lite_st).f_h0;
                 lite_h1 = (lite_st).f_h1;
@@ -13060,8 +12645,8 @@ static lt_s_388836977_2312347 lt_fn_lib_s_core_s_crypto__sha256Reader(lt_s_67774
                 lite_tail = lt_list_i64_from(0, NULL);
             }
         }
-        while (((lt_arg_left_10949 = lite_pos, lt_arg_right_10949 = INT64_C(64), lt_checked_add(lt_arg_left_10949, lt_arg_right_10949, 10949))) <= (lite_chunkLen)) {
-            lt_s_636182801_889164149 lite_st = lt_fn_lib_s_core_s_crypto__sha256Compress(lite_h0, lite_h1, lite_h2, lite_h3, lite_h4, lite_h5, lite_h6, lite_h7, lite_chunk, lite_pos);
+        while (((lt_arg_left_8732 = lite_pos, lt_arg_right_8732 = INT64_C(64), lt_checked_add(lt_arg_left_8732, lt_arg_right_8732, 8732))) <= (lite_chunkLen)) {
+            lt_s_43550529_298059828 lite_st = lt_fn_lib_s_core_s_crypto__sha256Compress(lite_h0, lite_h1, lite_h2, lite_h3, lite_h4, lite_h5, lite_h6, lite_h7, lite_chunk, lite_pos);
             (void)lite_st;
             lite_h0 = (lite_st).f_h0;
             lite_h1 = (lite_st).f_h1;
@@ -13071,11 +12656,11 @@ static lt_s_388836977_2312347 lt_fn_lib_s_core_s_crypto__sha256Reader(lt_s_67774
             lite_h5 = (lite_st).f_h5;
             lite_h6 = (lite_st).f_h6;
             lite_h7 = (lite_st).f_h7;
-            lite_pos = (lt_arg_left_11182 = lite_pos, lt_arg_right_11182 = INT64_C(64), lt_checked_add(lt_arg_left_11182, lt_arg_right_11182, 11182));
+            lite_pos = (lt_arg_left_8965 = lite_pos, lt_arg_right_8965 = INT64_C(64), lt_checked_add(lt_arg_left_8965, lt_arg_right_8965, 8965));
         }
         while ((lite_pos) < (lite_chunkLen)) {
-            (void)(lt_list_i64_push_back(&lite_tail, lt_list_i64_at(lite_chunk, lite_pos, 11265)));
-            lite_pos = (lt_arg_left_11288 = lite_pos, lt_arg_right_11288 = INT64_C(1), lt_checked_add(lt_arg_left_11288, lt_arg_right_11288, 11288));
+            (void)(lt_list_i64_push_back(&lite_tail, lt_list_i64_at(lite_chunk, lite_pos, 9048)));
+            lite_pos = (lt_arg_left_9071 = lite_pos, lt_arg_right_9071 = INT64_C(1), lt_checked_add(lt_arg_left_9071, lt_arg_right_9071, 9071));
         }
     }
     return ((lt_s_388836977_2312347){ .f_ok = true, .f_hex = lt_fn_lib_s_core_s_crypto__sha256FinalizeTail(lite_h0, lite_h1, lite_h2, lite_h3, lite_h4, lite_h5, lite_h6, lite_h7, lite_tail, lite_totalBytes), .f_error = LT_STR_LIT("", 0) });
@@ -67335,12 +66920,7 @@ int main(int argc, char **argv) {
     lt_m_frontend_d_syntax__braceIndexMap = lt_map_i64_i64_from(0, NULL);
     (void)lt_m_frontend_d_syntax__braceIndexMap;
     (void)lt_m_lib_s_core_s_crypto__hexAlphabet;
-    (void)lt_m_lib_s_core_s_crypto__pow32;
-    lt_m_lib_s_core_s_crypto__xor4 = lt_list_i64_copy(lt_fn_lib_s_core_s_crypto__buildNibbleTable(true));
-    (void)lt_m_lib_s_core_s_crypto__xor4;
-    lt_m_lib_s_core_s_crypto__and4 = lt_list_i64_copy(lt_fn_lib_s_core_s_crypto__buildNibbleTable(false));
-    (void)lt_m_lib_s_core_s_crypto__and4;
-    lt_m_lib_s_core_s_crypto__k256 = lt_list_i64_from(64, (const int64_t[]){INT64_C(1116352408), INT64_C(1899447441), INT64_C(3049323471), INT64_C(3921009573), INT64_C(961987163), INT64_C(1508970993), INT64_C(2453635748), INT64_C(2870763221), INT64_C(3624381080), INT64_C(310598401), INT64_C(607225278), INT64_C(1426881987), INT64_C(1925078388), INT64_C(2162078206), INT64_C(2614888103), INT64_C(3248222580), INT64_C(3835390401), INT64_C(4022224774), INT64_C(264347078), INT64_C(604807628), INT64_C(770255983), INT64_C(1249150122), INT64_C(1555081692), INT64_C(1996064986), INT64_C(2554220882), INT64_C(2821834349), INT64_C(2952996808), INT64_C(3210313671), INT64_C(3336571891), INT64_C(3584528711), INT64_C(113926993), INT64_C(338241895), INT64_C(666307205), INT64_C(773529912), INT64_C(1294757372), INT64_C(1396182291), INT64_C(1695183700), INT64_C(1986661051), INT64_C(2177026350), INT64_C(2456956037), INT64_C(2730485921), INT64_C(2820302411), INT64_C(3259730800), INT64_C(3345764771), INT64_C(3516065817), INT64_C(3600352804), INT64_C(4094571909), INT64_C(275423344), INT64_C(430227734), INT64_C(506948616), INT64_C(659060556), INT64_C(883997877), INT64_C(958139571), INT64_C(1322822218), INT64_C(1537002063), INT64_C(1747873779), INT64_C(1955562222), INT64_C(2024104815), INT64_C(2227730452), INT64_C(2361852424), INT64_C(2428436474), INT64_C(2756734187), INT64_C(3204031479), INT64_C(3329325298)});
+    lt_m_lib_s_core_s_crypto__k256 = ((lt_arr_u32_64){ { UINT64_C(1116352408), UINT64_C(1899447441), UINT64_C(3049323471), UINT64_C(3921009573), UINT64_C(961987163), UINT64_C(1508970993), UINT64_C(2453635748), UINT64_C(2870763221), UINT64_C(3624381080), UINT64_C(310598401), UINT64_C(607225278), UINT64_C(1426881987), UINT64_C(1925078388), UINT64_C(2162078206), UINT64_C(2614888103), UINT64_C(3248222580), UINT64_C(3835390401), UINT64_C(4022224774), UINT64_C(264347078), UINT64_C(604807628), UINT64_C(770255983), UINT64_C(1249150122), UINT64_C(1555081692), UINT64_C(1996064986), UINT64_C(2554220882), UINT64_C(2821834349), UINT64_C(2952996808), UINT64_C(3210313671), UINT64_C(3336571891), UINT64_C(3584528711), UINT64_C(113926993), UINT64_C(338241895), UINT64_C(666307205), UINT64_C(773529912), UINT64_C(1294757372), UINT64_C(1396182291), UINT64_C(1695183700), UINT64_C(1986661051), UINT64_C(2177026350), UINT64_C(2456956037), UINT64_C(2730485921), UINT64_C(2820302411), UINT64_C(3259730800), UINT64_C(3345764771), UINT64_C(3516065817), UINT64_C(3600352804), UINT64_C(4094571909), UINT64_C(275423344), UINT64_C(430227734), UINT64_C(506948616), UINT64_C(659060556), UINT64_C(883997877), UINT64_C(958139571), UINT64_C(1322822218), UINT64_C(1537002063), UINT64_C(1747873779), UINT64_C(1955562222), UINT64_C(2024104815), UINT64_C(2227730452), UINT64_C(2361852424), UINT64_C(2428436474), UINT64_C(2756734187), UINT64_C(3204031479), UINT64_C(3329325298) } });
     (void)lt_m_lib_s_core_s_crypto__k256;
     lt_m_symbol_d_table__localByName = lt_map_str_i64_from(0, NULL);
     (void)lt_m_symbol_d_table__localByName;
