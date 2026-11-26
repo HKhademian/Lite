@@ -363,11 +363,14 @@ test('buildSite generates static pages and metadata in dist/site', () => {
 
   const gymIndex = readFileSync(join(out, 'gym/index.html'), 'utf8');
   assert(gymIndex.includes('0 / 56 solved'));
-  assert(gymIndex.includes('Concept Drills (27)'));
-  assert(gymIndex.includes('Problem Workouts (29)'));
+  assert(gymIndex.includes('>Drills (27)</button>'));
+  assert(gymIndex.includes('>Workouts (29)</button>'));
   assert(gymIndex.includes('Export JSON'));
   assert(gymIndex.includes('Import JSON'));
   assert(gymIndex.includes('id="gym-search"'));
+  assert(gymIndex.includes('aria-label="Browse Gym exercises"'));
+  assert(gymIndex.includes('class="gym-exercise-list"'));
+  assert(gymIndex.includes('<summary>More filters</summary>'));
   assert(gymIndex.includes('data-filter-domain='));
   assert(!gymIndex.includes('42 browser-graded'));
   for (const gymRel of [
@@ -390,7 +393,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     assert(existsSync(join(out, gymRel)), `missing gym artifact: ${gymRel}`);
   }
   const astDojo = readFileSync(join(out, 'gym/workouts/expression-ast-eval.html'), 'utf8');
-  assert(astDojo.includes('Submit &amp; Grade'));
+  assert(astDojo.includes('Check all tests'));
+  assert(astDojo.includes('aria-controls="gym-switcher" aria-expanded="false"'));
+  assert(astDojo.includes('aria-controls="gym-scratch"'));
+  assert(astDojo.includes('href="#gym-workbench-editor">Jump to the editor'));
   assert(astDojo.includes('../../runtime/worker.js'));
   assert(astDojo.includes('../../runtime/play-stage.js'));
   assert(astDojo.includes('class="md-prose doc-prose"'));
@@ -401,6 +407,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(astDojo.includes('Reveal Reference Solution'));
   const drillDojo = readFileSync(join(out, 'gym/drills/immutable-vs-var.html'), 'utf8');
   assert(drillDojo.includes('<textarea id="gym-editor" class="pg-editor-input"'));
+  assert.equal(drillDojo.match(/ id="gym-editor"/g)?.length, 1);
   assert(drillDojo.includes('<pre id="gym-editor-pre" class="pg-editor-pre"'));
   assert(drillDojo.includes('id="gym-open-play" class="pg-copy-btn" href="../../playground/?piece=gym-immutable-vs-var"'));
   assert(!drillDojo.includes('?draft=gym'));

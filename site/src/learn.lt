@@ -135,11 +135,15 @@ itemIds: List<String>
     };
 
     trackSections: mut List<String> = [];
+    trackLinks: mut List<String> = [];
     loop trackOffs as tPos {
         trId := readOptStr(src, tPos, "id");
         trTitle := readOptStr(src, tPos, "title");
         trSummary := readOptStr(src, tPos, "summary");
         trLessonIds := readStringList(src, tPos, "lessonIds");
+        titleSep := trTitle.indexOf(" — ", 0);
+        shortTitle := if titleSep < 0 { trTitle } else { trTitle.slice(titleSep + 3, trTitle.length()) };
+        mut trackLinks.pushBack("<li data-track-jump=\"" + escapeHtml(trId) + "\"><a href=\"#track-" + escapeHtml(trId) + "\">" + escapeHtml(shortTitle) + "</a></li>");
 
         cards: mut List<String> = [];
         loop trLessonIds as lid {
@@ -217,8 +221,13 @@ itemIds: List<String>
     "    </div>",
     "  </div>",
     "</section>",
+    "<nav class=\"learn-track-jumps\" aria-labelledby=\"learn-track-heading\">",
+    "  <h2 id=\"learn-track-heading\">Jump to a track</h2>",
+    "  <ul>" + trackLinks.join("\n") + "</ul>",
+    "</nav>",
     "<section class=\"gym-filters\" aria-label=\"Filter curriculum\">",
-    "  <input id=\"learn-search\" class=\"filter-input\" type=\"search\" placeholder=\"Filter lessons, tutorials, or topics...\" aria-label=\"Filter Learn lessons\">",
+    "  <label for=\"learn-search\">Find a lesson</label>",
+    "  <input id=\"learn-search\" class=\"filter-input\" type=\"search\" placeholder=\"Try strings or imports\">",
     "  <div class=\"gym-filter-group\" role=\"group\" aria-label=\"Environment filter\">",
     "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"all\" aria-pressed=\"true\">All (" + totalStr + ")</button>",
     "    <button class=\"gym-filter-btn\" type=\"button\" data-learn-env=\"universal\" aria-pressed=\"false\">Browser + CLI (" + univCount.toText() + ")</button>",
@@ -227,7 +236,7 @@ itemIds: List<String>
     "  </div>",
     "  <div class=\"gym-filter-group\">",
     "    <button id=\"learn-filter-incomplete\" class=\"gym-filter-btn\" type=\"button\" aria-pressed=\"false\">Incomplete Only</button>",
-    "    <span id=\"learn-visible-count\" class=\"code-card-meta\">Showing " + totalStr + " / " + totalStr + "</span>",
+    "    <span id=\"learn-visible-count\" class=\"code-card-meta\" role=\"status\">Showing " + totalStr + " / " + totalStr + "</span>",
     "  </div>",
     "</section>",
     trackSections.join("\n"),
@@ -269,9 +278,11 @@ itemIds: List<String>
     "      for (var t = 0; t < tracks.length; t += 1) {",
     "        var sec = tracks[t];",
     "        sec.hidden = sec.querySelector(\".learn-index-card:not([hidden])\") === null;",
+    "        var jump = document.querySelector('[data-track-jump=\"' + sec.dataset.learnTrack + '\"]');",
+    "        if (jump) jump.hidden = sec.hidden;",
     "      }",
     "      var countEl = document.getElementById(\"learn-visible-count\");",
-    "      if (countEl) countEl.textContent = \"Showing \" + shown + \" / \" + lessons.length;",
+    "      if (countEl) countEl.textContent = shown === 0 ? \"No matching lessons. Try another search or change the filters.\" : \"Showing \" + shown + \" of \" + lessons.length + \" lessons and projects\";",
     "    }",
     "",
     "    var completed = loadCompleted();",

@@ -2724,12 +2724,89 @@ a.is-completed .learn-done-dot {
 }
 
 /* Lite Gym Coding Dojo & Multi-Case Judge */
-.gym-progress-headline {
+.learn-track-jumps {
+  margin: 0.5rem 0 1.4rem;
+}
+.learn-track-jumps h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.12rem;
+}
+.learn-track-jumps ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.35rem 1.75rem;
+  padding-left: 1.25rem;
+  margin: 0;
+}
+[data-learn-track],
+#gym-browse,
+#gym-workbench-editor,
+#gym-switcher {
+  scroll-margin-top: 76px;
+}
+.learn-index-card[hidden],
+.gym-index-card[hidden] {
+  display: none;
+}
+:where(.gym-shell, .gym-browser, .gym-progress, .gym-exercise-list, .learn-track-jumps) :focus-visible {
+  outline: 2px solid var(--tok-keyword);
+  outline-offset: 3px;
+}
+.gym-progress-tools {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.5rem;
   flex-wrap: wrap;
+  margin: 1rem 0;
+}
+.gym-progress summary,
+.gym-more-filters summary {
+  cursor: pointer;
+  color: var(--ink);
+  width: fit-content;
+  font-weight: 600;
+  padding: 0.3rem 0;
+}
+.gym-browser {
+  max-width: 48rem;
+}
+.gym-browser label {
+  display: block;
+  font-weight: 600;
+}
+.gym-browser input {
+  width: 100%;
+  margin: 0.4rem 0 0.75rem;
+}
+.gym-more-filters {
+  margin-top: 0.55rem;
+}
+.gym-more-filters .gym-filter-group {
+  margin-block: 0.55rem;
+}
+.gym-exercise-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+.gym-index-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.8rem;
+  padding: 0.55rem 0.15rem;
+  border-bottom: 1px solid var(--border);
+}
+.gym-exercise-link {
+  flex: 1 1 12rem;
+  padding-block: 0.3rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.gym-status-label {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
 }
 .gym-belt-grid {
   display: grid;
@@ -2820,13 +2897,6 @@ a.is-completed .learn-done-dot {
   background: var(--accent-soft);
   color: var(--ink);
   border-color: var(--accent);
-}
-.gym-card-tags {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  font-size: 0.8rem;
 }
 .gym-solved-label,
 .gym-solved-pill {
@@ -2959,6 +3029,7 @@ a.is-completed .learn-done-dot {
 }
 .gym-results-panel {
   padding: 0.85rem;
+  min-height: 7rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -3312,14 +3383,13 @@ a.is-completed .learn-done-dot {
     grid-template-columns: 1fr;
     gap: 1.15rem;
   }
-  .learn-workbench .pg-split,
-  .gym-dojo .pg-split {
+  .learn-workbench .pg-split {
     display: none;
   }
 }
 .gym-shell {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.15rem;
   align-items: start;
 }
@@ -3329,15 +3399,23 @@ a.is-completed .learn-done-dot {
 .gym-sidebar {
   display: none;
 }
+#gym-switcher-close {
+  margin-bottom: 0.75rem;
+}
+.gym-workspace {
+  min-width: 0;
+}
 .gym-shell.is-sidebar-open .gym-sidebar {
   display: block;
 }
 @media (max-width: 1180px) {
   .gym-shell.is-sidebar-open {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .gym-shell.is-sidebar-open .gym-sidebar {
-    display: none;
+    position: static;
+    max-height: min(56vh, 28rem);
+    overflow: auto;
   }
 }
 .gym-dojo.has-split {
@@ -3347,8 +3425,21 @@ a.is-completed .learn-done-dot {
 }
 @media (max-width: 960px) {
   .gym-dojo.has-split {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.25rem;
+  }
+  .gym-dojo .pg-split { display: none; }
+}
+@media (max-width: 640px) {
+  .gym-shell .pane-head {
+    flex-wrap: wrap;
+  }
+  .gym-shell .sample-picker {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .gym-shell .pg-actions {
+    flex-wrap: wrap;
   }
 }
 .gym-diff-lines {
