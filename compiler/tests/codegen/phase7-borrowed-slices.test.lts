@@ -1,0 +1,246 @@
+/* Phase 7 verification: borrowed zero-copy Slice<T>, mut slices, splitAt suspension/disjointness, String.bytes(), and compile-time/runtime rejections on TS & C11. */
+
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccProbe := compilerTest.probeCc();
+
+/* 1. Dual-target parity (TS, C11, C11 --sanitize ASan/UBSan): List/Array/Slice sub-slicing, mut, splitAt, String.bytes, toList, loop */
+parityProg := [
+    "io := import \"core/io\";",
+    "Pair := record { x: Int; label: String };",
+    "sumSlice := fn(s: Slice<Int>): Int {",
+    "    var total := 0;",
+    "    loop s as v { total += v; }",
+    "    total",
+    "};",
+    "swapFirstLast := fn(a: mut Slice<Int>, b: mut Slice<Int>): Unit {",
+    "    if not a.isEmpty() and not b.isEmpty() {",
+    "        tmp := a[0];",
+    "        a[0] = b[b.length() - 1];",
+    "        b[b.length() - 1] = tmp;",
+    "    }",
+    "};",
+    "addBias := fn(s: mut Slice<Int>, delta: Int): Unit {",
+    "    loop 0..s.length() as i {",
+    "        cur := s.uncheckedGet(i);",
+    "        mut s.uncheckedSet(i, cur + delta);",
+    "    }",
+    "};",
+    "main := fn(): Unit {",
+    "    xs: mut List<Int> = [10, 20, 30, 40, 50, 60];",
+    "    {",
+    "        s0 := xs[1..5];",
+    "        s1 := s0[1..3];",
+    "        io.outputLine(\"ro:\", s0.length(), s0[0], s1.length(), s1, sumSlice(s0));",
+    "        emptyMid := xs[2..2];",
+    "        io.outputLine(\"empty:\", emptyMid.length(), emptyMid.isEmpty(), emptyMid);",
+    "    }",
+    "    emptyList: mut List<Int> = [];",
+    "    {",
+    "        es := emptyList[0..0];",
+    "        io.outputLine(\"emptyZero:\", es.isEmpty());",
+    "    }",
+    "    {",
+    "        em := mut emptyList[..];",
+    "        (el, er) := mut em.splitAt(0);",
+    "        io.outputLine(\"emptySplit:\", el.isEmpty(), er.isEmpty());",
+    "    }",
+    "    {",
+    "        ms := mut xs[0..6];",
+    "        (l, r) := mut ms.splitAt(3);",
+    "        swapFirstLast(mut l, mut r);",
+    "        {",
+    "            (l0, l1) := mut l.splitAt(1);",
+    "            l0[0] += 100;",
+    "            addBias(mut l1, 5);",
+    "        }",
+    "        io.outputLine(\"halves:\", l, r);",
+    "    }",
+    "    {",
+    "        msAgain := mut xs[2..4];",
+    "        msAgain[0] = 999;",
+    "    }",
+    "    snap := xs[1..4].toList();",
+    "    xs[2] = 777;",
+    "    mut xs.pushBack(70);",
+    "    io.outputLine(\"snap_and_xs:\", snap, xs);",
+    "    var arr: [UInt8; 5] = [1, 2, 3, 4, 5];",
+    "    {",
+    "        sub := mut arr[1..4];",
+    "        sub[1] = 88;",
+    "    }",
+    "    io.outputLine(\"arr:\", arr, loop arr[..=2] { cast<Int>(.item) + 10 }.collected);",
+    "    pts: mut List<Pair> = [Pair { x = 1, label = \"one\" }, Pair { x = 2, label = \"two\" }, Pair { x = 3, label = \"three\" }];",
+    "    {",
+    "        ps := mut pts[0..2];",
+    "        ps[1] = Pair { x = 20, label = \"twenty\" };",
+    "        copiedPts := ps.toList();",
+    "        io.outputLine(\"pts:\", ps.length(), copiedPts);",
+    "    }",
+    "    io.outputLine(\"ptsAfter:\", pts);",
+    "    litBytes := \"Hi!\".bytes();",
+    "    shortStr := \"ok-14\";",
+    "    longStr := \"0123456789abcdef-long\";",
+    "    utfStr := \"a🚀b\";",
+    "    sb := shortStr.bytes();",
+    "    lb := longStr.bytes();",
+    "    ub := utfStr.bytes();",
+    "    emptyBytes := \"\".bytes();",
+    "    io.outputLine(\"bytes:\", litBytes.length(), litBytes[0], sb.length(), lb.length(), lb[16..20], ub.length(), ub[0], ub[1], ub[5], emptyBytes.isEmpty());",
+    "    var dynShort := \"dyn\";",
+    "    dynShort += \"!\";",
+    "    var dynLong := \"0123456789abcdef\";",
+    "    dynLong += \"-ext\";",
+    "    {",
+    "        dbS := dynShort.bytes();",
+    "        dbL := dynLong.bytes();",
+    "        io.outputLine(\"dynBytes:\", dbS.length(), dbS[3], dbL.length(), dbL[16]);",
+    "    }",
+    "    dynShort = \"mutated\";",
+    "    io.outputLine(\"dynAfter:\", dynShort);",
+    "};",
+    "main();"
+].join("\n");
+
+tsRun := compilerTest.compileCheckRunTs(root, tsComp, parityProg, "phase7-parity.lts");
+test.checkInt("phase7 TS compile+run: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("phase7 TS stderr", "", tsRun.stderr);
+
+expectedStdout := [
+    "ro: 4 20 2 [30, 40] 140",
+    "empty: 0 true []",
+    "emptyZero: true",
+    "emptySplit: true true",
+    "halves: [160, 25, 35] [40, 50, 10]",
+    "snap_and_xs: [25, 999, 40] [160, 25, 777, 40, 50, 10, 70]",
+    "arr: [1, 2, 88, 4, 5] [11, 12, 98]",
+    "pts: 2 [Pair { x = 1, label = one }, Pair { x = 20, label = twenty }]",
+    "ptsAfter: [Pair { x = 1, label = one }, Pair { x = 20, label = twenty }, Pair { x = 3, label = three }]",
+    "bytes: 3 72 5 21 [45, 108, 111, 110] 6 97 240 98 true",
+    "dynBytes: 4 33 20 45",
+    "dynAfter: mutated",
+    ""
+].join("\n");
+test.checkText("phase7 TS stdout", expectedStdout, tsRun.stdout);
+
+if ccProbe.available {
+    cRun := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, parityProg, "phase7-parity-c.lts", "");
+    test.checkInt("phase7 C compile+run: " + cRun.stderr, 0, cRun.status);
+    test.checkText("phase7 C stderr", "", cRun.stderr);
+    test.checkText("phase7 C stdout parity", tsRun.stdout, cRun.stdout);
+
+    cSan := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, parityProg, "phase7-parity-san.lts", "--sanitize");
+    test.checkInt("phase7 C --sanitize compile+run: " + cSan.stderr, 0, cSan.status);
+    test.checkText("phase7 C --sanitize stdout parity", tsRun.stdout, cSan.stdout);
+
+    cUnchecked := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, parityProg, "phase7-parity-unchecked.lts", "-fno-check-bounds -fno-check-unchecked");
+    test.checkInt("phase7 C unchecked flags: " + cUnchecked.stderr, 0, cUnchecked.status);
+    test.checkText("phase7 C unchecked stdout parity", tsRun.stdout, cUnchecked.stdout);
+}
+
+/* 2. Compile-time borrow, exclusivity, splitAt suspension, escape, closure, and bit-packed rejections */
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mutate owner while read-only slice active",
+"io := import \"core/io\";\nxs: mut List<Int> = [1, 2, 3];\ns := xs[0..2];\nmut xs.pushBack(4);\nio.outputLine(s[0]);\n",
+"cannot mutate xs while borrowed by slice s");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject read owner while mut slice active",
+"io := import \"core/io\";\nxs: mut List<Int> = [1, 2, 3];\ns := mut xs[0..2];\nio.outputLine(xs[0]);\ns[0] = 9;\n",
+"cannot read xs while mutably borrowed by slice s");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mutate owner while mut slice active",
+"xs: mut List<Int> = [1, 2, 3];\ns := mut xs[0..2];\nxs[2] = 9;\n",
+"cannot mutate xs while borrowed by slice s");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject read parent slice while splitAt children live",
+"io := import \"core/io\";\nxs: mut List<Int> = [1, 2, 3, 4];\ns := mut xs[0..4];\n(l, r) := mut s.splitAt(2);\nio.outputLine(s[0], l[0], r[0]);\n",
+"cannot access slice s while split into active child borrow");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mutate parent slice while splitAt children live",
+"xs: mut List<Int> = [1, 2, 3, 4];\ns := mut xs[0..4];\n(l, r) := mut s.splitAt(2);\ns[0] = 5;\n",
+"cannot access slice s while split into active child borrow");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject returning Slice<T> from function",
+"bad := fn(xs: List<Int>): Slice<Int> { xs[0..1] };\n",
+"borrowed Slice<T> cannot escape via function return type");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject returning tuple containing Slice<T>",
+"bad := fn(xs: List<Int>): (Slice<Int>, Int) { (xs[0..1], 1) };\n",
+"borrowed Slice<T> cannot escape via function return type");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject storing Slice<T> in List",
+"xs := [1, 2];\nbad: List<Slice<Int>> = [];\n",
+"borrowed Slice<T> cannot be stored in owning container or type definition");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject storing Slice<T> in Record",
+"Holder := record { s: Slice<Int> };\n",
+"borrowed Slice<T> cannot be stored in owning container or type definition");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject capturing Slice<T> in closure",
+"io := import \"core/io\";\nxs := [1, 2, 3];\ns := xs[0..2];\nf := fn(): Int { s[0] };\nio.outputLine(f());\n",
+"borrowed Slice<T> cannot be captured by closure");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject escaping inner owner via outer var Slice<T>",
+"mut outerInit := [1, 2];\nvar s := outerInit[0..1];\n{\n    inner := [3, 4];\n    s = inner[0..1];\n}\n",
+"borrowed slice cannot escape narrower scope of inner");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject slicing non-addressable temporary list",
+"s := [1, 2, 3][0..2];\n",
+"slice requires an addressable List, fixed Array, or Slice binding");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject slicing bit-packed Bool array",
+"flags: [Bool; 4] = [true, false, true, false];\ns := flags[0..2];\n",
+"not supported yet; convert with .toList() first");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject slicing bit-packed Int4 array",
+"nibs: [Int4; 4] = [1, 2, 3, 4];\ns := nibs[0..2];\n",
+"not supported yet; convert with .toList() first");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject String.bytes() on temporary expression",
+"var a := \"foo\";\nb := \"bar\";\ns := (a + b).bytes();\n",
+"String.bytes() requires an addressable String binding or string literal");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mutating read-only slice",
+"xs := [1, 2, 3];\ns := xs[0..2];\ns[0] = 9;\n",
+"cannot mutate read-only value s via index assignment");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject aliasing mut slice args (same var)",
+"f := fn(a: mut Slice<Int>, b: mut Slice<Int>): Unit { a[0] = 1; b[0] = 2; };\nxs: mut List<Int> = [1, 2, 3, 4];\ns := mut xs[0..4];\nf(mut s, mut s);\n",
+"cannot pass s multiple times as mut in the same call");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject aliasing mut slice args (same root list)",
+"f := fn(a: mut Slice<Int>, b: mut Slice<Int>): Unit { a[0] = 1; b[0] = 2; };\nxs: mut List<Int> = [1, 2, 3, 4];\nf(mut xs[0..2], mut xs[2..4]);\n",
+"multiple times as mut in the same call");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject aliasing mut owner and read-only slice",
+"f := fn(a: mut List<Int>, b: Slice<Int>): Unit { mut a.pushBack(b[0]); };\nxs: mut List<Int> = [1, 2, 3];\nf(mut xs, xs[0..2]);\n",
+"cannot pass xs as both read-only and mut in the same call");
+
+/* 3. Runtime BoundPanic checks on TS and C11 */
+boundCases := [
+    (label = "neg start", src = "io := import \"core/io\"; xs := [1, 2]; s := xs[-1..1]; io.outputLine(s);\n"),
+    (label = "end < start", src = "io := import \"core/io\"; xs := [1, 2, 3]; s := xs[2..1]; io.outputLine(s);\n"),
+    (label = "end > len", src = "io := import \"core/io\"; xs := [1, 2]; s := xs[0..3]; io.outputLine(s);\n"),
+    (label = "splitAt > len", src = "io := import \"core/io\"; xs := [1, 2]; (l, r) := xs[0..2].splitAt(3); io.outputLine(l, r);\n"),
+    (label = "slice idx oob", src = "io := import \"core/io\"; xs := [1, 2]; s := xs[0..1]; io.outputLine(s[1]);\n")
+];
+loop boundCases as bc {
+    tsFault := compilerTest.compileCheckRunTs(root, tsComp, bc.src, "phase7-oob-ts.lts");
+    test.check("TS bound fault (" + bc.label + ")", tsFault.status =!= 0 and tsFault.stderr.indexOf("BoundPanic", 0) >= 0);
+    if ccProbe.available {
+        cFault := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, bc.src, "phase7-oob-c.lts", "");
+        test.check("C bound fault (" + bc.label + ")", cFault.status =!= 0 and cFault.stderr.indexOf("BoundPanic", 0) >= 0);
+    }
+}
+
+test.done("phase7-borrowed-slices");

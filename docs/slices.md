@@ -1,6 +1,6 @@
 # Borrowed contiguous slices
 
-Status: **proposed view concept, 2026-10-19; direct positional access with typed faults is selected, while `Slice<T>` construction, slicing punctuation, access construction, lifetime checks, and index conventions remain proposals**. This would add a limited view contract without selecting general raw pointers or freely escaping reference values.
+Status: **baseline implemented in Phase 7 (2026-11-26): non-escaping `Slice<T>` views over addressable `List<T>`, byte-aligned `[T; N]`, and nested `Slice<T>`, plus read-only `String.bytes()`, `(left, right) := mut s.splitAt(mid)`, `.toList()`, and compile-time borrow/escape enforcement**. Slices over bit-packed fixed arrays (`Bool`, `Int1..4`, `UInt1..4`) remain deferred; convert with `.toList()` first. Provisional `$getSlice` / `$getMutSlice` hooks remain in place until Phase 11 migrates them to `Index`.
 
 ## A view, not another element allocation
 

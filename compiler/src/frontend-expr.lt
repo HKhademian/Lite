@@ -9738,8 +9738,9 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         close := syntax.expectSymbol(source, cursor, ")", prefix);
         bytesKind := "Slice<UInt8>";
         if receiver.constant {
+            cStrLit := cLiteral.textLiteralCode(receiver.textValue);
             bytesCode := if target == ir.TARGET_C {
-                "LT_STR_BYTES_LIT(" + cLiteral.textLiteralCode(receiver.textValue) + ")"
+                "lt_str_bytes_lit(" + cStrLit + ", sizeof(" + cStrLit + ") - 1u)"
             } else {
                 "lite$strBytes(" + receiver.code + ")"
             };

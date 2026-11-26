@@ -4378,6 +4378,26 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
         if resultType.kind =!= ir.VALUE_KIND_UNIT {
             syntax.failAt(source, position, prefix, "$setIndex on " + typeName + " must return Unit");
         }
+    } else if opName == "$getSlice" or opName == "$getMutSlice" {
+        if count =!= 3 {
+            syntax.failAt(source, position, prefix, opName + " on " + typeName + " must have exactly 3 parameters (receiver, start, end)");
+        }
+        firstSep := encoded.indexOf("|", 0);
+        recvPart := if firstSep < 0 { encoded } else { encoded.slice(0, firstSep) };
+        recvKind := paramKindOf(recvPart);
+        isMutHook := opName == "$getMutSlice";
+        if isMutHook and not recvKind.startsWithAt(0, "mut ") {
+            syntax.failAt(source, position, prefix, opName + " receiver on " + typeName + " must be mut Self");
+        }
+        if not isMutHook and recvKind.startsWithAt(0, "mut ") {
+            syntax.failAt(source, position, prefix, opName + " receiver on " + typeName + " must be read-only Self (not mut Self)");
+        }
+        if not hasSelfRecv {
+            syntax.failAt(source, position, prefix, opName + " receiver on " + typeName + " must have Self type");
+        }
+        if resultType.kind == ir.VALUE_KIND_UNIT {
+            syntax.failAt(source, position, prefix, opName + " on " + typeName + " must return a Slice value");
+        }
     }
     (next = resultType.next, result = resultType.kind, params = encoded, count = count, genericType = genericType, hasSelfRecv = hasSelfRecv)
 };

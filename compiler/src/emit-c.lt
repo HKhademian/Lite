@@ -8190,7 +8190,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if usesIntHelper(calls, "lt_c_list_fill_bytes(") or usesIntHelper(calls, "lt_c_list_copy_bytes(") or usesIntHelper(calls, "lt_c_list_index_of_byte(") {
         mut seedKinds.pushBack("List<UInt8>");
     }
-    if usesIntHelper(calls, "lt_str_bytes(") or usesIntHelper(calls, "LT_STR_BYTES_LIT(") {
+    if usesIntHelper(calls, "lt_str_bytes(") or usesIntHelper(calls, "lt_str_bytes_lit(") {
         mut seedKinds.pushBack("Slice<UInt8>");
     }
     loop reachable as item {
@@ -9232,12 +9232,11 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("    return (lt_slice_u8){ .data = (uint8_t *)(uintptr_t)p, .len = (int64_t)bl };");
         outLine("}");
     }
-    if usesIntHelper(calls, "LT_STR_BYTES_LIT(") {
+    if usesIntHelper(calls, "lt_str_bytes_lit(") {
         outLine("LT_INLINE lt_slice_u8 lt_str_bytes_lit(const char *s, size_t n) {");
         outLine("    if (n == 0u) { return (lt_slice_u8){ .data = NULL, .len = 0 }; }");
         outLine("    return (lt_slice_u8){ .data = (uint8_t *)(uintptr_t)s, .len = (int64_t)n };");
         outLine("}");
-        outLine("#define LT_STR_BYTES_LIT(s) lt_str_bytes_lit((s), sizeof(s) - 1u)");
     }
     var convIdx := 0;
     convCount := convExpKinds.length();

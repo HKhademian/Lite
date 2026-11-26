@@ -696,7 +696,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     intValue = if isRoot { 1 } else { 0 }, textValue = moduleKey));
 
     if isRoot and projectRoot =!= "" {
-        coreOwnerRels: List<String> = ["lib/core/int.lt", "lib/core/text.lt", "lib/core/list.lt", "lib/core/array.lt", "lib/core/map.lt", "lib/core/set.lt", "lib/core/rc.lt"];
+        coreOwnerRels: List<String> = ["lib/core/int.lt", "lib/core/text.lt", "lib/core/list.lt", "lib/core/array.lt", "lib/core/map.lt", "lib/core/set.lt", "lib/core/rc.lt", "lib/core/slice.lt"];
         loop coreOwnerRels as ownerRel {
             loadedOwner := hostFs.tryReadCoreOwner(projectRoot, ownerRel);
             if loadedOwner.ok and not moduleVisited(graph, loadedOwner.path) {

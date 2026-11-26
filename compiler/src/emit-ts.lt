@@ -3247,7 +3247,20 @@ emitSliceIterHelper := fn(): Unit {
 };
 emitStrBytesHelper := fn(): Unit {
     outLine("function lite$strBytes(s: string): { readonly data: bigint[]; readonly off: number; readonly len: number } {");
-    outLine("    const data = Array.from(new TextEncoder().encode(s), (b) => BigInt(b));");
+    outLine("    const data: bigint[] = [];");
+    outLine("    for (let i = 0; i < s.length; i += 1) {");
+    outLine("        const cp = s.codePointAt(i) as number;");
+    outLine("        if (cp > 0xffff) { i += 1; }");
+    outLine("        if (cp <= 0x7f) {");
+    outLine("            data.push(BigInt(cp));");
+    outLine("        } else if (cp <= 0x7ff) {");
+    outLine("            data.push(BigInt(0xc0 | (cp >> 6)), BigInt(0x80 | (cp & 0x3f)));");
+    outLine("        } else if (cp <= 0xffff) {");
+    outLine("            data.push(BigInt(0xe0 | (cp >> 12)), BigInt(0x80 | ((cp >> 6) & 0x3f)), BigInt(0x80 | (cp & 0x3f)));");
+    outLine("        } else {");
+    outLine("            data.push(BigInt(0xf0 | (cp >> 18)), BigInt(0x80 | ((cp >> 12) & 0x3f)), BigInt(0x80 | ((cp >> 6) & 0x3f)), BigInt(0x80 | (cp & 0x3f)));");
+    outLine("        }");
+    outLine("    }");
     outLine("    return { data, off: 0, len: data.length };");
     outLine("}");
     outLine("");

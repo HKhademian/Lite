@@ -1640,7 +1640,12 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         fnPreLocalsLen := localsCount(locals);
         upgradedMonoLocals := upgradeRootUninitLocalsForFn(locals, rootAssignedNames, futureValues, functions, tpl.declAt);
         locals = [];
-        loop upgradedMonoLocals as upg { mut locals.pushBack(upg); }
+        loop upgradedMonoLocals as upg {
+            upgText := if types.containsSliceKind(upg.kind) { "closure_forbidden" } else { upg.textValue };
+            mut locals.pushBack((name = upg.name, runtime = upg.runtime, kind = upg.kind,
+            mutable = upg.mutable, writable = upg.writable, depth = upg.depth, constant = upg.constant, code = upg.code,
+            intValue = upg.intValue, textValue = upgText, initState = upg.initState));
+        }
         var fnParamSeedBag := "";
         loop splitPipeEntries(inst.substParams, tpl.paramCount) as entry {
             parameterName := paramNameOf(entry);
@@ -3643,7 +3648,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     }
                     opName := source.slice(opStart, opEnd);
                     qualName := name + "." + opName;
-                    if opName.startsWithAt(0, "$") and opName =!= "$getIndex" and opName =!= "$setIndex" {
+                    if opName.startsWithAt(0, "$") and opName =!= "$getIndex" and opName =!= "$setIndex" and opName =!= "$getSlice" and opName =!= "$getMutSlice" {
                         failAt(source, opStart, prefix, "unknown compiler hook " + opName + " on " + name);
                     }
                     owner := resolveOwnedTypeOpTarget(source, nameStart, prefix, aliases, moduleIdentity, name);
@@ -3794,7 +3799,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     upgradedFnLocals := upgradeRootUninitLocalsForFn(locals, rootAssignedNames, futureValues, functions, nameStart);
                     locals = [];
                     loop upgradedFnLocals as upg {
-                        mut locals.pushBack(upg);
+                        upgText := if types.containsSliceKind(upg.kind) { "closure_forbidden" } else { upg.textValue };
+                        mut locals.pushBack((name = upg.name, runtime = upg.runtime, kind = upg.kind,
+                        mutable = upg.mutable, writable = upg.writable, depth = upg.depth, constant = upg.constant, code = upg.code,
+                        intValue = upg.intValue, textValue = upgText, initState = upg.initState));
                     }
                     var fnParamSeedBag := "";
                     loop splitPipeEntries(header.params, header.count) as entry {
@@ -3999,7 +4007,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 upgradedFnLocals := upgradeRootUninitLocalsForFn(locals, rootAssignedNames, futureValues, functions, nameStart);
                 locals = [];
                 loop upgradedFnLocals as upg {
-                    mut locals.pushBack(upg);
+                    upgText := if types.containsSliceKind(upg.kind) { "closure_forbidden" } else { upg.textValue };
+                    mut locals.pushBack((name = upg.name, runtime = upg.runtime, kind = upg.kind,
+                    mutable = upg.mutable, writable = upg.writable, depth = upg.depth, constant = upg.constant, code = upg.code,
+                    intValue = upg.intValue, textValue = upgText, initState = upg.initState));
                 }
                 var fnParamSeedBag := "";
                 loop splitPipeEntries(header.params, header.count) as entry {
