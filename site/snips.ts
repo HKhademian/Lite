@@ -244,46 +244,6 @@ export const snipsClientJs = `(function () {
 
   window.LiteSnips = api;
 
-  /* Lazy shared worker for inline Docs/Handbook execution */
-  var inlineWorker = null;
-  var inlineReqId = 1;
-  var inlinePending = new Map();
-
-  function getInlineWorker() {
-    if (inlineWorker) return inlineWorker;
-    if (typeof Worker !== "function") return null;
-    inlineWorker = new Worker(getBasePath() + "runtime/worker.js", { type: "module" });
-    inlineWorker.addEventListener("message", function (event) {
-      var msg = event.data || {};
-      var entry = inlinePending.get(msg.id);
-      if (entry) {
-        inlinePending.delete(msg.id);
-        entry.resolve(msg);
-      }
-    });
-    inlineWorker.addEventListener("error", function (err) {
-      inlinePending.forEach(function (entry) {
-        entry.reject(new Error((err && err.message) || "Worker error"));
-      });
-      inlinePending.clear();
-      inlineWorker = null;
-    });
-    return inlineWorker;
-  }
-
-  function runSnippetInWorker(code) {
-    return new Promise(function (resolve, reject) {
-      var w = getInlineWorker();
-      if (!w) {
-        reject(new Error("Web Workers are unavailable in this environment."));
-        return;
-      }
-      var id = inlineReqId++;
-      inlinePending.set(id, { resolve: resolve, reject: reject });
-      w.postMessage({ id: id, action: "run", source: code, stdin: "", args: [] });
-    });
-  }
-
   function inferTitleForPre(pre) {
     var card = pre.closest(".code-card, .sample-card, .gallery-card");
     if (card) {
@@ -365,14 +325,24 @@ export const snipsClientJs = `(function () {
 
   function attachInlineRunner(pre, runBtn, hostAnchor) {
     var outBox = null;
-    runBtn.addEventListener("click", function () {
+    var activeRun = null;
+
+    function stopRun() {
+      if (!activeRun) return;
+      if (activeRun.stage) activeRun.stage.stop();
+      if (activeRun.worker) activeRun.worker.terminate();
+      activeRun = null;
+    }
+
+    runBtn.addEventListener("click", async function () {
+      stopRun();
+      var run = { worker: null, stage: null };
+      activeRun = run;
       var code = (pre.textContent || "").replace(/\\n$/, "");
       if (!outBox) {
         outBox = document.createElement("div");
-        outBox.className = "lite-inline-out is-running";
-        if (hostAnchor && typeof hostAnchor.insertAdjacentElement === "function") {
-          hostAnchor.insertAdjacentElement("afterend", outBox);
-        }
+        outBox.className = "lite-inline-out";
+        hostAnchor.insertAdjacentElement("afterend", outBox);
       }
       outBox.hidden = false;
       outBox.className = "lite-inline-out is-running";
@@ -380,50 +350,91 @@ export const snipsClientJs = `(function () {
       var head = document.createElement("div");
       head.className = "lite-inline-out-head";
       var statusSpan = document.createElement("span");
+      statusSpan.setAttribute("role", "status");
       statusSpan.textContent = "Running in browser...";
       var closeBtn = makeActionBtn("Hide");
-      closeBtn.addEventListener("click", function () { outBox.hidden = true; });
+      closeBtn.addEventListener("click", function () {
+        stopRun();
+        outBox.hidden = true;
+        runBtn.disabled = false;
+        runBtn.focus();
+      });
       head.appendChild(statusSpan);
       head.appendChild(closeBtn);
       outBox.appendChild(head);
 
-      var t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
+      function appendOutput(text) {
+        var bodyPre = document.createElement("pre");
+        bodyPre.className = "lite-inline-out-pre";
+        bodyPre.textContent = text;
+        outBox.appendChild(bodyPre);
+      }
+
+      var t0 = performance.now();
       runBtn.disabled = true;
-      runSnippetInWorker(code).then(function (res) {
-        runBtn.disabled = false;
-        var elapsed = Math.round((typeof performance !== "undefined" ? performance.now() : Date.now()) - t0);
-        var hasCanvas = Boolean(res.canvas || res.play);
+      try {
+        var runtime = await import("./play-stage.js");
+        if (activeRun !== run) return;
+        run.worker = runtime.createWorkerClient(getBasePath() + "runtime/worker.js");
+        var res = await run.worker.call("run", { source: code, stdin: "", args: [] });
+        if (activeRun !== run) return;
+        var elapsed = Math.round(performance.now() - t0);
+        var frame = res.play || res.canvas;
         var needsCli = /import\\s+"core\\/(file|path|process|time)"/.test(code);
         var needsInput = /io\\.input(Int|Line|Args|Text)/.test(code);
         outBox.className = "lite-inline-out " + (res.ok ? "is-ok" : "is-err");
         statusSpan.textContent = res.ok
-          ? ("Ran in " + elapsed + " ms")
+          ? (frame ? "Canvas output" : "Ran in " + elapsed + " ms")
           : (needsCli ? "Requires CLI / Host OS (./bin/lite run)" : "Compile / Runtime Error");
 
-        var bodyPre = document.createElement("pre");
-        bodyPre.className = "lite-inline-out-pre";
-        var textOut = "";
-        if (res.stdout) textOut += res.stdout;
-        if (res.stderr) textOut += (textOut ? "\\n" : "") + res.stderr;
-        if (!textOut && hasCanvas) {
-          textOut = "(Canvas/Play output rendered — click Open in Play → to launch the interactive stage.)";
-        } else if (!textOut && res.ok) {
-          textOut = "(no stdout output)";
+        if (frame) {
+          var canvas = document.createElement("canvas");
+          canvas.className = "lite-inline-canvas";
+          canvas.setAttribute("aria-label", frame.title || "Lite canvas output");
+          if (res.play) canvas.tabIndex = 0;
+          outBox.appendChild(canvas);
+
+          var pauseBtn = makeActionBtn("Pause");
+          pauseBtn.hidden = true;
+          head.insertBefore(pauseBtn, closeBtn);
+          run.stage = runtime.createPlayStage({
+            canvas: canvas,
+            workerClient: run.worker,
+            pauseBtn: pauseBtn,
+            onStatus: function (status) {
+              if (res.ok) statusSpan.textContent = status;
+              pauseBtn.textContent = status === "Paused" ? "Resume" : "Pause";
+            },
+            onError: function (stderr) {
+              outBox.className = "lite-inline-out is-err";
+              statusSpan.textContent = "Canvas error";
+              appendOutput(stderr);
+              stopRun();
+            }
+          });
+          run.stage.startSession(frame, Boolean(res.ok && res.play));
+          run.stage.playTones(res.tones);
         }
+
+        var textOut = [res.stdout, res.stderr].filter(Boolean).join("\\n");
+        if (!textOut && !frame && res.ok) textOut = "(no stdout output)";
         if (needsInput && !res.ok) {
           textOut += "\\n[tip] This snippet expects stdin/args — click Open in Play → to supply inputs.";
         }
-        bodyPre.textContent = textOut;
-        outBox.appendChild(bodyPre);
-      }).catch(function (err) {
-        runBtn.disabled = false;
+        if (textOut) appendOutput(textOut);
+        if (!res.play || !res.ok) {
+          run.worker.terminate();
+          run.worker = null;
+        }
+      } catch (err) {
+        if (activeRun !== run) return;
         outBox.className = "lite-inline-out is-err";
         statusSpan.textContent = "Runner unavailable";
-        var bodyPre = document.createElement("pre");
-        bodyPre.className = "lite-inline-out-pre";
-        bodyPre.textContent = (err && err.message) || "Could not run snippet in this browser.";
-        outBox.appendChild(bodyPre);
-      });
+        appendOutput((err && err.message) || "Could not run snippet in this browser.");
+        stopRun();
+      } finally {
+        if (activeRun === run || !activeRun) runBtn.disabled = false;
+      }
     });
   }
 

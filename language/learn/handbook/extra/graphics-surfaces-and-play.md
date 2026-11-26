@@ -17,7 +17,28 @@ canvas.fillRect(36, 36, 88, 28, canvas.rgb(240, 180, 90));
 audio.tone(440, 120, 40);
 ```
 
-For interactive games, switch to `canvas.play(width, height, title)` and export `pub onFrame := fn(dt: Int): Unit`, `pub onKey := fn(key: String): Unit`, or `pub onPointer := fn(x: Int, y: Int, down: Bool): Unit`. The same `.lts` game runs directly in the Browser Playground **and** natively on desktop with `./bin/lite play`.
+Use `canvas.play` for interactive graphics. Run this example, then click or tap the canvas or press Space to change its color.
+
+```lite
+canvas := import "extra/canvas";
+canvas.play(160, 100, "Color Switch");
+
+var warm := false;
+draw := fn(): Unit {
+    canvas.clear(if warm { canvas.rgb(240, 180, 90) } else { canvas.rgb(104, 196, 224) });
+};
+toggle := fn(): Unit {
+    warm = not warm;
+    draw();
+};
+onCanvasKeyDown := fn(key: String): Unit {
+    if key == " " { toggle(); }
+};
+onCanvasPointerDown := fn(_x: Int, _y: Int, _button: Int): Unit { toggle(); };
+draw();
+```
+
+For animation, add an `onCanvasUpdate(dt: Float): Int` callback. Return `0` to keep running. The same program can run in Play and on desktop with `./bin/lite play`.
 
 ## Native Desktop & Headless Surfaces (`extra/surface`, `extra/color`)
 

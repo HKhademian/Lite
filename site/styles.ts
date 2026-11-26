@@ -3170,6 +3170,18 @@ a.is-completed .learn-done-dot {
 }
 .lite-inline-out.is-ok .lite-inline-out-head span { color: var(--ok); }
 .lite-inline-out.is-err .lite-inline-out-head span { color: var(--err); }
+.lite-inline-out-head button[hidden] { display: none; }
+.lite-inline-canvas {
+  display: block;
+  width: min(100%, 32rem);
+  height: auto;
+  margin: 0.75rem auto;
+  image-rendering: pixelated;
+}
+.lite-inline-canvas:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 .lite-inline-out-pre {
   margin: 0 !important;
   padding: 0.65rem 0.8rem !important;
