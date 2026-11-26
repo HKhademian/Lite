@@ -6,6 +6,7 @@ proc := import "core/process";
 path := import "core/path";
 project := import "util/project";
 compilerBuild := import "util/compiler-build";
+mdHtml := import "util/markdown-html";
 tb := import "util/text-builder";
 
 usageText := fn(): String {
@@ -15,30 +16,6 @@ usageText := fn(): String {
 usageExit := fn(): Unit {
     io.errorLine(usageText());
     io.exit(2);
-};
-
-escapeHtml := fn(raw: String): String {
-    out: mut tb.TextBuilder;
-    n := raw.length();
-    var runStart := 0;
-    var i := 0;
-    loop i < n {
-        ch := raw.at(i);
-        var rep := "";
-        if ch == "&" { rep = "&amp;"; }
-        else if ch == "<" { rep = "&lt;"; }
-        else if ch == ">" { rep = "&gt;"; }
-        else if ch == "\"" { rep = "&quot;"; }
-        if rep =!= "" {
-            if i > runStart { mut out.append(raw.slice(runStart, i)); }
-            mut out.append(rep);
-            runStart = i + 1;
-        }
-        i += 1;
-    }
-    if runStart == 0 { return raw; }
-    if runStart < n { mut out.append(raw.slice(runStart, n)); }
-    out.build()
 };
 
 hostOsName := fn(): String {
@@ -51,7 +28,7 @@ isSupportedPlatform := fn(p: String): Bool {
 };
 
 buildWebHtml := fn(titleText: String, jsBody: String): String {
-    safeTitle := escapeHtml(titleText);
+    safeTitle := mdHtml.escapeHtml(titleText);
     out: mut tb.TextBuilder;
     mut out.append("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n");
     mut out.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");

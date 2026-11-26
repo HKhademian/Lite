@@ -3,7 +3,6 @@
 fs := import "core/file";
 path := import "core/path";
 text := import "core/text";
-challenges := import "util/challenges";
 collections := import "util/collections";
 json := import "data/json";
 siteTools := import "./tools";
@@ -262,7 +261,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
 
         usages := modUsageCounts.getOr(mi, 0);
         usageText := if usages > 0 { " · " + usages.toText() + " sample" + (if usages == 1 { "" } else { "s" }) } else { "" };
-        searchBlob := challenges.asciiLower(mId + " " + mSum + " " + symNames.join(" "));
+        searchBlob := (mId + " " + mSum + " " + symNames.join(" ")).toLowerAscii();
         card := "<article class=\"portal-card module-index-card\" data-env=\"" + escapeHtml(mEnv) + "\" data-search=\"" + escapeHtml(searchBlob) + "\">\n"
         + "  <div class=\"portal-card-head\">\n"
         + "    <h2><a href=\"" + escapeHtml(mNs) + "/" + escapeHtml(mName) + ".html\"><code>" + escapeHtml(mId) + "</code></a></h2>\n"

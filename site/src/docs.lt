@@ -19,9 +19,9 @@ pub relativeHref := fn(fromOutPath: String, toOutPath: String): String {
         emptyP: List<String> = [];
         emptyP
     } else {
-        siteLib.splitByDelimiter(fromDir, "/")
+        fromDir.split("/")
     };
-    toPartsRaw := siteLib.splitByDelimiter(toOutPath, "/");
+    toPartsRaw := toOutPath.split("/");
     fromParts: mut List<String> = [];
     toParts: mut List<String> = [];
     loop fromPartsRaw as fp { if fp =!= "" and fp =!= "." { mut fromParts.pushBack(fp); } }
@@ -508,7 +508,7 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
                     } else {
                         relativeHref(activeOutPath, tOut) + "#" + hbSubIds[si]
                     };
-                    mut subLis.pushBack("<li data-hb-topic-search=\"" + escapeHtml(challenges.asciiLower(hbSubTexts[si])) + "\">"
+                    mut subLis.pushBack("<li data-hb-topic-search=\"" + escapeHtml(hbSubTexts[si].toLowerAscii()) + "\">"
                     + "<a href=\"" + escapeHtml(subHref) + "\">" + hbSubLabels[si] + "</a>"
                     + "</li>");
                 }
@@ -517,7 +517,7 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
             subListHtml := if subLis.length() > 0 {
                 "\n          <ul class=\"hb-subtopics\">\n            " + subLis.join("\n            ") + "\n          </ul>"
             } else { "" };
-            searchBlob := challenges.asciiLower(hbNavs[hi] + " " + sumTxt);
+            searchBlob := (hbNavs[hi] + " " + sumTxt).toLowerAscii();
             mut treeParts.pushBack("<div class=\"" + itemCls + "\" data-hb-chapter=\"" + escapeHtml(slug) + "\" data-hb-search=\"" + escapeHtml(searchBlob) + "\">\n"
             + "          <a class=\"" + cls + "\" href=\"" + escapeHtml(chHref) + "\" data-handbook-nav-slug=\"" + escapeHtml(slug) + "\">\n"
             + "            <span class=\"hb-num\">" + (hi + 1).toText() + "</span>\n"

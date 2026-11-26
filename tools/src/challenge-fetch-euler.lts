@@ -4,7 +4,6 @@ fs := import "core/file";
 io := import "core/io";
 path := import "core/path";
 cfetch := import "util/challenge-fetch";
-challenges := import "util/challenges";
 json := import "data/json";
 project := import "util/project";
 
@@ -106,7 +105,7 @@ run := fn(rawArgs: List<String>): Int {
     paths: mut List<String> = [];
     loop numbers as n {
         mut urls.pushBack("https://projecteuler.net/problem=" + n.toText());
-        mut paths.pushBack(path.join(cacheDir, "statements/problem-" + challenges.padLeftZero(n, 3) + ".html"));
+        mut paths.pushBack(path.join(cacheDir, "statements/problem-" + n.toText().padLeftWith(3, "0") + ".html"));
     }
     batch := cfetch.downloadBatch(urls, paths, false, 4, 45000, 150, false, false, 25);
     io.outputLine("cached " + cacheDir);

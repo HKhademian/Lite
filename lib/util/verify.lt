@@ -25,35 +25,12 @@ pub usageText := fn(): String {
     "Usage: ./bin/lite verify [--all] [--update] [--coverage] [--pedantic] [--jobs n] [--shard i/n] [--filter id-or-path] [--no-cache] [--quiet]"
 };
 
-isJsonSpace := fn(ch: String): Bool {
-    ch == " " or ch == "\t" or ch == "\r" or ch == "\n"
-};
-
-skipJsonSpace := fn(source: String, start: Int): Int {
-    size := source.length();
-    var pos := start;
-    loop pos < size and isJsonSpace(source.at(pos)) {
-        pos = pos + 1;
-    }
-    pos
-};
-
-isJsonObjectAt := fn(source: String, start: Int): Bool {
-    pos := skipJsonSpace(source, start);
-    pos < source.length() and source.at(pos) == "{"
-};
-
-isJsonArrayAt := fn(source: String, start: Int): Bool {
-    pos := skipJsonSpace(source, start);
-    pos < source.length() and source.at(pos) == "["
-};
-
 checkStringArrayField := fn(source: String, objPos: Int, key: String, label: String): (found: Bool, ok: Bool, error: String) {
     field := json.findField(source, objPos, key);
     if not field.found {
         return (found = false, ok = true, error = "");
     }
-    if not isJsonArrayAt(source, field.valuePos) {
+    if json.kindAt(source, field.valuePos) =!= .Array {
         return (found = true, ok = false, error = label + "." + key + ": expected an array of strings");
     }
     loop json.arrayOffsets(source, field.valuePos) as elPos {
@@ -68,7 +45,7 @@ checkStringArrayField := fn(source: String, objPos: Int, key: String, label: Str
 readStringArrayField := fn(source: String, objPos: Int, key: String): List<String> {
     out: mut List<String> = [];
     field := json.findField(source, objPos, key);
-    if not field.found or not isJsonArrayAt(source, field.valuePos) {
+    if not field.found or json.kindAt(source, field.valuePos) =!= .Array {
         return out;
     }
     loop json.arrayOffsets(source, field.valuePos) as elPos {
@@ -247,7 +224,7 @@ pathInsideDir := fn(baseDir: String, candidate: String): Bool {
 };
 
 checkVerifyStream := fn(source: String, streamPos: Int, baseDir: String, label: String, checkHash: Bool, allowOutsideDir: Bool): (ok: Bool, kind: String, error: String) {
-    if not isJsonObjectAt(source, streamPos) {
+    if json.kindAt(source, streamPos) =!= .Object {
         return (ok = false, kind = "", error = label + ": expected an object");
     }
     fileField := json.findField(source, streamPos, "file");
@@ -283,7 +260,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
     }
     src := regRead.text;
     validJson := json.validate(src);
-    if not validJson.ok or not isJsonObjectAt(src, 0) {
+    if not validJson.ok or json.kindAt(src, 0) =!= .Object {
         return (ok = false, text = "", error = "language/verifications/features.json: expected an object");
     }
     topKeys := json.objectKeys(src, 0);
@@ -293,7 +270,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
         }
     }
     featField := json.findField(src, 0, "features");
-    if not featField.found or not isJsonArrayAt(src, featField.valuePos) {
+    if not featField.found or json.kindAt(src, featField.valuePos) =!= .Array {
         return (ok = false, text = "", error = "language/verifications/features.json: features must be an array");
     }
 
@@ -302,7 +279,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
     var idx := 0;
     loop offsets as itemPos {
         label := "language/verifications/features.json: features[" + idx.toText() + "]";
-        if not isJsonObjectAt(src, itemPos) {
+        if json.kindAt(src, itemPos) =!= .Object {
             return (ok = false, text = "", error = label + ": expected an object");
         }
         allowed: List<String> = ["id", "summary", "case", "status", "docs"];
@@ -378,7 +355,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
     if not readRes.ok { return failManifestText(label + ": " + readRes.error); }
     src := readRes.text;
     validJson := json.validate(src);
-    if not validJson.ok or not isJsonObjectAt(src, 0) {
+    if not validJson.ok or json.kindAt(src, 0) =!= .Object {
         return failManifestText(label + ": expected an object");
     }
 
@@ -399,7 +376,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
     manifestId := idRes.value;
 
     sourceField := json.findField(src, 0, "source");
-    if not sourceField.found or not isJsonObjectAt(src, sourceField.valuePos) {
+    if not sourceField.found or json.kindAt(src, sourceField.valuePos) =!= .Object {
         return failManifestText(label + ".source: expected an object");
     }
     fileDir := path.parentDir(file);
@@ -478,7 +455,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
     }
 
     casesField := json.findField(src, 0, "cases");
-    if not casesField.found or not isJsonArrayAt(src, casesField.valuePos) {
+    if not casesField.found or json.kindAt(src, casesField.valuePos) =!= .Array {
         return failManifestText(label + ".cases: at least one case is required");
     }
     caseOffsets := json.arrayOffsets(src, casesField.valuePos);
@@ -491,7 +468,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
     var idx := 0;
     loop caseOffsets as sPos {
         sLabel := label + ".cases[" + idx.toText() + "]";
-        if not isJsonObjectAt(src, sPos) {
+        if json.kindAt(src, sPos) =!= .Object {
             return failManifestText(sLabel + ": expected an object");
         }
         loop json.objectKeys(src, sPos) as sk {
@@ -699,13 +676,13 @@ loadVerifyCache := fn(cacheFile: String, enabled: Bool): Set<String> {
     passed: mut Set<String>;
     if not enabled or fs.kind(cacheFile) =!= fs.FILE_KIND_FILE { return passed; }
     readRes := fs.readText(cacheFile);
-    if not readRes.ok or not json.validate(readRes.text).ok or not isJsonObjectAt(readRes.text, 0) {
+    if not readRes.ok or not json.validate(readRes.text).ok or json.kindAt(readRes.text, 0) =!= .Object {
         return passed;
     }
     verRes := json.readFieldInt(readRes.text, 0, "version");
     if not verRes.found or not verRes.ok or verRes.value =!= 1 { return passed; }
     passedField := json.findField(readRes.text, 0, "passed");
-    if not passedField.found or not isJsonObjectAt(readRes.text, passedField.valuePos) {
+    if not passedField.found or json.kindAt(readRes.text, passedField.valuePos) =!= .Object {
         return passed;
     }
     loop json.objectKeys(readRes.text, passedField.valuePos) as key {
@@ -877,7 +854,7 @@ passedKeysIn: Set<String>
         var shardFailures := 0;
         var hasShardReport := false;
         shardRead := fs.readText(shardResultFiles[idx]);
-        if shardRead.ok and json.validate(shardRead.text).ok and isJsonObjectAt(shardRead.text, 0) {
+        if shardRead.ok and json.validate(shardRead.text).ok and json.kindAt(shardRead.text, 0) == .Object {
             hasShardReport = true;
             execRes := json.readFieldInt(shardRead.text, 0, "executed");
             if execRes.found and execRes.ok { executed = executed + execRes.value; }

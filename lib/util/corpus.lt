@@ -14,34 +14,10 @@ streams := import "util/streams";
 cases := import "util/cases";
 compilerBuild := import "util/compiler-build";
 
-isJsonSpace := fn(ch: String): Bool {
-    ch == " " or ch == "\n" or ch == "\r" or ch == "\t"
-};
-
-skipJsonSpace := fn(source: String, start: Int): Int {
-    var pos := start;
-    size := source.length();
-    loop pos < size {
-        if not isJsonSpace(source.at(pos)) { return pos; }
-        pos = pos + 1;
-    }
-    pos
-};
-
-isJsonObjectAt := fn(source: String, start: Int): Bool {
-    pos := skipJsonSpace(source, start);
-    pos < source.length() and source.at(pos) == "{"
-};
-
-isJsonArrayAt := fn(source: String, start: Int): Bool {
-    pos := skipJsonSpace(source, start);
-    pos < source.length() and source.at(pos) == "["
-};
-
 /** Reads string items from a JSON array starting at `arrPos`. */
 pub readStringListAt := fn(source: String, arrPos: Int): List<String> {
     out: mut List<String> = [];
-    if not isJsonArrayAt(source, arrPos) { return out; }
+    if json.kindAt(source, arrPos) =!= .Array { return out; }
     loop json.arrayOffsets(source, arrPos) as elPos {
         s := json.readStringAt(source, elPos);
         if s.ok { mut out.pushBack(s.value); }
