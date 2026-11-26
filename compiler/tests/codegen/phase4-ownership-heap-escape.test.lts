@@ -1,0 +1,327 @@
+/* Phase 4 verification: exclusivity, compact rc-free containers (16B List, 24B Map/Set),
+   Tier 2 VM slab heap (lt_heap), const * + restrict borrowing, Move-on-Last-Use,
+   Scope Data Stack escape promotion, stack closures, and ASan+UBSan+LITE_CHECK_LEAKS=1 parity. */
+
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+project := import "util/project";
+test := import "core/test";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+builtTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+builtC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + builtC.error, builtC.ok);
+tsComp := builtTs.path;
+cComp := builtC.path;
+
+ccInfo := compilerTest.probeCc();
+
+/* 1. Compile-time exclusivity checks (TS + C11 reject aliasing with mut). */
+mutMutSrc := [
+    "io := import \"core/io\";",
+    "bump := fn(a: mut List<Int>, b: mut List<Int>): Int { (mut a).pushBack(1); (mut b).pushBack(2); a.length() + b.length() };",
+    "xs: mut List<Int> = [10];",
+    "io.outputLine(bump(mut xs, mut xs));"
+].join("\n");
+tsMutMut := compilerTest.compileStdin(root, tsComp, mutMutSrc, "--target=ts");
+test.check("TS rejects mut+mut aliasing", tsMutMut.status =!= 0);
+cMutMut := compilerTest.compileStdin(root, cComp, mutMutSrc, "");
+test.check("C rejects mut+mut aliasing", cMutMut.status =!= 0);
+
+roMutSrc := [
+    "io := import \"core/io\";",
+    "bump2 := fn(a: List<Int>, b: mut List<Int>): Int { (mut b).pushBack(a.length()); b.length() };",
+    "xs: mut List<Int> = [10, 20];",
+    "io.outputLine(bump2(xs, mut xs));"
+].join("\n");
+tsRoMut := compilerTest.compileStdin(root, tsComp, roMutSrc, "--target=ts");
+test.check("TS rejects ro+mut aliasing", tsRoMut.status =!= 0);
+cRoMut := compilerTest.compileStdin(root, cComp, roMutSrc, "");
+test.check("C rejects ro+mut aliasing", cRoMut.status =!= 0);
+
+/* 2. Feature + leak + stress program compiled cleanly under TS, VM lt_heap, and ASan+UBSan+LITE_CHECK_LEAKS=1. */
+featureSrc := [
+    "io := import \"core/io\";",
+    "",
+    "Holder := record { name: String; items: List<Int>; meta: Map<String, Int>; };",
+    "",
+    "sumList := fn(xs: List<Int>): Int {",
+    "    var acc := 0;",
+    "    loop xs as v { acc += v; }",
+    "    acc",
+    "};",
+    "",
+    "appendMut := fn(dst: mut List<Int>, src: List<Int>): Int {",
+    "    loop src as v { (mut dst).pushBack(v); }",
+    "    dst.length()",
+    "};",
+    "",
+    "sumMap := fn(m: Map<String, Int>): Int {",
+    "    var acc := 0;",
+    "    loop m as kv { acc += kv.value; }",
+    "    acc",
+    "};",
+    "",
+    "countSet := fn(s: Set<String>): Int { s.size() };",
+    "",
+    "/* Scope Data Stack candidate: non-escaping list created and grown in local scope */",
+    "scopeLocalTest := fn(n: Int): Int {",
+    "    localXs: mut List<Int> = [1, 2, 3];",
+    "    (mut localXs).pushBack(n);",
+    "    sumList(localXs) + localXs[1]",
+    "};",
+    "",
+    "/* Move-on-Last-Use candidate: owned local returned/handed off on last use */",
+    "buildAndMove := fn(k: Int): List<Int> {",
+    "    xs: mut List<Int> = [k, k + 1, k + 2];",
+    "    (mut xs).pushBack(k + 3);",
+    "    xs",
+    "};",
+    "",
+    "handoffChain := fn(k: Int): Int {",
+    "    a := buildAndMove(k);",
+    "    b := a;",
+    "    sumList(b)",
+    "};",
+    "",
+    "/* Early return / break / continue / finally with owned locals & boxed cells */",
+    "controlDrops := fn(flag: Int): Int {",
+    "    xs: List<Int> = [10, 20, 30];",
+    "    var total := 0;",
+    "    if flag == 1 {",
+    "        ys: List<String> = [\"aa\", \"bbb\"];",
+    "        total += ys.length() + sumList(xs);",
+    "        return total;",
+    "    }",
+    "    loop 0..5 as i {",
+    "        inner: List<Int> = [i, i * 2];",
+    "        if i == 2 { continue; }",
+    "        if i == 4 { total += sumList(inner); break; }",
+    "        total += sumList(inner);",
+    "    }",
+    "    finVal := { tmp: List<Int> = [1, 2, 3, 4]; sumList(tmp) } finally { _ := buildAndMove(9).length(); };",
+    "    total + finVal + sumList(xs)",
+    "};",
+    "",
+    "/* Closures capturing lt_cell_ boxes + owned containers, returned and cloned into List */",
+    "StepFn := alias fn(step: Int): Int;",
+    "makeCounters := fn(start: Int): List<StepFn> {",
+    "    res := {",
+    "        var c := start;",
+    "        hist: mut List<Int> = [start];",
+    "        inc := fn(step: Int): Int {",
+    "            c = c + step;",
+    "            (mut hist).pushBack(c);",
+    "            c + hist.length()",
+    "        };",
+    "        peek := fn(mult: Int): Int {",
+    "            c * mult + hist.length()",
+    "        };",
+    "        fnsOut: List<StepFn> = [inc, peek];",
+    "        fnsOut",
+    "    };",
+    "    res",
+    "};",
+    "",
+    "/* Tagged block with owned locals */",
+    "taggedTest := fn(v: Int): Int {",
+    "    @blk {",
+    "        a: List<Int> = [v, v + 1];",
+    "        if v > 10 {",
+    "            b: List<Int> = [v * 2, v * 3];",
+    "            return @blk sumList(a) + sumList(b);",
+    "        }",
+    "        sumList(a)",
+    "    }",
+    "};",
+    "",
+    "/* Main test body */",
+    "initItems: List<Int> = [1, 2];",
+    "h: mut Holder = Holder { name = \"h1\", items = initItems, meta = [\"a\" = 5, \"b\" = 7] };",
+    "nextItems: mut List<Int> = [3, 4, 5];",
+    "srcTail: List<Int> = [6, 7];",
+    "hLen := appendMut(mut nextItems, srcTail);",
+    "h.items = nextItems;",
+    "mKeys := h.meta.keys();",
+    "s: Set<String> = [\"x\", \"y\", \"x\"];",
+    "nested: mut List<String> = [\"row_one_long_string_val\", \"row_two_long_string_val\"];",
+    "firstRow := nested[0];",
+    "arrFixed: [Int; 3] = [7, 8, 9];",
+    "tPair: (String, Int) = (\"tuple_heap_owned_string_value\", 200);",
+    "(tS, tN) := tPair;",
+    "",
+    "fns := makeCounters(10);",
+    "f0 := fns[0];",
+    "f1 := fns[1];",
+    "rA := f0(5);",
+    "rB := f1(3);",
+    "",
+    "/* Temporary rvalues dropped without leaks */",
+    "tmpLen := buildAndMove(4).length() + sumList(buildAndMove(2)) + h.meta.keys().length() + h.meta.values().length() + s.values().length();",
+    "joinParts: List<String> = [\"alpha_long_part\", \"beta_long_part\"];",
+    "joined := joinParts.join(\":\");",
+    "io.outputLine(\"rvals\", tmpLen, joined);",
+    "io.outputLine(buildAndMove(11), h.meta);",
+    "",
+    "/* 50,000-iteration heavy container + closure churn */",
+    "var churn := 0;",
+    "loop 0..50000 as k {",
+    "    var stepList := buildAndMove(k % 7);",
+    "    if k % 5 == 0 {",
+    "        altStep: List<Int> = [k % 3, k % 11]; stepList = altStep;",
+    "    }",
+    "    mStep: Map<String, Int> = [\"k\" = sumList(stepList)];",
+    "    churn += mStep.getOr(\"k\", 0);",
+    "}",
+    "",
+    "io.outputLine(",
+    "    \"res\",",
+    "    scopeLocalTest(9),",
+    "    handoffChain(3),",
+    "    controlDrops(1),",
+    "    controlDrops(0),",
+    "    taggedTest(5),",
+    "    taggedTest(12),",
+    "    hLen,",
+    "    sumMap(h.meta),",
+    "    mKeys.length(),",
+    "    countSet(s),",
+    "    firstRow.length(),",
+    "    arrFixed[1],",
+    "    tN,",
+    "    tS.length(),",
+    "    rA,",
+    "    rB,",
+    "    churn",
+    ");"
+].join("\n");
+
+tsFeat := compilerTest.compileCheckRunTs(root, tsComp, featureSrc, "");
+test.checkInt("ts feature run status: " + tsFeat.stderr, 0, tsFeat.status);
+
+cFeatComp := compilerTest.compileStdin(root, cComp, featureSrc, "");
+test.checkInt("c feature compile status: " + cFeatComp.stderr, 0, cFeatComp.status);
+cOut := cFeatComp.stdout;
+
+/* Layout & Phase 4 codegen checks */
+test.check("c emits sizeof(lt_str) == 16", cOut.contains("_Static_assert(sizeof(lt_str) == 16"));
+test.check("c emits sizeof(lt_list_i64) == 16", cOut.contains("_Static_assert(sizeof(lt_list_i64) == 16"));
+test.check("c emits sizeof(lt_map) == 24", cOut.contains("lt_map") and cOut.contains("== 24"));
+test.check("c emits sizeof(lt_set) == 24", cOut.contains("lt_set") and cOut.contains("== 24"));
+test.check("c emits const * borrow", cOut.contains("const lt_list_i64 *"));
+test.check("c emits restrict on mut param", cOut.contains("lt_list_i64 * restrict"));
+test.check("c emits Move-on-Last-Use _move", cOut.contains("lt_list_i64_move(&"));
+test.check("c emits Scope Data Stack mark", cOut.contains("lt_vm_arena_mark(&lt_tl_ctx.scope)"));
+test.check("c emits Scope Data Stack from_scope", cOut.contains("lt_list_i64_from_scope("));
+test.check("c emits Scope Data Stack rewind", cOut.contains("lt_vm_arena_rewind(&lt_tl_ctx.scope"));
+
+if ccInfo.available {
+    tmpRes := fs.makeTempDir("lite-phase4-");
+    test.check("tmpDir: " + tmpRes.error, tmpRes.ok);
+    tmpDir := tmpRes.path;
+
+    featCFile := path.join(tmpDir, "feat.c");
+    featBinVm := path.join(tmpDir, "feat_vm");
+    featBinSan := path.join(tmpDir, "feat_san");
+    _wf := fs.writeText(featCFile, cOut);
+
+    ccVm := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", featCFile, "-o", featBinVm, "-lm"], tmpDir, [], true, "");
+    test.checkInt("feat vm cc status: " + ccVm.stderr, 0, ccVm.status);
+    runVm := proc.run(featBinVm, [], tmpDir, ["LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("feat vm run status: " + runVm.stderr, 0, runVm.status);
+    test.checkText("feat vm parity", tsFeat.stdout, runVm.stdout);
+
+    ccSan := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", featCFile, "-o", featBinSan, "-lm"], tmpDir, [], true, "");
+    test.checkInt("feat san cc status: " + ccSan.stderr, 0, ccSan.status);
+    runSan := proc.run(featBinSan, [], tmpDir, ["LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("feat san run status: " + runSan.stderr, 0, runSan.status);
+    test.checkText("feat san parity", tsFeat.stdout, runSan.stdout);
+
+    /* 3. 10,000-frame surface headless loop with stack closure + LITE_CHECK_LEAKS=1 */
+    surfSrc := [
+        "io := import \"core/io\";",
+        "surf := import \"extra/surface\";",
+        "var frames := 0;",
+        "var warmAllocs := 0;",
+        "var warmLive := 0;",
+        "var warmRss := 0;",
+        "runSurf := fn(prefixTag: String): Unit {",
+        "    win := surf.Surface.open(\"Phase4Surf\", 64, 48);",
+        "    win.uncapFrameRate();",
+        "    win.run(fn(inp: surf.FrameInput): Bool {",
+        "        if not inp.open { return false; }",
+        "        win.clear(surf.BLACK);",
+        "        win.drawText(prefixTag + frames.toText(), surf.point(4.0, 4.0), 6.0, surf.WHITE);",
+        "        if frames == 50 {",
+        "            vw := win.vitals();",
+        "            warmAllocs = vw.heapAllocs;",
+        "            warmLive = vw.liveBytes;",
+        "            warmRss = vw.memoryBytes;",
+        "        }",
+        "        frames += 1;",
+        "        frames < 10000",
+        "    });",
+        "    ve := win.vitals();",
+        "    io.outputLine(\"surf\", frames, ve.heapAllocs - warmAllocs, ve.liveBytes == warmLive, ve.memoryBytes - warmRss <= 2097152);",
+        "    win.close();",
+        "};",
+        "runSurf(\"P4_\");"
+    ].join("\n");
+    surfC := compilerTest.compileStdin(root, cComp, surfSrc, "");
+    test.checkInt("surf c compile: " + surfC.stderr, 0, surfC.status);
+    test.check("surf stack closure emitted", surfC.stdout.contains("&((lt_env_") and surfC.stdout.contains(".hdr = { NULL,"));
+
+    surfCFile := path.join(tmpDir, "surf.c");
+    surfBinVm := path.join(tmpDir, "surf_vm");
+    surfBinSan := path.join(tmpDir, "surf_san");
+    _ws := fs.writeText(surfCFile, surfC.stdout);
+
+    svmArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", surfCFile, "-o", surfBinVm, "-lm"];
+    ssanArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", surfCFile, "-o", surfBinSan, "-lm"];
+    if proc.platform() == "darwin" {
+        mut svmArgs.pushBack("-framework"); mut svmArgs.pushBack("Cocoa");
+        mut svmArgs.pushBack("-framework"); mut svmArgs.pushBack("CoreGraphics");
+        mut ssanArgs.pushBack("-framework"); mut ssanArgs.pushBack("Cocoa");
+        mut ssanArgs.pushBack("-framework"); mut ssanArgs.pushBack("CoreGraphics");
+    }
+    ccSvm := proc.run(ccInfo.cc, svmArgs, tmpDir, [], true, "");
+    test.checkInt("surf vm cc: " + ccSvm.stderr, 0, ccSvm.status);
+    runSvm := proc.run(surfBinVm, [], root, ["LITE_CANVAS_HEADLESS=1", "LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("surf vm run: " + runSvm.stderr, 0, runSvm.status);
+    test.checkText("surf vm output", "surf 10000 0 true true\n", runSvm.stdout);
+
+    ccSsan := proc.run(ccInfo.cc, ssanArgs, tmpDir, [], true, "");
+    test.checkInt("surf san cc: " + ccSsan.stderr, 0, ccSsan.status);
+    runSsan := proc.run(surfBinSan, [], root, ["LITE_CANVAS_HEADLESS=1", "LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("surf san run: " + runSsan.stderr, 0, runSsan.status);
+    test.checkText("surf san output", "surf 10000 0 true true\n", runSsan.stdout);
+
+    /* 4. Batch site-docs C11 compile & --discover run under VM lt_heap + ASan+UBSan + LITE_CHECK_LEAKS=1 */
+    docsEntry := path.join(root, "tools/src/site-docs.lts");
+    docsC := compilerTest.compileFile(cComp, root, [docsEntry]);
+    test.checkInt("site-docs c compile: " + docsC.stderr, 0, docsC.status);
+    docsCFile := path.join(tmpDir, "site_docs.c");
+    docsBinVm := path.join(tmpDir, "site_docs_vm");
+    docsBinSan := path.join(tmpDir, "site_docs_san");
+    _wd := fs.writeText(docsCFile, docsC.stdout);
+    ccDocs := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", docsCFile, "-o", docsBinVm, "-lm"], tmpDir, [], true, "");
+    test.checkInt("site-docs vm cc: " + ccDocs.stderr, 0, ccDocs.status);
+    runDocs := proc.run(docsBinVm, ["--", "--discover", root], root, ["LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("site-docs run: " + runDocs.stderr, 0, runDocs.status);
+    test.check("site-docs output has docs json", runDocs.stdout.contains("docs/"));
+    ccDocsSan := proc.run(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", docsCFile, "-o", docsBinSan, "-lm"], tmpDir, [], true, "");
+    test.checkInt("site-docs san cc: " + ccDocsSan.stderr, 0, ccDocsSan.status);
+    runDocsSan := proc.run(docsBinSan, ["--", "--discover", root], root, ["LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("site-docs san run: " + runDocsSan.stderr, 0, runDocsSan.status);
+    test.check("site-docs san output has docs json", runDocsSan.stdout.contains("docs/"));
+
+    _rm := fs.remove(tmpDir);
+}
+
+test.done("phase4-ownership-heap-escape");

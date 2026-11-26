@@ -23,7 +23,7 @@ run := fn(rawArgs: List<String>): Unit {
             io.exit(1);
         }
         io.output(res.jsonText);
-        io.exit(0);
+        return;
     }
 
     stdinRes := io.Reader.stdin().readAllText();

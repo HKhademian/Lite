@@ -92,7 +92,7 @@ badAliasSrc: List<String> = [
 "A := alias A;\n",
 "A := alias List<>;\n",
 "A := alias ();\n",
-"A := alias Float16;\n",
+"A := alias Float128;\n",
 ];
 badAliasErr: List<String> = [
 "2:1: duplicate type alias A\n",
@@ -101,7 +101,7 @@ badAliasErr: List<String> = [
 "1:1: recursive type alias A\n",
 "1:12: expected a list element type\n",
 "1:12: tuple type needs at least one field\n",
-"1:12: unknown type alias Float16\n",
+"1:12: unknown type alias Float128\n",
 ];
 var ai := 0;
 loop ai < 7 {

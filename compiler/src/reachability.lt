@@ -119,7 +119,7 @@ scanCodeCallsSet := fn(code: String, seen: mut Set<String>, userFnsOnly: Bool): 
                 (name.startsWithAt(0, "lite$") and not name.startsWithAt(0, "lite$m$")) or
                 name.startsWithAt(0, "lite_") or
                 (name.startsWithAt(0, "lt_") and not name.startsWithAt(0, "lt_fn_") and
-                not name.startsWithAt(0, "lt_m_") and (not name.startsWithAt(0, "lt_s") or name.startsWithAt(0, "lt_s_") or name.startsWithAt(0, "lt_set_") or name.startsWithAt(0, "lt_shl_") or name.startsWithAt(0, "lt_shr_") or name.startsWithAt(0, "lt_sadd_") or name.startsWithAt(0, "lt_ssub_") or name.startsWithAt(0, "lt_smul_")))
+                not name.startsWithAt(0, "lt_m_") and (not name.startsWithAt(0, "lt_s") or name.startsWithAt(0, "lt_s_") or name.startsWithAt(0, "lt_set_") or name.startsWithAt(0, "lt_str_") or name.startsWithAt(0, "lt_shl_") or name.startsWithAt(0, "lt_shr_") or name.startsWithAt(0, "lt_sadd_") or name.startsWithAt(0, "lt_ssub_") or name.startsWithAt(0, "lt_smul_")))
             };
             if matched {
                 mut seen.add(name + "(");
@@ -535,7 +535,7 @@ pub isSideEffectFreeCode := fn(target: String, code: String): Bool {
                 isPureWrapper := not prevIsDot and (
                 name == "Boolean" or name == "Number" or name == "INT64_C" or
                 name == "lt_float_literal" or name == "lt_float32_literal" or name == "strcmp" or
-                name == "LT_STR_LIT" or name == "LT_ASTR" or name == "LT_STR" or name == "lt_text_eq"
+                name == "LT_STR_LIT" or name == "LT_STR_SSO" or name == "LT_ASTR" or name == "LT_STR" or name == "lt_text_eq"
                 );
                 if not isKeywordParen and not isMathFround and not isPureWrapper {
                     return false;

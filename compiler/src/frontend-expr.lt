@@ -44,6 +44,112 @@ AliasDecl := alias (name: String, target: String, at: Int, end: Int, depth: Int)
 /** Lexical control-flow and metadata context matching `frontend-ir.ConstructCtx`. */
 ConstructCtx := alias (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
 
+/** Monotonic sequence for C11 owned temporary cleanup (`lt_ot_*` / `lt_or_*`). */
+var cOwnedTempSeq := 0;
+
+/** Returns a fresh hygienic C11 owned-temporary identifier with `prefix`. */
+freshCOwnedTemp := fn(prefix: String): String {
+    cOwnedTempSeq = cOwnedTempSeq + 1;
+    prefix + cOwnedTempSeq.toText()
+};
+
+/** Strips leading internal `/*@...*/` compiler markers from a C11 expression snippet for inspection. */
+stripCMarkersForInspect := fn(code: String): String {
+    var cur := code.trim();
+    loop cur.startsWithAt(0, "/*@") {
+        endM := cur.indexOf("@*/", 3);
+        if endM < 0 { break; }
+        cur = cur.slice(endM + 3, cur.length()).trim();
+    }
+    cur
+};
+
+/** Returns the last starting index of `needle` inside `s`, or `-1` if absent. */
+cLastIndexOf := fn(s: String, needle: String): Int {
+    var pos := 0;
+    var last := -1;
+    loop true {
+        hit := s.indexOf(needle, pos);
+        if hit < 0 { break; }
+        last = hit;
+        pos = hit + needle.length();
+    }
+    last
+};
+
+/** True when C11 expression `code` is an addressable lvalue variable, deref cell/param, or `.f_*` field chain safe for `const *` borrowing. */
+isCBorrowableLvalue := fn(code: String): Bool {
+    c := stripCMarkersForInspect(code);
+    if c == "" or c.indexOf("/*@CBLK:", 0) >= 0 or c.indexOf("{", 0) >= 0 { return false; }
+    var cur := c;
+    loop cur.length() > 0 {
+        if cur.startsWithAt(0, "(*") and cur.endsWith(")") {
+            inner := cur.slice(2, cur.length() - 1).trim();
+            if (inner.startsWithAt(0, "lite_") or inner.startsWithAt(0, "lt_cell_")) and inner.skipName(0) == inner.length() {
+                return true;
+            }
+            return false;
+        }
+        dotPos := cLastIndexOf(cur, ".f_");
+        if dotPos > 0 {
+            fPart := cur.slice(dotPos + 1, cur.length());
+            if fPart.skipName(0) == fPart.length() {
+                lhs := cur.slice(0, dotPos).trim();
+                if lhs.startsWithAt(0, "(") and lhs.endsWith(")") {
+                    cur = lhs.slice(1, lhs.length() - 1).trim();
+                } else {
+                    cur = lhs;
+                }
+                continue;
+            }
+        }
+        break;
+    }
+    (cur.startsWithAt(0, "lite_") or cur.startsWithAt(0, "lt_") or cur.startsWithAt(0, "_")) and cur.skipName(0) == cur.length()
+};
+
+/** Replaces a heap-allocated `lt_mk_<cid>(...)` closure expression with its stack-allocated compound literal when `/*@CSTK:...*/` is present. */
+promoteCStackClosure := fn(code: String): (ok: Bool, code: String) {
+    sIdx := code.indexOf("/*@CSTK:", 0);
+    if sIdx < 0 { return (ok = false, code = code); }
+    eIdx := code.indexOf("@*/", sIdx + 8);
+    if eIdx < 0 { return (ok = false, code = code); }
+    (ok = true, code = code.slice(0, sIdx) + code.slice(sIdx + 8, eIdx))
+};
+
+/** Prepares C11 expression `code` of type `kind` for borrowing (`byPtr` => `const *`) and returns an optional post-call `_drop` statement. */
+cBorrowExprWithPostDrop := fn(kind: String, code: String, byPtr: Bool): (expr: String, drop: String) {
+    dropFn := types.cDropFnForKind(kind);
+    if isCBorrowableLvalue(code) {
+        return (expr = if byPtr { "&(" + code + ")" } else { code }, drop = "");
+    }
+    if dropFn == "" {
+        if byPtr {
+            t := freshCOwnedTemp("lt_ot_");
+            cT := types.cValueType(kind);
+            return (expr = "/*@LTMP:" + cT + ":" + t + "@*/((" + t + " = (" + code + ")), &" + t + ")", drop = "");
+        }
+        return (expr = code, drop = "");
+    }
+    if code.startsWithAt(0, "/*@CBLK:") {
+        return (expr = code, drop = "");
+    }
+    t := freshCOwnedTemp("lt_ot_");
+    cT := types.cValueType(kind);
+    (expr = "/*@LTMP:" + cT + ":" + t + "@*/((" + t + " = (" + code + ")), " + (if byPtr { "&" + t } else { t }) + ")", drop = dropFn + "(&" + t + ")")
+};
+
+/** Sequences `drops` immediately after `expr` via hygienic `@LTMP` result capture when `drops` is non-empty. */
+cWrapExprWithPostDrops := fn(retKind: String, expr: String, drops: List<String>): String {
+    if drops.length() == 0 { return expr; }
+    if retKind == ir.VALUE_KIND_UNIT or retKind == ir.VALUE_KIND_NEVER {
+        return "(" + expr + ", " + drops.join(", ") + ")";
+    }
+    retVar := freshCOwnedTemp("lt_or_");
+    retT := types.cValueType(retKind);
+    "/*@LTMP:" + retT + ":" + retVar + "@*/((" + retVar + " = (" + expr + ")), " + drops.join(", ") + ", " + retVar + ")"
+};
+
 /** Normalizes expected contextual value kind by erasing non-value sentinels and unwrapping `TailList<T>`. */
 normalizeExpectedValueKind := fn(expected: String): String {
     if expected == ir.VALUE_KIND_UNIT or expected == ir.VALUE_KIND_NEVER {
@@ -909,8 +1015,9 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         loop ri >= 0 {
             le := locals[ri];
             isCell := le.runtime.startsWithAt(0, "(*lt_cell_");
-            scanTok := if isCell { le.runtime.slice(2, le.runtime.length() - 1) } else { le.runtime };
-            if (le.depth > 0 or isCell) and le.name =!= "$self" and scanTok =!= "" and
+            isDerefParam := le.runtime.startsWithAt(0, "(*lite_") and not isCell;
+            scanTok := if isCell or isDerefParam { le.runtime.slice(2, le.runtime.length() - 1) } else { le.runtime };
+            if (le.depth > 0 or isCell or isDerefParam) and le.name =!= "$self" and scanTok =!= "" and
             not paramRuntimes.contains(le.runtime) and
             not capRuntimes.contains(le.runtime) and
             reach.codeUsesTextCall(fnBody.code, scanTok) {
@@ -928,10 +1035,14 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             return (kind = fnKind, code = cExpr, intValue = 0, textValue = fnKind, constant = false, next = fnBody.next);
         }
         envFieldsBuf: mut tb.TextBuilder;
+        mut envFieldsBuf.append("lt_env_hdr hdr; ");
         envUnpackBuf: mut tb.TextBuilder;
         mkParamsBuf: mut tb.TextBuilder;
         mkInitsBuf: mut tb.TextBuilder;
         mkArgsBuf: mut tb.TextBuilder;
+        stkInitsBuf: mut tb.TextBuilder;
+        dropBodyBuf: mut tb.TextBuilder;
+        cloneBodyBuf: mut tb.TextBuilder;
         var bodyRewritten := fnBody.code;
         var ci := 0;
         loop ci < capCount {
@@ -946,6 +1057,9 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
                 mut mkParamsBuf.append(", ");
                 mut mkArgsBuf.append(", ");
             }
+            mut stkInitsBuf.append(", .");
+            mut stkInitsBuf.append(fName);
+            mut stkInitsBuf.append(" = ");
             if isCell {
                 cellPtr := cRt.slice(2, cRt.length() - 1);
                 mut envFieldsBuf.append(cT);
@@ -956,11 +1070,37 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
                 mut mkParamsBuf.append(" *");
                 mut mkParamsBuf.append(pName);
                 mut mkArgsBuf.append(cellPtr);
+                mut stkInitsBuf.append(cellPtr);
                 mut mkInitsBuf.append("e->");
                 mut mkInitsBuf.append(fName);
-                mut mkInitsBuf.append(" = ");
+                mut mkInitsBuf.append(" = (");
+                mut mkInitsBuf.append(cT);
+                mut mkInitsBuf.append(" *)lt_box_retain(");
                 mut mkInitsBuf.append(pName);
-                mut mkInitsBuf.append("; ");
+                mut mkInitsBuf.append("); ");
+                cellDropFn := types.cDropFnForKind(cK);
+                if cellDropFn =!= "" {
+                    mut dropBodyBuf.append("if (lt_box_dec(e->");
+                    mut dropBodyBuf.append(fName);
+                    mut dropBodyBuf.append(")) { ");
+                    mut dropBodyBuf.append(cellDropFn);
+                    mut dropBodyBuf.append("(e->");
+                    mut dropBodyBuf.append(fName);
+                    mut dropBodyBuf.append("); lt_box_free_raw(e->");
+                    mut dropBodyBuf.append(fName);
+                    mut dropBodyBuf.append("); } ");
+                } else {
+                    mut dropBodyBuf.append("lt_box_release(e->");
+                    mut dropBodyBuf.append(fName);
+                    mut dropBodyBuf.append("); ");
+                }
+                mut cloneBodyBuf.append("dst->");
+                mut cloneBodyBuf.append(fName);
+                mut cloneBodyBuf.append(" = (");
+                mut cloneBodyBuf.append(cT);
+                mut cloneBodyBuf.append(" *)lt_box_retain(src->");
+                mut cloneBodyBuf.append(fName);
+                mut cloneBodyBuf.append("); ");
                 mut envUnpackBuf.append(cT);
                 mut envUnpackBuf.append(" *");
                 mut envUnpackBuf.append(cellPtr);
@@ -972,6 +1112,11 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
                 mut envUnpackBuf.append(cellPtr);
                 mut envUnpackBuf.append("; ");
             } else {
+                isDerefParam := cRt.startsWithAt(0, "(*lite_");
+                unpackTok := if isDerefParam { "lt_cap_" + ci.toText() } else { cRt };
+                if isDerefParam {
+                    bodyRewritten = ctx.cReplaceExactToken(bodyRewritten, cRt, unpackTok);
+                }
                 mut envFieldsBuf.append(cT);
                 mut envFieldsBuf.append(" ");
                 mut envFieldsBuf.append(fName);
@@ -980,23 +1125,47 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
                 mut mkParamsBuf.append(" ");
                 mut mkParamsBuf.append(pName);
                 mut mkArgsBuf.append(ctx.copiedValueCode(target, cK, cRt));
+                mut stkInitsBuf.append(cRt);
                 mut mkInitsBuf.append("e->");
                 mut mkInitsBuf.append(fName);
                 mut mkInitsBuf.append(" = ");
                 mut mkInitsBuf.append(pName);
                 mut mkInitsBuf.append("; ");
+                valDropFn := types.cDropFnForKind(cK);
+                if valDropFn =!= "" {
+                    mut dropBodyBuf.append(valDropFn);
+                    mut dropBodyBuf.append("(&e->");
+                    mut dropBodyBuf.append(fName);
+                    mut dropBodyBuf.append("); ");
+                }
+                valCopyFn := types.cCopyFnForKind(cK);
+                if valCopyFn =!= "" {
+                    mut cloneBodyBuf.append("dst->");
+                    mut cloneBodyBuf.append(fName);
+                    mut cloneBodyBuf.append(" = ");
+                    mut cloneBodyBuf.append(valCopyFn);
+                    mut cloneBodyBuf.append("(src->");
+                    mut cloneBodyBuf.append(fName);
+                    mut cloneBodyBuf.append("); ");
+                } else {
+                    mut cloneBodyBuf.append("dst->");
+                    mut cloneBodyBuf.append(fName);
+                    mut cloneBodyBuf.append(" = src->");
+                    mut cloneBodyBuf.append(fName);
+                    mut cloneBodyBuf.append("; ");
+                }
                 if cM {
-                    bodyRewritten = ctx.cReplaceIdentToken(bodyRewritten, cRt, "(((" + envType + " *)_env)->" + fName + ")");
+                    bodyRewritten = ctx.cReplaceIdentToken(bodyRewritten, unpackTok, "(((" + envType + " *)_env)->" + fName + ")");
                 } else {
                     mut envUnpackBuf.append(cT);
                     mut envUnpackBuf.append(" ");
-                    mut envUnpackBuf.append(cRt);
+                    mut envUnpackBuf.append(unpackTok);
                     mut envUnpackBuf.append(" = ((");
                     mut envUnpackBuf.append(envType);
                     mut envUnpackBuf.append(" *)_env)->");
                     mut envUnpackBuf.append(fName);
                     mut envUnpackBuf.append("; (void)");
-                    mut envUnpackBuf.append(cRt);
+                    mut envUnpackBuf.append(unpackTok);
                     mut envUnpackBuf.append("; ");
                 }
             }
@@ -1007,9 +1176,15 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         mkParams := mkParamsBuf.build();
         mkInits := mkInitsBuf.build();
         mkArgs := mkArgsBuf.build();
+        stkInits := stkInitsBuf.build();
+        dropBody := dropBodyBuf.build();
+        cloneBody := cloneBodyBuf.build();
+        dropFnName := "lt_drop_" + cid;
+        cloneFnName := "lt_clone_" + cid;
         mkName := "lt_mk_" + cid;
-        cFnDef := "typedef struct { " + envFields + "} " + envType + ";\nstatic " + cRetType + " " + clName + "(" + cParamsCode + ") { (void)_env; /*@CFN_TEMPS@*/" + selfBind + envUnpack + paramVoidStmts + bodyRewritten + " }\nstatic " + cFnTag + " " + mkName + "(" + mkParams + ") { " + envType + " *e = malloc(sizeof(" + envType + ")); if (e == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } " + mkInits + "return (" + cFnTag + "){ " + clName + ", e }; }";
-        cExpr := "/*@T:" + fnKind + "@*//*@CFN_START:" + clName + "@*/" + cFnDef + "/*@CFN_END@*/" + mkName + "(" + mkArgs + ")";
+        cFnDef := "typedef struct { " + envFields + "} " + envType + ";\nstatic " + cRetType + " " + clName + "(" + cParamsCode + ") { (void)_env; /*@CFN_TEMPS@*/" + selfBind + envUnpack + paramVoidStmts + bodyRewritten + " }\nLT_INLINE void " + dropFnName + "(void *p) { " + envType + " *e = (" + envType + " *)p; (void)e; " + dropBody + "lt_heap_free(e); }\nLT_INLINE void *" + cloneFnName + "(void *p) { " + envType + " *src = (" + envType + " *)p; " + envType + " *dst = (" + envType + " *)lt_heap_alloc(sizeof(" + envType + ")); dst->hdr = (lt_env_hdr){ " + dropFnName + ", " + cloneFnName + " }; " + cloneBody + "return dst; }\nLT_INLINE " + cFnTag + " " + mkName + "(" + mkParams + ") { " + envType + " *e = (" + envType + " *)lt_heap_alloc(sizeof(" + envType + ")); e->hdr = (lt_env_hdr){ " + dropFnName + ", " + cloneFnName + " }; " + mkInits + "return (" + cFnTag + "){ " + clName + ", e }; }";
+        stkMarker := "/*@CSTK:((" + cFnTag + "){ " + clName + ", &((" + envType + "){ .hdr = { NULL, " + cloneFnName + " }" + stkInits + " }) })@*/";
+        cExpr := "/*@T:" + fnKind + "@*//*@CFN_START:" + clName + "@*/" + cFnDef + "/*@CFN_END@*/" + stkMarker + mkName + "(" + mkArgs + ")";
         return (kind = fnKind, code = cExpr, intValue = 0, textValue = fnKind, constant = false, next = fnBody.next);
     }
     fnPrefix := if usesSelf { "(function " + selfRuntime } else { "(function " };
@@ -1931,16 +2106,107 @@ blockDeclStmt := fn(target: String, declKw: String, runtime: String, kind: Strin
     }
 };
 
-/** Emits one assignment statement inside a block for TS or C11, unwrapping `/*@CBLK:<ret>@*/<body>` cleanly on C11. */
-blockAssignStmt := fn(target: String, runtime: String, valCode: String): String {
+/** Emits one assignment statement inside a block for TS or C11, dropping any overwritten owned C11 value and unwrapping `/*@CBLK:<ret>@*/<body>` cleanly. */
+blockAssignStmt := fn(target: String, runtime: String, kind: String, valCode: String): String {
+    dropFn := if target == ir.TARGET_C and kind =!= "" { types.cDropFnForKind(kind) } else { "" };
     if target == ir.TARGET_C and valCode.startsWithAt(0, "/*@CBLK:") {
         endHdr := valCode.indexOf("@*/", 8);
         retVar := valCode.slice(8, endHdr);
         blkBody := valCode.slice(endHdr + 3, valCode.length());
-        "{ " + blkBody + " " + runtime + " = " + retVar + "; }"
+        dropCode := if dropFn =!= "" { dropFn + "(&(" + runtime + ")); " } else { "" };
+        "{ " + blkBody + " " + dropCode + runtime + " = " + retVar + "; }"
+    } else if dropFn =!= "" {
+        tVar := freshCOwnedTemp("lt_ow_");
+        "{ " + types.cValueType(kind) + " " + tVar + " = " + valCode + "; " + dropFn + "(&(" + runtime + ")); " + runtime + " = " + tVar + "; }"
     } else {
         runtime + " = " + valCode + ";"
     }
+};
+
+/** Pushes a local declaration into `stmts`, tracking C11 owned cleanup and pre-declaring zero-init slots for tagged blocks. */
+pushBlockDeclC := fn(
+    isTaggedBody: Bool, target: String, declKw: String, rt: String, kind: String, tsAnn: String, initCode: String,
+    preDecls: mut List<String>, stmts: mut List<String>, owned: mut List<(stmtIdx: Int, rt: String, kind: String)>
+): Unit {
+    if target == ir.TARGET_C and isTaggedBody and not rt.startsWithAt(0, "(*lt_cell_") and types.cTypeNeedsDrop(kind) {
+        mut preDecls.pushBack(types.cValueType(kind) + " " + rt + " = " + ctx.zeroParsed(target, kind, 0).code + "; (void)" + rt + ";");
+        mut stmts.pushBack(blockAssignStmt(target, rt, "", initCode));
+        mut owned.pushBack((stmtIdx = -1, =rt, =kind));
+    } else {
+        mut stmts.pushBack(blockDeclStmt(target, declKw, rt, kind, tsAnn, initCode));
+        if target == ir.TARGET_C and not rt.startsWithAt(0, "(*lt_cell_") and types.cTypeNeedsDrop(kind) {
+            mut owned.pushBack((stmtIdx = stmts.length() - 1, =rt, =kind));
+        }
+    }
+};
+
+/** Builds C11 cleanup statements dropping `owned` locals declared before `beforeStmtIdx` (or all if `< 0`) and releasing `cells`. */
+buildBlockDropStmt := fn(owned: List<(stmtIdx: Int, rt: String, kind: String)>, cells: List<(ptr: String, kind: String)>, beforeStmtIdx: Int): String {
+    buf: mut tb.TextBuilder;
+    var oi := owned.length() - 1;
+    loop oi >= 0 {
+        o := owned[oi];
+        if beforeStmtIdx < 0 or o.stmtIdx < beforeStmtIdx {
+            dFn := types.cDropFnForKind(o.kind);
+            if dFn =!= "" {
+                mut buf.append(dFn);
+                mut buf.append("(&");
+                mut buf.append(o.rt);
+                mut buf.append("); ");
+            }
+        }
+        oi = oi - 1;
+    }
+    var ci := cells.length() - 1;
+    loop ci >= 0 {
+        cell := cells[ci];
+        dFn := types.cDropFnForKind(cell.kind);
+        if dFn =!= "" {
+            mut buf.append("if (lt_box_dec(");
+            mut buf.append(cell.ptr);
+            mut buf.append(")) { ");
+            mut buf.append(dFn);
+            mut buf.append("(");
+            mut buf.append(cell.ptr);
+            mut buf.append("); lt_box_free_raw(");
+            mut buf.append(cell.ptr);
+            mut buf.append("); } ");
+        } else {
+            mut buf.append("lt_box_release(");
+            mut buf.append(cell.ptr);
+            mut buf.append("); ");
+        }
+        ci = ci - 1;
+    }
+    buf.build().trim()
+};
+
+/** Applies C11 block-owned + boxed-cell exit-drop rewrites to `stmts` and appends `fullDrop` when not `blockExits`. */
+finalizeCBlockStmts := fn(
+    stmts: List<String>,
+    owned: List<(stmtIdx: Int, rt: String, kind: String)>,
+    cells: List<(ptr: String, kind: String)>,
+    fnRetKind: String,
+    startPos: Int,
+    blockExits: Bool
+): String {
+    if owned.length() == 0 and cells.length() == 0 {
+        return stmts.join(" ");
+    }
+    parts: mut List<String> = [];
+    var si := 0;
+    sCount := stmts.length();
+    loop si < sCount {
+        st := stmts[si];
+        exitDrop := buildBlockDropStmt(owned, cells, si);
+        mut parts.pushBack(if exitDrop =!= "" { ctx.cRewriteExitDrops(st, exitDrop, exitDrop, fnRetKind, startPos + si) } else { st });
+        si = si + 1;
+    }
+    if not blockExits {
+        fullDrop := buildBlockDropStmt(owned, cells, -1);
+        if fullDrop =!= "" { mut parts.pushBack(fullDrop); }
+    }
+    parts.join(" ")
 };
 
 /** Parses a braced block expression `{ ... }` and returns its evaluated target expression. */
@@ -1981,6 +2247,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         ""
     };
     statements: mut List<String> = [];
+    blockCells: mut List<(ptr: String, kind: String)> = [];
+    blockOwned: mut List<(stmtIdx: Int, rt: String, kind: String)> = [];
+    taggedPreDecls: mut List<String> = [];
     if hasFnInBlock {
         preScannedLocals := infer.appendBlockFutureLocals(target, source, start, prefix, blockLexDepth, seedBag, blockAssignedBag, blockAliases, functions, params, blockLocals);
         if target == ir.TARGET_C {
@@ -1992,7 +2261,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     if cT =!= "" and cT =!= "void" {
                         cellPtr := "lt_cell_" + entry.runtime;
                         cellRt := "(*" + cellPtr + ")";
-                        mut statements.pushBack("/*@T:" + entry.kind + "@*/" + cT + " *" + cellPtr + " = calloc(1, sizeof(" + cT + ")); if (" + cellPtr + " == NULL) { fprintf(stderr, \"MemoryFault\\n\"); exit(1); } (void)" + cellPtr + ";");
+                        mut statements.pushBack("/*@T:" + entry.kind + "@*/" + cT + " *" + cellPtr + " = (" + cT + " *)lt_box_alloc(sizeof(" + cT + ")); (void)" + cellPtr + ";");
+                        mut blockCells.pushBack((ptr = cellPtr, kind = entry.kind));
                         mut boxedLocals.pushBack((name = entry.name, runtime = cellRt, kind = entry.kind,
                         mutable = entry.mutable, writable = entry.writable, depth = entry.depth,
                         constant = entry.constant, code = entry.code, intValue = entry.intValue,
@@ -2119,7 +2389,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     declKw := if destructureMutable { "let " } else { "const " };
                     tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(groupedBindKind) { ": " + types.tsFunctionType(groupedBindKind) } else { "" };
                     groupedCode := ctx.assignValueCode(target, groupedBindKind, rhs.kind, rhs.code);
-                    mut statements.pushBack(blockDeclStmt(target, declKw, bindRuntime, groupedBindKind, tsTypeAnn, groupedCode));
+                    pushBlockDeclC(isTaggedBody, target, declKw, bindRuntime, groupedBindKind, tsTypeAnn, groupedCode, mut taggedPreDecls, mut statements, mut blockOwned);
                     mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, groupedBindKind, groupedCode) { bindRuntime } else { "" });
                     mut stmtDeps.pushBack(groupedCode);
                     trackedStmtCount = trackedStmtCount + 1;
@@ -2142,7 +2412,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 mutable = false, writable = false, depth = blockLexDepth, constant = false, code = aggFnDeps,
                 intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
                 if not blockExits {
-                    mut statements.pushBack(blockDeclStmt(target, "const ", tempRuntime, rhs.kind, "", rhs.code));
+                    pushBlockDeclC(isTaggedBody, target, "const ", tempRuntime, rhs.kind, "", rhs.code, mut taggedPreDecls, mut statements, mut blockOwned);
                     mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, rhs.kind, rhs.code) { tempRuntime } else { "" });
                     mut stmtDeps.pushBack(rhs.code);
                     trackedStmtCount = trackedStmtCount + 1;
@@ -2178,7 +2448,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         if not blockExits {
                             declKw := if destructureMutable { "let " } else { "const " };
                             tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(bindKind) { ": " + types.tsFunctionType(bindKind) } else { "" };
-                            mut statements.pushBack(blockDeclStmt(target, declKw, bindRuntime, bindKind, tsTypeAnn, fieldCode));
+                            pushBlockDeclC(isTaggedBody, target, declKw, bindRuntime, bindKind, tsTypeAnn, fieldCode, mut taggedPreDecls, mut statements, mut blockOwned);
                             mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, bindKind, fieldCode) { bindRuntime } else { "" });
                             mut stmtDeps.pushBack(fieldCode);
                             trackedStmtCount = trackedStmtCount + 1;
@@ -2325,13 +2595,21 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                                 "/*@P:" + baseOutKind + "@*/" + types.cArrayTag(baseOutKind) + "_print(" + outArg.code + ");"
                             } else if types.isListKind(baseOutKind) or types.isArrayKind(baseOutKind) {
                                 elK := if types.isListKind(baseOutKind) { types.listElementKind(baseOutKind) } else { types.arrayElementKind(baseOutKind) };
-                                "/*@P:" + baseOutKind + "@*/lt_list_" + types.cListTag(elK) + "_print(" + outArg.code + ");"
+                                ob := cBorrowExprWithPostDrop(baseOutKind, outArg.code, false);
+                                pCall := "/*@P:" + baseOutKind + "@*/lt_list_" + types.cListTag(elK) + "_print(" + ob.expr + ");";
+                                if ob.drop =!= "" { pCall + " " + ob.drop + ";" } else { pCall }
                             } else if types.isMapKind(baseOutKind) {
-                                "/*@P:" + baseOutKind + "@*/" + types.cMapTag(baseOutKind) + "_print(" + outArg.code + ");"
+                                ob := cBorrowExprWithPostDrop(baseOutKind, outArg.code, false);
+                                pCall := "/*@P:" + baseOutKind + "@*/" + types.cMapTag(baseOutKind) + "_print(" + ob.expr + ");";
+                                if ob.drop =!= "" { pCall + " " + ob.drop + ";" } else { pCall }
                             } else if types.isSetKind(baseOutKind) {
-                                "/*@P:" + baseOutKind + "@*/" + types.cSetTag(baseOutKind) + "_print(" + outArg.code + ");"
+                                ob := cBorrowExprWithPostDrop(baseOutKind, outArg.code, false);
+                                pCall := "/*@P:" + baseOutKind + "@*/" + types.cSetTag(baseOutKind) + "_print(" + ob.expr + ");";
+                                if ob.drop =!= "" { pCall + " " + ob.drop + ";" } else { pCall }
                             } else if types.cStructTag(baseOutKind) =!= "" {
-                                "/*@P:" + baseOutKind + "@*/" + types.cStructTag(baseOutKind) + "_print(" + outArg.code + ");"
+                                ob := cBorrowExprWithPostDrop(baseOutKind, outArg.code, false);
+                                pCall := "/*@P:" + baseOutKind + "@*/" + types.cStructTag(baseOutKind) + "_print(" + ob.expr + ");";
+                                if ob.drop =!= "" { pCall + " " + ob.drop + ";" } else { pCall }
                             } else {
                                 "printf(\"%\" PRId64, (int64_t)(" + outArg.code + "));"
                             };
@@ -3039,8 +3317,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                                 loopTailClose = " } }";
                             } else {
                                 bSeqTag := types.cListTag(loopItemKind);
-                                loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { " + types.cListElemType(bSeqTag) + " " + loopItemRuntime + " = " + bSeqVar + ".data[" + bSeqI + "]; (void)" + loopItemRuntime + "; ";
-                                loopTailClose = " } if (" + bSeqVar + ".rc != NULL) { if (*(" + bSeqVar + ".rc) <= 1) { free(" + bSeqVar + ".data); free(" + bSeqVar + ".rc); } else { *(" + bSeqVar + ".rc) -= 1; } } }";
+                                bSeqInit := ctx.copiedValueCode(target, loopSeqKind, loopSeqCode);
+                                loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = " + bSeqInit + "; int64_t " + bSeqVar + "_n = lt_list_" + bSeqTag + "_len(" + bSeqVar + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + "_n; " + bSeqI + " += 1) { " + types.cListElemType(bSeqTag) + " " + loopItemRuntime + " = " + bSeqVar + ".data[" + bSeqI + "]; (void)" + loopItemRuntime + "; ";
+                                loopTailClose = " } lt_list_" + bSeqTag + "_drop(&" + bSeqVar + "); }";
                             }
                         } else {
                             loopHeadCode = "for (const " + loopItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + loopItemRuntime + "; ";
@@ -3060,8 +3339,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                                 loopTailClose = " } }";
                             } else {
                                 bSeqTag := types.cListTag(loopItemKind);
-                                loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = lt_list_" + bSeqTag + "_copy(" + loopSeqCode + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + ".len; " + bSeqI + " += 1) { ";
-                                loopTailClose = " } if (" + bSeqVar + ".rc != NULL) { if (*(" + bSeqVar + ".rc) <= 1) { free(" + bSeqVar + ".data); free(" + bSeqVar + ".rc); } else { *(" + bSeqVar + ".rc) -= 1; } } }";
+                                bSeqInit := ctx.copiedValueCode(target, loopSeqKind, loopSeqCode);
+                                loopHeadCode = "{ lt_list_" + bSeqTag + " " + bSeqVar + " = " + bSeqInit + "; int64_t " + bSeqVar + "_n = lt_list_" + bSeqTag + "_len(" + bSeqVar + "); for (int64_t " + bSeqI + " = 0; " + bSeqI + " < " + bSeqVar + "_n; " + bSeqI + " += 1) { ";
+                                loopTailClose = " } lt_list_" + bSeqTag + "_drop(&" + bSeqVar + "); }";
                             }
                         } else {
                             loopHeadCode = "for (const " + tempItemRuntime + " of " + ir.targetListCopyCode(target, loopSeqCode) + ") { void " + tempItemRuntime + "; ";
@@ -3318,7 +3598,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     } else {
                         varInitCode := ctx.assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code);
                         tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
-                        mut statements.pushBack(blockDeclStmt(target, "let ", runtime, declParsed.kind, tsTypeAnn, varInitCode));
+                        pushBlockDeclC(isTaggedBody, target, "let ", runtime, declParsed.kind, tsTypeAnn, varInitCode, mut taggedPreDecls, mut statements, mut blockOwned);
                         mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, declParsed.kind, varInitCode) { runtime } else { "" });
                         mut stmtDeps.pushBack(varInitCode);
                         trackedStmtCount = trackedStmtCount + 1;
@@ -3367,7 +3647,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     mutInitCode := ctx.copiedValueCode(target, declParsed.kind, declParsed.code);
                     tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
                     mutDeclKw := if target == ir.TARGET_TS and types.isRecordOrDistinctRecord(declParsed.kind) { "let " } else { "const " };
-                    mut statements.pushBack(blockDeclStmt(target, mutDeclKw, runtime, declParsed.kind, tsTypeAnn, mutInitCode));
+                    pushBlockDeclC(isTaggedBody, target, mutDeclKw, runtime, declParsed.kind, tsTypeAnn, mutInitCode, mut taggedPreDecls, mut statements, mut blockOwned);
                     mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, declParsed.kind, mutInitCode) { runtime } else { "" });
                     mut stmtDeps.pushBack(mutInitCode);
                     trackedStmtCount = trackedStmtCount + 1;
@@ -3441,7 +3721,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if not blockExits {
                     valInitCode := ctx.copiedValueCode(target, declParsed.kind, declParsed.code);
                     tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
-                    mut statements.pushBack(blockDeclStmt(target, "const ", runtime, declParsed.kind, tsTypeAnn, valInitCode));
+                    pushBlockDeclC(isTaggedBody, target, "const ", runtime, declParsed.kind, tsTypeAnn, valInitCode, mut taggedPreDecls, mut statements, mut blockOwned);
                     mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, declParsed.kind, valInitCode) { runtime } else { "" });
                     mut stmtDeps.pushBack(valInitCode);
                     trackedStmtCount = trackedStmtCount + 1;
@@ -3499,7 +3779,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     } else {
                         declKw := if declInitState == ir.INIT_STATE_INIT and not (target == ir.TARGET_TS and typed.writable and types.isRecordOrDistinctRecord(typed.kind)) { "const " } else { "let " };
                         tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(typed.kind) { ": " + types.tsFunctionType(typed.kind) } else { "" };
-                        mut statements.pushBack(blockDeclStmt(target, declKw, runtime, typed.kind, tsTypeAnn, declCode));
+                        pushBlockDeclC(isTaggedBody, target, declKw, runtime, typed.kind, tsTypeAnn, declCode, mut taggedPreDecls, mut statements, mut blockOwned);
                         mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, typed.kind, declCode) { runtime } else { "" });
                         mut stmtDeps.pushBack(declCode);
                         trackedStmtCount = trackedStmtCount + 1;
@@ -3625,7 +3905,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             ctx.assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
                         };
                         if target == ir.TARGET_C {
-                            "(" + recEntry.runtime + "." + f0Prop + " = " + rhsCode + ")"
+                            dropFn0 := if recCompOp.width == 0 { types.cDropFnForKind(curKind) } else { "" };
+                            if dropFn0 =!= "" {
+                                tw0 := freshCOwnedTemp("lt_ow_");
+                                "{ " + types.cValueType(curKind) + " " + tw0 + " = " + rhsCode + "; " + dropFn0 + "(&(" + recEntry.runtime + "." + f0Prop + ")); " + recEntry.runtime + "." + f0Prop + " = " + tw0 + "; }"
+                            } else {
+                                "(" + recEntry.runtime + "." + f0Prop + " = " + rhsCode + ")"
+                            }
                         } else {
                             "(" + recEntry.runtime + " = { ...(" + recEntry.runtime + "), " + f0 + ": " + rhsCode + " })"
                         }
@@ -3640,7 +3926,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             ctx.assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
                         };
                         if target == ir.TARGET_C {
-                            "(" + recEntry.runtime + "." + f0Prop + "." + f1Prop + " = " + rhsCode + ")"
+                            dropFn1 := if recCompOp.width == 0 { types.cDropFnForKind(curKind) } else { "" };
+                            if dropFn1 =!= "" {
+                                tw1 := freshCOwnedTemp("lt_ow_");
+                                "{ " + types.cValueType(curKind) + " " + tw1 + " = " + rhsCode + "; " + dropFn1 + "(&(" + recEntry.runtime + "." + f0Prop + "." + f1Prop + ")); " + recEntry.runtime + "." + f0Prop + "." + f1Prop + " = " + tw1 + "; }"
+                            } else {
+                                "(" + recEntry.runtime + "." + f0Prop + "." + f1Prop + " = " + rhsCode + ")"
+                            }
                         } else {
                             "(" + recEntry.runtime + " = { ...(" + recEntry.runtime + "), " + f0 + ": { ...(" + subPath + "), " + f1 + ": " + rhsCode + " } })"
                         }
@@ -3654,7 +3946,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtCode);
                     }
                     if not blockExits {
-                        mut statements.pushBack(stmtCode + ";");
+                        mut statements.pushBack(if target == ir.TARGET_C and stmtCode.startsWithAt(0, "{ ") { stmtCode } else { stmtCode + ";" });
                         mut stmtOwners.pushBack("");
                         mut stmtDeps.pushBack(stmtCode);
                         trackedStmtCount = trackedStmtCount + 1;
@@ -3698,7 +3990,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         mut statements.pushBack(stmtReturnPrefix + "(" + rhsCode + ");");
                         blockExits = true;
                     } else {
-                        mut statements.pushBack(blockAssignStmt(target, entry.runtime, rhsCode));
+                        mut statements.pushBack(blockAssignStmt(target, entry.runtime, entry.kind, rhsCode));
                         isLocalOwner := not ir.localsRangeUsesRuntime(blockLocals, outerLocalsLen, entry.runtime);
                         assignOwner := if isLocalOwner and reach.isPrunableExprForTarget(target, entry.kind, rhsCode) { entry.runtime } else { "" };
                         assignDeps := if assignOwner =!= "" { rhsCode } else { entry.runtime + " " + rhsCode };
@@ -3816,7 +4108,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         mut stmtDeps.pushBack(statements[trackedStmtCount]);
         trackedStmtCount = trackedStmtCount + 1;
     }
-    if target == ir.TARGET_TS or isStmtBody {
+    if target == ir.TARGET_TS or (isStmtBody and blockOwned.length() == 0 and blockCells.length() == 0) {
         prunedStmts := reach.pruneBlockStatements(statements, stmtOwners, stmtDeps, sawTailExpr and not blockExits, blockCode);
         loop trackedStmtCount > 0 {
             _ := mut statements.popBack();
@@ -3833,7 +4125,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         }
     }
     if isStmtBody {
-        stmtCode := statements.join(" ");
+        fnCtxIdxS := if target == ir.TARGET_C { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
+        fnRetKS := if fnCtxIdxS >= 0 { ctxs[fnCtxIdxS].valKind } else { "" };
+        stmtCode := if target == ir.TARGET_C { finalizeCBlockStmts(statements, blockOwned, blockCells, fnRetKS, start, blockExits) } else { statements.join(" ") };
         stmtKind := if blockExits { ir.VALUE_KIND_NEVER } else { ir.VALUE_KIND_UNIT };
         return ctx.withMarkers((kind = stmtKind, code = stmtCode, intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
@@ -3854,7 +4148,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 mut statements.pushBack(if target == ir.TARGET_C { ctx.cUnwrapIntoVar("", ir.VALUE_KIND_UNIT, blockCode) } else { "void (" + blockCode + ");" });
             }
         }
-        finCode := statements.join(" ");
+        fnCtxIdxF := if target == ir.TARGET_C { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
+        fnRetKF := if fnCtxIdxF >= 0 { ctxs[fnCtxIdxF].valKind } else { "" };
+        finCode := if target == ir.TARGET_C { finalizeCBlockStmts(statements, blockOwned, blockCells, fnRetKF, start, blockExits) } else { statements.join(" ") };
         finKind := if blockExits { ir.VALUE_KIND_NEVER } else { ir.VALUE_KIND_UNIT };
         return ctx.withMarkers((kind = finKind, code = finCode, intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
@@ -3904,7 +4200,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 syntax.failAt(source, start, prefix, "function " + currentName + " must return " + types.displayKind(expected));
             }
         }
-        var fnBodyJoined := statements.join(" ");
+        var fnBodyJoined := if target == ir.TARGET_C { finalizeCBlockStmts(statements, blockOwned, blockCells, expected, start, blockExits) } else { statements.join(" ") };
         if reach.codeUsesTextCall(fnBodyJoined, "lite$throwTransfer(0,") {
             catchRet := if expected == ir.VALUE_KIND_UNIT { "return;" } else { "return lite$transferVal;" };
             fnBodyJoined = "try { " + fnBodyJoined + " } catch (lite$err) { if (lite$hasTransfer(lite$err, 0)) { " + catchRet + " } throw lite$err; }";
@@ -3971,10 +4267,16 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     if topLoopCtx.colVar =!= "" {
                         if target == ir.TARGET_C {
                             colTag := types.cListTag(topLoopValKind);
-                            mut statements.pushBack(topLoopValVar + " = " + tailLoopCode + "; lt_list_" + colTag + "_push_back(&" + topLoopCtx.colVar + ", " + topLoopValVar + ");");
+                            if types.cTypeNeedsDrop(topLoopValKind) {
+                                mut statements.pushBack(blockAssignStmt(target, topLoopValVar, topLoopValKind, tailLoopCode) + " lt_list_" + colTag + "_push_back(&" + topLoopCtx.colVar + ", " + ctx.copiedValueCode(target, topLoopValKind, topLoopValVar) + ");");
+                            } else {
+                                mut statements.pushBack(topLoopValVar + " = " + tailLoopCode + "; lt_list_" + colTag + "_push_back(&" + topLoopCtx.colVar + ", " + topLoopValVar + ");");
+                            }
                         } else {
                             mut statements.pushBack(topLoopValVar + " = " + tailLoopCode + "; " + topLoopCtx.colVar + ".push(" + topLoopValVar + ");");
                         }
+                    } else if target == ir.TARGET_C and types.cTypeNeedsDrop(topLoopValKind) {
+                        mut statements.pushBack(blockAssignStmt(target, topLoopValVar, topLoopValKind, tailLoopCode));
                     } else {
                         mut statements.pushBack(topLoopValVar + " = " + tailLoopCode + ";");
                     }
@@ -3983,7 +4285,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 syntax.failAt(source, start, prefix, "loop body must produce " + types.displayKind(topLoopValKind));
             }
         }
-        loopBodyJoined := statements.join(" ");
+        fnCtxIdxLp := if target == ir.TARGET_C { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
+        fnRetKLp := if fnCtxIdxLp >= 0 { ctxs[fnCtxIdxLp].valKind } else { "" };
+        loopBodyJoined := if target == ir.TARGET_C { finalizeCBlockStmts(statements, blockOwned, blockCells, fnRetKLp, start, blockExits) } else { statements.join(" ") };
         return ctx.withMarkers((kind = if blockExits { ir.VALUE_KIND_NEVER } else { topLoopValKind }, code = loopBodyJoined,
         intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { ctx.filterOtherMarkers(blockMarkers, topLoopId) } else { "" });
@@ -4048,10 +4352,40 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
             }
         }
-        bodyJoined := statements.join(" ");
+        fnCtxIdx := ctx.findCtxByKindIndex(ctxs, "fn");
+        fnRetKForDrops := if fnCtxIdx >= 0 { ctxs[fnCtxIdx].valKind } else { "" };
+        rawJoined := if target == ir.TARGET_C {
+            parts: mut List<String> = [];
+            loop taggedPreDecls as td { mut parts.pushBack(td); }
+            if blockOwned.length() > 0 or blockCells.length() > 0 {
+                var si := 0;
+                sCount := statements.length();
+                loop si < sCount {
+                    st := statements[si];
+                    exitDrop := buildBlockDropStmt(blockOwned, blockCells, si);
+                    mut parts.pushBack(if exitDrop =!= "" { ctx.cRewriteExitDrops(st, exitDrop, exitDrop, fnRetKForDrops, start + si) } else { st });
+                    si = si + 1;
+                }
+            } else {
+                loop statements as st { mut parts.pushBack(st); }
+            }
+            parts.join(" ")
+        } else {
+            statements.join(" ")
+        };
+        fullDropC := if target == ir.TARGET_C and (blockOwned.length() > 0 or blockCells.length() > 0) {
+            buildBlockDropStmt(blockOwned, blockCells, -1)
+        } else {
+            ""
+        };
+        bodyJoined := rawJoined;
         if target == ir.TARGET_C {
             needsCLbl := reach.codeUsesTextCall(bodyJoined, "goto " + topLabel + ";");
-            cBodyWithLbl := if needsCLbl { bodyJoined + " " + topLabel + ": ;" } else { bodyJoined };
+            cBodyWithLbl := if needsCLbl {
+                bodyJoined + " " + topLabel + ": ;" + (if fullDropC =!= "" { " " + fullDropC } else { "" })
+            } else {
+                bodyJoined + (if fullDropC =!= "" { " " + fullDropC } else { "" })
+            };
             if topValKind == ir.VALUE_KIND_UNIT or topValKind == ir.VALUE_KIND_NEVER {
                 return ctx.withMarkers((kind = topValKind, code = "/*@CBLK:0@*/{ " + cBodyWithLbl + " }", intValue = 0, textValue = "", constant = false, next = cursor),
                 if inferMode { ctx.filterOtherMarkers(blockMarkers, topId) } else { "" });
@@ -4091,16 +4425,35 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, finParsed); }
             stmtsJoined := statements.join(" ");
             if target == ir.TARGET_C {
+                fnCtxIdxFin := ctx.findCtxByKindIndex(ctxs, "fn");
+                fnRetKFin := if fnCtxIdxFin >= 0 { ctxs[fnCtxIdxFin].valKind } else { "" };
+                finStmtsParts: mut List<String> = [];
+                if blockOwned.length() > 0 or blockCells.length() > 0 {
+                    var fsi := 0;
+                    fCount := statements.length();
+                    loop fsi < fCount {
+                        fst := statements[fsi];
+                        fExitDrop := buildBlockDropStmt(blockOwned, blockCells, fsi);
+                        mut finStmtsParts.pushBack(if fExitDrop =!= "" { ctx.cRewriteExitDrops(fst, fExitDrop, fExitDrop, fnRetKFin, start + fsi) } else { fst });
+                        fsi = fsi + 1;
+                    }
+                } else {
+                    loop statements as fst { mut finStmtsParts.pushBack(fst); }
+                }
+                stmtsJoinedCFin := finStmtsParts.join(" ");
+                fullDropFin := if blockOwned.length() > 0 or blockCells.length() > 0 { buildBlockDropStmt(blockOwned, blockCells, -1) } else { "" };
                 tryBlockC := if blockExits {
-                    "/*@CBLK:0@*/" + stmtsJoined
+                    "/*@CBLK:0@*/" + stmtsJoinedCFin
                 } else if blockKind == ir.VALUE_KIND_UNIT or blockKind == ir.VALUE_KIND_NEVER {
-                    tailC := ctx.cUnwrapIntoVar("", blockKind, blockCode);
-                    "/*@CBLK:0@*/" + stmtsJoined + (if tailC =!= "" { " " + tailC } else { "" })
+                    rawTailC := ctx.cUnwrapIntoVar("", blockKind, blockCode);
+                    tailC := if fullDropFin =!= "" { ctx.cRewriteExitDrops(rawTailC, fullDropFin, fullDropFin, fnRetKFin, start + statements.length() + 1) } else { rawTailC };
+                    "/*@CBLK:0@*/" + stmtsJoinedCFin + (if tailC =!= "" { " " + tailC } else { "" }) + (if fullDropFin =!= "" { " " + fullDropFin } else { "" })
                 } else {
                     blkVar := "lt_blk_" + start.toText();
                     tailValC := ctx.copiedValueCode(target, blockKind, blockCode);
-                    tailAssignC := ctx.cUnwrapIntoVar(blkVar, blockKind, tailValC);
-                    "/*@CBLK:" + blkVar + "@*/" + types.cValueType(blockKind) + " " + blkVar + "; { " + stmtsJoined + " " + tailAssignC + " }"
+                    rawTailAssignC := ctx.cUnwrapIntoVar(blkVar, blockKind, tailValC);
+                    tailAssignC := if fullDropFin =!= "" { ctx.cRewriteExitDrops(rawTailAssignC, fullDropFin, fullDropFin, fnRetKFin, start + statements.length() + 1) } else { rawTailAssignC };
+                    "/*@CBLK:" + blkVar + "@*/" + types.cValueType(blockKind) + " " + blkVar + "; { " + stmtsJoinedCFin + " " + tailAssignC + (if fullDropFin =!= "" { " " + fullDropFin } else { "" }) + " }"
                 };
                 normKindC := if blockExits { ir.VALUE_KIND_NEVER } else { blockKind };
                 dummyBaseC := (kind = normKindC, code = "", intValue = 0, textValue = "", constant = false, next = cursor);
@@ -4129,9 +4482,24 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             if inferMode { blockMarkers } else { "" });
         }
     }
+    fnCtxIdxBlk := if target == ir.TARGET_C { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
+    fnRetKBlk := if fnCtxIdxBlk >= 0 { ctxs[fnCtxIdxBlk].valKind } else { "" };
     if blockExits {
         if target == ir.TARGET_C {
-            return ctx.withMarkers((kind = ir.VALUE_KIND_NEVER, code = "/*@CBLK:0@*/" + statements.join(" "),
+            exitStmtsParts: mut List<String> = [];
+            if blockOwned.length() > 0 or blockCells.length() > 0 {
+                var esi := 0;
+                eCount := statements.length();
+                loop esi < eCount {
+                    est := statements[esi];
+                    eDrop := buildBlockDropStmt(blockOwned, blockCells, esi);
+                    mut exitStmtsParts.pushBack(if eDrop =!= "" { ctx.cRewriteExitDrops(est, eDrop, eDrop, fnRetKBlk, start + esi) } else { est });
+                    esi = esi + 1;
+                }
+            } else {
+                loop statements as est { mut exitStmtsParts.pushBack(est); }
+            }
+            return ctx.withMarkers((kind = ir.VALUE_KIND_NEVER, code = "/*@CBLK:0@*/" + exitStmtsParts.join(" "),
             intValue = 0, textValue = "", constant = false, next = cursor),
             if inferMode { blockMarkers } else { "" });
         }
@@ -4139,23 +4507,39 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
     }
-    if statementCount == 0 {
+    if statementCount == 0 and blockCells.length() == 0 and blockOwned.length() == 0 {
         baseBlock := (kind = blockKind, code = blockCode, intValue = blockInt, textValue = blockText, constant = blockConstant, next = cursor);
         return if inferMode and blockMarkers =!= "" { ctx.withMarkers(baseBlock, blockMarkers) } else { baseBlock };
     }
     if target == ir.TARGET_C {
-        stmtsJoinedC := statements.join(" ");
+        cPartsEnd: mut List<String> = [];
+        if blockOwned.length() > 0 or blockCells.length() > 0 {
+            var nsi := 0;
+            nCount := statements.length();
+            loop nsi < nCount {
+                nst := statements[nsi];
+                nDrop := buildBlockDropStmt(blockOwned, blockCells, nsi);
+                mut cPartsEnd.pushBack(if nDrop =!= "" { ctx.cRewriteExitDrops(nst, nDrop, nDrop, fnRetKBlk, start + nsi) } else { nst });
+                nsi = nsi + 1;
+            }
+        } else {
+            loop statements as nst { mut cPartsEnd.pushBack(nst); }
+        }
+        stmtsJoinedC := cPartsEnd.join(" ");
+        fullDropC := if blockOwned.length() > 0 or blockCells.length() > 0 { buildBlockDropStmt(blockOwned, blockCells, -1) } else { "" };
         if blockKind == ir.VALUE_KIND_UNIT or blockKind == ir.VALUE_KIND_NEVER {
-            tailC := ctx.cUnwrapIntoVar("", blockKind, blockCode);
-            return ctx.withMarkers((kind = blockKind, code = "/*@CBLK:0@*/" + stmtsJoinedC + (if tailC =!= "" { " " + tailC } else { "" }),
+            rawTailC := ctx.cUnwrapIntoVar("", blockKind, blockCode);
+            tailC := if fullDropC =!= "" { ctx.cRewriteExitDrops(rawTailC, fullDropC, fullDropC, fnRetKBlk, start + statements.length() + 1) } else { rawTailC };
+            return ctx.withMarkers((kind = blockKind, code = "/*@CBLK:0@*/" + stmtsJoinedC + (if tailC =!= "" { " " + tailC } else { "" }) + (if fullDropC =!= "" { " " + fullDropC } else { "" }),
             intValue = 0, textValue = "", constant = false, next = cursor),
             if inferMode { blockMarkers } else { "" });
         }
         blkVar := "lt_blk_" + start.toText();
         tailValC := ctx.copiedValueCode(target, blockKind, blockCode);
-        tailAssignC := ctx.cUnwrapIntoVar(blkVar, blockKind, tailValC);
+        rawTailAssignC := ctx.cUnwrapIntoVar(blkVar, blockKind, tailValC);
+        tailAssignC := if fullDropC =!= "" { ctx.cRewriteExitDrops(rawTailAssignC, fullDropC, fullDropC, fnRetKBlk, start + statements.length() + 1) } else { rawTailAssignC };
         return ctx.withMarkers((kind = blockKind,
-        code = "/*@CBLK:" + blkVar + "@*/" + types.cValueType(blockKind) + " " + blkVar + "; { " + stmtsJoinedC + " " + tailAssignC + " }",
+        code = "/*@CBLK:" + blkVar + "@*/" + types.cValueType(blockKind) + " " + blkVar + "; { " + stmtsJoinedC + " " + tailAssignC + (if fullDropC =!= "" { " " + fullDropC } else { "" }) + " }",
         intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
     }
@@ -4515,12 +4899,14 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                         elemDecl + metaStep + cBodyWithCont + " } }"
                     } else {
                         seqTag := types.cListTag(seqItemKind);
+                        seqInit := ctx.copiedValueCode(target, seqSrcKind, seqCode);
                         elemDecl := if iterUsedInBody {
                             types.cListElemType(seqTag) + " " + loopIterVar + " = " + seqVar + ".data[" + seqI + "]; "
                         } else { "" };
-                        "{ lt_list_" + seqTag + " " + seqVar + " = lt_list_" + seqTag + "_copy(" + seqCode + "); " +
-                        "for (int64_t " + seqI + " = 0; " + seqI + " < " + seqVar + ".len; " + seqI + " += 1) { " +
-                        elemDecl + metaStep + cBodyWithCont + " } }"
+                        "{ lt_list_" + seqTag + " " + seqVar + " = " + seqInit + "; " +
+                        "int64_t " + seqVar + "_n = lt_list_" + seqTag + "_len(" + seqVar + "); " +
+                        "for (int64_t " + seqI + " = 0; " + seqI + " < " + seqVar + "_n; " + seqI + " += 1) { " +
+                        elemDecl + metaStep + cBodyWithCont + " } lt_list_" + seqTag + "_drop(&" + seqVar + "); }"
                     }
                 } else {
                     "while (" + condCode + ") { " + metaStep + cBodyWithCont + " }"
@@ -7455,15 +7841,21 @@ pub emitHookIndexAssignCode := fn(target: String, source: String, opPos: Int, pr
         return "(" + entry.runtime + ").set(" + keyCode + ", " + vCode + ")";
     }
     if target == ir.TARGET_C {
+        keyByPtr := types.cParamIsConstPtr(keyKind);
         if isCompound {
             cKeyType := types.cValueType(keyKind);
             cValType := types.cValueType(valKind);
-            curRead := getRuntime + "(" + entry.runtime + ", lt_ck)";
+            kb := cBorrowExprWithPostDrop(keyKind, "lt_ck", keyByPtr);
+            curRead := getRuntime + "(" + "&(" + entry.runtime + ")" + ", " + kb.expr + ")";
             nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, valKind, "lt_cv", compBaseOp, valParsed);
-            return "{ /*c-stmt*/ " + cKeyType + " lt_ck = " + keyCode + "; " + cValType + " lt_cv = " + curRead + "; " + setRuntime + "(&" + entry.runtime + ", lt_ck, " + nextVal + "); }";
+            return "{ /*c-stmt*/ " + cKeyType + " lt_ck = " + keyCode + "; " + cValType + " lt_cv = " + curRead + "; " + setRuntime + "(&" + entry.runtime + ", " + (if keyByPtr { "&lt_ck" } else { "lt_ck" }) + ", " + nextVal + "); }";
         }
         vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
-        return setRuntime + "(&" + entry.runtime + ", " + keyCode + ", " + vCode + ")";
+        kb := cBorrowExprWithPostDrop(keyKind, keyCode, keyByPtr);
+        setExpr := setRuntime + "(&" + entry.runtime + ", " + kb.expr + ", " + vCode + ")";
+        hkDrops: mut List<String> = [];
+        if kb.drop =!= "" { mut hkDrops.pushBack(kb.drop); }
+        return cWrapExprWithPostDrops(ir.VALUE_KIND_UNIT, setExpr, hkDrops);
     }
     isRec := types.isRecordOrDistinctRecord(entry.kind);
     alreadyBoxed := isRec and entry.runtime.endsWith(".v");
@@ -7552,6 +7944,38 @@ localsHasLocalClosure := fn(locals: List<Local>): Bool {
     false
 };
 
+/** Extracts a user-facing binding name from a runtime variable expression for diagnostics. */
+displayBindingFromRuntime := fn(rt: String): String {
+    var s := rt;
+    if s.startsWithAt(0, "&") { s = s.slice(1, s.length()); }
+    if s.startsWithAt(0, "(*") and s.endsWith(")") { s = s.slice(2, s.length() - 1); }
+    if s.endsWith(".v") { s = s.slice(0, s.length() - 2); }
+    if s.startsWithAt(0, "lite_") { s = s.slice(5, s.length()); }
+    s
+};
+
+/** Returns the conflicting source binding name if non-`mut` `argCode` aliases any `mut` root in `mutArgRoots`, or `""`. */
+findMutAliasConflictName := fn(argCode: String, argKind: String, mutArgRoots: List<String>, mutArgNames: List<String>): String {
+    if mutArgRoots.length() == 0 { return ""; }
+    isContainerArg := types.isMutContainerKind(argKind) or types.cTypeHasListField(argKind);
+    var ri := 0;
+    loop ri < mutArgRoots.length() {
+        rootRt := mutArgRoots[ri];
+        if argCode == rootRt or argCode == rootRt + ".v" or rootRt == argCode + ".v" {
+            return mutArgNames[ri];
+        }
+        if isContainerArg and (
+            argCode.startsWithAt(0, "(" + rootRt + ").") or
+            argCode.startsWithAt(0, rootRt + ".") or
+            argCode.startsWithAt(0, "((" + rootRt + ")).")
+        ) {
+            return mutArgNames[ri];
+        }
+        ri += 1;
+    }
+    ""
+};
+
 /** True when passing `argCode` to a read-only parameter requires a snapshot (C11 CoW RC bump or TS clone) to guard against aliasing or mutation during the call. */
 readOnlyArgNeedsSnapshot := fn(argCode: String, locals: List<Local>, mutArgRuntimes: List<String>, hasClosureHazard: Bool): Bool {
     locIdx := findLocalIndexByRuntime(locals, argCode);
@@ -7637,7 +8061,16 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     mutRecWritebackStmts: mut List<String> = [];
     mutRecKinds: mut List<String> = [];
     mutArgRuntimes: mut List<String> = [];
+    mutArgRoots: mut List<String> = [];
+    mutArgNames: mut List<String> = [];
     if hasRecv and callFirst > 0 and types.paramKindOf(callParams[callFirst - 1]).startsWithAt(0, "mut ") {
+        var recvRootCanon := if recvRootRuntime =!= "" { recvRootRuntime }
+        else if recvWritebackLocal =!= "" { recvWritebackLocal }
+        else if recvCode.startsWithAt(0, "&(") and recvCode.endsWith(")") { recvCode.slice(2, recvCode.length() - 1) }
+        else if recvCode.startsWithAt(0, "&") { recvCode.slice(1, recvCode.length()) }
+        else { recvCode };
+        mut mutArgRoots.pushBack(recvRootCanon);
+        mut mutArgNames.pushBack(displayBindingFromRuntime(recvRootCanon));
         if recvRootRuntime =!= "" {
             mut mutArgRuntimes.pushBack(recvRootRuntime);
             if not recvRootRuntime.endsWith(".v") {
@@ -7757,6 +8190,11 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 syntax.failAt(source, rhsStart, prefix, "argument " + (slot + 1).toText() + " of " + calleeDisplay + ": " + uErr);
                             }
                         }
+                        if mutArgRoots.contains(mEntry.runtime) {
+                            syntax.failAt(source, mNameStart, prefix, "cannot pass " + mListName + " multiple times as mut in the same call");
+                        }
+                        mut mutArgRoots.pushBack(mEntry.runtime);
+                        mut mutArgNames.pushBack(mListName);
                         var mCode := if target == ir.TARGET_C { "&" + mEntry.runtime } else { mEntry.runtime };
                         if target == ir.TARGET_TS and types.isRecordOrDistinctRecord(mEntry.kind) {
                             if mEntry.runtime.endsWith(".v") {
@@ -7846,6 +8284,11 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                 syntax.failAt(source, cursor, prefix, "argument " + (nextSlot + 1).toText() + " of " + calleeDisplay + ": " + uErr);
                             }
                         }
+                        if mutArgRoots.contains(mEntry.runtime) {
+                            syntax.failAt(source, mNameStart, prefix, "cannot pass " + mListName + " multiple times as mut in the same call");
+                        }
+                        mut mutArgRoots.pushBack(mEntry.runtime);
+                        mut mutArgNames.pushBack(mListName);
                         var mCode := if target == ir.TARGET_C { "&" + mEntry.runtime } else { mEntry.runtime };
                         if target == ir.TARGET_TS and types.isRecordOrDistinctRecord(mEntry.kind) {
                             if mEntry.runtime.endsWith(".v") {
@@ -7912,6 +8355,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     var effRuntime := callRuntime;
     var effResult := callResult;
     substSlotKinds: mut List<String> = [];
+    var substRecvKind := "";
     if isGenericCall {
         if callExpectedRet =!= "" and generics.kindHasUnboundGeneric(genParams, callResult, genBindings) {
             _retUnify := generics.unifyKindMut(genParams, callResult, callExpectedRet, mut genBindings);
@@ -7954,6 +8398,9 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             }
             tpFull := (if tpIsMut { "mut " } else { "" }) + tpConcrete;
             mut allSubstParts.pushBack(tpName + "=" + tpFull);
+            if hasRecv and tpIdx == 0 {
+                substRecvKind = tpFull;
+            }
             if not hasRecv or tpIdx > 0 {
                 mut substSlotKinds.pushBack(tpFull);
             }
@@ -7981,6 +8428,18 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         }
         slotIdx += 1;
     }
+    if mutArgRoots.length() > 0 {
+        var exIdx := 0;
+        loop exIdx < entryCount {
+            if not entryKinds[exIdx].startsWithAt(0, "mut ") {
+                conflictName := findMutAliasConflictName(entryCodes[exIdx], entryKinds[exIdx], mutArgRoots, mutArgNames);
+                if conflictName =!= "" {
+                    syntax.failAt(source, entryPositions[exIdx], prefix, "cannot pass " + conflictName + " as both read-only and mut in the same call");
+                }
+            }
+            exIdx += 1;
+        }
+    }
     var callHasFnArg := not isModuleFn;
     var ckIdx := 0;
     loop ckIdx < entryCount {
@@ -7991,30 +8450,63 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         ckIdx += 1;
     }
     callClosureHazard := callHasFnArg or localsHasLocalClosure(locals);
+    recvExpectedKind := if hasRecv {
+        if isGenericCall { substRecvKind }
+        else if callFirst > 0 { types.paramKindOf(callParams[callFirst - 1]) }
+        else { "" }
+    } else { "" };
+    isUserCModuleFn := target == ir.TARGET_C and isModuleFn and not effRuntime.startsWithAt(0, "lite$");
+    preBlkStmts: mut List<String> = [];
+    postCallDrops: mut List<String> = [];
     var emittedCode := "";
     var emittedResultKind := effResult;
     if isIdentityOrder {
         finalArgs: mut List<String> = [];
-        if hasRecv { mut finalArgs.pushBack(recvCode); }
+        if hasRecv {
+            if target == ir.TARGET_C {
+                mut finalArgs.pushBack(prepCCallArg(isUserCModuleFn, effRuntime, recvExpectedKind, recvCode, mut preBlkStmts, mut postCallDrops));
+            } else {
+                mut finalArgs.pushBack(recvCode);
+            }
+        }
         var pIdx := 0;
         loop pIdx < callCount {
             argExpected := if isGenericCall { substSlotKinds[pIdx] } else { types.paramKindOf(callParams[callFirst + pIdx]) };
-            if argExpected.startsWithAt(0, "mut ") {
-                mut finalArgs.pushBack(entryCodes[pIdx]);
+            rawArgCode := if argExpected.startsWithAt(0, "mut ") {
+                entryCodes[pIdx]
             } else {
                 needsSnap := readOnlyArgNeedsSnapshot(entryCodes[pIdx], locals, mutArgRuntimes, callClosureHazard);
-                mut finalArgs.pushBack(ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[pIdx], entryCodes[pIdx], needsSnap));
+                ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[pIdx], entryCodes[pIdx], needsSnap)
+            };
+            if target == ir.TARGET_C {
+                mut finalArgs.pushBack(prepCCallArg(isUserCModuleFn, effRuntime, argExpected, rawArgCode, mut preBlkStmts, mut postCallDrops));
+            } else {
+                mut finalArgs.pushBack(rawArgCode);
             }
             pIdx = pIdx + 1;
         }
         targetCallee := if isModuleFn { effRuntime } else { "(" + effRuntime + ")" };
-        if target == ir.TARGET_C and not isModuleFn {
+        rawCallExpr := if target == ir.TARGET_C and not isModuleFn {
             callFnKind := types.fnCanonicalKind(callParams, callFirst, callCount, effResult);
             callFnTag := types.cFnTag(callFnKind);
             cCallArgs := if callCount > 0 { effRuntime + ", " + finalArgs.join(", ") } else { effRuntime };
-            emittedCode = "/*@T:" + callFnKind + "@*/" + callFnTag + "_call(" + cCallArgs + ")";
+            "/*@T:" + callFnKind + "@*/" + callFnTag + "_call(" + cCallArgs + ")"
         } else {
-            emittedCode = targetCallee + "(" + finalArgs.join(", ") + ")";
+            targetCallee + "(" + finalArgs.join(", ") + ")"
+        };
+        if preBlkStmts.length() > 0 {
+            dropsStmt := if postCallDrops.length() > 0 { postCallDrops.join("; ") + "; " } else { "" };
+            if effResult == ir.VALUE_KIND_UNIT or effResult == ir.VALUE_KIND_NEVER {
+                emittedCode = "/*@CBLK:0@*/{ " + preBlkStmts.join(" ") + " (void)(" + rawCallExpr + "); " + dropsStmt + "}";
+            } else {
+                cRv := freshCOwnedTemp("lt_or_");
+                cRt := types.cValueType(effResult);
+                emittedCode = "/*@CBLK:" + cRv + "@*/" + cRt + " " + cRv + "; { " + preBlkStmts.join(" ") + " " + cRv + " = (" + rawCallExpr + "); " + dropsStmt + "}";
+            }
+        } else if target == ir.TARGET_C and postCallDrops.length() > 0 {
+            emittedCode = cWrapExprWithPostDrops(effResult, rawCallExpr, postCallDrops);
+        } else {
+            emittedCode = rawCallExpr;
         }
     } else if target =!= ir.TARGET_TS {
         discarded: mut List<String> = [];
@@ -8027,16 +8519,27 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             kIdx = kIdx + 1;
         }
         reorderedArgs: mut List<String> = [];
-        if hasRecv { mut reorderedArgs.pushBack(recvCode); }
+        if hasRecv {
+            if target == ir.TARGET_C {
+                mut reorderedArgs.pushBack(prepCCallArg(isUserCModuleFn, effRuntime, recvExpectedKind, recvCode, mut preBlkStmts, mut postCallDrops));
+            } else {
+                mut reorderedArgs.pushBack(recvCode);
+            }
+        }
         var sIdx := 0;
         loop sIdx < callCount {
             k := slotEntry[sIdx];
             argExpected := if isGenericCall { substSlotKinds[sIdx] } else { types.paramKindOf(callParams[callFirst + sIdx]) };
-            if argExpected.startsWithAt(0, "mut ") {
-                mut reorderedArgs.pushBack(entryCodes[k]);
+            rawArgCode := if argExpected.startsWithAt(0, "mut ") {
+                entryCodes[k]
             } else {
                 needsSnap := readOnlyArgNeedsSnapshot(entryCodes[k], locals, mutArgRuntimes, callClosureHazard);
-                mut reorderedArgs.pushBack(ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[k], entryCodes[k], needsSnap));
+                ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[k], entryCodes[k], needsSnap)
+            };
+            if target == ir.TARGET_C {
+                mut reorderedArgs.pushBack(prepCCallArg(isUserCModuleFn, effRuntime, argExpected, rawArgCode, mut preBlkStmts, mut postCallDrops));
+            } else {
+                mut reorderedArgs.pushBack(rawArgCode);
             }
             sIdx = sIdx + 1;
         }
@@ -8048,10 +8551,24 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         } else {
             effRuntime + "(" + reorderedArgs.join(", ") + ")"
         };
-        emittedCode = if discarded.length() > 0 {
-            "(" + discarded.join(", ") + ", " + callExpr + ")"
+        wrappedReordered := if preBlkStmts.length() > 0 {
+            dropsStmt := if postCallDrops.length() > 0 { postCallDrops.join("; ") + "; " } else { "" };
+            if effResult == ir.VALUE_KIND_UNIT or effResult == ir.VALUE_KIND_NEVER {
+                "/*@CBLK:0@*/{ " + preBlkStmts.join(" ") + " (void)(" + callExpr + "); " + dropsStmt + "}"
+            } else {
+                cRv := freshCOwnedTemp("lt_or_");
+                cRt := types.cValueType(effResult);
+                "/*@CBLK:" + cRv + "@*/" + cRt + " " + cRv + "; { " + preBlkStmts.join(" ") + " " + cRv + " = (" + callExpr + "); " + dropsStmt + "}"
+            }
+        } else if target == ir.TARGET_C and postCallDrops.length() > 0 {
+            cWrapExprWithPostDrops(effResult, callExpr, postCallDrops)
         } else {
             callExpr
+        };
+        emittedCode = if discarded.length() > 0 and not wrappedReordered.startsWithAt(0, "/*@CBLK:") {
+            "(" + discarded.join(", ") + ", " + wrappedReordered + ")"
+        } else {
+            wrappedReordered
         };
     } else {
         evalStmts: mut List<String> = [];
@@ -8126,6 +8643,39 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     ctx.withMarkers((kind = emittedResultKind, code = emittedCode, intValue = 0, textValue = "", constant = false, next = cursor), callMarkers)
 };
 
+/** Prepares one C11 argument/receiver expression for a user/module/indirect call (stack-closure promotion, `const *` borrow, and `@LTMP` cleanup). */
+prepCCallArg := fn(isUserMod: Bool, effRuntime: String, expectedKind: String, rawCode: String, preBlkStmts: mut List<String>, postDrops: mut List<String>): String {
+    if effRuntime == "lite$extraCanvasRun" and expectedKind.startsWithAt(0, "fn(") {
+        stk := promoteCStackClosure(rawCode);
+        if stk.ok { return stk.code; }
+    }
+    if expectedKind.startsWithAt(0, "mut ") {
+        return rawCode;
+    }
+    byPtr := isUserMod and types.cParamIsConstPtr(expectedKind);
+    if not byPtr and types.cDropFnForKind(expectedKind) == "" {
+        return rawCode;
+    }
+    if rawCode.startsWithAt(0, "/*@CBLK:") {
+        endHdr := rawCode.indexOf("@*/", 8);
+        if endHdr > 8 {
+            retVar := rawCode.slice(8, endHdr);
+            blkBody := rawCode.slice(endHdr + 3, rawCode.length());
+            if retVar =!= "" and retVar =!= "0" {
+                t := freshCOwnedTemp("lt_ot_");
+                cT := types.cValueType(expectedKind);
+                mut preBlkStmts.pushBack("/*@LTMP:" + cT + ":" + t + "@*/{ " + blkBody + " " + t + " = " + retVar + "; }");
+                dFn := types.cDropFnForKind(expectedKind);
+                if dFn =!= "" { mut postDrops.pushBack(dFn + "(&" + t + ")"); }
+                return if byPtr { "&" + t } else { t };
+            }
+        }
+    }
+    b := cBorrowExprWithPostDrop(expectedKind, rawCode, byPtr);
+    if b.drop =!= "" { mut postDrops.pushBack(b.drop); }
+    b.expr
+};
+
 /** Parses user and indirect function calls with positional, named, and `=name` shorthand arguments. */
 parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     parseUserOrIndirectCallWithRecv(target, source, openParen, errPos, isModuleFn, calleeDisplay, callRuntime, callParams, callFirst, callCount, callResult, false, "", "", "", "", "", "", "", callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
@@ -8194,12 +8744,24 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         cTag := if target == ir.TARGET_C { types.cListTag(elKind) } else { "" };
         if runtime == "lite$core$list$length:v1" {
             close := syntax.expectSymbol(source, cursor, ")", prefix);
-            lenCode := if target == ir.TARGET_C { "((" + receiver.code + ").len)" } else { "BigInt((" + receiver.code + ").length)" };
+            lenCode := if cTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                lDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut lDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(ir.VALUE_KIND_INT, "lt_list_" + cTag + "_len(" + rb.expr + ")", lDrops)
+            } else {
+                "BigInt((" + receiver.code + ").length)"
+            };
             return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lenCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
         if runtime == "lite$core$list$reverse:v1" {
             close := syntax.expectSymbol(source, cursor, ")", prefix);
-            revCode := if cTag =!= "" { "lt_list_" + cTag + "_reverse(" + receiver.code + ")" } else { "[...(" + receiver.code + ")].reverse()" };
+            revCode := if cTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                rDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut rDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(receiver.kind, "lt_list_" + cTag + "_reverse(" + rb.expr + ")", rDrops)
+            } else { "[...(" + receiver.code + ")].reverse()" };
             return ctx.withMarkers((kind = receiver.kind, code = revCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
         if runtime == "lite$core$list$clear:v1" {
@@ -8273,7 +8835,10 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             sCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, sArg.kind, sArg.code);
             eCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, eArg.kind, eArg.code);
             slCode := if cTag =!= "" {
-                "lt_list_" + cTag + "_slice(" + receiver.code + ", " + sCode + ", " + eCode + ", " + labelStart.toText() + ")"
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                sDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut sDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(receiver.kind, "lt_list_" + cTag + "_slice(" + rb.expr + ", " + sCode + ", " + eCode + ", " + labelStart.toText() + ")", sDrops)
             } else {
                 "lite$listSlice(" + receiver.code + ", " + sCode + ", " + eCode + ", " + labelStart.toText() + ")"
             };
@@ -8286,7 +8851,12 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         mTag := if target == ir.TARGET_C { types.cMapTag(receiver.kind) } else { "" };
         if runtime == "lite$core$map$size:v1" {
             close := syntax.expectSymbol(source, cursor, ")", prefix);
-            szCode := if mTag =!= "" { "((" + receiver.code + ").len)" } else { "BigInt((" + receiver.code + ").size)" };
+            szCode := if mTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                mDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut mDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(ir.VALUE_KIND_INT, "((int64_t)(" + rb.expr + ").len)", mDrops)
+            } else { "BigInt((" + receiver.code + ").size)" };
             return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = szCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
         if runtime == "lite$core$map$clear:v1" {
@@ -8296,13 +8866,25 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         }
         if runtime == "lite$core$map$keys:v1" {
             close := syntax.expectSymbol(source, cursor, ")", prefix);
-            kListCode := if mTag =!= "" { mTag + "_keys(" + receiver.code + ")" } else { "Array.from((" + receiver.code + ").keys())" };
-            return ctx.withMarkers((kind = "List<" + kKind + ">", code = kListCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+            kListKind := "List<" + kKind + ">";
+            kListCode := if mTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                mkDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut mkDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(kListKind, mTag + "_keys(" + rb.expr + ")", mkDrops)
+            } else { "Array.from((" + receiver.code + ").keys())" };
+            return ctx.withMarkers((kind = kListKind, code = kListCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
         if runtime == "lite$core$map$values:v1" {
             close := syntax.expectSymbol(source, cursor, ")", prefix);
-            vListCode := if mTag =!= "" { mTag + "_values(" + receiver.code + ")" } else { "Array.from((" + receiver.code + ").values())" };
-            return ctx.withMarkers((kind = "List<" + vKind + ">", code = vListCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+            vListKind := "List<" + vKind + ">";
+            vListCode := if mTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                mvDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut mvDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(vListKind, mTag + "_values(" + rb.expr + ")", mvDrops)
+            } else { "Array.from((" + receiver.code + ").values())" };
+            return ctx.withMarkers((kind = vListKind, code = vListCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
         keyArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, kKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
         if inferMode { markers = ctx.collectParsedMarkers(markers, keyArg); }
@@ -8312,7 +8894,12 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         keyCode := ctx.assignValueCode(target, kKind, keyArg.kind, keyArg.code);
         if runtime == "lite$core$map$has:v1" {
             close := ctx.expectNonemptyCallClose(source, keyArg.next, prefix);
-            hasCode := if mTag =!= "" { mTag + "_has(" + receiver.code + ", " + keyCode + ")" } else { "((" + receiver.code + ").has(" + keyCode + "))" };
+            hasCode := if mTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                mhDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut mhDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(ir.VALUE_KIND_BOOL, mTag + "_has(" + rb.expr + ", " + keyCode + ")", mhDrops)
+            } else { "((" + receiver.code + ").has(" + keyCode + "))" };
             return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = hasCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
         if runtime == "lite$core$map$remove:v1" {
@@ -8327,7 +8914,10 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             zeroVal := ctx.zeroParsed(target, vKind, close).code;
             resTupleKind := "(found:Bool,value:" + vKind + ")";
             getCode := if mTag =!= "" {
-                "/*@T:" + resTupleKind + "@*/" + mTag + "_get(" + receiver.code + ", " + keyCode + ", " + zeroVal + ")"
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                mgDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut mgDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(resTupleKind, "/*@T:" + resTupleKind + "@*/" + mTag + "_get(" + rb.expr + ", " + keyCode + ", " + zeroVal + ")", mgDrops)
             } else if not needsCopy {
                 "lite$mapGet((" + receiver.code + "), " + keyCode + ", " + zeroVal + ")"
             } else {
@@ -8350,7 +8940,10 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = setCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
         getOrCode := if mTag =!= "" {
-            mTag + "_get_or(" + receiver.code + ", " + keyCode + ", " + valCode + ")"
+            rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+            goDrops: mut List<String> = [];
+            if rb.drop =!= "" { mut goDrops.pushBack(rb.drop); }
+            cWrapExprWithPostDrops(vKind, mTag + "_get_or(" + rb.expr + ", " + keyCode + ", " + valCode + ")", goDrops)
         } else if not needsCopy {
             "lite$mapGetOr((" + receiver.code + "), " + keyCode + ", " + valCode + ")"
         } else {
@@ -8364,7 +8957,12 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         sTag := if target == ir.TARGET_C { types.cSetTag(receiver.kind) } else { "" };
         if runtime == "lite$core$set$size:v1" {
             close := syntax.expectSymbol(source, cursor, ")", prefix);
-            szCode := if sTag =!= "" { "((" + receiver.code + ").len)" } else { "BigInt((" + receiver.code + ").size)" };
+            szCode := if sTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                ssDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut ssDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(ir.VALUE_KIND_INT, "((int64_t)(" + rb.expr + ").len)", ssDrops)
+            } else { "BigInt((" + receiver.code + ").size)" };
             return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = szCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
         if runtime == "lite$core$set$clear:v1" {
@@ -8374,8 +8972,14 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         }
         if runtime == "lite$core$set$values:v1" {
             close := syntax.expectSymbol(source, cursor, ")", prefix);
-            valListCode := if sTag =!= "" { sTag + "_values(" + receiver.code + ")" } else { "Array.from((" + receiver.code + ").values())" };
-            return ctx.withMarkers((kind = "List<" + elemKind + ">", code = valListCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+            vListKind := "List<" + elemKind + ">";
+            valListCode := if sTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                svDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut svDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(vListKind, sTag + "_values(" + rb.expr + ")", svDrops)
+            } else { "Array.from((" + receiver.code + ").values())" };
+            return ctx.withMarkers((kind = vListKind, code = valListCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
         valArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, elemKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
         if inferMode { markers = ctx.collectParsedMarkers(markers, valArg); }
@@ -8392,7 +8996,12 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             rmCode := if sTag =!= "" { sTag + "_remove(&" + mutRt + ", " + valCode + ")" } else { "((" + mutRt + ").delete(" + valCode + "))" };
             return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = rmCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
-        hasCode := if sTag =!= "" { sTag + "_has(" + receiver.code + ", " + valCode + ")" } else { "((" + receiver.code + ").has(" + valCode + "))" };
+        hasCode := if sTag =!= "" {
+            rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+            shDrops: mut List<String> = [];
+            if rb.drop =!= "" { mut shDrops.pushBack(rb.drop); }
+            cWrapExprWithPostDrops(ir.VALUE_KIND_BOOL, sTag + "_has(" + rb.expr + ", " + valCode + ")", shDrops)
+        } else { "((" + receiver.code + ").has(" + valCode + "))" };
         return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = hasCode, intValue = 0, textValue = "", constant = false, next = close), markers);
     }
     syntax.failAt(source, labelStart, prefix, "unsupported hard builtin type operation " + opLabel);
@@ -9130,8 +9739,17 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 } else {
                     ctx.readOnlyArgWithSnapshot(target, getHook.keyKind, key.kind, key.code, readOnlyArgNeedsSnapshot(key.code, locals, emptyHookMutRts, hookClosureHazard))
                 };
+                var hkCode := emitHookIndexReadCode(target, indexStart, left.kind, recvCode, getHook.runtime, kCode);
+                if target == ir.TARGET_C and not getHook.runtime.startsWithAt(0, "lite$") {
+                    hkDrops: mut List<String> = [];
+                    rb := cBorrowExprWithPostDrop(left.kind, recvCode, types.cParamIsConstPtr(left.kind));
+                    if rb.drop =!= "" { mut hkDrops.pushBack(rb.drop); }
+                    kb := cBorrowExprWithPostDrop(getHook.keyKind, kCode, types.cParamIsConstPtr(getHook.keyKind));
+                    if kb.drop =!= "" { mut hkDrops.pushBack(kb.drop); }
+                    hkCode = cWrapExprWithPostDrops(getHook.valKind, emitHookIndexReadCode(target, indexStart, left.kind, rb.expr, getHook.runtime, kb.expr), hkDrops);
+                }
                 left = ctx.withMarkers((kind = getHook.valKind,
-                code = emitHookIndexReadCode(target, indexStart, left.kind, recvCode, getHook.runtime, kCode),
+                code = hkCode,
                 intValue = 0, textValue = "", constant = false, next = next),
                 if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), key) } else { "" });
             } else {
@@ -9414,13 +10032,18 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         wArgsBuf: mut tb.TextBuilder;
                         var wi := 0;
                         loop wi < info.count {
-                            pK := types.paramKindOf(params[info.first + wi]);
+                            rawPK := types.paramKindOf(params[info.first + wi]);
+                            pIsMut := rawPK.startsWithAt(0, "mut ");
+                            pK := if pIsMut { rawPK.slice(4, rawPK.length()) } else { rawPK };
                             aName := "lt_a_" + wi.toText();
                             mut wParamsBuf.append(", ");
                             mut wParamsBuf.append(types.cValueType(pK));
                             mut wParamsBuf.append(" ");
                             mut wParamsBuf.append(aName);
                             if wi > 0 { mut wArgsBuf.append(", "); }
+                            if not pIsMut and types.cParamIsConstPtr(pK) {
+                                mut wArgsBuf.append("&");
+                            }
                             mut wArgsBuf.append(aName);
                             wi = wi + 1;
                         }
@@ -9440,6 +10063,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 } else if info.runtime.startsWithAt(0, "lite$") {
                     var cursor := syntax.skipTrivia(source, postPosition + 1, prefix);
                     argumentCodes: mut List<String> = [];
+                    hostDrops: mut List<String> = [];
                     var callMarkers := "";
                     var argumentCount := 0;
                     size := source.length();
@@ -9463,7 +10087,14 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                 syntax.failAt(source, cursor, prefix, "argument " + (argumentCount + 1).toText() + " of " + calleeDisplay +
                                 " must be " + types.displayKind(argExpected) + ", got " + types.displayKind(argument.kind));
                             }
-                            (mut argumentCodes).pushBack(ctx.assignReadOnlyArgCode(target, argExpected, argument.kind, argument.code));
+                            rawHostArg := ctx.assignReadOnlyArgCode(target, argExpected, argument.kind, argument.code);
+                            if target == ir.TARGET_C and not argExpected.startsWithAt(0, "mut ") {
+                                hb := cBorrowExprWithPostDrop(argExpected, rawHostArg, false);
+                                if hb.drop =!= "" { mut hostDrops.pushBack(hb.drop); }
+                                (mut argumentCodes).pushBack(hb.expr);
+                            } else {
+                                (mut argumentCodes).pushBack(rawHostArg);
+                            }
                             argumentCount = argumentCount + 1;
                             cursor = syntax.skipTrivia(source, argument.next, prefix);
                             if cursor < size and source.at(cursor) == "," {
@@ -9497,7 +10128,9 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         mut argumentCodes.pushBack(errPos.toText());
                     }
                     callResultKind := if optionalExit { ir.VALUE_KIND_NEVER } else { info.result };
-                    left = ctx.withMarkers((kind = callResultKind, code = info.runtime + "(" + argumentCodes.join(", ") + ")",
+                    rawHostCall := info.runtime + "(" + argumentCodes.join(", ") + ")";
+                    hostCallCode := if target == ir.TARGET_C { cWrapExprWithPostDrops(callResultKind, rawHostCall, hostDrops) } else { rawHostCall };
+                    left = ctx.withMarkers((kind = callResultKind, code = hostCallCode,
                     intValue = 0, textValue = "", constant = false, next = cursor), callMarkers);
                 } else {
                     handleUserCall = true;

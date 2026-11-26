@@ -1228,6 +1228,7 @@ cFnTagCache: mut Map<String, String>;
 cStructTagCache: mut Map<String, String>;
 cArrayTagCache: mut Map<String, String>;
 cHasListCache: mut Map<String, Bool>;
+cNeedsDropCache: mut Map<String, Bool>;
 cValueTypeCache: mut Map<String, String>;
 containsFnCache: mut Map<String, Bool>;
 tsTypeCache: mut Map<String, String>;
@@ -1361,6 +1362,85 @@ pub cTypeHasListField := fn(kind: String): Bool {
     }
     (mut cHasListCache).set(kind, res);
     res
+};
+
+/** True when C11 representation of `kind` owns heap memory or closure environments requiring drop/copy (`List`, `Map`, `Set`, `fn`, or composites containing them). */
+pub cTypeNeedsDrop := fn(kind: String): Bool {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isFnKind(kind) { return true; }
+    if isArrayKind(kind) {
+        return if arrayExtent(kind) < 0 { true } else { self(arrayElementKind(kind)) };
+    }
+    if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) { return false; }
+    cached := cNeedsDropCache.get(kind);
+    if cached.found { return cached.value; }
+    var res := false;
+    if isTupleKind(kind) {
+        count := tupleComponentCount(kind);
+        var i := 0;
+        loop i < count {
+            if self(tupleComponent(kind, i).kind) { res = true; break; }
+            i = i + 1;
+        }
+    } else if isRecordKind(kind) {
+        count := recordComponentCount(kind);
+        var i := 0;
+        loop i < count {
+            if self(recordComponent(kind, i).kind) { res = true; break; }
+            i = i + 1;
+        }
+    } else {
+        count := enumCaseCount(kind);
+        var ci := 0;
+        loop ci < count and not res {
+            loop enumCasePayloads(kind, ci) as pk {
+                if self(pk) { res = true; break; }
+            }
+            ci = ci + 1;
+        }
+    }
+    (mut cNeedsDropCache).set(kind, res);
+    res
+};
+
+/** True when a non-`mut` parameter of `kind` is passed by `const *` borrow in C11. */
+pub cParamIsConstPtr := fn(kind: String): Bool {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    isListKind(kind) or (isArrayKind(kind) and cArrayTag(kind) == "") or isMapKind(kind) or isSetKind(kind) or cStructTag(kind) =!= ""
+};
+
+/** Returns the C11 `_drop` helper name for `kind`, or `""` when `kind` has trivial value semantics. */
+pub cDropFnForKind := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if isListKind(kind) or (isArrayKind(kind) and cArrayTag(kind) == "") {
+        elKind := if isListKind(kind) { listElementKind(kind) } else { arrayElementKind(kind) };
+        lt := cListTag(elKind);
+        if lt =!= "" { "lt_list_" + lt + "_drop" } else { "" }
+    } else if cMapTag(kind) =!= "" {
+        cMapTag(kind) + "_drop"
+    } else if cSetTag(kind) =!= "" {
+        cSetTag(kind) + "_drop"
+    } else if cArrayTag(kind) =!= "" and cTypeNeedsDrop(kind) {
+        cArrayTag(kind) + "_drop"
+    } else if cStructTag(kind) =!= "" and cTypeNeedsDrop(kind) {
+        cStructTag(kind) + "_drop"
+    } else if cFnTag(kind) =!= "" {
+        cFnTag(kind) + "_drop"
+    } else {
+        ""
+    }
+};
+
+/** Returns the C11 `_move` helper name for `kind`, or `""` when `kind` has trivial value semantics. */
+pub cMoveFnForKind := fn(kind: String): String {
+    d := cDropFnForKind(kind);
+    if d.endsWith("_drop") { d.slice(0, d.length() - 5) + "_move" } else { "" }
+};
+
+/** Returns the C11 `_copy` helper name for `kind`, or `""` when `kind` is trivially copyable. */
+pub cCopyFnForKind := fn(kind: String): String {
+    d := cDropFnForKind(kind);
+    if d.endsWith("_drop") { d.slice(0, d.length() - 5) + "_copy" } else { "" }
 };
 
 /** Maps a scalar or payload-free enum kind to its canonical C11 width tag (`i1..i64`, `u1..u64`, `f8..f64`, `bool`, `str`), or `""`. */

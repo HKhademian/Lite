@@ -130,7 +130,8 @@ src :=
 "    forwardMut(mut Z2);\n" +
 "\n" +
 "    localA: mut List<Int> = [1, 2, 3];\n" +
-"    appendAll(localA, mut localA);\n" +
+"    snapA := localA;\n" +
+"    appendAll(snapA, mut localA);\n" +
 "    io.outputLine(\"sameCallAlias\", localA.length(), localA[0], localA[3], localA[5]);\n" +
 "\n" +
 "    clAfter := {\n" +
@@ -164,7 +165,14 @@ test.checkInt("TS compile status: " + tsComp.stderr, 0, tsComp.status);
 test.check("TS zero-copy forwardSum(localC): no array clone", tsComp.stdout.contains("liteFn_forwardSum(lite_localC)"));
 test.check("TS zero-copy sumList(xs): no array clone", tsComp.stdout.contains("liteFn_sumList(lite_xs)"));
 test.check("TS global Z still snapshotted", tsComp.stdout.contains("liteFn_checkGlobalList([...(lite_Z)])"));
-test.check("TS same-call alias snapshotted", tsComp.stdout.contains("liteFn_appendAll([...(lite_localA)], lite_localA)"));
+
+/* Negative exclusivity checks on both TS and C11 */
+exclusivityAliasSrc := "f := fn(src: List<Int>, dst: mut List<Int>): Unit { mut dst.pushBack(src[0]); }; xs: mut List<Int> = [1]; f(xs, mut xs);\n";
+exclusivityDupMutSrc := "swap := fn(a: mut List<Int>, b: mut List<Int>): Unit { mut a.pushBack(b[0]); }; xs: mut List<Int> = [1]; swap(mut xs, mut xs);\n";
+compilerTest.assertCompileErrorContains(root, selTs.path, "exclusivity read-only + mut rejected (TS)", exclusivityAliasSrc, "cannot pass xs as both read-only and mut in the same call");
+compilerTest.assertCompileErrorContains(root, selC.path, "exclusivity read-only + mut rejected (C11)", exclusivityAliasSrc, "cannot pass xs as both read-only and mut in the same call");
+compilerTest.assertCompileErrorContains(root, selTs.path, "exclusivity double mut rejected (TS)", exclusivityDupMutSrc, "cannot pass xs multiple times as mut in the same call");
+compilerTest.assertCompileErrorContains(root, selC.path, "exclusivity double mut rejected (C11)", exclusivityDupMutSrc, "cannot pass xs multiple times as mut in the same call");
 
 tsRun := compilerTest.checkAndRunTs(root, tsComp.stdout);
 test.checkInt("TS run status: " + tsRun.stderr, 0, tsRun.status);

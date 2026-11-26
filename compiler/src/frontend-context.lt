@@ -210,16 +210,54 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     boolParsed(ir.targetComparisonCode(target, operator, left.kind, left.code, right.code), false, false, right.next)
 };
 
+/** True when C11 expression `code` already evaluates to a freshly created owned rvalue that needs no `_copy`. */
+isCFreshOwnedExpr := fn(code: String): Bool {
+    var c := code.trim();
+    loop c.startsWithAt(0, "/*@T:") or c.startsWithAt(0, "/*@LTMP:") or c.startsWithAt(0, "/*@CSTK:") {
+        endM := if c.startsWithAt(0, "/*@T:") { c.indexOf("@*/", 5) } else { c.indexOf("*/", 2) };
+        if endM < 0 { break; }
+        step := if c.startsWithAt(0, "/*@T:") { 3 } else { 2 };
+        c = c.slice(endM + step, c.length()).trim();
+    }
+    if c.startsWithAt(0, "/*@CBLK:") { return true; }
+    if not c.endsWith(")") { return false; }
+    if c.startsWithAt(0, "((lt_or_") or
+    c.startsWithAt(0, "((lt_s_") or c.startsWithAt(0, "((lt_arr_") or
+    c.startsWithAt(0, "((lt_list_") or c.startsWithAt(0, "((lt_map_") or
+    c.startsWithAt(0, "((lt_set_") or c.startsWithAt(0, "((lt_fnv_") or
+    c.startsWithAt(0, "(lt_s_") or c.startsWithAt(0, "(lt_arr_") or
+    c.startsWithAt(0, "(lt_list_") or c.startsWithAt(0, "(lt_map_") or
+    c.startsWithAt(0, "(lt_set_") or c.startsWithAt(0, "(lt_fnv_") {
+        return true;
+    }
+    if c.startsWithAt(0, "lt_fn_") or c.startsWithAt(0, "lt_fnv_") or
+    c.startsWithAt(0, "lt_mk_") or c.startsWithAt(0, "lt_wrap_") or
+    c.startsWithAt(0, "lt_list_") or c.startsWithAt(0, "lt_map_") or
+    c.startsWithAt(0, "lt_set_") or c.startsWithAt(0, "lt_arr_") or
+    c.startsWithAt(0, "lt_s_") or c.startsWithAt(0, "lt_c_") {
+        return true;
+    }
+    if c.startsWithAt(0, "lite$") {
+        openP := c.indexOf("(", 0);
+        dotP := c.indexOf(".", 0);
+        if openP > 0 and (dotP < 0 or openP < dotP) {
+            return true;
+        }
+    }
+    false
+};
+
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
 pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     if types.isDistinctKind(kind) { return self(target, types.distinctBaseKind(kind), code); }
-    if kind == ir.VALUE_KIND_NEVER or (target == ir.TARGET_C and code.startsWithAt(0, "/*@CBLK:")) { code }
+    if kind == ir.VALUE_KIND_NEVER or (target == ir.TARGET_C and isCFreshOwnedExpr(code)) { code }
     else if types.isArrayKind(kind) and target == ir.TARGET_C and types.cArrayTag(kind) =!= "" {
-        if not types.cTypeHasListField(kind) {
+        if not types.cTypeNeedsDrop(kind) {
             code
         } else {
             aTag := types.cArrayTag(kind);
             if code.startsWithAt(0, aTag + "_copy(") or
+            code.startsWithAt(0, aTag + "_move(") or
             code.startsWithAt(0, aTag + "_repeat(") or
             code.startsWithAt(0, "/*@T:" + kind + "@*/" + aTag + "_repeat(") or
             code.startsWithAt(0, "((/*@T:" + kind + "@*/") or
@@ -235,14 +273,28 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             tag := types.cListTag(elKind);
             if tag =!= "" {
                 if code.startsWithAt(0, "lt_list_" + tag + "_from(") or
+                code.startsWithAt(0, "lt_list_" + tag + "_from_scope(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_repeat(") or
                 code.startsWithAt(0, "/*@T:" + kind + "@*/lt_list_" + tag + "_repeat(") or
                 code.startsWithAt(0, "/*@T:" + kind + "@*/((void)") or
                 code.startsWithAt(0, "lt_list_" + tag + "_copy(") or
+                code.startsWithAt(0, "lt_list_" + tag + "_move(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_slice(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_slice_from(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_reverse(") or
+                code.startsWithAt(0, "lt_list_" + tag + "_pop_back(") or
+                code.startsWithAt(0, "lt_list_" + tag + "_pop_front(") or
+                code.startsWithAt(0, "lt_map_") or
+                code.startsWithAt(0, "lt_set_") or
+                (code.startsWithAt(0, "lt_arr_") and (code.indexOf("_slice(", 0) > 0 or code.indexOf("_slice_from(", 0) > 0)) or
                 code.startsWithAt(0, "lite$inputArgs(") or
+                code.startsWithAt(0, "lite$unicodeToCodePoints(") or
+                code.startsWithAt(0, "lite$ioRead(") or
+                code.startsWithAt(0, "lite$ioWriterBytes(") or
+                code.startsWithAt(0, "lite$fileListDir(") or
+                code.startsWithAt(0, "lite$cryptoRandomBytes(") or
+                code.startsWithAt(0, "lt_c_utf8_encode(") or
+                code.startsWithAt(0, "lt_c_io_read_all(") or
                 code.startsWithAt(0, "/*@CBLK:") {
                     code
                 } else {
@@ -265,7 +317,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     else if types.isMapKind(kind) {
         if target == ir.TARGET_C {
             mTag := types.cMapTag(kind);
-            if mTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, mTag + "_from(") and not code.startsWithAt(0, mTag + "_copy(") {
+            if mTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, mTag + "_from(") and not code.startsWithAt(0, mTag + "_copy(") and not code.startsWithAt(0, mTag + "_move(") {
                 mTag + "_copy(" + code + ")"
             } else {
                 code
@@ -283,7 +335,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     else if types.isSetKind(kind) {
         if target == ir.TARGET_C {
             sTag := types.cSetTag(kind);
-            if sTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, sTag + "_from(") and not code.startsWithAt(0, sTag + "_copy(") {
+            if sTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, sTag + "_from(") and not code.startsWithAt(0, sTag + "_copy(") and not code.startsWithAt(0, sTag + "_move(") {
                 sTag + "_copy(" + code + ")"
             } else {
                 code
@@ -294,9 +346,17 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             code
         }
     }
-    else if target == ir.TARGET_C and (types.isTupleKind(kind) or types.isRecordKind(kind) or types.isPayloadEnumKind(kind)) and types.cTypeHasListField(kind) {
+    else if target == ir.TARGET_C and types.isFnKind(kind) {
+        fTag := types.cFnTag(kind);
+        if fTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, "((/*@T:") and not code.startsWithAt(0, fTag + "_copy(") and not code.startsWithAt(0, fTag + "_move(") and not code.startsWithAt(0, "lt_mk_") {
+            fTag + "_copy(" + code + ")"
+        } else {
+            code
+        }
+    }
+    else if target == ir.TARGET_C and (types.isTupleKind(kind) or types.isRecordKind(kind) or types.isPayloadEnumKind(kind)) and types.cTypeNeedsDrop(kind) {
         tag := types.cStructTag(kind);
-        if tag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, tag + "_copy(") {
+        if tag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, tag + "_copy(") and not code.startsWithAt(0, tag + "_move(") {
             tag + "_copy(" + code + ")"
         } else {
             code
@@ -1259,6 +1319,197 @@ pub cReplaceIdentToken := fn(code: String, ident: String, replacement: String): 
     }
     if flushed == 0 { return code; }
     if flushed < size { mut out.append(code.slice(flushed, size)); }
+    out.build()
+};
+
+/** Replaces exact occurrences of C expression snippet `needle` outside quoted strings and `/*@CFN_START:...*/` blocks with `replacement`. */
+pub cReplaceExactToken := fn(code: String, needle: String, replacement: String): String {
+    if needle == "" or code.indexOf(needle, 0) < 0 { return code; }
+    size := code.length();
+    nLen := needle.length();
+    firstCh := needle.at(0);
+    out: mut tb.TextBuilder;
+    var cursor := 0;
+    var flushed := 0;
+    loop cursor < size {
+        ch := code.at(cursor);
+        if ch == "\"" or ch == "'" {
+            cursor = cursor + 1;
+            loop cursor < size {
+                c2 := code.at(cursor);
+                if c2 == "\\" { cursor = cursor + 2; }
+                else if c2 == ch { cursor = cursor + 1; break; }
+                else { cursor = cursor + 1; }
+            }
+        } else if ch == "/" and code.startsWithAt(cursor, "/*@CFN_START:") {
+            cursor = cursor + 13;
+            var fnDepth := 1;
+            loop cursor < size and fnDepth > 0 {
+                fc := code.at(cursor);
+                if fc == "\"" { cursor = syntax.skipAliasString(code, cursor); }
+                else if fc == "/" and code.startsWithAt(cursor, "/*@CFN_START:") { fnDepth += 1; cursor += 13; }
+                else if fc == "/" and code.startsWithAt(cursor, "/*@CFN_END@*/") { fnDepth -= 1; cursor += 13; }
+                else { cursor += 1; }
+            }
+        } else if ch == firstCh and code.startsWithAt(cursor, needle) {
+            if cursor > flushed { mut out.append(code.slice(flushed, cursor)); }
+            mut out.append(replacement);
+            cursor = cursor + nLen;
+            flushed = cursor;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    if flushed == 0 { return code; }
+    if flushed < size { mut out.append(code.slice(flushed, size)); }
+    out.build()
+};
+
+/** Injects `retDropStmt` before `return` / outer `goto` exits and optional `loopDropStmt` before `break`/`continue` at loop depth 0 in C11 block code. */
+pub cRewriteExitDrops := fn(bodyCode: String, retDropStmt: String, loopDropStmt: String, fnRetKind: String, rewriteId: Int): String {
+    if retDropStmt == "" and loopDropStmt == "" { return bodyCode; }
+    size := bodyCode.length();
+    out: mut tb.TextBuilder;
+    var cursor := 0;
+    var flushed := 0;
+    var rSeq := 0;
+    var innerLoopDepth := 0;
+    loopBraceStack: mut List<Int> = [];
+    var braceDepth := 0;
+    loop cursor < size {
+        ch := bodyCode.at(cursor);
+        if ch == "\"" or ch == "'" {
+            cursor = cursor + 1;
+            loop cursor < size {
+                c2 := bodyCode.at(cursor);
+                if c2 == "\\" { cursor = cursor + 2; }
+                else if c2 == ch { cursor = cursor + 1; break; }
+                else { cursor = cursor + 1; }
+            }
+        } else if ch == "/" and bodyCode.startsWithAt(cursor, "/*@CFN_START:") {
+            cursor = cursor + 13;
+            var fnDepth := 1;
+            loop cursor < size and fnDepth > 0 {
+                fc := bodyCode.at(cursor);
+                if fc == "\"" { cursor = syntax.skipAliasString(bodyCode, cursor); }
+                else if fc == "/" and bodyCode.startsWithAt(cursor, "/*@CFN_START:") { fnDepth += 1; cursor += 13; }
+                else if fc == "/" and bodyCode.startsWithAt(cursor, "/*@CFN_END@*/") { fnDepth -= 1; cursor += 13; }
+                else { cursor += 1; }
+            }
+        } else if ch == "{" {
+            braceDepth = braceDepth + 1;
+            cursor = cursor + 1;
+        } else if ch == "}" {
+            if loopBraceStack.length() > 0 and loopBraceStack[loopBraceStack.length() - 1] == braceDepth {
+                _popped := mut loopBraceStack.popBack();
+                if innerLoopDepth > 0 { innerLoopDepth -= 1; }
+            }
+            if braceDepth > 0 { braceDepth = braceDepth - 1; }
+            cursor = cursor + 1;
+        } else if ((ch == "f" and bodyCode.startsWithAt(cursor, "for (")) or (ch == "w" and bodyCode.startsWithAt(cursor, "while ("))) and
+        (cursor == 0 or not bodyCode.at(cursor - 1).isNameContinue()) {
+            var pScan := cursor + (if ch == "f" { 4 } else { 6 });
+            var pDepth := 0;
+            loop pScan < size {
+                pc := bodyCode.at(pScan);
+                if pc == "\"" or pc == "'" {
+                    pScan += 1;
+                    loop pScan < size {
+                        p2 := bodyCode.at(pScan);
+                        if p2 == "\\" { pScan += 2; }
+                        else if p2 == pc { pScan += 1; break; }
+                        else { pScan += 1; }
+                    }
+                } else if pc == "(" { pDepth += 1; pScan += 1; }
+                else if pc == ")" {
+                    pDepth -= 1; pScan += 1;
+                    if pDepth == 0 { break; }
+                } else { pScan += 1; }
+            }
+            loop pScan < size and (bodyCode.at(pScan) == " " or bodyCode.at(pScan) == "\t" or bodyCode.at(pScan) == "\n") { pScan += 1; }
+            if pScan < size and bodyCode.at(pScan) == "{" {
+                braceDepth = braceDepth + 1;
+                mut loopBraceStack.pushBack(braceDepth);
+                innerLoopDepth = innerLoopDepth + 1;
+                cursor = pScan + 1;
+            } else {
+                cursor = cursor + 1;
+            }
+        } else if loopDropStmt =!= "" and innerLoopDepth == 0 and ch == "b" and bodyCode.startsWithAt(cursor, "break;") and
+        (cursor == 0 or not bodyCode.at(cursor - 1).isNameContinue()) {
+            if cursor > flushed { mut out.append(bodyCode.slice(flushed, cursor)); }
+            mut out.append("{ " + loopDropStmt + " break; }");
+            cursor = cursor + 6;
+            flushed = cursor;
+        } else if loopDropStmt =!= "" and innerLoopDepth == 0 and ch == "c" and bodyCode.startsWithAt(cursor, "continue;") and
+        (cursor == 0 or not bodyCode.at(cursor - 1).isNameContinue()) {
+            if cursor > flushed { mut out.append(bodyCode.slice(flushed, cursor)); }
+            mut out.append("{ " + loopDropStmt + " continue; }");
+            cursor = cursor + 9;
+            flushed = cursor;
+        } else if retDropStmt =!= "" and ch == "g" and bodyCode.startsWithAt(cursor, "goto ") and
+        (cursor == 0 or not bodyCode.at(cursor - 1).isNameContinue()) {
+            lblStart := cursor + 5;
+            semi := bodyCode.indexOf(";", lblStart);
+            if semi > lblStart {
+                lbl := bodyCode.slice(lblStart, semi).trim();
+                if bodyCode.indexOf(lbl + ":", 0) < 0 {
+                    if cursor > flushed { mut out.append(bodyCode.slice(flushed, cursor)); }
+                    mut out.append("{ " + retDropStmt + " goto " + lbl + "; }");
+                    cursor = semi + 1;
+                    flushed = cursor;
+                    continue;
+                }
+            }
+            cursor = cursor + 1;
+        } else if retDropStmt =!= "" and ch == "r" and bodyCode.startsWithAt(cursor, "return") and
+        (cursor == 0 or not bodyCode.at(cursor - 1).isNameContinue()) and
+        (cursor + 6 >= size or not bodyCode.at(cursor + 6).isNameContinue()) {
+            var scan := cursor + 6;
+            var depth := 0;
+            var semi := -1;
+            loop scan < size {
+                sc := bodyCode.at(scan);
+                if sc == "\"" or sc == "'" {
+                    scan = scan + 1;
+                    loop scan < size {
+                        s2 := bodyCode.at(scan);
+                        if s2 == "\\" { scan = scan + 2; }
+                        else if s2 == sc { scan = scan + 1; break; }
+                        else { scan = scan + 1; }
+                    }
+                } else if sc == "(" or sc == "{" or sc == "[" {
+                    depth = depth + 1; scan = scan + 1;
+                } else if sc == ")" or sc == "}" or sc == "]" {
+                    if depth > 0 { depth = depth - 1; }
+                    scan = scan + 1;
+                } else if sc == ";" and depth == 0 {
+                    semi = scan; break;
+                } else {
+                    scan = scan + 1;
+                }
+            }
+            if semi >= 0 {
+                retExpr := bodyCode.slice(cursor + 6, semi).trim();
+                if cursor > flushed { mut out.append(bodyCode.slice(flushed, cursor)); }
+                if retExpr == "" or fnRetKind == "" or fnRetKind == ir.VALUE_KIND_UNIT or fnRetKind == ir.VALUE_KIND_NEVER {
+                    mut out.append("{ " + retDropStmt + " return; }");
+                } else {
+                    rSeq = rSeq + 1;
+                    tmpVar := "lt_exr_" + rewriteId.toText() + "_" + rSeq.toText();
+                    mut out.append("{ " + types.cValueType(fnRetKind) + " " + tmpVar + " = (" + retExpr + "); " + retDropStmt + " return " + tmpVar + "; }");
+                }
+                cursor = semi + 1;
+                flushed = cursor;
+                continue;
+            }
+            cursor = cursor + 1;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    if flushed == 0 { return bodyCode; }
+    if flushed < size { mut out.append(bodyCode.slice(flushed, size)); }
     out.build()
 };
 

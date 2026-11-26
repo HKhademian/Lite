@@ -317,6 +317,14 @@ pub cFieldName := fn(prop: String): String { types.cFieldName(prop) };
 pub cSafeIdent := fn(name: String): String { ir.cSafeIdent(name) };
 /** True when C11 representation of `kind` contains a list field. */
 pub cTypeHasListField := fn(kind: String): Bool { types.cTypeHasListField(kind) };
+/** True when C11 representation of `kind` owns heap memory or closure environments requiring drop/copy. */
+pub cTypeNeedsDrop := fn(kind: String): Bool { types.cTypeNeedsDrop(kind) };
+/** True when a non-`mut` parameter of `kind` is passed by `const *` borrow in C11. */
+pub cParamIsConstPtr := fn(kind: String): Bool { types.cParamIsConstPtr(kind) };
+/** Returns the C11 `_drop` helper name for `kind`, or `""`. */
+pub cDropFnForKind := fn(kind: String): String { types.cDropFnForKind(kind) };
+pub cReplaceExactToken := fn(code: String, needle: String, replacement: String): String { ctx.cReplaceExactToken(code, needle, replacement) };
+pub cRewriteExitDrops := fn(bodyCode: String, retDropStmt: String, loopDropStmt: String, fnRetKind: String, rewriteId: Int): String { ctx.cRewriteExitDrops(bodyCode, retDropStmt, loopDropStmt, fnRetKind, rewriteId) };
 /** Returns the C11 tuple conversion helper name between `actualKind` and `expectedKind`. */
 pub cTupleConvertName := fn(expectedKind: String, actualKind: String): String { types.cTupleConvertName(expectedKind, actualKind) };
 /** Returns the C11 map key tag for `kKind`. */
@@ -1604,7 +1612,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             isMutParam := rawParamKind.startsWithAt(0, "mut ");
             parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
             pRuntime := ir.safeTargetIdent(target, parameterName);
-            runtime := if isMutParam and target == TARGET_C { "(*lite_" + pRuntime + ")" }
+            isConstPtrParam := target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
+            runtime := if (isMutParam and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
             else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
             else { "lite_" + pRuntime };
             fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
@@ -3726,7 +3735,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         isMutParam := rawParamKind.startsWithAt(0, "mut ");
                         parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
                         pRuntime := ir.safeTargetIdent(target, parameterName);
-                        runtime := if isMutParam and target == TARGET_C { "(*lite_" + pRuntime + ")" }
+                        isConstPtrParam := target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
+                        runtime := if (isMutParam and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
                         else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
                         else { "lite_" + pRuntime };
                         fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
@@ -3918,7 +3928,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     isMutParam := rawParamKind.startsWithAt(0, "mut ");
                     parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
                     pRuntime := ir.safeTargetIdent(target, parameterName);
-                    runtime := if isMutParam and target == TARGET_C { "(*lite_" + pRuntime + ")" }
+                    isConstPtrParam := target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
+                    runtime := if (isMutParam and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
                     else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
                     else { "lite_" + pRuntime };
                     fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
@@ -4176,7 +4187,18 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
                         };
                         if target == TARGET_C {
-                            "(" + entry.runtime + "." + f0Prop + " = " + rhsCode + ")"
+                            fieldDrop := types.cDropFnForKind(curKind);
+                            if fieldDrop =!= "" {
+                                cFT := types.cValueType(curKind);
+                                if rhsCode.startsWithAt(0, "/*@CBLK:") {
+                                    tmpF := "lt_fv_" + opPos.toText();
+                                    "{ /*c-stmt*/ " + cFT + " " + tmpF + "; " + ctx.cUnwrapIntoVar(tmpF, curKind, rhsCode) + " " + fieldDrop + "(&(" + entry.runtime + "." + f0Prop + ")); " + entry.runtime + "." + f0Prop + " = " + tmpF + "; }"
+                                } else {
+                                    "{ /*c-stmt*/ " + cFT + " lt_fv = " + rhsCode + "; " + fieldDrop + "(&(" + entry.runtime + "." + f0Prop + ")); " + entry.runtime + "." + f0Prop + " = lt_fv; }"
+                                }
+                            } else {
+                                "(" + entry.runtime + "." + f0Prop + " = " + rhsCode + ")"
+                            }
                         } else {
                             "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": " + rhsCode + " })"
                         }
@@ -4191,7 +4213,18 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             assignValueCode(target, curKind, rhsParsed.kind, rhsParsed.code)
                         };
                         if target == TARGET_C {
-                            "(" + entry.runtime + "." + f0Prop + "." + f1Prop + " = " + rhsCode + ")"
+                            fieldDrop := types.cDropFnForKind(curKind);
+                            if fieldDrop =!= "" {
+                                cFT := types.cValueType(curKind);
+                                if rhsCode.startsWithAt(0, "/*@CBLK:") {
+                                    tmpF := "lt_fv_" + opPos.toText();
+                                    "{ /*c-stmt*/ " + cFT + " " + tmpF + "; " + ctx.cUnwrapIntoVar(tmpF, curKind, rhsCode) + " " + fieldDrop + "(&(" + entry.runtime + "." + f0Prop + "." + f1Prop + ")); " + entry.runtime + "." + f0Prop + "." + f1Prop + " = " + tmpF + "; }"
+                                } else {
+                                    "{ /*c-stmt*/ " + cFT + " lt_fv = " + rhsCode + "; " + fieldDrop + "(&(" + entry.runtime + "." + f0Prop + "." + f1Prop + ")); " + entry.runtime + "." + f0Prop + "." + f1Prop + " = lt_fv; }"
+                                }
+                            } else {
+                                "(" + entry.runtime + "." + f0Prop + "." + f1Prop + " = " + rhsCode + ")"
+                            }
                         } else {
                             "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": { ...(" + subPath + "), " + f1 + ": " + rhsCode + " } })"
                         }
