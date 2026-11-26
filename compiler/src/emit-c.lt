@@ -6560,7 +6560,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("#include <poll.h>");
         outLine("#include <sys/wait.h>");
     }
-    if usesFloatArithmetic(calls) or floatValues or hasInputFloat or hasExtraCanvas or usesIntHelper(calls, "lt_trunc_f64_to_int(") or usesIntHelper(calls, "lt_trunc_f64_to_uint(") { outLine("#include <math.h>"); }
+    if usesFloatArithmetic(calls) or float8Values or float16Values or hasInputFloat or hasExtraCanvas or usesIntHelper(calls, "lt_trunc_f64_to_int(") or usesIntHelper(calls, "lt_trunc_f64_to_uint(") { outLine("#include <math.h>"); }
     if hasExtraCanvas {
         outLine("#include <sys/resource.h>");
         outLine("#if defined(__APPLE__)");
