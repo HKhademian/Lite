@@ -148,7 +148,7 @@ still a separate, unproven milestone.
 
 ## Known gap in explicit module imports
 
-The [package preload rule](lite://doc/modules-and-packages#package-preload)
+The [package preload rule](lite://doc/packages-and-preload#package-preload)
 supersedes the 2026-11-24 script-only prelude direction. Each package can
 supply a `$preload.lt` that replaces Lite's default file for that package.
 When both files are absent, resolution adds no implicit module imports.
