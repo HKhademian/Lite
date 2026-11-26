@@ -340,13 +340,13 @@
       "name": "mutable-counter-loop",
       "source": "001-007-mutable-counter-loop.lts",
       "ts": "sha256:8427022ae1d271b66c84da0a498d27c43df20c0fb2d087186d607f213b1acd71",
-      "c": "sha256:fd40b06f571be128ddbab1c9ebd0a3e326eaa70883aabf18e11359f033d3ec4c"
+      "c": "sha256:8c760ffa8a652ad44e9b8a8e3ef2d194c831f99dc26fc32c7d5716aac008d27c"
     },
     {
       "name": "nested-if-in-loop",
       "source": "001-007-nested-if-in-loop.lts",
       "ts": "sha256:05a2af572087de7281f06581ece738c8e82ca66b6103e8bf84ddb1dd56898fb6",
-      "c": "sha256:2d438c3a84682eb623a16d8743e85805418435671f2f6cd22cec2f81ad6103b5"
+      "c": "sha256:6ffe9609859fb5a5e40890e0a0d38969166280f6231753b0c56035c9d464d650"
     },
     {
       "name": "not-precedence",
@@ -358,7 +358,7 @@
       "name": "report-in-loop",
       "source": "001-007-report-in-loop.lts",
       "ts": "sha256:0b0ce2d6576a31c56eefc075dc9378d7d69a2378513335238624d5ddb63df339",
-      "c": "sha256:775d6d8d4d784d698a3567918fdfc02a379501b9c052ed4d57c6e9d275f7a980"
+      "c": "sha256:76a435450f5bc7f973d5abe3072fb10c68478be06602fa67775cddfd44914af5"
     },
     {
       "name": "string-equality-if",
@@ -370,13 +370,13 @@
       "name": "runtime-division",
       "source": "001-009-runtime-division.lts",
       "ts": "sha256:b2915b39afd07965f178d665df8ebd448726345a6d71f6f85283a67367a1a715",
-      "c": "sha256:d1e3544024d5dd74067c3cbcf4d606a6ddb194848f43af2f35c95f4415b2b563"
+      "c": "sha256:a7fd2e43e7be0a20de00b0e57c7d899fdbc84d36ee0f37e95673456f391efb56"
     },
     {
       "name": "runtime-remainder",
       "source": "001-009-runtime-remainder.lts",
       "ts": "sha256:6e035dd1b7fce75635d19f895264c97a7c6468f55c88971d0c571e3819a5f104",
-      "c": "sha256:2625c3bec7d0210b41075139fc6c7059652eda1df083494e998c188b234175d1"
+      "c": "sha256:7ded4038148be0b90cb327dcc6c150dfb81ce95cc37b1b23cfd4ac611fbf4556"
     },
     {
       "name": "runtime-string-concat",
@@ -388,37 +388,37 @@
       "name": "division-by-zero",
       "source": "001-011-division-by-zero.lts",
       "ts": "sha256:fb3504447f8d745b83012d7bf2d4d4ed755f80cda325053c7786f3c04412cbb2",
-      "c": "sha256:1be971873f0d7edf234e3a42e85479788b8ae4ecccade294399dc025e1323e7a"
+      "c": "sha256:efb74aed4cc70cd359952ec103fce3a57d4abde0622bd865cf1a9512081a660c"
     },
     {
       "name": "min-divide-minus-one",
       "source": "001-011-min-divide-minus-one.lts",
       "ts": "sha256:fb939b9fe7b7a956384a05ea457fee9176d7676d0a62700297523eba96dfaa01",
-      "c": "sha256:e61a54e43df576216a604902907039c35b23351b0bff0277cba9df64307dce6d"
+      "c": "sha256:afe5e165c85622315d5f316b68585d0379d3520b6a19c951649220b58405abe0"
     },
     {
       "name": "overflow-add",
       "source": "001-011-overflow-add.lts",
       "ts": "sha256:cb4e6e02695f21db407540a88a1efdb3e19d44431ba4fc8fa1ebdbc9b28b95ca",
-      "c": "sha256:0e0a1a88b8c508a922789e58b44759fe6d92d464522aa2d9a2f8f7031411dd9f"
+      "c": "sha256:87d64516ada08c4084e0e542b69d83ba4086f343ee9416033b991f125a3bc36e"
     },
     {
       "name": "overflow-multiply-large",
       "source": "001-011-overflow-multiply-large.lts",
       "ts": "sha256:d89280ce445755fabcf2a614245a6c7a89a382668116588e6afdf8f67e28b133",
-      "c": "sha256:b4e9a1fc63b515a7640227872b44b59f93c2750db6ce7336f0ff853afef3318f"
+      "c": "sha256:ee0517a82e1da452f22b230a6884816b2ac7f96921e847b0e35334bd3efe097a"
     },
     {
       "name": "overflow-multiply",
       "source": "001-011-overflow-multiply.lts",
       "ts": "sha256:2e57af65817c0041c2d13e0b42ce5ac4614bec96e95ba6eed769e4efb33c7e2c",
-      "c": "sha256:06da5961d1d8c15a999d44bc3cd21fbd516669dd07c0e488419c6a2e5531abfc"
+      "c": "sha256:005fafbf9015e9e2d3a175af5b4b9b482947378b5b03a9b28d3da4e825677210"
     },
     {
       "name": "overflow-subtract",
       "source": "001-011-overflow-subtract.lts",
       "ts": "sha256:667cdb5d2ae34b61072d96920f81c6882145aa70fd795a0d37a4e5108174f043",
-      "c": "sha256:cf386e2aeef61a66646a0afdefce58ab02216d801123c32d47f1259466bf030c"
+      "c": "sha256:e4049f20b4ff4c40c941b0dd363949d4aa93761c6b77d13686466d460395b5e0"
     }
   ],
   "artifactSha256": "bd4740f52b99448839503a4875b684c23be0ca2943569f3de1783b0b6ae34c05"
