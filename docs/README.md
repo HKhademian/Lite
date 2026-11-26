@@ -30,12 +30,19 @@ The detailed reference below develops these foundations one concept at a time.
 
 ## Reading paths
 
-- **Foundations and types:** white paper → principles → decisions → grammar sketch → type categories → unions → patterns → errors.
-- **Collections and sequences:** collections and iterators → sequence types → arrays/lists/slices → collection contracts and algorithms.
-- **Control flow and lifecycle:** blocks and results → conditionals → loops → exits → recovery → finally and cleanup.
-- **Modules, performance, and tooling:** modules and packages → memory and performance → tooling and learning.
-
-These are reading paths, not separate index entries; each document has one canonical entry in this index.
+- **Types and patterns.** Start with [type categories](lite://doc/type-categories),
+  then see [unions](lite://doc/union-normalization), [pattern examples](lite://doc/pattern-examples),
+  and [Result and errors](lite://doc/result-and-errors).
+- **Collections.** Compare [sequence types](lite://doc/sequence-types), then see
+  how [arrays](lite://doc/arrays), [lists](lite://doc/lists), and [slices](lite://doc/slices)
+  relate to [iterators](lite://doc/collections-and-iterators).
+- **Control flow.** Read [blocks and results](lite://doc/blocks-and-results),
+  [conditionals](lite://doc/conditionals), and [loops](lite://doc/loops), then follow
+  [exits](lite://doc/control-flow), [recovery](lite://doc/recovery-boundaries), and
+  [cleanup](lite://doc/finally).
+- **Modules and tooling.** Read [modules and packages](lite://doc/modules-and-packages)
+  for imports and file kinds. See [memory and performance](lite://doc/memory-and-performance)
+  for native execution, and the [CLI reference](lite://tool) for command usage.
 
 ## How to read this reference
 

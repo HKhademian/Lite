@@ -8,7 +8,7 @@ agreement is required.
 Use the [first-program guide](lite://doc/start-here#prepare-the-checkout) to
 prepare the checkout and make sure you can run a script. Then read
 [AGENTS.md](lite://repo/AGENTS.md) and the [development workflow](lite://doc/development-workflow).
-Install the locked development dependencies from the repository root:
+Install the locked development dependencies from the repository root.
 
 ```sh
 npm --prefix igniter ci

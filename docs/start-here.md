@@ -36,8 +36,8 @@ records the program's input, output, and exit code.
 
 ## Prepare the checkout
 
-Use Git, a shell, and the Node.js version in
-[igniter/.node-version](lite://repo/igniter/.node-version). From a terminal:
+Use Git and the Node.js version in
+[igniter/.node-version](lite://repo/igniter/.node-version). Run these commands in a terminal.
 
 ```sh
 git clone https://github.com/HKhademian/Lite.git
@@ -57,14 +57,14 @@ For syntax highlighting, see [VS Code support](lite://repo/editors/vscode/README
 
 ## Compile, build natively, play, and check
 
-To see the generated TypeScript, run this from the repository root:
+Run this command from the repository root to see the generated TypeScript.
 
 ```sh
 ./bin/lite compile --target ts hello.lts > hello.ts
 ```
 
 Install the locked compiler dependencies to use the C11 target or
-[`check`](lite://tool/check):
+[`check`](lite://tool/check).
 
 ```sh
 npm --prefix igniter ci
@@ -72,7 +72,7 @@ npm --prefix igniter ci
 ```
 
 `check` compiles and strictly checks the script without executing it.
-Use the C11 target to generate C source, run it, or build an executable:
+Use the C11 target to generate C source, run it, or build an executable.
 
 ```sh
 ./bin/lite compile --target c hello.lts > hello.c

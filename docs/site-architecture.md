@@ -8,6 +8,20 @@ There are no separate school, study, or university academic tracks; all guided l
 
 See [documentation maintenance](lite://doc/documentation) and [the documentation index](lite://doc/overview) for authoring and link-checking policy.
 
+## Build and preview locally
+
+Use the Node.js version in [igniter/.node-version](lite://repo/igniter/.node-version).
+Run these commands from the repository root.
+
+```sh
+npm --prefix igniter ci
+./site/build.ts
+./site/serve.ts
+```
+
+Open `http://127.0.0.1:8080/`. After editing the docs, run
+`./bin/lite docs --check`, rebuild the site, and reload the page.
+
 ## Static Site Route Map
 
 Every top-level route uses the shared shell, unified progress/drawer helper, global search modal, and stylesheet in [the site chrome helper](lite://repo/site/chrome.ts), [academy runtime](lite://repo/site/academy-state.ts), [client search script](lite://repo/site/search.ts), and [stylesheet generator](lite://repo/site/styles.ts):
@@ -15,9 +29,9 @@ Every top-level route uses the shared shell, unified progress/drawer helper, glo
 | Route | Purpose | Generator |
 | --- | --- | --- |
 | `/` (`index.html`) | Overview, shell quickstart, resume progress bar, Academy pillar hub, featured samples | [build.ts](lite://repo/site/build.ts) |
-| `/learn/` | Interactive ability curriculum (21 lessons + 3 tutorials) with filters, resizable workbench, and Play Canvas + Audio runner | [learn-pages.ts](lite://repo/site/learn-pages.ts) |
-| `/gym/` | Browser-graded coding dojo (20 Litelings drills + 25 belt-ranked workouts) with line diffs, switcher drawer, and custom stdin sandbox | [gym-pages.ts](lite://repo/site/gym-pages.ts) |
-| `/docs/` | Layer 1 runnable 7-chapter Shipped Handbook (full-map topic tree, inline roadmap, prev/next cards) + Layer 2 design specs, proposals, and compiler docs | [docs-pages.ts](lite://repo/site/docs-pages.ts) |
+| `/learn/` | Guided lessons and projects with an interactive runner | [learn-pages.ts](lite://repo/site/learn-pages.ts) |
+| `/gym/` | Browser-graded drills and belt-ranked workouts | [gym-pages.ts](lite://repo/site/gym-pages.ts) |
+| `/docs/` | First-program guide, syntax tour, Handbook, and language design references | [docs-pages.ts](lite://repo/site/docs-pages.ts) |
 | `/modules/` | Standard library & Play (`core/*`, `extra/*`) API reference extracted from `.lts` sources with Academy & showcase backlinks | [modules-pages.ts](lite://repo/site/modules-pages.ts) |
 | `/tools/` | `./bin/lite` CLI subcommands, VS Code extension guide, Play host bridge, self-hosting ladder | [tools-page.ts](lite://repo/site/tools-page.ts) |
 | `/gallery/` | Build-time verified language showcase programs, Canvas art, Audio synthesis, and Play games | [build.ts](lite://repo/site/build.ts) |

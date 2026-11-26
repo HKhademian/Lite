@@ -15,7 +15,7 @@
 
 Open [Hello Lite](https://hkhademian.github.io/Lite/learn/getting-started/hello-lite.html) and click **Run** to see a Lite program execute in your browser. The lesson supplies two inputs and lets you edit the program.
 
-To run locally, use the Node.js version in [igniter/.node-version](igniter/.node-version) and a shell:
+To run locally, use the Node.js version in [igniter/.node-version](igniter/.node-version). Run these commands in a shell.
 
 ```sh
 git clone https://github.com/HKhademian/Lite.git
@@ -44,7 +44,7 @@ Lite is alpha software; the compiler currently supports a growing subset of the 
 - [Compiler reference](compiler/README.md) — compiler architecture, targets, and current coverage.
 - [Bootstrap guide](compiler/bootstrap/README.md) — self-rebuilding seed and verification.
 - [Transition plan](compiler/transition-plan.md) — ongoing compiler work and roadmap.
-- [Site architecture](docs/site-architecture.md) — build and preview the docs site, or work on the browser tools.
+- [Build and preview the docs site](docs/site-architecture.md#build-and-preview-locally) — local workflow for documentation contributors.
 - [Releases](docs/release-automation.md) & [Changelog](CHANGELOG.md) — versioning, gates, and milestones.
 - [Contributing](CONTRIBUTING.md) — development workflow and tests.
 
