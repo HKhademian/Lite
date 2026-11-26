@@ -551,10 +551,10 @@ pub distinctBaseKind := fn(kind: String): String {
     cur
 };
 
-/** True when `kind` (or its distinct base representation) is a mutable List, Array, Map, Set, Rc, or nominal record. */
+/** True when `kind` (or its distinct base representation) is a mutable List, Array, Map, Set, Rc, Slice, or nominal record. */
 pub isMutContainerKind := fn(kind: String): Bool {
     base := distinctBaseKind(kind);
-    isListKind(base) or isArrayKind(base) or isMapKind(base) or isSetKind(base) or isRcKind(base) or isRecordKind(base)
+    isListKind(base) or isArrayKind(base) or isMapKind(base) or isSetKind(base) or isRcKind(base) or isSliceKind(base) or isRecordKind(base)
 };
 
 /** True when `kind` is a nominal record or distinct type whose base representation is a nominal record. */
@@ -591,6 +591,83 @@ pub isRcKind := fn(kind: String): Bool {
 pub rcElementKind := fn(kind: String): String {
     if not isRcKind(kind) { return ""; }
     kind.slice(3, kind.length() - 1)
+};
+
+/** True when `kind` is canonical `Slice<T>`. */
+pub isSliceKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 7 and kind.startsWithAt(0, "Slice<") and kind.at(size - 1) == ">"
+};
+
+/** Returns the element type `T` from canonical `Slice<T>`, or `""` otherwise. */
+pub sliceElementKind := fn(kind: String): String {
+    if not isSliceKind(kind) { return ""; }
+    kind.slice(6, kind.length() - 1)
+};
+
+/** True when `kind` is or transitively contains a borrowed `Slice<T>` type. */
+pub containsSliceKind := fn(kind: String): Bool {
+    if kind.indexOf("Slice<", 0) < 0 { return false; }
+    if isSliceKind(kind) { return true; }
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if isListKind(kind) { return self(listElementKind(kind)); }
+    if isArrayKind(kind) { return self(arrayElementKind(kind)); }
+    if isMapKind(kind) { return self(mapKeyKind(kind)) or self(mapValueKind(kind)); }
+    if isSetKind(kind) { return self(setElementKind(kind)); }
+    if isRcKind(kind) { return self(rcElementKind(kind)); }
+    if isTupleKind(kind) {
+        var i := 0;
+        n := tupleComponentCount(kind);
+        loop i < n {
+            if self(tupleComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    if isRecordKind(kind) {
+        var i := 0;
+        n := recordComponentCount(kind);
+        loop i < n {
+            if self(recordComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    if isPayloadEnumKind(kind) {
+        var ci := 0;
+        cc := enumCaseCount(kind);
+        loop ci < cc {
+            loop enumCasePayloads(kind, ci) as pk {
+                if self(pk) { return true; }
+            }
+            ci = ci + 1;
+        }
+        return false;
+    }
+    if isFnKind(kind) {
+        var pi := 0;
+        pc := fnParamCount(kind);
+        loop pi < pc {
+            if self(fnParamComponent(kind, pi).kind) { return true; }
+            pi = pi + 1;
+        }
+        return self(fnResultKind(kind));
+    }
+    false
+};
+
+/** True when `elemKind` is stored in bit-packed sub-byte lanes (`Bool`, `Int1..Int4`, `UInt1..UInt4`). */
+pub isBitPackedElemKind := fn(elemKind: String): Bool {
+    base := distinctBaseKind(elemKind);
+    base == ir.VALUE_KIND_BOOL or
+    base == ir.VALUE_KIND_INT1 or base == ir.VALUE_KIND_INT2 or base == ir.VALUE_KIND_INT4 or
+    base == ir.VALUE_KIND_UINT1 or base == ir.VALUE_KIND_UINT2 or base == ir.VALUE_KIND_UINT4
+};
+
+/** True when `kind` is a concrete `[T; N]` fixed array backed by bit-packed sub-byte storage. */
+pub isBitPackedArrayKind := fn(kind: String): Bool {
+    base := distinctBaseKind(kind);
+    isArrayKind(base) and cArrayTag(base) =!= "" and isBitPackedElemKind(arrayElementKind(base))
 };
 
 /** True when `kind` is a canonical closed-union type set `Union<K1,K2,...>`. */
@@ -875,6 +952,7 @@ pub typeOpOwnerKey := fn(kind: String): String {
     if isMapKind(kind) { return "Map"; }
     if isSetKind(kind) { return "Set"; }
     if isRcKind(kind) { return "Rc"; }
+    if isSliceKind(kind) { return "Slice"; }
     if isArrayKind(kind) { return "Array"; }
     if kind == ir.VALUE_KIND_STRING or kind == ir.VALUE_KIND_BOOL or numeric.isNumericKind(kind) {
         return kind;
@@ -913,6 +991,7 @@ pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String
     if moduleIdentity == "lite.core.map.v1" and typeName == "Map" { return "Map"; }
     if moduleIdentity == "lite.core.set.v1" and typeName == "Set" { return "Set"; }
     if moduleIdentity == "lite.core.rc.v1" and typeName == "Rc" { return "Rc"; }
+    if moduleIdentity == "lite.core.slice.v1" and typeName == "Slice" { return "Slice"; }
     if moduleIdentity == "lite.core.text.v1" and
     (typeName == "String" or typeName == "Bool" or numeric.isFloatKind(typeName)) {
         return typeName;
@@ -926,7 +1005,7 @@ pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String
 
 /** True when `typeName` is a generic built-in type family requiring explicit `Self<...>` arguments. */
 pub isGenericCoreOwner := fn(typeName: String): Bool {
-    typeName == "List" or typeName == "Map" or typeName == "Set" or typeName == "Rc" or typeName == "Array"
+    typeName == "List" or typeName == "Map" or typeName == "Set" or typeName == "Rc" or typeName == "Slice" or typeName == "Array"
 };
 
 /** Returns the backing scalar kind of canonical enum kind `kind`, or `""` for a plain or payload enum. */
@@ -1260,6 +1339,7 @@ cIsSupportedElem := fn(kind: String): Bool {
     else if isMapKind(kind) { ok = isMapKeyKind(mapKeyKind(kind)) and self(mapValueKind(kind)); }
     else if isSetKind(kind) { ok = isMapKeyKind(setElementKind(kind)); }
     else if isRcKind(kind) { ok = self(rcElementKind(kind)); }
+    else if isSliceKind(kind) { ok = cListTag(sliceElementKind(kind)) =!= ""; }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         ok = true;
@@ -1497,6 +1577,15 @@ pub cRcTag := fn(kind: String): String {
     if s =!= "" { "lt_rc_" + s } else { "lt_rc_" + cStructHash(elBase) }
 };
 
+/** Maps a C-supported `Slice<T>` kind to its C11 16-byte view struct typedef `lt_slice_<tag>`, or `""`. */
+pub cSliceTag := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if not isSliceKind(kind) { return ""; }
+    el := sliceElementKind(kind);
+    lt := cListTag(el);
+    if lt =!= "" { "lt_slice_" + lt } else { "" }
+};
+
 /** Maps a non-array C-supported list element kind (scalar, enum, tuple, record, payload enum, rc, or fn) to its canonical C11 tag. */
 cNonArrayListTag := fn(elemKind: String): String {
     if isDistinctKind(elemKind) { return self(distinctBaseKind(elemKind)); }
@@ -1621,6 +1710,7 @@ pub cValueType := fn(kind: String): String {
     else if cMapTag(kind) =!= "" { cMapTag(kind) }
     else if cSetTag(kind) =!= "" { cSetTag(kind) }
     else if cRcTag(kind) =!= "" { cRcTag(kind) }
+    else if cSliceTag(kind) =!= "" { cSliceTag(kind) }
     else if cStructTag(kind) =!= "" { cStructTag(kind) }
     else if cFnTag(kind) =!= "" { cFnTag(kind) }
     else { "lt_str" };
@@ -1739,7 +1829,7 @@ pub encodeRecordDefaultsFromAliases := fn(aliases: List<AliasDecl>, recordKind: 
 
 /** True when TS local/var declarations of `kind` require an explicit type annotation (empty lists, maps, arrays, records, enums, or callables). */
 pub needsTsTypeAnnotation := fn(kind: String): Bool {
-    isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or isDistinctKind(kind) or containsFnKind(kind)
+    isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isSliceKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or isDistinctKind(kind) or containsFnKind(kind)
 };
 
 /** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
@@ -1801,6 +1891,7 @@ pub containsFnKind := fn(kind: String): Bool {
     else if isMapKind(kind) { res = self(mapKeyKind(kind)) or self(mapValueKind(kind)); }
     else if isSetKind(kind) { res = self(setElementKind(kind)); }
     else if isRcKind(kind) { res = self(rcElementKind(kind)); }
+    else if isSliceKind(kind) { res = self(sliceElementKind(kind)); }
     else if isArrayKind(kind) { res = self(arrayElementKind(kind)); }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
@@ -2028,6 +2119,7 @@ pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
     if isListKind(kind) { return self(genericParams, listElementKind(kind)); }
     if isSetKind(kind) { return self(genericParams, setElementKind(kind)); }
     if isRcKind(kind) { return self(genericParams, rcElementKind(kind)); }
+    if isSliceKind(kind) { return self(genericParams, sliceElementKind(kind)); }
     if isMapKind(kind) { return self(genericParams, mapKeyKind(kind)) or self(genericParams, mapValueKind(kind)); }
     if isArrayKind(kind) {
         return self(genericParams, arrayElementKind(kind)) or valueParamKind(genericParams, arrayExtentText(kind)) =!= "";
@@ -2092,6 +2184,9 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
     }
     if isRcKind(pattern) {
         return "Rc<" + self(genericParams, rcElementKind(pattern), bindings) + ">";
+    }
+    if isSliceKind(pattern) {
+        return "Slice<" + self(genericParams, sliceElementKind(pattern), bindings) + ">";
     }
     if isMapKind(pattern) {
         return "Map<" + self(genericParams, mapKeyKind(pattern), bindings) + "," +
@@ -2207,12 +2302,14 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
 pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): String {
     if isListKind(kind) {
         elem := listElementKind(kind);
+        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
         if isListKind(elem) { return "nested list types are not supported"; }
         if elem == ir.VALUE_KIND_UNIT { return "unsupported list element type Unit"; }
         return self(elem, allowGenericParams);
     }
     if isSetKind(kind) {
         elem := setElementKind(kind);
+        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
         if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isMapKeyKind(elem) {
             return "unsupported set element type " + displayKind(elem);
         }
@@ -2220,17 +2317,28 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     }
     if isRcKind(kind) {
         elem := rcElementKind(kind);
+        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
         if elem == ir.VALUE_KIND_UNIT or elem == ir.VALUE_KIND_NEVER {
             return "unsupported Rc element type " + displayKind(elem);
         }
         return self(elem, allowGenericParams);
     }
+    if isSliceKind(kind) {
+        elem := sliceElementKind(kind);
+        if elem == ir.VALUE_KIND_UNIT or elem == ir.VALUE_KIND_NEVER {
+            return "unsupported Slice element type " + displayKind(elem);
+        }
+        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        return self(elem, allowGenericParams);
+    }
     if isMapKind(kind) {
         k := mapKeyKind(kind);
+        if containsSliceKind(k) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
         if not isGenericParamName(allowGenericParams, distinctBaseKind(k)) and not isMapKeyKind(k) {
             return "unsupported map key type " + displayKind(k);
         }
         v := mapValueKind(kind);
+        if containsSliceKind(v) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
         if v == ir.VALUE_KIND_UNIT or v == ir.VALUE_KIND_NEVER {
             return "unsupported map value type " + displayKind(v);
         }
@@ -2240,6 +2348,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     }
     if isArrayKind(kind) {
         elem := arrayElementKind(kind);
+        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
         if elem == ir.VALUE_KIND_UNIT { return "unsupported array element type Unit"; }
         extText := arrayExtentText(kind);
         if extText =!= "*" and valueParamKind(allowGenericParams, extText) =!= ir.VALUE_KIND_INT {
@@ -2283,6 +2392,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         loop fi < fc {
             fk := recordComponent(kind, fi).kind;
             if fk == ir.VALUE_KIND_UNIT { return "unsupported record field type Unit"; }
+            if containsSliceKind(fk) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
             err := self(fk, allowGenericParams);
             if err =!= "" { return err; }
             fi = fi + 1;
@@ -2297,6 +2407,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         if uk == ir.VALUE_KIND_UNIT or uk == ir.VALUE_KIND_NEVER {
             return "unsupported distinct underlying type " + displayKind(uk);
         }
+        if containsSliceKind(uk) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
         return self(uk, allowGenericParams);
     }
     if isPayloadEnumKind(kind) {
@@ -2307,6 +2418,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
                 if pk == ir.VALUE_KIND_UNIT or pk == ir.VALUE_KIND_NEVER {
                     return "unsupported enum payload type " + displayKind(pk);
                 }
+                if containsSliceKind(pk) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
                 err := self(pk, allowGenericParams);
                 if err =!= "" { return err; }
             }
@@ -2503,6 +2615,7 @@ pub tsFunctionType := fn(kind: String): String {
     else if isMapKind(kind) { out = "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">"; }
     else if isSetKind(kind) { out = "Set<" + self(setElementKind(kind)) + ">"; }
     else if isRcKind(kind) { out = "{ box: { count: number; value: " + self(rcElementKind(kind)) + " } | null }"; }
+    else if isSliceKind(kind) { out = "{ readonly data: " + self(sliceElementKind(kind)) + "[]; readonly off: number; readonly len: number }"; }
     else if isArrayKind(kind) { out = self(arrayElementKind(kind)) + "[]"; }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
@@ -2589,6 +2702,10 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
     if isRcKind(kind) {
         elemKind := rcElementKind(kind);
         return "((r: " + tsFunctionType(kind) + "): string => r.box === null ? \"Rc(empty)\" : (\"Rc(\" + ((v: " + tsFunctionType(elemKind) + "): string => " + self(elemKind, "v") + ")(r.box.value) + \")\"))(" + code + ")";
+    }
+    if isSliceKind(kind) {
+        elemKind := sliceElementKind(kind);
+        return "((s: " + tsFunctionType(kind) + "): string => \"[\" + s.data.slice(s.off, s.off + s.len).map((value: " + tsFunctionType(elemKind) + ") => " + self(elemKind, "value") + ").join(\", \") + \"]\")(" + code + ")";
     }
     if isPayloadEnumKind(kind) {
         enumName := enumDisplayName(kind);
@@ -2725,6 +2842,7 @@ pub displayKind := fn(kind: String): String {
     if isMapKind(kind) { return "Map<" + self(mapKeyKind(kind)) + ", " + self(mapValueKind(kind)) + ">"; }
     if isSetKind(kind) { return "Set<" + self(setElementKind(kind)) + ">"; }
     if isRcKind(kind) { return "Rc<" + self(rcElementKind(kind)) + ">"; }
+    if isSliceKind(kind) { return "Slice<" + self(sliceElementKind(kind)) + ">"; }
     if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + arrayExtentText(kind) + "]"; }
     if isFnKind(kind) {
         count := fnParamCount(kind);
@@ -2999,7 +3117,7 @@ resolveDiscreteType := fn(aliases: List<AliasDecl>, rawTypeName: String, prefix:
         if tgt == "" or tgt.startsWithAt(0, "@recraw:") or tgt.startsWithAt(0, "@distraw:") or
         tgt.startsWithAt(0, "@genraw:") or tgt.startsWithAt(0, "@gentpl:") or tgt.startsWithAt(0, "$Val:") or
         isRecordKind(tgt) or isDistinctKind(tgt) or isTupleKind(tgt) or isListKind(tgt) or
-        isArrayKind(tgt) or isMapKind(tgt) or isSetKind(tgt) or isRcKind(tgt) or isFnKind(tgt) or
+        isArrayKind(tgt) or isMapKind(tgt) or isSetKind(tgt) or isRcKind(tgt) or isSliceKind(tgt) or isFnKind(tgt) or
         tgt.startsWithAt(0, "(") or tgt.startsWithAt(0, "[") or tgt.startsWithAt(0, "fn") {
             return (ok = false, kind = "", error = "unsupported comptime parameter type " + rawTypeName + "; only Int, Bool, String, and payload-free enums are supported");
         }
@@ -3311,6 +3429,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             if resolvedField.kind == ir.VALUE_KIND_UNIT {
                 syntax.failAt(errSource, errPos, prefix, "unsupported record field type Unit");
             }
+            if containsSliceKind(resolvedField.kind) {
+                syntax.failAt(errSource, errPos, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+            }
             (mut parts).pushBack(fName.text + ":" + resolvedField.kind);
             idx = idx + 1;
         }
@@ -3448,6 +3569,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if inner.kind == ir.VALUE_KIND_UNIT {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported array element type Unit");
         }
+        if containsSliceKind(inner.kind) {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        }
         afterElem := syntax.skipTrivia(source, inner.next, prefix);
         if afterElem >= size or source.at(afterElem) =!= ";" {
             syntax.failAt(errSource, if useLocalErr { afterElem } else { errPos }, prefix, if useLocalErr { "expected ;" } else { "expected [Type; Extent] in array type" });
@@ -3539,6 +3663,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if isListKind(inner.kind) {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "nested list types are not supported");
         }
+        if containsSliceKind(inner.kind) {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        }
         close := syntax.skipTrivia(source, inner.next, prefix);
         if close >= size or source.at(close) =!= ">" {
             syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in list type" });
@@ -3553,6 +3680,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         inner := self(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, "array element", genericType, seen);
         if inner.kind == ir.VALUE_KIND_UNIT {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "unsupported array element type Unit");
+        }
+        if containsSliceKind(inner.kind) {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
         }
         afterElem := syntax.skipTrivia(source, inner.next, prefix);
         if afterElem < size and source.at(afterElem) == ">" {
@@ -3571,6 +3701,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "expected a map key type");
         }
         keyParsed := self(errSource, errPos, useLocalErr, source, keyStart, prefix, aliases, "map key", genericType, seen);
+        if containsSliceKind(keyParsed.kind) {
+            syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        }
         if not isGenericParamName(genericType, distinctBaseKind(keyParsed.kind)) and not isMapKeyKind(keyParsed.kind) {
             syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "unsupported map key type " + displayKind(keyParsed.kind));
         }
@@ -3586,6 +3719,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if valParsed.kind == ir.VALUE_KIND_UNIT or valParsed.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, if useLocalErr { valStart } else { errPos }, prefix, "unsupported map value type " + displayKind(valParsed.kind));
         }
+        if containsSliceKind(valParsed.kind) {
+            syntax.failAt(errSource, if useLocalErr { valStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        }
         close := syntax.skipTrivia(source, valParsed.next, prefix);
         if close >= size or source.at(close) =!= ">" {
             syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in map type" });
@@ -3598,6 +3734,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected a set element type");
         }
         elemParsed := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "set element", genericType, seen);
+        if containsSliceKind(elemParsed.kind) {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        }
         if not isGenericParamName(genericType, distinctBaseKind(elemParsed.kind)) and not isMapKeyKind(elemParsed.kind) {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported set element type " + displayKind(elemParsed.kind));
         }
@@ -3616,11 +3755,32 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if elemParsed.kind == ir.VALUE_KIND_UNIT or elemParsed.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported Rc element type " + displayKind(elemParsed.kind));
         }
+        if containsSliceKind(elemParsed.kind) {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        }
         close := syntax.skipTrivia(source, elemParsed.next, prefix);
         if close >= size or source.at(close) =!= ">" {
             syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in Rc type" });
         }
         return (kind = "Rc<" + elemParsed.kind + ">", next = close + 1);
+    }
+    if resolvedName == "Slice" and afterName < size and source.at(afterName) == "<" {
+        elemStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if elemStart >= size or source.at(elemStart) == ">" {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected a Slice element type");
+        }
+        elemParsed := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "Slice element", genericType, seen);
+        if elemParsed.kind == ir.VALUE_KIND_UNIT or elemParsed.kind == ir.VALUE_KIND_NEVER {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported Slice element type " + displayKind(elemParsed.kind));
+        }
+        if containsSliceKind(elemParsed.kind) {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        }
+        close := syntax.skipTrivia(source, elemParsed.next, prefix);
+        if close >= size or source.at(close) =!= ">" {
+            syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in Slice type" });
+        }
+        return (kind = "Slice<" + elemParsed.kind + ">", next = close + 1);
     }
     if isGenericParamName(genericType, name) { return (kind = name, next = after); }
     if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT or numeric.isNarrowNumericKind(name) {
@@ -5124,6 +5284,21 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = close);
         }
         return (ok = true, kind = "Rc<" + elemRes.kind + ">", next = close + 1);
+    }
+    if resolvedName == "Slice" {
+        afterSl := syntax.skipTrivia(source, afterName, prefix);
+        if afterSl >= size or source.at(afterSl) =!= "<" {
+            return (ok = false, kind = "", next = afterSl);
+        }
+        elemRes := self(source, afterSl + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        if not elemRes.ok or elemRes.kind == ir.VALUE_KIND_UNIT or elemRes.kind == ir.VALUE_KIND_NEVER or containsSliceKind(elemRes.kind) {
+            return (ok = false, kind = "", next = afterSl + 1);
+        }
+        close := syntax.skipTrivia(source, elemRes.next, prefix);
+        if close >= size or source.at(close) =!= ">" {
+            return (ok = false, kind = "", next = close);
+        }
+        return (ok = true, kind = "Slice<" + elemRes.kind + ">", next = close + 1);
     }
     if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT {
         return (ok = true, kind = name, next = afterName);

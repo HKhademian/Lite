@@ -1,4 +1,4 @@
-/* Focused tests for copy-by-default range slicing on List<T>, [T; N], and String. */
+/* Focused tests for borrowed zero-copy range slicing on List<T>, [T; N], and String. */
 
 test := import "core/test";
 compilerBuild := import "util/compiler-build";
@@ -14,28 +14,38 @@ test.check("select C compiler: " + selC.error, selC.ok);
 tsComp := selTs.path;
 cComp := selC.path;
 
-/* 1. List, Array, and String range slicing (.., ..=, open start, open end, full copy, Unicode, value isolation) */
+/* 1. List, Array, and String range slicing (.., ..=, open start, open end, full view, Unicode, mut slice vs copy) */
 sliceProg :=
 "io := import \"core/io\";\n" +
 "items: mut List<Int> = [10, 20, 30, 40, 50];\n" +
-"mid := items[1..4];\n" +
-"inc := items[1..=3];\n" +
-"head := items[..2];\n" +
-"tail := items[3..];\n" +
-"full := items[..];\n" +
+"ownedMid := items.slice(1, 4);\n" +
+"{\n" +
+"    mid := items[1..4];\n" +
+"    inc := items[1..=3];\n" +
+"    head := items[..2];\n" +
+"    tail := items[3..];\n" +
+"    full := items[..];\n" +
+"    io.outputLine(mid[0], mid);\n" +
+"    io.outputLine(inc[1], inc);\n" +
+"    io.outputLine(head, tail, full[1]);\n" +
+"    io.outputLine(loop items[2..5] { .item + 1 }.collected);\n" +
+"}\n" +
 "items[1] = 999;\n" +
 "arr := [1, 2, 3, 4];\n" +
 "arrMid := arr[1..3];\n" +
 "arrInc := arr[..=2];\n" +
 "s := \"hello\";\n" +
 "emoji := \"a🚀b✨c\";\n" +
-"io.outputLine(mid.length(), mid);\n" +
-"io.outputLine(inc.length(), inc);\n" +
-"io.outputLine(head, tail, full.length(), full[1]);\n" +
+"io.outputLine(ownedMid, items[1..4]);\n" +
 "io.outputLine(arrMid, arrInc);\n" +
 "io.outputLine(s[1..4], s[..2], s[2..], s[..], s[1..=3]);\n" +
 "io.outputLine(emoji[1..4], emoji[1..4].length());\n" +
-"io.outputLine(loop items[2..5] { .item + 1 }.collected);\n";
+"{\n" +
+"    ms := mut items[1..4];\n" +
+"    ms[0] = 888;\n" +
+"    io.outputLine(ms);\n" +
+"}\n" +
+"io.outputLine(items);\n";
 
 optFlags := ["-O0", "-O1", "-O2", "-O3"];
 loop optFlags as flag {
@@ -44,7 +54,7 @@ loop optFlags as flag {
     rSl := compilerTest.checkAndRunTs(root, cSl.stdout);
     test.checkInt("range slicing run " + flag + ": " + rSl.stderr, 0, rSl.status);
     test.checkText("range slicing stdout " + flag,
-    "3 [20, 30, 40]\n3 [20, 30, 40]\n[10, 20] [40, 50] 5 20\n[2, 3] [1, 2, 3]\nell he llo hello ell\n🚀b✨ 3\n[31, 41, 51]\n",
+    "20 [20, 30, 40]\n30 [20, 30, 40]\n[10, 20] [40, 50] 20\n[31, 41, 51]\n[20, 30, 40] [999, 30, 40]\n[2, 3] [1, 2, 3]\nell he llo hello ell\n🚀b✨ 3\n[888, 30, 40]\n[10, 888, 30, 40, 50]\n",
     rSl.stdout);
 }
 

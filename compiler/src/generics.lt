@@ -246,6 +246,9 @@ mangleOneKind := fn(kind: String): String {
     if types.isRcKind(kind) {
         return "R_" + self(types.rcElementKind(kind)) + "_E";
     }
+    if types.isSliceKind(kind) {
+        return "Sl_" + self(types.sliceElementKind(kind)) + "_E";
+    }
     if types.isMapKind(kind) {
         return "M_" + self(types.mapKeyKind(kind)) + "_" + self(types.mapValueKind(kind)) + "_E";
     }
@@ -392,6 +395,9 @@ pub kindHasUnboundGeneric := fn(genericParams: String, kind: String, bindings: M
     if types.isRcKind(kind) {
         return self(genericParams, types.rcElementKind(kind), bindings);
     }
+    if types.isSliceKind(kind) {
+        return self(genericParams, types.sliceElementKind(kind), bindings);
+    }
     if types.isMapKind(kind) {
         return self(genericParams, types.mapKeyKind(kind), bindings) or self(genericParams, types.mapValueKind(kind), bindings);
     }
@@ -518,6 +524,12 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
             return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
         }
         return self(genericParams, types.rcElementKind(pattern), types.rcElementKind(actual), mut bindings);
+    }
+    if types.isSliceKind(pattern) {
+        if not types.isSliceKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        return self(genericParams, types.sliceElementKind(pattern), types.sliceElementKind(actual), mut bindings);
     }
     if types.isMapKind(pattern) {
         if not types.isMapKind(actual) {

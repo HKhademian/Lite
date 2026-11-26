@@ -191,6 +191,7 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "String.slice" and params == "text=String|start=Int|end=Int" and result == ir.VALUE_KIND_STRING { "lite$textSlice" }
         else if name == "String.toCodePoints" and params == "text=String" and result == "List<Int>" { "lite$unicodeToCodePoints" }
         else if name == "String.fromCodePoints" and params == "points=List<Int>" and result == "(ok:Bool,text:String,error:String)" { "lite$unicodeFromCodePoints" }
+        else if name == "String.bytes" and params == "text=String" and result == "Slice<UInt8>" { "lite$core$text$bytes:v1" }
         else if name == "Float.toText" and params == "value=Float" and result == ir.VALUE_KIND_STRING { "lite$floatToText" }
         else if name == "Float32.toText" and params == "value=Float32" and result == ir.VALUE_KIND_STRING { "lite$float32ToText" }
         else { "" }
@@ -205,6 +206,8 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "List.uncheckedGet" and params == "values=List<T>|index=Int" and result == "T" { "lite$core$list$uncheckedGet:v1" }
         else if name == "List.uncheckedSet" and params == "values=mut List<T>|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$uncheckedSet:v1" }
         else if name == "List.slice" and params == "values=List<T>|start=Int|end=Int" and result == "List<T>" { "lite$core$list$slice:v1" }
+        else if name == "List.$getSlice" and params == "values=List<T>|start=Int|end=Int" and result == "Slice<T>" { "lite$core$list$getSlice:v1" }
+        else if name == "List.$getMutSlice" and params == "values=mut List<T>|start=Int|end=Int" and result == "Slice<T>" { "lite$core$list$getMutSlice:v1" }
         else if name == "List.reverse" and params == "values=List<T>" and result == "List<T>" { "lite$core$list$reverse:v1" }
         else if name == "List.clear" and params == "values=mut List<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$list$clear:v1" }
         else { "" }
@@ -212,6 +215,8 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         if name == "Array.length" and params == "values=[T;N]" and result == ir.VALUE_KIND_INT { "lite$core$array$length:v1" }
         else if name == "Array.$getIndex" and params == "values=[T;N]|index=Int" and result == "T" { "lite$core$array$getIndex:v1" }
         else if name == "Array.$setIndex" and params == "values=mut [T;N]|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$array$setIndex:v1" }
+        else if name == "Array.$getSlice" and params == "values=[T;N]|start=Int|end=Int" and result == "Slice<T>" { "lite$core$array$getSlice:v1" }
+        else if name == "Array.$getMutSlice" and params == "values=mut [T;N]|start=Int|end=Int" and result == "Slice<T>" { "lite$core$array$getMutSlice:v1" }
         else if name == "Array.uncheckedGet" and params == "values=[T;N]|index=Int" and result == "T" { "lite$core$array$uncheckedGet:v1" }
         else if name == "Array.uncheckedSet" and params == "values=mut [T;N]|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$array$uncheckedSet:v1" }
         else { "" }
@@ -245,6 +250,17 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Rc.makeUnique" and params == "r=mut Rc<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$rc$makeUnique:v1" }
         else if name == "Rc.replace" and params == "r=mut Rc<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$rc$replace:v1" }
         else if name == "Rc.reset" and params == "r=mut Rc<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$rc$reset:v1" }
+        else { "" }
+    } else if moduleIdentity == "lite.core.slice.v1" {
+        if name == "Slice.length" and params == "values=Slice<T>" and result == ir.VALUE_KIND_INT { "lite$core$slice$length:v1" }
+        else if name == "Slice.$getIndex" and params == "values=Slice<T>|index=Int" and result == "T" { "lite$core$slice$getIndex:v1" }
+        else if name == "Slice.$setIndex" and params == "values=mut Slice<T>|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$slice$setIndex:v1" }
+        else if name == "Slice.uncheckedGet" and params == "values=Slice<T>|index=Int" and result == "T" { "lite$core$slice$uncheckedGet:v1" }
+        else if name == "Slice.uncheckedSet" and params == "values=mut Slice<T>|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$slice$uncheckedSet:v1" }
+        else if name == "Slice.$getSlice" and params == "values=Slice<T>|start=Int|end=Int" and result == "Slice<T>" { "lite$core$slice$getSlice:v1" }
+        else if name == "Slice.$getMutSlice" and params == "values=mut Slice<T>|start=Int|end=Int" and result == "Slice<T>" { "lite$core$slice$getMutSlice:v1" }
+        else if name == "Slice.splitAt" and params == "values=Slice<T>|mid=Int" and result == "(left:Slice<T>,right:Slice<T>)" { "lite$core$slice$splitAt:v1" }
+        else if name == "Slice.toList" and params == "values=Slice<T>" and result == "List<T>" { "lite$core$slice$toList:v1" }
         else { "" }
     } else if moduleIdentity == "lite.ds.arena.v1" {
         if name == "vmArenaCreate" and params == "capacityBytes=Int" and result == ir.VALUE_KIND_INT { "lite$vmArenaCreate" }

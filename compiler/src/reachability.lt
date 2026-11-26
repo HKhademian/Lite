@@ -119,7 +119,7 @@ scanCodeCallsSet := fn(code: String, seen: mut Set<String>, userFnsOnly: Bool): 
                 (name.startsWithAt(0, "lite$") and not name.startsWithAt(0, "lite$m$")) or
                 name.startsWithAt(0, "lite_") or
                 (name.startsWithAt(0, "lt_") and not name.startsWithAt(0, "lt_fn_") and
-                not name.startsWithAt(0, "lt_m_") and (not name.startsWithAt(0, "lt_s") or name.startsWithAt(0, "lt_s_") or name.startsWithAt(0, "lt_set_") or name.startsWithAt(0, "lt_str_") or name.startsWithAt(0, "lt_shl_") or name.startsWithAt(0, "lt_shr_") or name.startsWithAt(0, "lt_sadd_") or name.startsWithAt(0, "lt_ssub_") or name.startsWithAt(0, "lt_smul_")))
+                not name.startsWithAt(0, "lt_m_") and (not name.startsWithAt(0, "lt_s") or name.startsWithAt(0, "lt_s_") or name.startsWithAt(0, "lt_set_") or name.startsWithAt(0, "lt_slice_") or name.startsWithAt(0, "lt_str_") or name.startsWithAt(0, "lt_shl_") or name.startsWithAt(0, "lt_shr_") or name.startsWithAt(0, "lt_sadd_") or name.startsWithAt(0, "lt_ssub_") or name.startsWithAt(0, "lt_smul_")))
             };
             if matched {
                 mut seen.add(name + "(");
@@ -418,7 +418,7 @@ isTopDeclKind := fn(kind: String): Bool {
 
 /** True when `kind` and `code` only use scalar/unit features valid for scalar C dead-code pruning, preserving unsupported-type checks. */
 pub isCSupportedKindAndCode := fn(kind: String, code: String): Bool {
-    not types.isTupleKind(kind) and not types.isRecordKind(kind) and not types.isEnumKind(kind) and not types.isDistinctKind(kind) and not types.isMapKind(kind) and not types.isSetKind(kind) and not types.isRcKind(kind) and not types.isListKind(kind) and not types.isArrayKind(kind) and not types.containsFnKind(kind) and
+    not types.isTupleKind(kind) and not types.isRecordKind(kind) and not types.isEnumKind(kind) and not types.isDistinctKind(kind) and not types.isMapKind(kind) and not types.isSetKind(kind) and not types.isRcKind(kind) and not types.isSliceKind(kind) and not types.isListKind(kind) and not types.isArrayKind(kind) and not types.containsFnKind(kind) and
     not codeUsesValueIf(code) and not codeUsesListCopy(code) and not codeUsesListIndex(code) and not codeUsesListPop(code)
 };
 
@@ -428,7 +428,7 @@ isCUnsupportedItem := fn(item: Item): Bool {
     item.kind == ir.ITEM_KIND_LOCAL_RECORD or item.kind == ir.ITEM_KIND_VAR_RECORD or item.kind == ir.ITEM_KIND_ASSIGN_RECORD or
     item.kind == ir.ITEM_KIND_LOCAL_LIST or item.kind == ir.ITEM_KIND_VAR_LIST or item.kind == ir.ITEM_KIND_ASSIGN_LIST or
     item.kind == ir.ITEM_KIND_LOCAL_FN or item.kind == ir.ITEM_KIND_VAR_FN or item.kind == ir.ITEM_KIND_ASSIGN_FN or
-    (item.kind == ir.ITEM_KIND_DISCARD and (types.isTupleKind(item.name) or types.isRecordKind(item.name) or types.isEnumKind(item.name) or types.isDistinctKind(item.name) or types.isMapKind(item.name) or types.isSetKind(item.name) or types.isRcKind(item.name) or types.isListKind(item.name) or
+    (item.kind == ir.ITEM_KIND_DISCARD and (types.isTupleKind(item.name) or types.isRecordKind(item.name) or types.isEnumKind(item.name) or types.isDistinctKind(item.name) or types.isMapKind(item.name) or types.isSetKind(item.name) or types.isRcKind(item.name) or types.isSliceKind(item.name) or types.isListKind(item.name) or
     types.isArrayKind(item.name) or types.containsFnKind(item.name))) or
     codeUsesValueIf(item.code) or codeUsesListCopy(item.code) or codeUsesListIndex(item.code) or codeUsesListPop(item.code)
 };

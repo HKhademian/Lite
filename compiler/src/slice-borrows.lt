@@ -1,0 +1,300 @@
+/** Compile-time borrow, exclusivity, splitAt suspension, non-escaping, and provenance checks for borrowed `Slice<T>`. */
+
+ir := import "./frontend-ir";
+types := import "./frontend-types";
+syntax := import "./frontend-syntax";
+
+Local := alias (name: String, runtime: String, kind: String, mutable: Bool, writable: Bool, depth: Int, constant: Bool, code: String, intValue: Int, textValue: String, initState: String);
+
+/** Returns `true` when `locals[idx]` is currently in scope and is the latest entry for its `runtime`. */
+isLatestActiveSliceLocal := fn(locals: List<Local>, idx: Int): Bool {
+    loc := locals[idx];
+    if loc.depth < 0 or not types.isSliceKind(loc.kind) { return false; }
+    var j := locals.length() - 1;
+    loop j > idx {
+        if locals[j].runtime == loc.runtime { return false; }
+        j = j - 1;
+    }
+    true
+};
+
+/** Splits an owner chain `rt#depth#name|...` and returns `true` if `targetRt` appears at index >= `startIdx`, setting `outName`. */
+findOwnerInPayload := fn(payload: String, startIdx: Int, targetRt: String): (found: Bool, ownerName: String) {
+    if payload == "" or targetRt == "" { return (found = false, ownerName = ""); }
+    var idx := 0;
+    var start := 0;
+    size := payload.length();
+    loop start < size {
+        sep := payload.indexOf("|", start);
+        end := if sep >= 0 { sep } else { size };
+        if idx >= startIdx {
+            entry := payload.slice(start, end);
+            h1 := entry.indexOf("#", 0);
+            if h1 > 0 {
+                rt := entry.slice(0, h1);
+                if rt == targetRt {
+                    h2 := entry.indexOf("#", h1 + 1);
+                    nm := if h2 >= 0 { entry.slice(h2 + 1, entry.length()) } else { "" };
+                    return (found = true, ownerName = nm);
+                }
+            }
+        }
+        if sep < 0 { break; }
+        start = sep + 1;
+        idx = idx + 1;
+    }
+    (found = false, ownerName = "")
+};
+
+/** Encodes `rt#depth#name` prepended to existing provenance entries (`"ro_slice:..."` / `"borrow_ro:..."`), stripping its prefix. */
+stripProvenanceKind := fn(raw: String): String {
+    colon := raw.indexOf(":", 0);
+    if colon < 0 { "" } else { raw.slice(colon + 1, raw.length()) }
+};
+
+/** Returns the prefix kind before `:` in provenance `raw`, or `""`. */
+pub provenanceKind := fn(raw: String): String {
+    colon := raw.indexOf(":", 0);
+    if colon < 0 { "" } else { raw.slice(0, colon) }
+};
+
+/** Builds slice expression provenance (`ro_slice:...`, `mut_slice:...`, `ro_split:...`, `mut_split:...`) from receiver info. */
+pub makeSliceProvenance := fn(provKind: String, recvRuntime: String, recvDepth: Int, recvName: String, recvLocalText: String): String {
+    head := recvRuntime + "#" + recvDepth.toText() + "#" + recvName;
+    prev := stripProvenanceKind(recvLocalText);
+    tail := if prev =!= "" and prev =!= "param" { "|" + prev } else { "" };
+    provKind + ":" + head + tail
+};
+
+/** Converts a `Slice<T>` local entry into a read-only expression provenance when referenced by identifier. */
+pub sliceIdentifierProvenance := fn(runtime: String, depth: Int, name: String, localText: String): String {
+    prev := stripProvenanceKind(localText);
+    tail := if prev =!= "" and prev =!= "param" { "|" + prev } else { "" };
+    "ro_slice:" + runtime + "#" + depth.toText() + "#" + name + tail
+};
+
+/** Attaches split-half disjointness token `splitL@<pos>` or `splitR@<pos>` immediately after the split parent entry. */
+pub splitHalfProvenance := fn(rhsProvenance: String, splitPos: Int, isLeft: Bool): String {
+    pKind := provenanceKind(rhsProvenance);
+    payload := stripProvenanceKind(rhsProvenance);
+    bTag := if pKind == "mut_split" { "borrow_split:" } else { "borrow_ro:" };
+    sideTok := (if isLeft { "splitL@" } else { "splitR@" }) + splitPos.toText();
+    if payload == "" {
+        return bTag + sideTok;
+    }
+    firstSep := payload.indexOf("|", 0);
+    if firstSep < 0 {
+        return bTag + payload + "|" + sideTok;
+    }
+    head := payload.slice(0, firstSep);
+    rest := payload.slice(firstSep, payload.length());
+    bTag + head + "|" + sideTok + rest
+};
+
+/** True when `payload` contains the exact pipe-delimited token `tok`. */
+payloadHasToken := fn(payload: String, tok: String): Bool {
+    if payload == "" or tok == "" { return false; }
+    ("|" + payload + "|").indexOf("|" + tok + "|", 0) >= 0
+};
+
+/** True when two provenances come from opposite halves of the same `splitAt` call (`splitL@<id>` vs `splitR@<id>`). */
+pub areDisjointSplitProvenances := fn(provA: String, provB: String): Bool {
+    payA := stripProvenanceKind(provA);
+    payB := stripProvenanceKind(provB);
+    if payA == "" or payB == "" { return false; }
+    var start := 0;
+    size := payA.length();
+    loop start < size {
+        sep := payA.indexOf("|", start);
+        end := if sep >= 0 { sep } else { size };
+        entry := payA.slice(start, end);
+        if entry.startsWithAt(0, "splitL@") {
+            opp := "splitR@" + entry.slice(7, entry.length());
+            if payloadHasToken(payB, opp) { return true; }
+        } else if entry.startsWithAt(0, "splitR@") {
+            opp := "splitL@" + entry.slice(7, entry.length());
+            if payloadHasToken(payB, opp) { return true; }
+        }
+        if sep < 0 { break; }
+        start = sep + 1;
+    }
+    false
+};
+
+/** Converts RHS slice provenance into stored `Local.textValue` borrow provenance (`borrow_ro:...`, `borrow_mut:...`, `borrow_split:...`), or `""` if non-slice. */
+pub borrowTagForBinding := fn(targetKind: String, targetWritable: Bool, rhsProvenance: String): (ok: Bool, textValue: String, error: String) {
+    if not types.isSliceKind(targetKind) {
+        return (ok = true, textValue = rhsProvenance, error = "");
+    }
+    pKind := provenanceKind(rhsProvenance);
+    payload := stripProvenanceKind(rhsProvenance);
+    if targetWritable {
+        if pKind =!= "mut_slice" and pKind =!= "mut_split" {
+            return (ok = false, textValue = "", error = "mutable Slice<T> binding requires explicit mut slice expression");
+        }
+        bTag := if pKind == "mut_split" { "borrow_split:" } else { "borrow_mut:" };
+        return (ok = true, textValue = bTag + payload, error = "");
+    }
+    if pKind == "mut_slice" or pKind == "mut_split" or pKind == "ro_slice" or pKind == "ro_split" {
+        return (ok = true, textValue = "borrow_ro:" + payload, error = "");
+    }
+    if rhsProvenance.startsWithAt(0, "borrow_") { return (ok = true, textValue = rhsProvenance, error = ""); }
+    (ok = true, textValue = "", error = "")
+};
+
+/** Returns `writable` flag for an inferred local initialized from a slice expression (`mut_slice`/`mut_split` => true). */
+pub sliceExprIsMutable := fn(rhsProvenance: String): Bool {
+    pKind := provenanceKind(rhsProvenance);
+    pKind == "mut_slice" or pKind == "mut_split"
+};
+
+/** Returns maximum owner depth encoded in `provenance`, or -1 when static/literal/param. */
+maxBorrowOwnerDepth := fn(provenance: String): Int {
+    payload := stripProvenanceKind(provenance);
+    if payload == "" or payload == "param" { return -1; }
+    var maxD := -1;
+    var start := 0;
+    size := payload.length();
+    loop start < size {
+        sep := payload.indexOf("|", start);
+        end := if sep >= 0 { sep } else { size };
+        entry := payload.slice(start, end);
+        h1 := entry.indexOf("#", 0);
+        if h1 > 0 {
+            h2 := entry.indexOf("#", h1 + 1);
+            if h2 > h1 + 1 {
+                d := syntax.parseDigits(entry.slice(h1 + 1, h2), 0, h2 - h1 - 1);
+                if d > maxD { maxD = d; }
+            }
+        }
+        if sep < 0 { break; }
+        start = sep + 1;
+    }
+    maxD
+};
+
+/** Returns the first owner name encoded in `provenance`, or `""`. */
+firstOwnerName := fn(provenance: String): String {
+    payload := stripProvenanceKind(provenance);
+    if payload == "" or payload == "param" { return ""; }
+    sep := payload.indexOf("|", 0);
+    entry := if sep >= 0 { payload.slice(0, sep) } else { payload };
+    h1 := entry.indexOf("#", 0);
+    if h1 < 0 { return ""; }
+    h2 := entry.indexOf("#", h1 + 1);
+    if h2 < 0 { return ""; }
+    entry.slice(h2 + 1, entry.length())
+};
+
+/** Fails if assigning `rhsProvenance` to a local at `targetDepth` would let a borrowed slice outlive an inner owner. */
+pub checkSliceAssignDepth := fn(targetKind: String, targetDepth: Int, rhsProvenance: String, source: String, pos: Int, prefix: String): Unit {
+    if not types.isSliceKind(targetKind) { return; }
+    ownerDepth := maxBorrowOwnerDepth(rhsProvenance);
+    if ownerDepth > targetDepth {
+        ownerName := firstOwnerName(rhsProvenance);
+        label := if ownerName =!= "" { ownerName } else { "inner owner" };
+        syntax.failAt(source, pos, prefix, "borrowed slice cannot escape narrower scope of " + label);
+    }
+};
+
+/** Returns `true` if `rootRt` is currently borrowed by any active slice in `locals`, or fails with an exact borrow conflict message. */
+pub checkCanReadBinding := fn(locals: List<Local>, targetRuntime: String, targetName: String, source: String, pos: Int, prefix: String): Unit {
+    if targetRuntime == "" { return; }
+    var i := 0;
+    n := locals.length();
+    loop i < n {
+        if isLatestActiveSliceLocal(locals, i) {
+            b := locals[i];
+            bKind := provenanceKind(b.textValue);
+            payload := stripProvenanceKind(b.textValue);
+            if bKind == "borrow_mut" {
+                hit := findOwnerInPayload(payload, 0, targetRuntime);
+                if hit.found {
+                    syntax.failAt(source, pos, prefix, "cannot read " + targetName + " while mutably borrowed by slice " + b.name);
+                }
+            } else if bKind == "borrow_split" {
+                directHit := findOwnerInPayload(payload, 0, targetRuntime);
+                if directHit.found {
+                    parentHit := findOwnerInPayload(payload.slice(0, if payload.indexOf("|", 0) >= 0 { payload.indexOf("|", 0) } else { payload.length() }), 0, targetRuntime);
+                    if parentHit.found {
+                        syntax.failAt(source, pos, prefix, "cannot access slice " + targetName + " while split into active child borrow " + b.name);
+                    }
+                    syntax.failAt(source, pos, prefix, "cannot read " + targetName + " while mutably borrowed by slice " + b.name);
+                }
+            }
+        }
+        i = i + 1;
+    }
+};
+
+/** Fails if `targetRuntime` is currently borrowed (read-only, mutable, or split parent) by any active slice in `locals`. */
+pub checkCanMutateBinding := fn(locals: List<Local>, targetRuntime: String, targetName: String, source: String, pos: Int, prefix: String): Unit {
+    if targetRuntime == "" { return; }
+    var i := 0;
+    n := locals.length();
+    loop i < n {
+        if isLatestActiveSliceLocal(locals, i) {
+            b := locals[i];
+            bKind := provenanceKind(b.textValue);
+            payload := stripProvenanceKind(b.textValue);
+            if bKind == "borrow_split" {
+                hit := findOwnerInPayload(payload, 0, targetRuntime);
+                if hit.found {
+                    firstSep := payload.indexOf("|", 0);
+                    headOnly := if firstSep >= 0 { payload.slice(0, firstSep) } else { payload };
+                    if findOwnerInPayload(headOnly, 0, targetRuntime).found {
+                        syntax.failAt(source, pos, prefix, "cannot access slice " + targetName + " while split into active child borrow " + b.name);
+                    }
+                    syntax.failAt(source, pos, prefix, "cannot mutate " + targetName + " while borrowed by slice " + b.name);
+                }
+            } else if bKind == "borrow_ro" or bKind == "borrow_mut" {
+                hit := findOwnerInPayload(payload, 0, targetRuntime);
+                if hit.found {
+                    syntax.failAt(source, pos, prefix, "cannot mutate " + targetName + " while borrowed by slice " + b.name);
+                }
+            }
+        }
+        i = i + 1;
+    }
+};
+
+/** Returns root-most owner runtime encoded in slice provenance (for call-site aliasing checks), or `""`. */
+pub rootOwnersPipeBag := fn(provenance: String): String {
+    payload := stripProvenanceKind(provenance);
+    if payload == "" or payload == "param" { return ""; }
+    out: mut List<String> = [];
+    var start := 0;
+    size := payload.length();
+    loop start < size {
+        sep := payload.indexOf("|", start);
+        end := if sep >= 0 { sep } else { size };
+        entry := payload.slice(start, end);
+        h1 := entry.indexOf("#", 0);
+        if h1 > 0 {
+            mut out.pushBack(entry.slice(0, h1));
+        }
+        if sep < 0 { break; }
+        start = sep + 1;
+    }
+    if out.length() == 0 { "" } else { "|" + out.join("|") + "|" }
+};
+
+/** Fails if slice `exprProvenance` aliases any runtime listed in `mutArgRoots` (ignoring provenances from opposite halves of the same `splitAt`), or `""`. */
+pub findMutSliceAliasConflict := fn(exprProvenance: String, mutArgRoots: List<String>, mutArgNames: List<String>, mutArgProvs: List<String>): String {
+    if exprProvenance == "" or mutArgRoots.length() == 0 { return ""; }
+    payload := stripProvenanceKind(exprProvenance);
+    if payload == "" or payload == "param" { return ""; }
+    var ri := 0;
+    loop ri < mutArgRoots.length() {
+        mutProv := if ri < mutArgProvs.length() { mutArgProvs[ri] } else { "" };
+        if mutProv =!= "" and areDisjointSplitProvenances(exprProvenance, mutProv) {
+            ri = ri + 1;
+            continue;
+        }
+        if findOwnerInPayload(payload, 0, mutArgRoots[ri]).found {
+            return mutArgNames[ri];
+        }
+        ri = ri + 1;
+    }
+    ""
+};

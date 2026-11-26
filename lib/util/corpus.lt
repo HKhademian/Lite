@@ -171,6 +171,7 @@ MODULE_IDENTITIES: Map<String, String> = [
 "lib/core/map.lt" = "lite.core.map.v1",
 "lib/core/set.lt" = "lite.core.set.v1",
 "lib/core/rc.lt" = "lite.core.rc.v1",
+"lib/core/slice.lt" = "lite.core.slice.v1",
 "lib/ds/arena.lt" = "lite.ds.arena.v1",
 "lib/core/text.lt" = "lite.core.text.v1",
 "lib/core/file.lt" = "lite.core.file.v1",

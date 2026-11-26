@@ -852,6 +852,13 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         elTs := types.tsFunctionType(types.rcElementKind(kind));
         (kind = kind, code = "({ box: null } as { box: { count: number; value: " + elTs + " } | null })", intValue = 0, textValue = "", constant = false, next = next)
     }
+    else if types.isSliceKind(kind) {
+        if target == ir.TARGET_C and types.cSliceTag(kind) =!= "" {
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + types.cSliceTag(kind) + "){ .data = NULL, .len = 0 })", intValue = 0, textValue = "", constant = false, next = next);
+        }
+        elTs := types.tsFunctionType(types.sliceElementKind(kind));
+        (kind = kind, code = "({ data: ([] as " + elTs + "[]), off: 0, len: 0 })", intValue = 0, textValue = "", constant = false, next = next)
+    }
     else if types.isPayloadEnumKind(kind) {
         ps := types.enumCasePayloads(kind, 0);
         if target == ir.TARGET_C {
@@ -1953,7 +1960,7 @@ pub storageKind := fn(kind: String): String {
     match {
         types.isListKind(kind) or types.isArrayKind(kind) { "List" }
         types.isTupleKind(kind) { "Tuple" }
-        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) { "Record" }
+        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) { "Record" }
         types.isFnKind(kind) { "Fn" }
         numeric.isIntKind(kind) { ir.VALUE_KIND_INT }
         numeric.isFloatKind(kind) { ir.VALUE_KIND_FLOAT }
@@ -1963,7 +1970,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

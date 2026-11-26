@@ -105,7 +105,7 @@ paritySrc := [
     "    sumN += cast<Int>(v);",
     "}",
     "mVal := match nibbles { [-8, 5, 0, 7] { 1 } _ { 0 } };",
-    "sliced := nibbles[1..4];",
+    "sliced := nibbles.toList().slice(1, 4);",
     "io.outputLine(\"subbyte:\", nibbles, nibbles.0, d0, d1, d2, d3, sumN, mVal, sliced, bits);"
 ].join("\n");
 

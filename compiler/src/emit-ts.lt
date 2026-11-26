@@ -161,6 +161,18 @@ usesListPopFront := fn(calls: String): Bool {
     usesBuiltin(calls, "listPopFront")
 }
 
+/** True when any emitted item calls borrowed `Slice<T>` or `String.bytes()` helpers. */
+usesSliceFrom := fn(calls: String): Bool { usesBuiltin(calls, "sliceFrom") }
+usesSliceSub := fn(calls: String): Bool { usesBuiltin(calls, "sliceSub") }
+usesSliceAt := fn(calls: String): Bool { usesBuiltin(calls, "sliceAt") }
+usesSliceSet := fn(calls: String): Bool { usesBuiltin(calls, "sliceSet") }
+usesSliceUncheckedAt := fn(calls: String): Bool { usesBuiltin(calls, "sliceUncheckedAt") }
+usesSliceUncheckedSet := fn(calls: String): Bool { usesBuiltin(calls, "sliceUncheckedSet") }
+usesSliceSplitAt := fn(calls: String): Bool { usesBuiltin(calls, "sliceSplitAt") }
+usesSliceToList := fn(calls: String): Bool { usesBuiltin(calls, "sliceToList") }
+usesSliceIter := fn(calls: String): Bool { usesBuiltin(calls, "sliceIter") }
+usesStrBytes := fn(calls: String): Bool { usesBuiltin(calls, "strBytes") }
+
 /** True when any emitted item calls a host filesystem builtin. */
 /** True when any emitted item calls a core `file` host builtin. */
 usesFile := fn(calls: String): Bool {
@@ -455,7 +467,7 @@ emitFloatArithmeticHelpers := fn(calls: String, config: optCfg.OptConfig): Unit 
 
 /** True when positioned bounds faults may be raised by text or list helpers. */
 usesBounds := fn(calls: String): Bool {
-    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesListSet(calls) or usesListUncheckedIndex(calls) or usesListUncheckedSet(calls) or usesListSlice(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet") or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes")
+    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesListSet(calls) or usesListUncheckedIndex(calls) or usesListUncheckedSet(calls) or usesListSlice(calls) or usesSliceFrom(calls) or usesSliceSub(calls) or usesSliceAt(calls) or usesSliceSet(calls) or usesSliceUncheckedAt(calls) or usesSliceUncheckedSet(calls) or usesSliceSplitAt(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet") or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes")
 }
 
 /** True when runtime faults or input failures may require construct-level `finally` unwinding. */
@@ -478,9 +490,9 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String, co
     needUnchHelpers := usesUncheckedInt(calls);
     if not needCheckedHelpers and not needUnchHelpers and not usesBounds(calls) and not usesFloatArithmetic(calls) { return; }
     integers := needCheckedHelpers or needUnchHelpers;
-    hasHardBounds := usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListSlice(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet");
-    hasIdxBounds := config.checkBounds and (usesListIndex(calls) or usesListSet(calls) or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes"));
-    hasUnchBounds := config.checkUnchecked and (usesListUncheckedIndex(calls) or usesListUncheckedSet(calls));
+    hasHardBounds := usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListSlice(calls) or usesSliceFrom(calls) or usesSliceSub(calls) or usesSliceSplitAt(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet");
+    hasIdxBounds := config.checkBounds and (usesListIndex(calls) or usesListSet(calls) or usesSliceAt(calls) or usesSliceSet(calls) or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes"));
+    hasUnchBounds := config.checkUnchecked and (usesListUncheckedIndex(calls) or usesListUncheckedSet(calls) or usesSliceUncheckedAt(calls) or usesSliceUncheckedSet(calls));
     needsIntFaultFn := (config.checkArithmetic and needCheckedHelpers) or (config.checkUnchecked and needUnchHelpers);
     hasFloatArithCheck := usesBuiltin(calls, "floatOp") or usesBuiltin(calls, "float32Op") or usesBuiltin(calls, "float16Op") or usesBuiltin(calls, "float8Op") or usesBuiltin(calls, "floatPower");
     hasFloatFiniteCheck := hasFloatArithCheck or usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "f16Round") or usesBuiltin(calls, "f32Round") or usesBuiltin(calls, "fma8") or usesBuiltin(calls, "fma16") or usesBuiltin(calls, "fma32") or usesBuiltin(calls, "fma64") or usesBuiltin(calls, "f32FromBits") or usesBuiltin(calls, "f64FromBits");
@@ -3150,6 +3162,97 @@ emitListSliceHelper := fn(): Unit {
     outLine("");
 }
 
+/** Emits zero-copy borrowed `Slice<T>` and `String.bytes()` helpers on demand. */
+emitSliceFromHelper := fn(): Unit {
+    outLine("function lite$sliceFrom<T>(data: T[], start: bigint, end: bigint, hasEnd: boolean, at: number): { readonly data: T[]; readonly off: number; readonly len: number } {");
+    outLine("    const n = BigInt(data.length);");
+    outLine("    const e = hasEnd ? end : n;");
+    outLine("    if (start < 0n || e < start || e > n) { lite$fault(\"BoundPanic\", at, \"slice bounds outside its extent\"); }");
+    outLine("    return { data, off: Number(start), len: Number(e - start) };");
+    outLine("}");
+    outLine("");
+};
+emitSliceSubHelper := fn(): Unit {
+    outLine("function lite$sliceSub<T>(s: { readonly data: T[]; readonly off: number; readonly len: number }, start: bigint, end: bigint, hasEnd: boolean, at: number): { readonly data: T[]; readonly off: number; readonly len: number } {");
+    outLine("    const n = BigInt(s.len);");
+    outLine("    const e = hasEnd ? end : n;");
+    outLine("    if (start < 0n || e < start || e > n) { lite$fault(\"BoundPanic\", at, \"slice bounds outside its extent\"); }");
+    outLine("    return { data: s.data, off: s.off + Number(start), len: Number(e - start) };");
+    outLine("}");
+    outLine("");
+};
+emitSliceAtHelper := fn(config: optCfg.OptConfig): Unit {
+    outLine("function lite$sliceAt<T>(s: { readonly data: T[]; readonly off: number; readonly len: number }, index: bigint, at: number): T {");
+    if config.checkBounds {
+        outLine("    if (index < 0n || index >= BigInt(s.len)) { lite$fault(\"BoundPanic\", at, \"slice index outside its extent\"); }");
+    } else {
+        outLine("    void at;");
+    }
+    outLine("    return s.data[s.off + Number(index)] as T;");
+    outLine("}");
+    outLine("");
+};
+emitSliceSetHelper := fn(config: optCfg.OptConfig): Unit {
+    outLine("function lite$sliceSet<T>(s: { readonly data: T[]; readonly off: number; readonly len: number }, index: bigint, value: T, at: number): void {");
+    if config.checkBounds {
+        outLine("    if (index < 0n || index >= BigInt(s.len)) { lite$fault(\"BoundPanic\", at, \"slice index outside its extent\"); }");
+    } else {
+        outLine("    void at;");
+    }
+    outLine("    s.data[s.off + Number(index)] = value;");
+    outLine("}");
+    outLine("");
+};
+emitSliceUncheckedAtHelper := fn(config: optCfg.OptConfig): Unit {
+    outLine("function lite$sliceUncheckedAt<T>(s: { readonly data: T[]; readonly off: number; readonly len: number }, index: bigint, at: number): T {");
+    if config.checkUnchecked {
+        outLine("    if (index < 0n || index >= BigInt(s.len)) { lite$fault(\"BoundPanic\", at, \"slice index outside its extent\"); }");
+    } else {
+        outLine("    void at;");
+    }
+    outLine("    return s.data[s.off + Number(index)] as T;");
+    outLine("}");
+    outLine("");
+};
+emitSliceUncheckedSetHelper := fn(config: optCfg.OptConfig): Unit {
+    outLine("function lite$sliceUncheckedSet<T>(s: { readonly data: T[]; readonly off: number; readonly len: number }, index: bigint, value: T, at: number): void {");
+    if config.checkUnchecked {
+        outLine("    if (index < 0n || index >= BigInt(s.len)) { lite$fault(\"BoundPanic\", at, \"slice index outside its extent\"); }");
+    } else {
+        outLine("    void at;");
+    }
+    outLine("    s.data[s.off + Number(index)] = value;");
+    outLine("}");
+    outLine("");
+};
+emitSliceSplitAtHelper := fn(): Unit {
+    outLine("function lite$sliceSplitAt<T>(s: { readonly data: T[]; readonly off: number; readonly len: number }, mid: bigint, at: number): { left: { readonly data: T[]; readonly off: number; readonly len: number }; right: { readonly data: T[]; readonly off: number; readonly len: number } } {");
+    outLine("    if (mid < 0n || mid > BigInt(s.len)) { lite$fault(\"BoundPanic\", at, \"splitAt index outside slice extent\"); }");
+    outLine("    const m = Number(mid);");
+    outLine("    return { left: { data: s.data, off: s.off, len: m }, right: { data: s.data, off: s.off + m, len: s.len - m } };");
+    outLine("}");
+    outLine("");
+};
+emitSliceToListHelper := fn(): Unit {
+    outLine("function lite$sliceToList<T>(s: { readonly data: T[]; readonly off: number; readonly len: number }): T[] {");
+    outLine("    return s.data.slice(s.off, s.off + s.len);");
+    outLine("}");
+    outLine("");
+};
+emitSliceIterHelper := fn(): Unit {
+    outLine("function* lite$sliceIter<T>(s: { readonly data: T[]; readonly off: number; readonly len: number }): IterableIterator<T> {");
+    outLine("    for (let i = 0; i < s.len; i += 1) { yield s.data[s.off + i] as T; }");
+    outLine("}");
+    outLine("");
+};
+emitStrBytesHelper := fn(): Unit {
+    outLine("function lite$strBytes(s: string): { readonly data: bigint[]; readonly off: number; readonly len: number } {");
+    outLine("    const data = Array.from(new TextEncoder().encode(s), (b) => BigInt(b));");
+    outLine("    return { data, off: 0, len: data.length };");
+    outLine("}");
+    outLine("");
+};
+
 /** Emits the checked list-index helper used by generated programs that read list elements. */
 emitListIndexHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("function lite$listAt<T>(items: readonly T[], index: bigint, at: number): T {");
@@ -3781,6 +3884,16 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if usesListUncheckedIndex(calls) { emitListUncheckedIndexHelper(config); }
     if usesListUncheckedSet(calls) { emitListUncheckedSetHelper(config); }
     if usesListSlice(calls) { emitListSliceHelper(); }
+    if usesSliceFrom(calls) { emitSliceFromHelper(); }
+    if usesSliceSub(calls) { emitSliceSubHelper(); }
+    if usesSliceAt(calls) { emitSliceAtHelper(config); }
+    if usesSliceSet(calls) { emitSliceSetHelper(config); }
+    if usesSliceUncheckedAt(calls) { emitSliceUncheckedAtHelper(config); }
+    if usesSliceUncheckedSet(calls) { emitSliceUncheckedSetHelper(config); }
+    if usesSliceSplitAt(calls) { emitSliceSplitAtHelper(); }
+    if usesSliceToList(calls) { emitSliceToListHelper(); }
+    if usesSliceIter(calls) { emitSliceIterHelper(); }
+    if usesStrBytes(calls) { emitStrBytesHelper(); }
     if usesMapIndex(calls) { emitMapIndexHelper(); }
     if usesMapGet(calls) { emitMapGetHelper(); }
     if usesMapGetOr(calls) { emitMapGetOrHelper(); }
@@ -4016,6 +4129,10 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 outLine(indent + "for (const [lite$mk, lite$mv] of (" + item.code + ")) {");
                 indent = indent + "    ";
                 outLine(indent + "const " + item.runtime + " = { key: lite$mk, value: lite$mv };");
+                outLine(indent + "void " + item.runtime + ";");
+            } else if item.intValue == 7 {
+                outLine(indent + "for (const " + item.runtime + " of lite$sliceIter(" + item.code + ")) {");
+                indent = indent + "    ";
                 outLine(indent + "void " + item.runtime + ";");
             } else {
                 seqExpr := if item.code.startsWithAt(0, "Array.from(") { item.code } else { tsLiteral.listCopyCode(item.code) };

@@ -15,6 +15,7 @@ reach := import "./reachability";
 infer := import "./frontend-inference";
 ctx := import "./frontend-context";
 expr := import "./frontend-expr";
+sliceBorrows := import "./slice-borrows";
 io := import "core/io";
 
 /** Shared restricted front-end. */
@@ -291,6 +292,21 @@ pub isMapKind := fn(kind: String): Bool { types.isMapKind(kind) };
 pub isSetKind := fn(kind: String): Bool { types.isSetKind(kind) };
 /** True when `kind` is an `Rc<T>` type kind. */
 pub isRcKind := fn(kind: String): Bool { types.isRcKind(kind) };
+/** True when `kind` is a borrowed `Slice<T>` type kind. */
+pub isSliceKind := fn(kind: String): Bool { types.isSliceKind(kind) };
+/** Returns the element type of a borrowed `Slice<T>` type kind. */
+pub sliceElementKind := fn(kind: String): String { types.sliceElementKind(kind) };
+/** True when `kind` is `Slice<T>` or transitively contains one. */
+pub containsSliceKind := fn(kind: String): Bool { types.containsSliceKind(kind) };
+/** True when `kind` is a bit-packed fixed array whose storage cannot be sliced in Phase 7. */
+pub isBitPackedArrayKind := fn(kind: String): Bool { types.isBitPackedArrayKind(kind) };
+/** Returns the C11 slice helper tag (`lt_slice_<elem>`), or `""`. */
+pub cSliceTag := fn(kind: String): String { types.cSliceTag(kind) };
+/** True when `moduleIdentity` is a registered core module allowed to declare `Slice<T>` constructors. */
+isCoreSliceHostModule := fn(moduleIdentity: String): Bool {
+    moduleIdentity == "lite.core.list.v1" or moduleIdentity == "lite.core.array.v1" or
+    moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.core.slice.v1"
+};;
 /** True when `kind` is a nominal `enum` type kind. */
 pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
 /** True when `kind` is a payload-bearing nominal `enum` type kind. */
@@ -1400,9 +1416,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     (moduleIdentity == "lite.core.rc.v1" and
                     (fnName == "create" or fnName == "get" or fnName == "share" or
                     fnName == "isEmpty" or fnName == "strongCount" or fnName == "ptrEqual" or
-                    fnName == "makeUnique" or fnName == "replace" or fnName == "reset"));
+                    fnName == "makeUnique" or fnName == "replace" or fnName == "reset")) or
+                    (moduleIdentity == "lite.core.slice.v1" and
+                    (fnName == "length" or fnName == "isEmpty" or fnName == "uncheckedGet" or
+                    fnName == "uncheckedSet" or fnName == "splitAt" or fnName == "toList" or
+                    fnName == "$getIndex" or fnName == "$setIndex" or fnName == "$getSlice" or fnName == "$getMutSlice"));
                     if canPreParseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic) {
                         header := parseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic);
+                        if types.containsSliceKind(header.result) and not isCoreSliceHostModule(moduleIdentity) {
+                            failAt(source, fnAt, prefix, "borrowed Slice<T> cannot escape via function return type");
+                        }
                         afterHdr := skipTrivia(source, header.next, prefix);
                         if afterHdr < size and source.at(afterHdr) == ";" {
                             hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, fnName, header.params, header.result);
@@ -1456,6 +1479,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         scopedSelf := types.withSelfAlias(aliases, owner.selfTarget, 0);
                         if canPreParseFunctionHeader(source, headerPos, prefix, scopedSelf, false) {
                             header := types.parseTypeOpHeader(source, headerPos, prefix, aliases, tName, oName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
+                            if types.containsSliceKind(header.result) and not isCoreSliceHostModule(moduleIdentity) {
+                                failAt(source, opAt, prefix, "borrowed Slice<T> cannot escape via function return type");
+                            }
                             typeOpKey := (if header.hasSelfRecv { "$typeop:" } else { "$statictypeop:" }) + owner.ownerKey + "." + oName;
                             afterHdr := skipTrivia(source, header.next, prefix);
                             if afterHdr < size and source.at(afterHdr) == ";" {
@@ -1622,15 +1648,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             isMutParam := rawParamKind.startsWithAt(0, "mut ");
             parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
             pRuntime := ir.safeTargetIdent(target, parameterName);
+            isSliceParam := types.isSliceKind(parameterKind);
             isConstPtrParam := target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
-            runtime := if (isMutParam and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
+            runtime := if (isMutParam and not isSliceParam and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
             else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
             else { "lite_" + pRuntime };
             fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
             mut blockDecls.pushBack((name = parameterName, depth = 1));
             mut locals.pushBack((name = parameterName, runtime = runtime, kind = parameterKind,
             mutable = false, writable = isMutParam, depth = 1, constant = false, code = runtime,
-            intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+            intValue = 0, textValue = if isSliceParam { "borrow_param:" } else { "" }, initState = INIT_STATE_INIT));
         }
         currentName = monoSelfName;
         currentFnRuntime = inst.runtime;
@@ -2183,13 +2210,20 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 statementNext := consumeStatementEnd(source, rhs.next, prefix);
                 if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after tuple destructuring"); }
                 position = statementNext;
+                groupedSliceWritable := if types.isSliceKind(groupedBindKind) {
+                    destructureMutable or sliceBorrows.sliceExprIsMutable(rhs.textValue)
+                } else {
+                    destructureMutable
+                };
+                groupedBorrow := sliceBorrows.borrowTagForBinding(groupedBindKind, groupedSliceWritable, rhs.textValue);
+                if not groupedBorrow.ok { failAt(source, destructureOpen, prefix, groupedBorrow.error); }
                 rejectDuplicateBlockDecl(source, destructureOpen, prefix, blockDecls, depth, bindName);
                 mut blockDecls.pushBack((name = bindName, depth = depth));
                 bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);
                 bindFnCode := if target == TARGET_TS and containsFnKind(groupedBindKind) { computeCallableRhsDeps(rhs.code) } else { rhs.code };
                 mut locals.pushBack((name = bindName, runtime = bindRuntime, kind = groupedBindKind,
-                mutable = destructureMutable, writable = false, depth = depth, constant = false, code = bindFnCode,
-                intValue = rhs.intValue, textValue = rhs.textValue, initState = INIT_STATE_INIT));
+                mutable = destructureMutable, writable = if types.isSliceKind(groupedBindKind) { groupedSliceWritable } else { false }, depth = depth, constant = false, code = bindFnCode,
+                intValue = rhs.intValue, textValue = groupedBorrow.textValue, initState = INIT_STATE_INIT));
                 if currentLive and not currentStopped {
                     itemPrefix := if destructureMutable { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
                     destrCode := assignValueCode(target, groupedBindKind, rhs.kind, rhs.code);
@@ -2210,6 +2244,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             statementNext := consumeStatementEnd(source, rhs.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, rhs.next, prefix), prefix, "expected ; after " + destructure.shape + " destructuring"); }
             position = statementNext;
+            rhsProvKind := sliceBorrows.provenanceKind(rhs.textValue);
+            isSplitTuple := (rhsProvKind == "mut_split" or rhsProvKind == "ro_split") and destructure.shape == "tuple" and destructure.count == 2;
             aggCode := if target == TARGET_TS and containsFnKind(rhs.kind) { computeCallableRhsDeps(rhs.code) } else { "" };
             mut locals.pushBack((name = tempSlot, runtime = tempRuntime, kind = VALUE_KIND_UNIT,
             mutable = false, writable = false, depth = depth, constant = false, code = aggCode,
@@ -2245,9 +2281,11 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     bindRuntime := claimOrMakeLocalRuntime(target, locals, bindName, moduleKey, depth);
                     fieldCode := assignValueCode(target, bindKind, srcKind, propExpr);
                     fieldLocalCode := if target == TARGET_TS and containsFnKind(bindKind) { computeCallableRhsDeps(fieldCode) } else { fieldCode };
+                    fieldWritable := if isSplitTuple { rhsProvKind == "mut_split" } else { false };
+                    fieldText := if isSplitTuple { sliceBorrows.splitHalfProvenance(rhs.textValue, destructureOpen, bIndex == 0) } else { "" };
                     mut locals.pushBack((name = bindName, runtime = bindRuntime, kind = bindKind,
-                    mutable = destructureMutable, writable = false, depth = depth, constant = false, code = fieldLocalCode,
-                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+                    mutable = destructureMutable, writable = fieldWritable, depth = depth, constant = false, code = fieldLocalCode,
+                    intValue = 0, textValue = fieldText, initState = INIT_STATE_INIT));
                     if currentLive and not currentStopped {
                         itemPrefix := if destructureMutable { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
                         mut items.pushBack((kind = itemPrefix + storageKind(bindKind), name = bindName, runtime = bindRuntime,
@@ -3036,8 +3074,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     foundImm
                 };
                 if source.wordAt(afterParsed, "as") {
-                    if not isListKind(parsed.kind) and not isArrayKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) {
-                        failAt(source, position, prefix, "loop sequence must be a List, Array, Map, or Set, got " + displayKind(parsed.kind));
+                    if not isListKind(parsed.kind) and not isArrayKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) and not types.isSliceKind(parsed.kind) {
+                        failAt(source, position, prefix, "loop sequence must be a List, Array, Map, Set, or Slice, got " + displayKind(parsed.kind));
                     }
                     itemStart := skipTrivia(source, afterParsed + 2, prefix);
                     if itemStart >= size or not source.at(itemStart).isNameStart() {
@@ -3070,6 +3108,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         } else {
                             sequenceCode = "Array.from((" + parsed.code + ").values())";
                         }
+                    } else if types.isSliceKind(parsed.kind) {
+                        itemKind = types.sliceElementKind(parsed.kind);
+                        sequenceCode = if target == TARGET_C { "/*@T:" + parsed.kind + "@*/" + parsed.code } else { parsed.code };
+                        loopSeqMode = 7;
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         if target == TARGET_C and isArrayKind(parsed.kind) and types.cArrayTag(parsed.kind) =!= "" {
@@ -3083,7 +3125,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         }
                     }
                     position = skipTrivia(source, itemEnd, prefix);
-                } else if isListKind(parsed.kind) or isArrayKind(parsed.kind) or types.isMapKind(parsed.kind) or types.isSetKind(parsed.kind) {
+                } else if isListKind(parsed.kind) or isArrayKind(parsed.kind) or types.isMapKind(parsed.kind) or types.isSetKind(parsed.kind) or types.isSliceKind(parsed.kind) {
                     if types.isMapKind(parsed.kind) {
                         kKind := types.mapKeyKind(parsed.kind);
                         vKind := types.mapValueKind(parsed.kind);
@@ -3108,6 +3150,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         } else {
                             sequenceCode = "Array.from((" + parsed.code + ").values())";
                         }
+                    } else if types.isSliceKind(parsed.kind) {
+                        itemKind = types.sliceElementKind(parsed.kind);
+                        sequenceCode = if target == TARGET_C { "/*@T:" + parsed.kind + "@*/" + parsed.code } else { parsed.code };
+                        loopSeqMode = 7;
                     } else {
                         itemKind = if isListKind(parsed.kind) { listElementKind(parsed.kind) } else { arrayElementKind(parsed.kind) };
                         if target == TARGET_C and isArrayKind(parsed.kind) and types.cArrayTag(parsed.kind) =!= "" {
@@ -3240,6 +3286,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if not types.isMutContainerKind(parsed.kind) {
                 failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + displayKind(parsed.kind));
             }
+            mutBorrow := sliceBorrows.borrowTagForBinding(parsed.kind, true, parsed.textValue);
+            if not mutBorrow.ok { failAt(source, localStart, prefix, mutBorrow.error); }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
@@ -3248,7 +3296,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             mut blockDecls.pushBack((name = localName, depth = depth));
             mut locals.pushBack((name = localName, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = true, depth = depth, constant = false, code = mutLocalCode,
-            intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
+            intValue = parsed.intValue, textValue = mutBorrow.textValue, initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 itemCode := copiedValueCode(target, parsed.kind, parsed.code);
                 mutPrefix := if target == TARGET_TS and types.isRecordOrDistinctRecord(parsed.kind) { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
@@ -3290,6 +3338,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 if declaredWritable and not types.isMutContainerKind(parsed.kind) {
                     failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + displayKind(parsed.kind));
                 }
+                if not declaredWritable and types.isSliceKind(parsed.kind) {
+                    declaredWritable = sliceBorrows.sliceExprIsMutable(parsed.textValue);
+                }
             } else if position < size and source.at(position) == ":" {
                 if declaredWritable { failAt(source, localStart, prefix, "var mut cannot be combined with explicit type annotation"); }
                 typed := parseLocalType(source, position + 1, prefix, aliases);
@@ -3304,6 +3355,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         if types.isMapKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Map"); }
                         if types.isSetKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Set"); }
                         if types.isRcKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Rc"); }
+                        if types.isSliceKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Slice"); }
                         declInitState = if hasBlockDecl(blockAssignedDecls, depth, localName) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                         parsed = zeroParsed(target, typed.kind, reservedEnd);
                     } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
@@ -3325,6 +3377,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             } else {
                 failAt(source, position, prefix, "expected := or : after local name " + localName);
             }
+            varBorrow := sliceBorrows.borrowTagForBinding(parsed.kind, declaredWritable, parsed.textValue);
+            if not varBorrow.ok { failAt(source, localStart, prefix, varBorrow.error); }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
@@ -3335,7 +3389,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             mut blockDecls.pushBack((name = localName, depth = depth));
             mut locals.pushBack((name = localName, runtime = runtime, kind = parsed.kind,
             mutable = true, writable = declaredWritable, depth = depth, constant = false, code = varLocalCode,
-            intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
+            intValue = parsed.intValue, textValue = varBorrow.textValue, initState = declInitState));
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     mut items.pushBack((kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",
@@ -3612,6 +3666,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     wasPreRegisteredOp := existingOpIdx >= 0 and functions[existingOpIdx].declAt == nameStart;
                     position = skipTrivia(source, afterOpDecl + 2, prefix);
                     header := types.parseTypeOpHeader(source, position, prefix, aliases, name, opName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
+                    if types.containsSliceKind(header.result) and not isCoreSliceHostModule(moduleIdentity) {
+                        failAt(source, nameStart, prefix, "borrowed Slice<T> cannot escape via function return type");
+                    }
                     typeOpKey := (if header.hasSelfRecv { "$typeop:" } else { "$statictypeop:" }) + owner.ownerKey + "." + opName;
                     position = skipTrivia(source, header.next, prefix);
                     rejectMisplacedTag(source, position, prefix, "unexpected block tag in function header");
@@ -3746,15 +3803,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         isMutParam := rawParamKind.startsWithAt(0, "mut ");
                         parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
                         pRuntime := ir.safeTargetIdent(target, parameterName);
+                        isSliceParam := types.isSliceKind(parameterKind);
                         isConstPtrParam := target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
-                        runtime := if (isMutParam and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
+                        runtime := if (isMutParam and not isSliceParam and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
                         else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
                         else { "lite_" + pRuntime };
                         fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
                         mut blockDecls.pushBack((name = parameterName, depth = 1));
                         mut locals.pushBack((name = parameterName, runtime = runtime, kind = parameterKind,
                         mutable = false, writable = isMutParam, depth = 1, constant = false, code = runtime,
-                        intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+                        intValue = 0, textValue = if isSliceParam { "borrow_param:" } else { "" }, initState = INIT_STATE_INIT));
                         if not wasPreRegisteredOp {
                             mut functionParams.pushBack(entry);
                             parameterTotal = parameterTotal + 1;
@@ -3810,8 +3868,15 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 (moduleIdentity == "lite.core.rc.v1" and
                 (name == "create" or name == "get" or name == "share" or
                 name == "isEmpty" or name == "strongCount" or name == "ptrEqual" or
-                name == "makeUnique" or name == "replace" or name == "reset"));
+                name == "makeUnique" or name == "replace" or name == "reset")) or
+                (moduleIdentity == "lite.core.slice.v1" and
+                (name == "length" or name == "isEmpty" or name == "uncheckedGet" or
+                name == "uncheckedSet" or name == "splitAt" or name == "toList" or
+                name == "$getIndex" or name == "$setIndex" or name == "$getSlice" or name == "$getMutSlice"));
                 header := parseFunctionHeader(source, position, prefix, aliases, listIntrinsic);
+                if types.containsSliceKind(header.result) and not isCoreSliceHostModule(moduleIdentity) {
+                    failAt(source, nameStart, prefix, "borrowed Slice<T> cannot escape via function return type");
+                }
                 position = skipTrivia(source, header.next, prefix);
                 rejectMisplacedTag(source, position, prefix, "unexpected block tag in function header");
                 mut blockDecls.pushBack((name = name, depth = 0));
@@ -3943,15 +4008,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     isMutParam := rawParamKind.startsWithAt(0, "mut ");
                     parameterKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
                     pRuntime := ir.safeTargetIdent(target, parameterName);
+                    isSliceParam := types.isSliceKind(parameterKind);
                     isConstPtrParam := target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
-                    runtime := if (isMutParam and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
+                    runtime := if (isMutParam and not isSliceParam and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
                     else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
                     else { "lite_" + pRuntime };
                     fnParamSeedBag = appendPipeBag(fnParamSeedBag, parameterName);
                     mut blockDecls.pushBack((name = parameterName, depth = 1));
                     mut locals.pushBack((name = parameterName, runtime = runtime, kind = parameterKind,
                     mutable = false, writable = isMutParam, depth = 1, constant = false, code = runtime,
-                    intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+                    intValue = 0, textValue = if isSliceParam { "borrow_param:" } else { "" }, initState = INIT_STATE_INIT));
                     if not wasPreRegistered {
                         mut functionParams.pushBack(entry);
                         parameterTotal = parameterTotal + 1;
@@ -3990,6 +4056,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             parsed := parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
             locals = checkStatementTrace(target, source, nameStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
             rejectNonValueBinding(source, nameStart, prefix, parsed.kind, name);
+            valWritable := if types.isSliceKind(parsed.kind) { sliceBorrows.sliceExprIsMutable(parsed.textValue) } else { false };
+            valBorrow := sliceBorrows.borrowTagForBinding(parsed.kind, valWritable, parsed.textValue);
+            if not valBorrow.ok { failAt(source, nameStart, prefix, valBorrow.error); }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
@@ -3997,8 +4066,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             valLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) { computeCallableRhsDeps(parsed.code) } else { parsed.code };
             mut blockDecls.pushBack((name = name, depth = depth));
             mut locals.pushBack((name = name, runtime = runtime, kind = parsed.kind,
-            mutable = false, writable = false, depth = depth, constant = parsed.constant, code = valLocalCode,
-            intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
+            mutable = false, writable = valWritable, depth = depth, constant = parsed.constant, code = valLocalCode,
+            intValue = parsed.intValue, textValue = valBorrow.textValue, initState = INIT_STATE_INIT));
             if depth == 0 and blockCount == 0 and publishedValues.has(name) {
                 mut items.pushBack((kind = ITEM_KIND_PUBLIC_VALUE, name = name, runtime = runtime, code = parsed.kind,
                 intValue = 0, textValue = ""));
@@ -4032,6 +4101,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if types.isMapKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Map"); }
                     if types.isSetKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Set"); }
                     if types.isRcKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Rc"); }
+                    if types.isSliceKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Slice"); }
                     declInitState = if hasBlockDecl(blockAssignedDecls, depth, name) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
                     parsed = zeroParsed(target, typed.kind, reservedEnd);
                 } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
@@ -4044,6 +4114,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     locals = checkStatementTrace(target, source, nameStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 }
             }
+            annBorrow := sliceBorrows.borrowTagForBinding(typed.kind, typed.writable, parsed.textValue);
+            if not annBorrow.ok { failAt(source, nameStart, prefix, annBorrow.error); }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
@@ -4056,7 +4128,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             mut blockDecls.pushBack((name = name, depth = depth));
             mut locals.pushBack((name = name, runtime = runtime, kind = typed.kind,
             mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
-            code = annLocalCode, intValue = parsed.intValue, textValue = parsed.textValue, initState = declInitState));
+            code = annLocalCode, intValue = parsed.intValue, textValue = annBorrow.textValue, initState = declInitState));
             declItemPrefix := if declInitState == INIT_STATE_INIT and not (target == TARGET_TS and typed.writable and types.isRecordOrDistinctRecord(typed.kind)) { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
             if currentLive and not currentStopped {
                 if rhsDiverged {
@@ -4103,6 +4175,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if not canMutateHook {
                         failAt(source, nameStart, prefix, "cannot mutate read-only value " + name + " via index assignment");
                     }
+                    sliceBorrows.checkCanMutateBinding(locals, entry.runtime, name, source, nameStart, prefix);
                     var getHookRuntime := "";
                     if hookCompOp.width > 0 {
                         getHook := expr.resolveIndexHookOp(target, source, nameStart, prefix, entry.kind, "$getIndex", functions, functionParams, false);
@@ -4183,6 +4256,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if not entry.mutable and not entry.writable {
                         failAt(source, nameStart, prefix, "cannot mutate field of immutable local " + name);
                     }
+                    sliceBorrows.checkCanMutateBinding(locals, entry.runtime, name, source, nameStart, prefix);
                     if target =!= TARGET_TS and types.cStructTag(entry.kind) == "" {
                         failAt(source, nameStart, prefix, "C backend does not support record field assignment yet");
                     }
@@ -4275,6 +4349,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if entry.initState == INIT_STATE_MAYBE and not entry.mutable {
                 failAt(source, nameStart, prefix, "cannot assign to possibly initialized immutable local " + name);
             }
+            sliceBorrows.checkCanMutateBinding(locals, entry.runtime, name, source, nameStart, prefix);
             position = skipTrivia(source, position + 1, prefix);
             partialItems := parsePartialAssignIf(target, source, position, prefix, locals, functions, functionParams, currentName, nameStart, entry.kind, name, entry.runtime, stmtCtxs, aliases);
             var partialCount := 0;
@@ -4308,6 +4383,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if not isCompatibleKind(entry.kind, parsed.kind) {
                 failAt(source, nameStart, prefix, "cannot assign " + displayKind(parsed.kind) + " to " + displayKind(entry.kind) + " local " + name);
             }
+            sliceBorrows.checkSliceAssignDepth(entry.kind, entry.depth, parsed.textValue, source, nameStart, prefix);
+            assignBorrow := sliceBorrows.borrowTagForBinding(entry.kind, entry.writable, parsed.textValue);
+            if not assignBorrow.ok { failAt(source, nameStart, prefix, assignBorrow.error); }
             locals = checkStatementTrace(target, source, nameStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after assignment to " + name); }
@@ -4320,7 +4398,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             } else { assignedCode };
             mut locals.pushBack((name = entry.name, runtime = entry.runtime, kind = entry.kind,
             mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = assignLocalCode,
-            intValue = parsed.intValue, textValue = parsed.textValue, initState = INIT_STATE_INIT));
+            intValue = parsed.intValue, textValue = assignBorrow.textValue, initState = INIT_STATE_INIT));
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     mut items.pushBack((kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",
@@ -4356,6 +4434,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if not entry.mutable {
                 failAt(source, nameStart, prefix, "cannot assign to immutable local " + name);
             }
+            sliceBorrows.checkCanMutateBinding(locals, entry.runtime, name, source, nameStart, prefix);
             opPos := position;
             position = skipTrivia(source, position + compound.width, prefix);
             parsed := parseExpressionAsCtx(target, source, position, prefix, locals, functions, functionParams, currentName, entry.kind, stmtCtxs, aliases);
