@@ -124,7 +124,7 @@ Specify direct calls, named arguments, and callable values using the Phase 9 and
 
 ## 7. Syntax review implementation queue
 
-The [Start Lite syntax review](codex://threads/01a1dfd6-dfa7-7383-bb03-d90c7c98479b) proposed the following increments. They can proceed alongside the numbered phases as their contracts are confirmed and verified on TS and C11. The review confirmed contextual record literals in calls, assignments, and nested initializers on both targets.
+The Lite syntax review proposed the following increments. They can proceed alongside the numbered phases as their contracts are confirmed and verified on TS and C11. The review confirmed contextual record literals in calls, assignments, and nested initializers on both targets.
 
 1. **Standalone `do` blocks.** Reuse ordinary executable block semantics and decide how existing standalone brace blocks migrate before introducing standalone inferred records. [Blocks and results](lite://doc/blocks-and-results#standalone-executable-blocks)
 2. **Pattern binding in `if`.** Start with `if .Some(n) := source { ... }`, then cover `and n > 0`. Evaluate `source` once and scope `n` to the successful condition and branch. [Pattern contexts](lite://doc/pattern-contexts)
@@ -142,3 +142,19 @@ Start with the selected first-stage rule for `.lt` modules. Applicable top-level
 Add explicit `comptime { ... }` after ordinary block semantics are established. The same ordinary function should be eligible to run at either stage, including user functions that transitively perform I/O. In the illustrative `seed := comptime { io.readInt() };`, the compiler reads the integer during the build, and the generated program uses the resulting value without repeating the read. Ordinary error handling applies during evaluation. A computation that needs runtime-only state cannot supply a compile-time result.
 
 First-stage `.lt` initializers require an explicit `comptime` block for direct or transitive effects. Test that bare `seed := io.readInt();` and a bare wrapper call are rejected before reading input. Test a known module initializer, an ordinary function called at both stages, rejection of a runtime-dependent input, and an explicit build-time read supplied by the test harness whose result is embedded on both targets. Include handled input failure and failure to produce a required value. Define build-host services, effect ordering, input tracking, and which values can be embedded before enabling effectful execution. [Compile-time evaluation](lite://doc/compile-time-evaluation)
+
+---
+
+## 8. Open items (Phases 6–11)
+
+The remaining unresolved design choices across Phases 6–11 stay explicitly open below rather than being decided implicitly during implementation:
+
+| # | Area | Open Question / Deferred Decision | Current Status / Notes |
+| --- | --- | --- | --- |
+| **1** | **Phase execution order** | Confirm keeping `6 -> 7 -> 8 -> 9 (Interfaces) -> 10 (Contexts) -> 11 (Overloading)` versus moving Interfaces earlier | Proposed sequence lands raw safety/performance wins early while letting Contexts and Overloading build on Interfaces |
+| **2** | **Safety & unchecked switches** *(Phase 6)* | Exact defaults across `-O0`..`-O3` / `-Os` / `-Oc`, precedence and interaction with `--sanitize`, repeated-flag behavior (`-O3 -fcheck-unchecked` in both orders), and exact fault vs unchecked valid-domain contracts for `unchecked*` and `uncheckedGet`/`uncheckedSet` | Keep checked arithmetic and bounds ON by default across presets; overridable independently per flag |
+| **3** | **Slice non-escape & `splitAt(mid)`** *(Phase 7)* | Confirm borrowed-only non-escaping `Slice<T>` boundaries (zero `'a` annotations; reject local-slice escape, owner mutation while sliced, and heap storage; `.toList()` element-ownership contract for single-owner values), `mut Slice<T>.splitAt(mid)` parent-borrow suspension, packed-storage slice contract, and whether inclusive `xs[a..=b]` is needed | Provisional `$getSlice` / `$getMutSlice` hook used in Phase 7 until unified in Phase 11 |
+| **4** | **Niche packing, SIMD & `SoA<R>`** *(Phase 8)* | Per-type niche opt-out attribute spelling (explicitly deferred to Phase 8 alongside `@packed` / `@align` layout attributes), `-f[no-]niche-opt` preset defaults and package/FFI layout agreement, finite-float ingress enforcement (`bitCast` / FFI) for float niches, portable SIMD overflow/rounding semantics vs scalar paths, and `SoA<R>` row ownership and capacity-growth invalidation | Automatic fallback to tagged layout whenever `nicheCount == 0` (for example a 256-case `Enum: Int8`); runtime-scalable sizeless vectors rejected |
+| **5** | **Interfaces / Traits** *(Phase 9)* | Nominal vs structural conformance, implementation/attachment lookup syntax, fat-pointer dynamic dispatch representation, and generic protocol bounds | Deferred to a focused design review immediately before Phase 9 |
+| **6** | **Lexical contexts & `$context.lt`** *(Phase 10)* | C/FFI `NULL` `ctx` default-shim behavior, closures capturing `mut` contexts under exclusivity, cross-package provider selection / indirect calls, unused-context diagnostics, and transitive overrides across third-party signatures that omit a context | Unified `context` keyword across `$context.lt` declarations, `fn(...) context(...)`, and `context (...) { ... }` blocks; single `const lt_ctx_* *ctx` C boundary |
+| **7** | **Function & method overloading** *(Phase 11)* | Overload ranking and ambiguity rules across generics, named/labeled arguments, defaults, interfaces, contexts, and first-class callable values (`f := foo`) | Deferred to a focused design review immediately before Phase 11; unifies provisional `$getSlice` back into `Index` / `$getIndex` |
