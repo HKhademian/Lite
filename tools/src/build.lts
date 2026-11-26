@@ -178,6 +178,9 @@ run := fn(rawArgs: List<String>): Unit {
     var explicitCcOpt := false;
     var sizeOpt := false;
     var sanitize := false;
+    var debugPreset := false;
+    var explicitDebugSet := false;
+    var explicitDebugVal := false;
     var keepC := false;
     var keepTs := false;
     var quiet := false;
@@ -217,6 +220,7 @@ run := fn(rawArgs: List<String>): Unit {
             explicitCcOpt = true;
         } else if arg == "--sanitize" {
             sanitize = true;
+            mut compileOpts.pushBack(arg);
         } else if arg == "--keep-c" {
             keepC = true;
         } else if arg == "--keep-ts" {
@@ -233,17 +237,27 @@ run := fn(rawArgs: List<String>): Unit {
             if args.length() == 0 or args[0] == "--" { usageExit(); }
             (mut compileOpts).pushBack(arg);
             mut compileOpts.pushBack(mut args.popFront());
+        } else if arg == "-fdebug-info" {
+            explicitDebugSet = true;
+            explicitDebugVal = true;
+            mut compileOpts.pushBack(arg);
+        } else if arg == "-fno-debug-info" {
+            explicitDebugSet = true;
+            explicitDebugVal = false;
+            mut compileOpts.pushBack(arg);
         } else if arg.startsWithAt(0, "--emit-format=") or arg.startsWithAt(0, "--source-map=") or arg.startsWithAt(0, "-f") {
             mut compileOpts.pushBack(arg);
         } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or arg == "-Oc" or arg.startsWithAt(0, "--opt=") {
             hasOpt = true;
-            if arg == "-Os" or arg == "--opt=s" or arg == "--opt=S" { sizeOpt = true; }
+            sizeOpt = arg == "-Os" or arg == "--opt=s" or arg == "--opt=S";
+            debugPreset = arg == "-O0" or arg == "--opt=0";
             (mut compileOpts).pushBack(arg);
         } else if arg == "--opt" {
             if args.length() == 0 or args[0] == "--" { usageExit(); }
             hasOpt = true;
             optVal := mut args.popFront();
-            if optVal == "s" or optVal == "S" { sizeOpt = true; }
+            sizeOpt = optVal == "s" or optVal == "S";
+            debugPreset = optVal == "0";
             (mut compileOpts).pushBack(arg);
             mut compileOpts.pushBack(optVal);
         } else if arg.startsWithAt(0, "-") {
@@ -421,6 +435,8 @@ run := fn(rawArgs: List<String>): Unit {
         mut ccArgs.pushBack("-fsanitize=address,undefined");
         mut ccArgs.pushBack("-DLITE_ALLOC_SYSTEM");
         mut ccArgs.pushBack("-fno-omit-frame-pointer");
+        mut ccArgs.pushBack("-g");
+    } else if (if explicitDebugSet { explicitDebugVal } else { debugPreset }) {
         mut ccArgs.pushBack("-g");
     }
     cText := fs.readText(cArtifact);

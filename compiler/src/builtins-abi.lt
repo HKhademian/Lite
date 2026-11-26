@@ -202,6 +202,8 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "List.length" and params == "values=List<T>" and result == ir.VALUE_KIND_INT { "lite$core$list$length:v1" }
         else if (name == "List.setAt" or name == "List.$setIndex") and params == "values=mut List<T>|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$setAt:v1" }
         else if name == "List.$getIndex" and params == "values=List<T>|index=Int" and result == "T" { "lite$core$list$getIndex:v1" }
+        else if name == "List.uncheckedGet" and params == "values=List<T>|index=Int" and result == "T" { "lite$core$list$uncheckedGet:v1" }
+        else if name == "List.uncheckedSet" and params == "values=mut List<T>|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$uncheckedSet:v1" }
         else if name == "List.slice" and params == "values=List<T>|start=Int|end=Int" and result == "List<T>" { "lite$core$list$slice:v1" }
         else if name == "List.reverse" and params == "values=List<T>" and result == "List<T>" { "lite$core$list$reverse:v1" }
         else if name == "List.clear" and params == "values=mut List<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$list$clear:v1" }
@@ -210,6 +212,8 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         if name == "Array.length" and params == "values=[T;N]" and result == ir.VALUE_KIND_INT { "lite$core$array$length:v1" }
         else if name == "Array.$getIndex" and params == "values=[T;N]|index=Int" and result == "T" { "lite$core$array$getIndex:v1" }
         else if name == "Array.$setIndex" and params == "values=mut [T;N]|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$array$setIndex:v1" }
+        else if name == "Array.uncheckedGet" and params == "values=[T;N]|index=Int" and result == "T" { "lite$core$array$uncheckedGet:v1" }
+        else if name == "Array.uncheckedSet" and params == "values=mut [T;N]|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$array$uncheckedSet:v1" }
         else { "" }
     } else if moduleIdentity == "lite.core.map.v1" {
         if (name == "Map.set" or name == "Map.$setIndex") and params == "entries=mut Map<K,V>|key=K|value=V" and result == ir.VALUE_KIND_UNIT { "lite$core$map$set:v1" }
@@ -352,9 +356,48 @@ softBuiltinAbi := fn(moduleName: String, name: String): (params: String, result:
         if name == "Int.toText" {
             return (params = "value=Int", result = ir.VALUE_KIND_STRING);
         }
+        if name == "Int.abs" {
+            return (params = "value=Int", result = ir.VALUE_KIND_INT);
+        }
+        if name == "Int.min" or name == "Int.max" {
+            return (params = "a=Int|b=Int", result = ir.VALUE_KIND_INT);
+        }
+        if name == "Int.clamp" {
+            return (params = "value=Int|lo=Int|hi=Int", result = ir.VALUE_KIND_INT);
+        }
+        if name == "UInt32.clz" or name == "UInt32.ctz" or name == "UInt32.popcnt" {
+            return (params = "value=UInt32", result = ir.VALUE_KIND_INT);
+        }
+        if name == "UInt32.bswap" {
+            return (params = "value=UInt32", result = "UInt32");
+        }
+        if name == "UInt64.clz" or name == "UInt64.ctz" or name == "UInt64.popcnt" {
+            return (params = "value=UInt64", result = ir.VALUE_KIND_INT);
+        }
+        if name == "UInt64.bswap" {
+            return (params = "value=UInt64", result = "UInt64");
+        }
+        if name == "UInt64.mulWide" {
+            return (params = "a=UInt64|b=UInt64", result = "(lo:UInt64,hi:UInt64)");
+        }
+        if name == "UInt64.addWithCarry" {
+            return (params = "a=UInt64|b=UInt64|carry=Bool", result = "(sum:UInt64,carry:Bool)");
+        }
+        if name == "UInt64.subWithBorrow" {
+            return (params = "a=UInt64|b=UInt64|borrow=Bool", result = "(diff:UInt64,borrow:Bool)");
+        }
     } else if moduleName == "lib/core/list" {
         if name == "List.join" {
             return (params = "values=List<String>|separator=String", result = ir.VALUE_KIND_STRING);
+        }
+        if name == "List.fillBytes" {
+            return (params = "dst=mut List<UInt8>|offset=Int|length=Int|value=UInt8", result = ir.VALUE_KIND_UNIT);
+        }
+        if name == "List.copyBytes" {
+            return (params = "dst=mut List<UInt8>|dstOffset=Int|src=List<UInt8>|srcOffset=Int|length=Int", result = ir.VALUE_KIND_UNIT);
+        }
+        if name == "List.indexOfByte" {
+            return (params = "values=List<UInt8>|needle=UInt8|start=Int", result = ir.VALUE_KIND_INT);
         }
     } else if moduleName == "lib/core/text" {
         if name == "String.skipSpaces" or name == "String.skipName" {

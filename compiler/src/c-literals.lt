@@ -415,30 +415,29 @@ cIntTag := fn(kind: String): String {
     prefix + castIntBits(kind).toText()
 }
 
-/** Emits C11 code for a hard-builtin integer or float method (`bit*`, `shift*`, `rotate*`, `wrapping*`, `saturating*`, `unchecked*`, bit manip, `wideningMul`, `fma`). */
+/** Emits C11 code for a hard-builtin integer or float method (`bit*`, `shift*`, `rotate*`, `wrapping*`, `saturating*`, `unchecked*`, bit manip, `wideningMul`, `fma`, `toBits`, `fromBits`). */
 pub numericBuiltinCode := fn(kind: String, opName: String, a0: String, a1: String, a2: String, srcKind: String, position: Int, tupleStructTag: String): String {
     posText := position.toText();
     if numeric.isFloatKind(kind) {
-        if opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" {
-            if kind == numeric.KIND_FLOAT or kind == numeric.KIND_FLOAT32 {
-                sym := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else { "/" };
-                cF := if kind == numeric.KIND_FLOAT32 { "float" } else { "double" };
-                return "((" + cF + ")(((" + cF + ")(" + a0 + ")) " + sym + " ((" + cF + ")(" + a1 + "))))";
-            }
-            if kind == numeric.KIND_FLOAT16 {
-                fnSuffix := if opName == "uncheckedAdd" { "add" } else if opName == "uncheckedSub" { "sub" } else if opName == "uncheckedMul" { "mul" } else { "div" };
-                return "lt_f16_" + fnSuffix + "_raw(" + a0 + ", " + a1 + ")";
-            }
-            sym8 := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else { "/" };
-            return "lt_f64_to_f8(lt_f8_to_f64(" + a0 + ") " + sym8 + " lt_f8_to_f64(" + a1 + "), 0)";
-        }
+        fTag := if kind == numeric.KIND_FLOAT8 { "f8" } else if kind == numeric.KIND_FLOAT16 { "f16" } else if kind == numeric.KIND_FLOAT32 { "f32" } else { "f64" };
+        if opName == "uncheckedAdd" { return "lt_ufadd_" + fTag + "(" + a0 + ", " + a1 + ", " + posText + ")"; }
+        if opName == "uncheckedSub" { return "lt_ufsub_" + fTag + "(" + a0 + ", " + a1 + ", " + posText + ")"; }
+        if opName == "uncheckedMul" { return "lt_ufmul_" + fTag + "(" + a0 + ", " + a1 + ", " + posText + ")"; }
+        if opName == "uncheckedDiv" { return "lt_ufdiv_" + fTag + "(" + a0 + ", " + a1 + ", " + posText + ")"; }
         if opName == "fma" {
-            fTag := if kind == numeric.KIND_FLOAT8 { "f8" } else if kind == numeric.KIND_FLOAT16 { "f16" } else if kind == numeric.KIND_FLOAT32 { "f32" } else { "f64" };
             return "lt_fma_" + fTag + "(" + a0 + ", " + a1 + ", " + a2 + ", " + posText + ")";
         }
         if opName == "uncheckedFma" {
-            fTag := if kind == numeric.KIND_FLOAT8 { "f8" } else if kind == numeric.KIND_FLOAT16 { "f16" } else if kind == numeric.KIND_FLOAT32 { "f32" } else { "f64" };
-            return "lt_ufma_" + fTag + "(" + a0 + ", " + a1 + ", " + a2 + ")";
+            return "lt_ufma_" + fTag + "(" + a0 + ", " + a1 + ", " + a2 + ", " + posText + ")";
+        }
+        if opName == "toBits" {
+            return "lt_" + fTag + "_to_bits(" + a0 + ")";
+        }
+        if opName == "fromBits" {
+            return "lt_" + fTag + "_from_bits(" + a0 + ", " + posText + ")";
+        }
+        if opName == "uncheckedFromBits" {
+            return "lt_" + fTag + "_ufrom_bits(" + a0 + ", " + posText + ")";
         }
     }
     bits := castIntBits(kind);
@@ -487,22 +486,16 @@ pub numericBuiltinCode := fn(kind: String, opName: String, a0: String, a1: Strin
         castT := if isU { "uint64_t" } else { "int64_t" };
         return "((" + cT + ")lt_" + sOp + "_" + fam + "((" + castT + ")(" + a0 + "), (" + castT + ")(" + a1 + "), " + bitsText + "))";
     }
-    if opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" or opName == "uncheckedRem" {
-        uSym := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else if opName == "uncheckedDiv" { "/" } else { "%" };
-        return "((" + cT + ")(((" + cT + ")(" + a0 + ")) " + uSym + " ((" + cT + ")(" + a1 + "))))";
-    }
-    if opName == "uncheckedNeg" {
-        return "((" + cT + ")(-((" + cT + ")(" + a0 + "))))";
-    }
-    if opName == "uncheckedShiftLeft" {
-        return "((" + cT + ")(((" + uT + ")(" + a0 + ")) << (unsigned)(int64_t)(" + a1 + ")))";
-    }
-    if opName == "uncheckedShiftRight" {
-        return "((" + cT + ")(((" + cT + ")(" + a0 + ")) >> (unsigned)(int64_t)(" + a1 + ")))";
-    }
-    if opName == "uncheckedTruncate" {
-        return "((" + cT + ")(" + floatOperandCode(srcKind, a0) + "))";
-    }
+    iTag := cIntTag(kind);
+    if opName == "uncheckedAdd" { return "lt_uadd_" + iTag + "((" + cT + ")(" + a0 + "), (" + cT + ")(" + a1 + "), " + posText + ")"; }
+    if opName == "uncheckedSub" { return "lt_usub_" + iTag + "((" + cT + ")(" + a0 + "), (" + cT + ")(" + a1 + "), " + posText + ")"; }
+    if opName == "uncheckedMul" { return "lt_umul_" + iTag + "((" + cT + ")(" + a0 + "), (" + cT + ")(" + a1 + "), " + posText + ")"; }
+    if opName == "uncheckedDiv" { return "lt_udiv_" + iTag + "((" + cT + ")(" + a0 + "), (" + cT + ")(" + a1 + "), " + posText + ")"; }
+    if opName == "uncheckedRem" { return "lt_urem_" + iTag + "((" + cT + ")(" + a0 + "), (" + cT + ")(" + a1 + "), " + posText + ")"; }
+    if opName == "uncheckedNeg" { return "lt_uneg_" + iTag + "((" + cT + ")(" + a0 + "), " + posText + ")"; }
+    if opName == "uncheckedShiftLeft" { return "lt_ushl_" + iTag + "((" + cT + ")(" + a0 + "), (int64_t)(" + a1 + "), " + posText + ")"; }
+    if opName == "uncheckedShiftRight" { return "lt_ushr_" + iTag + "((" + cT + ")(" + a0 + "), (int64_t)(" + a1 + "), " + posText + ")"; }
+    if opName == "uncheckedTruncate" { return "lt_utrunc_" + iTag + "(" + floatOperandCode(srcKind, a0) + ", " + posText + ")"; }
     widthMask := if bits == 64 { "UINT64_MAX" } else { "((UINT64_C(1) << " + bitsText + ") - UINT64_C(1))" };
     masked := "(((uint64_t)(" + a0 + ")) & " + widthMask + ")";
     if opName == "countOnes" { return "lt_popcnt(" + masked + ")"; }

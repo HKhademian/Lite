@@ -274,3 +274,49 @@ pub List.find := fn<T: Type>(values: Self<T>, pred: fn(T): Bool): (found: Bool, 
     }
     (found = false, value = z)
 };
+
+/** Fills `length` bytes of `dst` starting at `offset` with `value`, faulting when out of bounds. */
+pub List.fillBytes := fn(dst: mut List<UInt8>, offset: Int, length: Int, value: UInt8): Unit {
+    if offset < 0 or length < 0 or length > dst.length() or offset > dst.length() - length {
+        _ := dst[-1];
+        return;
+    }
+    var i := 0;
+    loop i < length {
+        dst[offset + i] = value;
+        i += 1;
+    }
+};
+
+/** Copies `length` bytes from `src[srcOffset..]` into `dst[dstOffset..]`, overlap-safe and bounds-checked. */
+pub List.copyBytes := fn(dst: mut List<UInt8>, dstOffset: Int, src: List<UInt8>, srcOffset: Int, length: Int): Unit {
+    if dstOffset < 0 or srcOffset < 0 or length < 0 or length > dst.length() or dstOffset > dst.length() - length or length > src.length() or srcOffset > src.length() - length {
+        _ := dst[-1];
+        return;
+    }
+    if length == 0 { return; }
+    if dstOffset > srcOffset {
+        var i := length - 1;
+        loop i >= 0 {
+            dst[dstOffset + i] = src[srcOffset + i];
+            i -= 1;
+        }
+    } else {
+        var i := 0;
+        loop i < length {
+            dst[dstOffset + i] = src[srcOffset + i];
+            i += 1;
+        }
+    }
+};
+
+/** Returns the index of the first occurrence of `needle` at or after `start`, or `-1` when absent. */
+pub List.indexOfByte := fn(values: List<UInt8>, needle: UInt8, start: Int): Int {
+    var i := if start < 0 { 0 } else { start };
+    n := values.length();
+    loop i < n {
+        if values[i] == needle { return i; }
+        i += 1;
+    }
+    -1
+};

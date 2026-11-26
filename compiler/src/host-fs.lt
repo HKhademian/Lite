@@ -29,8 +29,8 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
     args: mut List<String> = rawArgs;
     loop args.length() > 0 {
         arg := mut args.popFront();
-        if arg == "--stdin" {
-            isStdin = true;
+        if arg == "--stdin" or arg == "--sanitize" {
+            if arg == "--stdin" { isStdin = true; }
         } else if arg.startsWithAt(0, "-O") {
             if not optCfg.parseOptClass(arg.slice(2, arg.length())).ok {
                 return (ok = false, =isStdin, =hasName, =name, =hasRoot, =rootPath, =hasOut, =outPath, =hasTrace, =tracePath, =filePath, error = "unsupported optimization flag " + arg + " (expected -O0, -O1, -O2, -O3, -Os, or -Oc)");

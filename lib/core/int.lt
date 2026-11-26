@@ -187,3 +187,171 @@ pub UInt16.toText := fn(value: Self): String {
 pub UInt32.toText := fn(value: Self): String {
     UInt64.toText(cast<UInt64>(value))
 };
+
+/** Returns the absolute value of signed 64-bit integer `value`, faulting on `Int.min`. */
+pub Int.abs := fn(value: Self): Int {
+    if value < 0 { 0 - value } else { value }
+};
+
+/** Returns the smaller of signed 64-bit integers `a` and `b`. */
+pub Int.min := fn(a: Self, b: Self): Int {
+    if a < b { a } else { b }
+};
+
+/** Returns the larger of signed 64-bit integers `a` and `b`. */
+pub Int.max := fn(a: Self, b: Self): Int {
+    if a > b { a } else { b }
+};
+
+/** Clamps signed 64-bit integer `value` to `[lo, hi]`. */
+pub Int.clamp := fn(value: Self, lo: Self, hi: Self): Int {
+    if value < lo { lo } else if value > hi { hi } else { value }
+};
+
+/** Returns the count of leading zero bits in `value` (`32` when zero). */
+pub UInt32.clz := fn(value: Self): Int {
+    zero: UInt32 = 0;
+    if value == zero { return 32; }
+    var v := value;
+    var count := 0;
+    top: UInt32 = 2147483648;
+    loop v.bitAnd(top) == zero {
+        count += 1;
+        v = v.shiftLeft(1);
+    }
+    count
+};
+
+/** Returns the count of trailing zero bits in `value` (`32` when zero). */
+pub UInt32.ctz := fn(value: Self): Int {
+    zero: UInt32 = 0;
+    if value == zero { return 32; }
+    var v := value;
+    var count := 0;
+    one: UInt32 = 1;
+    loop v.bitAnd(one) == zero {
+        count += 1;
+        v = v.shiftRight(1);
+    }
+    count
+};
+
+/** Returns the count of set bits in `value`. */
+pub UInt32.popcnt := fn(value: Self): Int {
+    var v := value;
+    var count := 0;
+    zero: UInt32 = 0;
+    one: UInt32 = 1;
+    loop v > zero {
+        v = v.bitAnd(v - one);
+        count += 1;
+    }
+    count
+};
+
+/** Returns `value` with its 4 bytes reversed. */
+pub UInt32.bswap := fn(value: Self): UInt32 {
+    m: UInt32 = 255;
+    b0 := value.bitAnd(m).shiftLeft(24);
+    b1 := value.shiftRight(8).bitAnd(m).shiftLeft(16);
+    b2 := value.shiftRight(16).bitAnd(m).shiftLeft(8);
+    b3 := value.shiftRight(24).bitAnd(m);
+    b0.bitOr(b1).bitOr(b2).bitOr(b3)
+};
+
+/** Returns the count of leading zero bits in `value` (`64` when zero). */
+pub UInt64.clz := fn(value: Self): Int {
+    zero: UInt64 = 0;
+    if value == zero { return 64; }
+    var v := value;
+    var count := 0;
+    one: UInt64 = 1;
+    top := one.shiftLeft(63);
+    loop v.bitAnd(top) == zero {
+        count += 1;
+        v = v.shiftLeft(1);
+    }
+    count
+};
+
+/** Returns the count of trailing zero bits in `value` (`64` when zero). */
+pub UInt64.ctz := fn(value: Self): Int {
+    zero: UInt64 = 0;
+    if value == zero { return 64; }
+    var v := value;
+    var count := 0;
+    one: UInt64 = 1;
+    loop v.bitAnd(one) == zero {
+        count += 1;
+        v = v.shiftRight(1);
+    }
+    count
+};
+
+/** Returns the count of set bits in `value`. */
+pub UInt64.popcnt := fn(value: Self): Int {
+    var v := value;
+    var count := 0;
+    zero: UInt64 = 0;
+    one: UInt64 = 1;
+    loop v > zero {
+        v = v.bitAnd(v - one);
+        count += 1;
+    }
+    count
+};
+
+/** Returns `value` with its 8 bytes reversed. */
+pub UInt64.bswap := fn(value: Self): UInt64 {
+    m: UInt64 = 255;
+    b0 := value.bitAnd(m).shiftLeft(56);
+    b1 := value.shiftRight(8).bitAnd(m).shiftLeft(48);
+    b2 := value.shiftRight(16).bitAnd(m).shiftLeft(40);
+    b3 := value.shiftRight(24).bitAnd(m).shiftLeft(32);
+    b4 := value.shiftRight(32).bitAnd(m).shiftLeft(24);
+    b5 := value.shiftRight(40).bitAnd(m).shiftLeft(16);
+    b6 := value.shiftRight(48).bitAnd(m).shiftLeft(8);
+    b7 := value.shiftRight(56).bitAnd(m);
+    b0.bitOr(b1).bitOr(b2).bitOr(b3).bitOr(b4).bitOr(b5).bitOr(b6).bitOr(b7)
+};
+
+/** Returns the exact 128-bit unsigned product of `a` and `b` as `(lo, hi)`. */
+pub UInt64.mulWide := fn(a: Self, b: Self): (lo: UInt64, hi: UInt64) {
+    mask32: UInt64 = 4294967295;
+    al := a.bitAnd(mask32);
+    ah := a.shiftRight(32);
+    bl := b.bitAnd(mask32);
+    bh := b.shiftRight(32);
+    p0 := al * bl;
+    p1 := al * bh;
+    p2 := ah * bl;
+    p3 := ah * bh;
+    mid := p0.shiftRight(32) + p1.bitAnd(mask32) + p2.bitAnd(mask32);
+    hiVal := p3 + p1.shiftRight(32) + p2.shiftRight(32) + mid.shiftRight(32);
+    loVal := p0.bitAnd(mask32).bitOr(mid.bitAnd(mask32).shiftLeft(32));
+    (lo = loVal, hi = hiVal)
+};
+
+/** Returns `(sum, carry)` for `a + b + carry` in 64-bit unsigned arithmetic. */
+pub UInt64.addWithCarry := fn(a: Self, b: Self, carry: Bool): (sum: UInt64, carry: Bool) {
+    s1 := a.wrappingAdd(b);
+    c1 := s1 < a;
+    one: UInt64 = 1;
+    zero: UInt64 = 0;
+    cIn := if carry { one } else { zero };
+    s2 := s1.wrappingAdd(cIn);
+    c2 := s2 < s1;
+    (sum = s2, carry = c1 or c2)
+};
+
+/** Returns `(diff, borrow)` for `a - b - borrow` in 64-bit unsigned arithmetic. */
+pub UInt64.subWithBorrow := fn(a: Self, b: Self, borrow: Bool): (diff: UInt64, borrow: Bool) {
+    d1 := a.wrappingSub(b);
+    b1 := a < b;
+    one: UInt64 = 1;
+    zero: UInt64 = 0;
+    bIn := if borrow { one } else { zero };
+    d2 := d1.wrappingSub(bIn);
+    b2 := d1 < bIn;
+    (diff = d2, borrow = b1 or b2)
+};

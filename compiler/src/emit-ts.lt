@@ -136,6 +136,16 @@ usesListSet := fn(calls: String): Bool {
     usesBuiltin(calls, "listSet")
 }
 
+/** True when any emitted item reads a list/array element through `uncheckedGet`. */
+usesListUncheckedIndex := fn(calls: String): Bool {
+    usesBuiltin(calls, "listUncheckedAt")
+}
+
+/** True when any emitted item writes a list/array element through `uncheckedSet`. */
+usesListUncheckedSet := fn(calls: String): Bool {
+    usesBuiltin(calls, "listUncheckedSet")
+}
+
 /** True when any emitted item slices a list through the checked helper. */
 usesListSlice := fn(calls: String): Bool {
     usesBuiltin(calls, "listSlice")
@@ -291,6 +301,34 @@ usesIntDivision := fn(calls: String): Bool {
     usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "remainderInt") or usesBuiltin(calls, "floorDivideInt") or usesBuiltin(calls, "floorModuloInt")
 }
 
+/** True when any emitted item uses integer unchecked intrinsics (`lite$unch...`). */
+usesUncheckedInt := fn(calls: String): Bool {
+    usesBuiltin(calls, "unchAddS") or usesBuiltin(calls, "unchAddU") or
+    usesBuiltin(calls, "unchSubS") or usesBuiltin(calls, "unchSubU") or
+    usesBuiltin(calls, "unchMulS") or usesBuiltin(calls, "unchMulU") or
+    usesBuiltin(calls, "unchDivS") or usesBuiltin(calls, "unchDivU") or
+    usesBuiltin(calls, "unchRemS") or usesBuiltin(calls, "unchRemU") or
+    usesBuiltin(calls, "unchNegS") or usesBuiltin(calls, "unchNegU") or
+    usesBuiltin(calls, "unchShlS") or usesBuiltin(calls, "unchShlU") or
+    usesBuiltin(calls, "unchShrS") or usesBuiltin(calls, "unchShrU") or
+    usesBuiltin(calls, "unchTruncS") or usesBuiltin(calls, "unchTruncU")
+}
+
+/** True when any emitted item uses float bit casts (`toBits`/`fromBits`/`uncheckedFromBits`). */
+usesFloatBits := fn(calls: String): Bool {
+    usesBuiltin(calls, "f32ToBits") or usesBuiltin(calls, "f64ToBits") or
+    usesBuiltin(calls, "f32FromBits") or usesBuiltin(calls, "f64FromBits") or
+    usesBuiltin(calls, "f32UFromBits") or usesBuiltin(calls, "f64UFromBits")
+}
+
+/** True when any emitted item uses float unchecked intrinsics (`lite$ufop...`, `lite$ufma...`). */
+usesUncheckedFloat := fn(calls: String): Bool {
+    usesBuiltin(calls, "ufop8") or usesBuiltin(calls, "ufop16") or
+    usesBuiltin(calls, "ufop32") or usesBuiltin(calls, "ufop64") or
+    usesBuiltin(calls, "ufma8") or usesBuiltin(calls, "ufma16") or
+    usesBuiltin(calls, "ufma32") or usesBuiltin(calls, "ufma64")
+}
+
 /** True when Float8/Float16/Float32/Float operations need finite-result and zero-divisor guards. */
 usesFloatArithmetic := fn(calls: String): Bool {
     usesBuiltin(calls, "floatOp") or usesBuiltin(calls, "float32Op") or
@@ -298,19 +336,30 @@ usesFloatArithmetic := fn(calls: String): Bool {
     usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "f16Round") or
     usesBuiltin(calls, "f32Round") or usesBuiltin(calls, "floatPower") or
     usesBuiltin(calls, "fma8") or usesBuiltin(calls, "fma16") or
-    usesBuiltin(calls, "fma32") or usesBuiltin(calls, "fma64")
+    usesBuiltin(calls, "fma32") or usesBuiltin(calls, "fma64") or
+    usesUncheckedFloat(calls) or
+    usesBuiltin(calls, "f32FromBits") or usesBuiltin(calls, "f64FromBits") or
+    usesBuiltin(calls, "f32UFromBits") or usesBuiltin(calls, "f64UFromBits")
 }
 
 /** Emits the shared Float/Float32/Float16/Float8 arithmetic helpers without folding operations before execution. */
-emitFloatArithmeticHelpers := fn(calls: String): Unit {
+emitFloatArithmeticHelpers := fn(calls: String, config: optCfg.OptConfig): Unit {
     if not usesFloatArithmetic(calls) { return; }
-    if usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "float8Op") or usesBuiltin(calls, "fma8") {
+    if usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "float8Op") or usesBuiltin(calls, "fma8") or usesBuiltin(calls, "ufop8") or usesBuiltin(calls, "ufma8") {
         outLine("function lite$f8Round(value: number, at: number): number {");
-        outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        if config.checkFloatFinite {
+            outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        } else {
+            outLine("    if (Number.isNaN(value)) return NaN;");
+        }
         outLine("    if (value === 0) return Object.is(value, -0) ? -0 : 0;");
         outLine("    const sign = value < 0 ? -1 : 1;");
         outLine("    const ax = Math.abs(value);");
-        outLine("    if (ax >= 464) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        if config.checkFloatFinite {
+            outLine("    if (ax >= 464) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        } else {
+            outLine("    if (ax >= 464) { void at; return sign * 448; }");
+        }
         outLine("    if (ax < 0.015625) {");
         outLine("        const scaled = ax * 512; const fl = Math.floor(scaled); const rem = scaled - fl; let m = fl;");
         outLine("        if (rem > 0.5 || (rem === 0.5 && (m & 1) !== 0)) m += 1;");
@@ -325,80 +374,88 @@ emitFloatArithmeticHelpers := fn(calls: String): Unit {
         outLine("    return sign * p * (1 + m / 8);");
         outLine("}");
     }
-    if usesBuiltin(calls, "float8Op") {
+    if usesBuiltin(calls, "float8Op") or (config.checkUnchecked and usesBuiltin(calls, "ufop8")) {
         outLine("function lite$float8Op(left: number, right: number, op: number, at: number): number {");
-        outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
+        if config.checkArithmetic { outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");"); }
         outLine("    return lite$f8Round(op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right, at);");
         outLine("}");
     }
-    if usesBuiltin(calls, "f16Round") or usesBuiltin(calls, "float16Op") or usesBuiltin(calls, "fma16") {
+    if usesBuiltin(calls, "f16Round") or usesBuiltin(calls, "float16Op") or usesBuiltin(calls, "fma16") or (config.checkUnchecked and (usesBuiltin(calls, "ufop16") or usesBuiltin(calls, "ufma16"))) {
         outLine("function lite$f16Round(value: number, at: number): number {");
         outLine("    const r = Math.f16round(value);");
-        outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        if config.checkFloatFinite { outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+        else { outLine("    void at;"); }
         outLine("    return r;");
         outLine("}");
     }
-    if usesBuiltin(calls, "float16Op") {
+    if usesBuiltin(calls, "float16Op") or (config.checkUnchecked and usesBuiltin(calls, "ufop16")) {
         outLine("function lite$float16Op(left: number, right: number, op: number, at: number): number {");
-        outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
+        if config.checkArithmetic { outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");"); }
         outLine("    return lite$f16Round(op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right, at);");
         outLine("}");
     }
     if usesBuiltin(calls, "f32Round") {
         outLine("function lite$f32Round(value: number, at: number): number {");
         outLine("    const r = Math.fround(value);");
-        outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        if config.checkFloatFinite { outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+        else { outLine("    void at;"); }
         outLine("    return r;");
         outLine("}");
     }
     if usesBuiltin(calls, "floatPower") {
         outLine("function lite$floatPower(left: number, right: number, at: number): number {");
-        outLine("    if (left === 0 && right < 0) lite$fault(\"ArithmeticPanic\", at, \"zero cannot be raised to a negative power\");");
+        if config.checkArithmetic { outLine("    if (left === 0 && right < 0) lite$fault(\"ArithmeticPanic\", at, \"zero cannot be raised to a negative power\");"); }
         outLine("    const value = Math.pow(left, right);");
-        outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        if config.checkFloatFinite { outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+        else if not config.checkArithmetic { outLine("    void at;"); }
         outLine("    return value;");
         outLine("}");
     }
-    if usesBuiltin(calls, "float32Op") {
+    if usesBuiltin(calls, "float32Op") or (config.checkUnchecked and usesBuiltin(calls, "ufop32")) {
         outLine("function lite$float32Op(left: number, right: number, op: number, at: number): number {");
-        outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
+        if config.checkArithmetic { outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");"); }
         outLine("    const value = Math.fround(op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right);");
-        outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        if config.checkFloatFinite { outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+        else if not config.checkArithmetic { outLine("    void at;"); }
         outLine("    return value;");
         outLine("}");
     }
-    if usesBuiltin(calls, "fma8") {
+    if usesBuiltin(calls, "fma8") or (config.checkUnchecked and usesBuiltin(calls, "ufma8")) {
         outLine("function lite$fma8(a: number, b: number, c: number, at: number): number { return lite$f8Round(a * b + c, at); }");
     }
-    if usesBuiltin(calls, "fma16") {
+    if usesBuiltin(calls, "fma16") or (config.checkUnchecked and usesBuiltin(calls, "ufma16")) {
         outLine("function lite$fma16(a: number, b: number, c: number, at: number): number { return lite$f16Round(a * b + c, at); }");
     }
-    if usesBuiltin(calls, "fma32") {
+    if usesBuiltin(calls, "fma32") or (config.checkUnchecked and usesBuiltin(calls, "ufma32")) {
         outLine("function lite$fma32(a: number, b: number, c: number, at: number): number {");
         outLine("    const r = Math.fround(a * b + c);");
-        outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        if config.checkFloatFinite { outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+        else { outLine("    void at;"); }
         outLine("    return r;");
         outLine("}");
     }
-    if usesBuiltin(calls, "fma64") {
+    if usesBuiltin(calls, "fma64") or (config.checkUnchecked and usesBuiltin(calls, "ufma64")) {
         outLine("function lite$fma64(a: number, b: number, c: number, at: number): number {");
         outLine("    const r = a * b + c;");
-        outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
+        if config.checkFloatFinite { outLine("    if (!Number.isFinite(r)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+        else { outLine("    void at;"); }
         outLine("    return r;");
         outLine("}");
     }
-    if not usesBuiltin(calls, "floatOp") { return; }
-    outLine("function lite$floatOp(left: number, right: number, op: number, at: number): number {");
-    outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");");
-    outLine("    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;");
-    outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");");
-    outLine("    return value;");
-    outLine("}");
+    if usesBuiltin(calls, "floatOp") or (config.checkUnchecked and usesBuiltin(calls, "ufop64")) {
+        outLine("function lite$floatOp(left: number, right: number, op: number, at: number): number {");
+        if config.checkArithmetic { outLine("    if (op === 3 && right === 0) lite$fault(\"ArithmeticPanic\", at, \"division by zero\");"); }
+        outLine("    const value = op === 0 ? left + right : op === 1 ? left - right : op === 2 ? left * right : left / right;");
+        if config.checkFloatFinite { outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+        else if not config.checkArithmetic { outLine("    void at;"); }
+        outLine("    return value;");
+        outLine("}");
+    }
 }
 
 /** True when positioned bounds faults may be raised by text or list helpers. */
 usesBounds := fn(calls: String): Bool {
-    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesListSet(calls) or usesListSlice(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet")
+    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesListSet(calls) or usesListUncheckedIndex(calls) or usesListUncheckedSet(calls) or usesListSlice(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet") or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes")
 }
 
 /** True when runtime faults or input failures may require construct-level `finally` unwinding. */
@@ -406,7 +463,7 @@ usesAbruptFault := fn(calls: String): Bool {
     usesBuiltin(calls, "finally") and (
     usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or
     usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or usesIntArithmetic(calls) or
-    usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls)
+    usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls) or usesUncheckedInt(calls)
     )
 }
 
@@ -416,34 +473,48 @@ usesAbruptUnwind := fn(calls: String): Bool {
 }
 
 /** Emits shared position metadata once, exact runtime faults, and the arithmetic helpers actually used. */
-emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): Unit {
-    integers := usesIntArithmetic(calls) or usesIntDivision(calls);
-    if not integers and not usesBounds(calls) and not usesFloatArithmetic(calls) { return; }
+emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String, config: optCfg.OptConfig): Unit {
+    needCheckedHelpers := usesIntArithmetic(calls) or usesIntDivision(calls);
+    needUnchHelpers := usesUncheckedInt(calls);
+    if not needCheckedHelpers and not needUnchHelpers and not usesBounds(calls) and not usesFloatArithmetic(calls) { return; }
+    integers := needCheckedHelpers or needUnchHelpers;
+    hasHardBounds := usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListSlice(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet");
+    hasIdxBounds := config.checkBounds and (usesListIndex(calls) or usesListSet(calls) or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes"));
+    hasUnchBounds := config.checkUnchecked and (usesListUncheckedIndex(calls) or usesListUncheckedSet(calls));
+    needsIntFaultFn := (config.checkArithmetic and needCheckedHelpers) or (config.checkUnchecked and needUnchHelpers);
+    needsFloatFaultFn := (usesFloatArithmetic(calls) and (config.checkArithmetic or config.checkFloatFinite)) or
+    (config.checkFloatFinite and (usesBuiltin(calls, "f32FromBits") or usesBuiltin(calls, "f64FromBits"))) or
+    (config.checkUnchecked and (usesUncheckedFloat(calls) or usesBuiltin(calls, "f32UFromBits") or usesBuiltin(calls, "f64UFromBits")));
+    needsFaultFn := hasHardBounds or hasIdxBounds or hasUnchBounds or needsIntFaultFn or needsFloatFaultFn;
     namePrefix := if prefix == "" { "" } else { prefix + ":" };
     needsRange := usesBuiltin(calls, "addInt") or usesBuiltin(calls, "subtractInt") or
     usesBuiltin(calls, "multiplyInt") or usesBuiltin(calls, "negateInt") or
     usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt");
-    outLine("const lite$intLines: readonly number[] = [" + frontend.lineStartCodes(source) + "];");
-    outLine("const lite$intSource = " + tsLiteral.textLiteralCode(namePrefix) + ";");
-    if needsRange { outLine("const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;"); }
-    outLine("function lite$fault(category: string, at: number, message: string): never {");
-    outLine("    let line = 0;");
-    outLine("    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;");
-    outLine("    const column = at - (lite$intLines[line] ?? 0) + 1;");
-    if usesAbruptUnwind(calls) {
-        outLine("    return lite$throwAbruptFault(lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
-    } else {
-        outLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
-        outLine("    process.exit(1);");
+    if needsFaultFn {
+        outLine("const lite$intLines: readonly number[] = [" + frontend.lineStartCodes(source) + "];");
+        outLine("const lite$intSource = " + tsLiteral.textLiteralCode(namePrefix) + ";");
     }
-    outLine("}");
-    if integers {
+    if needsRange and config.checkArithmetic { outLine("const lite$intMin = -(1n << 63n), lite$intMax = (1n << 63n) - 1n;"); }
+    if needsFaultFn {
+        outLine("function lite$fault(category: string, at: number, message: string): never {");
+        outLine("    let line = 0;");
+        outLine("    while (line + 1 < lite$intLines.length && (lite$intLines[line + 1] ?? Infinity) <= at) line += 1;");
+        outLine("    const column = at - (lite$intLines[line] ?? 0) + 1;");
+        if usesAbruptUnwind(calls) {
+            outLine("    return lite$throwAbruptFault(lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
+        } else {
+            outLine("    process.getBuiltinModule(\"node:fs\").writeSync(2, lite$intSource + (line + 1) + \":\" + column + \": \" + category + \": \" + message + \"\\n\");");
+            outLine("    process.exit(1);");
+        }
+        outLine("}");
+    }
+    if needsIntFaultFn and integers {
         outLine("function lite$intFault(at: number, message: string): never { return lite$fault(\"ArithmeticPanic\", at, message); }");
     }
     if needsRange {
         outLine("function lite$checkedInt(value: bigint, at: number): bigint {");
-        outLine("    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\");");
-        outLine("    return value;");
+        if config.checkArithmetic { outLine("    if (value < lite$intMin || value > lite$intMax) lite$intFault(at, \"integer outside Int range\"); return value;"); }
+        else { outLine("    void at; return BigInt.asIntN(64, value);"); }
         outLine("}");
     }
     if usesBuiltin(calls, "addInt") {
@@ -458,19 +529,23 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
     if usesBuiltin(calls, "negateInt") {
         outLine("function lite$negateInt(value: bigint, at: number): bigint { return lite$checkedInt(-value, at); }");
     }
-    if usesBuiltin(calls, "checkedNarrowInt") {
+    if usesBuiltin(calls, "checkedNarrowInt") or (config.checkUnchecked and (usesBuiltin(calls, "unchAddS") or usesBuiltin(calls, "unchSubS") or usesBuiltin(calls, "unchMulS") or usesBuiltin(calls, "unchNegS") or usesBuiltin(calls, "unchDivS"))) {
         outLine("function lite$checkedNarrowInt(value: bigint, bits: bigint, name: string, at: number): bigint {");
-        outLine("    const limit = 1n << (bits - 1n);");
-        outLine("    if (value < -limit || value >= limit) lite$intFault(at, \"integer outside \" + name + \" range\");");
-        outLine("    return value;");
+        if config.checkArithmetic or config.checkUnchecked {
+            outLine("    const limit = 1n << (bits - 1n);");
+            outLine("    if (value < -limit || value >= limit) lite$intFault(at, \"integer outside \" + name + \" range\");");
+            outLine("    return value;");
+        } else {
+            outLine("    void name; void at; return BigInt.asIntN(Number(bits), value);");
+        }
         outLine("}");
     }
     needURange := usesBuiltin(calls, "uaddInt") or usesBuiltin(calls, "usubInt") or usesBuiltin(calls, "umulInt");
     if needURange {
-        outLine("const lite$uintMax = (1n << 64n) - 1n;");
+        if config.checkArithmetic { outLine("const lite$uintMax = (1n << 64n) - 1n;"); }
         outLine("function lite$checkedUInt64(value: bigint, at: number): bigint {");
-        outLine("    if (value < 0n || value > lite$uintMax) lite$intFault(at, \"integer outside UInt64 range\");");
-        outLine("    return value;");
+        if config.checkArithmetic { outLine("    if (value < 0n || value > lite$uintMax) lite$intFault(at, \"integer outside UInt64 range\"); return value;"); }
+        else { outLine("    void at; return BigInt.asUintN(64, value);"); }
         outLine("}");
     }
     if usesBuiltin(calls, "uaddInt") { outLine("function lite$uaddInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedUInt64(left + right, at); }"); }
@@ -478,79 +553,109 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String): U
     if usesBuiltin(calls, "umulInt") { outLine("function lite$umulInt(left: bigint, right: bigint, at: number): bigint { return lite$checkedUInt64(left * right, at); }"); }
     if usesBuiltin(calls, "udivInt") {
         outLine("function lite$udivInt(left: bigint, right: bigint, at: number): bigint {");
-        outLine("    if (right === 0n) lite$intFault(at, \"division by zero\");");
+        if config.checkArithmetic { outLine("    if (right === 0n) lite$intFault(at, \"division by zero\");"); }
+        else { outLine("    void at;"); }
         outLine("    return left / right;");
         outLine("}");
     }
     if usesBuiltin(calls, "uremInt") {
         outLine("function lite$uremInt(left: bigint, right: bigint, at: number): bigint {");
-        outLine("    if (right === 0n) lite$intFault(at, \"division by zero\");");
+        if config.checkArithmetic { outLine("    if (right === 0n) lite$intFault(at, \"division by zero\");"); }
+        else { outLine("    void at;"); }
         outLine("    return left % right;");
         outLine("}");
     }
-    if usesBuiltin(calls, "checkedNarrowUInt") {
+    if usesBuiltin(calls, "checkedNarrowUInt") or (config.checkUnchecked and (usesBuiltin(calls, "unchAddU") or usesBuiltin(calls, "unchSubU") or usesBuiltin(calls, "unchMulU") or usesBuiltin(calls, "unchNegU"))) {
         outLine("function lite$checkedNarrowUInt(value: bigint, bits: bigint, name: string, at: number): bigint {");
-        outLine("    const limit = 1n << bits;");
-        outLine("    if (value < 0n || value >= limit) lite$intFault(at, \"integer outside \" + name + \" range\");");
-        outLine("    return value;");
+        if config.checkArithmetic or config.checkUnchecked {
+            outLine("    const limit = 1n << bits;");
+            outLine("    if (value < 0n || value >= limit) lite$intFault(at, \"integer outside \" + name + \" range\");");
+            outLine("    return value;");
+        } else {
+            outLine("    void name; void at; return BigInt.asUintN(Number(bits), value);");
+        }
         outLine("}");
     }
     if usesBuiltin(calls, "castI2U") {
         outLine("function lite$castI2U(value: bigint, bits: bigint, name: string, at: number): bigint {");
-        outLine("    const limit = 1n << bits;");
-        outLine("    if (value < 0n || value >= limit) lite$intFault(at, \"integer outside \" + name + \" range\");");
-        outLine("    return value;");
+        if config.checkArithmetic {
+            outLine("    const limit = 1n << bits;");
+            outLine("    if (value < 0n || value >= limit) lite$intFault(at, \"integer outside \" + name + \" range\");");
+            outLine("    return value;");
+        } else {
+            outLine("    void name; void at; return BigInt.asUintN(Number(bits), value);");
+        }
         outLine("}");
     }
     if usesBuiltin(calls, "castU2I") {
         outLine("function lite$castU2I(value: bigint, bits: bigint, name: string, at: number): bigint {");
-        outLine("    const maxv = (1n << (bits - 1n)) - 1n;");
-        outLine("    if (value > maxv) lite$intFault(at, \"integer outside \" + name + \" range\");");
-        outLine("    return value;");
+        if config.checkArithmetic {
+            outLine("    const maxv = (1n << (bits - 1n)) - 1n;");
+            outLine("    if (value > maxv) lite$intFault(at, \"integer outside \" + name + \" range\");");
+            outLine("    return value;");
+        } else {
+            outLine("    void name; void at; return BigInt.asIntN(Number(bits), value);");
+        }
         outLine("}");
     }
-    if usesBuiltin(calls, "truncToInt") {
+    if usesBuiltin(calls, "truncToInt") or (config.checkUnchecked and usesBuiltin(calls, "unchTruncS")) {
         outLine("function lite$truncToInt(value: number, bits: bigint, name: string, at: number): bigint {");
-        outLine("    if (!Number.isFinite(value)) lite$intFault(at, \"non-finite floating value\");");
-        outLine("    const t = Math.trunc(value);");
-        outLine("    const lim = 1n << (bits - 1n);");
-        outLine("    const bi = BigInt(t === 0 ? 0 : t);");
-        outLine("    if (bi < -lim || bi >= lim) lite$intFault(at, \"integer outside \" + name + \" range\");");
-        outLine("    return bi;");
+        if not config.checkArithmetic and not (config.checkUnchecked and usesBuiltin(calls, "unchTruncS")) {
+            outLine("    void name; void at; return BigInt.asIntN(Number(bits), BigInt(Math.trunc(value)));");
+        } else {
+            outLine("    if (!Number.isFinite(value)) lite$intFault(at, \"non-finite floating value\");");
+            outLine("    const t = Math.trunc(value);");
+            outLine("    const lim = 1n << (bits - 1n);");
+            outLine("    const bi = BigInt(t === 0 ? 0 : t);");
+            outLine("    if (bi < -lim || bi >= lim) lite$intFault(at, \"integer outside \" + name + \" range\");");
+            outLine("    return bi;");
+        }
         outLine("}");
     }
-    if usesBuiltin(calls, "truncToUInt") {
+    if usesBuiltin(calls, "truncToUInt") or (config.checkUnchecked and usesBuiltin(calls, "unchTruncU")) {
         outLine("function lite$truncToUInt(value: number, bits: bigint, name: string, at: number): bigint {");
-        outLine("    if (!Number.isFinite(value)) lite$intFault(at, \"non-finite floating value\");");
-        outLine("    const t = Math.trunc(value);");
-        outLine("    if (t < 0) lite$intFault(at, \"integer outside \" + name + \" range\");");
-        outLine("    const lim = 1n << bits;");
-        outLine("    const bi = BigInt(t === 0 ? 0 : t);");
-        outLine("    if (bi >= lim) lite$intFault(at, \"integer outside \" + name + \" range\");");
-        outLine("    return bi;");
+        if not config.checkArithmetic and not (config.checkUnchecked and usesBuiltin(calls, "unchTruncU")) {
+            outLine("    void name; void at; return BigInt.asUintN(Number(bits), BigInt(Math.trunc(value)));");
+        } else {
+            outLine("    if (!Number.isFinite(value)) lite$intFault(at, \"non-finite floating value\");");
+            outLine("    const t = Math.trunc(value);");
+            outLine("    if (t < 0) lite$intFault(at, \"integer outside \" + name + \" range\");");
+            outLine("    const lim = 1n << bits;");
+            outLine("    const bi = BigInt(t === 0 ? 0 : t);");
+            outLine("    if (bi >= lim) lite$intFault(at, \"integer outside \" + name + \" range\");");
+            outLine("    return bi;");
+        }
         outLine("}");
     }
-    if usesBuiltin(calls, "shlS") {
+    if usesBuiltin(calls, "shlS") or (config.checkUnchecked and usesBuiltin(calls, "unchShlS")) {
         outLine("function lite$shlS(v: bigint, n: bigint, bits: bigint, at: number): bigint {");
-        outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        if config.checkArithmetic or (config.checkUnchecked and usesBuiltin(calls, "unchShlS")) {
+            outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        } else { outLine("    void at;"); }
         outLine("    return BigInt.asIntN(Number(bits), v << n);");
         outLine("}");
     }
-    if usesBuiltin(calls, "shlU") {
+    if usesBuiltin(calls, "shlU") or (config.checkUnchecked and usesBuiltin(calls, "unchShlU")) {
         outLine("function lite$shlU(v: bigint, n: bigint, bits: bigint, at: number): bigint {");
-        outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        if config.checkArithmetic or (config.checkUnchecked and usesBuiltin(calls, "unchShlU")) {
+            outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        } else { outLine("    void at;"); }
         outLine("    return BigInt.asUintN(Number(bits), v << n);");
         outLine("}");
     }
-    if usesBuiltin(calls, "shrS") {
+    if usesBuiltin(calls, "shrS") or (config.checkUnchecked and usesBuiltin(calls, "unchShrS")) {
         outLine("function lite$shrS(v: bigint, n: bigint, bits: bigint, at: number): bigint {");
-        outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        if config.checkArithmetic or (config.checkUnchecked and usesBuiltin(calls, "unchShrS")) {
+            outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        } else { outLine("    void at;"); }
         outLine("    return BigInt.asIntN(Number(bits), v >> n);");
         outLine("}");
     }
-    if usesBuiltin(calls, "shrU") {
+    if usesBuiltin(calls, "shrU") or (config.checkUnchecked and usesBuiltin(calls, "unchShrU")) {
         outLine("function lite$shrU(v: bigint, n: bigint, bits: bigint, at: number): bigint {");
-        outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        if config.checkArithmetic or (config.checkUnchecked and usesBuiltin(calls, "unchShrU")) {
+            outLine("    if (n < 0n || n >= bits) lite$intFault(at, \"shift count out of range\");");
+        } else { outLine("    void at;"); }
         outLine("    return BigInt.asUintN(Number(bits), v >> n);");
         outLine("}");
     }
@@ -757,7 +862,7 @@ emitInputHelpers := fn(calls: String): Unit {
 emitProcessDecl := fn(calls: String): Unit {
     needBaseProcess := usesBuiltin(calls, "inputArgs") or usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or
     usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat") or usesBuiltin(calls, "reportError") or
-    usesBuiltin(calls, "exit") or usesDiagFailExit(calls) or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls);
+    usesBuiltin(calls, "exit") or usesDiagFailExit(calls) or usesIntArithmetic(calls) or usesIntDivision(calls) or usesBounds(calls) or usesFloatArithmetic(calls) or usesUncheckedInt(calls);
     needOsHost := usesHostOs(calls);
     needInputDecoder := usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
     needTextDecoder := needInputDecoder or usesStreamRuntime(calls) or usesBuiltin(calls, "unicodeUtf8DecodeStrict") or
@@ -2293,7 +2398,7 @@ emitExtraCanvasHelpers := fn(calls: String): Unit {
 }
 
 /** Emits the self-contained declarations and helpers for the I/O and text builtins a program uses. */
-emitBuiltinHelpers := fn(calls: String): Unit {
+emitBuiltinHelpers := fn(calls: String, config: optCfg.OptConfig): Unit {
     abruptFault := usesAbruptFault(calls);
     abruptExit := usesBuiltin(calls, "finally") and (usesBuiltin(calls, "exit") or usesDiagFailExit(calls));
     abruptUnwind := usesAbruptUnwind(calls);
@@ -2784,6 +2889,60 @@ emitBuiltinHelpers := fn(calls: String): Unit {
         outLine("}");
         outLine("");
     }
+    if usesBuiltin(calls, "u64AddCarry") {
+        outLine("function lite$u64AddCarry(a: bigint, b: bigint, carry: boolean): { sum: bigint; carry: boolean } {");
+        outLine("    const mask = (1n << 64n) - 1n;");
+        outLine("    const total = a + b + (carry ? 1n : 0n);");
+        outLine("    return { sum: total & mask, carry: total > mask };");
+        outLine("}");
+        outLine("");
+    }
+    if usesBuiltin(calls, "u64SubBorrow") {
+        outLine("function lite$u64SubBorrow(a: bigint, b: bigint, borrow: boolean): { diff: bigint; borrow: boolean } {");
+        outLine("    const raw = a - b - (borrow ? 1n : 0n);");
+        outLine("    return { diff: BigInt.asUintN(64, raw), borrow: raw < 0n };");
+        outLine("}");
+        outLine("");
+    }
+    if usesBuiltin(calls, "listFillBytes") {
+        outLine("function lite$listFillBytes(dst: bigint[], offset: bigint, length: bigint, value: bigint): void {");
+        if config.checkBounds {
+            outLine("    if (offset < 0n || length < 0n || offset + length > BigInt(dst.length)) {");
+            outLine("        lite$fault(\"BoundPanic\", 0, \"fillBytes range out of bounds\");");
+            outLine("    }");
+        }
+        outLine("    const start = Number(offset);");
+        outLine("    const end = start + Number(length);");
+        outLine("    dst.fill(value, start, end);");
+        outLine("}");
+        outLine("");
+    }
+    if usesBuiltin(calls, "listCopyBytes") {
+        outLine("function lite$listCopyBytes(dst: bigint[], dstOffset: bigint, src: readonly bigint[], srcOffset: bigint, length: bigint): void {");
+        if config.checkBounds {
+            outLine("    if (dstOffset < 0n || srcOffset < 0n || length < 0n || dstOffset + length > BigInt(dst.length) || srcOffset + length > BigInt(src.length)) {");
+            outLine("        lite$fault(\"BoundPanic\", 0, \"copyBytes range out of bounds\");");
+            outLine("    }");
+        }
+        outLine("    if (length === 0n) return;");
+        outLine("    const len = Number(length);");
+        outLine("    const dOff = Number(dstOffset);");
+        outLine("    const sOff = Number(srcOffset);");
+        outLine("    if (dOff > sOff) {");
+        outLine("        for (let i = len - 1; i >= 0; i -= 1) { dst[dOff + i] = src[sOff + i]!; }");
+        outLine("    } else {");
+        outLine("        for (let i = 0; i < len; i += 1) { dst[dOff + i] = src[sOff + i]!; }");
+        outLine("    }");
+        outLine("}");
+        outLine("");
+    }
+    if usesBuiltin(calls, "listIndexOfByte") {
+        outLine("function lite$listIndexOfByte(values: readonly bigint[], needle: bigint, start: bigint): bigint {");
+        outLine("    const s = start < 0n ? 0 : Number(start);");
+        outLine("    return BigInt(values.indexOf(needle, s));");
+        outLine("}");
+        outLine("");
+    }
     return;
 }
 
@@ -2938,11 +3097,30 @@ emitMapGetOrHelper := fn(): Unit {
 }
 
 /** Emits the checked list-write helper used by generated programs that mutate list/array elements by index. */
-emitListSetHelper := fn(): Unit {
+emitListSetHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("function lite$listSet<T>(items: T[], index: bigint, value: T, at: number): void {");
-    outLine("    if (index < 0n || index >= BigInt(items.length)) {");
-    outLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
-    outLine("    }");
+    if config.checkBounds {
+        outLine("    if (index < 0n || index >= BigInt(items.length)) {");
+        outLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
+        outLine("    }");
+    } else {
+        outLine("    void at;");
+    }
+    outLine("    items[Number(index)] = value;");
+    outLine("}");
+    outLine("");
+}
+
+/** Emits the unchecked list/array-write helper (bounds-checked when `-fcheck-unchecked` is enabled). */
+emitListUncheckedSetHelper := fn(config: optCfg.OptConfig): Unit {
+    outLine("function lite$listUncheckedSet<T>(items: T[], index: bigint, value: T, at: number): void {");
+    if config.checkUnchecked {
+        outLine("    if (index < 0n || index >= BigInt(items.length)) {");
+        outLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
+        outLine("    }");
+    } else {
+        outLine("    void at;");
+    }
     outLine("    items[Number(index)] = value;");
     outLine("}");
     outLine("");
@@ -2961,16 +3139,37 @@ emitListSliceHelper := fn(): Unit {
 }
 
 /** Emits the checked list-index helper used by generated programs that read list elements. */
-emitListIndexHelper := fn(): Unit {
+emitListIndexHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("function lite$listAt<T>(items: readonly T[], index: bigint, at: number): T {");
-    outLine("    if (index < 0n || index >= BigInt(items.length)) {");
-    outLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
-    outLine("    }");
+    if config.checkBounds {
+        outLine("    if (index < 0n || index >= BigInt(items.length)) {");
+        outLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
+        outLine("    }");
+    } else {
+        outLine("    void at;");
+    }
     outLine("    const value = items[Number(index)];");
-    outLine("    if (value === undefined) {");
-    outLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
-    outLine("    }");
-    outLine("    return value;");
+    if config.checkBounds {
+        outLine("    if (value === undefined) {");
+        outLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
+        outLine("    }");
+    }
+    outLine("    return value as T;");
+    outLine("}");
+    outLine("");
+}
+
+/** Emits the unchecked list/array-index helper (bounds-checked when `-fcheck-unchecked` is enabled). */
+emitListUncheckedIndexHelper := fn(config: optCfg.OptConfig): Unit {
+    outLine("function lite$listUncheckedAt<T>(items: readonly T[], index: bigint, at: number): T {");
+    if config.checkUnchecked {
+        outLine("    if (index < 0n || index >= BigInt(items.length)) {");
+        outLine("        lite$fault(\"BoundPanic\", at, \"list index outside its extent\");");
+        outLine("    }");
+    } else {
+        outLine("    void at;");
+    }
+    outLine("    return items[Number(index)] as T;");
     outLine("}");
     outLine("");
 }
@@ -2998,18 +3197,19 @@ emitListPopFrontHelper := fn(): Unit {
 }
 
 /** Emits positioned truncating division with checked Int64 results. */
-emitIntDivideHelper := fn(): Unit {
+emitIntDivideHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("function lite$divideInt(left: bigint, right: bigint, at: number): bigint {");
-    outLine("    if (right === 0n) lite$intFault(at, \"division by zero\");");
+    if config.checkArithmetic { outLine("    if (right === 0n) lite$intFault(at, \"division by zero\");"); }
     outLine("    return lite$checkedInt(left / right, at);");
     outLine("}");
     outLine("");
 }
 
 /** Emits positioned remainder; MIN%-1 is representable zero. */
-emitIntRemainderHelper := fn(): Unit {
+emitIntRemainderHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("function lite$remainderInt(left: bigint, right: bigint, at: number): bigint {");
-    outLine("    if (right === 0n) lite$intFault(at, \"remainder by zero\");");
+    if config.checkArithmetic { outLine("    if (right === 0n) lite$intFault(at, \"remainder by zero\");"); }
+    else { outLine("    void at;"); }
     outLine("    return left % right;");
     outLine("}");
     outLine("");
@@ -3026,9 +3226,10 @@ emitIntFloorDivideHelper := fn(): Unit {
 }
 
 /** Emits positioned floor modulo, including signed-minimum divisors. */
-emitIntFloorModuloHelper := fn(): Unit {
+emitIntFloorModuloHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("function lite$floorModuloInt(left: bigint, right: bigint, at: number): bigint {");
-    outLine("    if (right === 0n) lite$intFault(at, \"modulo by zero\");");
+    if config.checkArithmetic { outLine("    if (right === 0n) lite$intFault(at, \"modulo by zero\");"); }
+    else { outLine("    void at;"); }
     outLine("    const remainder = left % right;");
     outLine("    return remainder !== 0n && (remainder < 0n) !== (right < 0n) ? remainder + right : remainder;");
     outLine("}");
@@ -3036,13 +3237,217 @@ emitIntFloorModuloHelper := fn(): Unit {
 }
 
 /** Emits every checked Int division-family helper the program reads. */
-emitIntDivisionHelpers := fn(calls: String): Unit {
-    if (usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt")) { emitIntDivideHelper(); }
-    if usesBuiltin(calls, "remainderInt") { emitIntRemainderHelper(); }
+emitIntDivisionHelpers := fn(calls: String, config: optCfg.OptConfig): Unit {
+    if (usesBuiltin(calls, "divideInt") or usesBuiltin(calls, "floorDivideInt")) { emitIntDivideHelper(config); }
+    if usesBuiltin(calls, "remainderInt") { emitIntRemainderHelper(config); }
     if usesBuiltin(calls, "floorDivideInt") { emitIntFloorDivideHelper(); }
-    if usesBuiltin(calls, "floorModuloInt") { emitIntFloorModuloHelper(); }
+    if usesBuiltin(calls, "floorModuloInt") { emitIntFloorModuloHelper(config); }
     return;
 }
+
+/** Emits TS runtime helpers for Float bit casts and `unchecked*` operations (checked when `-fcheck-unchecked` is enabled). */
+emitUncheckedTsHelpers := fn(calls: String, config: optCfg.OptConfig): Unit {
+    if usesFloatBits(calls) {
+        outLine("const lite$fBitsBuf = new ArrayBuffer(8);");
+        outLine("const lite$fBitsDv = new DataView(lite$fBitsBuf);");
+        if usesBuiltin(calls, "f32ToBits") {
+            outLine("function lite$f32ToBits(v: number): bigint { lite$fBitsDv.setFloat32(0, v, true); return BigInt(lite$fBitsDv.getUint32(0, true)); }");
+        }
+        if usesBuiltin(calls, "f64ToBits") {
+            outLine("function lite$f64ToBits(v: number): bigint { lite$fBitsDv.setFloat64(0, v, true); return lite$fBitsDv.getBigUint64(0, true); }");
+        }
+        if usesBuiltin(calls, "f32FromBits") {
+            outLine("function lite$f32FromBits(u: bigint, at: number): number {");
+            outLine("    lite$fBitsDv.setUint32(0, Number(BigInt.asUintN(32, u)), true); const v = lite$fBitsDv.getFloat32(0, true);");
+            if config.checkFloatFinite { outLine("    if (!Number.isFinite(v)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+            else { outLine("    void at;"); }
+            outLine("    return v;");
+            outLine("}");
+        }
+        if usesBuiltin(calls, "f32UFromBits") {
+            outLine("function lite$f32UFromBits(u: bigint, at: number): number {");
+            outLine("    lite$fBitsDv.setUint32(0, Number(BigInt.asUintN(32, u)), true); const v = lite$fBitsDv.getFloat32(0, true);");
+            if config.checkUnchecked { outLine("    if (!Number.isFinite(v)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+            else { outLine("    void at;"); }
+            outLine("    return v;");
+            outLine("}");
+        }
+        if usesBuiltin(calls, "f64FromBits") {
+            outLine("function lite$f64FromBits(u: bigint, at: number): number {");
+            outLine("    lite$fBitsDv.setBigUint64(0, BigInt.asUintN(64, u), true); const v = lite$fBitsDv.getFloat64(0, true);");
+            if config.checkFloatFinite { outLine("    if (!Number.isFinite(v)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+            else { outLine("    void at;"); }
+            outLine("    return v;");
+            outLine("}");
+        }
+        if usesBuiltin(calls, "f64UFromBits") {
+            outLine("function lite$f64UFromBits(u: bigint, at: number): number {");
+            outLine("    lite$fBitsDv.setBigUint64(0, BigInt.asUintN(64, u), true); const v = lite$fBitsDv.getFloat64(0, true);");
+            if config.checkUnchecked { outLine("    if (!Number.isFinite(v)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+            else { outLine("    void at;"); }
+            outLine("    return v;");
+            outLine("}");
+        }
+    }
+    if usesBuiltin(calls, "ufop8") {
+        outLine("function lite$ufop8(l: number, r: number, op: number, at: number): number {");
+        if config.checkUnchecked { outLine("    return lite$float8Op(l, r, op, at);"); }
+        else { outLine("    void at; return lite$f8Round(op === 0 ? l + r : op === 1 ? l - r : op === 2 ? l * r : l / r, 0);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "ufop16") {
+        outLine("function lite$ufop16(l: number, r: number, op: number, at: number): number {");
+        if config.checkUnchecked { outLine("    return lite$float16Op(l, r, op, at);"); }
+        else { outLine("    void at; return Math.f16round(op === 0 ? l + r : op === 1 ? l - r : op === 2 ? l * r : l / r);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "ufop32") {
+        outLine("function lite$ufop32(l: number, r: number, op: number, at: number): number {");
+        if config.checkUnchecked { outLine("    return lite$float32Op(l, r, op, at);"); }
+        else { outLine("    void at; return Math.fround(op === 0 ? l + r : op === 1 ? l - r : op === 2 ? l * r : l / r);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "ufop64") {
+        outLine("function lite$ufop64(l: number, r: number, op: number, at: number): number {");
+        if config.checkUnchecked { outLine("    return lite$floatOp(l, r, op, at);"); }
+        else { outLine("    void at; return op === 0 ? l + r : op === 1 ? l - r : op === 2 ? l * r : l / r;"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "ufma8") {
+        outLine("function lite$ufma8(a: number, b: number, c: number, at: number): number {");
+        if config.checkUnchecked { outLine("    return lite$fma8(a, b, c, at);"); }
+        else { outLine("    void at; return lite$f8Round(a * b + c, 0);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "ufma16") {
+        outLine("function lite$ufma16(a: number, b: number, c: number, at: number): number {");
+        if config.checkUnchecked { outLine("    return lite$fma16(a, b, c, at);"); }
+        else { outLine("    void at; return Math.f16round(a * b + c);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "ufma32") {
+        outLine("function lite$ufma32(a: number, b: number, c: number, at: number): number {");
+        if config.checkUnchecked { outLine("    return lite$fma32(a, b, c, at);"); }
+        else { outLine("    void at; return Math.fround(a * b + c);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "ufma64") {
+        outLine("function lite$ufma64(a: number, b: number, c: number, at: number): number {");
+        if config.checkUnchecked { outLine("    return lite$fma64(a, b, c, at);"); }
+        else { outLine("    void at; return a * b + c;"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchAddS") {
+        outLine("function lite$unchAddS(a: bigint, b: bigint, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$checkedNarrowInt(a + b, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asIntN(Number(bits), a + b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchAddU") {
+        outLine("function lite$unchAddU(a: bigint, b: bigint, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$checkedNarrowUInt(a + b, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asUintN(Number(bits), a + b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchSubS") {
+        outLine("function lite$unchSubS(a: bigint, b: bigint, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$checkedNarrowInt(a - b, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asIntN(Number(bits), a - b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchSubU") {
+        outLine("function lite$unchSubU(a: bigint, b: bigint, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$checkedNarrowUInt(a - b, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asUintN(Number(bits), a - b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchMulS") {
+        outLine("function lite$unchMulS(a: bigint, b: bigint, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$checkedNarrowInt(a * b, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asIntN(Number(bits), a * b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchMulU") {
+        outLine("function lite$unchMulU(a: bigint, b: bigint, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$checkedNarrowUInt(a * b, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asUintN(Number(bits), a * b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchDivS") {
+        outLine("function lite$unchDivS(a: bigint, b: bigint, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked {
+            outLine("    if (b === 0n) lite$intFault(at, \"division by zero\");");
+            outLine("    return lite$checkedNarrowInt(a / b, bits, name, at);");
+        } else { outLine("    void name; void at; return BigInt.asIntN(Number(bits), a / b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchDivU") {
+        outLine("function lite$unchDivU(a: bigint, b: bigint, bits: bigint, _name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    if (b === 0n) lite$intFault(at, \"division by zero\"); return BigInt.asUintN(Number(bits), a / b);"); }
+        else { outLine("    void at; return BigInt.asUintN(Number(bits), a / b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchRemS") {
+        outLine("function lite$unchRemS(a: bigint, b: bigint, bits: bigint, _name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    if (b === 0n) lite$intFault(at, \"remainder by zero\"); return BigInt.asIntN(Number(bits), a % b);"); }
+        else { outLine("    void at; return BigInt.asIntN(Number(bits), a % b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchRemU") {
+        outLine("function lite$unchRemU(a: bigint, b: bigint, bits: bigint, _name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    if (b === 0n) lite$intFault(at, \"remainder by zero\"); return BigInt.asUintN(Number(bits), a % b);"); }
+        else { outLine("    void at; return BigInt.asUintN(Number(bits), a % b);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchNegS") {
+        outLine("function lite$unchNegS(a: bigint, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$checkedNarrowInt(-a, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asIntN(Number(bits), -a);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchNegU") {
+        outLine("function lite$unchNegU(a: bigint, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$checkedNarrowUInt(-a, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asUintN(Number(bits), -a);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchShlS") {
+        outLine("function lite$unchShlS(a: bigint, n: bigint, bits: bigint, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$shlS(a, n, bits, at);"); }
+        else { outLine("    void at; return BigInt.asIntN(Number(bits), a << n);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchShlU") {
+        outLine("function lite$unchShlU(a: bigint, n: bigint, bits: bigint, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$shlU(a, n, bits, at);"); }
+        else { outLine("    void at; return BigInt.asUintN(Number(bits), a << n);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchShrS") {
+        outLine("function lite$unchShrS(a: bigint, n: bigint, bits: bigint, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$shrS(a, n, bits, at);"); }
+        else { outLine("    void at; return BigInt.asIntN(Number(bits), a >> n);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchShrU") {
+        outLine("function lite$unchShrU(a: bigint, n: bigint, bits: bigint, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$shrU(a, n, bits, at);"); }
+        else { outLine("    void at; return BigInt.asUintN(Number(bits), a >> n);"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchTruncS") {
+        outLine("function lite$unchTruncS(v: number, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$truncToInt(v, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asIntN(Number(bits), BigInt(Math.trunc(v)));"); }
+        outLine("}");
+    }
+    if usesBuiltin(calls, "unchTruncU") {
+        outLine("function lite$unchTruncU(v: number, bits: bigint, name: string, at: number): bigint {");
+        if config.checkUnchecked { outLine("    return lite$truncToUInt(v, bits, name, at);"); }
+        else { outLine("    void name; void at; return BigInt.asUintN(Number(bits), BigInt(Math.trunc(v)));"); }
+        outLine("}");
+    }
+};
 
 /** Extracts the runtime identifier of parameter `targetIndex` from encoded `|`-separated `name=kind` entries. */
 paramRuntimeAt := fn(encoded: String, targetIndex: Int): String {
@@ -3084,8 +3489,36 @@ softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Strin
         if fnName == "hexDecode" { return "lite$cryptoDecodeBytes(\"hex\", " + arg0 + ")"; }
     } else if moduleName == "lib/core/int" {
         if fnName == "Int.toText" { return "String(" + arg0 + ")"; }
+        if fnName == "Int.abs" { return "(" + arg0 + " < 0n ? lite$negateInt(" + arg0 + ", 0) : " + arg0 + ")"; }
+        if fnName == "Int.min" { return "(" + arg0 + " < " + paramRuntimeAt(params, 1) + " ? " + arg0 + " : " + paramRuntimeAt(params, 1) + ")"; }
+        if fnName == "Int.max" { return "(" + arg0 + " > " + paramRuntimeAt(params, 1) + " ? " + arg0 + " : " + paramRuntimeAt(params, 1) + ")"; }
+        if fnName == "Int.clamp" {
+            a1 := paramRuntimeAt(params, 1);
+            a2 := paramRuntimeAt(params, 2);
+            return "(" + arg0 + " < " + a1 + " ? " + a1 + " : (" + arg0 + " > " + a2 + " ? " + a2 + " : " + arg0 + "))";
+        }
+        if fnName == "UInt32.clz" { return "lite$clz(" + arg0 + ", 32n)"; }
+        if fnName == "UInt32.ctz" { return "lite$ctz(" + arg0 + ", 32n)"; }
+        if fnName == "UInt32.popcnt" { return "lite$popcnt(" + arg0 + ", 32n)"; }
+        if fnName == "UInt32.bswap" { return "lite$bswapU(" + arg0 + ", 32n)"; }
+        if fnName == "UInt64.clz" { return "lite$clz(" + arg0 + ", 64n)"; }
+        if fnName == "UInt64.ctz" { return "lite$ctz(" + arg0 + ", 64n)"; }
+        if fnName == "UInt64.popcnt" { return "lite$popcnt(" + arg0 + ", 64n)"; }
+        if fnName == "UInt64.bswap" { return "lite$bswapU(" + arg0 + ", 64n)"; }
+        if fnName == "UInt64.mulWide" { return "lite$wmulU(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", 64n)"; }
+        if fnName == "UInt64.addWithCarry" { return "lite$u64AddCarry(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")"; }
+        if fnName == "UInt64.subWithBorrow" { return "lite$u64SubBorrow(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")"; }
     } else if moduleName == "lib/core/list" {
         if fnName == "List.join" { return arg0 + ".join(" + paramRuntimeAt(params, 1) + ")"; }
+        if fnName == "List.fillBytes" {
+            return "lite$listFillBytes(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ", " + paramRuntimeAt(params, 3) + ")";
+        }
+        if fnName == "List.copyBytes" {
+            return "lite$listCopyBytes(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ", " + paramRuntimeAt(params, 3) + ", " + paramRuntimeAt(params, 4) + ")";
+        }
+        if fnName == "List.indexOfByte" {
+            return "lite$listIndexOfByte(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")";
+        }
     } else if moduleName == "lib/core/text" {
         if fnName == "String.skipSpaces" { return "lite$textSkipWhile(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", true)"; }
         if fnName == "String.skipName" { return "lite$textSkipWhile(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", false)"; }
@@ -3328,20 +3761,23 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("let lite$out: string[] = [];");
         outLine("");
     }
-    emitBuiltinHelpers(calls);
+    emitBuiltinHelpers(calls, config);
     emitRcHelpers(calls);
     emitVmArenaHelpers(calls);
-    if usesListIndex(calls) { emitListIndexHelper(); }
-    if usesListSet(calls) { emitListSetHelper(); }
+    if usesListIndex(calls) { emitListIndexHelper(config); }
+    if usesListSet(calls) { emitListSetHelper(config); }
+    if usesListUncheckedIndex(calls) { emitListUncheckedIndexHelper(config); }
+    if usesListUncheckedSet(calls) { emitListUncheckedSetHelper(config); }
     if usesListSlice(calls) { emitListSliceHelper(); }
     if usesMapIndex(calls) { emitMapIndexHelper(); }
     if usesMapGet(calls) { emitMapGetHelper(); }
     if usesMapGetOr(calls) { emitMapGetOrHelper(); }
     if usesListPop(calls) { emitListPopHelper(); }
     if usesListPopFront(calls) { emitListPopFrontHelper(); }
-    emitIntArithmeticHelpers(calls, source, prefix);
-    emitFloatArithmeticHelpers(calls);
-    emitIntDivisionHelpers(calls);
+    emitIntArithmeticHelpers(calls, source, prefix, config);
+    emitFloatArithmeticHelpers(calls, config);
+    emitIntDivisionHelpers(calls, config);
+    emitUncheckedTsHelpers(calls, config);
     if usesEmit {
         outLine("export function main(lite$write?: (text: string) => void): string {");
         if hasExit { outLine("    lite$out = [];"); }

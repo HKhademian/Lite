@@ -908,7 +908,10 @@ usesCSoftBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_c_text_is_digit(") or usesIntHelper(calls, "lt_c_text_is_ascii_letter(") or
     usesIntHelper(calls, "lt_c_text_is_name_start(") or usesIntHelper(calls, "lt_c_text_is_name_continue(") or
     usesIntHelper(calls, "lt_c_text_is_whitespace(") or
-    usesIntHelper(calls, "lt_c_sha256_text(") or usesIntHelper(calls, "lt_c_sha256_bytes(")
+    usesIntHelper(calls, "lt_c_sha256_text(") or usesIntHelper(calls, "lt_c_sha256_bytes(") or
+    usesIntHelper(calls, "lt_c_u64_add_carry(") or usesIntHelper(calls, "lt_c_u64_sub_borrow(") or
+    usesIntHelper(calls, "lt_c_list_fill_bytes(") or usesIntHelper(calls, "lt_c_list_copy_bytes(") or
+    usesIntHelper(calls, "lt_c_list_index_of_byte(")
 };
 
 /** True when any emitted item needs POSIX OS headers (`unistd.h`, `fcntl.h`, `sys/stat.h`, `dirent.h`). */
@@ -922,6 +925,24 @@ usesIntDivision := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite_divide_int(") or usesIntHelper(calls, "lite_remainder_int(") or
     usesIntHelper(calls, "lite_floor_divide_int(") or usesIntHelper(calls, "lite_floor_modulo_int(")
 }
+
+/** True when a program calls any integer unchecked intrinsic (`lt_uadd_...`, etc.). */
+usesUncheckedInt := fn(calls: Set<String>): Bool {
+    usesHelperPrefix(calls, "lt_uadd_") or usesHelperPrefix(calls, "lt_usub_") or
+    usesHelperPrefix(calls, "lt_umul_") or usesHelperPrefix(calls, "lt_udiv_") or
+    usesHelperPrefix(calls, "lt_urem_") or usesHelperPrefix(calls, "lt_uneg_") or
+    usesHelperPrefix(calls, "lt_ushl_") or usesHelperPrefix(calls, "lt_ushr_") or
+    usesHelperPrefix(calls, "lt_utrunc_")
+};
+
+/** True when a program calls any float unchecked or bit-cast intrinsic. */
+usesUncheckedFloat := fn(calls: Set<String>): Bool {
+    usesHelperPrefix(calls, "lt_ufadd_") or usesHelperPrefix(calls, "lt_ufsub_") or
+    usesHelperPrefix(calls, "lt_ufmul_") or usesHelperPrefix(calls, "lt_ufdiv_") or
+    usesHelperPrefix(calls, "lt_ufma_") or
+    usesIntHelper(calls, "lt_f32_from_bits(") or usesIntHelper(calls, "lt_f64_from_bits(") or
+    usesIntHelper(calls, "lt_f32_ufrom_bits(") or usesIntHelper(calls, "lt_f64_ufrom_bits(")
+};
 
 /** True when a program needs checked dynamic Int or UInt arithmetic, narrow range guards, or numeric casts. */
 usesIntArithmetic := fn(calls: Set<String>): Bool {
@@ -943,13 +964,13 @@ usesFloatArithmetic := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_float8_literal(") or
     usesIntHelper(calls, "lt_f64_to_f16_checked(") or usesIntHelper(calls, "lt_f64_to_f32_checked(") or
     usesIntHelper(calls, "lt_float_power(") or usesHelperPrefix(calls, "lt_fma_") or
-    usesIntHelper(calls, "lt_ufma_f8(")
+    usesUncheckedFloat(calls)
 }
 
 /** Emits checked Float8/Float16/Float32/Float operations; caller temporaries preserve left-to-right operand effects. */
-emitFloatArithmeticHelpers := fn(calls: Set<String>, float8Values: Bool, float16Values: Bool, float8Literals: Bool, float16Literals: Bool): Unit {
-    needF8 := float8Values or float8Literals or usesIntHelper(calls, "lt_f8_to_f64(") or usesIntHelper(calls, "lt_f8_neg(") or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_float8_op(") or usesIntHelper(calls, "lt_fma_f8(") or usesIntHelper(calls, "lt_ufma_f8(");
-    needF16 := float16Values or float16Literals or usesIntHelper(calls, "lt_f16_to_f64(") or usesIntHelper(calls, "lt_f16_neg(") or usesHelperPrefix(calls, "lt_f64_to_f16") or usesIntHelper(calls, "lt_float16_op(") or usesHelperPrefix(calls, "lt_f16_") or usesIntHelper(calls, "lt_fma_f16(") or usesIntHelper(calls, "lt_ufma_f16(");
+emitFloatArithmeticHelpers := fn(calls: Set<String>, float8Values: Bool, float16Values: Bool, float8Literals: Bool, float16Literals: Bool, config: optCfg.OptConfig): Unit {
+    needF8 := float8Values or float8Literals or usesIntHelper(calls, "lt_f8_to_f64(") or usesIntHelper(calls, "lt_f8_neg(") or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_float8_op(") or usesIntHelper(calls, "lt_fma_f8(") or usesIntHelper(calls, "lt_ufma_f8(") or usesIntHelper(calls, "lt_ufadd_f8(") or usesIntHelper(calls, "lt_ufsub_f8(") or usesIntHelper(calls, "lt_ufmul_f8(") or usesIntHelper(calls, "lt_ufdiv_f8(");
+    needF16 := float16Values or float16Literals or usesIntHelper(calls, "lt_f16_to_f64(") or usesIntHelper(calls, "lt_f16_neg(") or usesHelperPrefix(calls, "lt_f64_to_f16") or usesIntHelper(calls, "lt_float16_op(") or usesHelperPrefix(calls, "lt_f16_") or usesIntHelper(calls, "lt_fma_f16(") or usesIntHelper(calls, "lt_ufma_f16(") or usesIntHelper(calls, "lt_ufadd_f16(") or usesIntHelper(calls, "lt_ufsub_f16(") or usesIntHelper(calls, "lt_ufmul_f16(") or usesIntHelper(calls, "lt_ufdiv_f16(");
     if needF8 {
         lutBuf: mut tb.TextBuilder;
         var b := 0;
@@ -973,13 +994,22 @@ emitFloatArithmeticHelpers := fn(calls: Set<String>, float8Values: Bool, float16
         outLine("static const float lt_f8_lut[256] = { " + lutBuf.build() + " };");
         outLine("LT_INLINE double lt_f8_to_f64(uint8_t b) { return (double)lt_f8_lut[b]; }");
         outLine("LT_INLINE uint8_t lt_f8_neg(uint8_t b) { return (uint8_t)(b ^ 0x80u); }");
-        if float8Literals or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_float8_op(") or usesIntHelper(calls, "lt_fma_f8(") or usesIntHelper(calls, "lt_ufma_f8(") {
+        if float8Literals or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_float8_op(") or usesIntHelper(calls, "lt_fma_f8(") or usesIntHelper(calls, "lt_ufma_f8(") or usesIntHelper(calls, "lt_ufadd_f8(") or usesIntHelper(calls, "lt_ufsub_f8(") or usesIntHelper(calls, "lt_ufmul_f8(") or usesIntHelper(calls, "lt_ufdiv_f8(") {
             outLine("static uint8_t lt_f64_to_f8(double x, size_t at) {");
-            outLine("    if (!isfinite(x)) { lt_int_fault(at, \"non-finite floating value\"); }");
+            if config.checkFloatFinite {
+                outLine("    if (!isfinite(x)) { lt_int_fault(at, \"non-finite floating value\"); }");
+            } else {
+                outLine("    (void)at;");
+                outLine("    if (isnan(x)) { return 0x7fu; }");
+            }
             outLine("    uint8_t sign = signbit(x) ? 0x80u : 0u;");
             outLine("    double ax = fabs(x);");
             outLine("    if (ax == 0.0) { return sign; }");
-            outLine("    if (ax >= 464.0) { lt_int_fault(at, \"non-finite floating value\"); }");
+            if config.checkFloatFinite {
+                outLine("    if (ax >= 464.0) { lt_int_fault(at, \"non-finite floating value\"); }");
+            } else {
+                outLine("    if (ax >= 464.0) { return (uint8_t)(sign | 0x7eu); }");
+            }
             outLine("    if (ax < 0x1p-6) {");
             outLine("        double scaled = ax * 512.0; double fl = floor(scaled); double rem = scaled - fl; uint8_t m = (uint8_t)fl;");
             outLine("        if (rem > 0.5 || (rem == 0.5 && (m & 1u) != 0u)) { m += 1u; }");
@@ -993,9 +1023,9 @@ emitFloatArithmeticHelpers := fn(calls: Set<String>, float8Values: Bool, float16
             outLine("}");
         }
         if float8Literals { outLine("static uint8_t lt_float8_literal(const char *text) { return lt_f64_to_f8(strtod(text, NULL), 0); }"); }
-        if usesIntHelper(calls, "lt_float8_op(") {
+        if usesIntHelper(calls, "lt_float8_op(") or (config.checkUnchecked and (usesIntHelper(calls, "lt_ufadd_f8(") or usesIntHelper(calls, "lt_ufsub_f8(") or usesIntHelper(calls, "lt_ufmul_f8(") or usesIntHelper(calls, "lt_ufdiv_f8("))) {
             outLine("static uint8_t lt_float8_op(double left, double right, int op, size_t at) {");
-            outLine("    if (op == 3 && right == 0.0) { lt_int_fault(at, \"division by zero\"); }");
+            if config.checkArithmetic { outLine("    if (op == 3 && right == 0.0) { lt_int_fault(at, \"division by zero\"); }"); }
             outLine("    double value = op == 0 ? left + right : op == 1 ? left - right : op == 2 ? left * right : left / right;");
             outLine("    return lt_f64_to_f8(value, at);");
             outLine("}");
@@ -1031,16 +1061,20 @@ emitFloatArithmeticHelpers := fn(calls: Set<String>, float8Values: Bool, float16
         outLine("}");
         outLine("LT_INLINE lt_f16 lt_f16_neg(lt_f16 h) { return (lt_f16)(h ^ 0x8000u); }");
         outLine("#endif");
-        if usesIntHelper(calls, "lt_f64_to_f16_checked(") or usesIntHelper(calls, "lt_float16_op(") or usesIntHelper(calls, "lt_fma_f16(") {
+        if usesIntHelper(calls, "lt_f64_to_f16_checked(") or usesIntHelper(calls, "lt_float16_op(") or usesIntHelper(calls, "lt_fma_f16(") or (config.checkUnchecked and (usesIntHelper(calls, "lt_ufma_f16(") or usesIntHelper(calls, "lt_ufadd_f16(") or usesIntHelper(calls, "lt_ufsub_f16(") or usesIntHelper(calls, "lt_ufmul_f16(") or usesIntHelper(calls, "lt_ufdiv_f16("))) {
             outLine("static lt_f16 lt_f64_to_f16_checked(double v, size_t at) {");
-            outLine("    if (!isfinite(v) || fabs(v) >= 65520.0) { lt_int_fault(at, \"non-finite floating value\"); }");
+            if config.checkFloatFinite {
+                outLine("    if (!isfinite(v) || fabs(v) >= 65520.0) { lt_int_fault(at, \"non-finite floating value\"); }");
+            } else {
+                outLine("    (void)at;");
+            }
             outLine("    return lt_f64_to_f16_unchecked(v);");
             outLine("}");
         }
         if float16Literals { outLine("static lt_f16 lt_float16_literal(const char *text) { return lt_f64_to_f16_unchecked(strtod(text, NULL)); }"); }
-        if usesIntHelper(calls, "lt_float16_op(") {
+        if usesIntHelper(calls, "lt_float16_op(") or (config.checkUnchecked and (usesIntHelper(calls, "lt_ufadd_f16(") or usesIntHelper(calls, "lt_ufsub_f16(") or usesIntHelper(calls, "lt_ufmul_f16(") or usesIntHelper(calls, "lt_ufdiv_f16("))) {
             outLine("static lt_f16 lt_float16_op(double left, double right, int op, size_t at) {");
-            outLine("    if (op == 3 && right == 0.0) { lt_int_fault(at, \"division by zero\"); }");
+            if config.checkArithmetic { outLine("    if (op == 3 && right == 0.0) { lt_int_fault(at, \"division by zero\"); }"); }
             outLine("    double value = op == 0 ? left + right : op == 1 ? left - right : op == 2 ? left * right : left / right;");
             outLine("    return lt_f64_to_f16_checked(value, at);");
             outLine("}");
@@ -1058,77 +1092,67 @@ emitFloatArithmeticHelpers := fn(calls: Set<String>, float8Values: Bool, float16
             outLine("LT_INLINE lt_f16 lt_f16_div_raw(lt_f16 a, lt_f16 b) { return lt_f64_to_f16_unchecked(lt_f16_to_f64(a) / lt_f16_to_f64(b)); }");
         }
     }
-    if usesIntHelper(calls, "lt_fma_f8(") {
+    if usesIntHelper(calls, "lt_fma_f8(") or (config.checkUnchecked and usesIntHelper(calls, "lt_ufma_f8(")) {
         outLine("static uint8_t lt_fma_f8(uint8_t a, uint8_t b, uint8_t c, size_t at) {");
         outLine("    return lt_f64_to_f8(fma(lt_f8_to_f64(a), lt_f8_to_f64(b), lt_f8_to_f64(c)), at);");
         outLine("}");
     }
-    if usesIntHelper(calls, "lt_ufma_f8(") {
-        outLine("LT_INLINE uint8_t lt_ufma_f8(uint8_t a, uint8_t b, uint8_t c) {");
-        outLine("    return lt_f64_to_f8(fma(lt_f8_to_f64(a), lt_f8_to_f64(b), lt_f8_to_f64(c)), 0);");
-        outLine("}");
-    }
-    if usesIntHelper(calls, "lt_fma_f16(") {
+    if usesIntHelper(calls, "lt_fma_f16(") or (config.checkUnchecked and usesIntHelper(calls, "lt_ufma_f16(")) {
         outLine("static lt_f16 lt_fma_f16(lt_f16 a, lt_f16 b, lt_f16 c, size_t at) {");
         outLine("    return lt_f64_to_f16_checked(fma(lt_f16_to_f64(a), lt_f16_to_f64(b), lt_f16_to_f64(c)), at);");
         outLine("}");
     }
-    if usesIntHelper(calls, "lt_ufma_f16(") {
-        outLine("LT_INLINE lt_f16 lt_ufma_f16(lt_f16 a, lt_f16 b, lt_f16 c) {");
-        outLine("    return lt_f64_to_f16_unchecked(fma(lt_f16_to_f64(a), lt_f16_to_f64(b), lt_f16_to_f64(c)));");
-        outLine("}");
-    }
-    if usesIntHelper(calls, "lt_fma_f32(") {
+    if usesIntHelper(calls, "lt_fma_f32(") or (config.checkUnchecked and usesIntHelper(calls, "lt_ufma_f32(")) {
         outLine("static float lt_fma_f32(float a, float b, float c, size_t at) {");
         outLine("    float v = fmaf(a, b, c);");
-        outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }");
+        if config.checkFloatFinite { outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+        else { outLine("    (void)at;"); }
         outLine("    return v;");
         outLine("}");
     }
-    if usesIntHelper(calls, "lt_fma_f64(") {
+    if usesIntHelper(calls, "lt_fma_f64(") or (config.checkUnchecked and usesIntHelper(calls, "lt_ufma_f64(")) {
         outLine("static double lt_fma_f64(double a, double b, double c, size_t at) {");
         outLine("    double v = fma(a, b, c);");
-        outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }");
+        if config.checkFloatFinite { outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+        else { outLine("    (void)at;"); }
         outLine("    return v;");
         outLine("}");
-    }
-    if usesIntHelper(calls, "lt_ufma_f32(") {
-        outLine("LT_INLINE float lt_ufma_f32(float a, float b, float c) { return fmaf(a, b, c); }");
-    }
-    if usesIntHelper(calls, "lt_ufma_f64(") {
-        outLine("LT_INLINE double lt_ufma_f64(double a, double b, double c) { return fma(a, b, c); }");
     }
     if usesIntHelper(calls, "lt_f64_to_f32_checked(") {
         outLine("static float lt_f64_to_f32_checked(double v, size_t at) {");
         outLine("    float r = (float)v;");
-        outLine("    if (!isfinite(r)) { lt_int_fault(at, \"non-finite floating value\"); }");
+        if config.checkFloatFinite { outLine("    if (!isfinite(r)) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+        else { outLine("    (void)at;"); }
         outLine("    return r;");
         outLine("}");
     }
     if not usesFloatArithmetic(calls) { return; }
     if usesIntHelper(calls, "lt_float_power(") {
         outLine("static double lt_float_power(double left, double right, size_t at) {");
-        outLine("    if (left == 0 && right < 0) { lt_int_fault(at, \"zero cannot be raised to a negative power\"); }");
+        if config.checkArithmetic { outLine("    if (left == 0 && right < 0) { lt_int_fault(at, \"zero cannot be raised to a negative power\"); }"); }
         outLine("    double value = pow(left, right);");
-        outLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
+        if config.checkFloatFinite { outLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+        else if not config.checkArithmetic { outLine("    (void)at;"); }
         outLine("    return value;");
         outLine("}");
     }
-    if usesIntHelper(calls, "lt_float32_op(") {
+    if usesIntHelper(calls, "lt_float32_op(") or (config.checkUnchecked and (usesIntHelper(calls, "lt_ufadd_f32(") or usesIntHelper(calls, "lt_ufsub_f32(") or usesIntHelper(calls, "lt_ufmul_f32(") or usesIntHelper(calls, "lt_ufdiv_f32("))) {
         outLine("static float lt_float32_op(double left, double right, int op, size_t at) {");
         outLine("    const float l = (float)left;");
         outLine("    const float r = (float)right;");
-        outLine("    if (op == 3 && r == 0.0f) { lt_int_fault(at, \"division by zero\"); }");
+        if config.checkArithmetic { outLine("    if (op == 3 && r == 0.0f) { lt_int_fault(at, \"division by zero\"); }"); }
         outLine("    float value = op == 0 ? l + r : op == 1 ? l - r : op == 2 ? l * r : l / r;");
-        outLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
+        if config.checkFloatFinite { outLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+        else if not config.checkArithmetic { outLine("    (void)at;"); }
         outLine("    return value;");
         outLine("}");
     }
-    if not usesIntHelper(calls, "lt_float_op(") { return; }
+    if not (usesIntHelper(calls, "lt_float_op(") or (config.checkUnchecked and (usesIntHelper(calls, "lt_ufadd_f64(") or usesIntHelper(calls, "lt_ufsub_f64(") or usesIntHelper(calls, "lt_ufmul_f64(") or usesIntHelper(calls, "lt_ufdiv_f64(")))) { return; }
     outLine("static double lt_float_op(double left, double right, int op, size_t at) {");
-    outLine("    if (op == 3 && right == 0) { lt_int_fault(at, \"division by zero\"); }");
+    if config.checkArithmetic { outLine("    if (op == 3 && right == 0) { lt_int_fault(at, \"division by zero\"); }"); }
     outLine("    double value = op == 0 ? left + right : op == 1 ? left - right : op == 2 ? left * right : left / right;");
-    outLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }");
+    if config.checkFloatFinite { outLine("    if (!isfinite(value)) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+    else if not config.checkArithmetic { outLine("    (void)at;"); }
     outLine("    return value;");
     outLine("}");
 }
@@ -1139,18 +1163,20 @@ usesTextPrimitives := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(")
 }
 
-/** True when any list, fixed-array, or map bounds helper is called in `calls`. */
-usesAnyListBounds := fn(calls: Set<String>): Bool {
+/** True when any list, fixed-array, or map bounds helper actually needs `lt_bound_fault`. */
+usesAnyListBounds := fn(calls: Set<String>, config: optCfg.OptConfig): Bool {
     loop calls as tok {
         if tok.startsWithAt(0, "lt_list_") and (
-        tok.endsWith("_at(") or tok.endsWith("_set(") or
+        ((tok.endsWith("_at(") or tok.endsWith("_set(")) and config.checkBounds) or
+        ((tok.endsWith("_uat(") or tok.endsWith("_uset(")) and config.checkUnchecked) or
         tok.endsWith("_pop_back(") or tok.endsWith("_pop_front(") or
         tok.endsWith("_slice(") or tok.endsWith("_slice_from(")
         ) {
             return true;
         }
         if tok.startsWithAt(0, "lt_arr_") and (
-        tok.endsWith("_at(") or tok.endsWith("_set(") or
+        ((tok.endsWith("_at(") or tok.endsWith("_set(")) and config.checkBounds) or
+        ((tok.endsWith("_uat(") or tok.endsWith("_uset(")) and config.checkUnchecked) or
         tok.endsWith("_slice(") or tok.endsWith("_slice_from(")
         ) {
             return true;
@@ -1158,6 +1184,9 @@ usesAnyListBounds := fn(calls: Set<String>): Bool {
         if tok.startsWithAt(0, "lt_map_") and tok.endsWith("_at(") {
             return true;
         }
+    }
+    if config.checkBounds and (usesIntHelper(calls, "lt_c_list_fill_bytes(") or usesIntHelper(calls, "lt_c_list_copy_bytes(")) {
+        return true;
     }
     false
 };
@@ -2031,7 +2060,7 @@ emitCRcHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrint
 };
 
 /** Emits portable ISO C11 16 B `rc`-free list struct and helpers for `tag`. */
-emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool, needFrom: Bool): Unit {
+emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool, needFrom: Bool, config: optCfg.OptConfig): Unit {
     cType := frontend.cListElemType(tag);
     cElemConstPtr := "const " + cType + " *";
     lType := "lt_list_" + tag;
@@ -2042,7 +2071,9 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, nee
     hasRepeat := usesIntHelper(calls, lType + "_repeat(");
     hasCopy := needCopy or usesIntHelper(calls, lType + "_copy(");
     hasAt := usesIntHelper(calls, lType + "_at(");
+    hasUat := usesIntHelper(calls, lType + "_uat(");
     hasSet := usesIntHelper(calls, lType + "_set(");
+    hasUset := usesIntHelper(calls, lType + "_uset(");
     hasPushBack := usesIntHelper(calls, lType + "_push_back(");
     hasPushFront := usesIntHelper(calls, lType + "_push_front(");
     hasPopBack := usesIntHelper(calls, lType + "_pop_back(");
@@ -2125,8 +2156,27 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, nee
     }
     if hasAt {
         outLine("static " + cType + " " + lType + "_at(" + lType + " xs, int64_t idx, size_t at) {");
-        outLine("    int64_t n = " + lType + "_len(xs);");
-        outLine("    if (LT_UNLIKELY(idx < 0 || idx >= n)) { lt_bound_fault(at, \"list index outside its extent\"); }");
+        if config.checkBounds {
+            outLine("    int64_t n = " + lType + "_len(xs);");
+            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= n)) { lt_bound_fault(at, \"list index outside its extent\"); }");
+        } else {
+            outLine("    (void)at;");
+        }
+        if elemNeedsDeepCopy {
+            outLine("    return " + elOps.copyFn + "(xs.data[idx]);");
+        } else {
+            outLine("    return xs.data[idx];");
+        }
+        outLine("}");
+    }
+    if hasUat {
+        outLine("LT_INLINE " + cType + " " + lType + "_uat(" + lType + " xs, int64_t idx, size_t at) {");
+        if config.checkUnchecked {
+            outLine("    int64_t n = " + lType + "_len(xs);");
+            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= n)) { lt_bound_fault(at, \"list index outside its extent\"); }");
+        } else {
+            outLine("    (void)at;");
+        }
         if elemNeedsDeepCopy {
             outLine("    return " + elOps.copyFn + "(xs.data[idx]);");
         } else {
@@ -2136,8 +2186,26 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, nee
     }
     if hasSet {
         outLine("static void " + lType + "_set(" + lType + " *xs, int64_t idx, " + cType + " val, size_t at) {");
-        outLine("    int64_t n = " + lType + "_len(*xs);");
-        outLine("    if (LT_UNLIKELY(idx < 0 || idx >= n)) { lt_bound_fault(at, \"list index outside its extent\"); }");
+        if config.checkBounds {
+            outLine("    int64_t n = " + lType + "_len(*xs);");
+            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= n)) { lt_bound_fault(at, \"list index outside its extent\"); }");
+        } else {
+            outLine("    (void)at;");
+        }
+        if elemNeedsDrop {
+            outLine("    " + elOps.dropFn + "(&xs->data[idx]);");
+        }
+        outLine("    xs->data[idx] = val;");
+        outLine("}");
+    }
+    if hasUset {
+        outLine("LT_INLINE void " + lType + "_uset(" + lType + " *xs, int64_t idx, " + cType + " val, size_t at) {");
+        if config.checkUnchecked {
+            outLine("    int64_t n = " + lType + "_len(*xs);");
+            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= n)) { lt_bound_fault(at, \"list index outside its extent\"); }");
+        } else {
+            outLine("    (void)at;");
+        }
         if elemNeedsDrop {
             outLine("    " + elOps.dropFn + "(&xs->data[idx]);");
         }
@@ -2277,7 +2345,7 @@ emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, nee
 };
 
 /** Emits portable ISO C11 inline fixed-array value struct (`typedef struct { T data[N]; } lt_arr_...`) and only the helper operations used for `kind`. Zero heap allocations. */
-emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool): Unit {
+emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool, config: optCfg.OptConfig): Unit {
     aTag := frontend.cArrayTag(kind);
     elKind := frontend.arrayElementKind(kind);
     ext := frontend.arrayExtent(kind);
@@ -2293,11 +2361,13 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
     hasRepeat := ext > 0 and usesIntHelper(calls, aTag + "_repeat(");
     hasCopy := elemNeedsDeepCopy and (needCopy or usesIntHelper(calls, aTag + "_copy("));
     hasAt := usesIntHelper(calls, aTag + "_at(");
+    hasUat := usesIntHelper(calls, aTag + "_uat(");
     hasSet := usesIntHelper(calls, aTag + "_set(");
+    hasUset := usesIntHelper(calls, aTag + "_uset(");
     hasSliceFrom := usesIntHelper(calls, aTag + "_slice_from(");
     hasSlice := usesIntHelper(calls, aTag + "_slice(") or hasSliceFrom;
-    hasGetRaw := isSubByte and (needPrint or hasAt or hasSlice or usesIntHelper(calls, aTag + "_get_raw("));
-    hasSetRaw := isSubByte and (hasFrom or hasRepeat or hasSet);
+    hasGetRaw := isSubByte and (needPrint or hasAt or hasUat or hasSlice or usesIntHelper(calls, aTag + "_get_raw("));
+    hasSetRaw := isSubByte and (hasFrom or hasRepeat or hasSet or hasUset);
     if ext == 0 {
         outLine("typedef struct { uint8_t _empty; } " + aTag + ";");
     } else if isSubByte {
@@ -2379,12 +2449,48 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
         outLine("LT_INLINE " + cElemType + " " + aTag + "_at(" + aTag + " xs, int64_t idx, size_t at) {");
         if ext == 0 {
             outLine("    (void)xs; (void)idx;");
-            outLine("    lt_bound_fault(at, \"list index outside its extent\");");
+            if config.checkBounds { outLine("    lt_bound_fault(at, \"list index outside its extent\");"); }
+            else { outLine("    (void)at; " + cElemType + " z; memset(&z, 0, sizeof(z)); return z;"); }
         } else if isSubByte {
-            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            if config.checkBounds {
+                outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            } else {
+                outLine("    (void)at;");
+            }
             outLine("    return " + aTag + "_get_raw(xs, idx);");
         } else {
-            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            if config.checkBounds {
+                outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            } else {
+                outLine("    (void)at;");
+            }
+            if elemNeedsDeepCopy {
+                outLine("    return " + elOps.copyFn + "(xs.data[idx]);");
+            } else {
+                outLine("    return xs.data[idx];");
+            }
+        }
+        outLine("}");
+    }
+    if hasUat {
+        outLine("LT_INLINE " + cElemType + " " + aTag + "_uat(" + aTag + " xs, int64_t idx, size_t at) {");
+        if ext == 0 {
+            outLine("    (void)xs; (void)idx;");
+            if config.checkUnchecked { outLine("    lt_bound_fault(at, \"list index outside its extent\");"); }
+            else { outLine("    (void)at; " + cElemType + " z; memset(&z, 0, sizeof(z)); return z;"); }
+        } else if isSubByte {
+            if config.checkUnchecked {
+                outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            } else {
+                outLine("    (void)at;");
+            }
+            outLine("    return " + aTag + "_get_raw(xs, idx);");
+        } else {
+            if config.checkUnchecked {
+                outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            } else {
+                outLine("    (void)at;");
+            }
             if elemNeedsDeepCopy {
                 outLine("    return " + elOps.copyFn + "(xs.data[idx]);");
             } else {
@@ -2397,12 +2503,47 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
         outLine("LT_INLINE void " + aTag + "_set(" + aTag + " *xs, int64_t idx, " + cElemType + " val, size_t at) {");
         if ext == 0 {
             outLine("    (void)xs; (void)idx; (void)val;");
-            outLine("    lt_bound_fault(at, \"list index outside its extent\");");
+            if config.checkBounds { outLine("    lt_bound_fault(at, \"list index outside its extent\");"); }
+            else { outLine("    (void)at;"); }
         } else if isSubByte {
-            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            if config.checkBounds {
+                outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            } else {
+                outLine("    (void)at;");
+            }
             outLine("    " + aTag + "_set_raw(xs, idx, val);");
         } else {
-            outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            if config.checkBounds {
+                outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            } else {
+                outLine("    (void)at;");
+            }
+            if elemNeedsDrop {
+                outLine("    " + elOps.dropFn + "(&xs->data[idx]);");
+            }
+            outLine("    xs->data[idx] = val;");
+        }
+        outLine("}");
+    }
+    if hasUset {
+        outLine("LT_INLINE void " + aTag + "_uset(" + aTag + " *xs, int64_t idx, " + cElemType + " val, size_t at) {");
+        if ext == 0 {
+            outLine("    (void)xs; (void)idx; (void)val;");
+            if config.checkUnchecked { outLine("    lt_bound_fault(at, \"list index outside its extent\");"); }
+            else { outLine("    (void)at;"); }
+        } else if isSubByte {
+            if config.checkUnchecked {
+                outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            } else {
+                outLine("    (void)at;");
+            }
+            outLine("    " + aTag + "_set_raw(xs, idx, val);");
+        } else {
+            if config.checkUnchecked {
+                outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + extStr + ")) { lt_bound_fault(at, \"list index outside its extent\"); }");
+            } else {
+                outLine("    (void)at;");
+            }
             if elemNeedsDrop {
                 outLine("    " + elOps.dropFn + "(&xs->data[idx]);");
             }
@@ -2463,11 +2604,17 @@ emitCArrayHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPr
 };
 
 /** Emits portable C11 guards that reject overflow and bounds faults before evaluating operations. */
-emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: String): Unit {
-    usesArith := usesIntArithmetic(calls) or usesIntDivision(calls) or usesFloatArithmetic(calls);
+emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: String, config: optCfg.OptConfig): Unit {
+    usesArithHelpers := usesIntArithmetic(calls) or usesIntDivision(calls) or usesFloatArithmetic(calls);
+    usesCheckedIntFault := config.checkArithmetic and (usesIntArithmetic(calls) or usesIntDivision(calls));
+    usesCheckedFloatFault := (usesFloatArithmetic(calls) and (config.checkArithmetic or config.checkFloatFinite)) or
+    (config.checkFloatFinite and (usesIntHelper(calls, "lt_f32_from_bits(") or usesIntHelper(calls, "lt_f64_from_bits("))) or
+    (config.checkUnchecked and (usesHelperPrefix(calls, "lt_ufadd_") or usesHelperPrefix(calls, "lt_ufsub_") or usesHelperPrefix(calls, "lt_ufmul_") or usesHelperPrefix(calls, "lt_ufdiv_") or usesHelperPrefix(calls, "lt_ufma_") or usesIntHelper(calls, "lt_f32_ufrom_bits(") or usesIntHelper(calls, "lt_f64_ufrom_bits(")));
+    usesUnchIntFault := config.checkUnchecked and usesUncheckedInt(calls);
+    usesArith := usesCheckedIntFault or usesCheckedFloatFault or usesUnchIntFault;
     usesBounds := usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or
-    usesAnyListBounds(calls);
-    if not usesArith and not usesBounds { return; }
+    usesAnyListBounds(calls, config);
+    if not usesArithHelpers and not usesArith and not usesBounds { return; }
     outLine("#ifndef LT_UNLIKELY");
     outLine("#if defined(__GNUC__) || defined(__clang__)");
     outLine("#define LT_UNLIKELY(x) __builtin_expect(!!(x), 0)");
@@ -2477,194 +2624,244 @@ emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: Strin
     outLine("#define LT_COLD");
     outLine("#endif");
     outLine("#endif");
-    namePrefix := if prefix == "" { "" } else { prefix + ":" };
-    outLine("static const size_t lt_int_lines[] = {" + frontend.lineStartCodes(source) + "};");
-    outLine("static const char *lt_int_source = " + cLiteral.textLiteralCode(namePrefix) + ";");
-    if usesBounds {
-        outLine("static LT_COLD _Noreturn void lt_fault(const char *category, size_t at, const char *message) {");
-        outLine("    size_t line = 0;");
-        outLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
-        outLine("    fprintf(stderr, \"%s%zu:%zu: %s: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, category, message);");
-        outLine("    exit(1);");
-        outLine("}");
-        outLine("static LT_COLD _Noreturn void lt_bound_fault(size_t at, const char *message) { lt_fault(\"BoundPanic\", at, message); }");
-        if usesArith {
-            outLine("static LT_COLD _Noreturn void lt_int_fault(size_t at, const char *message) { lt_fault(\"ArithmeticPanic\", at, message); }");
+    if usesArith or usesBounds {
+        namePrefix := if prefix == "" { "" } else { prefix + ":" };
+        outLine("static const size_t lt_int_lines[] = {" + frontend.lineStartCodes(source) + "};");
+        outLine("static const char *lt_int_source = " + cLiteral.textLiteralCode(namePrefix) + ";");
+        if usesBounds {
+            outLine("static LT_COLD _Noreturn void lt_fault(const char *category, size_t at, const char *message) {");
+            outLine("    size_t line = 0;");
+            outLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
+            outLine("    fprintf(stderr, \"%s%zu:%zu: %s: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, category, message);");
+            outLine("    exit(1);");
+            outLine("}");
+            outLine("static LT_COLD _Noreturn void lt_bound_fault(size_t at, const char *message) { lt_fault(\"BoundPanic\", at, message); }");
+            if usesArith {
+                outLine("static LT_COLD _Noreturn void lt_int_fault(size_t at, const char *message) { lt_fault(\"ArithmeticPanic\", at, message); }");
+            }
+        } else {
+            outLine("static LT_COLD _Noreturn void lt_int_fault(size_t at, const char *message) {");
+            outLine("    size_t line = 0;");
+            outLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
+            outLine("    fprintf(stderr, \"%s%zu:%zu: ArithmeticPanic: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, message);");
+            outLine("    exit(1);");
+            outLine("}");
         }
-    } else {
-        outLine("static LT_COLD _Noreturn void lt_int_fault(size_t at, const char *message) {");
-        outLine("    size_t line = 0;");
-        outLine("    while (line + 1 < sizeof(lt_int_lines) / sizeof(lt_int_lines[0]) && lt_int_lines[line + 1] <= at) { line += 1; }");
-        outLine("    fprintf(stderr, \"%s%zu:%zu: ArithmeticPanic: %s\\n\", lt_int_source, line + 1, at - lt_int_lines[line] + 1, message);");
-        outLine("    exit(1);");
-        outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_add(") {
         outLine("LT_INLINE int64_t lt_checked_add(int64_t left, int64_t right, size_t at) {");
-        outLine("#if defined(__GNUC__) || defined(__clang__)");
-        outLine("    int64_t out = 0;");
-        outLine("    if (LT_UNLIKELY(__builtin_add_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outLine("    return out;");
-        outLine("#else");
-        outLine("    if ((right > 0 && left > INT64_MAX - right) || (right < 0 && left < INT64_MIN - right)) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outLine("    return left + right;");
-        outLine("#endif");
+        if not config.checkArithmetic {
+            outLine("    (void)at; return (int64_t)((uint64_t)left + (uint64_t)right);");
+        } else {
+            outLine("#if defined(__GNUC__) || defined(__clang__)");
+            outLine("    int64_t out = 0;");
+            outLine("    if (LT_UNLIKELY(__builtin_add_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside Int range\"); }");
+            outLine("    return out;");
+            outLine("#else");
+            outLine("    if ((right > 0 && left > INT64_MAX - right) || (right < 0 && left < INT64_MIN - right)) { lt_int_fault(at, \"integer outside Int range\"); }");
+            outLine("    return left + right;");
+            outLine("#endif");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_subtract(") {
         outLine("LT_INLINE int64_t lt_checked_subtract(int64_t left, int64_t right, size_t at) {");
-        outLine("#if defined(__GNUC__) || defined(__clang__)");
-        outLine("    int64_t out = 0;");
-        outLine("    if (LT_UNLIKELY(__builtin_sub_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outLine("    return out;");
-        outLine("#else");
-        outLine("    if ((right < 0 && left > INT64_MAX + right) || (right > 0 && left < INT64_MIN + right)) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outLine("    return left - right;");
-        outLine("#endif");
+        if not config.checkArithmetic {
+            outLine("    (void)at; return (int64_t)((uint64_t)left - (uint64_t)right);");
+        } else {
+            outLine("#if defined(__GNUC__) || defined(__clang__)");
+            outLine("    int64_t out = 0;");
+            outLine("    if (LT_UNLIKELY(__builtin_sub_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside Int range\"); }");
+            outLine("    return out;");
+            outLine("#else");
+            outLine("    if ((right < 0 && left > INT64_MAX + right) || (right > 0 && left < INT64_MIN + right)) { lt_int_fault(at, \"integer outside Int range\"); }");
+            outLine("    return left - right;");
+            outLine("#endif");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_multiply(") {
         outLine("LT_INLINE int64_t lt_checked_multiply(int64_t left, int64_t right, size_t at) {");
-        outLine("#if defined(__GNUC__) || defined(__clang__)");
-        outLine("    int64_t out = 0;");
-        outLine("    if (LT_UNLIKELY(__builtin_mul_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outLine("    return out;");
-        outLine("#else");
-        outLine("    if (left == 0 || right == 0) { return 0; }");
-        outLine("    if (left > 0) {");
-        outLine("        if (right > 0) { if (left > INT64_MAX / right) { lt_int_fault(at, \"integer outside Int range\"); } }");
-        outLine("        else if (right < INT64_MIN / left) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outLine("    } else if (right > 0) {");
-        outLine("        if (left < INT64_MIN / right) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outLine("    } else if (right < INT64_MAX / left) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outLine("    return left * right;");
-        outLine("#endif");
+        if not config.checkArithmetic {
+            outLine("    (void)at; return (int64_t)((uint64_t)left * (uint64_t)right);");
+        } else {
+            outLine("#if defined(__GNUC__) || defined(__clang__)");
+            outLine("    int64_t out = 0;");
+            outLine("    if (LT_UNLIKELY(__builtin_mul_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside Int range\"); }");
+            outLine("    return out;");
+            outLine("#else");
+            outLine("    if (left == 0 || right == 0) { return 0; }");
+            outLine("    if (left > 0) {");
+            outLine("        if (right > 0) { if (left > INT64_MAX / right) { lt_int_fault(at, \"integer outside Int range\"); } }");
+            outLine("        else if (right < INT64_MIN / left) { lt_int_fault(at, \"integer outside Int range\"); }");
+            outLine("    } else if (right > 0) {");
+            outLine("        if (left < INT64_MIN / right) { lt_int_fault(at, \"integer outside Int range\"); }");
+            outLine("    } else if (right < INT64_MAX / left) { lt_int_fault(at, \"integer outside Int range\"); }");
+            outLine("    return left * right;");
+            outLine("#endif");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_negate(") {
         outLine("LT_INLINE int64_t lt_checked_negate(int64_t value, size_t at) {");
-        outLine("    if (LT_UNLIKELY(value == INT64_MIN)) { lt_int_fault(at, \"integer outside Int range\"); }");
-        outLine("    return -value;");
+        if config.checkArithmetic { outLine("    if (LT_UNLIKELY(value == INT64_MIN)) { lt_int_fault(at, \"integer outside Int range\"); }"); }
+        else { outLine("    (void)at;"); }
+        outLine("    return (int64_t)(UINT64_C(0) - (uint64_t)value);");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_narrow_int(") {
         outLine("LT_INLINE int64_t lt_checked_narrow_int(int64_t value, int bits, const char *name, size_t at) {");
-        outLine("    if (bits >= 64) { return value; }");
-        outLine("    const int64_t limit = INT64_C(1) << (bits - 1);");
-        outLine("    if (LT_UNLIKELY(value < -limit || value >= limit)) {");
-        outLine("        char message[64];");
-        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
-        outLine("        lt_int_fault(at, message);");
-        outLine("    }");
-        outLine("    return value;");
+        if not config.checkArithmetic {
+            outLine("    (void)bits; (void)name; (void)at; return value;");
+        } else {
+            outLine("    if (bits >= 64) { return value; }");
+            outLine("    const int64_t limit = INT64_C(1) << (bits - 1);");
+            outLine("    if (LT_UNLIKELY(value < -limit || value >= limit)) {");
+            outLine("        char message[64];");
+            outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+            outLine("        lt_int_fault(at, message);");
+            outLine("    }");
+            outLine("    return value;");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_uadd(") {
         outLine("LT_INLINE uint64_t lt_checked_uadd(uint64_t left, uint64_t right, size_t at) {");
-        outLine("#if defined(__GNUC__) || defined(__clang__)");
-        outLine("    uint64_t out = 0;");
-        outLine("    if (LT_UNLIKELY(__builtin_add_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
-        outLine("    return out;");
-        outLine("#else");
-        outLine("    if (LT_UNLIKELY(left > UINT64_MAX - right)) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
-        outLine("    return left + right;");
-        outLine("#endif");
+        if not config.checkArithmetic {
+            outLine("    (void)at; return left + right;");
+        } else {
+            outLine("#if defined(__GNUC__) || defined(__clang__)");
+            outLine("    uint64_t out = 0;");
+            outLine("    if (LT_UNLIKELY(__builtin_add_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+            outLine("    return out;");
+            outLine("#else");
+            outLine("    if (LT_UNLIKELY(left > UINT64_MAX - right)) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+            outLine("    return left + right;");
+            outLine("#endif");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_usub(") {
         outLine("LT_INLINE uint64_t lt_checked_usub(uint64_t left, uint64_t right, size_t at) {");
-        outLine("    if (LT_UNLIKELY(left < right)) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+        if config.checkArithmetic { outLine("    if (LT_UNLIKELY(left < right)) { lt_int_fault(at, \"integer outside UInt64 range\"); }"); }
+        else { outLine("    (void)at;"); }
         outLine("    return left - right;");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_umul(") {
         outLine("LT_INLINE uint64_t lt_checked_umul(uint64_t left, uint64_t right, size_t at) {");
-        outLine("#if defined(__GNUC__) || defined(__clang__)");
-        outLine("    uint64_t out = 0;");
-        outLine("    if (LT_UNLIKELY(__builtin_mul_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
-        outLine("    return out;");
-        outLine("#else");
-        outLine("    if (left != 0 && right > UINT64_MAX / left) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
-        outLine("    return left * right;");
-        outLine("#endif");
+        if not config.checkArithmetic {
+            outLine("    (void)at; return left * right;");
+        } else {
+            outLine("#if defined(__GNUC__) || defined(__clang__)");
+            outLine("    uint64_t out = 0;");
+            outLine("    if (LT_UNLIKELY(__builtin_mul_overflow(left, right, &out))) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+            outLine("    return out;");
+            outLine("#else");
+            outLine("    if (left != 0 && right > UINT64_MAX / left) { lt_int_fault(at, \"integer outside UInt64 range\"); }");
+            outLine("    return left * right;");
+            outLine("#endif");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_udiv(") {
         outLine("LT_INLINE uint64_t lt_checked_udiv(uint64_t left, uint64_t right, size_t at) {");
-        outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"division by zero\"); }");
+        if config.checkArithmetic { outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"division by zero\"); }"); }
+        else { outLine("    (void)at;"); }
         outLine("    return left / right;");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_urem(") {
         outLine("LT_INLINE uint64_t lt_checked_urem(uint64_t left, uint64_t right, size_t at) {");
-        outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"division by zero\"); }");
+        if config.checkArithmetic { outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"division by zero\"); }"); }
+        else { outLine("    (void)at;"); }
         outLine("    return left % right;");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_checked_narrow_uint(") {
         outLine("LT_INLINE uint64_t lt_checked_narrow_uint(uint64_t value, int bits, const char *name, size_t at) {");
-        outLine("    if (bits >= 64) { return value; }");
-        outLine("    const uint64_t limit = UINT64_C(1) << (bits & 63);");
-        outLine("    if (LT_UNLIKELY(value >= limit)) {");
-        outLine("        char message[64];");
-        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
-        outLine("        lt_int_fault(at, message);");
-        outLine("    }");
-        outLine("    return value;");
+        if not config.checkArithmetic {
+            outLine("    (void)bits; (void)name; (void)at; return value;");
+        } else {
+            outLine("    if (bits >= 64) { return value; }");
+            outLine("    const uint64_t limit = UINT64_C(1) << (bits & 63);");
+            outLine("    if (LT_UNLIKELY(value >= limit)) {");
+            outLine("        char message[64];");
+            outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+            outLine("        lt_int_fault(at, message);");
+            outLine("    }");
+            outLine("    return value;");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_cast_i2u(") {
         outLine("LT_INLINE uint64_t lt_cast_i2u(int64_t value, int bits, const char *name, size_t at) {");
-        outLine("    if (LT_UNLIKELY(value < 0 || (bits < 64 && (uint64_t)value >= (UINT64_C(1) << (bits & 63))))) {");
-        outLine("        char message[64];");
-        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
-        outLine("        lt_int_fault(at, message);");
-        outLine("    }");
-        outLine("    return (uint64_t)value;");
+        if not config.checkArithmetic {
+            outLine("    (void)bits; (void)name; (void)at; return (uint64_t)value;");
+        } else {
+            outLine("    if (LT_UNLIKELY(value < 0 || (bits < 64 && (uint64_t)value >= (UINT64_C(1) << (bits & 63))))) {");
+            outLine("        char message[64];");
+            outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+            outLine("        lt_int_fault(at, message);");
+            outLine("    }");
+            outLine("    return (uint64_t)value;");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_cast_u2i(") {
         outLine("LT_INLINE int64_t lt_cast_u2i(uint64_t value, int bits, const char *name, size_t at) {");
-        outLine("    const uint64_t maxv = (UINT64_C(1) << (bits - 1)) - UINT64_C(1);");
-        outLine("    if (LT_UNLIKELY(value > maxv)) {");
-        outLine("        char message[64];");
-        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
-        outLine("        lt_int_fault(at, message);");
-        outLine("    }");
-        outLine("    return (int64_t)value;");
+        if not config.checkArithmetic {
+            outLine("    (void)bits; (void)name; (void)at; return (int64_t)value;");
+        } else {
+            outLine("    const uint64_t maxv = (UINT64_C(1) << (bits - 1)) - UINT64_C(1);");
+            outLine("    if (LT_UNLIKELY(value > maxv)) {");
+            outLine("        char message[64];");
+            outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+            outLine("        lt_int_fault(at, message);");
+            outLine("    }");
+            outLine("    return (int64_t)value;");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_trunc_f64_to_int(") {
         outLine("LT_INLINE int64_t lt_trunc_f64_to_int(double value, int bits, const char *name, size_t at) {");
-        outLine("    if (LT_UNLIKELY(!isfinite(value))) { lt_int_fault(at, \"non-finite floating value\"); }");
-        outLine("    double t = trunc(value);");
-        outLine("    bool oob = (bits == 64) ? (t < -9223372036854775808.0 || t >= 9223372036854775808.0) : (t < -(double)(UINT64_C(1) << (bits - 1)) || t >= (double)(UINT64_C(1) << (bits - 1)));");
-        outLine("    if (LT_UNLIKELY(oob)) {");
-        outLine("        char message[64];");
-        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
-        outLine("        lt_int_fault(at, message);");
-        outLine("    }");
-        outLine("    return (int64_t)t;");
+        if not config.checkArithmetic {
+            outLine("    (void)bits; (void)name; (void)at; return (int64_t)value;");
+        } else {
+            outLine("    if (LT_UNLIKELY(!isfinite(value))) { lt_int_fault(at, \"non-finite floating value\"); }");
+            outLine("    double t = trunc(value);");
+            outLine("    bool oob = (bits == 64) ? (t < -9223372036854775808.0 || t >= 9223372036854775808.0) : (t < -(double)(UINT64_C(1) << (bits - 1)) || t >= (double)(UINT64_C(1) << (bits - 1)));");
+            outLine("    if (LT_UNLIKELY(oob)) {");
+            outLine("        char message[64];");
+            outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+            outLine("        lt_int_fault(at, message);");
+            outLine("    }");
+            outLine("    return (int64_t)t;");
+        }
         outLine("}");
     }
     if usesIntHelper(calls, "lt_trunc_f64_to_uint(") {
         outLine("LT_INLINE uint64_t lt_trunc_f64_to_uint(double value, int bits, const char *name, size_t at) {");
-        outLine("    if (LT_UNLIKELY(!isfinite(value))) { lt_int_fault(at, \"non-finite floating value\"); }");
-        outLine("    double t = trunc(value);");
-        outLine("    bool oob = (t < 0.0) || ((bits == 64) ? (t >= 18446744073709551616.0) : (t >= (double)(UINT64_C(1) << (bits & 63))));");
-        outLine("    if (LT_UNLIKELY(oob)) {");
-        outLine("        char message[64];");
-        outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
-        outLine("        lt_int_fault(at, message);");
-        outLine("    }");
-        outLine("    return (uint64_t)t;");
+        if not config.checkArithmetic {
+            outLine("    (void)bits; (void)name; (void)at; return (uint64_t)value;");
+        } else {
+            outLine("    if (LT_UNLIKELY(!isfinite(value))) { lt_int_fault(at, \"non-finite floating value\"); }");
+            outLine("    double t = trunc(value);");
+            outLine("    bool oob = (t < 0.0) || ((bits == 64) ? (t >= 18446744073709551616.0) : (t >= (double)(UINT64_C(1) << (bits & 63))));");
+            outLine("    if (LT_UNLIKELY(oob)) {");
+            outLine("        char message[64];");
+            outLine("        snprintf(message, sizeof message, \"integer outside %s range\", name);");
+            outLine("        lt_int_fault(at, message);");
+            outLine("    }");
+            outLine("    return (uint64_t)t;");
+        }
         outLine("}");
     }
     outLine("");
 }
 
 /** Emits on-demand C11 helpers for bitwise, checked shift, rotate, wrapping, saturating, and bit-count intrinsics. */
-emitIntBitwiseHelpers := fn(calls: Set<String>): Unit {
+emitIntBitwiseHelpers := fn(calls: Set<String>, config: optCfg.OptConfig): Unit {
     needWrapS := usesIntHelper(calls, "lt_wrap_s(") or usesHelperPrefix(calls, "lt_wmul_i1__") or usesHelperPrefix(calls, "lt_wmul_i2__") or usesHelperPrefix(calls, "lt_wmul_i4__") or usesIntHelper(calls, "lt_shl_s(") or usesIntHelper(calls, "lt_rotl_s(") or usesIntHelper(calls, "lt_rotr_s(");
     if needWrapS {
         outLine("LT_INLINE int8_t lt_wrap_s(uint64_t u, int bits) {");
@@ -2676,7 +2873,8 @@ emitIntBitwiseHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lt_shl_s(") {
         outLine("LT_INLINE int64_t lt_shl_s(int64_t v, int64_t n, int bits, size_t at) {");
-        outLine("    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, \"shift count out of range\"); }");
+        if config.checkArithmetic { outLine("    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, \"shift count out of range\"); }"); }
+        else { outLine("    (void)at;"); }
         outLine("    uint64_t r = ((uint64_t)v) << (unsigned)n;");
         outLine("    if (bits >= 64) { return (int64_t)r; }");
         outLine("    uint64_t m = (UINT64_C(1) << (bits & 63)) - UINT64_C(1);");
@@ -2687,7 +2885,8 @@ emitIntBitwiseHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lt_shl_u(") {
         outLine("LT_INLINE uint64_t lt_shl_u(uint64_t v, int64_t n, int bits, size_t at) {");
-        outLine("    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, \"shift count out of range\"); }");
+        if config.checkArithmetic { outLine("    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, \"shift count out of range\"); }"); }
+        else { outLine("    (void)at;"); }
         outLine("    uint64_t r = v << (unsigned)n;");
         outLine("    if (bits < 64) { r &= (UINT64_C(1) << (bits & 63)) - UINT64_C(1); }");
         outLine("    return r;");
@@ -2695,13 +2894,15 @@ emitIntBitwiseHelpers := fn(calls: Set<String>): Unit {
     }
     if usesIntHelper(calls, "lt_shr_s(") {
         outLine("LT_INLINE int64_t lt_shr_s(int64_t v, int64_t n, int bits, size_t at) {");
-        outLine("    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, \"shift count out of range\"); }");
+        if config.checkArithmetic { outLine("    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, \"shift count out of range\"); }"); }
+        else { outLine("    (void)bits; (void)at;"); }
         outLine("    return (v >= 0) ? (int64_t)((uint64_t)v >> (unsigned)n) : (int64_t)(~((~(uint64_t)v) >> (unsigned)n));");
         outLine("}");
     }
     if usesIntHelper(calls, "lt_shr_u(") {
         outLine("LT_INLINE uint64_t lt_shr_u(uint64_t v, int64_t n, int bits, size_t at) {");
-        outLine("    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, \"shift count out of range\"); }");
+        if config.checkArithmetic { outLine("    if (LT_UNLIKELY(n < 0 || n >= bits)) { lt_int_fault(at, \"shift count out of range\"); }"); }
+        else { outLine("    (void)at;"); }
         outLine("    if (bits < 64) { v &= (UINT64_C(1) << (bits & 63)) - UINT64_C(1); }");
         outLine("    return v >> (unsigned)n;");
         outLine("}");
@@ -3102,20 +3303,25 @@ usesStringConcat := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite_concat(")
 }
 
-/** Emits positioned portable division, guarding undefined C arithmetic. */
-emitIntDivideHelper := fn(): Unit {
+/** Emits positioned portable division, guarding undefined C arithmetic unless `-fno-check-arithmetic` is set. */
+emitIntDivideHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("LT_INLINE int64_t lite_divide_int(int64_t left, int64_t right, size_t at) {");
-    outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"division by zero\"); }");
-    outLine("    if (LT_UNLIKELY(left == INT64_MIN && right == -1)) { lt_int_fault(at, \"integer outside Int range\"); }");
+    if config.checkArithmetic {
+        outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"division by zero\"); }");
+        outLine("    if (LT_UNLIKELY(left == INT64_MIN && right == -1)) { lt_int_fault(at, \"integer outside Int range\"); }");
+    } else {
+        outLine("    (void)at;");
+    }
     outLine("    return left / right;");
     outLine("}");
     outLine("");
 }
 
 /** Emits positioned remainder, returning zero before C MIN%-1 would be undefined. */
-emitIntRemainderHelper := fn(): Unit {
+emitIntRemainderHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("LT_INLINE int64_t lite_remainder_int(int64_t left, int64_t right, size_t at) {");
-    outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"remainder by zero\"); }");
+    if config.checkArithmetic { outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"remainder by zero\"); }"); }
+    else { outLine("    (void)at;"); }
     outLine("    if (LT_UNLIKELY(left == INT64_MIN && right == -1)) { return 0; }");
     outLine("    return left % right;");
     outLine("}");
@@ -3133,9 +3339,10 @@ emitIntFloorDivideHelper := fn(): Unit {
 }
 
 /** Emits positioned floor modulo with a defined signed-minimum path. */
-emitIntFloorModuloHelper := fn(): Unit {
+emitIntFloorModuloHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("LT_INLINE int64_t lite_floor_modulo_int(int64_t left, int64_t right, size_t at) {");
-    outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"modulo by zero\"); }");
+    if config.checkArithmetic { outLine("    if (LT_UNLIKELY(right == 0)) { lt_int_fault(at, \"modulo by zero\"); }"); }
+    else { outLine("    (void)at;"); }
     outLine("    if (LT_UNLIKELY(left == INT64_MIN && right == -1)) { return 0; }");
     outLine("    const int64_t remainder = left % right;");
     outLine("    return remainder != 0 && ((remainder < 0) != (right < 0)) ? remainder + right : remainder;");
@@ -3144,15 +3351,258 @@ emitIntFloorModuloHelper := fn(): Unit {
 }
 
 /** Emits every checked Int division-family helper the program reads. */
-emitIntDivisionHelpers := fn(calls: Set<String>): Unit {
+emitIntDivisionHelpers := fn(calls: Set<String>, config: optCfg.OptConfig): Unit {
     if usesIntHelper(calls, "lite_divide_int(") or usesIntHelper(calls, "lite_floor_divide_int(") {
-        emitIntDivideHelper();
+        emitIntDivideHelper(config);
     }
-    if usesIntHelper(calls, "lite_remainder_int(") { emitIntRemainderHelper(); }
+    if usesIntHelper(calls, "lite_remainder_int(") { emitIntRemainderHelper(config); }
     if usesIntHelper(calls, "lite_floor_divide_int(") { emitIntFloorDivideHelper(); }
-    if usesIntHelper(calls, "lite_floor_modulo_int(") { emitIntFloorModuloHelper(); }
+    if usesIntHelper(calls, "lite_floor_modulo_int(") { emitIntFloorModuloHelper(config); }
     return;
 }
+
+/** Emits on-demand C11 helpers for Float bit casts and `unchecked*` operations (checked when `-fcheck-unchecked` is enabled). */
+emitUncheckedCHelpers := fn(calls: Set<String>, config: optCfg.OptConfig): Unit {
+    if usesIntHelper(calls, "lt_f32_to_bits(") {
+        outLine("LT_INLINE uint32_t lt_f32_to_bits(float v) { uint32_t u = 0u; memcpy(&u, &v, 4u); return u; }");
+    }
+    if usesIntHelper(calls, "lt_f64_to_bits(") {
+        outLine("LT_INLINE uint64_t lt_f64_to_bits(double v) { uint64_t u = 0u; memcpy(&u, &v, 8u); return u; }");
+    }
+    if usesIntHelper(calls, "lt_f32_from_bits(") {
+        outLine("LT_INLINE float lt_f32_from_bits(uint32_t u, size_t at) {");
+        outLine("    float v = 0.0f; memcpy(&v, &u, 4u);");
+        if config.checkFloatFinite { outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+        else { outLine("    (void)at;"); }
+        outLine("    return v;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_f32_ufrom_bits(") {
+        outLine("LT_INLINE float lt_f32_ufrom_bits(uint32_t u, size_t at) {");
+        outLine("    float v = 0.0f; memcpy(&v, &u, 4u);");
+        if config.checkUnchecked { outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+        else { outLine("    (void)at;"); }
+        outLine("    return v;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_f64_from_bits(") {
+        outLine("LT_INLINE double lt_f64_from_bits(uint64_t u, size_t at) {");
+        outLine("    double v = 0.0; memcpy(&v, &u, 8u);");
+        if config.checkFloatFinite { outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+        else { outLine("    (void)at;"); }
+        outLine("    return v;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_f64_ufrom_bits(") {
+        outLine("LT_INLINE double lt_f64_ufrom_bits(uint64_t u, size_t at) {");
+        outLine("    double v = 0.0; memcpy(&v, &u, 8u);");
+        if config.checkUnchecked { outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+        else { outLine("    (void)at;"); }
+        outLine("    return v;");
+        outLine("}");
+    }
+    fOps: List<String> = ["add", "sub", "mul", "div"];
+    fSyms: List<String> = ["+", "-", "*", "/"];
+    var foi := 0;
+    loop foi < 4 {
+        opN := fOps[foi];
+        sym := fSyms[foi];
+        if usesIntHelper(calls, "lt_uf" + opN + "_f64(") {
+            outLine("LT_INLINE double lt_uf" + opN + "_f64(double a, double b, size_t at) {");
+            if config.checkUnchecked { outLine("    return lt_float_op(a, b, " + foi.toText() + ", at);"); }
+            else { outLine("    (void)at; return a " + sym + " b;"); }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_uf" + opN + "_f32(") {
+            outLine("LT_INLINE float lt_uf" + opN + "_f32(float a, float b, size_t at) {");
+            if config.checkUnchecked { outLine("    return lt_float32_op((double)a, (double)b, " + foi.toText() + ", at);"); }
+            else { outLine("    (void)at; return (float)(a " + sym + " b);"); }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_uf" + opN + "_f16(") {
+            outLine("LT_INLINE lt_f16 lt_uf" + opN + "_f16(lt_f16 a, lt_f16 b, size_t at) {");
+            if config.checkUnchecked { outLine("    return lt_float16_op(lt_f16_to_f64(a), lt_f16_to_f64(b), " + foi.toText() + ", at);"); }
+            else { outLine("    (void)at; return lt_f64_to_f16_unchecked(lt_f16_to_f64(a) " + sym + " lt_f16_to_f64(b));"); }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_uf" + opN + "_f8(") {
+            outLine("LT_INLINE uint8_t lt_uf" + opN + "_f8(uint8_t a, uint8_t b, size_t at) {");
+            if config.checkUnchecked { outLine("    return lt_float8_op(lt_f8_to_f64(a), lt_f8_to_f64(b), " + foi.toText() + ", at);"); }
+            else { outLine("    (void)at; return lt_f64_to_f8(lt_f8_to_f64(a) " + sym + " lt_f8_to_f64(b), 0);"); }
+            outLine("}");
+        }
+        foi += 1;
+    }
+    if usesIntHelper(calls, "lt_ufma_f64(") {
+        outLine("LT_INLINE double lt_ufma_f64(double a, double b, double c, size_t at) {");
+        if config.checkUnchecked { outLine("    return lt_fma_f64(a, b, c, at);"); } else { outLine("    (void)at; return fma(a, b, c);"); }
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_ufma_f32(") {
+        outLine("LT_INLINE float lt_ufma_f32(float a, float b, float c, size_t at) {");
+        if config.checkUnchecked { outLine("    return lt_fma_f32(a, b, c, at);"); } else { outLine("    (void)at; return fmaf(a, b, c);"); }
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_ufma_f16(") {
+        outLine("LT_INLINE lt_f16 lt_ufma_f16(lt_f16 a, lt_f16 b, lt_f16 c, size_t at) {");
+        if config.checkUnchecked { outLine("    return lt_fma_f16(a, b, c, at);"); }
+        else { outLine("    (void)at; return lt_f64_to_f16_unchecked(fma(lt_f16_to_f64(a), lt_f16_to_f64(b), lt_f16_to_f64(c)));"); }
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_ufma_f8(") {
+        outLine("LT_INLINE uint8_t lt_ufma_f8(uint8_t a, uint8_t b, uint8_t c, size_t at) {");
+        if config.checkUnchecked { outLine("    return lt_fma_f8(a, b, c, at);"); }
+        else { outLine("    (void)at; return lt_f64_to_f8(fma(lt_f8_to_f64(a), lt_f8_to_f64(b), lt_f8_to_f64(c)), 0);"); }
+        outLine("}");
+    }
+    if not usesUncheckedInt(calls) { return; }
+    iTags: List<String> = ["i1","i2","i4","i8","i16","i32","i64","u1","u2","u4","u8","u16","u32","u64"];
+    iBits: List<Int> = [1, 2, 4, 8, 16, 32, 64, 1, 2, 4, 8, 16, 32, 64];
+    iCTypes: List<String> = ["int8_t","int8_t","int8_t","int8_t","int16_t","int32_t","int64_t","uint8_t","uint8_t","uint8_t","uint8_t","uint16_t","uint32_t","uint64_t"];
+    var idx := 0;
+    loop idx < 14 {
+        t := iTags[idx];
+        bits := iBits[idx];
+        cT := iCTypes[idx];
+        isSigned := idx < 7;
+        uT := if isSigned { iCTypes[idx + 7] } else { cT };
+        bText := bits.toText();
+        loExpr := if bits == 64 { "INT64_MIN" } else { "-(INT64_C(1) << " + (bits - 1).toText() + ")" };
+        hiExpr := if bits == 64 { "INT64_MAX" } else { "(INT64_C(1) << " + (bits - 1).toText() + ") - INT64_C(1)" };
+        uMaxExpr := if bits == 64 { "UINT64_MAX" } else { "(UINT64_C(1) << " + bText + ") - UINT64_C(1)" };
+        if usesIntHelper(calls, "lt_uadd_" + t + "(") {
+            outLine("LT_INLINE " + cT + " lt_uadd_" + t + "(" + cT + " a, " + cT + " b, size_t at) {");
+            if not config.checkUnchecked {
+                outLine("    (void)at; return (" + cT + ")((" + uT + ")a + (" + uT + ")b);");
+            } else if bits == 64 and isSigned {
+                outLine("    int64_t out = 0; if (LT_UNLIKELY(__builtin_add_overflow(a, b, &out))) { lt_int_fault(at, \"integer outside Int range\"); } return out;");
+            } else if bits == 64 {
+                outLine("    uint64_t out = 0; if (LT_UNLIKELY(__builtin_add_overflow(a, b, &out))) { lt_int_fault(at, \"integer outside UInt64 range\"); } return out;");
+            } else if isSigned {
+                outLine("    int64_t r = (int64_t)a + (int64_t)b; if (LT_UNLIKELY(r < " + loExpr + " || r > " + hiExpr + ")) { lt_int_fault(at, \"integer overflow\"); } return (" + cT + ")r;");
+            } else {
+                outLine("    uint64_t r = (uint64_t)a + (uint64_t)b; if (LT_UNLIKELY(r > " + uMaxExpr + ")) { lt_int_fault(at, \"integer overflow\"); } return (" + cT + ")r;");
+            }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_usub_" + t + "(") {
+            outLine("LT_INLINE " + cT + " lt_usub_" + t + "(" + cT + " a, " + cT + " b, size_t at) {");
+            if not config.checkUnchecked {
+                outLine("    (void)at; return (" + cT + ")((" + uT + ")a - (" + uT + ")b);");
+            } else if bits == 64 and isSigned {
+                outLine("    int64_t out = 0; if (LT_UNLIKELY(__builtin_sub_overflow(a, b, &out))) { lt_int_fault(at, \"integer outside Int range\"); } return out;");
+            } else if isSigned {
+                outLine("    int64_t r = (int64_t)a - (int64_t)b; if (LT_UNLIKELY(r < " + loExpr + " || r > " + hiExpr + ")) { lt_int_fault(at, \"integer overflow\"); } return (" + cT + ")r;");
+            } else {
+                outLine("    if (LT_UNLIKELY(a < b)) { lt_int_fault(at, \"integer overflow\"); } return (" + cT + ")(a - b);");
+            }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_umul_" + t + "(") {
+            outLine("LT_INLINE " + cT + " lt_umul_" + t + "(" + cT + " a, " + cT + " b, size_t at) {");
+            if not config.checkUnchecked {
+                outLine("    (void)at; return (" + cT + ")((" + uT + ")a * (" + uT + ")b);");
+            } else if bits == 64 and isSigned {
+                outLine("    int64_t out = 0; if (LT_UNLIKELY(__builtin_mul_overflow(a, b, &out))) { lt_int_fault(at, \"integer outside Int range\"); } return out;");
+            } else if bits == 64 {
+                outLine("    uint64_t out = 0; if (LT_UNLIKELY(__builtin_mul_overflow(a, b, &out))) { lt_int_fault(at, \"integer outside UInt64 range\"); } return out;");
+            } else if isSigned {
+                outLine("    int64_t r = (int64_t)a * (int64_t)b; if (LT_UNLIKELY(r < " + loExpr + " || r > " + hiExpr + ")) { lt_int_fault(at, \"integer overflow\"); } return (" + cT + ")r;");
+            } else {
+                outLine("    uint64_t r = (uint64_t)a * (uint64_t)b; if (LT_UNLIKELY(r > " + uMaxExpr + ")) { lt_int_fault(at, \"integer overflow\"); } return (" + cT + ")r;");
+            }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_udiv_" + t + "(") {
+            outLine("LT_INLINE " + cT + " lt_udiv_" + t + "(" + cT + " a, " + cT + " b, size_t at) {");
+            if not config.checkUnchecked {
+                outLine("    (void)at; return (" + cT + ")(a / b);");
+            } else if isSigned {
+                outLine("    if (LT_UNLIKELY(b == 0)) { lt_int_fault(at, \"division by zero\"); }");
+                outLine("    if (LT_UNLIKELY((int64_t)a == " + loExpr + " && (int64_t)b == -1)) { lt_int_fault(at, \"integer overflow\"); }");
+                outLine("    return (" + cT + ")((int64_t)a / (int64_t)b);");
+            } else {
+                outLine("    if (LT_UNLIKELY(b == 0)) { lt_int_fault(at, \"division by zero\"); } return (" + cT + ")(a / b);");
+            }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_urem_" + t + "(") {
+            outLine("LT_INLINE " + cT + " lt_urem_" + t + "(" + cT + " a, " + cT + " b, size_t at) {");
+            if not config.checkUnchecked {
+                outLine("    (void)at; return (" + cT + ")(a % b);");
+            } else if isSigned {
+                outLine("    if (LT_UNLIKELY(b == 0)) { lt_int_fault(at, \"remainder by zero\"); }");
+                outLine("    if (LT_UNLIKELY((int64_t)a == " + loExpr + " && (int64_t)b == -1)) { return (" + cT + ")0; }");
+                outLine("    return (" + cT + ")((int64_t)a % (int64_t)b);");
+            } else {
+                outLine("    if (LT_UNLIKELY(b == 0)) { lt_int_fault(at, \"remainder by zero\"); } return (" + cT + ")(a % b);");
+            }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_uneg_" + t + "(") {
+            outLine("LT_INLINE " + cT + " lt_uneg_" + t + "(" + cT + " a, size_t at) {");
+            if not config.checkUnchecked {
+                outLine("    (void)at; return (" + cT + ")((" + uT + ")0u - (" + uT + ")a);");
+            } else if isSigned {
+                outLine("    if (LT_UNLIKELY((int64_t)a == " + loExpr + ")) { lt_int_fault(at, \"integer overflow\"); } return (" + cT + ")(-(int64_t)a);");
+            } else {
+                outLine("    if (LT_UNLIKELY(a != 0)) { lt_int_fault(at, \"integer overflow\"); } return (" + cT + ")0;");
+            }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_ushl_" + t + "(") {
+            outLine("LT_INLINE " + cT + " lt_ushl_" + t + "(" + cT + " a, int64_t n, size_t at) {");
+            if not config.checkUnchecked {
+                outLine("    (void)at; return (" + cT + ")((" + uT + ")a << (unsigned)n);");
+            } else if isSigned and bits == 64 {
+                outLine("    if (LT_UNLIKELY(n < 0 || n >= 64)) { lt_int_fault(at, \"shift count out of range\"); } return (int64_t)(((uint64_t)a) << (unsigned)n);");
+            } else if isSigned {
+                outLine("    if (LT_UNLIKELY(n < 0 || n >= " + bText + ")) { lt_int_fault(at, \"shift count out of range\"); }");
+                outLine("    uint64_t m = (UINT64_C(1) << " + bText + ") - UINT64_C(1); uint64_t s = UINT64_C(1) << " + (bits - 1).toText() + ";");
+                outLine("    uint64_t r = (((uint64_t)a) << (unsigned)n) & m; return (" + cT + ")((r & s) ? (int64_t)(r | ~m) : (int64_t)r);");
+            } else {
+                outLine("    if (LT_UNLIKELY(n < 0 || n >= " + bText + ")) { lt_int_fault(at, \"shift count out of range\"); }");
+                outLine("    uint64_t r = ((uint64_t)a) << (unsigned)n;");
+                if bits < 64 { outLine("    r &= " + uMaxExpr + ";"); }
+                outLine("    return (" + cT + ")r;");
+            }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_ushr_" + t + "(") {
+            outLine("LT_INLINE " + cT + " lt_ushr_" + t + "(" + cT + " a, int64_t n, size_t at) {");
+            if not config.checkUnchecked {
+                outLine("    (void)at; return (" + cT + ")(a >> (unsigned)n);");
+            } else if isSigned {
+                outLine("    if (LT_UNLIKELY(n < 0 || n >= " + bText + ")) { lt_int_fault(at, \"shift count out of range\"); }");
+                outLine("    return (" + cT + ")((a >= 0) ? (int64_t)((uint64_t)a >> (unsigned)n) : (int64_t)(~((~(uint64_t)a) >> (unsigned)n)));");
+            } else {
+                outLine("    if (LT_UNLIKELY(n < 0 || n >= " + bText + ")) { lt_int_fault(at, \"shift count out of range\"); }");
+                outLine("    return (" + cT + ")((uint64_t)a >> (unsigned)n);");
+            }
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_utrunc_" + t + "(") {
+            outLine("LT_INLINE " + cT + " lt_utrunc_" + t + "(double v, size_t at) {");
+            if not config.checkUnchecked {
+                outLine("    (void)at; return (" + cT + ")v;");
+            } else if isSigned {
+                outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }");
+                outLine("    double tr = trunc(v);");
+                if bits == 64 { outLine("    if (LT_UNLIKELY(tr < -9223372036854775808.0 || tr >= 9223372036854775808.0)) { lt_int_fault(at, \"integer overflow\"); }"); }
+                else { outLine("    if (LT_UNLIKELY(tr < -(double)(UINT64_C(1) << " + (bits - 1).toText() + ") || tr >= (double)(UINT64_C(1) << " + (bits - 1).toText() + "))) { lt_int_fault(at, \"integer overflow\"); }"); }
+                outLine("    return (" + cT + ")tr;");
+            } else {
+                outLine("    if (LT_UNLIKELY(!isfinite(v))) { lt_int_fault(at, \"non-finite floating value\"); }");
+                outLine("    double tr = trunc(v);");
+                if bits == 64 { outLine("    if (LT_UNLIKELY(tr < 0.0 || tr >= 18446744073709551616.0)) { lt_int_fault(at, \"integer overflow\"); }"); }
+                else { outLine("    if (LT_UNLIKELY(tr < 0.0 || tr >= (double)(UINT64_C(1) << " + bText + "))) { lt_int_fault(at, \"integer overflow\"); }"); }
+                outLine("    return (" + cT + ")tr;");
+            }
+            outLine("}");
+        }
+        idx += 1;
+    }
+};
 
 /** Emits the checked UTF-8 byte concatenation helper backed by SSO (<= 14B) or `lt_vm_arena`. */
 emitStringConcatHelper := fn(): Unit {
@@ -3458,6 +3908,7 @@ isSafeScopeListUsage := fn(normCode: String, rt: String, lType: String): Bool {
             (cursor >= 2 and normCode.startsWithAt(cursor - 2, "&("));
             bySafeHelper := (cursor >= lType.length() + 5 and normCode.startsWithAt(cursor - (lType.length() + 5), lType + "_len(")) or
             (cursor >= lType.length() + 4 and normCode.startsWithAt(cursor - (lType.length() + 4), lType + "_at(")) or
+            (cursor >= lType.length() + 5 and normCode.startsWithAt(cursor - (lType.length() + 5), lType + "_uat(")) or
             (cursor >= lType.length() + 7 and normCode.startsWithAt(cursor - (lType.length() + 7), lType + "_print(")) or
             (cursor >= lType.length() + 9 and normCode.startsWithAt(cursor - (lType.length() + 9), lType + "_reverse(")) or
             (cursor >= lType.length() + 7 and normCode.startsWithAt(cursor - (lType.length() + 7), lType + "_slice(")) or
@@ -5588,8 +6039,42 @@ cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Stri
     arg0 := cParamRuntimeAt(params, 0);
     if moduleName == "lib/core/int" {
         if fnName == "Int.toText" { return "lt_c_int_text(" + arg0 + ")"; }
+        if fnName == "Int.abs" { return "(" + arg0 + " < 0 ? lt_checked_negate(" + arg0 + ", 0) : " + arg0 + ")"; }
+        if fnName == "Int.min" { return "(" + arg0 + " < " + cParamRuntimeAt(params, 1) + " ? " + arg0 + " : " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "Int.max" { return "(" + arg0 + " > " + cParamRuntimeAt(params, 1) + " ? " + arg0 + " : " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "Int.clamp" {
+            a1 := cParamRuntimeAt(params, 1);
+            a2 := cParamRuntimeAt(params, 2);
+            return "(" + arg0 + " < " + a1 + " ? " + a1 + " : (" + arg0 + " > " + a2 + " ? " + a2 + " : " + arg0 + "))";
+        }
+        if fnName == "UInt32.clz" { return "lt_clz((uint64_t)(" + arg0 + "), 32)"; }
+        if fnName == "UInt32.ctz" { return "lt_ctz((uint64_t)(" + arg0 + "), 32)"; }
+        if fnName == "UInt32.popcnt" { return "lt_popcnt((uint64_t)(" + arg0 + "))"; }
+        if fnName == "UInt32.bswap" { return "lt_bswap32(" + arg0 + ")"; }
+        if fnName == "UInt64.clz" { return "lt_clz(" + arg0 + ", 64)"; }
+        if fnName == "UInt64.ctz" { return "lt_ctz(" + arg0 + ", 64)"; }
+        if fnName == "UInt64.popcnt" { return "lt_popcnt(" + arg0 + ")"; }
+        if fnName == "UInt64.bswap" { return "lt_bswap64(" + arg0 + ")"; }
+        if fnName == "UInt64.mulWide" {
+            return "lt_wmul_u64__" + frontend.cStructTag("(lo:UInt64,hi:UInt64)") + "(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")";
+        }
+        if fnName == "UInt64.addWithCarry" {
+            return "lt_c_u64_add_carry(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
+        }
+        if fnName == "UInt64.subWithBorrow" {
+            return "lt_c_u64_sub_borrow(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
+        }
     } else if moduleName == "lib/core/list" {
         if fnName == "List.join" { return "lt_c_text_join(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
+        if fnName == "List.fillBytes" {
+            return "lt_c_list_fill_bytes(&" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ", " + cParamRuntimeAt(params, 3) + ")";
+        }
+        if fnName == "List.copyBytes" {
+            return "lt_c_list_copy_bytes(&" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ", " + cParamRuntimeAt(params, 3) + ", " + cParamRuntimeAt(params, 4) + ")";
+        }
+        if fnName == "List.indexOfByte" {
+            return "lt_c_list_index_of_byte(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
+        }
     } else if moduleName == "lib/core/text" {
         if fnName == "String.skipSpaces" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", true)"; }
         if fnName == "String.skipName" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", false)"; }
@@ -5674,7 +6159,7 @@ applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs:
 };
 
 /** Emits C11 native fast-path helpers for `core/int`, `core/text`, and `core/file` soft builtins. */
-emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
+emitCSoftBuiltinHelpers := fn(calls: Set<String>, config: optCfg.OptConfig): Unit {
     if not usesCSoftBuiltins(calls) { return; }
     if usesIntHelper(calls, "lt_c_text_is_digit(") {
         outLine("static bool lt_c_text_is_digit(lt_str s) { const char *d = lt_str_data(&s); return lt_str_byte_len(s) == 1u && d[0] >= '0' && d[0] <= '9'; }");
@@ -6552,6 +7037,62 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
         okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
         outLine("static " + okErrTag + " lt_c_io_write_line(" + shTag + " writer, lt_str text) { return lt_c_io_write_str_raw(writer, text, true); }");
     }
+    if usesIntHelper(calls, "lt_c_u64_add_carry(") {
+        acTag := frontend.cStructTag("(sum:UInt64,carry:Bool)");
+        fSum := frontend.cFieldName("sum");
+        fCarry := frontend.cFieldName("carry");
+        outLine("LT_INLINE " + acTag + " lt_c_u64_add_carry(uint64_t a, uint64_t b, bool carry) {");
+        outLine("    uint64_t s1 = a + b;");
+        outLine("    bool c1 = s1 < a;");
+        outLine("    uint64_t s2 = s1 + (carry ? UINT64_C(1) : UINT64_C(0));");
+        outLine("    bool c2 = s2 < s1;");
+        outLine("    return (" + acTag + "){ ." + fSum + " = s2, ." + fCarry + " = c1 || c2 };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_u64_sub_borrow(") {
+        sbTag := frontend.cStructTag("(diff:UInt64,borrow:Bool)");
+        fDiff := frontend.cFieldName("diff");
+        fBorrow := frontend.cFieldName("borrow");
+        outLine("LT_INLINE " + sbTag + " lt_c_u64_sub_borrow(uint64_t a, uint64_t b, bool borrow) {");
+        outLine("    uint64_t d1 = a - b;");
+        outLine("    bool b1 = a < b;");
+        outLine("    uint64_t bi = borrow ? UINT64_C(1) : UINT64_C(0);");
+        outLine("    uint64_t d2 = d1 - bi;");
+        outLine("    bool b2 = d1 < bi;");
+        outLine("    return (" + sbTag + "){ ." + fDiff + " = d2, ." + fBorrow + " = b1 || b2 };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, "lt_c_list_fill_bytes(") or usesIntHelper(calls, "lt_c_list_copy_bytes(") or usesIntHelper(calls, "lt_c_list_index_of_byte(") {
+        u8ListType := cScalarType("List<UInt8>");
+        if usesIntHelper(calls, "lt_c_list_fill_bytes(") {
+            outLine("static void lt_c_list_fill_bytes(" + u8ListType + " *dst, int64_t offset, int64_t length, uint8_t value) {");
+            if config.checkBounds {
+                outLine("    int64_t n = " + u8ListType + "_len(*dst);");
+                outLine("    if (LT_UNLIKELY(offset < 0 || length < 0 || length > n || offset > n - length)) { lt_bound_fault(0u, \"fillBytes range out of bounds\"); }");
+            }
+            outLine("    if (length > 0) { memset(dst->data + offset, (int)value, (size_t)length); }");
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_c_list_copy_bytes(") {
+            outLine("static void lt_c_list_copy_bytes(" + u8ListType + " *dst, int64_t dst_off, " + u8ListType + " src, int64_t src_off, int64_t length) {");
+            if config.checkBounds {
+                outLine("    int64_t dn = " + u8ListType + "_len(*dst);");
+                outLine("    int64_t sn = " + u8ListType + "_len(src);");
+                outLine("    if (LT_UNLIKELY(dst_off < 0 || src_off < 0 || length < 0 || length > dn || dst_off > dn - length || length > sn || src_off > sn - length)) { lt_bound_fault(0u, \"copyBytes range out of bounds\"); }");
+            }
+            outLine("    if (length > 0) { memmove(dst->data + dst_off, src.data + src_off, (size_t)length); }");
+            outLine("}");
+        }
+        if usesIntHelper(calls, "lt_c_list_index_of_byte(") {
+            outLine("static int64_t lt_c_list_index_of_byte(" + u8ListType + " values, uint8_t needle, int64_t start) {");
+            outLine("    int64_t n = " + u8ListType + "_len(values);");
+            outLine("    int64_t s = start < 0 ? 0 : start;");
+            outLine("    if (s >= n) { return -1; }");
+            outLine("    const void *p = memchr(values.data + s, (int)needle, (size_t)(n - s));");
+            outLine("    return p == NULL ? -1 : (int64_t)((const uint8_t *)p - values.data);");
+            outLine("}");
+        }
+    }
 };
 
 /** True when any emitted item calls a `ds/arena` virtual-memory arena builtin. */
@@ -7299,10 +7840,10 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     float32Literals := usesIntHelper(calls, "lt_float32_literal(");
     hasFloatToText := usesIntHelper(calls, "lite$floatToText(");
     hasFloat32ToText := usesIntHelper(calls, "lite$float32ToText(");
-    var float8Values := float8Literals or usesHelperPrefix(calls, "lt_f8_") or usesHelperPrefix(calls, "lt_float8_") or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_fma_f8(") or usesIntHelper(calls, "lt_ufma_f8(");
-    var float16Values := float16Literals or usesHelperPrefix(calls, "lt_f16_") or usesHelperPrefix(calls, "lt_float16_") or usesHelperPrefix(calls, "lt_f64_to_f16") or usesIntHelper(calls, "lt_fma_f16(") or usesIntHelper(calls, "lt_ufma_f16(");
-    var float32Values := float32Literals or hasFloat32ToText or usesIntHelper(calls, "lt_float32_op(") or usesIntHelper(calls, "lt_f64_to_f32_checked(");
-    var floatValues := floatLiterals or float8Values or float16Values or float32Values or hasFloatToText or usesFloatArithmetic(calls);
+    var float8Values := float8Literals or usesHelperPrefix(calls, "lt_f8_") or usesHelperPrefix(calls, "lt_float8_") or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_fma_f8(") or usesIntHelper(calls, "lt_ufma_f8(") or usesIntHelper(calls, "lt_ufadd_f8(") or usesIntHelper(calls, "lt_ufsub_f8(") or usesIntHelper(calls, "lt_ufmul_f8(") or usesIntHelper(calls, "lt_ufdiv_f8(");
+    var float16Values := float16Literals or usesHelperPrefix(calls, "lt_f16_") or usesHelperPrefix(calls, "lt_float16_") or usesHelperPrefix(calls, "lt_f64_to_f16") or usesIntHelper(calls, "lt_fma_f16(") or usesIntHelper(calls, "lt_ufma_f16(") or usesIntHelper(calls, "lt_ufadd_f16(") or usesIntHelper(calls, "lt_ufsub_f16(") or usesIntHelper(calls, "lt_ufmul_f16(") or usesIntHelper(calls, "lt_ufdiv_f16(");
+    var float32Values := float32Literals or hasFloat32ToText or usesIntHelper(calls, "lt_float32_op(") or usesIntHelper(calls, "lt_f64_to_f32_checked(") or usesIntHelper(calls, "lt_f32_to_bits(") or usesIntHelper(calls, "lt_f32_from_bits(") or usesIntHelper(calls, "lt_f32_ufrom_bits(") or usesIntHelper(calls, "lt_ufadd_f32(") or usesIntHelper(calls, "lt_ufsub_f32(") or usesIntHelper(calls, "lt_ufmul_f32(") or usesIntHelper(calls, "lt_ufdiv_f32(") or usesIntHelper(calls, "lt_ufma_f32(");
+    var floatValues := floatLiterals or float8Values or float16Values or float32Values or hasFloatToText or usesFloatArithmetic(calls) or usesIntHelper(calls, "lt_f64_to_bits(");
     fnRefTokens: mut Set<String>;
     var fnDepth := 0;
     loop reachable as item {
@@ -7461,6 +8002,12 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         mut seedKinds.pushBack("(ok:Bool,path:String,error:String)");
     }
     if usesIntHelper(calls, "lite$processEnvGet(") { mut seedKinds.pushBack("(found:Bool,value:String)"); }
+    if usesHelperPrefix(calls, "lt_wmul_u64__") { mut seedKinds.pushBack("(lo:UInt64,hi:UInt64)"); }
+    if usesIntHelper(calls, "lt_c_u64_add_carry(") { mut seedKinds.pushBack("(sum:UInt64,carry:Bool)"); }
+    if usesIntHelper(calls, "lt_c_u64_sub_borrow(") { mut seedKinds.pushBack("(diff:UInt64,borrow:Bool)"); }
+    if usesIntHelper(calls, "lt_c_list_fill_bytes(") or usesIntHelper(calls, "lt_c_list_copy_bytes(") or usesIntHelper(calls, "lt_c_list_index_of_byte(") {
+        mut seedKinds.pushBack("List<UInt8>");
+    }
     loop reachable as item {
         if frontend.cArrayTag(item.kind) =!= "" or cListTagForKind(item.kind) =!= "" or frontend.cStructTag(item.kind) =!= "" or frontend.cMapTag(item.kind) =!= "" or frontend.cSetTag(item.kind) =!= "" or frontend.cRcTag(item.kind) =!= "" or frontend.cFnTag(item.kind) =!= "" {
             mut seedKinds.pushBack(item.kind);
@@ -7717,7 +8264,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("/* LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics */");
     }
     outLine("#include <stdio.h>");
-    if usesAnyListBounds(calls) or usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns or hasExtraCanvas or usesRuntimeCtx or usesIntHelper(calls, "calloc(") { outLine("#include <stdlib.h>"); }
+    if usesAnyListBounds(calls, config) or usesIntDivision(calls) or usesStringConcat(calls) or usesIntArithmetic(calls) or floatValues or hasUnreachable or hasExit or usesTextPrimitives(calls) or hasInput or hasAnyList or hasPosixHost or hasUnicodeHost or hasSoftBuiltins or hasHoistedFns or hasExtraCanvas or usesRuntimeCtx or usesIntHelper(calls, "calloc(") { outLine("#include <stdlib.h>"); }
     if hasInputInt or hasPosixHost or usesIntHelper(calls, "lt_c_text_to_int(") { outLine("#include <errno.h>"); }
     outLine("#include <inttypes.h>");
     outLine("#include <stdbool.h>");
@@ -7846,7 +8393,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("#include <poll.h>");
         outLine("#include <sys/wait.h>");
     }
-    if usesFloatArithmetic(calls) or float8Values or float16Values or hasInputFloat or hasExtraCanvas or usesIntHelper(calls, "lt_trunc_f64_to_int(") or usesIntHelper(calls, "lt_trunc_f64_to_uint(") or usesHelperPrefix(calls, "lt_ufma_") { outLine("#include <math.h>"); }
+    if usesFloatArithmetic(calls) or float8Values or float16Values or hasInputFloat or hasExtraCanvas or usesIntHelper(calls, "lt_trunc_f64_to_int(") or usesIntHelper(calls, "lt_trunc_f64_to_uint(") or usesHelperPrefix(calls, "lt_utrunc_") or usesHelperPrefix(calls, "lt_ufma_") { outLine("#include <math.h>"); }
     if hasExtraCanvas {
         outLine("#include <sys/resource.h>");
         outLine("#if defined(__APPLE__)");
@@ -8373,10 +8920,11 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             outLine("static _Noreturn void lt_exit(int64_t status) { fflush(stdout); exit((int)status); }");
         }
     }
-    emitIntArithmeticHelpers(calls, source, prefix);
-    emitIntBitwiseHelpers(calls);
-    emitFloatArithmeticHelpers(calls, float8Values, float16Values, float8Literals, float16Literals);
-    emitIntDivisionHelpers(calls);
+    emitIntArithmeticHelpers(calls, source, prefix, config);
+    emitIntBitwiseHelpers(calls, config);
+    emitFloatArithmeticHelpers(calls, float8Values, float16Values, float8Literals, float16Literals, config);
+    emitIntDivisionHelpers(calls, config);
+    emitUncheckedCHelpers(calls, config);
     if hasAnyList {
         outLine("typedef struct { uint64_t len; uint64_t cap; } lt_list_jumbo_hdr;");
         outLine("#define LT_LIST_SCOPE_BIT UINT32_C(0x80000000)");
@@ -8416,12 +8964,12 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             lNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "L:" + lTag);
             lNeedPrint := frontend.tokenBucketHas(printTypeKeys, "L:" + lTag);
             lNeedFrom := (hasInputArgs and lTag == "str") or arrSliceNeedFrom.has(lTag);
-            emitCListTagHelpers(lTag, payload, calls, lNeedCopy, lNeedPrint, lNeedFrom);
+            emitCListTagHelpers(lTag, payload, calls, lNeedCopy, lNeedPrint, lNeedFrom, config);
         } else if isA {
             aTag := frontend.cArrayTag(payload);
             aNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "A:" + aTag);
             aNeedPrint := frontend.tokenBucketHas(printTypeKeys, "A:" + aTag);
-            emitCArrayHelpers(payload, calls, aNeedCopy, aNeedPrint);
+            emitCArrayHelpers(payload, calls, aNeedCopy, aNeedPrint, config);
         } else if isM {
             mTag := frontend.cMapTag(payload);
             mNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "M:" + mTag);
@@ -8530,7 +9078,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("");
     }
     emitCHostBuiltinHelpers(calls);
-    emitCSoftBuiltinHelpers(calls);
+    emitCSoftBuiltinHelpers(calls, config);
     emitCExtraCanvasHelpers(calls);
     emitCVmArenaHelpers(calls);
     hoistedGlobals: mut Set<String>;

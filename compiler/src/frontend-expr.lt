@@ -8926,15 +8926,57 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         return ctx.withMarkers((kind = ir.VALUE_KIND_STRING, code = "lite$textSlice(" + receiver.code + ", " + sCode + ", " + eCode + ", " + labelStart.toText() + ")",
         intValue = 0, textValue = "", constant = false, next = close), markers);
     }
-    if runtime == "lite$core$array$length:v1" {
-        close := syntax.expectSymbol(source, cursor, ")", prefix);
-        ext := types.arrayExtent(receiver.kind);
-        if ext >= 0 {
-            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = ir.targetIntLiteralCode(target, ext, false, ext.toText()),
-            intValue = ext, textValue = "", constant = true, next = close), markers);
+    if runtime.startsWithAt(0, "lite$core$array$") {
+        elKind := types.arrayElementKind(receiver.kind);
+        aTag := if target == ir.TARGET_C { types.cArrayTag(receiver.kind) } else { "" };
+        if runtime == "lite$core$array$length:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            ext := types.arrayExtent(receiver.kind);
+            if ext >= 0 {
+                return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = ir.targetIntLiteralCode(target, ext, false, ext.toText()),
+                intValue = ext, textValue = "", constant = true, next = close), markers);
+            }
+            lenCode := if target == ir.TARGET_C { "((" + receiver.code + ").len)" } else { "BigInt((" + receiver.code + ").length)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lenCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
-        lenCode := if target == ir.TARGET_C { "((" + receiver.code + ").len)" } else { "BigInt((" + receiver.code + ").length)" };
-        return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lenCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        if runtime == "lite$core$array$uncheckedGet:v1" {
+            idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
+            if not numeric.isIntKind(idxArg.kind) {
+                syntax.failAt(source, cursor, prefix, opLabel + " index must be Int, got " + types.displayKind(idxArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, idxArg.next, prefix);
+            iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+            getCode := if aTag =!= "" {
+                "/*@T:" + receiver.kind + "@*/" + aTag + "_uat(" + receiver.code + ", " + iCode + ", " + labelStart.toText() + ")"
+            } else {
+                "lite$listUncheckedAt(" + receiver.code + ", " + iCode + ", " + labelStart.toText() + ")"
+            };
+            return ctx.withMarkers((kind = elKind, code = getCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$array$uncheckedSet:v1" {
+            idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
+            if not numeric.isIntKind(idxArg.kind) {
+                syntax.failAt(source, cursor, prefix, opLabel + " index must be Int, got " + types.displayKind(idxArg.kind));
+            }
+            comma := syntax.expectSymbol(source, syntax.skipTrivia(source, idxArg.next, prefix), ",", prefix);
+            vStart := syntax.skipTrivia(source, comma, prefix);
+            valArg := parseBinaryCtx(target, source, vStart, prefix, locals, functions, params, currentName, elKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, valArg); }
+            if not types.isCompatibleKind(elKind, valArg.kind) {
+                syntax.failAt(source, vStart, prefix, opLabel + " element must be " + types.displayKind(elKind) + ", got " + types.displayKind(valArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, valArg.next, prefix);
+            iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+            vCode := ctx.assignValueCode(target, elKind, valArg.kind, valArg.code);
+            setCode := if aTag =!= "" {
+                "/*@T:" + receiver.kind + "@*/" + aTag + "_uset(&" + mutRt + ", " + iCode + ", " + vCode + ", " + labelStart.toText() + ")"
+            } else {
+                "lite$listUncheckedSet(" + mutRt + ", " + iCode + ", " + vCode + ", " + labelStart.toText() + ")"
+            };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = setCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
     }
     if runtime.startsWithAt(0, "lite$core$list$") {
         elKind := types.listElementKind(receiver.kind);
@@ -8992,7 +9034,25 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             };
             return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = pushCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
-        if runtime == "lite$core$list$setAt:v1" {
+        if runtime == "lite$core$list$uncheckedGet:v1" {
+            idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
+            if not numeric.isIntKind(idxArg.kind) {
+                syntax.failAt(source, cursor, prefix, opLabel + " index must be Int, got " + types.displayKind(idxArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, idxArg.next, prefix);
+            iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+            getCode := if cTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                gDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut gDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(elKind, "lt_list_" + cTag + "_uat(" + rb.expr + ", " + iCode + ", " + labelStart.toText() + ")", gDrops)
+            } else {
+                "lite$listUncheckedAt(" + receiver.code + ", " + iCode + ", " + labelStart.toText() + ")"
+            };
+            return ctx.withMarkers((kind = elKind, code = getCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$list$setAt:v1" or runtime == "lite$core$list$uncheckedSet:v1" {
             idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
             if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
             if not numeric.isIntKind(idxArg.kind) {
@@ -9008,10 +9068,11 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             close := ctx.expectNonemptyCallClose(source, valArg.next, prefix);
             iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
             vCode := ctx.assignValueCode(target, elKind, valArg.kind, valArg.code);
+            isUnchSet := runtime == "lite$core$list$uncheckedSet:v1";
             setCode := if cTag =!= "" {
-                "lt_list_" + cTag + "_set(&" + mutRt + ", " + iCode + ", " + vCode + ", " + labelStart.toText() + ")"
+                "lt_list_" + cTag + "_" + (if isUnchSet { "uset" } else { "set" }) + "(&" + mutRt + ", " + iCode + ", " + vCode + ", " + labelStart.toText() + ")"
             } else {
-                "lite$listSet(" + mutRt + ", " + iCode + ", " + vCode + ", " + labelStart.toText() + ")"
+                (if isUnchSet { "lite$listUncheckedSet(" } else { "lite$listSet(" }) + mutRt + ", " + iCode + ", " + vCode + ", " + labelStart.toText() + ")"
             };
             return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = setCode, intValue = 0, textValue = "", constant = false, next = close), markers);
         }
@@ -9239,6 +9300,8 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
 /** True when `opName` is a hard-builtin numeric method on integer/float type `kind`. */
 isNumericHardBuiltin := fn(kind: String, opName: String, isStatic: Bool): Bool {
     if numeric.isFloatKind(kind) {
+        if opName == "toBits" { return kind == numeric.KIND_FLOAT32 or kind == numeric.KIND_FLOAT; }
+        if opName == "fromBits" or opName == "uncheckedFromBits" { return isStatic and (kind == numeric.KIND_FLOAT32 or kind == numeric.KIND_FLOAT); }
         return opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" or opName == "fma" or opName == "uncheckedFma";
     }
     if not numeric.isIntKind(kind) { return false; }
@@ -9265,14 +9328,16 @@ parseNumericHardBuiltin := fn(
     }
     memberEnd := source.skipName(memberStart);
     openParen := syntax.expectSymbol(source, syntax.skipTrivia(source, memberEnd, prefix), "(", prefix);
-    isUnary := opName == "bitNot" or opName == "wrappingNeg" or opName == "uncheckedNeg" or opName == "uncheckedTruncate" or opName == "countOnes" or opName == "leadingZeros" or opName == "trailingZeros" or opName == "byteSwap";
+    isBitsIn := opName == "fromBits" or opName == "uncheckedFromBits";
+    bitsKind := if kind == numeric.KIND_FLOAT32 { numeric.KIND_UINT32 } else { numeric.KIND_UINT64 };
+    isUnary := opName == "bitNot" or opName == "wrappingNeg" or opName == "uncheckedNeg" or opName == "uncheckedTruncate" or opName == "countOnes" or opName == "leadingZeros" or opName == "trailingZeros" or opName == "byteSwap" or opName == "toBits" or isBitsIn;
     isShift := opName == "shiftLeft" or opName == "shiftRight" or opName == "rotateLeft" or opName == "rotateRight" or opName == "uncheckedShiftLeft" or opName == "uncheckedShiftRight";
     isFma := opName == "fma" or opName == "uncheckedFma";
     var cursor := syntax.skipTrivia(source, openParen, prefix);
     var markers := if inferMode and hasReceiver { ctx.collectParsedMarkers("", receiver) } else { "" };
     var a0 := if hasReceiver { receiver } else { (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = cursor) };
     if not hasReceiver {
-        exp0 := if opName == "uncheckedTruncate" { "" } else { kind };
+        exp0 := if opName == "uncheckedTruncate" { "" } else if isBitsIn { bitsKind } else { kind };
         p0 := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, exp0, 0, ctxs, iifeDepth, inferMode, "", aliases);
         a0 = p0;
         if inferMode { markers = ctx.collectParsedMarkers(markers, a0); }
@@ -9281,8 +9346,8 @@ parseNumericHardBuiltin := fn(
                 if not numeric.isFloatKind(a0.kind) {
                     syntax.failAt(source, cursor, prefix, kind + ".uncheckedTruncate expects a Float operand, got " + types.displayKind(a0.kind));
                 }
-            } else if not types.isCompatibleKind(kind, a0.kind) {
-                syntax.failAt(source, cursor, prefix, kind + "." + opName + " expects " + types.displayKind(kind) + ", got " + types.displayKind(a0.kind));
+            } else if not types.isCompatibleKind(exp0, a0.kind) {
+                syntax.failAt(source, cursor, prefix, kind + "." + opName + " expects " + types.displayKind(exp0) + ", got " + types.displayKind(a0.kind));
             }
         }
         cursor = syntax.skipTrivia(source, a0.next, prefix);
@@ -9320,13 +9385,15 @@ parseNumericHardBuiltin := fn(
     }
     closeParen := syntax.expectSymbol(source, cursor, ")", prefix);
     retKind := if opName == "countOnes" or opName == "leadingZeros" or opName == "trailingZeros" { ir.VALUE_KIND_INT }
+    else if opName == "toBits" { bitsKind }
     else if opName == "wideningMul" { "(lo:" + kind + ",hi:" + kind + ")" }
     else { kind };
     if inferMode {
         return ctx.withMarkers((kind = retKind, code = "", intValue = 0, textValue = "", constant = false, next = closeParen), markers);
     }
-    a0Code := if opName == "uncheckedTruncate" or a0.kind == kind or not numeric.isNumericKind(a0.kind) { a0.code }
-    else { ir.targetNumericCastCode(target, kind, a0.kind, a0.code, memberStart) };
+    expCast0 := if isBitsIn { bitsKind } else { kind };
+    a0Code := if opName == "uncheckedTruncate" or a0.kind == expCast0 or not numeric.isNumericKind(a0.kind) { a0.code }
+    else { ir.targetNumericCastCode(target, expCast0, a0.kind, a0.code, memberStart) };
     a1Code := if isUnary or isShift or a1.kind == kind or not numeric.isNumericKind(a1.kind) { a1.code }
     else { ir.targetNumericCastCode(target, kind, a1.kind, a1.code, memberStart) };
     a2Code := if not isFma or a2.kind == kind or not numeric.isNumericKind(a2.kind) { a2.code }

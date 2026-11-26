@@ -388,6 +388,10 @@ run := fn(rawArgs: List<String>): Unit {
     builtinOpts: mut List<String> = [];
     var target := "ts";
     var targetSet := false;
+    var sanitize := false;
+    var debugPreset := false;
+    var explicitDebugSet := false;
+    var explicitDebugVal := false;
     var playMode := false;
     var playScale := 0;
     var playFps := 60;
@@ -445,14 +449,28 @@ run := fn(rawArgs: List<String>): Unit {
             if args.length() == 0 or args[0] == "--" { usageExit(); }
             (mut builtinOpts).pushBack(arg);
             mut builtinOpts.pushBack(mut args.popFront());
+        } else if arg == "--sanitize" {
+            sanitize = true;
+            mut builtinOpts.pushBack(arg);
+        } else if arg == "-fdebug-info" {
+            explicitDebugSet = true;
+            explicitDebugVal = true;
+            mut builtinOpts.pushBack(arg);
+        } else if arg == "-fno-debug-info" {
+            explicitDebugSet = true;
+            explicitDebugVal = false;
+            mut builtinOpts.pushBack(arg);
         } else if arg.startsWithAt(0, "--emit-format=") or arg.startsWithAt(0, "--source-map=") or arg.startsWithAt(0, "-f") {
             mut builtinOpts.pushBack(arg);
         } else if arg == "-O0" or arg == "-O1" or arg == "-O2" or arg == "-O3" or arg == "-Os" or arg == "-Oc" or arg.startsWithAt(0, "--opt=") {
+            debugPreset = arg == "-O0" or arg == "--opt=0";
             mut builtinOpts.pushBack(arg);
         } else if arg == "--opt" {
             if args.length() == 0 or args[0] == "--" { usageExit(); }
+            optVal := mut args.popFront();
+            debugPreset = optVal == "0";
             (mut builtinOpts).pushBack(arg);
-            mut builtinOpts.pushBack(mut args.popFront());
+            mut builtinOpts.pushBack(optVal);
         } else {
             scriptPath = arg;
             break;
@@ -562,6 +580,14 @@ run := fn(rawArgs: List<String>): Unit {
         }
         binPath := path.join(tempDir.path, baseNoExt);
         ccArgs: mut List<String> = ["-std=c11", "-O1", cArtifact, "-o", binPath, "-lm"];
+        if sanitize {
+            mut ccArgs.pushBack("-fsanitize=address,undefined");
+            mut ccArgs.pushBack("-DLITE_ALLOC_SYSTEM");
+            mut ccArgs.pushBack("-fno-omit-frame-pointer");
+            mut ccArgs.pushBack("-g");
+        } else if (if explicitDebugSet { explicitDebugVal } else { debugPreset }) {
+            mut ccArgs.pushBack("-g");
+        }
         if proc.platform() == "darwin" and compiled.stdout.contains("LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
             mut ccArgs.pushBack("-framework");
             mut ccArgs.pushBack("Cocoa");

@@ -327,29 +327,24 @@ pub floatTruncCode := fn(dstIntKind: String, srcFloatKind: String, code: String,
     }
 }
 
-/** Emits TypeScript code for a hard-builtin integer or float method (`bit*`, `shift*`, `rotate*`, `wrapping*`, `saturating*`, `unchecked*`, bit manip, `wideningMul`, `fma`). */
+/** Emits TypeScript code for a hard-builtin integer or float method (`bit*`, `shift*`, `rotate*`, `wrapping*`, `saturating*`, `unchecked*`, bit manip, `wideningMul`, `fma`, `toBits`, `fromBits`). */
 pub numericBuiltinCode := fn(kind: String, opName: String, a0: String, a1: String, a2: String, srcKind: String, position: Int): String {
     posText := position.toText();
     if numeric.isFloatKind(kind) {
+        fBits := if kind == numeric.KIND_FLOAT8 { "8" } else if kind == numeric.KIND_FLOAT16 { "16" } else if kind == numeric.KIND_FLOAT32 { "32" } else { "64" };
         if opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" {
-            sym := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else { "/" };
-            expr := "((" + a0 + ") " + sym + " (" + a1 + "))";
-            if kind == numeric.KIND_FLOAT8 { return "lite$f8Round(" + expr + ", 0)"; }
-            if kind == numeric.KIND_FLOAT16 { return "Math.f16round(" + expr + ")"; }
-            if kind == numeric.KIND_FLOAT32 { return "Math.fround(" + expr + ")"; }
-            return expr;
+            opIdx := if opName == "uncheckedAdd" { "0" } else if opName == "uncheckedSub" { "1" } else if opName == "uncheckedMul" { "2" } else { "3" };
+            return "lite$ufop" + fBits + "(" + a0 + ", " + a1 + ", " + opIdx + ", " + posText + ")";
         }
         if opName == "fma" {
-            fBits := if kind == numeric.KIND_FLOAT8 { "8" } else if kind == numeric.KIND_FLOAT16 { "16" } else if kind == numeric.KIND_FLOAT32 { "32" } else { "64" };
             return "lite$fma" + fBits + "(" + a0 + ", " + a1 + ", " + a2 + ", " + posText + ")";
         }
         if opName == "uncheckedFma" {
-            expr := "((" + a0 + ") * (" + a1 + ") + (" + a2 + "))";
-            if kind == numeric.KIND_FLOAT8 { return "lite$f8Round(" + expr + ", 0)"; }
-            if kind == numeric.KIND_FLOAT16 { return "Math.f16round(" + expr + ")"; }
-            if kind == numeric.KIND_FLOAT32 { return "Math.fround(" + expr + ")"; }
-            return expr;
+            return "lite$ufma" + fBits + "(" + a0 + ", " + a1 + ", " + a2 + ", " + posText + ")";
         }
+        if opName == "toBits" { return "lite$f" + fBits + "ToBits(" + a0 + ")"; }
+        if opName == "fromBits" { return "lite$f" + fBits + "FromBits(" + a0 + ", " + posText + ")"; }
+        if opName == "uncheckedFromBits" { return "lite$f" + fBits + "UFromBits(" + a0 + ", " + posText + ")"; }
     }
     bits := castIntBits(kind);
     bitsNum := bits.toText();
@@ -381,15 +376,17 @@ pub numericBuiltinCode := fn(kind: String, opName: String, a0: String, a1: Strin
         fam := if isU { "U" } else { "S" };
         return "lite$" + sOp + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ")";
     }
-    if opName == "uncheckedAdd" or opName == "uncheckedSub" or opName == "uncheckedMul" or opName == "uncheckedDiv" or opName == "uncheckedRem" {
-        uSym := if opName == "uncheckedAdd" { "+" } else if opName == "uncheckedSub" { "-" } else if opName == "uncheckedMul" { "*" } else if opName == "uncheckedDiv" { "/" } else { "%" };
-        return wrapFn + "(" + bitsNum + ", (" + a0 + ") " + uSym + " (" + a1 + "))";
-    }
-    if opName == "uncheckedNeg" { return wrapFn + "(" + bitsNum + ", -(" + a0 + "))"; }
-    if opName == "uncheckedShiftLeft" { return wrapFn + "(" + bitsNum + ", (" + a0 + ") << (" + a1 + "))"; }
-    if opName == "uncheckedShiftRight" { return wrapFn + "(" + bitsNum + ", (" + a0 + ") >> (" + a1 + "))"; }
+    fam := if isU { "U" } else { "S" };
+    if opName == "uncheckedAdd" { return "lite$unchAdd" + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ", " + textLiteralCode(kind) + ", " + posText + ")"; }
+    if opName == "uncheckedSub" { return "lite$unchSub" + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ", " + textLiteralCode(kind) + ", " + posText + ")"; }
+    if opName == "uncheckedMul" { return "lite$unchMul" + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ", " + textLiteralCode(kind) + ", " + posText + ")"; }
+    if opName == "uncheckedDiv" { return "lite$unchDiv" + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ", " + textLiteralCode(kind) + ", " + posText + ")"; }
+    if opName == "uncheckedRem" { return "lite$unchRem" + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ", " + textLiteralCode(kind) + ", " + posText + ")"; }
+    if opName == "uncheckedNeg" { return "lite$unchNeg" + fam + "(" + a0 + ", " + bitsN + ", " + textLiteralCode(kind) + ", " + posText + ")"; }
+    if opName == "uncheckedShiftLeft" { return "lite$unchShl" + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ", " + posText + ")"; }
+    if opName == "uncheckedShiftRight" { return "lite$unchShr" + fam + "(" + a0 + ", " + a1 + ", " + bitsN + ", " + posText + ")"; }
     if opName == "uncheckedTruncate" {
-        return wrapFn + "(" + bitsNum + ", BigInt(Math.trunc(" + floatOperandCode(srcKind, a0) + ")))";
+        return "lite$unchTrunc" + fam + "(" + floatOperandCode(srcKind, a0) + ", " + bitsN + ", " + textLiteralCode(kind) + ", " + posText + ")";
     }
     if opName == "countOnes" { return "lite$popcnt(" + a0 + ", " + bitsN + ")"; }
     if opName == "leadingZeros" { return "lite$clz(" + a0 + ", " + bitsN + ")"; }
