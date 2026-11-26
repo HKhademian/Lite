@@ -8785,11 +8785,11 @@ static lt_s_645963766_344195862 lt_fn_lib_s_core_s_file__writeText(lt_str lite_p
 static int64_t lt_fn_lib_s_core_s_text__tp_String_op_codePointAt(lt_str lite_text, int64_t lite_position) {
     (void)lite_text;
     (void)lite_position;
-    lt_str lite_ch = lt_text_at(lite_text, lite_position, 2616);
+    lt_str lite_ch = lt_text_at(lite_text, lite_position, 2920);
     (void)lite_ch;
     lt_list_i64 lite_points = lt_list_i64_copy(lt_unicode_to_code_points(lite_ch));
     (void)lite_points;
-    return lt_list_i64_at(lite_points, INT64_C(0), 2674);
+    return lt_list_i64_at(lite_points, INT64_C(0), 2978);
 }
 
 static int64_t lt_fn_lib_s_core_s_text__tp_String_op_indexOf(lt_str lite_source, lt_str lite_needle, int64_t lite_start) {
@@ -8906,10 +8906,10 @@ static bool lt_fn_lib_s_core_s_text__tp_String_op_contains(lt_str lite_source, l
 static lt_list_str lt_fn_lib_s_core_s_text__tp_String_op_split(lt_str lite_source, lt_str lite_divider) {
     (void)lite_source;
     (void)lite_divider;
-    int64_t lt_arg_left_32886;
-    int64_t lt_arg_right_32886;
-    int64_t lt_arg_left_33184;
-    int64_t lt_arg_right_33184;
+    int64_t lt_arg_left_34773;
+    int64_t lt_arg_right_34773;
+    int64_t lt_arg_left_35071;
+    int64_t lt_arg_right_35071;
     lt_list_str lite_out = lt_list_str_from(0, NULL);
     (void)lite_out;
     int64_t lite_srcLen = lt_text_length(lite_source);
@@ -8920,8 +8920,8 @@ static lt_list_str lt_fn_lib_s_core_s_text__tp_String_op_split(lt_str lite_sourc
         int64_t lite_i = INT64_C(0);
         (void)lite_i;
         while ((lite_i) < (lite_srcLen)) {
-            (void)(lt_list_str_push_back(&lite_out, lt_text_at(lite_source, lite_i, 32864)));
-            lite_i = (lt_arg_left_32886 = lite_i, lt_arg_right_32886 = INT64_C(1), lt_checked_add(lt_arg_left_32886, lt_arg_right_32886, 32886));
+            (void)(lt_list_str_push_back(&lite_out, lt_text_at(lite_source, lite_i, 34751)));
+            lite_i = (lt_arg_left_34773 = lite_i, lt_arg_right_34773 = INT64_C(1), lt_checked_add(lt_arg_left_34773, lt_arg_right_34773, 34773));
         }
         return lt_list_str_copy(lite_out);
     }
@@ -8931,11 +8931,11 @@ static lt_list_str lt_fn_lib_s_core_s_text__tp_String_op_split(lt_str lite_sourc
         int64_t lite_hit = lt_fn_lib_s_core_s_text__tp_String_op_indexOf(lite_source, lite_divider, lite_pos);
         (void)lite_hit;
         if ((lite_hit) < (INT64_C(0))) {
-            (void)(lt_list_str_push_back(&lite_out, lt_text_slice(lite_source, lite_pos, lite_srcLen, 33064)));
+            (void)(lt_list_str_push_back(&lite_out, lt_text_slice(lite_source, lite_pos, lite_srcLen, 34951)));
             break;
         }
-        (void)(lt_list_str_push_back(&lite_out, lt_text_slice(lite_source, lite_pos, lite_hit, 33148)));
-        lite_pos = (lt_arg_left_33184 = lite_hit, lt_arg_right_33184 = lite_divLen, lt_checked_add(lt_arg_left_33184, lt_arg_right_33184, 33184));
+        (void)(lt_list_str_push_back(&lite_out, lt_text_slice(lite_source, lite_pos, lite_hit, 35035)));
+        lite_pos = (lt_arg_left_35071 = lite_hit, lt_arg_right_35071 = lite_divLen, lt_checked_add(lt_arg_left_35071, lt_arg_right_35071, 35071));
     }
     return lt_list_str_copy(lite_out);
 }
@@ -60282,9 +60282,10 @@ static void lt_fn_emit_d_c__emitCSoftBuiltinHelpers(lt_set_str lite_calls) {
         (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate text\\n\"); exit(1); }", 89)));
         (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("    int needed = 0; int seen = 0; uint32_t cp = 0u; uint8_t lo = 0x80u; uint8_t hi = 0xBFu;", 91)));
         (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("    for (int64_t i = 0; i < bytes.len; ) {", 42)));
-        (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("        if (out_len + 4u > cap) { cap *= 2u; uint8_t *nb = realloc(out, cap + 1u); if (nb == NULL) { fprintf(stderr, \"MemoryFault: cannot grow text\\n\"); exit(1); } out = nb; }", 175)));
+        (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("        if (out_len + 8u > cap) { cap *= 2u; uint8_t *nb = realloc(out, cap + 1u); if (nb == NULL) { fprintf(stderr, \"MemoryFault: cannot grow text\\n\"); exit(1); } out = nb; }", 175)));
         (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("        int64_t raw = bytes.data[i];", 36)));
         (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("        if (raw < 0 || raw > 255) {", 35)));
+        (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("            if (needed > 0) { out[out_len++] = 0xEFu; out[out_len++] = 0xBFu; out[out_len++] = 0xBDu; cp_count += 1; }", 118)));
         (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("            needed = 0; seen = 0; cp = 0u; lo = 0x80u; hi = 0xBFu;", 66)));
         (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("            out[out_len++] = 0xEFu; out[out_len++] = 0xBFu; out[out_len++] = 0xBDu; cp_count += 1; i += 1;", 106)));
         (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("            continue;", 21)));
@@ -61149,52 +61150,52 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
     (void)lite_prefix;
     (void)lite_builtinSpecs;
     (void)lite_config;
-    int64_t lt_arg_left_372570;
-    int64_t lt_arg_right_372570;
-    int64_t lt_arg_left_373122;
-    int64_t lt_arg_right_373122;
-    int64_t lt_arg_left_378534;
-    int64_t lt_arg_right_378534;
-    int64_t lt_arg_left_385913;
-    int64_t lt_arg_right_385913;
-    int64_t lt_arg_left_386413;
-    int64_t lt_arg_right_386413;
-    int64_t lt_arg_left_387382;
-    int64_t lt_arg_right_387382;
-    int64_t lt_arg_left_405843;
-    int64_t lt_arg_right_405843;
-    int64_t lt_arg_left_407145;
-    int64_t lt_arg_right_407145;
-    int64_t lt_arg_left_407276;
-    int64_t lt_arg_right_407276;
-    int64_t lt_arg_left_407547;
-    int64_t lt_arg_right_407547;
-    int64_t lt_arg_left_407772;
-    int64_t lt_arg_right_407772;
-    int64_t lt_arg_left_408612;
-    int64_t lt_arg_right_408612;
-    int64_t lt_arg_left_408899;
-    int64_t lt_arg_right_408899;
-    int64_t lt_arg_left_409088;
-    int64_t lt_arg_right_409088;
-    int64_t lt_arg_left_409146;
-    int64_t lt_arg_right_409146;
-    int64_t lt_arg_left_409386;
-    int64_t lt_arg_right_409386;
-    int64_t lt_arg_left_409548;
-    int64_t lt_arg_right_409548;
-    int64_t lt_arg_left_409711;
-    int64_t lt_arg_right_409711;
-    int64_t lt_arg_left_409906;
-    int64_t lt_arg_right_409906;
-    int64_t lt_arg_left_410012;
-    int64_t lt_arg_right_410012;
-    int64_t lt_arg_left_410311;
-    int64_t lt_arg_right_410311;
-    int64_t lt_arg_left_410507;
-    int64_t lt_arg_right_410507;
-    int64_t lt_arg_left_410824;
-    int64_t lt_arg_right_410824;
+    int64_t lt_arg_left_372709;
+    int64_t lt_arg_right_372709;
+    int64_t lt_arg_left_373261;
+    int64_t lt_arg_right_373261;
+    int64_t lt_arg_left_378673;
+    int64_t lt_arg_right_378673;
+    int64_t lt_arg_left_386052;
+    int64_t lt_arg_right_386052;
+    int64_t lt_arg_left_386552;
+    int64_t lt_arg_right_386552;
+    int64_t lt_arg_left_387521;
+    int64_t lt_arg_right_387521;
+    int64_t lt_arg_left_405982;
+    int64_t lt_arg_right_405982;
+    int64_t lt_arg_left_407284;
+    int64_t lt_arg_right_407284;
+    int64_t lt_arg_left_407415;
+    int64_t lt_arg_right_407415;
+    int64_t lt_arg_left_407686;
+    int64_t lt_arg_right_407686;
+    int64_t lt_arg_left_407911;
+    int64_t lt_arg_right_407911;
+    int64_t lt_arg_left_408751;
+    int64_t lt_arg_right_408751;
+    int64_t lt_arg_left_409038;
+    int64_t lt_arg_right_409038;
+    int64_t lt_arg_left_409227;
+    int64_t lt_arg_right_409227;
+    int64_t lt_arg_left_409285;
+    int64_t lt_arg_right_409285;
+    int64_t lt_arg_left_409525;
+    int64_t lt_arg_right_409525;
+    int64_t lt_arg_left_409687;
+    int64_t lt_arg_right_409687;
+    int64_t lt_arg_left_409850;
+    int64_t lt_arg_right_409850;
+    int64_t lt_arg_left_410045;
+    int64_t lt_arg_right_410045;
+    int64_t lt_arg_left_410151;
+    int64_t lt_arg_right_410151;
+    int64_t lt_arg_left_410450;
+    int64_t lt_arg_right_410450;
+    int64_t lt_arg_left_410646;
+    int64_t lt_arg_right_410646;
+    int64_t lt_arg_left_410963;
+    int64_t lt_arg_right_410963;
     bool lite_prevCompact = lt_m_emit_d_c__cCompactEmit;
     (void)lite_prevCompact;
     int64_t lite_prevSourceMap = lt_m_emit_d_c__cSourceMapMode;
@@ -61262,7 +61263,7 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
             }
             if (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_START)) {
                 lite_hasFunctions = true;
-                lite_fnDepth = (lt_arg_left_372570 = lite_fnDepth, lt_arg_right_372570 = INT64_C(1), lt_checked_add(lt_arg_left_372570, lt_arg_right_372570, 372570));
+                lite_fnDepth = (lt_arg_left_372709 = lite_fnDepth, lt_arg_right_372709 = INT64_C(1), lt_checked_add(lt_arg_left_372709, lt_arg_right_372709, 372709));
                 (void)(lt_fn_emit_d_c__checkCFunctionSignature(lite_item));
                 lt_str lite_baseRetKind = lt_fn_frontend__distinctBaseKind((lite_item).f_code);
                 (void)lite_baseRetKind;
@@ -61280,7 +61281,7 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                 }
             } else if (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_END)) {
                 if ((lite_fnDepth) > (INT64_C(0))) {
-                    lite_fnDepth = (lt_arg_left_373122 = lite_fnDepth, lt_arg_right_373122 = INT64_C(1), lt_checked_subtract(lt_arg_left_373122, lt_arg_right_373122, 373122));
+                    lite_fnDepth = (lt_arg_left_373261 = lite_fnDepth, lt_arg_right_373261 = INT64_C(1), lt_checked_subtract(lt_arg_left_373261, lt_arg_right_373261, 373261));
                 }
             } else if ((lite_fnDepth) > (INT64_C(0))) {
                 if (((lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_END)) || (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_END_OUTPUT)))) {
@@ -61305,13 +61306,13 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                 bool lt_cval_823;
                 if (lt_fn_frontend__isDistinctKind((lite_item).f_textValue)) {
                     {
-                        bool lt_blk_374873;
+                        bool lt_blk_375012;
                         {
                             lt_str lite_base = lt_fn_frontend__distinctBaseKind((lite_item).f_textValue);
                             (void)lite_base;
-                            lt_blk_374873 = ((((((((((((((((((lt_fn_frontend__isIntScalarKind(lite_base)) || (lt_fn_frontend__isFloatScalarKind(lite_base)))) || (lt_text_eq(lite_base, lt_m_frontend__VALUE_KIND_BOOL)))) || (lt_text_eq(lite_base, lt_m_frontend__VALUE_KIND_STRING)))) || (lt_fn_frontend__isEnumKind(lite_base)))) || (!lt_text_eq(lt_fn_emit_d_c__cListTagForKind(lite_base), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cStructTag(lite_base), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cMapTag(lite_base), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cSetTag(lite_base), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cFnTag(lite_base), LT_STR_LIT("", 0))));
+                            lt_blk_375012 = ((((((((((((((((((lt_fn_frontend__isIntScalarKind(lite_base)) || (lt_fn_frontend__isFloatScalarKind(lite_base)))) || (lt_text_eq(lite_base, lt_m_frontend__VALUE_KIND_BOOL)))) || (lt_text_eq(lite_base, lt_m_frontend__VALUE_KIND_STRING)))) || (lt_fn_frontend__isEnumKind(lite_base)))) || (!lt_text_eq(lt_fn_emit_d_c__cListTagForKind(lite_base), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cStructTag(lite_base), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cMapTag(lite_base), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cSetTag(lite_base), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cFnTag(lite_base), LT_STR_LIT("", 0))));
                         }
-                        lt_cval_823 = lt_blk_374873;
+                        lt_cval_823 = lt_blk_375012;
                     }
                 } else {
                     lt_cval_823 = false;
@@ -61364,9 +61365,9 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                     int64_t lite_sepIdx = lt_fn_lib_s_core_s_text__tp_String_op_indexOf(lite_entry, LT_STR_LIT("\n", 1), INT64_C(0));
                     (void)lite_sepIdx;
                     if ((lite_sepIdx) > (INT64_C(0))) {
-                        lt_str lite_eKey = lt_text_slice(lite_entry, INT64_C(0), lite_sepIdx, 378472);
+                        lt_str lite_eKey = lt_text_slice(lite_entry, INT64_C(0), lite_sepIdx, 378611);
                         (void)lite_eKey;
-                        lt_str lite_eBody = lt_text_slice(lite_entry, (lt_arg_left_378534 = lite_sepIdx, lt_arg_right_378534 = INT64_C(1), lt_checked_add(lt_arg_left_378534, lt_arg_right_378534, 378534)), lt_text_length(lite_entry), 378521);
+                        lt_str lite_eBody = lt_text_slice(lite_entry, (lt_arg_left_378673 = lite_sepIdx, lt_arg_right_378673 = INT64_C(1), lt_checked_add(lt_arg_left_378673, lt_arg_right_378673, 378673)), lt_text_length(lite_entry), 378660);
                         (void)lite_eBody;
                         if ((!(lt_set_str_has(lite_hoistedFnKeys, lite_eKey)))) {
                             (void)(lt_set_str_add(&lite_hoistedFnKeys, lite_eKey));
@@ -61508,8 +61509,8 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
             } else if (((lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_LOOP_SEQ)) && (((lite_item).f_intValue) == (INT64_C(4))))) {
                 lt_list_str lite_annotsM = lt_list_str_copy(lt_fn_emit_d_c__extractCTypeAnnotations((lite_item).f_code));
                 (void)lite_annotsM;
-                if ((((((lite_annotsM).len)) > (INT64_C(0))) && (lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lt_list_str_at(lite_annotsM, INT64_C(0), 384513), INT64_C(0), LT_STR_LIT("T:", 2))))) {
-                    lt_str lite_mk = lt_text_slice(lt_list_str_at(lite_annotsM, INT64_C(0), 384570), INT64_C(2), lt_text_length(lt_list_str_at(lite_annotsM, INT64_C(0), 384590)), 384573);
+                if ((((((lite_annotsM).len)) > (INT64_C(0))) && (lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lt_list_str_at(lite_annotsM, INT64_C(0), 384652), INT64_C(0), LT_STR_LIT("T:", 2))))) {
+                    lt_str lite_mk = lt_text_slice(lt_list_str_at(lite_annotsM, INT64_C(0), 384709), INT64_C(2), lt_text_length(lt_list_str_at(lite_annotsM, INT64_C(0), 384729)), 384712);
                     (void)lite_mk;
                     lt_list_str lite_cFlags = lt_list_str_copy(lt_fn_emit_d_c__collectTypeFlags(lite_mk));
                     (void)lite_cFlags;
@@ -61553,14 +61554,14 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                         (void)lite_pSep;
                         int64_t lite_pEnd = (((lite_pSep) >= (INT64_C(0))) ? lite_pSep : lt_text_length((lite_item).f_textValue));
                         (void)lite_pEnd;
-                        lt_str lite_pEntry = lt_text_slice((lite_item).f_textValue, lite_pStart, lite_pEnd, 385754);
+                        lt_str lite_pEntry = lt_text_slice((lite_item).f_textValue, lite_pStart, lite_pEnd, 385893);
                         (void)lite_pEntry;
                         int64_t lite_pEq = lt_fn_lib_s_core_s_text__tp_String_op_indexOf(lite_pEntry, LT_STR_LIT("=", 1), INT64_C(0));
                         (void)lite_pEq;
                         if ((lite_pEq) >= (INT64_C(0))) {
-                            lt_str lite_rawPKind = lt_text_slice(lite_pEntry, (lt_arg_left_385913 = lite_pEq, lt_arg_right_385913 = INT64_C(1), lt_checked_add(lt_arg_left_385913, lt_arg_right_385913, 385913)), lt_text_length(lite_pEntry), 385903);
+                            lt_str lite_rawPKind = lt_text_slice(lite_pEntry, (lt_arg_left_386052 = lite_pEq, lt_arg_right_386052 = INT64_C(1), lt_checked_add(lt_arg_left_386052, lt_arg_right_386052, 386052)), lt_text_length(lite_pEntry), 386042);
                             (void)lite_rawPKind;
-                            lt_str lite_pKind = ((lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lite_rawPKind, INT64_C(0), LT_STR_LIT("mut ", 4))) ? lt_text_slice(lite_rawPKind, INT64_C(4), lt_text_length(lite_rawPKind), 386016) : lite_rawPKind);
+                            lt_str lite_pKind = ((lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lite_rawPKind, INT64_C(0), LT_STR_LIT("mut ", 4))) ? lt_text_slice(lite_rawPKind, INT64_C(4), lt_text_length(lite_rawPKind), 386155) : lite_rawPKind);
                             (void)lite_pKind;
                             if (((((((!lt_text_eq(lt_fn_emit_d_c__cListTagForKind(lite_pKind), LT_STR_LIT("", 0))) || (!lt_text_eq(lt_fn_frontend__cStructTag(lite_pKind), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cMapTag(lite_pKind), LT_STR_LIT("", 0))))) || (!lt_text_eq(lt_fn_frontend__cSetTag(lite_pKind), LT_STR_LIT("", 0))))) {
                                 (void)(lt_list_str_push_back(&lite_seedKinds, lite_pKind));
@@ -61569,7 +61570,7 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                         if ((lite_pSep) < (INT64_C(0))) {
                             break;
                         }
-                        lite_pStart = (lt_arg_left_386413 = lite_pSep, lt_arg_right_386413 = INT64_C(1), lt_checked_add(lt_arg_left_386413, lt_arg_right_386413, 386413));
+                        lite_pStart = (lt_arg_left_386552 = lite_pSep, lt_arg_right_386552 = INT64_C(1), lt_checked_add(lt_arg_left_386552, lt_arg_right_386552, 386552));
                     }
                 }
             }
@@ -61581,9 +61582,9 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                     lt_str lite_ann = lt_seq_9.data[lt_sidx_9];
                     (void)lite_ann;
                     if (lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lite_ann, INT64_C(0), LT_STR_LIT("T:", 2))) {
-                        (void)(lt_list_str_push_back(&lite_seedKinds, lt_text_slice(lite_ann, INT64_C(2), lt_text_length(lite_ann), 386629)));
+                        (void)(lt_list_str_push_back(&lite_seedKinds, lt_text_slice(lite_ann, INT64_C(2), lt_text_length(lite_ann), 386768)));
                     } else if (lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lite_ann, INT64_C(0), LT_STR_LIT("P:", 2))) {
-                        lt_str lite_pk = lt_text_slice(lite_ann, INT64_C(2), lt_text_length(lite_ann), 386730);
+                        lt_str lite_pk = lt_text_slice(lite_ann, INT64_C(2), lt_text_length(lite_ann), 386869);
                         (void)lite_pk;
                         (void)(lt_list_str_push_back(&lite_seedKinds, lite_pk));
                         lt_list_str lite_pFlagsA = lt_list_str_copy(lt_fn_emit_d_c__collectTypeFlags(lite_pk));
@@ -61604,14 +61605,14 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                             }
                         }
                     } else if (lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lite_ann, INT64_C(0), LT_STR_LIT("C:", 2))) {
-                        lt_str lite_body = lt_text_slice(lite_ann, INT64_C(2), lt_text_length(lite_ann), 387191);
+                        lt_str lite_body = lt_text_slice(lite_ann, INT64_C(2), lt_text_length(lite_ann), 387330);
                         (void)lite_body;
                         int64_t lite_bar = lt_fn_lib_s_core_s_text__tp_String_op_indexOf(lite_body, LT_STR_LIT("|", 1), INT64_C(0));
                         (void)lite_bar;
                         if ((lite_bar) > (INT64_C(0))) {
-                            lt_str lite_eKind = lt_text_slice(lite_body, INT64_C(0), lite_bar, 387323);
+                            lt_str lite_eKind = lt_text_slice(lite_body, INT64_C(0), lite_bar, 387462);
                             (void)lite_eKind;
-                            lt_str lite_aKind = lt_text_slice(lite_body, (lt_arg_left_387382 = lite_bar, lt_arg_right_387382 = INT64_C(1), lt_checked_add(lt_arg_left_387382, lt_arg_right_387382, 387382)), lt_text_length(lite_body), 387372);
+                            lt_str lite_aKind = lt_text_slice(lite_body, (lt_arg_left_387521 = lite_bar, lt_arg_right_387521 = INT64_C(1), lt_checked_add(lt_arg_left_387521, lt_arg_right_387521, 387521)), lt_text_length(lite_body), 387511);
                             (void)lite_aKind;
                             (void)(lt_list_str_push_back(&lite_seedKinds, lite_eKind));
                             (void)(lt_list_str_push_back(&lite_seedKinds, lite_aKind));
@@ -61704,7 +61705,7 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                     (void)lite_isE;
                     bool lite_isF = lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lite_sub, INT64_C(0), LT_STR_LIT("F|", 2));
                     (void)lite_isF;
-                    lt_str lite_payload = lt_text_slice(lite_sub, INT64_C(2), lt_text_length(lite_sub), 390019);
+                    lt_str lite_payload = lt_text_slice(lite_sub, INT64_C(2), lt_text_length(lite_sub), 390158);
                     (void)lite_payload;
                     lt_str lite_tKey = ((lite_isL) ? lite_concat(LT_STR_LIT("L:", 2), lt_fn_frontend__cListTag(lite_payload)) : ((lite_isM) ? lite_concat(LT_STR_LIT("M:", 2), lt_fn_frontend__cMapTag(lite_payload)) : ((lite_isE) ? lite_concat(LT_STR_LIT("E:", 2), lt_fn_frontend__cSetTag(lite_payload)) : ((lite_isF) ? lite_concat(LT_STR_LIT("F:", 2), lt_fn_frontend__cFnTag(lite_payload)) : lite_concat(LT_STR_LIT("S:", 2), lt_fn_frontend__cStructTag(lite_payload))))));
                     (void)lite_tKey;
@@ -61735,7 +61736,7 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
             lt_str lite_oe = lt_seq_15.data[lt_sidx_15];
             (void)lite_oe;
             if (lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lite_oe, INT64_C(0), LT_STR_LIT("S|", 2))) {
-                lt_str lite_sKind = lt_text_slice(lite_oe, INT64_C(2), lt_text_length(lite_oe), 390713);
+                lt_str lite_sKind = lt_text_slice(lite_oe, INT64_C(2), lt_text_length(lite_oe), 390852);
                 (void)lite_sKind;
                 lt_str lite_sTag = lt_fn_frontend__cStructTag(lite_sKind);
                 (void)lite_sTag;
@@ -62058,7 +62059,7 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
             (void)lite_isE;
             bool lite_isF = lt_fn_lib_s_core_s_text__tp_String_op_startsWithAt(lite_oe, INT64_C(0), LT_STR_LIT("F|", 2));
             (void)lite_isF;
-            lt_str lite_payload = lt_text_slice(lite_oe, INT64_C(2), lt_text_length(lite_oe), 404294);
+            lt_str lite_payload = lt_text_slice(lite_oe, INT64_C(2), lt_text_length(lite_oe), 404433);
             (void)lite_payload;
             if (lite_isL) {
                 lt_str lite_lTag = lt_fn_frontend__cListTag(lite_payload);
@@ -62112,8 +62113,8 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
     int64_t lite_convCount = ((lite_convExpKinds).len);
     (void)lite_convCount;
     while ((lite_convIdx) < (lite_convCount)) {
-        (void)(lt_fn_emit_d_c__emitCTupleConvHelper(lt_list_str_at(lite_convExpKinds, lite_convIdx, 405783), lt_list_str_at(lite_convActKinds, lite_convIdx, 405806)));
-        lite_convIdx = (lt_arg_left_405843 = lite_convIdx, lt_arg_right_405843 = INT64_C(1), lt_checked_add(lt_arg_left_405843, lt_arg_right_405843, 405843));
+        (void)(lt_fn_emit_d_c__emitCTupleConvHelper(lt_list_str_at(lite_convExpKinds, lite_convIdx, 405922), lt_list_str_at(lite_convActKinds, lite_convIdx, 405945)));
+        lite_convIdx = (lt_arg_left_405982 = lite_convIdx, lt_arg_right_405982 = INT64_C(1), lt_checked_add(lt_arg_left_405982, lt_arg_right_405982, 405982));
     }
     if (lite_hasMainArgs) {
         (void)(lt_fn_emit_d_c__outLine(LT_STR_LIT("static int lt_argc = 0;", 23)));
@@ -62151,17 +62152,17 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                 lt_s_46742333_794518375 lite_item = lt_seq_20.data[lt_sidx_20];
                 (void)lite_item;
                 if (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_START)) {
-                    lite_scanDepth = (lt_arg_left_407145 = lite_scanDepth, lt_arg_right_407145 = INT64_C(1), lt_checked_add(lt_arg_left_407145, lt_arg_right_407145, 407145));
+                    lite_scanDepth = (lt_arg_left_407284 = lite_scanDepth, lt_arg_right_407284 = INT64_C(1), lt_checked_add(lt_arg_left_407284, lt_arg_right_407284, 407284));
                 } else if (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_END)) {
                     if ((lite_scanDepth) > (INT64_C(0))) {
-                        lite_scanDepth = (lt_arg_left_407276 = lite_scanDepth, lt_arg_right_407276 = INT64_C(1), lt_checked_subtract(lt_arg_left_407276, lt_arg_right_407276, 407276));
+                        lite_scanDepth = (lt_arg_left_407415 = lite_scanDepth, lt_arg_right_407415 = INT64_C(1), lt_checked_subtract(lt_arg_left_407415, lt_arg_right_407415, 407415));
                     }
                 } else if ((lite_scanDepth) == (INT64_C(0))) {
                     if (((((((lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_SCOPE)) || (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_IF)))) || (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_LOOP)))) || (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_LOOP_SEQ)))) {
-                        lite_scanBlocks = (lt_arg_left_407547 = lite_scanBlocks, lt_arg_right_407547 = INT64_C(1), lt_checked_add(lt_arg_left_407547, lt_arg_right_407547, 407547));
+                        lite_scanBlocks = (lt_arg_left_407686 = lite_scanBlocks, lt_arg_right_407686 = INT64_C(1), lt_checked_add(lt_arg_left_407686, lt_arg_right_407686, 407686));
                     } else if (((((lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_END_SCOPE)) || (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_END_IF)))) || (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_END_LOOP)))) {
                         if ((lite_scanBlocks) > (INT64_C(0))) {
-                            lite_scanBlocks = (lt_arg_left_407772 = lite_scanBlocks, lt_arg_right_407772 = INT64_C(1), lt_checked_subtract(lt_arg_left_407772, lt_arg_right_407772, 407772));
+                            lite_scanBlocks = (lt_arg_left_407911 = lite_scanBlocks, lt_arg_right_407911 = INT64_C(1), lt_checked_subtract(lt_arg_left_407911, lt_arg_right_407911, 407911));
                         }
                     } else if ((((((((lite_scanBlocks) == (INT64_C(0))) && (lt_fn_emit_d_c__isCLocalDeclKind((lite_item).f_kind)))) && (lt_fn_frontend__tokenBucketHas(lite_fnRefTokens, (lite_item).f_runtime)))) && ((!(lt_set_str_has(lite_hoistedGlobals, (lite_item).f_runtime)))))) {
                         (void)(lt_set_str_add(&lite_hoistedGlobals, (lite_item).f_runtime));
@@ -62204,29 +62205,29 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
             for (int64_t lt_sidx_23 = 0; lt_sidx_23 < lt_seq_23.len; lt_sidx_23 += 1) {
                 lt_s_46742333_794518375 lite$item = lt_seq_23.data[lt_sidx_23];
                 (void)lite$item;
-                lite_totalItems = (lt_arg_left_408612 = lite_totalItems, lt_arg_right_408612 = INT64_C(1), lt_checked_add(lt_arg_left_408612, lt_arg_right_408612, 408612));
+                lite_totalItems = (lt_arg_left_408751 = lite_totalItems, lt_arg_right_408751 = INT64_C(1), lt_checked_add(lt_arg_left_408751, lt_arg_right_408751, 408751));
             }
         }
         int64_t lite_fnIdx = INT64_C(0);
         (void)lite_fnIdx;
         while ((lite_fnIdx) < (lite_totalItems)) {
-            if (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_fnIdx, 408702)).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_START)) {
-                int64_t lite_cScan = (lt_arg_left_408899 = lite_fnIdx, lt_arg_right_408899 = INT64_C(1), lt_checked_subtract(lt_arg_left_408899, lt_arg_right_408899, 408899));
+            if (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_fnIdx, 408841)).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_START)) {
+                int64_t lite_cScan = (lt_arg_left_409038 = lite_fnIdx, lt_arg_right_409038 = INT64_C(1), lt_checked_subtract(lt_arg_left_409038, lt_arg_right_409038, 409038));
                 (void)lite_cScan;
-                while ((((lite_cScan) >= (INT64_C(0))) && ((((lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_cScan, 408951)).f_kind, lt_m_frontend__ITEM_KIND_COMMENT)) || (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_cScan, 409006)).f_kind, lt_m_frontend__ITEM_KIND_SOURCE_LOC))))))) {
-                    lite_cScan = (lt_arg_left_409088 = lite_cScan, lt_arg_right_409088 = INT64_C(1), lt_checked_subtract(lt_arg_left_409088, lt_arg_right_409088, 409088));
+                while ((((lite_cScan) >= (INT64_C(0))) && ((((lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_cScan, 409090)).f_kind, lt_m_frontend__ITEM_KIND_COMMENT)) || (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_cScan, 409145)).f_kind, lt_m_frontend__ITEM_KIND_SOURCE_LOC))))))) {
+                    lite_cScan = (lt_arg_left_409227 = lite_cScan, lt_arg_right_409227 = INT64_C(1), lt_checked_subtract(lt_arg_left_409227, lt_arg_right_409227, 409227));
                 }
-                int64_t lite_cEmit = (lt_arg_left_409146 = lite_cScan, lt_arg_right_409146 = INT64_C(1), lt_checked_add(lt_arg_left_409146, lt_arg_right_409146, 409146));
+                int64_t lite_cEmit = (lt_arg_left_409285 = lite_cScan, lt_arg_right_409285 = INT64_C(1), lt_checked_add(lt_arg_left_409285, lt_arg_right_409285, 409285));
                 (void)lite_cEmit;
                 while ((lite_cEmit) < (lite_fnIdx)) {
-                    if (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_cEmit, 409221)).f_kind, lt_m_frontend__ITEM_KIND_COMMENT)) {
-                        (void)(lt_fn_emit_d_c__emitCComment(LT_STR_LIT("", 0), (lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_cEmit, 409316)).f_code));
+                    if (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_cEmit, 409360)).f_kind, lt_m_frontend__ITEM_KIND_COMMENT)) {
+                        (void)(lt_fn_emit_d_c__emitCComment(LT_STR_LIT("", 0), (lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_cEmit, 409455)).f_code));
                     }
-                    lite_cEmit = (lt_arg_left_409386 = lite_cEmit, lt_arg_right_409386 = INT64_C(1), lt_checked_add(lt_arg_left_409386, lt_arg_right_409386, 409386));
+                    lite_cEmit = (lt_arg_left_409525 = lite_cEmit, lt_arg_right_409525 = INT64_C(1), lt_checked_add(lt_arg_left_409525, lt_arg_right_409525, 409525));
                 }
                 lite_fnIdx = lt_fn_emit_d_c__emitOneCFunction(lite_reachable, lite_fnIdx, lite_totalItems, lite_hoistedGlobals);
             } else {
-                lite_fnIdx = (lt_arg_left_409548 = lite_fnIdx, lt_arg_right_409548 = INT64_C(1), lt_checked_add(lt_arg_left_409548, lt_arg_right_409548, 409548));
+                lite_fnIdx = (lt_arg_left_409687 = lite_fnIdx, lt_arg_right_409687 = INT64_C(1), lt_checked_add(lt_arg_left_409687, lt_arg_right_409687, 409687));
             }
         }
     }
@@ -62240,7 +62241,7 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
             for (int64_t lt_sidx_24 = 0; lt_sidx_24 < lt_seq_24.len; lt_sidx_24 += 1) {
                 lt_s_46742333_794518375 lite$item = lt_seq_24.data[lt_sidx_24];
                 (void)lite$item;
-                lite_rTotal = (lt_arg_left_409711 = lite_rTotal, lt_arg_right_409711 = INT64_C(1), lt_checked_add(lt_arg_left_409711, lt_arg_right_409711, 409711));
+                lite_rTotal = (lt_arg_left_409850 = lite_rTotal, lt_arg_right_409850 = INT64_C(1), lt_checked_add(lt_arg_left_409850, lt_arg_right_409850, 409850));
             }
         }
         int64_t lite_mDepth = INT64_C(0);
@@ -62248,24 +62249,24 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
         int64_t lite_ri = INT64_C(0);
         (void)lite_ri;
         while ((lite_ri) < (lite_rTotal)) {
-            lt_s_46742333_794518375 lite_item = lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_ri, 409821);
+            lt_s_46742333_794518375 lite_item = lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_ri, 409960);
             (void)lite_item;
             if (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_START)) {
-                lite_mDepth = (lt_arg_left_409906 = lite_mDepth, lt_arg_right_409906 = INT64_C(1), lt_checked_add(lt_arg_left_409906, lt_arg_right_409906, 409906));
+                lite_mDepth = (lt_arg_left_410045 = lite_mDepth, lt_arg_right_410045 = INT64_C(1), lt_checked_add(lt_arg_left_410045, lt_arg_right_410045, 410045));
             } else if (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_END)) {
                 if ((lite_mDepth) > (INT64_C(0))) {
-                    lite_mDepth = (lt_arg_left_410012 = lite_mDepth, lt_arg_right_410012 = INT64_C(1), lt_checked_subtract(lt_arg_left_410012, lt_arg_right_410012, 410012));
+                    lite_mDepth = (lt_arg_left_410151 = lite_mDepth, lt_arg_right_410151 = INT64_C(1), lt_checked_subtract(lt_arg_left_410151, lt_arg_right_410151, 410151));
                 }
             } else if ((lite_mDepth) == (INT64_C(0))) {
                 bool lite_attachedToFn = false;
                 (void)lite_attachedToFn;
                 if (lt_text_eq((lite_item).f_kind, lt_m_frontend__ITEM_KIND_COMMENT)) {
-                    int64_t lite_look = (lt_arg_left_410311 = lite_ri, lt_arg_right_410311 = INT64_C(1), lt_checked_add(lt_arg_left_410311, lt_arg_right_410311, 410311));
+                    int64_t lite_look = (lt_arg_left_410450 = lite_ri, lt_arg_right_410450 = INT64_C(1), lt_checked_add(lt_arg_left_410450, lt_arg_right_410450, 410450));
                     (void)lite_look;
-                    while ((((lite_look) < (lite_rTotal)) && ((((lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_look, 410370)).f_kind, lt_m_frontend__ITEM_KIND_COMMENT)) || (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_look, 410424)).f_kind, lt_m_frontend__ITEM_KIND_SOURCE_LOC))))))) {
-                        lite_look = (lt_arg_left_410507 = lite_look, lt_arg_right_410507 = INT64_C(1), lt_checked_add(lt_arg_left_410507, lt_arg_right_410507, 410507));
+                    while ((((lite_look) < (lite_rTotal)) && ((((lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_look, 410509)).f_kind, lt_m_frontend__ITEM_KIND_COMMENT)) || (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_look, 410563)).f_kind, lt_m_frontend__ITEM_KIND_SOURCE_LOC))))))) {
+                        lite_look = (lt_arg_left_410646 = lite_look, lt_arg_right_410646 = INT64_C(1), lt_checked_add(lt_arg_left_410646, lt_arg_right_410646, 410646));
                     }
-                    if ((((lite_look) < (lite_rTotal)) && (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_look, 410585)).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_START)))) {
+                    if ((((lite_look) < (lite_rTotal)) && (lt_text_eq((lt_list_lt_s_46742333_794518375_at(lite_reachable, lite_look, 410724)).f_kind, lt_m_frontend__ITEM_KIND_FUNCTION_START)))) {
                         lite_attachedToFn = true;
                     }
                 }
@@ -62273,7 +62274,7 @@ static void lt_fn_emit_d_c__emitProgramWithConfig(lt_list_lt_s_46742333_79451837
                     (void)(lt_list_lt_s_46742333_794518375_push_back(&lite_mainItems, lite_item));
                 }
             }
-            lite_ri = (lt_arg_left_410824 = lite_ri, lt_arg_right_410824 = INT64_C(1), lt_checked_add(lt_arg_left_410824, lt_arg_right_410824, 410824));
+            lite_ri = (lt_arg_left_410963 = lite_ri, lt_arg_right_410963 = INT64_C(1), lt_checked_add(lt_arg_left_410963, lt_arg_right_410963, 410963));
         }
     } else {
         {
