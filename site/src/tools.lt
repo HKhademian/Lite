@@ -2,23 +2,51 @@
 
 text := import "core/text";
 json := import "data/json";
+tb := import "util/text-builder";
+
+minNonNeg := fn(a: Int, b: Int): Int {
+    if a < 0 { return b; }
+    if b < 0 or a <= b { return a; }
+    b
+};
 
 /** Escapes HTML special characters (`&`, `<`, `>`, `"`, `'`). */
 pub escapeSiteHtml := fn(raw: String): String {
-    size := raw.length();
-    out: mut List<String> = [];
-    var i := 0;
-    loop i < size {
-        ch := raw.at(i);
-        if ch == "&" { mut out.pushBack("&amp;"); }
-        else if ch == "<" { mut out.pushBack("&lt;"); }
-        else if ch == ">" { mut out.pushBack("&gt;"); }
-        else if ch == "\"" { mut out.pushBack("&quot;"); }
-        else if ch == "'" { mut out.pushBack("&#39;"); }
-        else { mut out.pushBack(ch); }
-        i = i + 1;
+    var nextAmp := raw.indexOf("&", 0);
+    var nextLt := raw.indexOf("<", 0);
+    var nextGt := raw.indexOf(">", 0);
+    var nextQuot := raw.indexOf("\"", 0);
+    var nextApos := raw.indexOf("'", 0);
+    if nextAmp < 0 and nextLt < 0 and nextGt < 0 and nextQuot < 0 and nextApos < 0 {
+        return raw;
     }
-    out.join("")
+    size := raw.length();
+    out: mut tb.TextBuilder;
+    var runStart := 0;
+    loop true {
+        hit := minNonNeg(nextAmp, minNonNeg(nextLt, minNonNeg(nextGt, minNonNeg(nextQuot, nextApos))));
+        if hit < 0 { break; }
+        if hit > runStart { mut out.append(raw.slice(runStart, hit)); }
+        if hit == nextAmp {
+            mut out.append("&amp;");
+            nextAmp = raw.indexOf("&", hit + 1);
+        } else if hit == nextLt {
+            mut out.append("&lt;");
+            nextLt = raw.indexOf("<", hit + 1);
+        } else if hit == nextGt {
+            mut out.append("&gt;");
+            nextGt = raw.indexOf(">", hit + 1);
+        } else if hit == nextQuot {
+            mut out.append("&quot;");
+            nextQuot = raw.indexOf("\"", hit + 1);
+        } else {
+            mut out.append("&#39;");
+            nextApos = raw.indexOf("'", hit + 1);
+        }
+        runStart = hit + 1;
+    }
+    if runStart < size { mut out.append(raw.slice(runStart, size)); }
+    out.build()
 };
 
 slugifyCommandName := fn(name: String): String {

@@ -9,6 +9,7 @@ json := import "data/json";
 mdHtml := import "util/markdown-html";
 siteLib := import "./library";
 siteTools := import "./tools";
+tb := import "util/text-builder";
 
 escapeHtml := siteTools.escapeSiteHtml;
 
@@ -458,6 +459,26 @@ chIdx: Int, hbSubChIdx: List<Int>, hbSubIds: List<String>, hbSubLabels: List<Str
     + "    </nav>"
 };
 
+appendSpecSidebarStart := fn(out: mut tb.TextBuilder, hbIndexHref: String): Unit {
+    mut out.append("<aside class=\"portal-sidebar\" aria-label=\"Specification navigation\">\n");
+    mut out.append("      <div class=\"docs-layer-tabs\" role=\"tablist\" aria-label=\"Documentation layer\">\n");
+    mut out.append("        <a class=\"docs-layer-tab\" href=\"");
+    mut out.append(escapeHtml(hbIndexHref));
+    mut out.append("\">Handbook</a>\n");
+    mut out.append("        <span class=\"docs-layer-tab active\" aria-selected=\"true\">Design Spec</span>\n");
+    mut out.append("      </div>\n");
+    mut out.append("      <input id=\"docs-sidebar-filter\" class=\"docs-sidebar-filter\" type=\"search\" placeholder=\"Filter spec docs...\" aria-label=\"Filter specification documents\">\n");
+    mut out.append("      <button class=\"docs-quick-search-btn\" type=\"button\" data-open-search><span>Search all docs</span><kbd>&#8984;K</kbd></button>\n");
+    mut out.append("      <div class=\"docs-sidebar-head\">\n");
+    mut out.append("        <label class=\"docs-verified-toggle\">\n");
+    mut out.append("          <input id=\"docs-verified-only\" type=\"checkbox\">\n");
+    mut out.append("          <span>Verified in TS only</span>\n");
+    mut out.append("        </label>\n");
+    mut out.append("        <span id=\"docs-sidebar-count\" class=\"code-card-meta\"></span>\n");
+    mut out.append("      </div>\n");
+    mut out.append("      ");
+};
+
 renderDocsSidebar := fn(
 layer: String, activeOutPath: String,
 hbOuts: List<String>, hbNavs: List<String>, hbSlugs: List<String>, hbSums: List<String>,
@@ -469,18 +490,19 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
 
     if layer == "handbook" {
         isSinglePage := activeOutPath == "docs/handbook/single-page.html";
-        treeParts: mut List<String> = [];
+        treeOut: mut tb.TextBuilder;
         totalSubs := hbSubChIdx.length();
         var hi := 0;
         loop hi < hbOuts.length() {
+            if hi > 0 { mut treeOut.append("\n        "); }
             if hi == 0 {
-                mut treeParts.pushBack("<p class=\"hb-part-label\">Start</p>");
+                mut treeOut.append("<p class=\"hb-part-label\">Start</p>\n        ");
             } else if hi == 1 {
-                mut treeParts.pushBack("<p class=\"hb-part-label\">Core Language</p>");
+                mut treeOut.append("<p class=\"hb-part-label\">Core Language</p>\n        ");
             } else if hi == 4 {
-                mut treeParts.pushBack("<p class=\"hb-part-label\">Data &amp; Execution</p>");
+                mut treeOut.append("<p class=\"hb-part-label\">Data &amp; Execution</p>\n        ");
             } else if hi == 6 {
-                mut treeParts.pushBack("<p class=\"hb-part-label\">Modules &amp; I/O</p>");
+                mut treeOut.append("<p class=\"hb-part-label\">Modules &amp; I/O</p>\n        ");
             }
 
             tOut := hbOuts[hi];
@@ -497,10 +519,36 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
             cls := if isActive { "hb-chapter-link active" } else { "hb-chapter-link" };
             itemCls := if isActive { "hb-chapter-item is-active" } else { "hb-chapter-item" };
             cleanTitle := stripChapterNumPrefix(hbNavs[hi]);
-            subLis: mut List<String> = [];
+            searchBlob := (hbNavs[hi] + " " + sumTxt).toLowerAscii();
+
+            mut treeOut.append("<div class=\"");
+            mut treeOut.append(itemCls);
+            mut treeOut.append("\" data-hb-chapter=\"");
+            mut treeOut.append(escapeHtml(slug));
+            mut treeOut.append("\" data-hb-search=\"");
+            mut treeOut.append(escapeHtml(searchBlob));
+            mut treeOut.append("\">\n          <a class=\"");
+            mut treeOut.append(cls);
+            mut treeOut.append("\" href=\"");
+            mut treeOut.append(escapeHtml(chHref));
+            mut treeOut.append("\" data-handbook-nav-slug=\"");
+            mut treeOut.append(escapeHtml(slug));
+            mut treeOut.append("\">\n            <span class=\"hb-num\">");
+            mut treeOut.append((hi + 1).toText());
+            mut treeOut.append("</span>\n            <span class=\"hb-chapter-title\">");
+            mut treeOut.append(escapeHtml(cleanTitle));
+            mut treeOut.append("</span>\n            <span class=\"learn-done-dot\" aria-hidden=\"true\"></span>\n          </a>");
+
+            var hasSubs := false;
             var si := 0;
             loop si < totalSubs {
                 if hbSubChIdx[si] == hi {
+                    if not hasSubs {
+                        mut treeOut.append("\n          <ul class=\"hb-subtopics\">\n            ");
+                        hasSubs = true;
+                    } else {
+                        mut treeOut.append("\n            ");
+                    }
                     subHref := if isSinglePage {
                         "#h" + (hi + 1).toText() + "-" + hbSubIds[si]
                     } else if isActive {
@@ -508,23 +556,20 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
                     } else {
                         relativeHref(activeOutPath, tOut) + "#" + hbSubIds[si]
                     };
-                    mut subLis.pushBack("<li data-hb-topic-search=\"" + escapeHtml(hbSubTexts[si].toLowerAscii()) + "\">"
-                    + "<a href=\"" + escapeHtml(subHref) + "\">" + hbSubLabels[si] + "</a>"
-                    + "</li>");
+                    mut treeOut.append("<li data-hb-topic-search=\"");
+                    mut treeOut.append(escapeHtml(hbSubTexts[si].toLowerAscii()));
+                    mut treeOut.append("\"><a href=\"");
+                    mut treeOut.append(escapeHtml(subHref));
+                    mut treeOut.append("\">");
+                    mut treeOut.append(hbSubLabels[si]);
+                    mut treeOut.append("</a></li>");
                 }
                 si = si + 1;
             }
-            subListHtml := if subLis.length() > 0 {
-                "\n          <ul class=\"hb-subtopics\">\n            " + subLis.join("\n            ") + "\n          </ul>"
-            } else { "" };
-            searchBlob := (hbNavs[hi] + " " + sumTxt).toLowerAscii();
-            mut treeParts.pushBack("<div class=\"" + itemCls + "\" data-hb-chapter=\"" + escapeHtml(slug) + "\" data-hb-search=\"" + escapeHtml(searchBlob) + "\">\n"
-            + "          <a class=\"" + cls + "\" href=\"" + escapeHtml(chHref) + "\" data-handbook-nav-slug=\"" + escapeHtml(slug) + "\">\n"
-            + "            <span class=\"hb-num\">" + (hi + 1).toText() + "</span>\n"
-            + "            <span class=\"hb-chapter-title\">" + escapeHtml(cleanTitle) + "</span>\n"
-            + "            <span class=\"learn-done-dot\" aria-hidden=\"true\"></span>\n"
-            + "          </a>" + subListHtml + "\n"
-            + "        </div>");
+            if hasSubs {
+                mut treeOut.append("\n          </ul>");
+            }
+            mut treeOut.append("\n        </div>");
             hi = hi + 1;
         }
 
@@ -536,87 +581,105 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
         gymHref := relativeHref(activeOutPath, "gym/");
         playHref := relativeHref(activeOutPath, "playground/");
 
-        return "<aside class=\"portal-sidebar hb-sidebar\" aria-label=\"Handbook navigation\">\n"
-        + "      <div class=\"docs-layer-tabs\" role=\"tablist\" aria-label=\"Documentation layer\">\n"
-        + "        <span class=\"docs-layer-tab active\" aria-selected=\"true\">Handbook</span>\n"
-        + "        <a class=\"docs-layer-tab\" href=\"" + escapeHtml(specHref) + "\">Design Spec</a>\n"
-        + "      </div>\n"
-        + "      <input id=\"handbook-sidebar-filter\" class=\"docs-sidebar-filter\" type=\"search\" placeholder=\"Filter topics (match, record, :=)...\" aria-label=\"Filter handbook chapters and topics\">\n"
-        + "      <button class=\"docs-quick-search-btn\" type=\"button\" data-open-search><span>Search all docs</span><kbd>&#8984;K</kbd></button>\n"
-        + "      <div class=\"hb-progress-strip\">\n"
-        + "        <div class=\"hb-progress-head\">\n"
-        + "          <span id=\"hb-progress-label\" class=\"code-card-meta\">0 / " + hbOuts.length().toText() + " chapters read</span>\n"
-        + "          <button id=\"hb-toggle-topics\" class=\"hb-compact-btn\" type=\"button\" aria-pressed=\"false\" title=\"Collapse or expand topic trees\">Compact</button>\n"
-        + "        </div>\n"
-        + "        <div class=\"learn-bar-track\" style=\"height: 4px;\"><div id=\"hb-progress-fill\" class=\"learn-bar-fill\" style=\"width: 0%;\"></div></div>\n"
-        + "      </div>\n"
-        + "      <div id=\"hb-nav-tree\" class=\"hb-tree\">\n"
-        + "        " + treeParts.join("\n        ") + "\n"
-        + "        <p id=\"hb-filter-empty\" class=\"code-card-meta hb-filter-empty\" hidden>No matching handbook topics. <button class=\"hb-inline-link\" type=\"button\" data-open-search>Search all docs &rarr;</button></p>\n"
-        + "      </div>\n"
-        + "      <div class=\"hb-sidebar-foot\">\n"
-        + "        <p class=\"portal-toc-title\" style=\"margin-bottom: 0.35rem;\">Academy &amp; Reference</p>\n"
-        + "        <ul class=\"portal-nav-list\">\n"
-        + "          <li><a href=\"" + escapeHtml(singleHref) + "\"" + singleCls + ">Single-Page Edition</a></li>\n"
-        + "          <li><a href=\"" + escapeHtml(modulesHref) + "\">Standard Modules</a></li>\n"
-        + "          <li><a href=\"" + escapeHtml(learnHref) + "\">Interactive Learn</a></li>\n"
-        + "          <li><a href=\"" + escapeHtml(gymHref) + "\">Lite Gym</a></li>\n"
-        + "          <li><a href=\"" + escapeHtml(playHref) + "\">Play Studio</a></li>\n"
-        + "        </ul>\n"
-        + "      </div>\n"
-        + "    </aside>";
+        aside: mut tb.TextBuilder;
+        mut aside.append("<aside class=\"portal-sidebar hb-sidebar\" aria-label=\"Handbook navigation\">\n");
+        mut aside.append("      <div class=\"docs-layer-tabs\" role=\"tablist\" aria-label=\"Documentation layer\">\n");
+        mut aside.append("        <span class=\"docs-layer-tab active\" aria-selected=\"true\">Handbook</span>\n");
+        mut aside.append("        <a class=\"docs-layer-tab\" href=\"");
+        mut aside.append(escapeHtml(specHref));
+        mut aside.append("\">Design Spec</a>\n");
+        mut aside.append("      </div>\n");
+        mut aside.append("      <input id=\"handbook-sidebar-filter\" class=\"docs-sidebar-filter\" type=\"search\" placeholder=\"Filter topics (match, record, :=)...\" aria-label=\"Filter handbook chapters and topics\">\n");
+        mut aside.append("      <button class=\"docs-quick-search-btn\" type=\"button\" data-open-search><span>Search all docs</span><kbd>&#8984;K</kbd></button>\n");
+        mut aside.append("      <div class=\"hb-progress-strip\">\n");
+        mut aside.append("        <div class=\"hb-progress-head\">\n");
+        mut aside.append("          <span id=\"hb-progress-label\" class=\"code-card-meta\">0 / ");
+        mut aside.append(hbOuts.length().toText());
+        mut aside.append(" chapters read</span>\n");
+        mut aside.append("          <button id=\"hb-toggle-topics\" class=\"hb-compact-btn\" type=\"button\" aria-pressed=\"false\" title=\"Collapse or expand topic trees\">Compact</button>\n");
+        mut aside.append("        </div>\n");
+        mut aside.append("        <div class=\"learn-bar-track\" style=\"height: 4px;\"><div id=\"hb-progress-fill\" class=\"learn-bar-fill\" style=\"width: 0%;\"></div></div>\n");
+        mut aside.append("      </div>\n");
+        mut aside.append("      <div id=\"hb-nav-tree\" class=\"hb-tree\">\n        ");
+        mut aside.append(treeOut.build());
+        mut aside.append("\n        <p id=\"hb-filter-empty\" class=\"code-card-meta hb-filter-empty\" hidden>No matching handbook topics. <button class=\"hb-inline-link\" type=\"button\" data-open-search>Search all docs &rarr;</button></p>\n");
+        mut aside.append("      </div>\n");
+        mut aside.append("      <div class=\"hb-sidebar-foot\">\n");
+        mut aside.append("        <p class=\"portal-toc-title\" style=\"margin-bottom: 0.35rem;\">Academy &amp; Reference</p>\n");
+        mut aside.append("        <ul class=\"portal-nav-list\">\n");
+        mut aside.append("          <li><a href=\"");
+        mut aside.append(escapeHtml(singleHref));
+        mut aside.append("\"");
+        mut aside.append(singleCls);
+        mut aside.append(">Single-Page Edition</a></li>\n");
+        mut aside.append("          <li><a href=\"");
+        mut aside.append(escapeHtml(modulesHref));
+        mut aside.append("\">Standard Modules</a></li>\n");
+        mut aside.append("          <li><a href=\"");
+        mut aside.append(escapeHtml(learnHref));
+        mut aside.append("\">Interactive Learn</a></li>\n");
+        mut aside.append("          <li><a href=\"");
+        mut aside.append(escapeHtml(gymHref));
+        mut aside.append("\">Lite Gym</a></li>\n");
+        mut aside.append("          <li><a href=\"");
+        mut aside.append(escapeHtml(playHref));
+        mut aside.append("\">Play Studio</a></li>\n");
+        mut aside.append("        </ul>\n      </div>\n    </aside>");
+        return aside.build();
     }
 
     grpIds: List<String> = ["start", "design", "proposals", "compiler", "brand"];
     grpTitles: List<String> = ["Start & Overview", "Design Reference", "Proposals (LP)", "Compiler & Contribute", "Brand & Identity"];
-    grpBlocks: mut List<String> = [];
+    grpsOut: mut tb.TextBuilder;
     var gi := 0;
     loop gi < 5 {
         gid := grpIds[gi];
-        lis: mut List<String> = [];
+        lisOut: mut tb.TextBuilder;
         var hasActive := gid == "start";
+        var cnt := 0;
         var si := 0;
         loop si < spOuts.length() {
             if spGroups[si] == gid {
+                if cnt > 0 { mut lisOut.append("\n            "); }
                 tOut := spOuts[si];
                 if tOut == activeOutPath { hasActive = true; }
                 href := if tOut == activeOutPath { siteLib.posixBasename(tOut, "") } else { relativeHref(activeOutPath, tOut) };
                 cls := if tOut == activeOutPath { " class=\"active\"" } else { "" };
                 verStr := if spVerified[si] { "true" } else { "false" };
                 dispLabel := if spTitles.length() > si and spTitles[si] =!= "" { spTitles[si] } else { spNavs[si] };
-                mut lis.pushBack("<li data-verified=\"" + verStr + "\"><a href=\"" + escapeHtml(href) + "\"" + cls + ">" + escapeHtml(dispLabel) + "</a></li>");
+                mut lisOut.append("<li data-verified=\"");
+                mut lisOut.append(verStr);
+                mut lisOut.append("\"><a href=\"");
+                mut lisOut.append(escapeHtml(href));
+                mut lisOut.append("\"");
+                mut lisOut.append(cls);
+                mut lisOut.append(">");
+                mut lisOut.append(escapeHtml(dispLabel));
+                mut lisOut.append("</a></li>");
+                cnt += 1;
             }
             si = si + 1;
         }
-        cnt := lis.length();
         if cnt > 0 {
-            openAttr := if hasActive { " open" } else { "" };
-            mut grpBlocks.pushBack("<details class=\"portal-nav-group\"" + openAttr + ">\n"
-            + "        <summary>" + escapeHtml(grpTitles[gi]) + " (" + cnt.toText() + ")</summary>\n"
-            + "        <ul class=\"portal-nav-list\">\n"
-            + "          " + lis.join("\n            ") + "\n"
-            + "        </ul>\n"
-            + "      </details>");
+            if grpsOut.count() > 0 { mut grpsOut.append("\n      "); }
+            mut grpsOut.append("<details class=\"portal-nav-group\"");
+            if hasActive { mut grpsOut.append(" open"); }
+            mut grpsOut.append(">\n        <summary>");
+            mut grpsOut.append(escapeHtml(grpTitles[gi]));
+            mut grpsOut.append(" (");
+            mut grpsOut.append(cnt.toText());
+            mut grpsOut.append(")</summary>\n        <ul class=\"portal-nav-list\">\n          ");
+            mut grpsOut.append(lisOut.build());
+            mut grpsOut.append("\n        </ul>\n      </details>");
         }
         gi = gi + 1;
     }
 
-    "<aside class=\"portal-sidebar\" aria-label=\"Specification navigation\">\n"
-    + "      <div class=\"docs-layer-tabs\" role=\"tablist\" aria-label=\"Documentation layer\">\n"
-    + "        <a class=\"docs-layer-tab\" href=\"" + escapeHtml(hbIndexHref) + "\">Handbook</a>\n"
-    + "        <span class=\"docs-layer-tab active\" aria-selected=\"true\">Design Spec</span>\n"
-    + "      </div>\n"
-    + "      <input id=\"docs-sidebar-filter\" class=\"docs-sidebar-filter\" type=\"search\" placeholder=\"Filter spec docs...\" aria-label=\"Filter specification documents\">\n"
-    + "      <button class=\"docs-quick-search-btn\" type=\"button\" data-open-search><span>Search all docs</span><kbd>&#8984;K</kbd></button>\n"
-    + "      <div class=\"docs-sidebar-head\">\n"
-    + "        <label class=\"docs-verified-toggle\">\n"
-    + "          <input id=\"docs-verified-only\" type=\"checkbox\">\n"
-    + "          <span>Verified in TS only</span>\n"
-    + "        </label>\n"
-    + "        <span id=\"docs-sidebar-count\" class=\"code-card-meta\"></span>\n"
-    + "      </div>\n"
-    + "      " + grpBlocks.join("\n      ") + "\n"
-    + "    </aside>"
+    specAside: mut tb.TextBuilder;
+    appendSpecSidebarStart(mut specAside, hbIndexHref);
+    mut specAside.append(grpsOut.build());
+    mut specAside.append("\n    </aside>");
+    specAside.build()
 };
 
 replaceFirst := fn(haystack: String, needle: String, replacement: String): String {
@@ -634,27 +697,40 @@ dirOutSample: String, spOuts: List<String>, spGroups: List<String>, spNavs: List
     var gi := 0;
     loop gi < 5 {
         gid := grpIds[gi];
-        lis: mut List<String> = [];
+        lisOut: mut tb.TextBuilder;
+        var cnt := 0;
         var si := 0;
         loop si < spOuts.length() {
             if spGroups[si] == gid {
+                if cnt > 0 { mut lisOut.append("\n            "); }
                 tOut := spOuts[si];
                 href := relativeHref(dirOutSample, tOut);
                 verStr := if spVerified[si] { "true" } else { "false" };
                 dispLabel := if spTitles.length() > si and spTitles[si] =!= "" { spTitles[si] } else { spNavs[si] };
-                mut lis.pushBack("<li data-verified=\"" + verStr + "\"><a href=\"" + escapeHtml(href) + "\">" + escapeHtml(dispLabel) + "</a></li>");
+                mut lisOut.append("<li data-verified=\"");
+                mut lisOut.append(verStr);
+                mut lisOut.append("\"><a href=\"");
+                mut lisOut.append(escapeHtml(href));
+                mut lisOut.append("\">");
+                mut lisOut.append(escapeHtml(dispLabel));
+                mut lisOut.append("</a></li>");
+                cnt += 1;
             }
             si = si + 1;
         }
-        cnt := lis.length();
         if cnt > 0 {
             openAttr := if gid == "start" { " open" } else { "" };
-            mut out.pushBack("<details class=\"portal-nav-group\"" + openAttr + ">\n"
-            + "        <summary>" + escapeHtml(grpTitles[gi]) + " (" + cnt.toText() + ")</summary>\n"
-            + "        <ul class=\"portal-nav-list\">\n"
-            + "          " + lis.join("\n            ") + "\n"
-            + "        </ul>\n"
-            + "      </details>");
+            blk: mut tb.TextBuilder;
+            mut blk.append("<details class=\"portal-nav-group\"");
+            mut blk.append(openAttr);
+            mut blk.append(">\n        <summary>");
+            mut blk.append(escapeHtml(grpTitles[gi]));
+            mut blk.append(" (");
+            mut blk.append(cnt.toText());
+            mut blk.append(")</summary>\n        <ul class=\"portal-nav-list\">\n          ");
+            mut blk.append(lisOut.build());
+            mut blk.append("\n        </ul>\n      </details>");
+            mut out.pushBack(blk.build());
         } else {
             mut out.pushBack("");
         }
@@ -671,67 +747,59 @@ activeOutPath: String, activeGroup: String, tmpls: List<String>, baseIdx: Int
     activeHref := escapeHtml(siteLib.posixBasename(activeOutPath, ""));
     activeNeedle := "<a href=\"" + activeHref + "\">";
     activeRepl := "<a href=\"" + activeHref + "\" class=\"active\">";
-    grpBlocks: mut List<String> = [];
+    grpsOut: mut tb.TextBuilder;
     var gi := 0;
     loop gi < 5 {
         blk := tmpls[baseIdx + gi];
         if blk =!= "" {
+            if grpsOut.count() > 0 { mut grpsOut.append("\n      "); }
             if grpIds[gi] == activeGroup {
                 var patched := blk;
                 if activeGroup =!= "start" {
                     patched = replaceFirst(patched, "<details class=\"portal-nav-group\">", "<details class=\"portal-nav-group\" open>");
                 }
                 patched = replaceFirst(patched, activeNeedle, activeRepl);
-                mut grpBlocks.pushBack(patched);
+                mut grpsOut.append(patched);
             } else {
-                mut grpBlocks.pushBack(blk);
+                mut grpsOut.append(blk);
             }
         }
         gi = gi + 1;
     }
-    "<aside class=\"portal-sidebar\" aria-label=\"Specification navigation\">\n"
-    + "      <div class=\"docs-layer-tabs\" role=\"tablist\" aria-label=\"Documentation layer\">\n"
-    + "        <a class=\"docs-layer-tab\" href=\"" + escapeHtml(hbIndexHref) + "\">Handbook</a>\n"
-    + "        <span class=\"docs-layer-tab active\" aria-selected=\"true\">Design Spec</span>\n"
-    + "      </div>\n"
-    + "      <input id=\"docs-sidebar-filter\" class=\"docs-sidebar-filter\" type=\"search\" placeholder=\"Filter spec docs...\" aria-label=\"Filter specification documents\">\n"
-    + "      <button class=\"docs-quick-search-btn\" type=\"button\" data-open-search><span>Search all docs</span><kbd>&#8984;K</kbd></button>\n"
-    + "      <div class=\"docs-sidebar-head\">\n"
-    + "        <label class=\"docs-verified-toggle\">\n"
-    + "          <input id=\"docs-verified-only\" type=\"checkbox\">\n"
-    + "          <span>Verified in TS only</span>\n"
-    + "        </label>\n"
-    + "        <span id=\"docs-sidebar-count\" class=\"code-card-meta\"></span>\n"
-    + "      </div>\n"
-    + "      " + grpBlocks.join("\n      ") + "\n"
-    + "    </aside>"
+    specAside: mut tb.TextBuilder;
+    appendSpecSidebarStart(mut specAside, hbIndexHref);
+    mut specAside.append(grpsOut.build());
+    mut specAside.append("\n    </aside>");
+    specAside.build()
 };
 
 rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOutIndex: Map<String, Int>, hbChapterIds: List<String>): String {
-    withIds: mut List<String> = [];
+    withIds: mut tb.TextBuilder;
     len := html.length();
     var pos := 0;
     loop pos < len {
         idPos := html.indexOf("id=\"", pos);
         if idPos < 0 {
-            mut withIds.pushBack(html.slice(pos, len));
+            mut withIds.append(html.slice(pos, len));
             break;
         }
         atBoundary := idPos == 0 or isBoundaryBeforeId(html.at(idPos - 1));
         if atBoundary {
             qEnd := html.indexOf("\"", idPos + 4);
             if qEnd > idPos + 4 {
-                mut withIds.pushBack(html.slice(pos, idPos + 4) + anchorPrefix + html.slice(idPos + 4, qEnd + 1));
+                mut withIds.append(html.slice(pos, idPos + 4));
+                mut withIds.append(anchorPrefix);
+                mut withIds.append(html.slice(idPos + 4, qEnd + 1));
                 pos = qEnd + 1;
                 continue;
             }
         }
-        (mut withIds).pushBack(html.slice(pos, idPos + 4));
+        mut withIds.append(html.slice(pos, idPos + 4));
         pos = idPos + 4;
     }
-    step1 := withIds.join("");
+    step1 := withIds.build();
 
-    withLinks: mut List<String> = [];
+    withLinks: mut tb.TextBuilder;
     sLen := step1.length();
     pos = 0;
     needle := "href=\"";
@@ -739,25 +807,28 @@ rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOutInde
     loop pos < sLen {
         aPos := step1.indexOf(needle, pos);
         if aPos < 0 {
-            mut withLinks.pushBack(step1.slice(pos, sLen));
+            mut withLinks.append(step1.slice(pos, sLen));
             break;
         }
         atBoundary := aPos == 0 or isBoundaryBeforeId(step1.at(aPos - 1));
         valStart := aPos + nLen;
         if not atBoundary {
-            mut withLinks.pushBack(step1.slice(pos, valStart));
+            mut withLinks.append(step1.slice(pos, valStart));
             pos = valStart;
             continue;
         }
         qEnd := step1.indexOf("\"", valStart);
         if qEnd < 0 {
-            mut withLinks.pushBack(step1.slice(pos, sLen));
+            mut withLinks.append(step1.slice(pos, sLen));
             break;
         }
-        (mut withLinks).pushBack(step1.slice(pos, valStart));
+        mut withLinks.append(step1.slice(pos, valStart));
         rawVal := step1.slice(valStart, qEnd);
         if rawVal.startsWithAt(0, "#") and rawVal.length() > 1 {
-            mut withLinks.pushBack("#" + anchorPrefix + rawVal.slice(1, rawVal.length()) + "\"");
+            mut withLinks.append("#");
+            mut withLinks.append(anchorPrefix);
+            mut withLinks.append(rawVal.slice(1, rawVal.length()));
+            mut withLinks.append("\"");
         } else if not rawVal.startsWithAt(0, "#") and rawVal.length() > 0 {
             hashPos := rawVal.indexOf("#", 0);
             filePart := if hashPos >= 0 { rawVal.slice(0, hashPos) } else { rawVal };
@@ -766,19 +837,26 @@ rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOutInde
             if hit >= 0 {
                 if hashPos >= 0 and hashPos + 1 < rawVal.length() {
                     fragPart := rawVal.slice(hashPos + 1, rawVal.length());
-                    mut withLinks.pushBack("#h" + (hit + 1).toText() + "-" + fragPart + "\"");
+                    mut withLinks.append("#h");
+                    mut withLinks.append((hit + 1).toText());
+                    mut withLinks.append("-");
+                    mut withLinks.append(fragPart);
+                    mut withLinks.append("\"");
                 } else {
-                    mut withLinks.pushBack(escapeHtml("#" + hbChapterIds[hit]) + "\"");
+                    mut withLinks.append(escapeHtml("#" + hbChapterIds[hit]));
+                    mut withLinks.append("\"");
                 }
             } else {
-                mut withLinks.pushBack(rawVal + "\"");
+                mut withLinks.append(rawVal);
+                mut withLinks.append("\"");
             }
         } else {
-            mut withLinks.pushBack(rawVal + "\"");
+            mut withLinks.append(rawVal);
+            mut withLinks.append("\"");
         }
         pos = qEnd + 1;
     }
-    withLinks.join("")
+    withLinks.build()
 };
 
 isBoundaryBeforeId := fn(ch: String): Bool {
@@ -1017,23 +1095,15 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         }
         si = si + 1;
     }
-    specLandingBody := "<div class=\"portal-layout-2col\">\n"
-    + "  " + renderDocsSidebar("spec", "docs/spec/index.html", emptyStrs, emptyStrs, emptyStrs, emptyStrs, hbSubChIdx, emptyStrs, emptyStrs, emptyStrs, spOuts, spGroups, spNavs, spTitles, spVerified) + "\n"
-    + "  <article class=\"md-prose\">\n"
-    + "    <div class=\"portal-mobile-bar\">\n"
-    + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n"
-    + "    </div>\n"
-    + "    <h1>Full Design Specification, Proposals &amp; Compiler Docs</h1>\n"
-    + "    <p class=\"hero-lead\">\n"
-    + "      Browse all " + spCount.toText() + " design documents, language proposals (<code>LP-0001..LP-0010</code>),\n"
-    + "      and compiler architecture guides with explicit status labels distinguishing shipped TS behavior from selected design and open proposals.\n"
-    + "    </p>\n"
-    + "    <div class=\"portal-grid-2\">\n"
-    + "      " + startCards.join("\n") + "\n"
-    + "    </div>\n"
-    + "  </article>\n"
-    + "</div>";
-    mut pagesJson.pushBack("{\"relPath\":\"docs/spec/index.html\",\"title\":\"Design Specification — Docs — Lite\",\"description\":\"LiteLang design specification, proposals, and compiler documentation index.\",\"basePath\":\"../../\",\"body\":" + json.quoteString(specLandingBody) + "}");
+    specBodyOut: mut tb.TextBuilder;
+    mut specBodyOut.append("<div class=\"portal-layout-2col\">\n  ");
+    mut specBodyOut.append(renderDocsSidebar("spec", "docs/spec/index.html", emptyStrs, emptyStrs, emptyStrs, emptyStrs, hbSubChIdx, emptyStrs, emptyStrs, emptyStrs, spOuts, spGroups, spNavs, spTitles, spVerified));
+    mut specBodyOut.append("\n  <article class=\"md-prose\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n    </div>\n    <h1>Full Design Specification, Proposals &amp; Compiler Docs</h1>\n    <p class=\"hero-lead\">\n      Browse all ");
+    mut specBodyOut.append(spCount.toText());
+    mut specBodyOut.append(" design documents, language proposals (<code>LP-0001..LP-0010</code>),\n      and compiler architecture guides with explicit status labels distinguishing shipped TS behavior from selected design and open proposals.\n    </p>\n    <div class=\"portal-grid-2\">\n      ");
+    mut specBodyOut.append(startCards.join("\n"));
+    mut specBodyOut.append("\n    </div>\n  </article>\n</div>");
+    mut pagesJson.pushBack("{\"relPath\":\"docs/spec/index.html\",\"title\":\"Design Specification — Docs — Lite\",\"description\":\"LiteLang design specification, proposals, and compiler documentation index.\",\"basePath\":\"../../\",\"body\":" + json.quoteString(specBodyOut.build()) + "}");
 
     hbChapterIds: mut List<String> = [];
     hbOutIndex: mut Map<String, Int>;
@@ -1044,57 +1114,42 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut hbOutIndex.set(hbOuts[hi], hi);
         hi = hi + 1;
     }
-    chBlocks: mut List<String> = [];
-    singleTocItems: mut List<String> = [];
+    chBlocksOut: mut tb.TextBuilder;
+    singleTocOut: mut tb.TextBuilder;
     hi = 0;
     loop hi < hbCount {
         chSlug := if hbSlugs[hi] =!= "" { hbSlugs[hi] } else { "ch-" + (hi + 1).toText() };
         anchorPrefix := "h" + (hi + 1).toText() + "-";
         rewritten := rewriteSinglePageChapterHtml(hbHtmls[hi], anchorPrefix, hbOutIndex, hbChapterIds);
-        mut chBlocks.pushBack("<section class=\"section handbook-single-chapter\" id=\"chapter-" + escapeHtml(chSlug) + "\">\n"
-        + "      <div class=\"portal-card-head\" style=\"margin-bottom: 0.5rem;\">\n"
-        + "        <span class=\"code-card-meta\">Chapter " + (hi + 1).toText() + "</span>\n"
-        + "        <span class=\"status-pill status-pill-shipped\">Verified in TS</span>\n"
-        + "      </div>\n"
-        + "      " + rewritten + "\n"
-        + "    </section>");
-        mut singleTocItems.pushBack("<li><a href=\"#chapter-" + escapeHtml(chSlug) + "\">" + escapeHtml(hbNavs[hi]) + "</a></li>");
+        if hi > 0 {
+            mut chBlocksOut.append("\n    ");
+            mut singleTocOut.append("\n      ");
+        }
+        mut chBlocksOut.append("<section class=\"section handbook-single-chapter\" id=\"chapter-");
+        mut chBlocksOut.append(escapeHtml(chSlug));
+        mut chBlocksOut.append("\">\n      <div class=\"portal-card-head\" style=\"margin-bottom: 0.5rem;\">\n        <span class=\"code-card-meta\">Chapter ");
+        mut chBlocksOut.append((hi + 1).toText());
+        mut chBlocksOut.append("</span>\n        <span class=\"status-pill status-pill-shipped\">Verified in TS</span>\n      </div>\n      ");
+        mut chBlocksOut.append(rewritten);
+        mut chBlocksOut.append("\n    </section>");
+
+        mut singleTocOut.append("<li><a href=\"#chapter-");
+        mut singleTocOut.append(escapeHtml(chSlug));
+        mut singleTocOut.append("\">");
+        mut singleTocOut.append(escapeHtml(hbNavs[hi]));
+        mut singleTocOut.append("</a></li>");
         hi = hi + 1;
     }
     emptyBools: List<Bool> = [];
-    singleBody := "<div class=\"portal-layout\" id=\"top\">\n"
-    + "  " + renderDocsSidebar("handbook", "docs/handbook/single-page.html", hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, emptyStrs, emptyStrs, emptyStrs, emptyStrs, emptyBools) + "\n"
-    + "  <article class=\"md-prose\">\n"
-    + "    <div class=\"portal-mobile-bar\">\n"
-    + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters &amp; Topics</button>\n"
-    + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">Chapters Jump</button>\n"
-    + "    </div>\n"
-    + "    <div class=\"hb-kicker-bar\">\n"
-    + "      <nav class=\"hb-breadcrumbs\" aria-label=\"Breadcrumb\">\n"
-    + "        <a href=\"../\">Docs</a>\n"
-    + "        <span aria-hidden=\"true\">&rsaquo;</span>\n"
-    + "        <a href=\"overview-and-setup.html\">Handbook</a>\n"
-    + "        <span aria-hidden=\"true\">&rsaquo;</span>\n"
-    + "        <span class=\"hb-kicker-chapter\">Single-Page View</span>\n"
-    + "      </nav>\n"
-    + "      <div class=\"docs-badge-row\"><span class=\"status-pill status-pill-shipped\">100% Runnable in TS</span></div>\n"
-    + "    </div>\n"
-    + "    <h1>The Lite Handbook (Single-Page Edition)</h1>\n"
-    + "    <p class=\"hero-lead\">All seven Shipped Handbook chapters on one page for fast reading, search, or printing.</p>\n"
-    + "    " + chBlocks.join("\n") + "\n"
-    + "  </article>\n"
-    + "  <aside class=\"portal-toc\" aria-label=\"Chapters\">\n"
-    + "    <p class=\"portal-toc-title\">Chapters</p>\n"
-    + "    <ul>\n"
-    + "      " + singleTocItems.join("\n      ") + "\n"
-    + "    </ul>\n"
-    + "    <div class=\"portal-toc-foot\">\n"
-    + "      <a href=\"overview-and-setup.html\">Chapter-by-chapter &rarr;</a>\n"
-    + "      <a href=\"#top\">&uarr; Back to top</a>\n"
-    + "    </div>\n"
-    + "  </aside>\n"
-    + "</div>";
-    mut pagesJson.pushBack("{\"relPath\":\"docs/handbook/single-page.html\",\"title\":\"Single-Page Handbook — Docs — Lite\",\"description\":\"Complete Shipped Lite Handbook on a single searchable page.\",\"basePath\":\"../../\",\"body\":" + json.quoteString(singleBody) + "}");
+    singleBodyOut: mut tb.TextBuilder;
+    mut singleBodyOut.append("<div class=\"portal-layout\" id=\"top\">\n  ");
+    mut singleBodyOut.append(renderDocsSidebar("handbook", "docs/handbook/single-page.html", hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, emptyStrs, emptyStrs, emptyStrs, emptyStrs, emptyBools));
+    mut singleBodyOut.append("\n  <article class=\"md-prose\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters &amp; Topics</button>\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">Chapters Jump</button>\n    </div>\n    <div class=\"hb-kicker-bar\">\n      <nav class=\"hb-breadcrumbs\" aria-label=\"Breadcrumb\">\n        <a href=\"../\">Docs</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <a href=\"overview-and-setup.html\">Handbook</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <span class=\"hb-kicker-chapter\">Single-Page View</span>\n      </nav>\n      <div class=\"docs-badge-row\"><span class=\"status-pill status-pill-shipped\">100% Runnable in TS</span></div>\n    </div>\n    <h1>The Lite Handbook (Single-Page Edition)</h1>\n    <p class=\"hero-lead\">All seven Shipped Handbook chapters on one page for fast reading, search, or printing.</p>\n    ");
+    mut singleBodyOut.append(chBlocksOut.build());
+    mut singleBodyOut.append("\n  </article>\n  <aside class=\"portal-toc\" aria-label=\"Chapters\">\n    <p class=\"portal-toc-title\">Chapters</p>\n    <ul>\n      ");
+    mut singleBodyOut.append(singleTocOut.build());
+    mut singleBodyOut.append("\n    </ul>\n    <div class=\"portal-toc-foot\">\n      <a href=\"overview-and-setup.html\">Chapter-by-chapter &rarr;</a>\n      <a href=\"#top\">&uarr; Back to top</a>\n    </div>\n  </aside>\n</div>");
+    mut pagesJson.pushBack("{\"relPath\":\"docs/handbook/single-page.html\",\"title\":\"Single-Page Handbook — Docs — Lite\",\"description\":\"Complete Shipped Lite Handbook on a single searchable page.\",\"basePath\":\"../../\",\"body\":" + json.quoteString(singleBodyOut.build()) + "}");
 
     hi = 0;
     loop hi < hbCount {
@@ -1139,53 +1194,67 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         tocEditLink := if repoUrl =!= "" {
             "\n      <a href=\"" + escapeHtml(repoUrl + "/blob/main/" + mSrc) + "\">View source</a>"
         } else { "" };
-        relBlock := if hbRelated[hi] =!= "" { "\n    " + hbRelated[hi] } else { "" };
-        body := "<div class=\"portal-layout\" id=\"top\">\n"
-        + "  " + renderDocsSidebar("handbook", mOut, hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, spOuts, spGroups, spNavs, spTitles, spVerified) + "\n"
-        + "  <article class=\"md-prose\" data-handbook-slug=\"" + escapeHtml(chSlug) + "\">\n"
-        + "    <div class=\"portal-mobile-bar\">\n"
-        + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters &amp; Topics</button>\n"
-        + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">On This Page</button>\n"
-        + "    </div>\n"
-        + "    <div class=\"hb-kicker-bar\">\n"
-        + "      <nav class=\"hb-breadcrumbs\" aria-label=\"Breadcrumb\">\n"
-        + "        <a href=\"" + escapeHtml(relativeHref(mOut, "docs/index.html")) + "\">Docs</a>\n"
-        + "        <span aria-hidden=\"true\">&rsaquo;</span>\n"
-        + "        <a href=\"" + escapeHtml(relativeHref(mOut, "docs/handbook/overview-and-setup.html")) + "\">Handbook</a>\n"
-        + "        <span aria-hidden=\"true\">&rsaquo;</span>\n"
-        + "        <span class=\"hb-kicker-chapter\">Chapter " + (hi + 1).toText() + " of " + hbCount.toText() + " &middot; " + escapeHtml(handbookPartName(hi)) + "</span>\n"
-        + "      </nav>\n"
-        + "      <div class=\"docs-badge-row\">\n"
-        + "        <span class=\"code-card-meta\">~" + readMins.toText() + " min read</span>\n"
-        + "        <span class=\"status-pill status-pill-shipped\">Verified in TS</span>\n"
-        + "      </div>\n"
-        + "    </div>\n"
-        + "    " + chapterBodyHtml
-        + relBlock + "\n"
-        + "    <footer class=\"docs-page-footer\">\n"
-        + "      <div class=\"docs-source-row\">" + editLink + " <span class=\"code-card-meta\">&middot; Shortcuts: <kbd>[</kbd> Prev &middot; <kbd>]</kbd> Next &middot; <kbd>/</kbd> Search</span></div>\n"
-        + "      <nav class=\"docs-pager docs-pager-cards\" aria-label=\"Previous and next chapter\">\n"
-        + "        " + prevCard + "\n"
-        + "        " + nextCard + "\n"
-        + "      </nav>\n"
-        + "    </footer>\n"
-        + "  </article>\n"
-        + "  <aside class=\"portal-toc\" aria-label=\"On this page\">\n"
-        + "    <p class=\"portal-toc-title\">On This Page</p>\n"
-        + "    <ul>\n"
-        + "      " + hbTocHtmls[hi] + "\n"
-        + "    </ul>\n"
-        + "    <div class=\"portal-toc-foot\">\n"
-        + "      <a href=\"single-page.html\">Single-page view</a>" + tocEditLink + "\n"
-        + "      <a href=\"#top\">&uarr; Back to top</a>\n"
-        + "    </div>\n"
-        + "  </aside>\n"
-        + "</div>";
+        bodyOut: mut tb.TextBuilder;
+        mut bodyOut.append("<div class=\"portal-layout\" id=\"top\">\n  ");
+        mut bodyOut.append(renderDocsSidebar("handbook", mOut, hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, spOuts, spGroups, spNavs, spTitles, spVerified));
+        mut bodyOut.append("\n  <article class=\"md-prose\" data-handbook-slug=\"");
+        mut bodyOut.append(escapeHtml(chSlug));
+        mut bodyOut.append("\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters &amp; Topics</button>\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">On This Page</button>\n    </div>\n    <div class=\"hb-kicker-bar\">\n      <nav class=\"hb-breadcrumbs\" aria-label=\"Breadcrumb\">\n        <a href=\"");
+        mut bodyOut.append(escapeHtml(relativeHref(mOut, "docs/index.html")));
+        mut bodyOut.append("\">Docs</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <a href=\"");
+        mut bodyOut.append(escapeHtml(relativeHref(mOut, "docs/handbook/overview-and-setup.html")));
+        mut bodyOut.append("\">Handbook</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <span class=\"hb-kicker-chapter\">Chapter ");
+        mut bodyOut.append((hi + 1).toText());
+        mut bodyOut.append(" of ");
+        mut bodyOut.append(hbCount.toText());
+        mut bodyOut.append(" &middot; ");
+        mut bodyOut.append(escapeHtml(handbookPartName(hi)));
+        mut bodyOut.append("</span>\n      </nav>\n      <div class=\"docs-badge-row\">\n        <span class=\"code-card-meta\">~");
+        mut bodyOut.append(readMins.toText());
+        mut bodyOut.append(" min read</span>\n        <span class=\"status-pill status-pill-shipped\">Verified in TS</span>\n      </div>\n    </div>\n    ");
+        mut bodyOut.append(chapterBodyHtml);
+        if hbRelated[hi] =!= "" {
+            mut bodyOut.append("\n    ");
+            mut bodyOut.append(hbRelated[hi]);
+        }
+        mut bodyOut.append("\n    <footer class=\"docs-page-footer\">\n      <div class=\"docs-source-row\">");
+        mut bodyOut.append(editLink);
+        mut bodyOut.append(" <span class=\"code-card-meta\">&middot; Shortcuts: <kbd>[</kbd> Prev &middot; <kbd>]</kbd> Next &middot; <kbd>/</kbd> Search</span></div>\n      <nav class=\"docs-pager docs-pager-cards\" aria-label=\"Previous and next chapter\">\n        ");
+        mut bodyOut.append(prevCard);
+        mut bodyOut.append("\n        ");
+        mut bodyOut.append(nextCard);
+        mut bodyOut.append("\n      </nav>\n    </footer>\n  </article>\n  <aside class=\"portal-toc\" aria-label=\"On this page\">\n    <p class=\"portal-toc-title\">On This Page</p>\n    <ul>\n      ");
+        mut bodyOut.append(hbTocHtmls[hi]);
+        mut bodyOut.append("\n    </ul>\n    <div class=\"portal-toc-foot\">\n      <a href=\"single-page.html\">Single-page view</a>");
+        mut bodyOut.append(tocEditLink);
+        mut bodyOut.append("\n      <a href=\"#top\">&uarr; Back to top</a>\n    </div>\n  </aside>\n</div>");
+
         dispTitle := if dTitle =!= "" { dTitle } else { mNav };
         pTitle := dispTitle + " — Handbook — Lite";
         pDesc := if mSum =!= "" { mSum } else { dTitle + " (" + mSrc + ")" };
-        mut pagesJson.pushBack("{\"relPath\":" + json.quoteString(mOut) + ",\"title\":" + json.quoteString(pTitle) + ",\"description\":" + json.quoteString(pDesc) + ",\"basePath\":\"../../\",\"body\":" + json.quoteString(body) + "}");
-        mut searchEntriesJson.pushBack("{\"kind\":\"handbook\",\"title\":" + json.quoteString(dispTitle) + ",\"subtitle\":" + json.quoteString(if mSum =!= "" { mSum } else { mSrc }) + ",\"href\":" + json.quoteString(mOut) + ",\"keywords\":" + json.quoteString(mSrc + " " + mNav + " " + dTitle) + ",\"badge\":\"Verified in TS\"}");
+        pageEntry: mut tb.TextBuilder;
+        mut pageEntry.append("{\"relPath\":");
+        mut pageEntry.append(json.quoteString(mOut));
+        mut pageEntry.append(",\"title\":");
+        mut pageEntry.append(json.quoteString(pTitle));
+        mut pageEntry.append(",\"description\":");
+        mut pageEntry.append(json.quoteString(pDesc));
+        mut pageEntry.append(",\"basePath\":\"../../\",\"body\":");
+        mut pageEntry.append(json.quoteString(bodyOut.build()));
+        mut pageEntry.append("}");
+        mut pagesJson.pushBack(pageEntry.build());
+
+        searchEntry: mut tb.TextBuilder;
+        mut searchEntry.append("{\"kind\":\"handbook\",\"title\":");
+        mut searchEntry.append(json.quoteString(dispTitle));
+        mut searchEntry.append(",\"subtitle\":");
+        mut searchEntry.append(json.quoteString(if mSum =!= "" { mSum } else { mSrc }));
+        mut searchEntry.append(",\"href\":");
+        mut searchEntry.append(json.quoteString(mOut));
+        mut searchEntry.append(",\"keywords\":");
+        mut searchEntry.append(json.quoteString(mSrc + " " + mNav + " " + dTitle));
+        mut searchEntry.append(",\"badge\":\"Verified in TS\"}");
+        mut searchEntriesJson.pushBack(searchEntry.build());
         hi = hi + 1;
     }
 
@@ -1227,40 +1296,60 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         } else {
             "<code>" + escapeHtml(mSrc) + "</code>"
         };
-        relBlock := if spRelated[si] =!= "" { "\n    " + spRelated[si] } else { "" };
-        body := "<div class=\"portal-layout\" id=\"top\">\n"
-        + "  " + renderSpecSidebarFromTemplates(mOut, mGrp, specDirTmpls, dirIdx * 5) + "\n"
-        + "  <article class=\"md-prose\">\n"
-        + "    <div class=\"portal-mobile-bar\">\n"
-        + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n"
-        + "      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">On This Page</button>\n"
-        + "    </div>\n"
-        + "    <div class=\"portal-card-head\" style=\"margin-bottom: 0.65rem;\">\n"
-        + "      <span class=\"code-card-meta\"><a href=\"" + escapeHtml(relativeHref(mOut, "docs/index.html")) + "\">Docs</a> / Design Spec</span>\n"
-        + "      <div class=\"docs-badge-row\">" + vBadge + "<span class=\"status-pill " + cls + "\">" + escapeHtml(lbl) + "</span></div>\n"
-        + "    </div>\n"
-        + "    " + spHtmls[si]
-        + relBlock + "\n"
-        + "    <footer class=\"docs-page-footer\">\n"
-        + "      <div class=\"docs-source-row\">" + editLink + "</div>\n"
-        + "      <nav class=\"docs-pager\" aria-label=\"Previous and next document\">\n"
-        + "        " + prevLink + "\n"
-        + "        " + nextLink + "\n"
-        + "      </nav>\n"
-        + "    </footer>\n"
-        + "  </article>\n"
-        + "  <aside class=\"portal-toc\" aria-label=\"On this page\">\n"
-        + "    <p class=\"portal-toc-title\">On This Page</p>\n"
-        + "    <ul>\n"
-        + "      " + spTocHtmls[si] + "\n"
-        + "    </ul>\n"
-        + "  </aside>\n"
-        + "</div>";
+        spBodyOut: mut tb.TextBuilder;
+        mut spBodyOut.append("<div class=\"portal-layout\" id=\"top\">\n  ");
+        mut spBodyOut.append(renderSpecSidebarFromTemplates(mOut, mGrp, specDirTmpls, dirIdx * 5));
+        mut spBodyOut.append("\n  <article class=\"md-prose\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">On This Page</button>\n    </div>\n    <div class=\"portal-card-head\" style=\"margin-bottom: 0.65rem;\">\n      <span class=\"code-card-meta\"><a href=\"");
+        mut spBodyOut.append(escapeHtml(relativeHref(mOut, "docs/index.html")));
+        mut spBodyOut.append("\">Docs</a> / Design Spec</span>\n      <div class=\"docs-badge-row\">");
+        mut spBodyOut.append(vBadge);
+        mut spBodyOut.append("<span class=\"status-pill ");
+        mut spBodyOut.append(cls);
+        mut spBodyOut.append("\">");
+        mut spBodyOut.append(escapeHtml(lbl));
+        mut spBodyOut.append("</span></div>\n    </div>\n    ");
+        mut spBodyOut.append(spHtmls[si]);
+        if spRelated[si] =!= "" {
+            mut spBodyOut.append("\n    ");
+            mut spBodyOut.append(spRelated[si]);
+        }
+        mut spBodyOut.append("\n    <footer class=\"docs-page-footer\">\n      <div class=\"docs-source-row\">");
+        mut spBodyOut.append(editLink);
+        mut spBodyOut.append("</div>\n      <nav class=\"docs-pager\" aria-label=\"Previous and next document\">\n        ");
+        mut spBodyOut.append(prevLink);
+        mut spBodyOut.append("\n        ");
+        mut spBodyOut.append(nextLink);
+        mut spBodyOut.append("\n      </nav>\n    </footer>\n  </article>\n  <aside class=\"portal-toc\" aria-label=\"On this page\">\n    <p class=\"portal-toc-title\">On This Page</p>\n    <ul>\n      ");
+        mut spBodyOut.append(spTocHtmls[si]);
+        mut spBodyOut.append("\n    </ul>\n  </aside>\n</div>");
         dispTitle := if dTitle =!= "" { dTitle } else { mNav };
         pTitle := dispTitle + " — Design Spec — Lite";
         pDesc := if mSum =!= "" { mSum } else { dTitle + " (" + mSrc + ")" };
-        mut pagesJson.pushBack("{\"relPath\":" + json.quoteString(mOut) + ",\"title\":" + json.quoteString(pTitle) + ",\"description\":" + json.quoteString(pDesc) + ",\"basePath\":\"../../\",\"body\":" + json.quoteString(body) + "}");
-        mut searchEntriesJson.pushBack("{\"kind\":\"doc\",\"title\":" + json.quoteString(dispTitle) + ",\"subtitle\":" + json.quoteString(if mSum =!= "" { mSum } else { mSrc }) + ",\"href\":" + json.quoteString(mOut) + ",\"keywords\":" + json.quoteString(mSrc + " " + mNav + " " + dTitle) + ",\"badge\":" + json.quoteString(lbl) + "}");
+        spPageEntry: mut tb.TextBuilder;
+        mut spPageEntry.append("{\"relPath\":");
+        mut spPageEntry.append(json.quoteString(mOut));
+        mut spPageEntry.append(",\"title\":");
+        mut spPageEntry.append(json.quoteString(pTitle));
+        mut spPageEntry.append(",\"description\":");
+        mut spPageEntry.append(json.quoteString(pDesc));
+        mut spPageEntry.append(",\"basePath\":\"../../\",\"body\":");
+        mut spPageEntry.append(json.quoteString(spBodyOut.build()));
+        mut spPageEntry.append("}");
+        mut pagesJson.pushBack(spPageEntry.build());
+
+        spSearchEntry: mut tb.TextBuilder;
+        mut spSearchEntry.append("{\"kind\":\"doc\",\"title\":");
+        mut spSearchEntry.append(json.quoteString(dispTitle));
+        mut spSearchEntry.append(",\"subtitle\":");
+        mut spSearchEntry.append(json.quoteString(if mSum =!= "" { mSum } else { mSrc }));
+        mut spSearchEntry.append(",\"href\":");
+        mut spSearchEntry.append(json.quoteString(mOut));
+        mut spSearchEntry.append(",\"keywords\":");
+        mut spSearchEntry.append(json.quoteString(mSrc + " " + mNav + " " + dTitle));
+        mut spSearchEntry.append(",\"badge\":");
+        mut spSearchEntry.append(json.quoteString(lbl));
+        mut spSearchEntry.append("}");
+        mut searchEntriesJson.pushBack(spSearchEntry.build());
         si = si + 1;
     }
 
@@ -1268,5 +1357,17 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     loop spTocL2Ids as sse { mut searchEntriesJson.pushBack(sse); }
 
     docsPageCount := pagesJson.length();
-    (ok = true, jsonText = "{\"docsPageCount\":" + docsPageCount.toText() + ",\"handbookCount\":" + hbCount.toText() + ",\"specCount\":" + spCount.toText() + ",\"pages\":[" + pagesJson.join(",") + "],\"searchEntries\":[" + searchEntriesJson.join(",") + "]}", error = "")
+    payloadOut: mut tb.TextBuilder;
+    mut payloadOut.append("{\"docsPageCount\":");
+    mut payloadOut.append(docsPageCount.toText());
+    mut payloadOut.append(",\"handbookCount\":");
+    mut payloadOut.append(hbCount.toText());
+    mut payloadOut.append(",\"specCount\":");
+    mut payloadOut.append(spCount.toText());
+    mut payloadOut.append(",\"pages\":[");
+    mut payloadOut.append(pagesJson.join(","));
+    mut payloadOut.append("],\"searchEntries\":[");
+    mut payloadOut.append(searchEntriesJson.join(","));
+    mut payloadOut.append("]}");
+    (ok = true, jsonText = payloadOut.build(), error = "")
 };
