@@ -4,11 +4,15 @@ Status: **navigation map selected 2026-10-25**. This page names the pages that s
 
 A **normative page** states a selected or established rule. A **supporting page** provides examples, comparisons, rationale, or a narrower part of the contract. A **historical page** records rejected alternatives and must not be read as current behavior.
 
-If two pages conflict, the normative page for that area and the [decision ledger](lite://doc/decisions-and-open-questions) win. Report the conflict rather than synthesizing a third rule.
+The owning page states the current rule. When supporting text conflicts,
+report the discrepancy and reconcile it against the owning rule and the
+recorded decision.
 
-The [LiteLang current design specification](lite://spec) provides stable area IDs and a condensed summary. It is subordinate to these normative pages and the ledger.
-
-The [Lite Proposal register](lite://doc/proposals/README) links accepted decision records with their LP IDs, revisions, statuses, and release targets. It records proposal/version history; the owning normative page and decision ledger remain the current-rule reference. Acceptance does not itself create a release or bump a component version.
+The [specification index](lite://spec) gives each area a stable LS ID and
+links to its owners. The [decision ledger](lite://doc/decisions-and-open-questions)
+and [Lite Proposal register](lite://doc/proposals/README) retain the decision
+history. For compiler behavior, follow the owning page's evidence and the
+[verification cases](lite://repo/language/verifications/README.md).
 
 The [memory and performance priorities](lite://doc/memory-and-performance#lightweight-native-execution-priority), selected 2026-10-28, own the lightweight native execution goals and their measurement boundaries. Compiler and memory-management candidates in that page remain proposals.
 
@@ -16,19 +20,20 @@ The [multilingual source and learning page](lite://doc/multilingual-source-and-l
 
 ## Map
 
-| Area | Start with | Also normative for narrower contracts |
+| Area | Start with | Related rule pages and draft references |
 |---|---|---|
-| Design method | [Continuity and analogical coherence](lite://doc/continuity-and-analogy) | [Principles](lite://doc/principles), [decision ledger](lite://doc/decisions-and-open-questions) |
+| Design method | [Continuity and analogical coherence](lite://doc/continuity-and-analogy) | [Principles](lite://doc/principles) |
 | Syntax and tokens | [Grammar sketch](lite://doc/grammar-sketch) | [Lexical structure](lite://doc/lexical-structure) |
-| Types, inference, and flow | [Types and inference](lite://doc/types-and-inference) | [Type categories](lite://doc/type-categories), [type tests and narrowing](lite://doc/type-tests-and-narrowing) |
+| Types, inference, and flow | [Types and inference](lite://doc/types-and-inference) | [type tests and narrowing](lite://doc/type-tests-and-narrowing) |
 | Unions | [Plain union normalization](lite://doc/union-normalization) | [Membership](lite://doc/union-membership), [widening](lite://doc/union-widening), [values and access](lite://doc/union-values-and-access), [field reads](lite://doc/union-field-reads), [field writes](lite://doc/union-field-writes), [initialization](lite://doc/union-initialization-policy), [zero](lite://doc/union-zero), [patterns](lite://doc/union-patterns) |
 | Initialization | [First initialization](lite://doc/first-initialization) | [Zero initialization](lite://doc/zero-initialization), [reserved storage](lite://doc/reserved-storage), [record initialization](lite://doc/record-initialization) |
-| Conditionals | [Conditionals](lite://doc/conditionals) | [Branch-result inference](lite://doc/branch-result-inference), [conditional union fallback](lite://doc/conditional-union-fallback), [condition chains](lite://doc/condition-chains) |
+| Conditionals | [Conditionals](lite://doc/conditionals) | [Branch-result inference](lite://doc/branch-result-inference), [condition chains](lite://doc/condition-chains) |
+| Record construction | [Record initialization](lite://doc/record-initialization) | [Record identity](lite://doc/record-type-identity), [contextual literal draft](lite://doc/record-literal-boundaries#contextual-record-literals-and-executable-blocks) |
 | Loops | [Loops](lite://doc/loops) | [Loop value](lite://doc/loop-value), [loop type inference](lite://doc/loop-type-inference), [loop completion](lite://doc/loop-completion), [last item](lite://doc/loop-last-item) |
 | Recovery and errors | [Result and errors](lite://doc/result-and-errors) | [Expression recovery](lite://doc/expression-recovery), [failure capture and unwrapping](lite://doc/failure-capture-and-unwrapping), [manual failures and inference](lite://doc/manual-failures-and-inference), [recovery and fallbacks](lite://doc/recovery-and-fallbacks), [checked fault policy](lite://doc/checked-fault-policy), [panics](lite://doc/panics), [finally](lite://doc/finally) |
 | Collections and sequences | [Collections and iterators](lite://doc/collections-and-iterators) | [Collection abstractions](lite://doc/collection-abstractions), [operation contracts](lite://doc/collection-operation-contracts), [sequence types](lite://doc/sequence-types), [indexed sequence contract](lite://doc/indexed-sequence-contract) |
-| Functions and calls | [Functions](lite://doc/functions) | [Type-attached operations](lite://doc/type-operations), [Named arguments and tuples](lite://doc/named-arguments-and-tuples), [callable input packs](lite://doc/callable-input-packs), [safe callable compatibility and var invariance](lite://doc/callable-value-variance), [union parameter defaults](lite://doc/union-parameter-defaults) |
-| Modules and packages | [Modules and packages](lite://doc/modules-and-packages) | — |
+| Functions and calls | [Functions](lite://doc/functions) | [Type-attached operations](lite://doc/type-operations), [Named arguments and tuples](lite://doc/named-arguments-and-tuples), [callable input packs](lite://doc/callable-input-packs), [safe callable compatibility and var invariance](lite://doc/callable-value-variance), [union parameter defaults](lite://doc/union-parameter-defaults), [caller grants](lite://doc/caller-mutation-grants), [generic parameter declarations](lite://doc/generic-notation#explicit-generic-names-and-inferred-parameter-declarations) |
+| Modules and packages | [Modules and packages](lite://doc/modules-and-packages) | [Import and re-export visibility](lite://doc/modules-and-packages#import-expansion-and-re-exports), [package preload](lite://doc/modules-and-packages#package-preload) |
 | Naming and versions | [Naming and versioning](lite://doc/versioning-and-naming) | — |
 | Tooling and formatter | [Tooling and learning](lite://doc/tooling-and-learning) | [Lexical structure](lite://doc/lexical-structure) |
 | Process and history | [Decision ledger](lite://doc/decisions-and-open-questions) | [Review handoff](lite://doc/language-design-review-handoff), [historical backlog](lite://repo/TASKS.md) |
@@ -38,16 +43,17 @@ The [multilingual source and learning page](lite://doc/multilingual-source-and-l
 
 - Each rule has one owning normative page. Other pages link to it instead of restating the full rule.
 - A supporting page may summarize a rule only when it also links to the owning page and does not add a conflicting condition.
-- When a selection changes, edit the owning page and the decision ledger first, then update examples and comparisons.
+- When a selection changes, update its owning page, record the dated decision, and refresh affected examples and links.
 - Historical pages keep the old rule but say which current page supersedes it.
 
 ## Historical and supporting pages
 
-These pages are useful context but are not the current rule for their area:
+The entries below identify the earlier rules preserved in these pages.
 
+- [Conditional union fallback](lite://doc/conditional-union-fallback) — earlier zero-default rule.
 - [Conditional recovery](lite://doc/conditional-recovery) — superseded external-handler placement.
 - [Loop accumulator](lite://doc/loop-accumulator) — retired optional-accumulator model.
-- [Loop receivers](lite://doc/loop-receivers) — retired receiver-list and header-destructuring model.
+- [Loop receivers](lite://doc/loop-receivers) — includes retired receiver-list and header-destructuring forms.
 - [Loop recovery](lite://doc/loop-recovery) — historical grouped-loop recovery.
 - [Loop pattern alternatives](lite://doc/loop-pattern-alternatives) — historical receiver-pattern alternatives.
 - [Qualified access summaries](lite://doc/access-union-qualifiers) — historical access notation.

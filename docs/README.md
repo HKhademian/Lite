@@ -1,15 +1,11 @@
 # Language documentation
 
-Current entry guide: **2026-11-23**. Stage: **selected design with dual-target TypeScript and native C11 self-hosting**.
-
-The [Lite-written compiler](lite://doc/compiler/overview) supplies both the generated TS
-bootstrap (`igniter.ts`) and standalone C11 bootstrap (`compiler.c`), reaching a
-byte-identical 3-generation self-hosting fixed point on both backends. Public
-compile/check, default tests, `./bin/lite build`, `./bin/lite play`, and
-`./bin/lite verify` enforce dual-target TS + C11 parity across all 36 `core/*`
-and `extra/*` modules. T00 is retired historical reference only. Use the
-[Shipped Handbook](lite://handbook/overview-and-setup) for what ships today and
-[transition](lite://doc/compiler/transition-plan) for remaining design work.
+Use the [Shipped Handbook](lite://handbook/overview-and-setup) to learn
+the language available today. Use the [specification index](lite://spec) and
+[normative map](lite://doc/normative-pages) to locate a design rule. The
+[compiler guide](lite://doc/compiler/overview) and
+[verification cases](lite://repo/language/verifications/README.md) describe
+implementation and evidence.
 
 ## Start here
 
@@ -22,9 +18,9 @@ and `extra/*` modules. T00 is retired historical reference only. Use the
 
 1. [LiteLang white paper](lite://doc/white-paper): the LiteLang philosophy, intended audience, and criteria for every design decision.
 2. [Principles and goals](lite://doc/principles): a concise overview of established goals and defaults.
-3. [Current decisions and open questions](lite://doc/decisions-and-open-questions): selected contracts and work still to settle.
+3. [Current decisions and open questions](lite://doc/decisions-and-open-questions): dated design history and open questions.
 4. [Provisional grammar sketch](lite://doc/grammar-sketch): the current syntax outline and its remaining boundaries.
-5. [LiteLang current design specification](lite://spec): stable-ID summary of selected rules, subordinate to the normative pages.
+5. [LiteLang current design specification](lite://spec): stable IDs and links to the current rule owners.
 6. [Normative page map](lite://doc/normative-pages): which page owns each current rule and which pages are historical.
 
 The detailed reference below develops these foundations one concept at a time.
@@ -40,13 +36,12 @@ These are reading paths, not separate index entries; each document has one canon
 
 ## How to read this reference
 
-[Source kinds](lite://doc/modules-and-packages#distinct-script-and-module-files) are
-distinct: .lts scripts have an executable file body; .lt files belong to modules
-and have no implicit imports, even for core type names. Short type/API names in
-conceptual fragments assume appropriate explicit bindings in a module context;
-those fragments are not complete .lt files with an invisible prelude. Full
-module headers and member-unpacking syntax remain open. Old .lite names in
-dated review snapshots are historical, not another selected current source kind.
+[Source kinds](lite://doc/modules-and-packages#distinct-script-and-module-files)
+govern the separate `.lts` script and `.lt` module forms. The
+[preload design](lite://doc/modules-and-packages#package-preload) defines
+package-local availability, and the
+[compiler gap](lite://doc/modules-and-packages#implicit-core-preloading-gap)
+describes current ambient loading.
 
 - **Selected / established** records an explicit user choice or a rule retained by the subsequent discussion. Status lines use “selected” for a specific decision and “established” for the broader direction; both have the same normative weight.
 - **Working proposal** is a concrete design suggestion that still needs confirmation or formalization. Status lines may say “proposal” or “proposed.”
@@ -62,7 +57,7 @@ the stated design status; executable evidence comes from linked case manifests.
 
 Tuple type components use `name: Type`, a bare label with an inferred type, or `:Type` for an unnamed component. For example, `(l: Int, r: Int)`, `(l, r)`, and `(:Int, :Int)` have distinct named/unnamed roles in type context. Tuple value expressions and binding patterns retain their context-specific meanings; see the component grammar in the named-input routing entry.
 
-Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are temporary explanatory notation. Generic declaration/application syntax has not been designed or selected; the future review may replace these spellings. See the temporary generic notation entry.
+See [generic notation](lite://doc/generic-notation) for current parameter forms and the pending inference rules.
 
 ## Foundations
 
@@ -78,7 +73,7 @@ Generic forms such as `Array<Float, 3>`, `List<Int>`, and `Option<User>` are tem
 - [Declarations and assignment](lite://doc/declarations-and-assignment): `:=`, unparenthesized Boolean initializers with optional leading and/or, explicit types, independent `var`/`mut` capabilities, and declared replacement contracts versus flow-sensitive read types.
 - [Mutability, access, and operations](lite://doc/mutability): the four declaration forms, held-data access, and operation receiver requirements.
 - [Mut qualifier placement](lite://doc/mut-qualifier-placement): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
-- [Local shadowing and copies](lite://doc/local-shadowing-and-copies): sequential same-block shadowing, shallow mutable record copies, inline nested layout, and preserved reference targets.
+- [Local shadowing and copies](lite://doc/local-shadowing-and-copies): scope and value-copy rules.
 - [Operators](lite://doc/operators): selected basic arithmetic precedence and binary left association, comparison/logical operations, optional leading logical separators and identity additive +, and selected power spelling with explicit unary-minus grouping.
 - [Power and negation](lite://doc/power-and-negation): reject -base `**` exponent, require the negative-base or outer-negation group, and retain open power typing/association/domain contracts.
 - [Arithmetic operators across languages](lite://doc/arithmetic-operators-comparison): Java, C, C++, C#, Python, and modern references; division/remainder/modulo, current / :/ % :% family with rem/mod meanings, power and unary signs, identity versus promotion/conversion, primary sources, and seven versioned local toolchain probes.

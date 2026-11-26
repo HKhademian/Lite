@@ -8,7 +8,7 @@ todos:
     status: completed
   - id: reconcile
     content: "Reconcile contradictory current pages with paths intact"
-    status: pending
+    status: completed
   - id: core-text-pilot
     content: "Verify one path from source comments to module docs and Handbook"
     status: pending
@@ -48,6 +48,12 @@ through tested examples and stable links.
 - Independently reviewed the TS live record mutation box fix and exercised
   strict TS and stripped JavaScript at `-O0` and `-O3`. Keep its language
   contract separate from backend representation details.
+
+- Started the documentation worktree and reconciled the public spec index.
+  The LS pages link to their owning rules, the ledger is dated history, and
+  import implementation status matches the TS and C11 probes.
+  `lite docs --check` and the built site checks passed. A comparison retained
+  all 375 baseline HTML routes and 11,677 captured anchor IDs.
 
 ## Baseline inventory
 
@@ -110,19 +116,6 @@ owning topic pages, and these observations describe the baseline compiler.
 - [Atomic commits](../rules/atomic-commits.md) and [documentation rules](../rules/documentation.md)
 
 ## Implementation order
-
-### Step 2 — reconcile
-
-**Depends on** baseline.
-
-**Files** `docs/spec/README.md`, `docs/README.md`, `docs/normative-pages.md`, `docs/decisions-and-open-questions.md`, and the affected owning topic pages.
-
-- Reconcile partial initialization, conditional payload patterns, package preload and re-exports, generic parameter annotations, and the first-call mutation grant.
-- Keep LS-001 through LS-011 and their anchors as entry points. Give each entry a short description and link to the current owner.
-- Leave the decision ledger and LP records available as dated evidence. Make the current-rule map point to the owning page when a record is superseded.
-- Distinguish the selected behavior from the compiler behavior verified for this revision. Keep the existing public paths during this phase.
-
-**Acceptance** A reader reaches one current rule for each reviewed topic. Pending behavior is visible as pending. `./bin/lite docs --check` passes, subject to any documented baseline failures.
 
 ### Step 3 — core-text-pilot
 

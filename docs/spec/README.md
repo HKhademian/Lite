@@ -1,313 +1,119 @@
 # LiteLang current design specification
 
-Status: **draft current-design summary, 2026-10-30**. This page states the selected design at area level with stable IDs. It is not yet a complete language specification, and it is not a compiler contract. The linked normative page and the [decision ledger](lite://doc/decisions-and-open-questions) remain authoritative if wording here is incomplete or conflicts.
+This index groups LiteLang rules under stable area IDs. The linked
+[owning pages](lite://doc/normative-pages) state the current rules and
+identify working proposals. The [decision ledger](lite://doc/decisions-and-open-questions)
+and [proposal register](lite://doc/proposals/README) retain the history.
+
+Use the [Shipped Handbook](lite://handbook/overview-and-setup) for runnable
+guidance and the [verification cases](lite://repo/language/verifications/README.md)
+for tested compiler behavior. A selected design may still await implementation.
 
 ## Using the IDs
 
-- `LS-001` through `LS-011` identify stable design areas. The number does not change when wording is refined.
-- A removed area is marked **superseded** and its ID is never reused.
-- Cite the area ID for the broad decision and the linked normative page for details.
-- “Selected” means a user choice or retained rule. “Open” means no current contract.
+Cite LS-001 through LS-011 for an area and the owning section for the precise
+rule. IDs stay stable as wording and organization change. A superseded ID
+remains reserved.
 
 ## LS-001 — Source, syntax, and evaluation
 
-Selected:
-
-- **Unambiguous meaning is a language-wide principle.** If distinct viable interpretations remain after applying the language rules and context, reject the program with a diagnostic rather than silently select one. Explicit runtime choices and documented resolution rules remain valid. See [unambiguous meaning](lite://doc/unambiguous-meaning).
-
-- Ordinary functions can be evaluated during compilation as well as called at runtime. A pure, side-effect-free computation with compile-time-known inputs is itself compile-time known, including an ordinary call such as `square(4)`. Explicit compile-time evaluation can incorporate its supported result into the program without repeating that computation at runtime. Compile-time-required inputs require values known during compilation; an immutable binding of runtime input is not thereby known. The intended direction includes compile-time file reads, interactive input and network fetches; purity proofs, host effects and dependency rules remain open. The proposed `comptime { ... }` spelling is not yet a complete selected grammar or implemented feature. See [compile-time evaluation](lite://doc/compile-time-evaluation).
-
-- In the first compiler stage, applicable `.lt` module top-level value definitions must have compile-time-known initial values; `var` and `mut` are permitted with known initial values. Defining a function does not execute its body, and explicit compile-time computation can supply an initial value with build-time effects. Later-stage runtime initialization, detailed module write access, reserved storage, materialization and forward-value dependencies remain open. This is not a current `.lt` compiler-support claim. See [module initial definitions](lite://doc/modules-and-packages#compile-time-known-initial-definitions).
-
-- During compile-time execution, ordinary errors and panics retain their failure channels and applicable handling; an unhandled failure that prevents a required value fails compilation. An evaluation that runs indefinitely or exceeds an evaluation limit is intended to fail with a compile-time panic; actual limit configuration and recovery are open. See [failure and evaluation limits](lite://doc/compile-time-evaluation#failure-and-evaluation-limits).
-
-- Blocks use braces. `if`, `else if`, `else`, `loop`, `then`, and `finally` are the ordinary control constructs.
-- Every LiteLang source file (`.lts` script or `.lt` module) is an invisible-brace root code block with **no parent block** and `pub` as its sole distinction from inner braced `{ ... }` blocks. `.lts` evaluates top-to-bottom as a script body whose unobserved final result completes with `Unit`, while `.lt` shares that root-block model without top-level runtime evaluation (admitting compile-time-known initial definitions such as `x := 1`; merging `.lt`/`.lts` later remains open). `import` binds a compile-time token referencing `pub` symbols of a sibling file block (`fn`, `type`, immutable values, and `var`/`mut` in design), not a runtime value. Side-effect-free dead code in any block may be eliminated (`x := { y := 1; 5 }` -> `x := 5;`). See [source file body](lite://doc/blocks-and-results#source-file-body), [block DCE](lite://doc/blocks-and-results#dead-code-elimination-in-blocks), and [source kinds](lite://doc/modules-and-packages#distinct-script-and-module-files).
-- An ordinary `x = value` assignment is not a symbol declaration. It is permitted as a top-level item in the `.lts` script body and rejected as a standalone `.lt` module-level item. Assignments inside executable function bodies remain governed by their ordinary rules. This does not prohibit explicit compile-time effects in module initializers or settle all other module-level statement forms. See [source kinds](lite://doc/modules-and-packages#distinct-script-and-module-files).
-- Output, value display, and execution tracing require an explicit source operation or deliberately enabled tool facility, including in demonstrators and playgrounds. Expressions, declarations, and assignments do not echo their values automatically. Observation must not re-evaluate expressions. See [explicit output and tracing](lite://doc/tooling-and-learning#explicit-output-and-tracing).
-- Newlines do not terminate or group expressions. Semicolons are ordinary separators and may be omitted after complete block/record items.
-- Temporary I/O now uses optional String prompts on inputAll/inputLine/inputInt/inputFloat and zero-or-more-value output/outputLine. A leading output String is an ordinary value; values are space-separated, and outputLine always appends one newline. The report builtin is removed. See the [current helper contract](lite://doc/tooling-and-learning#temporary-input-and-output-helpers-selected-2026-11-02) for value display and admitted compiler forms.
-- Operands and named call inputs evaluate left to right in written order. Generated TS reports also evaluate their arguments before appending the joined line, retaining reports made by argument calls; see the [compiler parity record](lite://doc/compiler/parity#report-order-seed-refresh).
-- Initial static enforcement rejects calls with evident reads before initialization and conservatively rejects calls whose initialization safety cannot be proved in the initial supported subset. No runtime readiness fallback is selected for that subset; exact proof rules and the full language's long-term callback policy remain open. See [initial static enforcement](lite://doc/functions#initial-static-enforcement).
-- Deferred bodies independently analyze an admitted surrounding reserved `var` value as initially write-only, becoming readable after their own successful first write. If the serial block independently initializes the value, deferred bodies can analyze it as readable at entry. A first-stage call that reads it before initialization is rejected; unprovable safety remains conservatively rejected in the initial subset. This direction does not require deeper compiler analysis now; post-call initialization propagation remains open. See [deferred-body value state](lite://doc/functions#independent-deferred-body-value-state).
-- Across every block (root file block and inner `{ ... }` blocks), symbol visibility is **parallel at compile time** ("circuit wiring") while runtime values propagate top to bottom along the **execution trace** ("wire values"). Eager and deferred code can resolve sibling symbols in any order with uniform surrounding read/write/type/call rules, rejecting any read that reaches an uninitialized symbol (`x: Int = ?;` or pre-init reads). **Same-block redeclaration shadowing is postponed (2026-11-15)**: two declarations of the same symbol in one block (even of different kinds) are currently disallowed, while flow narrowing without redeclaration and nested `{ ... }` outer shadowing remain separate. See [block order](lite://doc/evaluation-order#executable-block-items), [deferred bodies](lite://doc/functions#deferred-body-lookup), and [local shadowing and copies](lite://doc/local-shadowing-and-copies).
-- Typed scalar/tuple/fixed-array locals are implemented, including omitted zero-initialization (`name: Type;`) and reserved storage with first whole-value initialization (`name: Type = ?`). Reads before that first write are rejected; `if`/`match` paths join and loop bodies do not establish initialization. List/function zero and List/function reservation remain open. See [zero initialization](lite://doc/zero-initialization), [reserved storage](lite://doc/reserved-storage), and [first initialization](lite://doc/first-initialization).
-- Partial conditionals are implemented for direct declaration initializers (the declaration keeps its default `zero(T)`) and assignments (the false path performs no write). Value-required positions still require a final `else`. The explicit `else { ? }` branch, branch-correlated initialization, else-if chain defaults, branch-result unions, `then`, and `finally` remain unimplemented. See [conditionals](lite://doc/conditionals).
-- Subjectless Boolean `match { condition { ... } _ { ... } }` is implemented in the igniter: first true arm, required final `_`, action/value arms, same-type value results. Subject-based patterns and union inference remain open. See [match](lite://doc/match#subjectless-boolean-selection-selected).
-- Operator grouping, tighter to looser: prefix `-`; `**`; `* / :/ % :%`; `+ -`; comparison; `not`; `and`; `or`. `**` is right-associative with a Float-default result; zero exponents yield 1 and negative exponents are admitted for nonzero bases; zero to a negative exponent panics. The multiplicative and additive levels associate left to right; comparisons form chains, and parentheses override grouping. The unary-minus/power restriction below also applies.
-- All ten comparison forms share one precedence. A comparison chain compares adjacent operands, evaluates each operand at most once left to right, and stops at the first false comparison.
-- Division distinguishes calculation from storage: floating operands supply floating arithmetic, including nonintegral values; Int storage applies / truncation or :/ floor to the quotient. For example -7.5 / 2 stores -3 and -7.5 :/ 2 stores -4. Preserve the operands. Float/Double results retain fractional /, including 2 / 7; integer-only division without floating evidence/expectation keeps its integer default. See [division](lite://doc/division#floating-calculation-and-integer-storage) for numeric/context limits.
-- Preserve floating intermediates until the complete admitted expression reaches Int storage: (7.5 / 2) * 2.0 stores 7. Parentheses group without converting; a typed Int intermediate stores its rounded value before later arithmetic. Explicit rounding operations retain their meanings. See [storage boundaries](lite://doc/division#floating-intermediates-and-storage-boundaries).
-- `=` is assignment, `==` is equality, and `=!=` is inequality. `**` is right-associative power: `2 ** 3 ** 2` means `2 ** (3 ** 2)` and evaluates to 512. An unparenthesized unary-minus/power spelling is rejected: write `(-2) ** 2` or `-(2 ** 2)`. See [power and negation](lite://doc/power-and-negation).
-- Conditions require `Bool`; there is no implicit truthiness. A complete Boolean expression may start with one optional `and`/`or`, which adds no operand and no binding.
-- Postfix ! extracts success or forwards retained failures; explicitly captured panics resume their original panic channel. Postfix ? captures supported failures before operand evaluation (LP-0009/LP-0010).
-- The [grammar sketch](lite://doc/grammar-sketch) and [lexical structure](lite://doc/lexical-structure) own the detailed syntax; [operators](lite://doc/operators) owns the selected precedence ladder, and [evaluation order](lite://doc/evaluation-order) owns sequencing details.
-
-Open: complete grammar/parser, expression integration, power signed-zero, overflow and other fault behavior, numeric/fault semantics, and exact diagnosis/recovery rules.
+Start with [lexical structure](lite://doc/lexical-structure), the
+[grammar sketch](lite://doc/grammar-sketch), and [operators](lite://doc/operators).
+[Evaluation order](lite://doc/evaluation-order) owns sequencing. See
+[blocks and results](lite://doc/blocks-and-results) for executable scope and
+[compile-time evaluation](lite://doc/compile-time-evaluation) for its separate
+phase and effect rules.
 
 ## LS-002 — Bindings, permissions, and assignment
 
-Selected:
-
-- `name := expression` declares and infers a binding.
-- `name: Type = expression` declares with an explicit type. Declarations use `:=` or `: Type =`; no `let` keyword is added.
-- Bindings are fixed and read-only by default.
-- `var` permits whole-binding replacement. `mut` permits writable access to held data. `var mut` grants both, in that order.
-- In typed forms, `var` stays with the binding and `mut` follows the colon, as in `var user: mut User`.
-- `=` does not declare a name. Assignment selects its target once, evaluates the right-hand side, and only then writes. A compound update reads the target's current value before evaluating its right operand.
-- Assignment is a statement producing `Unit` and cannot be used as a value.
-- `name: Type = ?` explicitly reserves storage. The first whole-value write may initialize it without `var`; later replacement requires `var`.
-- Definite initialization is path-sensitive: every path reaching a read must have initialized the binding.
-- Same-block redeclaration shadowing is postponed completely on **2026-11-15** (two declarations of the same symbol in one block, even of different kinds, are disallowed for now); nested `{ ... }` blocks may still shadow outer parent bindings, and flow-sensitive type narrowing without redeclaration remains distinct. The file top level is an invisible-brace root code block with no parent block and `pub` as its sole addition, sharing uniform lookup/access rules with inner blocks. See [executable block items](lite://doc/evaluation-order#executable-block-items) and [local shadowing and copies](lite://doc/local-shadowing-and-copies).
-- For a permitted surrounding reference, a deferred body retains its selected symbol identity and reads its current value when evaluated. An earlier same-block symbol remains selected across a later same-block shadow; replacing the selected `var` value can affect later reads. Value copies and callee selection retain ordinary rules. Capture eligibility and lifetime rules remain open. See [binding identity](lite://doc/functions#existing-bindings-survive-later-shadowing) and [live reads](lite://doc/functions#live-reads-of-admitted-surrounding-bindings).
-- A returned function may safely retain a surrounding value beyond its creator's call, including the [reader and mutable counter examples](lite://doc/functions#surrounding-access-under-review). Each counter-producing call has distinct persistent state. Preserve Lite's low-level, low/no-runtime-overhead goals; retention mechanics, costs, sharing, resources and general lifetime rules remain open. Compiler support may follow later.
-- [Copying the counter](lite://doc/functions#copying-an-independent-counter) copies its current owned state; subsequent counter updates are independent. Copy eligibility and general treatment of references and resources remain open.
-- [Separate function copies from one block](lite://doc/functions#separate-copies-of-functions-from-one-block) do not implicitly share owned mutable state, including when returned together. Physical copies can be optimized when observable copy behavior is preserved.
-- Mutation is explicit: the [surrounding block example](lite://doc/functions#mutable-surrounding-blocks-and-escaping-state) uses `var` for the block's updated binding and a fixed function symbol; the escaping counter example uses `mut` on its result. General access and callable type rules remain open.
-- With no earlier same-name symbol in the defining block, an admitted deferred-body reference selects the first later same-name ordinary value symbol in that block before an already-visible outer symbol. Each code block introduces a scope, including function, ordinary, `if`, loop, and `match` blocks; lookup proceeds from the innermost scope through lexical parents one by one. The [nested examples](lite://doc/functions#a-nearer-value-through-nested-deferred-bodies) select nearer surrounding values. Initialization is not hoisted; early reads still fail the initial safety checks. General within-scope collisions, self-name collisions, and module resolution remain separate. See [nearer forward symbols](lite://doc/functions#nearer-forward-symbols-before-outer-symbols).
-- A direct function-valued declaration with no earlier visible same-name binding may refer to its own binding in its deferred body, with initialization required before invocation and no separate signature/header declaration. The explicit-input/result countdown probe is admitted. Ordinary names retain ordinary lexical lookup; explicit self calls select the current implementation. Mutual recursion, recursive inference, and escaping lifetime rules remain open. See [direct self-reference](lite://doc/functions#direct-self-reference-without-an-earlier-target).
-
-Open: partial construction, initialization through callees, and full field/element construction contracts.
+[Declarations and assignment](lite://doc/declarations-and-assignment) owns
+binding syntax and assignment. [Mutability](lite://doc/mutability) covers
+local permissions, while [caller grants](lite://doc/caller-mutation-grants)
+owns temporary access conveyed by a call. See
+[mutation grants for field receivers](lite://doc/type-operations#mutation-grants-for-field-receivers)
+for the first-call boundary.
 
 ## LS-003 — Types, unions, and zero
 
-Selected:
-
-- `T ! E` is a recoverable outcome type; `T!` is its shorthand. Success and error handling are explicit.
-- `Option<T>` is a named explicit optional type. There is no implicit null or nullable ordinary value. `Unit` is a real type.
-- [Alias and distinct declarations](lite://doc/type-aliases) distinguish another name for a type or symbol from a fresh nominal type.
-- `A | B` is a normalized plain union: order-independent, flattened, and duplicate-free. Normalization does not collapse nominal records, enum cases, `Option`, or `Result` into their payloads or into `Unit`.
-- Equivalent union spellings share the same member-to-Kind mapping at a shared representation boundary, including between compatible separately compiled consumers. Actual numeric tags, their stability policy, layout/ABI and unknown-tag behavior remain open; see [the Kind mapping rule](lite://doc/union-zero#one-kind-mapping-for-the-same-union-type).
-- A value is admitted to a union when its normalized type is an exact member; widening preserves the source member. Narrowing is checked.
-- A union field read is valid when every possible alternative exposes that readable field; its type is the normalized union of the field types. Construct the result representation by selecting the active parent's field and admitting its value into that result union; this is conceptually a complete narrowed if/else, not reinterpretation of the original field as union storage. Evaluate the receiver once and preserve ordinary copies. A field write must be compatible with every possible target. See [field-read representation](lite://doc/union-field-reads#field-reads-construct-the-result-representation).
-- Current FVP work uses ordinary sequence-copy semantics; compiler/post-compilation optimizations may remove physical copies while preserving all selected behavior. Explicit noncopying modes come later. This adds no ownership syntax or optimization implementation; see [INV-055 clarification](lite://repo/research/investigations/INV-055-fvp-owner-boundary.md).
-- Fixed-array [S; N] values widen to [T; N] through ordinary copying when S safely widens to T and access/initialization/copy contracts hold. Preserve extent, order, values, and the source contract; adapt representation if needed. Widening grants no write permission and introduces no shared view or write grant. See [fixed-array widening](lite://doc/arrays#fixed-array-values-widen-element-by-element).
-- `[Int64; 2]` and `(:Int64, :Int64)` are distinct types despite equal selected inline layout. Equal stored values do not establish type identity. Conversion, ABI, and other array/tuple shapes remain separate questions; see [the identity clarification](lite://doc/arrays#equal-layout-does-not-determine-type-identity).
-- Tuple values widen component by component when every corresponding payload fits ordinary value compatibility and the remaining label/access/copy contracts hold. Preserve ordered shape, nesting, source type, segment roles/extents, and write-grant restrictions. Explicit typed label conversion remains a separate bypass; no reconstruction or same-layout guarantee is required. See [tuple widening](lite://doc/types-and-inference#tuple-values-widen-component-by-component).
-- Generic value widening requires proof of compatibility of the complete instantiated contracts; compatible type arguments alone are insufficient. Simple compatible inline payload copying may fit; an Int-only stored callback cannot promise to accept String. Reject conversions without a valid proof. Syntax and the complete generic proof system remain open; see [generic widening](lite://doc/types-and-inference#generic-widening-requires-complete-compatibility).
-- Union member-only var access needs a valid active-member proof and permits writes of that member without changing the tag; unnarrowed payload-reference writes are rejected. Whole-union var access remains allowed and may replace tag plus payload, including Int to String without narrowing. See [union write grants](lite://doc/call-replacement-flow#union-payload-grants-and-whole-union-grants).
-- A valid plain-union member refinement permits checked payload reads and ordinary member-typed arguments without shrinking union storage or granting writes. Ordinary calls copy the payload in the callee's required representation. Whole-union replacements still use the declared accepted types and update tag/payload plus subsequent read facts. See [union payload access](lite://doc/union-membership#checked-payload-reads-and-ordinary-arguments).
-- Unchecked narrowing is a compile-time error. A narrower annotation alone is insufficient; an established static proof or checked selection/handling must justify the narrower contract. See [checked narrowing](lite://doc/types-and-inference#unchecked-narrowing-is-rejected).
-- All-zero storage is a valid language-defined value for every type. Result zero is `.ok(zero(T))` for `T ! E`.
-- A multi-member union's active member for `zero(T)` is still open; do not choose a canonical or leftmost member.
-
-Open: generic declaration/application syntax, union-zero priority, and zero mappings for enums, references, resources, and constrained domains.
+[Types and inference](lite://doc/types-and-inference) links the rules for
+literal typing, compatibility, and inference. See [aliases and distinct
+types](lite://doc/type-aliases), [records](lite://doc/records),
+[enums](lite://doc/enums-and-variants), and
+[union normalization](lite://doc/union-normalization) for identity.
+[Zero initialization](lite://doc/zero-initialization) and
+[union zero](lite://doc/union-zero) own the corresponding value contracts.
 
 ## LS-004 — Initialization and defaults
 
-Selected:
-
-- An admitted omitted typed local `name: Type` immediately zero-initializes that type, subject to the multi-member union restriction below and the unresolved zero mappings in LS-003.
-- Where admitted, the initializer spelling selects the mechanism: omitted typed local → zero; `= 0` → zero; `= {}` → declared field defaults; `= ?` → reserved storage.
-- Where zero construction is admitted, `name: Type = 0` uses the language-defined zero. `name: Type = {}` uses declared field defaults.
-- Reserved `= ?` storage is not readable before initialization and adds no `Unit`, `None`, or unknown union member.
-- A bare typed declaration initializes all-zero storage for every type. Contextual `0` can mean zero storage or a numeric value; distinct viable results are an inference error. Union Kind 0 identifies no known active member; `= ?` requests uninitialized storage.
-- A zero-initialized union has no known active member; programs can check and explicitly handle that state in a match. A match that reaches it unhandled implicitly panics, and ordinary `_` covers listed members. State names and checker/pattern syntax remain open; see [union patterns](lite://doc/union-patterns#zero-initialized-union-state-in-checks-and-matches).
-- A conditional initializer without `else` leaves the declaration default on no match. `else { ? }` leaves the binding reserved on that path, correlated with the condition.
-- A fixed binding's first whole-value write initializes it; later replacement requires `var`.
-- Record construction must satisfy required fields and the type's validity contract.
-
-Open: field-default mechanics, partial construction, and allocation/cleanup details.
+[First initialization](lite://doc/first-initialization) owns definite
+initialization, including [conditional reservation](lite://doc/first-initialization#conditional-reservation).
+[Zero initialization](lite://doc/zero-initialization) covers bare typed
+declarations. [Record initialization](lite://doc/record-initialization) covers
+field defaults. [Callable default contracts](lite://doc/callable-default-contracts)
+covers omitted arguments.
 
 ## LS-005 — Functions and calls
 
-Selected:
-
-- A local function with an omitted input type can infer a reusable indexed-read requirement from its body, retaining the supplied provider's element type in the result across calls with different compatible providers. An explicit complete public contract exposes its requirements and relationships and cannot be silently strengthened by its body. This selected direction is not yet implemented; generic constraint and signature syntax remain open. See [local indexed inference](lite://doc/collection-function-signatures#local-inferred-indexing-and-explicit-public-contracts).
-
-- Generic functions declare their parameter names in a separate angle-bracket list. Inference of omitted parameter annotations from signature positions is selected and awaits implementation. See [generic parameter declarations](lite://doc/generic-notation#explicit-generic-names-and-inferred-parameter-declarations).
-
-- self(...) explicitly invokes the implementation currently executing with its implementation environment, independently of later shadows or replacement of its named binding. Ordinary call evaluation/checking and failure/cleanup rules apply; no tail-call guarantee or header is implied. Ordinary named calls keep lexical lookup, and the earlier implicit no-earlier-target recursion remains valid. Only this self-call form is selected; first-class self, name collisions/reservation, and full nested/outer targeting remain open. See [explicit self calls](lite://doc/functions#explicit-current-function-self-calls).
-
-- Function types and literals use `fn`; ordinary parameters are written `name: Type`.
-- A function type is its signature without a body; function literals are ordinary value expressions.
-- A compatible fallible callable view may widen success and/or declared error payload types in one outer `T ! E` result, preserving `.ok`/`.err`; narrowing extra errors requires explicit handling/mapping. The original source retains its contract. See [callable outcome widening](lite://doc/callable-value-variance#fallible-callable-views-may-widen-outcomes).
-- Access qualifiers follow the colon: `fn(user: mut User)` for held-data mutation and `fn(target: var T)` for caller-storage replacement.
-- Basic `var T` parameter types stay invariant when converting callable signatures: reading and writing require the same resolved `T`. Explicit public-label conversion cannot change that value/access contract. Individual `var` argument admission still uses current read facts and accepted writes; see [callable var invariance](lite://doc/callable-value-variance#var-parameters-keep-their-value-type).
-- A zero-initialized callable is callable, performs no user-body work, and returns `zero(R)` after ordinary argument evaluation and required cleanup.
-- The public callable contract must permit argument omission. Ordinary user implementations need an applicable declared default; supplied arguments take precedence.
-- Call evaluation prepares the callee and supplied arguments in source order. Ordinary user implementations then evaluate missing applicable defaults in declared slot order at call time. An exit stops later preparation.
-- A zero implementation runs no defaults and needs no actual default definition for omission-capable ordinary inputs. It preserves supplied-argument evaluation and required cleanup, returns `zero(R)`, and grants no omission of required inputs or fabricated access permission. See [zero-callable omission](lite://doc/callable-default-contracts#zero-callable-omission-selected).
-
-Open: complete default grammar and lookup, generic callable compatibility, signature/implementation placement, and ownership/ABI details.
+[Functions](lite://doc/functions) owns callable declarations and lookup.
+[Named input routing](lite://doc/named-input-routing) owns positional and named
+inputs. [Type-attached operations](lite://doc/type-operations) owns static and
+instance calls. [Generic parameter declarations](lite://doc/generic-notation#explicit-generic-names-and-inferred-parameter-declarations)
+records the agreed inference direction. See [closures](lite://doc/closures)
+for deferred capture and lifetime design.
 
 ## LS-006 — Conditionals
 
-Selected:
-
-- A conditional is total only with a final `else`.
-- A no-`else` conditional is partial. Matching branches supply `T`; no match is noncontributing.
-- Declaration initializer: the declaration default remains (`zero(T)` or reserved with `?`).
-- Assignment: no match performs no write.
-- Loop body: no match contributes nothing and preserves `.value`.
-- Value-required context — argument, return, arithmetic, nested expression, or `then` — requires a final `else`.
-- `then` requires a final `else`, receives the selected `T`, and produces `R`. A partial no-`else` conditional cannot carry `then`.
-- `else { ? }` is an explicit no-initialization/no-write/no-contribution branch. `?` is a control-flow marker, not a value: it cannot be stored, passed, returned, compared, or used in arithmetic.
-- A conditional's tagged `.value` is readable only inside its attached `then` via `@tag.value`; condition metadata is hidden.
-- A returned error or unhandled panic supplies no conditional `T`, so result-processing `then` is skipped. A locally recovered failure may still complete a branch normally.
-- A multi-member union declaration initializer requires an explicit `else` or `?`; assignment and loop no-match paths do not.
-
-Open: exact cleanup attachment scope, the `&` form's public value/operations, and general coverage proofs.
+[Conditionals](lite://doc/conditionals) owns conditional forms, including
+[partial initializers](lite://doc/conditionals#no-final-else-guarded-update)
+and [pattern guards](lite://doc/conditionals#pattern-binding-followed-by-guards).
+[Condition chains](lite://doc/condition-chains) covers sequencing and binding
+visibility. [Branch-result inference](lite://doc/branch-result-inference)
+covers result types shared with [match](lite://doc/match).
 
 ## LS-007 — Loops
 
-Selected:
-
-- One `loop` keyword supports iterable, Boolean, and unconditional sources.
-- `as` names one optional item. Destructuring happens inside the body; positional receiver lists and completion receivers are retired.
-- `.item`, `.count`, and `.value` are loop metadata; `.index` is additionally available only for positional sources such as arrays, lists, and slices, not for a unique set. `.value` has static type `T` and starts at `zero(T)`.
-- `.item` is `Unit` in Boolean and unconditional loops. After zero body entries, `then` exposes type-directed zero placeholders and `.count == 0`.
-- A normally completing tail value, `continue value`, or `break value` commits to `.value`. Plain `continue` and bare `break` preserve it.
-- A no-`else` conditional in loop tail position contributes nothing on no match; a declaration such as `x := if ...; x` still contributes `x`'s declaration default.
-- A receiverless `then` processes the completion result. Without `then`, the selected result is final `.value`.
-- `break`, `continue`, and `return` may target an explicit `@tag`. A targeted return runs only the named target's `then`.
-- If no path contributes and no expected type constrains `T`, `T` defaults to `Unit`.
-- A construct-level `finally` on `if` and `loop` runs after `then` (when present) on normal completion and when the construct is left by `return`, a targeting `break`/`continue`, a fault, or `exit`; its `Unit` result does not replace the construct result. Inner cleanup runs before a targeted exit reaches an outer loop. Faulting cleanup currently replaces a pending exit; primary/secondary retention remains unimplemented. See [finally](lite://doc/finally).
-- The igniter implements a typed, zero-initialized `.value`, body-tail commits, plain `continue`/bare `break` preservation, final `.value` without `then`, and one receiverless `then` with `.value`/`.count` and a transformed result. `T` is inferred from an expected destination, a named sequence element type when the body reads `.value` or supplies an exit payload, or the body tail. Action loops without `then` stay `Unit` and commit nothing. `.count`, `.item` and positional `.index` are readable in bodies and `then`; payload `break`/`continue`, `break @tag`, `continue @tag`, `return @tag`, and tagged `@tag.field` access are implemented. Noncontributing partial-conditional body tails and conditional tags remain unimplemented. See [loop value](lite://doc/loop-value) and [loop completion](lite://doc/loop-completion).
-
-Open: complete body/result inference, nonzero `.value` initialization, lifetime/retention, and cleanup attachment.
+[Loops](lite://doc/loops) owns source forms and iteration. See
+[loop value](lite://doc/loop-value), [loop type inference](lite://doc/loop-type-inference),
+and [loop completion](lite://doc/loop-completion) for accumulated results,
+metadata, and completion.
 
 ## LS-008 — Errors, recovery, and cleanup
 
-Selected:
-
-- [LP-0018 r1](lite://doc/proposals/LP-0018-implicit-panics-without-effect-declarations) prohibits checked live-panic effect declarations/inferred lists. Ordinary indexing, arithmetic, and helpers may panic implicitly without transitive signature noise. A literal fn(): T ! Panic returns stored outcome data; it does not describe an effect silently stripped by ordinary calls. Newly captured live occurrences use broad Panic while retaining concrete category/payload identity. Documentary known-fault annotations remain non-exhaustive and under investigation, with no typing/exhaustiveness effect.
-- [LP-0016 r1](lite://doc/proposals/LP-0016-recapture-and-warning-policy) permits recapture as T ! (Es | Panic), unchanged if Es already includes broad Panic. No extra outward layer, re-raising, duplicate occurrence removal, or nested success flattening follows. An unchanged type alone cannot justify a warning; any optional proof-based redundant-capture warning is suppressible, and all warnings are suppressible generally. Exact control syntax/configuration remains open.
-- [LP-0017 r1](lite://doc/proposals/LP-0017-result-failure-occurrence-patterns) selects .err(e) first-occurrence binding as F and .err(...es) ordered all-occurrence binding as [F] for T ! F. Tag-only .err binds nothing; .ok(value) preserves the whole T. Scalar subpatterns test only the first occurrence, without searching or mutating the source. A scalar raise forwards only that value; explicit collection or outcome! can preserve the whole group. This does not flatten occurrence internals or change generic enum/tuple-rest semantics.
-
-- Ordinary returned errors use T ! E without implicitly including Panic. [LP-0009 r1](lite://doc/proposals/LP-0009-flat-failure-capture) selects exp? capture into flat T ! Panic or T ! (E | Panic), normalizing one outward Result layer while retaining ordered occurrences, repeated categories, and origins. Any expression may be captured; complete blocks use ({ ... })?. Capture starts before operand evaluation and does not intercept function/closure exits or unwrap Result arguments.
-- Stored `S ! E` values widen to `T ! F` when both payload types fit by selected safe widening, recursively across matching layers. Preserve `.ok`/`.err`, active payloads, ordinary copies, and the source contract; no flattening, added layer, unwrap, unchecked narrowing, or writable-grant widening. See [stored Result widening](lite://doc/result-and-errors#stored-result-values-widen-safely) and [general safe widening](lite://doc/types-and-inference#safe-widening).
-- Recovery tags have explicit block scope ([LP-0008 r1](lite://doc/proposals/LP-0008-recovery-block-tags-and-traces)). A protected-block tag does not enclose its handlers; a tagged wrapper must explicitly contain the full chain. `else ...errs: DiskFull @myblock { return @myblock value }` completes only that handler, leaving the remainder for later layers. Nonlocal exits with unmatched failures remain open.
-- `else` recovery is target-level. An operation handles only its defined faults; argument/operand panics bypass that handler ([LP-0001 r1](lite://doc/proposals/LP-0001-operation-specific-panic-recovery)). An explicit `{ ... } else { ... }` block covers supported typed panics from its contents, argument evaluation, and synchronously called code ([LP-0002 r1](lite://doc/proposals/LP-0002-explicit-block-panic-recovery)). The block boundary is active before its first item; the handler is outside its own protection.
-- Typed filters may select an error/panic type, preserve declared order, and bind a receiver where selected.
-- Recovery munches pending occurrences in written else order, independently of error occurrence order ([LP-0003 r1](lite://doc/proposals/LP-0003-pending-failure-munching)). A single failure is schematically (ErrSingle,), an aggregate contains several occurrences, and () means none. A match consumes only its match; no match runs no handler and consumes nothing. A proven empty remainder needs no further catch or returned-error propagation for those handled failures, provided no new failures are introduced. This is a recovery-state model, not a selected tuple ABI or primary-promotion rule.
-- Error declarations admit types without occurrence counts ([LP-0004 r1](lite://doc/proposals/LP-0004-count-free-error-contracts)). Complete type-directed recovery must not require predicting aggregate multiplicity or writing one clause per unknown occurrence. LP-0013 now selects typed scalar first-match/discard; untyped broad binding remains open; LP-0006/LP-0007 below clarify consumption of all matches and explicit collector binding. No error-count parameter or implicit handler loop is selected.
-- Simple catches consume all matching pending failures ([LP-0006 r1](lite://doc/proposals/LP-0006-whole-match-failure-consumption)): an ordinary ErrA filter covers every ErrA occurrence; a receiverless catch-all covers all supported pending failures. Explicit sequence capture is not required for complete consumption. LP-0013 now selects typed scalar first-match/discard; untyped broad binding remains open. The explicit ellipsis collector is selected below; the earlier bracket-annotation capture candidate is not an alternative spelling.
-- [LP-0007 r1](lite://doc/proposals/LP-0007-typed-recovery-collectors) selects ...errs: Error with [Error], singleton/multiple ordered matches, and once-per-matching-clause execution. [LP-0009 r1](lite://doc/proposals/LP-0009-flat-failure-capture) adds ...ps: Panic and ...fails: Failure with [Panic]/[Failure], selecting panics and both channels respectively. Clauses execute in written else order; each collector preserves within-group occurrence order. Stored unmatched panics remain in the residual outcome. LP-0013 now selects typed scalar first-match/discard; untyped binding, origin access, and retention/transport remain open.
-- [LP-0010 r1](lite://doc/proposals/LP-0010-outcome-extraction-and-exhaustion) generalizes ! to extract one success layer or forward all retained failures from the nearest function/closure. Returned errors obey declared coverage; captured panics resume their channel through applicable cleanup. Later local else cannot intercept that exit itself; ordinary live operand panics are not captured by !.
-- Complete static failure exhaustion yields the ordinary normal value type with no further !. Runtime success alone is insufficient. A narrow BoundPanic filter leaves open Panic; new handler/cleanup failures remain obligations. See [x11–x26 types](lite://doc/failure-capture-and-unwrapping#types-of-the-review-examples).
-- [LP-0012 r1](lite://doc/proposals/LP-0012-manual-failures-and-error-inference) selects custom Error/Panic capability and eligible error inference. [LP-0014 r1](lite://doc/proposals/LP-0014-directed-failure-exits) now makes scalar/group raise a directed failure exit for both channels, defaulting to the nearest function/closure or naming an enclosing executable block with @outer. After operand evaluation transfer bypasses recovery inside its target; surrounding recovery of the completed target remains eligible. Preserve supplied order/origins and required cleanup. This supersedes bare-Panic local interception from LP-0012; generated/live operation panics keep ordinary propagation.
-- Eligible nonrecursive bodies with established inputs and no explicit/expected output infer success types and escaping returned-error categories: Error raises, .err returns, ! forwarding, and outward fallible tails. Exclude implicit panics, handled/local stored Results, and uninvoked nested bodies. Explicit/expected outputs remain constraints. See [manual examples](lite://doc/manual-failures-and-inference); recursive/public/no-normal-completion policies remain open.
-
-- [LP-0015 r1](lite://doc/proposals/LP-0015-early-return-recovery-paths) selects normal function return from a captured recovery handler: abandon that unfinished expression and return the written value, even if other captured errors/panics remain. No implicit forwarding or additional handling rejection applies to this return pattern. The recovery declaration is not initialized on that path; its residual type describes continuing paths only. The returned value belongs to the function success contract. Required cleanup/new failures retain their ordinary rules. See [the tmp1/tmp2 trace](lite://doc/expression-recovery#early-function-returns-and-continuing-path-types).
-
-- [LP-0013 r1](lite://doc/proposals/LP-0013-scalar-recovery-selection) selects typed scalar first-match exposure and consumption/discard of other matches, leaving different categories untouched. Ellipsis exposes all matches. Once-per-clause execution and exact ordered tuple binding remain unchanged. LP-0017 now selects .err occurrence inspection; untyped broad recovery binding remains open. [Draft LP-0011 r4](lite://doc/proposals/LP-0011-explicit-failure-raising) now concerns other pending categories on failure-directed/tagged exits and transport/provenance, not ordinary early function return, raise syntax, or target selection.
-
-- `A | B` is an alternative; `A & B` is an order-insensitive co-occurrence set and binds no value.
-- Ordered failure tuples use existing tuple syntax and bind a real tuple; positional access works, labels only in the named form.
-- `finally` is cleanup-only: it has no receiver, does not recover failures, and does not replace a pending result/exit.
-- `finally` runs on normal and abrupt exits and preserves the pending outcome when cleanup completes normally. Cleanup failures follow the selected primary/secondary precedence.
-- `then` runs before `finally` on normal loop/conditional completion. A handler in the same scope recovers a matching typed panic before that scope's `finally` runs once on exit.
-
-Open: custom failure-category declaration/conformance, ambiguous classification, recursive/public error inference, re-emission provenance, carrier construction/origin APIs, mixed-channel forwarding ABI, [untyped broad receiver binding, retention/transport, and exits with a remainder](lite://doc/proposals/LP-0005-handler-execution-and-exits), `Error`'s full contract, operation fault attribution, complete recovery-chain/assignment attachment, the `&` form's public value/operations and transport, exact `finally` attachment scope, and hard-abort behavior.
+[Result and errors](lite://doc/result-and-errors) introduces the failure
+channels. [Expression recovery](lite://doc/expression-recovery) and
+[recovery boundaries](lite://doc/recovery-boundaries) govern handling scope.
+See [capture and unwrapping](lite://doc/failure-capture-and-unwrapping),
+[panics](lite://doc/panics), and [finally](lite://doc/finally) for their
+separate contracts and open questions.
 
 ## LS-009 — Collections and sequences
 
-Selected:
-
-- Consumers request capabilities rather than one concrete collection type.
-- The approved builtin FVP List<T> slice supports scalar/flat-tuple elements, typed empty/nonempty construction, ordinary sequence copies, readable indexing/traversal and four explicit end operations on named writable bindings. Bounds/empty pops use temporary terminal BoundPanic; general generics, capacity, views, indexed writes, user-function mut parameters and recovery remain unimplemented. See [INV-055 evidence](lite://repo/research/investigations/INV-055-fvp-list-slice.md).
-- Fixed arrays, growable lists, and slice views are the sequence storage roles.
-- The canonical sequence end-operation names are push_front, push_back, pop_front and pop_back, selected 2026-10-31. The separately approved builtin List<T> FVP slice now implements typed construction and positional end operations with explicit mut grants; capacity/permanent allocation behavior and complete signatures remain open. See [INV-055](lite://repo/research/investigations/INV-055-fvp-list-operations.md).
-- A fresh nonempty bracket literal with an established element type and statically known total length `N` infers `[T; N]` unless an expected concrete collection type selects another family.
-- Statically known spreads contribute their lengths to `[T; N]`. `var`/`mut` and later operations do not by themselves change the inferred family or extent; an expected concrete growable collection can request a list.
-- Indexed reads/writes and pops use ordinary syntax; invalid bounds are typed faults recoverable by an attached `else`.
-- Iteration does not require conversion to a standard list or exposure of static size.
-
-Open: collection/iterator protocol names and syntax, empty/unresolved-element literal inference, generic constraints, conversions, ownership, and runtime-array spelling.
+Start with [collections and iterators](lite://doc/collections-and-iterators)
+and the [indexed sequence contract](lite://doc/indexed-sequence-contract).
+See [arrays](lite://doc/arrays), [lists](lite://doc/lists),
+[maps](lite://doc/maps), [sets](lite://doc/sets), and [slices](lite://doc/slices)
+for each family.
 
 ## LS-010 — Modules, tooling, and project stage
 
-Selected:
-
-- Separately compiled Lite libraries and consumers must be able to interoperate
-  as Lite components, without requiring implementation-source imports, a single
-  compilation unit or a redesigned C FFI API. Compatible components exchange
-  runtime values according to their shared contracts; source-level type
-  agreement alone does not make incompatible representations safe. Library
-  artifacts, ABI scope, versioning, validation and linking remain open; see
-  [separately compiled libraries](lite://doc/modules-and-packages#separately-compiled-libraries-and-runtime-agreement).
-  Independent library and consumer builds must establish consistent mappings
-  and meanings under the shared contract without whole-program compilation.
-
-- The approved igniter fixed-array subset runs nonempty homogeneous literals of scalars/flat tuples, Int bracket/literal dot reads, explicit [T; N] function inputs/results and action traversal with optional as item. Exact extents/types, evaluated value copies, source-once traversal, scoped receivers and nearest-loop exits are preserved. Runtime bounds use the temporary BoundPanic diagnostic. Empty construction, unions, nested arrays, mutation/growth, views, metadata, general sequence contracts and native layout remain unimplemented. See [fixed-array coverage](lite://repo/igniter/README.md#fixed-arrays-and-traversal).
-- Named user-function calls implement fixed-slot interleaving, =name shorthand and named replacement of positional contributions, preserving written evaluation order and checking final slot types. Defaults/spread and builtin public labels remain unimplemented. See [INV-031 evidence](lite://repo/research/investigations/INV-031-fvp-named-calls.md).
-- Explicit typed receiving declarations now support positional label conversion of stored flat scalar tuples with exact ordered shape/types; ordinary transfers remain label-sensitive. See [conversion evidence](lite://repo/research/investigations/INV-022-fvp-label-conversion.md).
-- The mixed-field increment adds existing interleaved named/unnamed flat tuple values and annotations, preserving position/label identity through copies, function contracts and arrays. See [INV-022 evidence](lite://repo/research/investigations/INV-022-fvp-mixed-tuples.md).
-- The named-field igniter increment implements flat fully named scalar tuple values, =name shorthand, literal fields and named tuple function inputs/results, preserving label-sensitive stored transfers and positional order. Contextual constructor routing, nested tuples, named patterns, spread and mutation remain unimplemented. See [named-field coverage](lite://repo/igniter/README.md#named-fixed-tuples).
-- Approved inputArgs(): List<String> exposes only ordered script arguments after an explicit -- suffix, without stdin/output effects or implicit write grants. Existing commands remain valid; --check still does not execute. See [INV-067 evidence](lite://repo/research/investigations/INV-067-fvp-script-arguments.md).
-- The approved temporary inputAll helper accepts zero or one positional String prompt and returns all remaining decoded stdin through EOF, preserving whitespace/lookahead/line endings and returning empty text at immediate EOF. Its prompt uses stdout without an added newline before reading, matching inputInt; other helpers retain their existing EOF behavior. See [INV-004 evidence](lite://repo/research/investigations/INV-004-fvp-whole-input.md).
-- For the temporary FVP helpers, inputInt accepts an optional String prompt written exactly to stdout without an added newline before reading. report accepts one or more ordinary scalar/Unit arguments and flat fixed tuples, evaluates them once left to right, joins their displayed values with spaces and adds a newline. A first String is ordinary data. Selected 2026-11-01: tuples display source-like (`(1,)`, `(1, 2)`, `(1, left=2, right=3, 4)`), labels come from the static tuple type, and Unit still displays as `Unit`. No formatting template, array/list/callable report, or tuple call spread is selected. Other helper signatures remain unchanged. See [prompt/report selection](lite://doc/tooling-and-learning#optional-integer-input-prompt-and-multiple-report-values).
-- The user-requested executable root ./bin/lite run launcher forwards to the current igniter, preserving arguments, caller-relative source paths, standard streams and exit status. It uses node from PATH and passes through the existing --check option; no installed command, build backend or language feature is implied. See [root launcher](lite://doc/tooling-and-learning#root-run-launcher).
-- Superseding runner selection, 2026-11-05: `./bin/lite run` compiles one script to a temporary TS artifact, executes it with `node compiler/entry.ts`, forwards arguments after an optional `--`, standard streams and exit status, and removes the temporary directory. It restores no interpreter, adds no T00 fallback and no separate release stream; `./bin/lite check` remains check-only. See [tool naming](lite://doc/versioning-and-naming#1-canonical-names).
-- Selected output direction: TS first for an auditable permanent bootstrap, early self-hosting and maintained web output; C first native and maintained library/project export/migration target; possible AS/early Wasm remains an investigation. Keep igniter/self-hosted work overlapping until sufficient confidence. Exact byte-output parity and reproducible provenance are goals; see [INV-061 direction](lite://repo/research/investigations/INV-061-first-compiler-output.md).
-- Feature and artifact verification now lives in `language/verifications/`: 36 canonical feature cases are the semantic contract, while all 19 examples and all 20 samples are verified consumers with `source.file`/`source.text`/`source.bytes`, `source.hash`, per-stream hashes and expected streams. `./bin/lite verify` runs git-affected cases and `./bin/lite verify --all` runs all 75 scenarios (91 target executions); both support `--update`, `--coverage`, `--filter`, `--shard i/n`, `--no-cache` and `--quiet`, with cached passes. Eight feature cases opt into `targets: ["igniter", "ts", "c"]`. `./bin/lite test` is a short smoke suite; `--fast` runs generated regressions with source sweeps omitted, and `--full` runs the complete local gate. Samples use `append` observation calls instead of changing teaching bodies. Coverage is blocking for features, examples and samples; broader compiler targets and showcases remain open. GitHub Actions runs the test, verification and editor gates. See [INV-073 evidence](lite://repo/research/investigations/INV-073-verification-registry.md) and the [verification guide](lite://repo/language/verifications/README.md).
-- Lite compiler sources live under `compiler/src/` with shared core modules in `lib/core/`; compiler files use namespace aliases and explicit `pub` declarations. Each manifest names one source root, and the Lite import visitor processes its dependency graph. One selected TS igniter builds both the TS compiler and the TS-hosted C emitter; this verifies neither native C self-hosting nor the full Lite design. T00 and the T11–T16 generated chain are retired. The recorded compiler corpus has 69 program and 25 rejection cases; the current source graph preserves all recorded TS artifact and execution contracts. Compiler imports, cycle handling and the outstanding span/initialization boundaries are described in [module-import-stages](lite://doc/compiler/module-import-stages). See [extraction evidence](lite://repo/research/investigations/INV-061-compiler-extraction.md) for historical checkpoints.
-- The igniter and restricted TS/C emitters now admit truncating Int `%` with signed dividends, zero-divisor failure and compile-time folding in the emitters; a 42nd program fixture covers signed cases, and samples 008/018 now execute. See [operators](lite://doc/operators).
-- The restricted TS/C emitters now admit Int division/remainder (`/`, `%`) and floor division/modulo (`:/`, `:%`), String literals/escapes, immutable String locals, String `+` concatenation, multi-value reports over Int/String values, plus the control-flow slice: Bool values/comparisons/logic, mutable locals and assignment, `if`/`else`, and Boolean/unconditional loops with runtime report output. Constant String expressions fold, while dynamic concatenation lowers to TS `+` or a checked C byte-copy helper; emitted literals are escaped for TS and C. Compiler verification at this earlier checkpoint was 69 program and 24 rejection cases under `igniter/tests/compiler/`; each pairs a sibling `.lts` entry source with a JSON model containing a `source` object (`file`/`text`/`bytes` plus `hash`) and `cases[]` (each case has optional `stdin`/`stdout`/`stderr` and required `exitCode`; each stream uses `text`/`bytes`/`file` plus `hash`), with filenames `NNN-MMM-title-subtitle.json` (001 program, 002 rejection). All program cases pass four-way parity and all rejection cases pass exact diagnostics through both compilers. The current gates cover strict checking, 32 compiler-host groups, 4 policy/tooling groups and 9 editor groups. Text operations/indexing, NUL handling, runtime input and self-rebuild remain open; see [String/report evidence](lite://repo/research/investigations/INV-061-string-and-multi-value-reports.md).
-- The restricted TS/C emitters now admit left-associative `+ - * /`, parentheses, unary signs and immutable `x := <expression>;` locals. Expressions are checked in signed 64-bit at compile time and lowered to TS BigInt or C `int64_t`; the 28-case arithmetic/local corpus has raw byte/status/signal parity across emitted TS, translated JS, native C and the igniter. Range faults and division by zero are compile-time rejections; see [arithmetic/local evidence](lite://repo/research/investigations/INV-061-arithmetic-and-locals-emission.md).
-- The two restricted compiler applications consume an optional explicit source-name argument for their own rejection diagnostics, preserving valid artifact bytes. This is application behavior, not generated runtime diagnostic parity or a new language feature; see [context evidence](lite://repo/research/investigations/INV-061-compiler-source-context.md).
-- The restricted TS/C emitters now consume complete source through approved inputAll, accepting multi-line whitespace while rejecting unsupported later content before emitting artifacts. Twelve admitted cases have raw-byte/status parity; see [whole-source evidence](lite://repo/research/investigations/INV-061-whole-source-emission.md).
-- A matching restricted Lite-to-C emitter now produces actual native output: nine constant-report programs match the TS and igniter output bytes/status after external C compilation. This is not general native lowering, library export or self-hosting; see [C evidence](lite://repo/research/investigations/INV-061-c-emission-and-parity.md).
-- A first restricted Lite-to-TS emitter now has raw stdout/stderr/status parity across signed report literals, strict checking and TS-to-JS execution. It is not a self-hosted compiler snapshot or browser/AS proof; see [bounded evidence](lite://repo/research/investigations/INV-061-ts-emission-and-parity.md).
-- A Lite-written integer calculator now demonstrates retained-token parsing, recursion and value/position results on the unchanged alpha.15 interpreter. This adds no language feature or compiler stage; see [INV-061 evidence](lite://repo/research/investigations/INV-061-lite-arithmetic-front-end.md).
-- The user-approved igniter tuple subset executes flat unnamed scalar tuples, .0/.1 reads, ordinary positional declaration patterns and explicit tuple function inputs/results. Exact shape/types, Unit/singleton/grouping distinctions, value copies and receiver binding order are preserved. Wider tuple forms, mutation, native layout and the broader text profile remain separate. See [fixed-tuple coverage](lite://repo/igniter/README.md#flat-fixed-tuples).
-- The user explicitly approves temporary textLength/textAt/textSlice helpers on 2026-10-31 with code-point positions, half-open intervals and terminal bounds faults. The igniter retains their implementation and demonstrates a retained-token scanner using approved named-tuple lists. Earlier tags did not confer consent; generic String indexing, full text policy, native representation and self-hosting remain open or unimplemented. See [text-helper coverage](lite://repo/igniter/README.md#temporary-text-operations).
-- The igniter now also executes explicitly scalar-annotated fn literals, positional calls, return, and own-name/self(...) recursion, with separate call environments and lexical/live helper reads. General captures, later helper lookup, inference, wider routing and callable inputs/results remain unsupported; this does not select a general capture policy. See [typed-function coverage](lite://repo/igniter/README.md#typed-user-functions).
-- The igniter also implements action-position Boolean and unconditional loops with scoped bodies and bare nearest-loop break/continue. Value-producing loops, metadata, iteration protocols, header transfers, and completion/cleanup forms remain unsupported; the broader loop contract is unchanged. See [action-loop coverage](lite://repo/igniter/README.md#action-loops).
-- The next implemented igniter increment adds Bool-only logical operations, scalar comparison chains, scoped blocks, and basic conditionals. Same-type value branches and no-else actions are supported; partial conditional values/guarded updates, unions, patterns, and then/finally are rejected pending implementation. See [actual conditional coverage](lite://repo/igniter/README.md#conditions-and-block-values); broader language contracts remain selected independently.
-- Strict TypeScript run directly by Node replaces Python as the minimal bootstrap igniter for the experimental interpreter. Move compiler development to LiteLang as soon as supported language features permit, retire active host-language development, and preserve the versioned seed/source route to rebuild the current compiler. The bootstrap subset now has a recorded T11/T12 fixed point and the default TS compiler uses that generated seed; wider feature parity and the native C chain remain pending. See [igniter and early self-hosting](lite://doc/tooling-and-learning#typescript-igniter-and-early-self-hosting).
-- Valid constant integer expressions still fold, while constant overflow/division/remainder faults lower to checked runtime operations and occur only when reached. Dead branches, false loops, short-circuit operands and unused functions remain unevaluated; invalid literals/types/names still reject before effects. Constant MIN%-1 and MIN:%-1 emit zero for portable C. See the [deferred-fault ledger](lite://doc/compiler/parity#deferred-constant-arithmetic-faults).
-- Parenthesized inequality and bare String/Int/Bool function-tail comparisons now remain distinct from assignment and named tuple fields. This closes parser ambiguities without selecting a new operator; see the [inequality ledger](lite://doc/compiler/parity#inequality-token-discrimination).
-- Generated C multi-value output evaluates every argument once, from left to right, before writing any part of the call. Later argument faults retain earlier calls' output without printing a partial current call. Single-value emitted C is unchanged; see the [C output-order ledger](lite://doc/compiler/parity#c-output-argument-evaluation).
-- The compiler now discovers target helper requirements in one pass through emitted expressions. This preserves exact program artifacts/diagnostics and reduces measured compiler time on output/self-source workloads; see the [helper-scan ledger](lite://doc/compiler/parity#single-pass-helper-discovery).
-- Generated TS and portable C11 now check dynamic default-Int addition, subtraction, multiplication and negation, preserving exact positioned ArithmeticPanic diagnostics, prior output and status on overflow. This existing-feature parity slice leaves constant folding, division-family behavior and wider numeric/type gaps separate; see the [arithmetic ledger](lite://doc/compiler/parity#checked-int64-arithmetic).
-- The temporary interpreter numeric profile uses checked signed 64-bit integers and one finite 64-bit binary floating family. Integer overflow, division by zero, and non-finite arithmetic results raise typed arithmetic panics; non-finite literals/input are rejected. Exact rounding, mixed promotions, literal grammar and formatting remain open. This does not freeze permanent numeric widths or a native ABI. See [temporary numeric profile](lite://doc/numbers#temporary-fvp-numeric-profile).
-- The igniter now also admits `Int8`, `Int16`, `Int32`, `Int64` and `Float32`, `Float64`, with `Int` = `Int64` and `Float`/`Float64`/`Double` aliases. Literals keep Int64/Float64 defaults; a literal constant may initialize a narrow annotated type only when it fits and is exactly representable (fractional `Float32` storage rounds). Arithmetic promotes to the wider width within one family; a mixed `Int`/`Float` arithmetic or comparison converts the integer operand to the floating operand's width (with possible precision loss for large `Int64`). Assignments/arguments/returns admit only the selected lossless widenings (including `Int8`/`Int16` to `Float32` and `Int32` to `Float`). Narrow arithmetic width-checks and Float32 rounds results. Narrowing, unsigned widths, casts, and stored tuple/array component widening remain unimplemented. See [numeric widths](lite://doc/numbers).
-- The first FVP uses a small interpreter: read one source file, parse/check its supported subset, and execute it with temporary input/report/exit helpers. Native compilation remains a later goal. The first checkpoint selects scalar integer/floating/text values, inferred bindings, var/replacement, basic arithmetic/grouping, and temporary helper calls. Conditionals/Booleans, loops, user functions, tuples, and richer types follow incrementally. Numeric/text details, helper contracts, and internal structure remain open; TypeScript/Node is the minimal igniter; the first narrow checkpoint is implemented. See [FVP interpreter](lite://doc/tooling-and-learning#fvp-interpreter) and [first checkpoint](lite://doc/tooling-and-learning#first-executable-checkpoint).
-- The immediate FVP uses provisional inputInt, inputFloat, inputLine, inputWord, outputLine(...), and reportError(...) helpers for explicit input/reporting. Invalid input or EOF before a value is available raises an input fault; unhandled faults produce a diagnostic and nonzero status, without automatic retry or fabricated values. An intentional empty inputLine is valid empty text. Complete signatures, exact parsing/consumption, fault category/transport, formatting, destinations, and implementation remain open. See [temporary FVP input and reporting](lite://doc/tooling-and-learning#temporary-fvp-input-and-reporting).
-- A successful reportError call reports only. Normal FVP completion maps to status 0; rejected programs and unhandled fatal execution failures map to nonzero, with exact codes and full failure policy open. exit(errCode?) explicitly ends the current program run with an optional code; omitted-code default, code domain, cleanup/finally and recovery behavior remain open. See [FVP completion and explicit exit](lite://doc/tooling-and-learning#fvp-completion-and-explicit-exit).
-- .lt module files have no implicit imports, including core type names. Definitions belong to packages/modules and require qualification or explicit member introduction. Module aliases and unpacking syntax remain open; syntax/literal typing is distinct from namespace imports. Script-run conveniences and their warning/log policy remain a proposal, and cannot make names implicit inside imported .lt modules.
-- Even standard modules/files should be replaceable through an explicit dependency/provider model. The compiler-primitive/library boundary, provider selection and compatibility mechanisms remain open. See [replaceable standard modules](lite://doc/modules-and-packages#replaceable-standard-modules).
-- Modules default to private visibility.
-- The official formatter is `lite fmt`. `lite fmt --check` is read-only and suitable for CI.
-- Formatting is a presentation transform. It requires syntactically valid source but is not a type checker or name resolver.
-- The formatter preserves meaning, is idempotent, and leaves a malformed or unverified file unchanged while reporting a diagnostic and failure status.
-- Lightweight native execution is a core priority: fast execution/startup, low memory overhead, small runtime support, and small final executables. Ordinary native programs should require neither a VM nor a tracing garbage collector. These are goals, not implementation guarantees; memory model, backend, numeric budgets, and linking mechanisms remain open. Preserve selected copies, safety, and cleanup; see [performance priorities](lite://doc/memory-and-performance#lightweight-native-execution-priority).
-- Salam joins the project reference languages. Simple English is the shared reference human-language presentation. Familiar-language source/teaching and a bridge to English are a [proposal under investigation](lite://doc/multilingual-source-and-learning), beyond accepted Unicode names; no localized syntax or conversion mechanism is selected.
-- The Lite-written compiler supplies the generated TS bootstrap used by public compile/check, default tests and routine compiler tools. The compile-and-execute runner is `./bin/lite run`; T00 is an explicitly selected historical reference. C output and native self-hosting are deferred during the [approved transition](lite://doc/compiler/transition-plan). Same-source generated fixed points and corpus checks establish the documented subset, not full language conformance. The broader language remains a design draft with existing-feature TS parity unfinished. The [bootstrap plan](lite://doc/bootstrap-plan) records gates without changing selected language rules.
-
-Open: package/build syntax, runtime/native ABI, complete formatter implementation, and module resolution details.
+[Modules and packages](lite://doc/modules-and-packages) owns source kinds,
+[import and re-export visibility](lite://doc/modules-and-packages#import-expansion-and-re-exports),
+and [package preload](lite://doc/modules-and-packages#package-preload).
+[Module import stages](lite://doc/compiler/module-import-stages) tracks the
+current compiler gap. See [tooling and learning](lite://doc/tooling-and-learning)
+for the source and editor experience.
 
 ## LS-011 — Naming and versioning
 
-Selected:
-
-- The umbrella project is **Lite** (`lite`); the language is **LiteLang** (`litelang`).
-- A script/program is a **LiteScript** (`litescript`); the plural is **LiteScripts**. Module source is a distinct file kind.
-- The compiler is the **Lite compiler**, package `lite-compiler`, router `lite-compile`, with target commands `lite-compile-ts` and `lite-compile-c`.
-- The runtime is the **Lite runtime**, package `lite-runtime`, binary `literun`.
-- The command-line tool is `lite`; scripts use `.lts` and module-based source uses `.lt`, superseding the former `.lite` suffix.
-- Language, compiler, runtime, and CLI have independent semantic versions. The runtime also has an integer ABI version.
-- A language version changes only through an accepted Lite Proposal (`LP-NNNN`) or a recorded ledger decision. Releases use a project manifest tag such as `lite-v1.2.0` plus component tags such as `lang-v1.2.0` and `compiler-v0.4.1`.
-- A proposal uses `LP-NNNN rN` with status, target version, and supersession links. Accepted proposals are not silently edited.
-- Same language MAJOR promises source compatibility; the runtime must match the compiler's declared ABI or a declared compatibility range.
-- Existing pages that say “LiteScript” for the language are legacy usage. New and edited text uses LiteLang for the language and LiteScript only for a program.
-
-Open: package-registry spelling and stable standard-library contracts. Independent
-component versions and release automation are implemented; see the
-[release guide](lite://doc/release-automation) and [registry](lite://repo/config/versions.json).
+[Naming and versioning](lite://doc/versioning-and-naming) owns project,
+language, component, and proposal names. See [release automation](lite://doc/release-automation)
+and the [version registry](lite://repo/config/versions.json) for release
+mechanics and current component assignments.
 
 ## Open contracts at a glance
 
-These are not missing documentation; they are deliberately unresolved design questions:
-
-- complete grammar and operator coverage;
-- generic declaration/application syntax;
-- active-member selection for multi-member union zero;
-- zero mappings for enums, references, resources, and constrained domains;
-- partial construction and initialization through callees;
-- default-parameter grammar/lookup and callable adaptation details;
-- exact cleanup attachment, `&` value/operations, and hard-abort policy;
-- collection protocols, empty-literal inference, and ownership/conversion rules;
-- module/package and runtime ABI contracts.
+The owning pages record open questions in context. The
+[proposal register](lite://doc/proposals/README) links active drafts and prior
+revisions. The [normative map](lite://doc/normative-pages) leads to current
+rules, and the [decision ledger](lite://doc/decisions-and-open-questions)
+preserves earlier decisions and their dates.

@@ -234,8 +234,10 @@ the two `pub` forms above let a consumer of this file access `Point` or
 A re-export preserves the original declaration's identity and access rules.
 The imported file's private declarations remain private to that file.
 
-These are four alternative forms. The public import forms and full block-local
-expansion need compiler verification on TS and C11. See also
+These are four alternative forms. A November 2026 probe verified the private
+namespace form on TS and C11. Both compilers currently reject the unaliased
+form with `import requires a module alias`. The public import forms and
+block-local expansion are pending compiler support. See also
 [visibility](lite://doc/modules-and-packages#visibility).
 
 ### Namespace import history

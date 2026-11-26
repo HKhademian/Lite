@@ -1,8 +1,27 @@
 # Decisions and open questions
 
-Dated decision ledger, updated through **2026-11-24**. Older entries retain their
-original scope. Decisions do not establish compiler conformance; use
-[the transition](lite://doc/compiler/transition-plan) for current execution evidence.
+Dated decision ledger. Use the [normative map](lite://doc/normative-pages)
+for current rules and the [verification cases](lite://repo/language/verifications/README.md)
+for evidence of compiler behavior. Entries below retain the decisions and
+expectations at their recorded checkpoints.
+
+## Documentation reconciliation, 2026-11-26
+
+The current rules and pending design are linked here so the dated records
+below remain readable in their original context:
+
+- [Partial initialization](lite://doc/conditionals#no-final-else-guarded-update)
+  supersedes the historical zero-default rule on a no-match initializer path.
+- [Conditional pattern guards](lite://doc/conditionals#pattern-binding-followed-by-guards)
+  are selected and still need compiler support.
+- [Package preload](lite://doc/modules-and-packages#package-preload) and
+  [re-exports](lite://doc/modules-and-packages#import-expansion-and-re-exports)
+  supersede the script-only prelude direction recorded below.
+- [Generic parameter declarations](lite://doc/generic-notation#explicit-generic-names-and-inferred-parameter-declarations)
+  record explicit parameter names and pending annotation inference.
+- [Field receiver grants](lite://doc/type-operations#mutation-grants-for-field-receivers)
+  own the first-call boundary. [Caller grants](lite://doc/caller-mutation-grants#evaluation-and-scope)
+  own the visibility of writes.
 
 ## Explicit module imports and implicit core preloading gap, 2026-11-24
 
