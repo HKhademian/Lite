@@ -256,6 +256,31 @@ access, computed keys, effects and compatibility with an explicit record
 destination. Any reinterpretation of selected tuple, record, or block rules
 requires explicit review.
 
+### Typed entries and inferred field shapes
+
+The follow-up distinguishes `Map<K, V>` from an inferred record-like value in
+the same way that `List<T>` differs from a tuple. A map has one key type and
+one value type for all entries, with its own key and lookup rules. Its value
+type can itself be a union. A record-like value has a fixed set of labels,
+each with its own static type. In the example below `alice` has type `Float`,
+`bob` has type `UserID`, and `carl` infers `String`. The outer shape is inferred.
+
+```text
+scores := {
+    "alice": Float = 10,
+    "bob": UserID = 25,
+    "carl" = "test",
+};
+```
+
+Both braces and brackets were proposed for this example. Braces align with
+record construction. The grammar would need an explicit way to distinguish a
+standalone inferred record-like literal from an executable block, including
+empty, single-entry, and wholly unannotated forms. Brackets would need to
+distinguish this shape from the existing `[key = value]` map literal without
+relying on inferred types or the presence of a field annotation. Quoted labels,
+access syntax, anonymous type identity, and the final delimiters remain open.
+
 ## Separate choices
 
 1. **Lite-native data expressions.** Existing or future Lite record, tuple,
