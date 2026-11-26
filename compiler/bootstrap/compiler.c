@@ -8906,10 +8906,10 @@ static bool lt_fn_lib_s_core_s_text__tp_String_op_contains(lt_str lite_source, l
 static lt_list_str lt_fn_lib_s_core_s_text__tp_String_op_split(lt_str lite_source, lt_str lite_divider) {
     (void)lite_source;
     (void)lite_divider;
-    int64_t lt_arg_left_34773;
-    int64_t lt_arg_right_34773;
-    int64_t lt_arg_left_35071;
-    int64_t lt_arg_right_35071;
+    int64_t lt_arg_left_35324;
+    int64_t lt_arg_right_35324;
+    int64_t lt_arg_left_35622;
+    int64_t lt_arg_right_35622;
     lt_list_str lite_out = lt_list_str_from(0, NULL);
     (void)lite_out;
     int64_t lite_srcLen = lt_text_length(lite_source);
@@ -8920,8 +8920,8 @@ static lt_list_str lt_fn_lib_s_core_s_text__tp_String_op_split(lt_str lite_sourc
         int64_t lite_i = INT64_C(0);
         (void)lite_i;
         while ((lite_i) < (lite_srcLen)) {
-            (void)(lt_list_str_push_back(&lite_out, lt_text_at(lite_source, lite_i, 34751)));
-            lite_i = (lt_arg_left_34773 = lite_i, lt_arg_right_34773 = INT64_C(1), lt_checked_add(lt_arg_left_34773, lt_arg_right_34773, 34773));
+            (void)(lt_list_str_push_back(&lite_out, lt_text_at(lite_source, lite_i, 35302)));
+            lite_i = (lt_arg_left_35324 = lite_i, lt_arg_right_35324 = INT64_C(1), lt_checked_add(lt_arg_left_35324, lt_arg_right_35324, 35324));
         }
         return lt_list_str_copy(lite_out);
     }
@@ -8931,11 +8931,11 @@ static lt_list_str lt_fn_lib_s_core_s_text__tp_String_op_split(lt_str lite_sourc
         int64_t lite_hit = lt_fn_lib_s_core_s_text__tp_String_op_indexOf(lite_source, lite_divider, lite_pos);
         (void)lite_hit;
         if ((lite_hit) < (INT64_C(0))) {
-            (void)(lt_list_str_push_back(&lite_out, lt_text_slice(lite_source, lite_pos, lite_srcLen, 34951)));
+            (void)(lt_list_str_push_back(&lite_out, lt_text_slice(lite_source, lite_pos, lite_srcLen, 35502)));
             break;
         }
-        (void)(lt_list_str_push_back(&lite_out, lt_text_slice(lite_source, lite_pos, lite_hit, 35035)));
-        lite_pos = (lt_arg_left_35071 = lite_hit, lt_arg_right_35071 = lite_divLen, lt_checked_add(lt_arg_left_35071, lt_arg_right_35071, 35071));
+        (void)(lt_list_str_push_back(&lite_out, lt_text_slice(lite_source, lite_pos, lite_hit, 35586)));
+        lite_pos = (lt_arg_left_35622 = lite_hit, lt_arg_right_35622 = lite_divLen, lt_checked_add(lt_arg_left_35622, lt_arg_right_35622, 35622));
     }
     return lt_list_str_copy(lite_out);
 }
