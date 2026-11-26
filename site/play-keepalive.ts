@@ -3,6 +3,8 @@
 const KEEPALIVE_VAR = 'litePlayKeepalive99';
 const KEEPALIVE_TS_VAR = `lite_${KEEPALIVE_VAR}`;
 const KEEPALIVE_TS_FN = `liteFn_${KEEPALIVE_VAR}`;
+const KEEPALIVE_C_VAR = `lite_${KEEPALIVE_VAR}`;
+const KEEPALIVE_C_FN = `lt_fn__${KEEPALIVE_VAR}`;
 
 const CALLBACK_CALLS: Readonly<Record<string, string>> = {
   onCanvasInit: '()',
@@ -192,6 +194,55 @@ export function stripPlayKeepaliveTs(ts: string): string {
         trimmed.startsWith(`if (${KEEPALIVE_TS_VAR})`)) &&
       trimmed.includes('{')
     ) {
+      braceDepth = countBracesOutsideStrings(line);
+      if (braceDepth > 0) skippingBlock = true;
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+}
+
+function dropPrecedingLineDirective(out: string[]): void {
+  if (out.length > 0 && /^#line\s+\d+\s+"/.test(out[out.length - 1]!.trim())) {
+    out.pop();
+  }
+}
+
+/** Strips the synthetic Play keepalive guard and branch from emitted C. */
+export function stripPlayKeepaliveC(c: string): string {
+  const lines = c.replace(/\r\n?/g, '\n').split('\n');
+  const out: string[] = [];
+  let skippingBlock = false;
+  let braceDepth = 0;
+
+  for (const line of lines) {
+    if (skippingBlock) {
+      braceDepth += countBracesOutsideStrings(line);
+      if (braceDepth <= 0) {
+        skippingBlock = false;
+        braceDepth = 0;
+      }
+      continue;
+    }
+    const trimmed = line.trim();
+    if (
+      trimmed === `static bool ${KEEPALIVE_C_FN}(void);` ||
+      trimmed === `(void)${KEEPALIVE_C_FN};` ||
+      trimmed === `(void)${KEEPALIVE_C_VAR};` ||
+      (trimmed.startsWith(`static bool ${KEEPALIVE_C_VAR}`) && trimmed.endsWith(';')) ||
+      (trimmed.startsWith(`bool ${KEEPALIVE_C_VAR}`) && trimmed.endsWith(';'))
+    ) {
+      dropPrecedingLineDirective(out);
+      continue;
+    }
+    if (
+      (trimmed.startsWith(`static bool ${KEEPALIVE_C_FN}(`) ||
+        trimmed.startsWith(`if (${KEEPALIVE_C_FN}())`) ||
+        trimmed.startsWith(`if (${KEEPALIVE_C_VAR})`)) &&
+      trimmed.includes('{')
+    ) {
+      dropPrecedingLineDirective(out);
       braceDepth = countBracesOutsideStrings(line);
       if (braceDepth > 0) skippingBlock = true;
       continue;

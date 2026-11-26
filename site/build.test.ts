@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
-import { buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../igniter/artifacts.ts';
+import { buildCCompiler, buildTsCompiler, compileBuiltCompiler, type CompilerBuild } from '../igniter/artifacts.ts';
 import { academyClientJs } from './academy-state.ts';
 import { buildSite, parseBuildArgs } from './build.ts';
 import { formatCodeView } from './code-view.ts';
@@ -24,7 +24,7 @@ import {
 import { heroSample, sampleGroups, showcaseSamples } from './groups.ts';
 import { escapeHtml, highlightC, highlightLite, highlightTs } from './highlight.ts';
 import { extractLiteUrisFromMarkdown, LiteAcademyGraph, parseLiteUri, relativeWebHref, rewriteLiteUriHtml, validateBuiltSiteReferences } from './lite-uri.ts';
-import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.ts';
+import { appendPlayKeepalive, stripPlayKeepaliveC, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { createCanvasSurfaceHost, createPlayStage, createWorkerClient, mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
 import { stripLiteTs } from './strip-ts.ts';
@@ -799,6 +799,41 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
     assert(cRes.c?.includes('#include <stdio.h>'));
     assert(cRes.c?.includes('int main(void)'));
 
+    const playCSrc = [
+      'canvas := import "extra/canvas";',
+      'ctx := canvas.play(16, 12, "WorkerC");',
+      'helper := fn(v: Int): Int { v + 1 };',
+      'onCanvasUpdate := fn(dt: Float): Int {',
+      '  canvas.clear(canvas.rgb(helper(1), 2, 3));',
+      '  0',
+      '};',
+    ].join('\n');
+    const playCRes = await send({
+      id: 201,
+      action: 'compile-c',
+      source: playCSrc,
+      stdin: '',
+      args: [],
+    });
+    assert.equal(playCRes.id, 201);
+    assert.equal(playCRes.ok, true);
+    assert.match(playCRes.c ?? '', /static\s+int64_t\s+lt_fn__helper\(/);
+    assert.match(playCRes.c ?? '', /static\s+int64_t\s+lt_fn__onCanvasUpdate\(/);
+    assert(!(playCRes.c ?? '').includes('litePlayKeepalive99'), 'worker compile-c leaked litePlayKeepalive99');
+
+    const playBothRes = await send({
+      id: 202,
+      action: 'compile',
+      source: playCSrc,
+      stdin: '',
+      args: [],
+    });
+    assert.equal(playBothRes.id, 202);
+    assert.equal(playBothRes.ok, true);
+    assert.match(playBothRes.c ?? '', /static\s+int64_t\s+lt_fn__helper\(/);
+    assert.match(playBothRes.c ?? '', /static\s+int64_t\s+lt_fn__onCanvasUpdate\(/);
+    assert(!(playBothRes.c ?? '').includes('litePlayKeepalive99'), 'worker compile action leaked litePlayKeepalive99');
+
     const errRes = await send({
       id: 3,
       action: 'compile',
@@ -1330,6 +1365,35 @@ test('formatCodeView simplifies Program identifiers without collisions on TS and
   const cPortable = formatCodeView(cSource, 'c', 'portable');
   assert(cPortable.includes('int64_t lt_m_left_s_util__val = INT64_C(10);'));
   assert(cPortable.includes('int64_t lt_s2_x = INT64_C(6);'));
+
+  const cWithUserFns = [
+    '#include <stdio.h>',
+    'static int64_t lt_m_foo__bar;',
+    'static int64_t lite_total;',
+    'static int64_t lt_fn__doubleIt(int64_t lite_n);',
+    'static int64_t lt_fn__doubleIt(int64_t lite_n) {',
+    '    (void)lite_n;',
+    '    return lite_n * INT64_C(2);',
+    '}',
+    'int main(void) {',
+    '    int status = 0;',
+    '#line 1 "lib/foo.lt"',
+    '    lt_s_123 lt_m_foo__bar = lt_fn_foo__make();',
+    '    (void)lt_m_foo__bar;',
+    '    lite_total = lt_fn__doubleIt(INT64_C(21));',
+    '    (void)lite_total;',
+    '    return status;',
+    '}',
+  ].join('\n');
+  const userFnProgramC = formatCodeView(cWithUserFns, 'c', 'program');
+  assert(userFnProgramC.includes('static int64_t total;'));
+  assert(userFnProgramC.includes('static int64_t doubleIt(int64_t n) {'));
+  assert(!userFnProgramC.includes('lt_fn__doubleIt'));
+  assert(!userFnProgramC.includes('lt_m_foo__bar ='));
+  assert(!userFnProgramC.includes('lib/foo.lt'));
+  assert(!userFnProgramC.includes('(void)n;'));
+  assert(!userFnProgramC.includes('(void)total;'));
+  assert(!userFnProgramC.includes('(void)lite_'));
 });
 
 test('playground inline module initializes without TDZ or ReferenceError', async () => {
@@ -2473,6 +2537,40 @@ test('play keepalive preserves Play bridge exports and callbacks across -O0..-O3
     assert.match(stripped, /\bfunction liteFn_onCanvasInit\b/, `-O${lv} missing onCanvasInit`);
     assert(!stripped.includes('litePlayKeepalive99'), `-O${lv} leaked litePlayKeepalive99`);
     assert(!stripped.includes('if (false)'), `-O${lv} leaked if (false) keepalive block`);
+  }
+});
+
+test('play C keepalive preserves Play callbacks across -O0..-O3 and C Program/Portable views show function bodies', () => {
+  const hello = playSamples.find(s => s.id === 'play-hello');
+  assert(hello !== undefined, 'missing play-hello sample');
+  const src = readFileSync(resolve(root, hello.file), 'utf8');
+  const ka = appendPlayKeepalive(src);
+  assert(ka !== null, 'expected Play keepalive wrapper');
+  const cCompiler = buildCCompiler();
+  for (const lv of [0, 1, 2, 3]) {
+    const res = compileBuiltCompiler(cCompiler, { text: ka, name: hello.file, cwd: root, options: [`-O${lv}`] });
+    assert.equal(res.status, 0, `-O${lv} C compile failed: ${res.stderr.toString('utf8')}`);
+    const stripped = stripPlayKeepaliveC(res.stdout.toString('utf8'));
+    assert(!stripped.includes('litePlayKeepalive99'), `-O${lv} C leaked litePlayKeepalive99`);
+    assert.match(stripped, /^static\s+void\s+lt_fn__render\(void\)\s*\{$/m, `-O${lv} missing render body`);
+    assert.match(stripped, /^static\s+void\s+lt_fn__onCanvasInit\(void\)\s*\{$/m, `-O${lv} missing onCanvasInit body`);
+    assert.match(stripped, /^static\s+int64_t\s+lt_fn__onCanvasUpdate\(double\s+lite_dt\)\s*\{$/m, `-O${lv} missing onCanvasUpdate body`);
+    assert.match(stripped, /^static\s+void\s+lt_fn__onCanvasKeyDown\(lt_str\s+lite_key\)\s*\{$/m, `-O${lv} missing onCanvasKeyDown body`);
+    assert.match(stripped, /^static\s+void\s+lt_fn__onCanvasPointerDown\(/m, `-O${lv} missing onCanvasPointerDown body`);
+
+    const portableC = formatCodeView(stripped, 'c', 'portable');
+    assert(portableC.includes('#include <stdio.h>'));
+    assert.match(portableC, /^static\s+int64_t\s+lt_fn__onCanvasUpdate\(double\s+lite_dt\)\s*\{$/m);
+
+    const programC = formatCodeView(stripped, 'c', 'program');
+    assert.match(programC, /^static\s+int64_t\s+x;$/m, `-O${lv} Program C missing top-level state`);
+    assert.match(programC, /^static\s+void\s+render\(void\)\s*\{$/m, `-O${lv} Program C missing render`);
+    assert.match(programC, /^static\s+void\s+onCanvasInit\(void\)\s*\{$/m, `-O${lv} Program C missing onCanvasInit`);
+    assert.match(programC, /^static\s+int64_t\s+onCanvasUpdate\(double\s+dt\)\s*\{$/m, `-O${lv} Program C missing onCanvasUpdate`);
+    assert.match(programC, /^static\s+void\s+onCanvasKeyDown\(lt_str\s+key\)\s*\{$/m, `-O${lv} Program C missing onCanvasKeyDown`);
+    assert.match(programC, /^static\s+void\s+onCanvasPointerDown\(/m, `-O${lv} Program C missing onCanvasPointerDown`);
+    assert(programC.includes('int main(void) {'), `-O${lv} Program C missing int main`);
+    assert(!programC.includes('lt_m_lib_s_extra_s_color__BLACK ='), `-O${lv} Program C leaked module color init`);
   }
 });
 

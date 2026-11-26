@@ -171,26 +171,64 @@ function extractTsPortable(source: string): string {
   return out.join('\n');
 }
 
+const C_SUPPRESSED_VOID_RE = /^\(void\)(?:lite_|lt_m_|lt_s\d+_)[a-zA-Z0-9_]+;$/;
+const C_MODULE_INIT_RE = /^(?:[A-Za-z_][A-Za-z0-9_\s*]*\s+)?lt_m_[a-zA-Z0-9_]+\s*=.*;$/;
+const C_LINE_DIRECTIVE_RE = /^#line\s+\d+\s+"/;
+
 function extractCProgram(source: string): string {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
   const mainIndex = lines.findIndex((line) => line.startsWith('int main('));
   if (mainIndex === -1) return source;
+
+  const userGlobals: string[] = [];
+  const userFns: string[] = [];
+  for (let i = 0; i < mainIndex; ) {
+    const line = lines[i]!;
+    const trimmed = line.trim();
+    if (/^static\s+[^;()=]+\blite_[A-Za-z0-9_]+(?:\s*=[^;]+)?\s*;$/.test(trimmed)) {
+      userGlobals.push(line);
+      i += 1;
+      continue;
+    }
+    if (
+      /^static\s+[^;]*\blt_fn__[A-Za-z0-9_]+\s*\(/.test(trimmed) &&
+      !trimmed.endsWith(';') &&
+      trimmed.includes('{')
+    ) {
+      const fnEnd = skipBraceBlock(lines, i);
+      const fnLines = lines.slice(i, fnEnd).filter((fnLine) => !C_SUPPRESSED_VOID_RE.test(fnLine.trim()));
+      userFns.push(fnLines.join('\n'));
+      i = fnEnd;
+      continue;
+    }
+    i += 1;
+  }
+
   const mainEnd = skipBraceBlock(lines, mainIndex);
-  return lines
-    .slice(mainIndex, mainEnd)
-    .filter((line) => {
-      const trimmed = line.trim();
-      if (/^\(void\)(?:lite_|lt_m_|lt_s\d+_)[a-zA-Z0-9_]+;$/.test(trimmed)) return false;
-      if (/^(?:(?:int64_t|const char \*|double|bool)\s+)?lt_m_[a-zA-Z0-9_]+\s*=.*;$/.test(trimmed)) return false;
-      return true;
-    })
-    .join('\n');
+  const mainOut: string[] = [];
+  for (const line of lines.slice(mainIndex, mainEnd)) {
+    const trimmed = line.trim();
+    if (C_SUPPRESSED_VOID_RE.test(trimmed)) continue;
+    if (C_MODULE_INIT_RE.test(trimmed)) {
+      if (mainOut.length > 0 && C_LINE_DIRECTIVE_RE.test(mainOut[mainOut.length - 1]!.trim())) {
+        mainOut.pop();
+      }
+      continue;
+    }
+    mainOut.push(line);
+  }
+
+  const sections: string[] = [];
+  if (userGlobals.length > 0) sections.push(userGlobals.join('\n'));
+  for (const fnBlock of userFns) sections.push(fnBlock);
+  sections.push(mainOut.join('\n'));
+  return sections.join('\n\n');
 }
 
 function extractCPortable(source: string): string {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
   return lines
-    .filter((line) => !/^\(void\)(?:lite_|lt_m_|lt_s\d+_)[a-zA-Z0-9_]+;$/.test(line.trim()))
+    .filter((line) => !C_SUPPRESSED_VOID_RE.test(line.trim()))
     .join('\n');
 }
 

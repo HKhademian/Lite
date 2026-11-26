@@ -1,7 +1,7 @@
 /** Browser Web Worker script for compiling (TS & C) and running Lite programs in Playground. */
 
 export const playgroundWorkerJs = `import { stripLiteTs } from './strip-ts.js';
-import { appendPlayKeepalive, stripPlayKeepaliveTs } from './play-keepalive.js';
+import { appendPlayKeepalive, stripPlayKeepaliveTs, stripPlayKeepaliveC } from './play-keepalive.js';
 
 class ExitSignal {
   constructor(code) {
@@ -456,7 +456,7 @@ function compileWith(compilerSource, vfs, source, optLevel = 1, compilerFlags = 
   );
 }
 
-function compileTsForPlayground(compilerSource, stdlib, extraModules, source, optLevel = 1, compilerFlags = []) {
+function compileWithPlayKeepalive(compilerSource, stdlib, extraModules, source, optLevel, compilerFlags, stripKeepalive) {
   const withKeepalive = appendPlayKeepalive(source ?? '');
   if (withKeepalive !== null) {
     const keepaliveVfs = buildPlaygroundVfs(stdlib, extraModules, withKeepalive);
@@ -464,12 +464,20 @@ function compileTsForPlayground(compilerSource, stdlib, extraModules, source, op
     if (keepaliveResult.ok && keepaliveResult.stdout) {
       return {
         ...keepaliveResult,
-        stdout: stripPlayKeepaliveTs(keepaliveResult.stdout),
+        stdout: stripKeepalive(keepaliveResult.stdout),
       };
     }
   }
   const baseVfs = buildPlaygroundVfs(stdlib, extraModules, source);
   return compileWith(compilerSource, baseVfs, source, optLevel, compilerFlags);
+}
+
+function compileTsForPlayground(compilerSource, stdlib, extraModules, source, optLevel = 1, compilerFlags = []) {
+  return compileWithPlayKeepalive(compilerSource, stdlib, extraModules, source, optLevel, compilerFlags, stripPlayKeepaliveTs);
+}
+
+function compileCForPlayground(cCompilerSource, stdlib, extraModules, source, optLevel = 1, compilerFlags = []) {
+  return compileWithPlayKeepalive(cCompilerSource, stdlib, extraModules, source, optLevel, compilerFlags, stripPlayKeepaliveC);
 }
 
 function attachPlayBridge(js) {
@@ -759,8 +767,7 @@ self.onmessage = async (event) => {
     if (action === 'compile-c') {
       const t0 = performance.now();
       const cSource = await loadCompilerSource('compiler-c.js');
-      const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
-      const cResult = compileWith(cSource, vfs, source, level, extraCompilerFlags);
+      const cResult = compileCForPlayground(cSource, stdlib, extraModules ?? null, source, level, extraCompilerFlags);
       const compileMs = Math.round((performance.now() - t0) * 10) / 10;
       self.postMessage({
         id,
@@ -800,8 +807,7 @@ self.onmessage = async (event) => {
     const ts = compileResult.stdout;
     if (action === 'compile') {
       const cSource = await loadCompilerSource('compiler-c.js');
-      const vfs = buildPlaygroundVfs(stdlib, extraModules ?? null, source);
-      const cResult = compileWith(cSource, vfs, source, level, extraCompilerFlags);
+      const cResult = compileCForPlayground(cSource, stdlib, extraModules ?? null, source, level, extraCompilerFlags);
       const totalCompileMs = Math.round((performance.now() - compileStart) * 10) / 10;
       self.postMessage({
         id,
