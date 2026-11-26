@@ -69,4 +69,19 @@ test.checkBool("reject unterminated escape", false, json.readStringAt("\"abc\\",
 test.checkBool("reject invalid escape", false, json.readStringAt("\"abc\\q\"", 0).ok);
 test.checkBool("reject incomplete unicode escape", false, json.readStringAt("\"\\u12\"", 0).ok);
 
+slashTrail := json.readStringAt("\"foo\\\\\"", 0);
+test.checkBool("escaped trailing backslash ok", true, slashTrail.ok);
+test.checkText("escaped trailing backslash val", "foo\\", slashTrail.value);
+
+slashQuote := json.readStringAt("\"a\\\\\\\"b\"", 0);
+test.checkBool("escaped backslash and quote ok", true, slashQuote.ok);
+test.checkText("escaped backslash and quote val", "a\\\"b", slashQuote.value);
+
+siblingObj := "{\"a\":\"x\\\\\",\"b\":\"y\"}";
+test.checkBool("sibling valid", true, json.validate(siblingObj).ok);
+sibA := json.readFieldString(siblingObj, 0, "a");
+sibB := json.readFieldString(siblingObj, 0, "b");
+test.checkText("sibling a", "x\\", sibA.value);
+test.checkText("sibling b", "y", sibB.value);
+
 test.done("util-json");

@@ -102,76 +102,81 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
     }
     var pos := start + 1;
     out: mut tb.TextBuilder;
-    var runStart := pos;
-    var nextQuote := source.indexOf("\"", pos);
-    var nextSlash := source.indexOf("\\", pos);
-    var nextLf := source.indexOf("\n", pos);
-    var nextCr := source.indexOf("\r", pos);
-    var nextTab := source.indexOf("\t", pos);
-    loop pos < size {
-        hit := minNonNeg(nextQuote, minNonNeg(nextSlash, minNonNeg(nextLf, minNonNeg(nextCr, nextTab))));
-        if hit < 0 {
-            pos = size;
-            break;
-        }
-        if hit == nextQuote {
+    var hasEscapes := false;
+    loop true {
+        nextQuote := source.indexOf("\"", pos);
+        segEnd := if nextQuote < 0 { size } else { nextQuote };
+        seg := source.slice(pos, segEnd);
+        segLen := seg.length();
+        var segSlash := seg.indexOf("\\", 0);
+        var segLf := seg.indexOf("\n", 0);
+        var segCr := seg.indexOf("\r", 0);
+        var segTab := seg.indexOf("\t", 0);
+        if segSlash < 0 and segLf < 0 and segCr < 0 and segTab < 0 {
+            if nextQuote < 0 {
+                return JsonString { ok = false, value = "", next = size, error = "unterminated string literal" };
+            }
             if not decode {
-                return JsonString { ok = true, value = "", next = hit + 1, error = "" };
+                return JsonString { ok = true, value = "", next = nextQuote + 1, error = "" };
             }
-            if runStart == start + 1 {
-                return JsonString { ok = true, value = source.slice(runStart, hit), next = hit + 1, error = "" };
+            if not hasEscapes {
+                return JsonString { ok = true, value = seg, next = nextQuote + 1, error = "" };
             }
-            if hit > runStart {
-                mut out.append(source.slice(runStart, hit));
+            if segLen > 0 {
+                mut out.append(seg);
             }
-            return JsonString { ok = true, value = out.build(), next = hit + 1, error = "" };
+            return JsonString { ok = true, value = out.build(), next = nextQuote + 1, error = "" };
         }
-        if hit == nextSlash {
-            pos = hit;
-            if decode and pos > runStart {
-                mut out.append(source.slice(runStart, pos));
+        var segPos := 0;
+        var segRunStart := 0;
+        var escapedQuote := false;
+        loop segPos < segLen {
+            hit := minNonNeg(segSlash, minNonNeg(segLf, minNonNeg(segCr, segTab)));
+            if hit < 0 { break; }
+            if hit =!= segSlash {
+                return JsonString { ok = false, value = "", next = pos + hit, error = "unescaped control character in string" };
             }
-            if pos + 1 >= size {
-                return JsonString { ok = false, value = "", next = pos, error = "unterminated string escape" };
+            hasEscapes = true;
+            if decode and hit > segRunStart {
+                mut out.append(seg.slice(segRunStart, hit));
             }
-            esc := source.at(pos + 1);
-            if esc == "\"" or esc == "\\" or esc == "/" {
+            absSlash := pos + hit;
+            if hit + 1 == segLen {
+                if nextQuote < 0 {
+                    return JsonString { ok = false, value = "", next = absSlash, error = "unterminated string escape" };
+                }
+                if decode { mut out.append("\""); }
+                escapedQuote = true;
+                pos = nextQuote + 1;
+                break;
+            }
+            esc := seg.at(hit + 1);
+            var consumed := 2;
+            if esc == "\\" or esc == "/" {
                 if decode { mut out.append(esc); }
-                pos += 2;
-                runStart = pos;
             } else if esc == "n" {
                 if decode { mut out.append("\n"); }
-                pos += 2;
-                runStart = pos;
             } else if esc == "r" {
                 if decode { mut out.append("\r"); }
-                pos += 2;
-                runStart = pos;
             } else if esc == "t" {
                 if decode { mut out.append("\t"); }
-                pos += 2;
-                runStart = pos;
             } else if esc == "b" {
                 if decode { mut out.append(String.fromCodePoint(8).text); }
-                pos += 2;
-                runStart = pos;
             } else if esc == "f" {
                 if decode { mut out.append(String.fromCodePoint(12).text); }
-                pos += 2;
-                runStart = pos;
             } else if esc == "u" {
-                if pos + 5 >= size {
-                    return JsonString { ok = false, value = "", next = pos, error = "incomplete unicode escape" };
+                if absSlash + 5 >= size {
+                    return JsonString { ok = false, value = "", next = absSlash, error = "incomplete unicode escape" };
                 }
-                firstHex := parseHex4(source, pos + 2);
+                firstHex := parseHex4(source, absSlash + 2);
                 if not firstHex.ok {
-                    return JsonString { ok = false, value = "", next = pos, error = "invalid unicode escape" };
+                    return JsonString { ok = false, value = "", next = absSlash, error = "invalid unicode escape" };
                 }
                 code := firstHex.value;
-                var consumed := 6;
+                consumed = 6;
                 if decode {
-                    if code >= 55296 and code <= 56319 and pos + 11 < size and source.at(pos + 6) == "\\" and source.at(pos + 7) == "u" {
-                        secondHex := parseHex4(source, pos + 8);
+                    if code >= 55296 and code <= 56319 and absSlash + 11 < size and source.at(absSlash + 6) == "\\" and source.at(absSlash + 7) == "u" {
+                        secondHex := parseHex4(source, absSlash + 8);
                         if secondHex.ok and secondHex.value >= 56320 and secondHex.value <= 57343 {
                             pair: List<Int> = [code, secondHex.value];
                             pairRes := String.fromUtf16Strict(pair);
@@ -179,37 +184,45 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
                                 mut out.append(pairRes.text);
                                 consumed = 12;
                             } else {
-                                mut out.append(source.slice(pos, pos + 6));
+                                mut out.append(source.slice(absSlash, absSlash + 6));
                             }
                         } else {
-                            mut out.append(source.slice(pos, pos + 6));
+                            mut out.append(source.slice(absSlash, absSlash + 6));
                         }
                     } else if code >= 55296 and code <= 57343 {
-                        mut out.append(source.slice(pos, pos + 6));
+                        mut out.append(source.slice(absSlash, absSlash + 6));
                     } else {
                         cpRes := String.fromCodePoint(code);
                         if cpRes.ok {
                             mut out.append(cpRes.text);
                         } else {
-                            mut out.append(source.slice(pos, pos + 6));
+                            mut out.append(source.slice(absSlash, absSlash + 6));
                         }
                     }
                 }
-                pos += consumed;
-                runStart = pos;
             } else {
-                return JsonString { ok = false, value = "", next = pos, error = "invalid string escape" };
+                return JsonString { ok = false, value = "", next = absSlash, error = "invalid string escape" };
             }
-            if nextQuote >= 0 and nextQuote < pos { nextQuote = source.indexOf("\"", pos); }
-            if nextSlash >= 0 and nextSlash < pos { nextSlash = source.indexOf("\\", pos); }
-            if nextLf >= 0 and nextLf < pos { nextLf = source.indexOf("\n", pos); }
-            if nextCr >= 0 and nextCr < pos { nextCr = source.indexOf("\r", pos); }
-            if nextTab >= 0 and nextTab < pos { nextTab = source.indexOf("\t", pos); }
-        } else {
-            return JsonString { ok = false, value = "", next = hit, error = "unescaped control character in string" };
+            segPos = hit + consumed;
+            segRunStart = segPos;
+            if segSlash >= 0 and segSlash < segPos { segSlash = seg.indexOf("\\", segPos); }
+            if segLf >= 0 and segLf < segPos { segLf = seg.indexOf("\n", segPos); }
+            if segCr >= 0 and segCr < segPos { segCr = seg.indexOf("\r", segPos); }
+            if segTab >= 0 and segTab < segPos { segTab = seg.indexOf("\t", segPos); }
         }
+        if escapedQuote { continue; }
+        if nextQuote < 0 {
+            return JsonString { ok = false, value = "", next = size, error = "unterminated string literal" };
+        }
+        if not decode {
+            return JsonString { ok = true, value = "", next = nextQuote + 1, error = "" };
+        }
+        if segLen > segRunStart {
+            mut out.append(seg.slice(segRunStart, segLen));
+        }
+        return JsonString { ok = true, value = out.build(), next = nextQuote + 1, error = "" };
     }
-    JsonString { ok = false, value = "", next = pos, error = "unterminated string literal" }
+    JsonString { ok = false, value = "", next = size, error = "unterminated string literal" }
 };
 
 scanNumberToken := fn(source: String, start: Int): JsonScan {
