@@ -141,4 +141,8 @@ test.checkInt("rejects bad -finline-limit", 2, badLim.status);
 badRounds := compilerTest.compileStdinWithOpts(root, tsComp, root, src, "demo.lts", "", ["-fopt-rounds=99"]);
 test.checkInt("rejects bad -fopt-rounds", 2, badRounds.status);
 
+/* 7. -fniche-opt / -fno-niche-opt flag acceptance and last-wins reset. */
+nicheFlagOk := compilerTest.compileStdinWithOpts(root, cComp, root, src, "demo.lts", "", ["-O0", "-fniche-opt", "-fno-niche-opt"]);
+test.checkInt("accepts -fniche-opt / -fno-niche-opt: " + nicheFlagOk.stderr, 0, nicheFlagOk.status);
+
 test.done("opt-config");

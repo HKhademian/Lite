@@ -864,19 +864,15 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         if target == ir.TARGET_C {
             tag := types.cStructTag(kind);
             if ps.length() == 0 {
-                return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ .tag = 0, .u = { ._empty = 0 } })", intValue = 0, textValue = "", constant = false, next = next);
+                return (kind = kind, code = "/*@T:" + kind + "@*/" + tag + "_mk_0()", intValue = 0, textValue = "", constant = false, next = next);
             }
-            fInitBuf: mut tb.TextBuilder;
+            zeroArgs: mut List<String> = [];
             var pi := 0;
             loop pi < ps.length() {
-                if pi > 0 { mut fInitBuf.append(", "); }
-                mut fInitBuf.append(".f");
-                mut fInitBuf.append(pi.toText());
-                mut fInitBuf.append(" = ");
-                mut fInitBuf.append(self(target, ps[pi], next).code);
+                mut zeroArgs.pushBack(self(target, ps[pi], next).code);
                 pi = pi + 1;
             }
-            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ .tag = 0, .u = { .c0 = { " + fInitBuf.build() + " } } })", intValue = 0, textValue = "", constant = false, next = next);
+            return (kind = kind, code = "/*@T:" + kind + "@*/" + tag + "_mk_0(" + zeroArgs.join(", ") + ")", intValue = 0, textValue = "", constant = false, next = next);
         }
         tsT := types.tsFunctionType(kind);
         tsInitBuf: mut tb.TextBuilder;

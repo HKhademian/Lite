@@ -1,0 +1,355 @@
+/* Phase 8A verification: sound C11 restrict proofs, @packed/@align/@no_niche layout attributes, core/option Option<T>, and C11 niche packing + tagged fallback. */
+
+test := import "core/test";
+tb := import "util/text-builder";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccProbe := compilerTest.probeCc();
+
+/* Generate a 256-case Enum: Int8 (0 spare bit patterns -> automatic tagged fallback). */
+e256Cases: mut tb.TextBuilder;
+mut e256Cases.append("C0 = -128; ");
+var ei := 1;
+loop ei < 256 {
+    mut e256Cases.append("C");
+    mut e256Cases.append(ei.toText());
+    mut e256Cases.append("; ");
+    ei = ei + 1;
+}
+
+layoutSrc := [
+    "io := import \"core/io\";",
+    "opt := import \"core/option\";",
+    "rc := import \"core/rc\";",
+    "SmallColor := enum: UInt8 { Red; Green; Blue; };",
+    "PlainKind := enum { Alpha; Beta; };",
+    "FullByte := enum: Int8 { " + e256Cases.build() + "};",
+    "@no_niche",
+    "OptOutColor := enum: UInt8 { Cyan; Magenta; };",
+    "@no_niche",
+    "NoNicheOpt := enum<T: Type> { Empty; Val(T); };",
+    "@packed",
+    "PackedHdr := record { kind: UInt8; size: UInt32; };",
+    "@align(16)",
+    "Aligned16 := record { tag: UInt8; count: UInt32; };",
+    "@align(64)",
+    "Aligned64 := enum<T: Type> { None; Some(T); };",
+    "UserRec := record { active: Bool; label: String; score: Int; };",
+    "SubIntRec := record { code: Int4; qty: Int; };",
+    "checkLayoutProbe := fn(",
+    "    p_opt_bool: opt.Option<Bool>, p_opt_i4: opt.Option<Int4>, p_opt_u4: opt.Option<UInt4>,",
+    "    p_opt_se: opt.Option<SmallColor>, p_opt_pe: opt.Option<PlainKind>, p_opt_str: opt.Option<String>,",
+    "    p_opt_rc: opt.Option<Rc<Int>>, p_opt_list: opt.Option<List<Int>>, p_rec: UserRec,",
+    "    p_opt_rec: opt.Option<UserRec>, p_opt_subrec: opt.Option<SubIntRec>, p_opt_int: opt.Option<Int>,",
+    "    p_opt_flt: opt.Option<Float>, p_opt_f32: opt.Option<Float32>, p_opt_e256: opt.Option<FullByte>,",
+    "    p_opt_nn_enum: opt.Option<OptOutColor>, p_opt_nn_opt: NoNicheOpt<Bool>,",
+    "    p_packed: PackedHdr, p_align16: Aligned16, p_align64: Aligned64<Bool>",
+    "): Bool {",
+    "    nnOk := match p_opt_nn_opt { .Empty { false } .Val(_) { true } };",
+    "    a64Ok := match p_align64 { .None { false } .Some(_) { true } };",
+    "    p_opt_bool.isSome() and p_opt_i4.isSome() and p_opt_u4.isSome() and p_opt_se.isSome() and",
+    "    p_opt_pe.isSome() and p_opt_str.isSome() and p_opt_rc.isSome() and p_opt_list.isSome() and",
+    "    p_rec.active and p_opt_rec.isSome() and p_opt_subrec.isSome() and p_opt_int.isSome() and",
+    "    p_opt_flt.isSome() and p_opt_f32.isSome() and p_opt_e256.isSome() and",
+    "    p_opt_nn_enum.isSome() and p_packed.kind > 0 and p_align16.tag > 0 and nnOk and a64Ok",
+    "};",
+    "var globalTick := 10;",
+    "pureDisjointHalves := fn(a: mut Slice<Int>, b: mut Slice<Int>): Unit {",
+    "    if not a.isEmpty() and not b.isEmpty() {",
+    "        tmp := a[0];",
+    "        a[0] = b[b.length() - 1];",
+    "        b[b.length() - 1] = tmp;",
+    "    }",
+    "};",
+    "pureCopySlice := fn(dst: mut Slice<Int>, src: Slice<Int>): Unit {",
+    "    var s := 0;",
+    "    loop src as v { s += v; }",
+    "    if not dst.isEmpty() { dst[0] += s; }",
+    "};",
+    "overlapReadSum := fn(a: Slice<Int>, b: Slice<Int>): Int {",
+    "    var acc := 0;",
+    "    var i := 0;",
+    "    loop i < a.length() and i < b.length() {",
+    "        acc += a[i] + b[i];",
+    "        i += 1;",
+    "    }",
+    "    acc",
+    "};",
+    "mutGlobalSliceBump := fn(s: mut Slice<Int>): Unit {",
+    "    globalTick += 1;",
+    "    if not s.isEmpty() { s[0] += globalTick; }",
+    "};",
+    "purePushFromSrc := fn(dst: mut List<Int>, src: List<Int>): Unit {",
+    "    loop src as x { mut dst.pushBack(x); }",
+    "};",
+    "checkOptions := fn(): Unit {",
+    "    var p_opt_bool: opt.Option<Bool>;",
+    "    p_opt_bool = .Some(false);",
+    "    bSome: opt.Option<Bool> = .Some(true);",
+    "    var p_opt_i4: opt.Option<Int4> = .Some(-5);",
+    "    var p_opt_u4: opt.Option<UInt4> = .Some(12);",
+    "    var p_opt_se: opt.Option<SmallColor> = .Some(.Green);",
+    "    var p_opt_pe: opt.Option<PlainKind> = .Some(.Beta);",
+    "    var p_opt_str: opt.Option<String> = .Some(\"hello-niche-world\");",
+    "    p_opt_str2: opt.Option<String> = p_opt_str;",
+    "    var zStr: opt.Option<String>;",
+    "    var p_opt_rc: opt.Option<Rc<Int>> = .Some(Rc.create(99));",
+    "    var zRc: opt.Option<Rc<Int>>;",
+    "    p_opt_list: opt.Option<List<Int>> = .Some([7, 8, 9]);",
+    "    emptyListOpt: opt.Option<List<Int>> = .Some([]);",
+    "    zList: opt.Option<List<Int>>;",
+    "    p_rec := UserRec { active = true, label = \"rec-label-long\", score = 42 };",
+    "    p_opt_rec: opt.Option<UserRec> = .Some(p_rec);",
+    "    var p_opt_subrec: opt.Option<SubIntRec> = .Some(SubIntRec { code = -3, qty = 77 });",
+    "    p_opt_int: opt.Option<Int> = .Some(12345);",
+    "    p_opt_flt: opt.Option<Float> = .Some(2.5);",
+    "    p_opt_f32: opt.Option<Float32> = .Some(1.25);",
+    "    p_opt_e256: opt.Option<FullByte> = .Some(.C255);",
+    "    p_opt_nn_enum: opt.Option<OptOutColor> = .Some(.Magenta);",
+    "    p_opt_nn_opt: NoNicheOpt<Bool> = .Val(true);",
+    "    p_packed := PackedHdr { kind = 5, size = 1024 };",
+    "    p_align16 := Aligned16 { tag = 3, count = 88 };",
+    "    p_align64: Aligned64<Bool> = .Some(true);",
+    "    probeOk := checkLayoutProbe(p_opt_bool, p_opt_i4, p_opt_u4, p_opt_se, p_opt_pe, p_opt_str, p_opt_rc, p_opt_list, p_rec, p_opt_rec, p_opt_subrec, p_opt_int, p_opt_flt, p_opt_f32, p_opt_e256, p_opt_nn_enum, p_opt_nn_opt, p_packed, p_align16, p_align64);",
+    "    p_opt_i4 = .None;",
+    "    p_opt_u4 = .Some(3);",
+    "    io.outputLine(\"optBool:\", p_opt_bool.isSome(), bSome.unwrapOr(false), opt.Option<Bool>.None.isNone(), probeOk);",
+    "    io.outputLine(\"optSmall:\", p_opt_i4.isNone(), p_opt_u4.unwrapOr(0), p_opt_se.unwrapOr(.Red), p_opt_pe.unwrapOr(.Alpha));",
+    "    io.outputLine(\"optOwn:\", p_opt_str.expect(\"str\"), p_opt_str2.isSome(), zStr.isNone(), p_opt_rc.expect(\"rc\").get(), zRc.isNone());",
+    "    io.outputLine(\"optList:\", p_opt_list.unwrapOr([]), emptyListOpt.unwrapOr([1]).length(), zList.isNone());",
+    "    io.outputLine(\"optRec:\", p_opt_rec.expect(\"rec\"), p_opt_subrec.expect(\"sub\"));",
+    "    io.outputLine(\"optTag:\", p_opt_int.expect(\"int\"), p_opt_flt.expect(\"flt\"), p_opt_f32.expect(\"f32\"), p_opt_e256.expect(\"e256\"), p_opt_nn_enum.expect(\"nn\"), p_opt_nn_opt);",
+    "    io.outputLine(\"attrs:\", p_packed.kind, p_packed.size, p_align16.tag, p_align16.count, p_align64);",
+    "};",
+    "main := fn(): Unit {",
+    "    checkOptions();",
+    "    xs: mut List<Int> = [1, 2, 3, 4, 5, 6];",
+    "    {",
+    "        ms := mut xs[0..6];",
+    "        (l, r) := mut ms.splitAt(3);",
+    "        pureDisjointHalves(mut l, mut r);",
+    "        pureCopySlice(mut r, l);",
+    "    }",
+    "    ovSum := overlapReadSum(xs[0..4], xs[2..6]);",
+    "    {",
+    "        s1 := mut xs[0..2];",
+    "        mutGlobalSliceBump(mut s1);",
+    "    }",
+    "    dst: mut List<Int> = [100];",
+    "    src: List<Int> = [200, 300];",
+    "    purePushFromSrc(mut dst, src);",
+    "    io.outputLine(\"restrict:\", xs, ovSum, globalTick, dst);",
+    "};",
+    "main();"
+].join("\n");
+
+/* 1. Dual-target parity (TS, C11, C11 --sanitize ASan/UBSan). */
+tsRun := compilerTest.compileCheckRunTs(root, tsComp, layoutSrc, "phase8a-parity.lts");
+test.checkInt("phase8a TS compile+run: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("phase8a TS stderr", "", tsRun.stderr);
+
+expectedOut := [
+    "optBool: true true true true",
+    "optSmall: true 3 SmallColor.Green PlainKind.Beta",
+    "optOwn: hello-niche-world true true 99 true",
+    "optList: [7, 8, 9] 0 true",
+    "optRec: UserRec { active = true, label = rec-label-long, score = 42 } SubIntRec { code = -3, qty = 77 }",
+    "optTag: 12345 2.5 1.25 FullByte.C255 OptOutColor.Magenta NoNicheOpt<Bool>.Val(true)",
+    "attrs: 5 1024 3 88 Aligned64<Bool>.Some(true)",
+    "restrict: [17, 2, 3, 15, 5, 1] 50 11 [100, 200, 300]",
+    ""
+].join("\n");
+test.checkText("phase8a TS stdout", expectedOut, tsRun.stdout);
+
+if ccProbe.available {
+    cRun := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, layoutSrc, "phase8a-c.lts", "");
+    test.checkInt("phase8a C compile+run: " + cRun.stderr, 0, cRun.status);
+    test.checkText("phase8a C stdout parity", tsRun.stdout, cRun.stdout);
+
+    cSan := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, layoutSrc, "phase8a-san.lts", "--sanitize");
+    test.checkInt("phase8a C --sanitize compile+run: " + cSan.stderr, 0, cSan.status);
+    test.checkText("phase8a C --sanitize stdout parity", tsRun.stdout, cSan.stdout);
+
+    /* 2. Inspect emitted C11 for sound restrict emission. */
+    cEmit := compilerTest.compileStdinWithOpts(root, cComp, root, layoutSrc, "phase8a-c.lts", "", ["-O1"]);
+    test.checkInt("phase8a C -O1 emit: " + cEmit.stderr, 0, cEmit.status);
+    cCode := cEmit.stdout;
+
+    findFnDef := fn(src: String, fnName: String): String {
+        var pos := src.indexOf(fnName + "(", 0);
+        loop pos >= 0 {
+            openBody := src.indexOf(") {", pos);
+            semi := src.indexOf(";", pos);
+            if openBody >= 0 and (semi < 0 or openBody < semi) {
+                endBody := src.indexOf("\n}\n", openBody);
+                if endBody > pos { return src.slice(pos, endBody); }
+            }
+            pos = src.indexOf(fnName + "(", pos + 1);
+        }
+        ""
+    };
+
+    disjBody := findFnDef(cCode, "lt_fn__pureDisjointHalves");
+    test.check("pureDisjointHalves found", disjBody =!= "");
+    test.check("disjoint halves emits * restrict __rp", disjBody.contains("* restrict lite_a__rp") and disjBody.contains("* restrict lite_b__rp"));
+    test.check("disjoint halves uses _at_r/_set_r", disjBody.contains("_at_r(") and disjBody.contains("_set_r("));
+
+    cpBody := findFnDef(cCode, "lt_fn__pureCopySlice");
+    test.check("pureCopySlice found", cpBody =!= "");
+    test.check("pureCopySlice emits const * restrict for src loop", cpBody.contains("const int64_t * restrict lite_src__rp") and cpBody.contains("lite_src__rp["));
+
+    ovBody := findFnDef(cCode, "lt_fn__overlapReadSum");
+    test.check("overlapReadSum found", ovBody =!= "");
+    test.check("overlapReadSum omits restrict", not ovBody.contains("restrict"));
+
+    mgBody := findFnDef(cCode, "lt_fn__mutGlobalSliceBump");
+    test.check("mutGlobalSliceBump found", mgBody =!= "");
+    test.check("mutGlobalSliceBump omits restrict when accessing mut global", not mgBody.contains("restrict"));
+
+    lstBody := findFnDef(cCode, "lt_fn__purePushFromSrc");
+    test.check("purePushFromSrc found", lstBody =!= "");
+    lstHdr := lstBody.slice(0, lstBody.indexOf(") {", 0));
+    test.check("purePushFromSrc uses * restrict on dst and const * restrict on src", lstHdr.contains(" * restrict lite_dst") and lstHdr.contains("const ") and lstHdr.contains(" * restrict lite_src"));
+
+    /* 3. C11 _Static_assert size & alignment verification (-fniche-opt vs -fno-niche-opt vs -O0). */
+    extractParamCTag := fn(srcC: String, paramIdent: String): String {
+        hit := srcC.indexOf(paramIdent, 0);
+        if hit < 0 { return ""; }
+        var p := hit;
+        loop p > 0 and srcC.slice(p - 6, p) =!= "lt_s_" {
+            if srcC.slice(p - 5, p) == "lt_s_" { p = p - 5; break; }
+            p = p - 1;
+        }
+        if not srcC.startsWithAt(p, "lt_s_") { return ""; }
+        e := srcC.indexOf(" ", p);
+        if e > p { srcC.slice(p, e) } else { "" }
+    };
+
+    injectStaticAsserts := fn(srcC: String, assertions: String): String {
+        fnPos := srcC.indexOf("static bool lt_fn__checkLayoutProbe(", 0);
+        defPos := if fnPos >= 0 { srcC.indexOf("static bool lt_fn__checkLayoutProbe(", fnPos + 1) } else { -1 };
+        bodyPos := if defPos >= 0 { srcC.indexOf(") {", defPos) } else { -1 };
+        if bodyPos < 0 { return ""; }
+        insertAt := bodyPos + 3;
+        srcC.slice(0, insertAt) + "\n" + assertions + "\n" + srcC.slice(insertAt, srcC.length())
+    };
+
+    align16Tag := extractParamCTag(cCode, "lite_p_align16");
+    align64Tag := extractParamCTag(cCode, "lite_p_align64");
+    test.check("extracted align16 and align64 C struct tags", align16Tag =!= "" and align64Tag =!= "");
+
+    nicheAsserts := [
+        "    _Static_assert(sizeof(*lite_p_opt_bool) == 1, \"Option<Bool> must be 1 byte\");",
+        "    _Static_assert(sizeof(*lite_p_opt_i4) == 1, \"Option<Int4> must be 1 byte\");",
+        "    _Static_assert(sizeof(*lite_p_opt_u4) == 1, \"Option<UInt4> must be 1 byte\");",
+        "    _Static_assert(sizeof(*lite_p_opt_se) == 1, \"Option<SmallColor> must be 1 byte\");",
+        "    _Static_assert(sizeof(*lite_p_opt_pe) == sizeof(int64_t), \"Option<PlainKind> reuses enum niche\");",
+        "    _Static_assert(sizeof(*lite_p_opt_str) == 16, \"Option<String> must be 16 bytes\");",
+        "    _Static_assert(sizeof(*lite_p_opt_rc) == 8, \"Option<Rc<Int>> must be 8 bytes\");",
+        "    _Static_assert(sizeof(*lite_p_opt_list) == 16, \"Option<List<Int>> must be 16 bytes\");",
+        "    _Static_assert(sizeof(*lite_p_opt_rec) == sizeof(*lite_p_rec), \"Option<UserRec> reuses String field niche\");",
+        "    _Static_assert(sizeof(*lite_p_opt_subrec) == 16, \"Option<SubIntRec> reuses Int4 field niche\");",
+        "    _Static_assert(sizeof(*lite_p_opt_int) > sizeof(int64_t), \"Option<Int> must stay tagged\");",
+        "    _Static_assert(sizeof(*lite_p_opt_flt) > sizeof(double), \"Option<Float> must stay tagged until finite ingress\");",
+        "    _Static_assert(sizeof(*lite_p_opt_f32) > sizeof(float), \"Option<Float32> must stay tagged\");",
+        "    _Static_assert(sizeof(*lite_p_opt_e256) > 1, \"Option<256-case Int8 enum> must fall back to tagged\");",
+        "    _Static_assert(sizeof(*lite_p_opt_nn_enum) > 1, \"Option<@no_niche enum> must fall back to tagged\");",
+        "    _Static_assert(sizeof(*lite_p_opt_nn_opt) > 1, \"@no_niche Option must stay tagged\");",
+        "    _Static_assert(sizeof(*lite_p_packed) == 5, \"@packed PackedHdr must be 5 bytes\");",
+        "    _Static_assert(_Alignof(" + align16Tag + ") == 16, \"@align(16) record alignment\");",
+        "    _Static_assert(_Alignof(" + align64Tag + ") == 64, \"@align(64) enum alignment\");"
+    ].join("\n");
+
+    patchedO1 := injectStaticAsserts(cCode, nicheAsserts);
+    test.check("injected -O1 _Static_assert checks", patchedO1 =!= "");
+    o1StaticRun := compilerTest.compileAndRunC(patchedO1, ccProbe.cc, "");
+    test.checkInt("-O1 _Static_assert compile+run: " + o1StaticRun.stderr, 0, o1StaticRun.status);
+    test.checkText("-O1 _Static_assert stdout parity", tsRun.stdout, o1StaticRun.stdout);
+
+    noNicheAsserts := [
+        "    _Static_assert(sizeof(*lite_p_opt_bool) > 1, \"-fno-niche-opt disables Option<Bool> niche packing\");",
+        "    _Static_assert(sizeof(*lite_p_opt_str) > 16, \"-fno-niche-opt disables Option<String> niche packing\");",
+        "    _Static_assert(sizeof(*lite_p_opt_rc) > 8, \"-fno-niche-opt disables Option<Rc> niche packing\");",
+        "    _Static_assert(sizeof(*lite_p_packed) == 5, \"@packed still 5 bytes with -fno-niche-opt\");",
+        "    _Static_assert(_Alignof(" + align64Tag + ") == 64, \"@align(64) still 64 on tagged fallback\");"
+    ].join("\n");
+
+    cNoNiche := compilerTest.compileStdinWithOpts(root, cComp, root, layoutSrc, "phase8a-nn.lts", "", ["-O1", "-fno-niche-opt"]);
+    test.checkInt("phase8a C -fno-niche-opt emit: " + cNoNiche.stderr, 0, cNoNiche.status);
+    patchedNoNiche := injectStaticAsserts(cNoNiche.stdout, noNicheAsserts);
+    test.check("injected -fno-niche-opt _Static_assert checks", patchedNoNiche =!= "");
+    nnStaticRun := compilerTest.compileAndRunC(patchedNoNiche, ccProbe.cc, "");
+    test.checkInt("-fno-niche-opt _Static_assert compile+run: " + nnStaticRun.stderr, 0, nnStaticRun.status);
+    test.checkText("-fno-niche-opt _Static_assert stdout parity", tsRun.stdout, nnStaticRun.stdout);
+
+    cO0 := compilerTest.compileStdinWithOpts(root, cComp, root, layoutSrc, "phase8a-o0.lts", "", ["-O0"]);
+    test.checkInt("phase8a C -O0 emit: " + cO0.stderr, 0, cO0.status);
+    patchedO0 := injectStaticAsserts(cO0.stdout, noNicheAsserts);
+    test.check("injected -O0 _Static_assert checks", patchedO0 =!= "");
+    o0StaticRun := compilerTest.compileAndRunC(patchedO0, ccProbe.cc, "");
+    test.checkInt("-O0 _Static_assert compile+run: " + o0StaticRun.stderr, 0, o0StaticRun.status);
+    test.checkText("-O0 _Static_assert stdout parity", tsRun.stdout, o0StaticRun.stdout);
+}
+
+/* 4. Option.expect failure parity (TS + C11). */
+expectFailSrc := [
+    "io := import \"core/io\";",
+    "opt := import \"core/option\";",
+    "x: opt.Option<Int> = .None;",
+    "io.outputLine(x.expect(\"missing value\"));"
+].join("\n");
+tsExpectFail := compilerTest.compileCheckRunTs(root, tsComp, expectFailSrc, "phase8a-exp-ts.lts");
+test.check("TS Option.expect on None fails cleanly", tsExpectFail.status =!= 0 and tsExpectFail.stderr.contains("missing value"));
+if ccProbe.available {
+    cExpectFail := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, expectFailSrc, "phase8a-exp-c.lts", "");
+    test.check("C Option.expect on None fails cleanly", cExpectFail.status =!= 0 and cExpectFail.stderr.contains("missing value"));
+}
+
+/* 5. Compile-time layout attribute rejections. */
+compilerTest.assertCompileErrorContains(root, tsComp, "reject @packed on enum",
+"@packed\nE := enum { A; B; };\n", "@packed is only allowed on record declarations");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject @packed on record with String",
+"@packed\nR := record { s: String; };\n", "@packed record cannot contain heap-owned or drop-requiring fields");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject @packed on record with List",
+"@packed\nR := record { xs: List<Int>; };\n", "@packed record cannot contain heap-owned or drop-requiring fields");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject @packed + @align combined",
+"@packed @align(16)\nR := record { a: UInt8; };\n", "@align cannot be combined with @packed");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject @align(0)",
+"@align(0)\nR := record { a: UInt8; };\n", "@align(0) must be a power of two in 1..4096");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject @align(3)",
+"@align(3)\nR := record { a: UInt8; };\n", "@align(3) must be a power of two in 1..4096");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject @align(8192)",
+"@align(8192)\nR := record { a: UInt8; };\n", "@align(8192) must be a power of two in 1..4096");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate @no_niche",
+"@no_niche @no_niche\nE := enum { A; B; };\n", "duplicate @no_niche attribute");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject unknown @bogus on decl",
+"@bogus\nR := record { a: UInt8; };\n", "unknown type layout attribute @bogus");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject layout attr on fn",
+"@align(16)\nf := fn(): Int { 1 };\n", "layout attributes are only allowed on record and enum declarations");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject layout attr on alias",
+"@no_niche\nA := alias Int;\n", "layout attributes are only allowed on record and enum declarations");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject layout attr on distinct",
+"@no_niche\nD := distinct Int;\n", "layout attributes are only allowed on record and enum declarations");
+
+test.done("phase8a-layout-niche-restrict");

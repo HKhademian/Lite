@@ -745,6 +745,13 @@ pub scanInnerBlockAssignedBag := fn(target: String, source: String, openBracePos
         } else if ch == ")" or ch == "]" {
             if parenDepth > 0 { parenDepth = parenDepth - 1; }
             position = position + 1;
+        } else if parenDepth == 0 and ch == "@" {
+            attr := types.parseTypeLayoutAttrs(source, position, prefix);
+            if attr.ok and attr.hasAttrs {
+                position = syntax.skipTrivia(source, attr.next, prefix);
+                continue;
+            }
+            position = position + 1;
         } else if parenDepth == 0 and ch.isNameStart() {
             afterName := source.skipName(position);
             name := source.slice(position, afterName);
@@ -1025,6 +1032,13 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
         } else if ch == ")" or ch == "]" {
             if parenDepth > 0 { parenDepth = parenDepth - 1; }
             position = position + 1;
+        } else if parenDepth == 0 and ch == "@" {
+            attr := types.parseTypeLayoutAttrs(source, position, prefix);
+            if attr.ok and attr.hasAttrs {
+                position = syntax.skipTrivia(source, attr.next, prefix);
+                continue;
+            }
+            position = position + 1;
         } else if parenDepth == 0 and ch.isNameStart() {
             nameStart := position;
             afterName := source.skipName(position);
@@ -1262,6 +1276,60 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
             position = position + 1;
         } else if ch == ")" or ch == "]" {
             if depth == 0 and parenDepth > 0 { parenDepth = parenDepth - 1; }
+            position = position + 1;
+        } else if depth == 0 and parenDepth == 0 and ch == "@" {
+            attr := types.parseTypeLayoutAttrs(source, position, prefix);
+            if attr.ok and attr.hasAttrs {
+                var attrScanPos := syntax.skipTrivia(source, attr.next, prefix);
+                isAttrPub := attrScanPos < size and source.wordAt(attrScanPos, "pub");
+                if isAttrPub {
+                    attrScanPos = syntax.skipTrivia(source, attrScanPos + 3, prefix);
+                }
+                if attrScanPos < size and source.at(attrScanPos).isNameStart() {
+                    aNameStart := attrScanPos;
+                    aAfterName := source.skipName(aNameStart);
+                    aName := source.slice(aNameStart, aAfterName);
+                    aOpPos := syntax.skipTrivia(source, aAfterName, prefix);
+                    if not syntax.isReservedWord(aName) and source.startsWithAt(aOpPos, ":=") {
+                        aValStart := syntax.skipTrivia(source, aOpPos + 2, prefix);
+                        if source.wordAt(aValStart, "record") {
+                            if isAttrPub {
+                                mut decls.pushBack((kind = ir.DECL_KIND_PUB_TYPE, name = aName, runtime = "", code = "", intValue = 0, textValue = ""));
+                            }
+                            gp := types.scanComptimeTypeParams(source, aValStart + 6, prefix);
+                            if not gp.ok {
+                                position = if gp.next > aValStart + 6 { gp.next } else { aValStart + 6 };
+                                continue;
+                            }
+                            bracePos := syntax.skipTrivia(source, gp.next, prefix);
+                            recTarget := types.collectRecordTargetWithAttrs(source, bracePos, prefix, moduleKey, aNameStart, aName, attr.encoded);
+                            rawTxt := if gp.hasParams { "@genraw:" + types.encodeLengthPrefixedText(gp.paramsCsv) + recTarget.text } else { recTarget.text };
+                            mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = aName, runtime = "", code = rawTxt,
+                            intValue = aNameStart, textValue = recTarget.next.toText()));
+                            position = recTarget.next;
+                            continue;
+                        }
+                        if source.wordAt(aValStart, "enum") {
+                            if isAttrPub {
+                                mut decls.pushBack((kind = ir.DECL_KIND_PUB_TYPE, name = aName, runtime = "", code = "", intValue = 0, textValue = ""));
+                            }
+                            gp := types.scanComptimeTypeParams(source, aValStart + 4, prefix);
+                            if not gp.ok {
+                                position = if gp.next > aValStart + 4 { gp.next } else { aValStart + 4 };
+                                continue;
+                            }
+                            enumTarget := types.collectEnumTargetWithAttrs(source, gp.next, prefix, moduleKey, aNameStart, aName, attr.encoded);
+                            rawTxt := if gp.hasParams { "@genraw:" + types.encodeLengthPrefixedText(gp.paramsCsv) + enumTarget.text } else { enumTarget.text };
+                            mut decls.pushBack((kind = ir.DECL_KIND_ALIAS, name = aName, runtime = "", code = rawTxt,
+                            intValue = aNameStart, textValue = enumTarget.next.toText()));
+                            position = enumTarget.next;
+                            continue;
+                        }
+                    }
+                }
+                position = attr.next;
+                continue;
+            }
             position = position + 1;
         } else if depth == 0 and parenDepth == 0 and ch.isNameStart() {
             nameStart := position;

@@ -311,6 +311,12 @@ isCoreSliceHostModule := fn(moduleIdentity: String): Bool {
 pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
 /** True when `kind` is a payload-bearing nominal `enum` type kind. */
 pub isPayloadEnumKind := fn(kind: String): Bool { types.isPayloadEnumKind(kind) };
+/** Maps a plain `enum` kind to its C11 backing storage type, tag, and maximum representable case count (`maxCases`). */
+pub plainEnumCStorage := fn(kind: String): (cType: String, cTag: String, maxCases: Int) { types.plainEnumCStorage(kind) };
+/** Returns layout attributes (`packed`, `align`, `noNiche`) attached to canonical record `kind`. */
+pub recordLayoutAttrs := fn(kind: String): (packed: Bool, align: Int, noNiche: Bool) { types.recordLayoutAttrs(kind) };
+/** Returns layout attributes (`packed`, `align`, `noNiche`) attached to canonical enum `kind`. */
+pub enumLayoutAttrs := fn(kind: String): (packed: Bool, align: Int, noNiche: Bool) { types.enumLayoutAttrs(kind) };
 /** Returns the user-facing display name for an enum `kind`. */
 pub enumDisplayName := fn(kind: String): String { types.enumDisplayName(kind) };
 /** Returns the number of declared cases in an enum `kind`. */
@@ -2330,11 +2336,45 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             continue;
         }
         if ch == "@" {
+            layoutAttr := types.parseTypeLayoutAttrs(source, position, prefix);
+            if not layoutAttr.ok {
+                failAt(source, layoutAttr.errPos, prefix, layoutAttr.errMsg);
+            }
+            if layoutAttr.hasAttrs {
+                var attrDeclPos := skipTrivia(source, layoutAttr.next, prefix);
+                if source.wordAt(attrDeclPos, "pub") {
+                    if blockCount =!= 0 {
+                        failAt(source, attrDeclPos, prefix, "pub is only allowed on top-level declarations");
+                    }
+                    attrDeclPos = skipTrivia(source, attrDeclPos + 3, prefix);
+                }
+                if attrDeclPos >= size or not source.at(attrDeclPos).isNameStart() {
+                    failAt(source, attrDeclPos, prefix, "layout attributes are only allowed on record and enum declarations");
+                }
+                attrDeclEnd := source.skipName(attrDeclPos);
+                attrDeclOp := skipTrivia(source, attrDeclEnd, prefix);
+                if not source.startsWithAt(attrDeclOp, ":=") {
+                    failAt(source, attrDeclOp, prefix, "layout attributes are only allowed on record and enum declarations");
+                }
+                attrTargetPos := skipTrivia(source, attrDeclOp + 2, prefix);
+                if not source.wordAt(attrTargetPos, "record") and not source.wordAt(attrTargetPos, "enum") {
+                    failAt(source, attrTargetPos, prefix, "layout attributes are only allowed on record and enum declarations");
+                }
+                if layoutAttr.packed and source.wordAt(attrTargetPos, "enum") {
+                    failAt(source, position, prefix, "@packed is only allowed on record declarations");
+                }
+                position = attrDeclPos;
+                continue;
+            }
             tagInfo := parseTagAt(source, position, prefix);
             afterTag := skipTrivia(source, tagInfo.next, prefix);
             if afterTag >= size or (source.at(afterTag) =!= "{" and source.at(afterTag) =!= "." and
             not source.wordAt(afterTag, "if") and not source.wordAt(afterTag, "match") and
             not source.wordAt(afterTag, "loop")) {
+                if source.wordAt(afterTag, "pub") or
+                (afterTag < size and source.at(afterTag).isNameStart() and source.startsWithAt(skipTrivia(source, source.skipName(afterTag), prefix), ":=")) {
+                    failAt(source, position, prefix, "unknown type layout attribute @" + tagInfo.tag);
+                }
                 failAt(source, afterTag, prefix, "expected {, if, match, loop or . after block tag @" + tagInfo.tag);
             }
             if isLtModule and blockCount == 0 {

@@ -488,15 +488,17 @@ headerTypeArgs := fn(hdr: String): List<String> {
     splitTopLevelKinds(hdr.slice(lt + 1, size - 1))
 };
 
-/** Formats a nominal identity header `mod#at#Name[<A,B>]` into `Name[<A, B>]`. */
+/** Formats a nominal identity header `mod#at#Name[~attrs][<A,B>]` into `Name[<A, B>]`. */
 headerDisplayName := fn(hdr: String): String {
     baseEnd := headerBaseEnd(hdr);
-    base := hdr.slice(0, baseEnd);
-    var hashPos := baseEnd - 1;
+    tilde := hdr.indexOf("~", 0);
+    nameEnd := if tilde >= 0 and tilde < baseEnd { tilde } else { baseEnd };
+    base := hdr.slice(0, nameEnd);
+    var hashPos := nameEnd - 1;
     loop hashPos >= 0 and base.at(hashPos) =!= "#" {
         hashPos = hashPos - 1;
     }
-    shortName := if hashPos >= 0 { base.slice(hashPos + 1, baseEnd) } else { base };
+    shortName := if hashPos >= 0 { base.slice(hashPos + 1, nameEnd) } else { base };
     args := headerTypeArgs(hdr);
     if args.length() == 0 { return shortName; }
     dispArgs: mut List<String> = [];
@@ -504,6 +506,151 @@ headerDisplayName := fn(hdr: String): String {
         mut dispArgs.pushBack(displayKind(a));
     }
     shortName + "<" + dispArgs.join(", ") + ">"
+};
+
+isPowerOfTwoAlign := fn(n: Int): Bool {
+    if n < 1 or n > 4096 { return false; }
+    var p := 1;
+    loop p < n {
+        p = p * 2;
+    }
+    p == n
+};
+
+/** Decodes optional `~P~A<n>~N` layout attributes from a canonical record or enum header. */
+pub parseLayoutAttrSuffix := fn(rawHeader: String): (packed: Bool, align: Int, noNiche: Bool) {
+    baseEnd := headerBaseEnd(rawHeader);
+    tilde := rawHeader.indexOf("~", 0);
+    if tilde < 0 or tilde >= baseEnd {
+        return (packed = false, align = 0, noNiche = false);
+    }
+    var packed := false;
+    var align := 0;
+    var noNiche := false;
+    var cur := tilde;
+    loop cur < baseEnd {
+        if rawHeader.at(cur) =!= "~" { break; }
+        cur = cur + 1;
+        if cur >= baseEnd { break; }
+        ch := rawHeader.at(cur);
+        if ch == "P" {
+            packed = true;
+            cur = cur + 1;
+        } else if ch == "N" {
+            noNiche = true;
+            cur = cur + 1;
+        } else if ch == "A" {
+            cur = cur + 1;
+            dStart := cur;
+            loop cur < baseEnd and rawHeader.at(cur).isDigit() {
+                cur = cur + 1;
+            }
+            if cur > dStart {
+                align = syntax.parseDigits(rawHeader, dStart, cur);
+            }
+        } else {
+            break;
+        }
+    }
+    (=packed, =align, =noNiche)
+};
+
+/** Returns layout attributes (`packed`, `align`, `noNiche`) attached to canonical record `kind`. */
+pub recordLayoutAttrs := fn(kind: String): (packed: Bool, align: Int, noNiche: Bool) {
+    semi := recordHeaderSemi(kind);
+    if semi <= 7 { return (packed = false, align = 0, noNiche = false); }
+    parseLayoutAttrSuffix(kind.slice(7, semi))
+};
+
+/** Returns layout attributes (`packed`, `align`, `noNiche`) attached to canonical enum `kind`. */
+pub enumLayoutAttrs := fn(kind: String): (packed: Bool, align: Int, noNiche: Bool) {
+    if not isEnumKind(kind) { return (packed = false, align = 0, noNiche = false); }
+    hdr := decodeLengthPrefixedAt(kind, 5);
+    if hdr.next < 0 { return (packed = false, align = 0, noNiche = false); }
+    parseLayoutAttrSuffix(hdr.text)
+};
+
+/** Parses zero or more leading type layout attributes (`@packed`, `@align(N)`, `@no_niche`) before a declaration. */
+pub parseTypeLayoutAttrs := fn(source: String, startPos: Int, prefix: String): (
+ok: Bool, hasAttrs: Bool, packed: Bool, align: Int, noNiche: Bool, encoded: String, next: Int, errPos: Int, errMsg: String
+) {
+    emptyRes := (ok = true, hasAttrs = false, packed = false, align = 0, noNiche = false, encoded = "", next = startPos, errPos = -1, errMsg = "");
+    size := source.length();
+    if startPos >= size or source.at(startPos) =!= "@" { return emptyRes; }
+    firstTag := syntax.skipTrivia(source, startPos + 1, prefix);
+    if firstTag >= size or not source.at(firstTag).isNameStart() { return emptyRes; }
+    firstName := source.slice(firstTag, source.skipName(firstTag));
+    if firstName =!= "packed" and firstName =!= "align" and firstName =!= "no_niche" {
+        return emptyRes;
+    }
+    var cur := startPos;
+    var packed := false;
+    var align := 0;
+    var noNiche := false;
+    loop cur < size and source.at(cur) == "@" {
+        attrStart := cur;
+        tagPos := syntax.skipTrivia(source, cur + 1, prefix);
+        if tagPos >= size or not source.at(tagPos).isNameStart() {
+            return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = attrStart, errMsg = "expected layout attribute name after @");
+        }
+        tagEnd := source.skipName(tagPos);
+        attrName := source.slice(tagPos, tagEnd);
+        afterName := syntax.skipTrivia(source, tagEnd, prefix);
+        if attrName == "packed" {
+            if afterName < size and source.at(afterName) == "(" {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = afterName, errMsg = "@packed does not take arguments");
+            }
+            if packed {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = attrStart, errMsg = "duplicate @packed attribute");
+            }
+            if align > 0 {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = attrStart, errMsg = "@packed cannot be combined with @align");
+            }
+            packed = true;
+            cur = afterName;
+        } else if attrName == "no_niche" {
+            if afterName < size and source.at(afterName) == "(" {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = afterName, errMsg = "@no_niche does not take arguments");
+            }
+            if noNiche {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = attrStart, errMsg = "duplicate @no_niche attribute");
+            }
+            noNiche = true;
+            cur = afterName;
+        } else if attrName == "align" {
+            if align > 0 {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = attrStart, errMsg = "duplicate @align attribute");
+            }
+            if packed {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = attrStart, errMsg = "@align cannot be combined with @packed");
+            }
+            if afterName >= size or source.at(afterName) =!= "(" {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = afterName, errMsg = "@align requires a power-of-two byte alignment argument");
+            }
+            numPos := syntax.skipTrivia(source, afterName + 1, prefix);
+            var numEnd := numPos;
+            loop numEnd < size and source.at(numEnd).isDigit() {
+                numEnd = numEnd + 1;
+            }
+            if numEnd == numPos {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = numPos, errMsg = "@align requires a positive integer power-of-two in 1..4096");
+            }
+            parsedAlign := syntax.parseDigits(source, numPos, numEnd);
+            closePos := syntax.skipTrivia(source, numEnd, prefix);
+            if closePos >= size or source.at(closePos) =!= ")" {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = closePos, errMsg = "expected ) after @align argument");
+            }
+            if not isPowerOfTwoAlign(parsedAlign) {
+                return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = numPos, errMsg = "@align(" + parsedAlign.toText() + ") must be a power of two in 1..4096");
+            }
+            align = parsedAlign;
+            cur = syntax.skipTrivia(source, closePos + 1, prefix);
+        } else {
+            return (ok = false, hasAttrs = true, =packed, =align, =noNiche, encoded = "", next = cur, errPos = attrStart, errMsg = "unknown type layout attribute @" + attrName);
+        }
+    }
+    encoded := (if packed { "~P" } else { "" }) + (if align > 0 { "~A" + align.toText() } else { "" }) + (if noNiche { "~N" } else { "" });
+    (ok = true, hasAttrs = true, =packed, =align, =noNiche, =encoded, next = cur, errPos = -1, errMsg = "")
 };
 
 /** True when `kind` is this compiler's canonical nominal distinct kind `Distinct<lp(id#at#Name[<...>])Underlying>`. */
@@ -1540,6 +1687,22 @@ pub cCopyFnForKind := fn(kind: String): String {
     if d.endsWith("_drop") { d.slice(0, d.length() - 5) + "_copy" } else { "" }
 };
 
+/** Maps a plain `enum` kind to its C11 backing storage type, tag, and maximum representable case count (`maxCases`). */
+pub plainEnumCStorage := fn(kind: String): (cType: String, cTag: String, maxCases: Int) {
+    if not isEnumKind(kind) or isPayloadEnumKind(kind) {
+        return (cType = "int64_t", cTag = "i64", maxCases = 9223372036854775807);
+    }
+    bk := enumBackingKind(kind);
+    if bk == ir.VALUE_KIND_INT1 or bk == ir.VALUE_KIND_UINT1 { (cType = "uint8_t", cTag = "u8", maxCases = 2) }
+    else if bk == ir.VALUE_KIND_INT2 or bk == ir.VALUE_KIND_UINT2 { (cType = "uint8_t", cTag = "u8", maxCases = 4) }
+    else if bk == ir.VALUE_KIND_INT4 or bk == ir.VALUE_KIND_UINT4 { (cType = "uint8_t", cTag = "u8", maxCases = 16) }
+    else if bk == ir.VALUE_KIND_INT8 or bk == ir.VALUE_KIND_UINT8 { (cType = "uint8_t", cTag = "u8", maxCases = 256) }
+    else if bk == ir.VALUE_KIND_INT16 or bk == ir.VALUE_KIND_UINT16 { (cType = "uint16_t", cTag = "u16", maxCases = 65536) }
+    else if bk == ir.VALUE_KIND_INT32 or bk == ir.VALUE_KIND_UINT32 { (cType = "uint32_t", cTag = "u32", maxCases = 4294967296) }
+    else if bk == ir.VALUE_KIND_BOOL { (cType = "int64_t", cTag = "i64", maxCases = 2) }
+    else { (cType = "int64_t", cTag = "i64", maxCases = 9223372036854775807) }
+};
+
 /** Maps a scalar or payload-free enum kind to its canonical C11 width tag (`i1..i64`, `u1..u64`, `f8..f64`, `bool`, `str`), or `""`. */
 cScalarTag := fn(kind: String): String {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
@@ -1549,7 +1712,8 @@ cScalarTag := fn(kind: String): String {
     else if kind == ir.VALUE_KIND_INT8 { "i8" }
     else if kind == ir.VALUE_KIND_INT16 { "i16" }
     else if kind == ir.VALUE_KIND_INT32 { "i32" }
-    else if kind == ir.VALUE_KIND_INT or (isEnumKind(kind) and not isPayloadEnumKind(kind)) { "i64" }
+    else if isEnumKind(kind) and not isPayloadEnumKind(kind) { plainEnumCStorage(kind).cTag }
+    else if kind == ir.VALUE_KIND_INT { "i64" }
     else if kind == ir.VALUE_KIND_UINT1 { "u1" }
     else if kind == ir.VALUE_KIND_UINT2 { "u2" }
     else if kind == ir.VALUE_KIND_UINT4 { "u4" }
@@ -2298,6 +2462,43 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
     pattern
 };
 
+/** True when `kind` contains strings, heap containers, handles, or closures forbidden inside `@packed` structs. */
+packedRecordFieldUnsafe := fn(kind: String): Bool {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if kind == ir.VALUE_KIND_STRING or cTypeNeedsDrop(kind) { return true; }
+    if isArrayKind(kind) { return self(arrayElementKind(kind)); }
+    if isTupleKind(kind) {
+        var i := 0;
+        n := tupleComponentCount(kind);
+        loop i < n {
+            if self(tupleComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    if isRecordKind(kind) {
+        var i := 0;
+        n := recordComponentCount(kind);
+        loop i < n {
+            if self(recordComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    if isPayloadEnumKind(kind) {
+        var ci := 0;
+        cc := enumCaseCount(kind);
+        loop ci < cc {
+            loop enumCasePayloads(kind, ci) as pk {
+                if self(pk) { return true; }
+            }
+            ci = ci + 1;
+        }
+        return false;
+    }
+    false
+};
+
 /** Validates map-key, set-element, nested-list, tuple, record-field, and distinct constraints on a canonical kind, returning `""` if valid. */
 pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): String {
     if isListKind(kind) {
@@ -2387,6 +2588,9 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         return "";
     }
     if isRecordKind(kind) {
+        if recordLayoutAttrs(kind).packed and packedRecordFieldUnsafe(kind) {
+            return "@packed record cannot contain heap-owned or drop-requiring fields";
+        }
         fc := recordComponentCount(kind);
         var fi := 0;
         loop fi < fc {
@@ -2916,7 +3120,9 @@ parseEnumCaseLiteral := fn(rawText: String, expectedBacking: String, prefix: Str
     isSign := ch == "-" or ch == "+";
     numPos := if isSign { syntax.skipTrivia(rawText, pos + 1, prefix) } else { pos };
     if numPos < size and rawText.at(numPos).isDigit() {
-        hintKind := if numeric.isNumericKind(expectedBacking) {
+        hintKind := if isNeg and numeric.isIntKind(expectedBacking) {
+            ir.VALUE_KIND_INT
+        } else if numeric.isNumericKind(expectedBacking) {
             expectedBacking
         } else {
             ""
@@ -4631,8 +4837,8 @@ skipRecordFieldDefault := fn(source: String, start: Int, limit: Int, prefix: Str
     cur
 };
 
-/** Pre-scans `Name := enum [: BackingType] { Case [= val]; ... }` into an encoded `@enumraw:` target and end offset. */
-pub collectEnumTarget := fn(source: String, afterEnumKw: Int, prefix: String, moduleIdentity: String, declAt: Int, enumName: String): (text: String, next: Int) {
+/** Pre-scans `Name := enum [: BackingType] { Case [= val]; ... }` with layout attributes into an encoded `@enumraw:` target. */
+pub collectEnumTargetWithAttrs := fn(source: String, afterEnumKw: Int, prefix: String, moduleIdentity: String, declAt: Int, enumName: String, attrSuffix: String): (text: String, next: Int) {
     size := source.length();
     var cursor := syntax.skipTrivia(source, afterEnumKw, prefix);
     var rawBacking := "";
@@ -4735,12 +4941,17 @@ pub collectEnumTarget := fn(source: String, afterEnumKw: Int, prefix: String, mo
         mut pairsBuf.append(encodeLengthPrefixedText(vals[idx]));
         idx = idx + 1;
     }
-    enumHeader := moduleIdentity + "#" + declAt.toText() + "#" + enumName;
+    enumHeader := moduleIdentity + "#" + declAt.toText() + "#" + enumName + attrSuffix;
     (text = "@enumraw:" + encodeLengthPrefixedText(enumHeader) + encodeLengthPrefixedText(rawBacking) + count.toText() + ";" + pairsBuf.build(), next = closeEnd)
 };
 
-/** Pre-scans `Name := record { field: Type [= default]; ... }` into an encoded `@recraw:` target and end offset. */
-pub collectRecordTarget := fn(source: String, bracePos: Int, prefix: String, moduleIdentity: String, declAt: Int, recName: String): (text: String, next: Int) {
+/** Pre-scans `Name := enum [: BackingType] { Case [= val]; ... }` into an encoded `@enumraw:` target and end offset. */
+pub collectEnumTarget := fn(source: String, afterEnumKw: Int, prefix: String, moduleIdentity: String, declAt: Int, enumName: String): (text: String, next: Int) {
+    collectEnumTargetWithAttrs(source, afterEnumKw, prefix, moduleIdentity, declAt, enumName, "")
+};
+
+/** Pre-scans `Name := record { field: Type [= default]; ... }` with layout attributes into an encoded `@recraw:` target. */
+pub collectRecordTargetWithAttrs := fn(source: String, bracePos: Int, prefix: String, moduleIdentity: String, declAt: Int, recName: String, attrSuffix: String): (text: String, next: Int) {
     size := source.length();
     start := syntax.skipTrivia(source, bracePos, prefix);
     if start >= size or source.at(start) =!= "{" {
@@ -4799,8 +5010,13 @@ pub collectRecordTarget := fn(source: String, bracePos: Int, prefix: String, mod
         mut pairsBuf.append(encodeLengthPrefixedText(typesList[idx]));
         idx = idx + 1;
     }
-    recHeader := moduleIdentity + "#" + declAt.toText() + "#" + recName;
+    recHeader := moduleIdentity + "#" + declAt.toText() + "#" + recName + attrSuffix;
     (text = "@recraw:" + encodeLengthPrefixedText(recHeader) + count.toText() + ";" + pairsBuf.build(), next = closeEnd)
+};
+
+/** Pre-scans `Name := record { field: Type [= default]; ... }` into an encoded `@recraw:` target and end offset. */
+pub collectRecordTarget := fn(source: String, bracePos: Int, prefix: String, moduleIdentity: String, declAt: Int, recName: String): (text: String, next: Int) {
+    collectRecordTargetWithAttrs(source, bracePos, prefix, moduleIdentity, declAt, recName, "")
 };
 
 /** Pre-scans `Name := distinct TargetType` into an encoded `@distraw:` target and end offset. */
@@ -4853,9 +5069,26 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
         } else if ch == ")" or ch == "]" {
             if parenDepth > 0 { parenDepth = parenDepth - 1; }
             cursor = cursor + 1;
-        } else if parenDepth == 0 and ch.isNameStart() {
-            nameStart := cursor;
-            afterName := source.skipName(cursor);
+        } else if parenDepth == 0 and (ch == "@" or ch.isNameStart()) {
+            var attrSuffix := "";
+            var nameStart := cursor;
+            if ch == "@" {
+                attr := parseTypeLayoutAttrs(source, cursor, prefix);
+                if not attr.ok or not attr.hasAttrs {
+                    cursor = cursor + 1;
+                    continue;
+                }
+                attrSuffix = attr.encoded;
+                nameStart = syntax.skipTrivia(source, attr.next, prefix);
+                if source.wordAt(nameStart, "pub") {
+                    nameStart = syntax.skipTrivia(source, nameStart + 3, prefix);
+                }
+                if nameStart >= limit or not source.at(nameStart).isNameStart() {
+                    cursor = attr.next;
+                    continue;
+                }
+            }
+            afterName := source.skipName(nameStart);
             name := source.slice(nameStart, afterName);
             opPos := syntax.skipTrivia(source, afterName, prefix);
             if name =!= "pub" and not syntax.isReservedWord(name) and source.startsWithAt(opPos, ":=") {
@@ -4864,7 +5097,7 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
                     gp := scanComptimeTypeParams(source, typePos + 5, prefix);
                     targetStart := syntax.skipTrivia(source, gp.next, prefix);
                     aliasTarget := collectTypeTarget(source, targetStart, prefix);
-                    if gp.ok {
+                    if gp.ok and attrSuffix == "" {
                         rawTxt := if gp.hasParams { "@genraw:" + encodeLengthPrefixedText(gp.paramsCsv) + aliasTarget.text } else { aliasTarget.text };
                         mut found.pushBack((name = name, target = rawTxt, at = nameStart, end = aliasTarget.next, depth = blockDepth));
                         hasFound = true;
@@ -4874,7 +5107,7 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
                 } else if source.wordAt(typePos, "distinct") {
                     gp := scanComptimeTypeParams(source, typePos + 8, prefix);
                     distTarget := collectDistinctTarget(source, gp.next, prefix, "b" + blockDepth.toText(), nameStart, name);
-                    if gp.ok {
+                    if gp.ok and attrSuffix == "" {
                         rawTxt := if gp.hasParams { "@genraw:" + encodeLengthPrefixedText(gp.paramsCsv) + distTarget.text } else { distTarget.text };
                         mut found.pushBack((name = name, target = rawTxt, at = nameStart, end = distTarget.next, depth = blockDepth));
                         hasFound = true;
@@ -4884,7 +5117,7 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
                 } else if source.wordAt(typePos, "record") {
                     gp := scanComptimeTypeParams(source, typePos + 6, prefix);
                     braceStart := syntax.skipTrivia(source, gp.next, prefix);
-                    recTarget := collectRecordTarget(source, braceStart, prefix, "b" + blockDepth.toText(), nameStart, name);
+                    recTarget := collectRecordTargetWithAttrs(source, braceStart, prefix, "b" + blockDepth.toText(), nameStart, name, attrSuffix);
                     if gp.ok {
                         rawTxt := if gp.hasParams { "@genraw:" + encodeLengthPrefixedText(gp.paramsCsv) + recTarget.text } else { recTarget.text };
                         mut found.pushBack((name = name, target = rawTxt, at = nameStart, end = recTarget.next, depth = blockDepth));
@@ -4894,7 +5127,7 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
                     continue;
                 } else if source.wordAt(typePos, "enum") {
                     gp := scanComptimeTypeParams(source, typePos + 4, prefix);
-                    enumTarget := collectEnumTarget(source, gp.next, prefix, "b" + blockDepth.toText(), nameStart, name);
+                    enumTarget := collectEnumTargetWithAttrs(source, gp.next, prefix, "b" + blockDepth.toText(), nameStart, name, attrSuffix);
                     if gp.ok {
                         rawTxt := if gp.hasParams { "@genraw:" + encodeLengthPrefixedText(gp.paramsCsv) + enumTarget.text } else { enumTarget.text };
                         mut found.pushBack((name = name, target = rawTxt, at = nameStart, end = enumTarget.next, depth = blockDepth));

@@ -3878,10 +3878,12 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     hasInput := usesBuiltin(calls, "inputAll") or usesBuiltin(calls, "inputLine") or usesBuiltin(calls, "inputInt") or usesBuiltin(calls, "inputFloat");
     hasExit := usesBuiltin(calls, "exit") or usesDiagFailExit(calls) or hasInput or abruptUnwind;
     var hasEmitItem := false;
+    var hasSliceLoopSeq := false;
     loop effectiveItems as emitScan {
         if emitScan.kind == frontend.ITEM_KIND_END or emitScan.kind == frontend.ITEM_KIND_END_OUTPUT {
             hasEmitItem = true;
-            break;
+        } else if emitScan.kind == frontend.ITEM_KIND_LOOP_SEQ and emitScan.intValue == 7 {
+            hasSliceLoopSeq = true;
         }
     }
     usesEmit := hasEmitItem or hasExit or hasInput or abruptUnwind or calls.indexOf("lite$emit(", 0) >= 0;
@@ -3905,7 +3907,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if usesSliceUncheckedSet(calls) { emitSliceUncheckedSetHelper(config); }
     if usesSliceSplitAt(calls) { emitSliceSplitAtHelper(); }
     if usesSliceToList(calls) { emitSliceToListHelper(); }
-    if usesSliceIter(calls) { emitSliceIterHelper(); }
+    if usesSliceIter(calls) or hasSliceLoopSeq { emitSliceIterHelper(); }
     if usesStrBytes(calls) { emitStrBytesHelper(); }
     if usesMapIndex(calls) { emitMapIndexHelper(); }
     if usesMapGet(calls) { emitMapGetHelper(); }

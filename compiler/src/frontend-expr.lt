@@ -1985,19 +1985,9 @@ emitPayloadEnumValue := fn(target: String, enumKind: String, caseIdx: Int, argCo
     if target == ir.TARGET_C {
         tag := types.cStructTag(enumKind);
         if argCodes.length() == 0 {
-            return "/*@T:" + enumKind + "@*/((" + tag + "){ .tag = " + caseIdx.toText() + ", .u = { ._empty = 0 } })";
+            return "/*@T:" + enumKind + "@*/" + tag + "_mk_" + caseIdx.toText() + "()";
         }
-        fieldsInitBuf: mut tb.TextBuilder;
-        var pi := 0;
-        loop pi < argCodes.length() {
-            if pi > 0 { mut fieldsInitBuf.append(", "); }
-            mut fieldsInitBuf.append(".f");
-            mut fieldsInitBuf.append(pi.toText());
-            mut fieldsInitBuf.append(" = ");
-            mut fieldsInitBuf.append(argCodes[pi]);
-            pi = pi + 1;
-        }
-        return "/*@T:" + enumKind + "@*/((" + tag + "){ .tag = " + caseIdx.toText() + ", .u = { .c" + caseIdx.toText() + " = { " + fieldsInitBuf.build() + " } } })";
+        return "/*@T:" + enumKind + "@*/" + tag + "_mk_" + caseIdx.toText() + "(" + argCodes.join(", ") + ")";
     }
     tsT := types.tsFunctionType(enumKind);
     objBuf: mut tb.TextBuilder;
@@ -2550,11 +2540,43 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 cursor = if stmtNext >= 0 { stmtNext } else { stmtEndPos };
             }
         } else if chAtCursor == "@" {
+            layoutAttr := types.parseTypeLayoutAttrs(source, cursor, prefix);
+            if not layoutAttr.ok {
+                syntax.failAt(source, layoutAttr.errPos, prefix, layoutAttr.errMsg);
+            }
+            if layoutAttr.hasAttrs {
+                attrDeclPos := syntax.skipTrivia(source, layoutAttr.next, prefix);
+                if source.wordAt(attrDeclPos, "pub") {
+                    syntax.failAt(source, attrDeclPos, prefix, "pub is only allowed on top-level declarations");
+                }
+                if attrDeclPos >= blockSourceSize or not source.at(attrDeclPos).isNameStart() {
+                    syntax.failAt(source, attrDeclPos, prefix, "layout attributes are only allowed on record and enum declarations");
+                }
+                attrDeclEnd := source.skipName(attrDeclPos);
+                attrDeclOp := syntax.skipTrivia(source, attrDeclEnd, prefix);
+                if not source.startsWithAt(attrDeclOp, ":=") {
+                    syntax.failAt(source, attrDeclOp, prefix, "layout attributes are only allowed on record and enum declarations");
+                }
+                attrTargetPos := syntax.skipTrivia(source, attrDeclOp + 2, prefix);
+                if not source.wordAt(attrTargetPos, "record") and not source.wordAt(attrTargetPos, "enum") {
+                    syntax.failAt(source, attrTargetPos, prefix, "layout attributes are only allowed on record and enum declarations");
+                }
+                if layoutAttr.packed and source.wordAt(attrTargetPos, "enum") {
+                    syntax.failAt(source, cursor, prefix, "@packed is only allowed on record declarations");
+                }
+                isStatement = true;
+                cursor = attrDeclPos;
+                continue;
+            }
             tagPeek := syntax.parseTagAt(source, cursor, prefix);
             afterPeek := syntax.skipTrivia(source, tagPeek.next, prefix);
             if afterPeek >= blockSourceSize or (source.at(afterPeek) =!= "{" and source.at(afterPeek) =!= "." and
             not source.wordAt(afterPeek, "if") and not source.wordAt(afterPeek, "match") and
             not source.wordAt(afterPeek, "loop")) {
+                if source.wordAt(afterPeek, "pub") or
+                (afterPeek < blockSourceSize and source.at(afterPeek).isNameStart() and source.startsWithAt(syntax.skipTrivia(source, source.skipName(afterPeek), prefix), ":=")) {
+                    syntax.failAt(source, cursor, prefix, "unknown type layout attribute @" + tagPeek.tag);
+                }
                 syntax.failAt(source, afterPeek, prefix, "expected {, if, match, loop or . after block tag @" + tagPeek.tag);
             }
         } else if chAtCursor.isNameStart() {
@@ -5522,8 +5544,9 @@ parseEnumCasePattern := fn(target: String, source: String, patPos: Int, caseStar
         return (cond = cmp.code, bindings = "", irrefutable = false, boolMask = 0, enumCases = "|" + caseIdx.toText() + "|", next = caseEnd, markers = "");
     }
     payloads := types.enumCasePayloads(enumKind, caseIdx);
+    cEnumTag := if target == ir.TARGET_C { types.cStructTag(enumKind) } else { "" };
     tagCond := if target == ir.TARGET_C {
-        "(" + subjCode + ").tag == " + caseIdx.toText()
+        cEnumTag + "_tag(" + subjCode + ") == " + caseIdx.toText()
     } else {
         "(" + subjCode + ")._t === " + caseIdx.toText()
     };
@@ -5545,7 +5568,7 @@ parseEnumCasePattern := fn(target: String, source: String, patPos: Int, caseStar
         }
         pk := payloads[pi];
         payloadExpr := if target == ir.TARGET_C {
-            "((" + subjCode + ").u.c" + caseIdx.toText() + ".f" + pi.toText() + ")"
+            cEnumTag + "_p_" + caseIdx.toText() + "_" + pi.toText() + "(" + subjCode + ")"
         } else {
             "(((" + subjCode + ") as { readonly _t: " + caseIdx.toText() + "; readonly _" + pi.toText() + ": " + types.tsFunctionType(pk) + " })._" + pi.toText() + ")"
         };
@@ -11492,5 +11515,11 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
         emptySeen: List<String> = [];
         types.resolveAliasKind(source, nameStart, prefix, aliases, recName, emptySeen)
     };
+    if not gp.hasParams and types.recordLayoutAttrs(canonicalKind).packed {
+        vErr := types.validateCanonicalKind(canonicalKind, "");
+        if vErr =!= "" {
+            syntax.failAt(source, nameStart, prefix, vErr);
+        }
+    }
     (kind = canonicalKind, encodedDefaults = types.encodeRecordPairs(defaultKeys, defaultCodes), genericParams = resolvedRecParams, markers = markers, next = afterDecl)
 };
