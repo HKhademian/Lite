@@ -115,9 +115,7 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
             value := compareIntegers(operator, left.intValue, right.intValue);
             return boolParsed(ir.targetBoolLiteralCode(target, value), value, true, right.next);
         }
-        return boolParsed(ir.targetComparisonCode(target, operator, ir.VALUE_KIND_INT,
-        if target == ir.TARGET_C { "((int64_t)(" + left.code + "))" } else { left.code },
-        if target == ir.TARGET_C { "((int64_t)(" + right.code + "))" } else { right.code }), false, false, right.next);
+        return boolParsed(ir.targetComparisonCode(target, operator, ir.VALUE_KIND_INT, left.code, right.code), false, false, right.next);
     }
     if numeric.isUnsignedIntKind(left.kind) and numeric.isUnsignedIntKind(right.kind) {
         if left.constant and right.constant {
