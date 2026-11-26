@@ -1,11 +1,11 @@
 ---
 name: documentation-reorganization
-status: pending
+status: in_progress
 created: 2026-11-26
 todos:
   - id: baseline
     content: "Inventory current rule owners, examples, and public links"
-    status: pending
+    status: completed
   - id: reconcile
     content: "Reconcile contradictory current pages with paths intact"
     status: pending
@@ -49,6 +49,59 @@ through tested examples and stable links.
   strict TS and stripped JavaScript at `-O0` and `-O3`. Keep its language
   contract separate from backend representation details.
 
+## Baseline inventory
+
+Completed against `6bb53592ef2e` in the documentation worktree. The offline
+docs check and module JSON export passed. The full site build passed using
+Node `26.12.1` with local dependencies whose lockfiles matched the checkout.
+It checked 375 HTML pages, 79,335 links, and 13,819 fragment links. The
+build covered 66 showcase and play entries, 25 lessons, 3 tutorials, and
+56 Gym exercises. Module JSON listed 39 modules and 854 symbols.
+
+The worktree's ignored `dist/documentation-baseline/` holds the route and
+anchor snapshot, link graph, search index, module JSON, build logs, source
+registrations, and focused probe sources. It records 11 LS IDs, 18 LP
+records, 11 Handbook chapters, and 2 registered snippets. The snapshot can
+be rebuilt from the baseline revision with `./bin/lite docs --check`,
+`./bin/lite docs --modules-json`, and `node ./site/build.ts --verbose`.
+
+### Rule ownership and link destinations
+
+- Keep `docs/spec/README.md` and its LS anchors as the entry index.
+  `docs/normative-pages.md` should point directly to current rules. Keep the
+  ledger and LP record paths available as history.
+- Partial initialization goes to `conditionals#no-final-else-guarded-update`
+  and `first-initialization#conditional-reservation`. Conditional payload
+  guards go to `conditionals#pattern-binding-followed-by-guards`. Remove the
+  historical conditional union fallback from the list of current rule owners.
+- Import and re-export names go to the Imports and visibility chapter.
+  Preload resolution and policy go to Packages and preload. Preserve
+  `modules-and-packages#import-expansion-and-re-exports`,
+  `#package-preload`, and `#implicit-core-preloading-gap` as entry points.
+  The compiler implementation gap stays owned by `compiler/module-import-stages.md`.
+- Keep the `generic-notation#explicit-generic-names-and-inferred-parameter-declarations`
+  and `type-operations#mutation-grants-for-field-receivers` anchors as
+  owners of those syntax directions. Caller-visible writes belong in
+  `caller-mutation-grants#evaluation-and-scope`. Backend lowering goes in
+  compiler documentation.
+- Record construction and defaults move to the current `record-initialization`
+  route as the construction chapter. Record identity stays under Records.
+  Executable blocks and `do` go to `blocks-and-results`. Preserve the old
+  `record-literal-boundaries` route and relevant anchors.
+- Use `loop-completion` for loop results, `.value`, `.collected`, and
+  `then`. Preserve routes and anchors from `loop-value`,
+  `loop-type-inference`, and `loop-last-item`. Keep source modes and item
+  binding under `loops`. Keep the old accumulator page reachable as history.
+
+### Current implementation evidence
+
+Both generated targets still print `8 0` for the partial initializer
+probe. Both reject guarded `.Some(n) := ...` conditionals, omitted
+`: Int` on a generic dimension parameter in the receiver example,
+`do { ... }`, and a plain import without an alias. Both compile the
+qualified import version. The selected or draft source rules remain in the
+owning topic pages, and these observations describe the baseline compiler.
+
 ## Read first
 
 - [Documentation maintenance](../../docs/documentation.md) and [normative map](../../docs/normative-pages.md)
@@ -57,18 +110,6 @@ through tested examples and stable links.
 - [Atomic commits](../rules/atomic-commits.md) and [documentation rules](../rules/documentation.md)
 
 ## Implementation order
-
-### Step 1 — baseline
-
-**Depends on** none.
-
-**Files** Audit `docs/`, `compiler/`, `lib/`, `language/learn/`, `language/verifications/`, `config/documentation.json`, `site/src/docs.lt`, and `site/lite-uri.ts`.
-
-- Capture the existing public routes, LS and LP IDs, heading fragments, module symbol links, and runnable example registrations.
-- Inventory each candidate page as a current rule owner, shipped guide, generated API, implementation evidence, or historical design. List contradictions and the evidence for resolving them.
-- Record the current docs-check and site-build baseline. Track pre-existing failures separately.
-
-**Acceptance** The migration list identifies the owner and compatibility destination for every page or section scheduled to move. The baseline records which checks and examples pass.
 
 ### Step 2 — reconcile
 
