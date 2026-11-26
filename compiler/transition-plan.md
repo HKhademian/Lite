@@ -38,6 +38,8 @@ plans:
 
 # T11 and C transition
 
+Status: **historical transition record**. For current targets and seed evidence, see the [compiler overview](lite://doc/compiler/overview) and [bootstrap guide](lite://doc/compiler/bootstrap-readme).
+
 ## Mission
 
 Carry out the owner-approved transition from the handwritten T00 implementation

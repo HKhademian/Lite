@@ -72,10 +72,9 @@ covers result types shared with [match](lite://doc/match).
 
 ## LS-007 — Loops
 
-[Loops](lite://doc/loops) owns source forms and iteration. See
-[loop value](lite://doc/loop-value), [loop type inference](lite://doc/loop-type-inference),
-and [loop completion](lite://doc/loop-completion) for accumulated results,
-metadata, and completion.
+[Loops](lite://doc/loops) owns source forms and iteration.
+[Loop results and completion](lite://doc/loop-completion) owns result typing,
+contributions, metadata, and `then`.
 
 ## LS-008 — Errors, recovery, and cleanup
 
@@ -98,7 +97,7 @@ for each family.
 
 [Modules and packages](lite://doc/modules-and-packages) owns source kinds,
 [import and re-export visibility](lite://doc/modules-and-packages#import-expansion-and-re-exports),
-and [package preload](lite://doc/modules-and-packages#package-preload).
+and [package preload](lite://doc/packages-and-preload#package-preload).
 [Module import stages](lite://doc/compiler/module-import-stages) tracks the
 current compiler gap. See [tooling and learning](lite://doc/tooling-and-learning)
 for the source and editor experience.

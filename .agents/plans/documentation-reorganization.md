@@ -17,7 +17,7 @@ todos:
     status: completed
   - id: remaining-topics
     content: "Consolidate remaining high-overlap topics and archive history"
-    status: pending
+    status: completed
   - id: shared-status
     content: "Publish evidence-backed support in CLI and site navigation"
     status: pending
@@ -58,6 +58,8 @@ through tested examples and stable links.
 - Connected the existing UTF-8 showcase to public API comments, Handbook, Learn, Gym, and Playground. Module JSON and both filtered TS/C11 verification runs passed.
 
 - Moved contextual construction and defaults to Record initialization and standalone do to Blocks and results. Preserved prior headings as compatibility entry points. The docs check passed.
+
+- Consolidated loop results, separated package-local preload, and documented backend mutation lowering. Kept old headings and historic links. Offline docs and full site validation passed.
 
 ## Baseline inventory
 
@@ -120,19 +122,6 @@ owning topic pages, and these observations describe the baseline compiler.
 - [Atomic commits](../rules/atomic-commits.md) and [documentation rules](../rules/documentation.md)
 
 ## Implementation order
-
-### Step 5 — remaining-topics
-
-**Depends on** records-and-blocks.
-
-**Files** Related pages under `docs/`, `compiler/module-import-stages.md`, `compiler/transition-plan.md`, and affected Handbook chapters.
-
-- Consolidate loop result typing, `.value`, `.collected`, `then`, and zero-iteration rules into Loop results and completion. Retain the main Loops page for source forms and iteration.
-- Separate import syntax and visibility from package preload and compiler rollout. Preserve package-local override, default-file absence, private import expansion, and both public import forms.
-- Keep binding permissions, caller grants, and operation syntax in their respective owning pages. Move live TS accessor boxes and C11 field addresses into compiler documentation with regression links.
-- Turn historical pages and superseded notes into archived reading paths. Keep accepted LP text, historical identifiers, and link destinations. Leave recovery and cleanup consolidation for their design review.
-
-**Acceptance** Each topic ships as a small, independently reviewable migration. Public aliases and fragments continue to resolve across the CLI and site.
 
 ### Step 6 — shared-status
 

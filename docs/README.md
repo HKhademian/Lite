@@ -38,7 +38,7 @@ These are reading paths, not separate index entries; each document has one canon
 
 [Source kinds](lite://doc/modules-and-packages#distinct-script-and-module-files)
 govern the separate `.lts` script and `.lt` module forms. The
-[preload design](lite://doc/modules-and-packages#package-preload) defines
+[preload design](lite://doc/packages-and-preload#package-preload) defines
 package-local availability, and the
 [compiler gap](lite://doc/modules-and-packages#implicit-core-preloading-gap)
 describes current ambient loading.
@@ -131,7 +131,6 @@ See [generic notation](lite://doc/generic-notation) for current parameter forms 
 - [Union initialization policy](lite://doc/union-initialization-policy): bare typed declarations initialize all-zero storage; contextual zero is accepted when its possible meanings yield one distinct result. `= ?` requests uninitialized storage.
 - [Union zero](lite://doc/union-zero): selected universal zero requirement; active-member priority and mappings for unions, enums, references, and resources remain open.
 - [Empty union zero proposal](lite://doc/union-empty-zero-proposal): proposed empty state for unions; not selected; compared with Unit and member-priority alternatives.
-- [Conditional union fallback](lite://doc/conditional-union-fallback): declaration initializers with a multi-member union require an explicit `else` or `?`; assignment and loop no-match paths are noncontributing.
 - [Branch result inference](lite://doc/branch-result-inference): normalized union inference for conditional, match, and local-lambda completion; explicit contracts constrain it, and `then` requires a final `else`.
 - [Union parameter defaults](lite://doc/union-parameter-defaults): argument omission is rejected without an applicable explicit default; call-time default ordering and the absence of an automatic zero fallback.
 - [Qualified access summaries](lite://doc/access-union-qualifiers): historical exploration of `A | mut B | C`, common write capabilities, source-contract boundaries, and payload mutation versus replacement.
@@ -236,10 +235,6 @@ See [generic notation](lite://doc/generic-notation) for current parameter forms 
 - [Collections and iterators](lite://doc/collections-and-iterators): source adapters and capability requirements.
 - [Optional loop item name](lite://doc/loop-receivers): one item identifier, body-local destructuring, and metadata instead of receiver lists.
 - [Loop pattern alternatives](lite://doc/loop-pattern-alternatives): selected body-based selection and historical receiver-pattern/filtering alternatives, with adapter, termination, branch, and failure questions deferred.
-- [Loop value](lite://doc/loop-value): typed zero-initialized .value, internal commits, skipped iterations, and result inference.
-- [Loop type inference](lite://doc/loop-type-inference): body and destination constraints, value-only bodies, separate completion results, and numeric compatibility boundaries.
-- [Last item during completion](lite://doc/loop-last-item): .item and positional .index reporting, zero/empty behavior, and use-based retention that keeps no unused item state for completion.
-- [Historical accumulator](lite://doc/loop-accumulator): retired Option/previous-value receiver model.
 - [Finally](lite://doc/finally): selected cleanup-only behavior, `then` before cleanup on loop/conditional completion, inner-to-outer cleanup before an outer matching handler, primary/secondary cleanup-failure precedence, declaration-ordered member-wise handling, order-insensitive `&` co-occurrence patterns, and ordered failure tuples; the `&` form's public value, attachment scope, no-handler policy, and hard-abort behavior remain open.
 - [Loop recovery](lite://doc/loop-recovery): historical grouped-loop recovery example; external handler placement is superseded, with completion and cleanup questions retained.
 - [Loop completion](lite://doc/loop-completion): receiverless `then`, tagged returns, explicit targeted break/continue, result/metadata behavior, and its distinction from deferred cleanup.
@@ -258,6 +253,7 @@ See [generic notation](lite://doc/generic-notation) for current parameter forms 
 - [Naming and versioning](lite://doc/versioning-and-naming): Lite project, LiteLang language, LiteScript programs, layered `lite-compile` commands, `literun` runtime, independent version streams, `LP-NNNN` proposals and component tags.
 - [Lite Proposal register](lite://doc/proposals/README): accepted and unreleased LP-0001–LP-0004 and LP-0006–LP-0010 plus LP-0012–LP-0018, draft LP-0005 r7 for untyped binding and pending exits, draft LP-0011 r4 for unmatched-remainder/provenance transport, revision/status records, and unassigned release targets.
 - [Modules and packages](lite://doc/modules-and-packages): private defaults and intended packaging experience.
+- [Packages and preload](lite://doc/packages-and-preload): package-local preload selection and separate compilation.
 - [Memory and performance](lite://doc/memory-and-performance): selected lightweight native execution priorities, small runtime/executable goals, measurement requirements, singleton/fixed-array layouts, zero-sized element cardinality, representation boundaries, and open memory semantics; the supporting [runtime-cost review](lite://doc/memory-and-performance#runtime-cost-review) separates compile-time proofs from generated work and unresolved support machinery.
 - [Tooling and learning](lite://doc/tooling-and-learning): official formatter, read-only lite fmt --check for CI using normal formatting/verification rules, compact/multiline and opaque-comment policies, idempotence, verified output before writing, unchanged malformed/unverified files with diagnostics and overall failure status, format-on-save preservation, and gradual teaching.
 - [Comments in modern formatters](lite://doc/comment-formatting-research): 2026-10-25 investigation of Deno, Bun, Rustfmt, Dart/Flutter, and Prettier; eight versioned local Deno/Rustfmt probes, primary sources, execution limits, the subsequent selected LiteLang formatter contract, and remaining open implementation details.
@@ -269,3 +265,9 @@ See [generic notation](lite://doc/generic-notation) for current parameter forms 
 ## Suggested reading order
 
 Read the principles, lexical rules, blocks, declarations, and functions first. Then read conditionals and the loop documents together. Loop result inference and completion hooks must be evaluated as one contract, rather than implemented independently from isolated examples.
+
+## Historical reading
+
+- [Conditional union fallback](lite://doc/conditional-union-fallback): historical zero-default rule. Current partial initializers follow the conditional pages.
+- [Historical accumulator](lite://doc/loop-accumulator): retired Option/previous-value receiver model.
+- [Compiler transition checkpoints](lite://doc/compiler/transition-plan) record historical bootstrap status.

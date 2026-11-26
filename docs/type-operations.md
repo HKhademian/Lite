@@ -100,7 +100,7 @@ state.inner.counter.bump();                 /* rejected because bump requires mu
 ```
 
 A read-only first call rejects the grant even if a later call mutates.
-Later calls use their own receiver and grant rules. See [explicit caller
+Later calls use their own receiver and grant rules. See [compiler mutation lowering](lite://doc/compiler/mutation-lowering) for backend details. See [explicit caller
 grants](lite://doc/caller-mutation-grants).
 
 For simple bindings, `mut counter.bump()`, `(mut counter).bump()`, and
