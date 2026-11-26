@@ -338,6 +338,44 @@ export function stripLiteTs(source: string): string {
       }
     }
 
+    // Object accessor `get name(): ReturnType {` and `set name(param: Type) {`
+    if (
+      (source.startsWith('get ', i) || source.startsWith('set ', i)) &&
+      !isIdentOrDotBefore(source, i)
+    ) {
+      const accHead = /^(get|set)\s+[\p{XID_Start}_$][\p{XID_Continue}$]*/u.exec(source.slice(i));
+      if (accHead !== null) {
+        let afterName = i + accHead[0]!.length;
+        while (afterName < n && /\s/.test(source[afterName]!)) afterName += 1;
+        if (source[afterName] === '(') {
+          const parenStart = afterName;
+          const parenEnd = skipBalanced(source, parenStart, '(', ')');
+          let afterParen = parenEnd;
+          while (afterParen < n && /\s/.test(source[afterParen]!)) afterParen += 1;
+          let bodyStart = afterParen;
+          if (source[bodyStart] === ':') {
+            bodyStart = skipTypeAnnotation(source, bodyStart + 1, new Set(['{']));
+            while (source[bodyStart] === '{') {
+              const afterBrace = skipBalanced(source, bodyStart, '{', '}');
+              const nextStop = skipTypeAnnotation(source, afterBrace, new Set(['{', ';', '\n', ',', '}']));
+              if (source[nextStop] === '{') {
+                bodyStart = nextStop;
+              } else {
+                break;
+              }
+            }
+          }
+          if (source[bodyStart] === '{') {
+            out.push(`${accHead[0]!}(`);
+            out.push(stripParamList(source.slice(parenStart + 1, parenEnd - 1)));
+            out.push(') ');
+            i = bodyStart;
+            continue;
+          }
+        }
+      }
+    }
+
     // Generic type arguments on calls/constructors: `Map<K, V>(`
     if (ch === '<' && isIdentContBefore(source, i)) {
       const angleEnd = skipGenericArgs(source, i);

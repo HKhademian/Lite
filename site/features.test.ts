@@ -198,6 +198,30 @@ test('stripLiteTs strips comma-separated typed declarators in for headers and le
   assert.equal(res, 24n);
 });
 
+test('stripLiteTs strips typed get/set accessors in live mut-record boxes', () => {
+  const src = [
+    'let lite_board: { cell: { step: bigint } } = { cell: { step: 4n } };',
+    'const lite$mb_recv: { v: { step: bigint } } = {',
+    '  get v(): { step: bigint } { return (lite_board).cell; },',
+    '  set v(lite$nv: { step: bigint }) { lite_board = { ...(lite_board), cell: lite$nv }; }',
+    '};',
+    'try {',
+    '  lite$mb_recv.v = { ...(lite$mb_recv.v), step: lite$mb_recv.v.step + 1n };',
+    '  throw new Error("boom");',
+    '} catch {',
+    '} finally {',
+    '}',
+    'return lite_board.cell.step;',
+  ].join('\n');
+  const stripped = stripLiteTs(src);
+  assert(!stripped.includes(': bigint'), stripped);
+  assert(!stripped.includes(': { v:'), stripped);
+  assert(stripped.includes('get v() {'), stripped);
+  assert(stripped.includes('set v(lite$nv) {'), stripped);
+  const res = (new Function(stripped) as () => bigint)();
+  assert.equal(res, 5n);
+});
+
 test('verifyGymCorpus compiles and executes all 56 Gym starters and solutions', () => {
   const result = verifyGymCorpus();
   assert.equal(result.exerciseCount, 56);
