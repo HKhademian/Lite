@@ -1,6 +1,7 @@
 /** Pure RFC-8259 JSON scanner, typed reader, and O(N) string serializer (`data/json`) across TS and C11. */
 
 text := import "core/text";
+tb := import "util/text-builder";
 
 /** Top-level value classification at a JSON token offset. */
 pub JsonKind := enum {
@@ -50,17 +51,14 @@ pub JsonField := record {
     valuePos: Int;
 }
 
-isJsonSpace := fn(ch: String): Bool {
-    ch == " " or ch == "\t" or ch == "\r" or ch == "\n"
+skipSpaces := fn(source: String, start: Int): Int {
+    source.skipSpaces(if start < 0 { 0 } else { start })
 };
 
-skipSpaces := fn(source: String, start: Int): Int {
-    size := source.length();
-    var pos := if start < 0 { 0 } else { start };
-    loop pos < size and isJsonSpace(source.at(pos)) {
-        pos += 1;
-    }
-    pos
+minNonNeg := fn(a: Int, b: Int): Int {
+    if a < 0 { return b; }
+    if b < 0 or a <= b { return a; }
+    b
 };
 
 isHexDigit := fn(ch: String): Bool {
@@ -103,52 +101,62 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
         return JsonString { ok = false, value = "", next = start, error = "expected JSON string" };
     }
     var pos := start + 1;
-    parts: mut List<String> = [];
+    out: mut tb.TextBuilder;
     var runStart := pos;
+    var nextQuote := source.indexOf("\"", pos);
+    var nextSlash := source.indexOf("\\", pos);
+    var nextLf := source.indexOf("\n", pos);
+    var nextCr := source.indexOf("\r", pos);
+    var nextTab := source.indexOf("\t", pos);
     loop pos < size {
-        ch := source.at(pos);
-        if ch == "\"" {
+        hit := minNonNeg(nextQuote, minNonNeg(nextSlash, minNonNeg(nextLf, minNonNeg(nextCr, nextTab))));
+        if hit < 0 {
+            pos = size;
+            break;
+        }
+        if hit == nextQuote {
             if not decode {
-                return JsonString { ok = true, value = "", next = pos + 1, error = "" };
+                return JsonString { ok = true, value = "", next = hit + 1, error = "" };
             }
             if runStart == start + 1 {
-                return JsonString { ok = true, value = source.slice(runStart, pos), next = pos + 1, error = "" };
+                return JsonString { ok = true, value = source.slice(runStart, hit), next = hit + 1, error = "" };
             }
-            if pos > runStart {
-                mut parts.pushBack(source.slice(runStart, pos));
+            if hit > runStart {
+                mut out.append(source.slice(runStart, hit));
             }
-            return JsonString { ok = true, value = parts.join(""), next = pos + 1, error = "" };
+            return JsonString { ok = true, value = out.build(), next = hit + 1, error = "" };
         }
-        if ch == "\\" {
+        if hit == nextSlash {
+            pos = hit;
             if decode and pos > runStart {
-                mut parts.pushBack(source.slice(runStart, pos));
+                mut out.append(source.slice(runStart, pos));
             }
             if pos + 1 >= size {
                 return JsonString { ok = false, value = "", next = pos, error = "unterminated string escape" };
             }
             esc := source.at(pos + 1);
             if esc == "\"" or esc == "\\" or esc == "/" {
-                if decode { mut parts.pushBack(esc); }
+                if decode { mut out.append(esc); }
                 pos += 2;
                 runStart = pos;
             } else if esc == "n" {
-                if decode { mut parts.pushBack("\n"); }
+                if decode { mut out.append("\n"); }
                 pos += 2;
                 runStart = pos;
             } else if esc == "r" {
-                if decode { mut parts.pushBack("\r"); }
+                if decode { mut out.append("\r"); }
                 pos += 2;
                 runStart = pos;
             } else if esc == "t" {
-                if decode { mut parts.pushBack("\t"); }
+                if decode { mut out.append("\t"); }
                 pos += 2;
                 runStart = pos;
             } else if esc == "b" {
-                if decode { mut parts.pushBack(String.fromCodePoint(8).text); }
+                if decode { mut out.append(String.fromCodePoint(8).text); }
                 pos += 2;
                 runStart = pos;
             } else if esc == "f" {
-                if decode { mut parts.pushBack(String.fromCodePoint(12).text); }
+                if decode { mut out.append(String.fromCodePoint(12).text); }
                 pos += 2;
                 runStart = pos;
             } else if esc == "u" {
@@ -168,22 +176,22 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
                             pair: List<Int> = [code, secondHex.value];
                             pairRes := String.fromUtf16Strict(pair);
                             if pairRes.ok {
-                                mut parts.pushBack(pairRes.text);
+                                mut out.append(pairRes.text);
                                 consumed = 12;
                             } else {
-                                mut parts.pushBack(source.slice(pos, pos + 6));
+                                mut out.append(source.slice(pos, pos + 6));
                             }
                         } else {
-                            mut parts.pushBack(source.slice(pos, pos + 6));
+                            mut out.append(source.slice(pos, pos + 6));
                         }
                     } else if code >= 55296 and code <= 57343 {
-                        mut parts.pushBack(source.slice(pos, pos + 6));
+                        mut out.append(source.slice(pos, pos + 6));
                     } else {
                         cpRes := String.fromCodePoint(code);
                         if cpRes.ok {
-                            mut parts.pushBack(cpRes.text);
+                            mut out.append(cpRes.text);
                         } else {
-                            mut parts.pushBack(source.slice(pos, pos + 6));
+                            mut out.append(source.slice(pos, pos + 6));
                         }
                     }
                 }
@@ -192,11 +200,13 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
             } else {
                 return JsonString { ok = false, value = "", next = pos, error = "invalid string escape" };
             }
+            if nextQuote >= 0 and nextQuote < pos { nextQuote = source.indexOf("\"", pos); }
+            if nextSlash >= 0 and nextSlash < pos { nextSlash = source.indexOf("\\", pos); }
+            if nextLf >= 0 and nextLf < pos { nextLf = source.indexOf("\n", pos); }
+            if nextCr >= 0 and nextCr < pos { nextCr = source.indexOf("\r", pos); }
+            if nextTab >= 0 and nextTab < pos { nextTab = source.indexOf("\t", pos); }
         } else {
-            if ch == "\n" or ch == "\r" or ch == "\t" {
-                return JsonString { ok = false, value = "", next = pos, error = "unescaped control character in string" };
-            }
-            pos += 1;
+            return JsonString { ok = false, value = "", next = hit, error = "unescaped control character in string" };
         }
     }
     JsonString { ok = false, value = "", next = pos, error = "unterminated string literal" }
@@ -545,11 +555,26 @@ pub objectKeys := fn(source: String, objectStart: Int): List<String> {
     keys
 };
 
-/** Encodes `value` as a quoted RFC-8259 JSON string literal in O(N) time. */
-pub quoteString := fn(value: String): String {
+rareCtrlChars: mut List<String> = [];
+
+ensureRareCtrlChars := fn(): List<String> {
+    if rareCtrlChars.length() == 0 {
+        var cp := 0;
+        loop cp < 32 {
+            if cp =!= 9 and cp =!= 10 and cp =!= 13 {
+                mut rareCtrlChars.pushBack(String.fromCodePoint(cp).text);
+            }
+            cp += 1;
+        }
+    }
+    rareCtrlChars
+};
+
+quoteStringWithCodePoints := fn(value: String): String {
     cps := value.toCodePoints();
     size := cps.length();
-    parts: mut List<String> = ["\""];
+    out: mut tb.TextBuilder;
+    mut out.append("\"");
     var runStart := 0;
     var i := 0;
     loop i < size {
@@ -566,15 +591,62 @@ pub quoteString := fn(value: String): String {
             esc = "\\u00" + hexCharLower(cp / 16) + hexCharLower(cp % 16);
         }
         if esc =!= "" {
-            if i > runStart { mut parts.pushBack(value.slice(runStart, i)); }
-            mut parts.pushBack(esc);
+            if i > runStart { mut out.append(value.slice(runStart, i)); }
+            mut out.append(esc);
             runStart = i + 1;
         }
         i += 1;
     }
-    if runStart < size { mut parts.pushBack(value.slice(runStart, size)); }
-    mut parts.pushBack("\"");
-    parts.join("")
+    if runStart < size { mut out.append(value.slice(runStart, size)); }
+    mut out.append("\"");
+    out.build()
+};
+
+/** Encodes `value` as a quoted RFC-8259 JSON string literal in O(N) time. */
+pub quoteString := fn(value: String): String {
+    ctrls := ensureRareCtrlChars();
+    loop ctrls as ctrl {
+        if value.indexOf(ctrl, 0) >= 0 {
+            return quoteStringWithCodePoints(value);
+        }
+    }
+    var nextQuote := value.indexOf("\"", 0);
+    var nextSlash := value.indexOf("\\", 0);
+    var nextLf := value.indexOf("\n", 0);
+    var nextCr := value.indexOf("\r", 0);
+    var nextTab := value.indexOf("\t", 0);
+    if nextQuote < 0 and nextSlash < 0 and nextLf < 0 and nextCr < 0 and nextTab < 0 {
+        return "\"" + value + "\"";
+    }
+    size := value.length();
+    out: mut tb.TextBuilder;
+    mut out.append("\"");
+    var runStart := 0;
+    loop true {
+        hit := minNonNeg(nextQuote, minNonNeg(nextSlash, minNonNeg(nextLf, minNonNeg(nextCr, nextTab))));
+        if hit < 0 { break; }
+        if hit > runStart { mut out.append(value.slice(runStart, hit)); }
+        if hit == nextQuote {
+            mut out.append("\\\"");
+            nextQuote = value.indexOf("\"", hit + 1);
+        } else if hit == nextSlash {
+            mut out.append("\\\\");
+            nextSlash = value.indexOf("\\", hit + 1);
+        } else if hit == nextLf {
+            mut out.append("\\n");
+            nextLf = value.indexOf("\n", hit + 1);
+        } else if hit == nextCr {
+            mut out.append("\\r");
+            nextCr = value.indexOf("\r", hit + 1);
+        } else {
+            mut out.append("\\t");
+            nextTab = value.indexOf("\t", hit + 1);
+        }
+        runStart = hit + 1;
+    }
+    if runStart < size { mut out.append(value.slice(runStart, size)); }
+    mut out.append("\"");
+    out.build()
 };
 
 /** Encodes a `Bool` as `"true"` or `"false"`. */

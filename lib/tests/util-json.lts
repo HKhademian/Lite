@@ -47,4 +47,26 @@ test.checkBool("valueSpan ok", true, span.ok);
 test.checkInt("valueSpan start", 2, span.start);
 test.checkInt("valueSpan end", 15, span.end);
 
+test.checkText("quote empty", "\"\"", json.quoteString(""));
+htmlSample := "<div class=\"a&b\">\tline1\r\nline2\\path/é🙂</div>";
+htmlQuoted := json.quoteString(htmlSample);
+htmlDecoded := json.readFieldString("{\"html\":" + htmlQuoted + "}", 0, "html");
+test.checkBool("html roundtrip ok", true, htmlDecoded.found and htmlDecoded.ok);
+test.checkText("html roundtrip val", htmlSample, htmlDecoded.value);
+
+nulNonAscii := "é" + String.fromCodePoint(0).text + "\n\t";
+nulQuoted := json.quoteString(nulNonAscii);
+test.checkText("nul non-ascii quoted", "\"é\\u0000\\n\\t\"", nulQuoted);
+nulDecoded := json.readStringAt(nulQuoted, 0);
+test.checkBool("nul non-ascii decode ok", true, nulDecoded.ok);
+test.checkText("nul non-ascii decode val", nulNonAscii, nulDecoded.value);
+
+test.checkBool("reject unescaped lf", false, json.readStringAt("\"a\nb\"", 0).ok);
+test.checkBool("reject unescaped cr", false, json.readStringAt("\"a\rb\"", 0).ok);
+test.checkBool("reject unescaped tab", false, json.readStringAt("\"a\tb\"", 0).ok);
+test.checkBool("reject unterminated string", false, json.readStringAt("\"abc", 0).ok);
+test.checkBool("reject unterminated escape", false, json.readStringAt("\"abc\\", 0).ok);
+test.checkBool("reject invalid escape", false, json.readStringAt("\"abc\\q\"", 0).ok);
+test.checkBool("reject incomplete unicode escape", false, json.readStringAt("\"\\u12\"", 0).ok);
+
 test.done("util-json");
