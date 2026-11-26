@@ -38,7 +38,7 @@
     {
       "document": "docs/start-here.md",
       "source": "language/examples/foundations/io/double-sum.lts",
-      "fence": 1,
+      "fence": 0,
       "skipLines": 2
     },
     {

@@ -1,30 +1,32 @@
 # Overview & Setup
 
-Welcome to the **Shipped Lite Handbook**. Every feature, type, operator, and module documented in these eleven chapters compiles and runs today through Lite's verified **dual-target TypeScript and native C11** compiler toolchain.
-
-> [!NOTE]
-> For selected design rules still under implementation, working proposals (`LP-0001..LP-0018`), and compiler architecture notes, switch to the **Design Spec & Proposals** layer in the Docs portal or inspect [Language Documentation](lite://doc/overview).
+The Handbook teaches the language you can use with the current compiler.
+For a quick first run, open the [Hello Lite lesson](lite://learn/hello-lite).
+Check [implementation status](lite://doc/implementation-status) before trying a
+feature from the [language design](lite://spec).
 
 ## What is Lite?
 
-Lite is a statically typed, small-runtime language and **3-generation self-hosted compiler** (verified on both TypeScript and native C11) designed around three principles:
+Lite is a statically typed language with a small runtime. Its compiler is
+written in Lite and produces TypeScript or standalone C11. The language makes
+consequential operations visible in the program text.
 
-- **Explicit behavior**: Consequential operations—stdin prompts, stdout printing, mutation (`var`, `mut`), early exit (`io.exit`), and module `import`s—are visible directly in source.
-- **No implicit globals**: Even standard input and output require an explicit namespace import (`io := import "core/io";`).
-- **Dual-target lightweight execution**: Source files compile cleanly to strict TypeScript (`--target ts`) **and** standalone native C11 (`--target c`, checked under `-std=c11 -Wall -Wextra -Werror`) with optimization levels `-O0` through `-O3` and `-Os`.
+- Standard input and output use the explicitly imported [I/O module](lite://module/core/io).
+- `var` marks a binding that can be reassigned. `mut` marks permission to change a value
+  through a function call.
 
 ## Prepare Your Checkout
 
-You can run `./bin/lite run` immediately with Node.js (version listed in [igniter/.node-version](lite://repo/igniter/.node-version)). To also run `./bin/lite check`, formatter tests, and editor checks, install the locked development packages from the repository root:
-
-```sh
-npm --prefix igniter ci
-npm --prefix editors/vscode ci
-```
+Follow [local setup](lite://doc/start-here#prepare-the-checkout) for the clone
+and run commands. The [CLI reference](lite://tool) covers checking, formatting,
+and compiling. See [the contributor guide](lite://doc/contributing) for editor
+tests and repository development.
 
 ## Your First Program
 
-Save a script such as [double-sum.lts](lite://play/double-sum):
+Open the [guided run](lite://learn/hello-lite) or follow the
+[local walkthrough](lite://doc/start-here). The program imports `core/io` as
+`io`, reads two integers, and prints twice their sum:
 
 ```lite
 io := import "core/io";
@@ -36,20 +38,10 @@ total = total * 2;
 io.outputLine(total);
 ```
 
-Run it directly from the repository root:
-
-```sh
-./bin/lite run language/examples/foundations/io/double-sum.lts
-```
-
-Enter `7` and `5` at the prompts to print `24`. Other everyday commands:
-
-- [`./bin/lite check`](lite://tool/check) `file.lts` — parse, typecheck, and check execution-trace safety across TS and C11 without running.
-- [`./bin/lite compile`](lite://tool/compile) `[--target ts|c] [-O0..-O3|-Os] file.lts` — print compiled TypeScript or C11 to stdout.
-- [`./bin/lite build`](lite://tool/build) `[-O0..-O3|-Os] file.lts [-o out]` — compile a Lite program into a standalone native executable via C11.
-- [`./bin/lite play`](lite://tool/play) `file.lts` — launch interactive `extra/canvas` / `extra/audio` Play games in a native resizable/fullscreenable desktop window.
-- [`./bin/lite fmt`](lite://tool/fmt) `--check file.lts` — verify canonical Lite formatting.
-- [`./bin/lite doctor`](lite://tool/doctor) — validate repository consistency and docs links.
+Enter `7` and `5` at the prompts to print `24`. Look up the calls in
+[`core/io`](lite://module/core/io) or open the
+[I/O chapter](lite://handbook/imports-visibility-and-io) when you need to parse
+arguments or import from another file.
 
 ## File Kinds & Comments
 
@@ -63,7 +55,7 @@ Comments in Lite use **nestable** block syntax `/* ... */` (there are no `//` li
    still inside outer comment */
 ```
 
-See [Comments](lite://doc/comments) and [Start Here](lite://doc/start-here).
+See [Comments](lite://doc/comments) and [module imports](lite://handbook/imports-visibility-and-io).
 
 ## Next Chapter
 

@@ -1,20 +1,23 @@
 # Language documentation
 
-Use the [Shipped Handbook](lite://handbook/overview-and-setup) to learn
-the language available today. Use the [specification index](lite://spec) and
-[normative map](lite://doc/normative-pages) to locate a design rule. The
-[compiler guide](lite://doc/compiler/overview) and
-[verification cases](lite://repo/language/verifications/README.md) describe
-implementation and evidence.
+Start with the first program or use this index to find language design rules.
 
 ## Start here
 
-- [First program](lite://doc/start-here): prepare the checkout, compile and run a program.
-- [Short language tour](lite://doc/tour): examples connected to their reference topics.
-- [Contributor guide](lite://doc/contributing), [development workflow](lite://doc/development-workflow)
-  and [documentation maintenance](lite://doc/documentation): how changes stay verifiable.
-- [Evolving Lite with its own compiler](lite://doc/evolving-language): grow the
-  self-hosting subset through verified feature increments and temporary bridges.
+- [Run your first program](lite://doc/start-here) in the browser or on your machine.
+- [Take the syntax tour](lite://doc/tour) to see bindings, functions, loops, and data types in short programs.
+- [Read the Handbook](lite://handbook/overview-and-setup) or [follow interactive lessons](lite://learn) to learn supported Lite.
+- [Search the module reference](lite://module) for library operations and the [CLI reference](lite://tool) for commands.
+- [Check implementation status](lite://doc/implementation-status) or [set up for contributing](lite://doc/contributing).
+
+## Language design and compiler
+
+Use the [development workflow](lite://doc/development-workflow),
+[documentation maintenance guide](lite://doc/documentation), and
+[self-hosting development guide](lite://doc/evolving-language) to work on Lite.
+The [compiler guide](lite://doc/compiler/overview) and
+[verification cases](lite://repo/language/verifications/README.md) describe
+the implementation and its tests.
 
 1. [LiteLang white paper](lite://doc/white-paper): the LiteLang philosophy, intended audience, and criteria for every design decision.
 2. [Principles and goals](lite://doc/principles): a concise overview of established goals and defaults.

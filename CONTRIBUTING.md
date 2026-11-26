@@ -5,10 +5,18 @@ Contributions intentionally submitted for inclusion are licensed under Apache
 2.0 as described in sections 5 and 6 of that license. No separate contributor
 agreement is required.
 
-Read [AGENTS.md](lite://repo/AGENTS.md) and the [development workflow](lite://doc/development-workflow).
-Use Node from [igniter/.node-version](lite://repo/igniter/.node-version) and install locked
-development dependencies with `npm --prefix igniter ci` and
-`npm --prefix editors/vscode ci`.
+Use the [first-program guide](lite://doc/start-here#prepare-the-checkout) to
+prepare the checkout and make sure you can run a script. Then read
+[AGENTS.md](lite://repo/AGENTS.md) and the [development workflow](lite://doc/development-workflow).
+Install the locked development dependencies from the repository root:
+
+```sh
+npm --prefix igniter ci
+npm --prefix editors/vscode ci
+```
+
+The first command installs compiler and test tooling. The second installs
+the packages for grammar checks and VS Code extension packaging.
 
 Compiler implementation belongs in `compiler/src/` and `lib/core/`. Generated
 seeds are rebuilt, never edited. Supporting tools use direct Node TypeScript

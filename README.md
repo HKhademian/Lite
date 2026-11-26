@@ -9,45 +9,32 @@
 - **Low ceremony:** Clean, readable syntax that stays out of your way.
 - **Explicit behavior:** No hidden globals, implicit echoes, or surprise runtime magic.
 - **Lightweight execution:** Compiles cleanly to strict TypeScript **and** standalone native C11 (`-std=c11 -Wall -Wextra -Werror`) with `-O0`..`-O3`/`-Os` optimization levels and 3-generation self-hosting on both backends.
-- **Self-hosted foundation:** Written in LiteLang, easy to inspect, learn, and extend, with 36 `core/*` and `extra/*` modules (collections, math, vectors, matrices, grids, memory pools, and desktop/Play graphics).
+- **Self-hosted foundation:** The compiler and library modules are written in LiteLang. The library covers collections, math, text processing, and graphics.
 
 ## Quickstart
 
-Explore the **Showcase & Playground** published via GitHub Pages, or build and preview it locally:
+Open [Hello Lite](https://hkhademian.github.io/Lite/learn/getting-started/hello-lite.html) and click **Run** to see a Lite program execute in your browser. The lesson supplies two inputs and lets you edit the program.
 
-```sh
-./site/build.ts
-./site/serve.ts
-```
-
-Run, build, or play a script locally (using the Node version in [igniter/.node-version](igniter/.node-version)):
+To run locally, use the Node.js version in [igniter/.node-version](igniter/.node-version) and a shell:
 
 ```sh
 git clone https://github.com/HKhademian/Lite.git
 cd Lite
 ./bin/lite run language/examples/foundations/io/double-sum.lts
-./bin/lite build -O2 language/examples/foundations/io/double-sum.lts -o /tmp/double-sum
-./bin/lite play samples/games/arcade/paddle-pong.lts
 ```
 
-Check or compile a script with `./bin/lite`:
-
-```sh
-./bin/lite check language/examples/foundations/io/double-sum.lts
-./bin/lite compile --target ts language/examples/foundations/io/double-sum.lts
-./bin/lite compile --target c language/examples/foundations/io/double-sum.lts
-```
+Enter `7` and `5` on separate lines to get `24`. The [first-program guide](https://hkhademian.github.io/Lite/docs/design/start-here.html) walks through the code, shows how to run a script of your own, and explains the tools you need for checking and building.
 
 ## Learn & Explore
 
-- [Learn curriculum](language/learn/README.md) — 25 interactive track lessons, 3 project tutorials, and the 11-chapter [Handbook](language/learn/handbook/getting-started/overview-and-setup.md).
-- [Gym dojo](language/gym/README.md) — 56 verified drills and belt-ranked katas (white to obsidian).
-- [Start here](docs/start-here.md) — run your first program and set up local tools.
-- [Language tour](docs/tour.md) — example-led introduction to LiteLang.
+- [Handbook](https://hkhademian.github.io/Lite/docs/handbook/overview-and-setup.html) — read about supported syntax and everyday programming in Lite.
+- [Learn](https://hkhademian.github.io/Lite/learn/) — work through interactive lessons and projects.
+- [Gym](https://hkhademian.github.io/Lite/gym/) — practice with drills and katas that check your answers.
+- [Language tour](https://hkhademian.github.io/Lite/docs/design/tour.html) — skim the syntax through short runnable examples.
+- [Modules](https://hkhademian.github.io/Lite/modules/) and [CLI tools](https://hkhademian.github.io/Lite/tools/) — look up imports, library functions, and commands.
 - [Examples](language/examples/README.md) — runnable `.lts` programs.
 - [White paper](docs/white-paper.md) — philosophy and design criteria.
-- [Documentation index](docs/README.md) — full language design, spec, and proposals.
-- [Site architecture](docs/site-architecture.md) — static site pipeline, worker protocol, and portable Learn/Gym schemas.
+- [Implementation status](docs/implementation-status.md) and [design index](docs/README.md) — see what the compiler supports and where the language design is headed.
 - [VS Code support](editors/vscode/README.md) — syntax highlighting for `.lt` and `.lts`.
 
 ## Internals & Contributing
@@ -57,6 +44,7 @@ Lite is alpha software; the compiler currently supports a growing subset of the 
 - [Compiler reference](compiler/README.md) — compiler architecture, targets, and current coverage.
 - [Bootstrap guide](compiler/bootstrap/README.md) — self-rebuilding seed and verification.
 - [Transition plan](compiler/transition-plan.md) — ongoing compiler work and roadmap.
+- [Site architecture](docs/site-architecture.md) — build and preview the docs site, or work on the browser tools.
 - [Releases](docs/release-automation.md) & [Changelog](CHANGELOG.md) — versioning, gates, and milestones.
 - [Contributing](CONTRIBUTING.md) — development workflow and tests.
 

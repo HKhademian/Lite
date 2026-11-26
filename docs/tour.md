@@ -1,11 +1,10 @@
 # A short LiteLang tour
 
-This tour introduces selected language ideas through existing sources. All
-linked tour examples compile and run across both the **generated TypeScript and
-native C11** backends, while broader design features remain in progress—check
-[the Shipped Handbook](lite://handbook/overview-and-setup) and
-[compiler status](lite://doc/compiler/overview); the wider reference is a design
-contract, not a claim of full executable coverage.
+Try [your first program](lite://doc/start-here) for browser and local setup,
+then use this tour to see what Lite code looks like. The linked programs run
+with both the TypeScript and C11 backends. Read the
+[Handbook](lite://handbook/overview-and-setup) for a guided walk through
+supported language features.
 
 ## Bindings and arithmetic
 
@@ -23,8 +22,9 @@ io.outputLine(total);
 `24` and has its own [runnable case](lite://repo/language/cases/bindings/tour/run-mutable-accumulator.case.json).
 The [double-sum case](lite://repo/language/verifications/artifacts/examples/foundations/io/double-sum.json)
 checks the corresponding interactive program.
-Read [declarations](lite://doc/declarations-and-assignment), [mutability](lite://doc/mutability)
-and [operators](lite://doc/operators) for the selected contracts.
+Continue with [Bindings & Mutability](lite://handbook/bindings-and-mutability)
+or look up [declarations](lite://doc/declarations-and-assignment) and
+[operators](lite://doc/operators) in the language design.
 
 ## Modern collections, loops, and records
 
@@ -89,5 +89,6 @@ Each example has a corresponding manifest under
 [artifact verifications](lite://repo/language/verifications/artifacts/examples). Cases preserve
 input, output, diagnostics and status; an unsupported case remains visible.
 
-Return to [the reference index](lite://doc/overview), visit [start here](lite://doc/start-here),
-or read [the normative map](lite://doc/normative-pages) for rule ownership.
+Browse the [module reference](lite://module) for library functions, or
+[practice in Gym](lite://gym). The [design index](lite://doc/overview)
+links to detailed rules and [implementation status](lite://doc/implementation-status).
