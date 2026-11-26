@@ -56,6 +56,16 @@ pub Float.toText := fn(value: Self): String;
 /** Formats one 32-bit IEEE-754 Float32 as shortest round-trip decimal text (`-0.0` formats as `"0"`). */
 pub Float32.toText := fn(value: Self): String;
 
+/** Formats one 8-bit OCP E4M3 Float8 as decimal text (`-0.0` formats as `"0"`). */
+pub Float8.toText := fn(value: Self): String {
+    Float.toText(cast<Float>(value))
+};
+
+/** Formats one 16-bit IEEE binary16 Float16 as decimal text (`-0.0` formats as `"0"`). */
+pub Float16.toText := fn(value: Self): String {
+    Float.toText(cast<Float>(value))
+};
+
 /* --- Pure Unicode scalar & UTF-8 / UTF-16 helpers --- */
 
 /** Returns true when `point` is a valid Unicode scalar value (`0..0x10FFFF` excluding surrogates `0xD800..0xDFFF`). */

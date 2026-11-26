@@ -125,3 +125,65 @@ pub Int16.toText := fn(value: Self): String {
 pub Int32.toText := fn(value: Self): String {
     Int.toText(value)
 }
+
+
+/** Formats one 1-bit signed Int1 as base-10 text. */
+pub Int1.toText := fn(value: Self): String {
+    Int.toText(cast<Int>(value))
+};
+
+/** Formats one 2-bit signed Int2 as base-10 text. */
+pub Int2.toText := fn(value: Self): String {
+    Int.toText(cast<Int>(value))
+};
+
+/** Formats one 4-bit signed Int4 as base-10 text. */
+pub Int4.toText := fn(value: Self): String {
+    Int.toText(cast<Int>(value))
+};
+
+/** Formats one 64-bit unsigned UInt64 as base-10 text. */
+pub UInt64.toText := fn(value: Self): String {
+    if value == 0 { return "0"; }
+    digits := "0123456789";
+    ten: UInt64 = 10;
+    var current := value;
+    var out := "";
+    loop current > 0 {
+        rem := current % ten;
+        idx := cast<Int>(rem);
+        out = digits.at(idx) + out;
+        current = current / ten;
+    }
+    out
+};
+
+/** Formats one 1-bit unsigned UInt1 as base-10 text. */
+pub UInt1.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 2-bit unsigned UInt2 as base-10 text. */
+pub UInt2.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 4-bit unsigned UInt4 as base-10 text. */
+pub UInt4.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 8-bit unsigned UInt8 as base-10 text. */
+pub UInt8.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 16-bit unsigned UInt16 as base-10 text. */
+pub UInt16.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 32-bit unsigned UInt32 as base-10 text. */
+pub UInt32.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};

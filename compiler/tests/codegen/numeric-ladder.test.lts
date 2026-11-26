@@ -51,6 +51,8 @@ test.check("c layout uses uint8_t[4] + LUT for [Float8; 4]", cLayout.stdout.cont
 /* 2. Full TS & C11 behavioral parity across all 18 numeric types, casts, trunc, comparisons, and sub-byte arrays */
 paritySrc := [
     "io := import \"core/io\";",
+    "_intMod := import \"core/int\";",
+    "_textMod := import \"core/text\";",
     "i1a: Int1 = -1; i1b: Int1 = 0;",
     "i2a: Int2 = -2; i2b: Int2 = 1;",
     "i4a: Int4 = -8; i4b: Int4 = 7;",
@@ -74,6 +76,8 @@ paritySrc := [
     "io.outputLine(\"ints:\", i1a, i1b, i2a, i2b, i4a, i4b, i8a, i8b, i16a, i16b, i32a, i32b, i64a, i64b);",
     "io.outputLine(\"uints:\", u1b, u2b, u4b, u8b, u16b, u32b, u64max, u64big - 123);",
     "io.outputLine(\"floats:\", f8a, f8b, f8a + 0.5, -f8a, f16a, f16b, f16a + 1.5, -f16a, f32a, f64a, dbl);",
+    "u64Zero: UInt64 = 0;",
+    "io.outputLine(\"texts:\", i1a.toText(), i2a.toText(), i4b.toText(), u1b.toText(), u2b.toText(), u4b.toText(), u8b.toText(), u16b.toText(), u32b.toText(), u64Zero.toText(), u64max.toText(), f8a.toText(), f16a.toText());",
     "/* Checked casts & widening */",
     "wU64: UInt64 = u8b;",
     "wF64: Float = f8a;",
