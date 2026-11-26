@@ -3945,8 +3945,8 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_i = 0n;
             void lite_i;
             while (((lite_i) < (lite_srcLen))) {
-                void (lite_out.push(lite$textAt(lite_source, lite_i, 35302)));
-                lite_i = lite$addInt(lite_i, 1n, 35324);
+                void (lite_out.push(lite$textAt(lite_source, lite_i, 35499)));
+                lite_i = lite$addInt(lite_i, 1n, 35521);
             }
             return [...(lite_out)];
         }
@@ -3956,11 +3956,11 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_hit = liteFn$lib$core$text$tp_String_op_indexOf(lite_source, lite_divider, lite_pos);
             void lite_hit;
             if (((lite_hit) < (0n))) {
-                void (lite_out.push(lite$textSlice(lite_source, lite_pos, lite_srcLen, 35502)));
+                void (lite_out.push(lite$textSlice(lite_source, lite_pos, lite_srcLen, 35699)));
                 break;
             }
-            void (lite_out.push(lite$textSlice(lite_source, lite_pos, lite_hit, 35586)));
-            lite_pos = lite$addInt(lite_hit, lite_divLen, 35622);
+            void (lite_out.push(lite$textSlice(lite_source, lite_pos, lite_hit, 35783)));
+            lite_pos = lite$addInt(lite_hit, lite_divLen, 35819);
         }
         return [...(lite_out)];
     }
