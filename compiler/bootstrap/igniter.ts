@@ -1651,11 +1651,11 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         let lite_out: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_out;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_runStart = 0n;
         void lite_runStart;
         let lite_position = 0n;
@@ -1680,17 +1680,17 @@ export function main(lite$write?: (text: string) => void): string {
             }
             if (((lite_esc) !== (""))) {
                 if (((lite_position) > (lite_runStart))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_value, lite_runStart, lite_position, 1167)));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_esc));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_runStart = lite$addInt(lite_position, 1n, 1262);
             }
             lite_position = lite$addInt(lite_position, 1n, 1294);
@@ -1699,17 +1699,17 @@ export function main(lite$write?: (text: string) => void): string {
             return (((("\"") + (lite_value))) + ("\""));
         }
         if (((lite_runStart) < (lite_size))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_value, lite_runStart, lite_size, 1405)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
     void liteFn$_p__p_$_p__p_$compiler$src$c__literals$textLiteralCode;
@@ -1991,11 +1991,11 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_level))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "    "));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_i = lite$addInt(lite_i, 1n, 2027);
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
@@ -2106,17 +2106,17 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_afterOk;
                 if (((lite_beforeOk) && (lite_afterOk))) {
                     if (((lite_i) > (lite_flushed))) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_code, lite_flushed, lite_i, 5026)));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_replacement));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_i = lite_afterPos;
                     lite_flushed = lite_i;
                     continue;
@@ -2128,11 +2128,11 @@ export function main(lite$write?: (text: string) => void): string {
             return lite_code;
         }
         if (((lite_flushed) < (lite_n))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_code, lite_flushed, lite_n, 5305)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
@@ -2457,11 +2457,11 @@ export function main(lite$write?: (text: string) => void): string {
                     if (((lite_blockDepth) > (0n))) {
                         lite_blockDepth = lite$subtractInt(lite_blockDepth, 1n, 14518);
                     }
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ((((lite_baseIndent) + (liteFn$_p__p_$_p__p_$compiler$src$emit__format$indentSpaces(lite_blockDepth)))) + ("}"))));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_i = lite$addInt(lite_i, 1n, 14624);
                     lite_atLineStart = false;
                     let lite_peek = lite_i;
@@ -2470,67 +2470,67 @@ export function main(lite$write?: (text: string) => void): string {
                         lite_peek = lite$addInt(lite_peek, 1n, 14860);
                     }
                     if (((((lite_peek) < (lite_n))) && ((((((liteFn$lib$core$text$tp_String_op_wordAt(lite_trimmed, lite_peek, "else")) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_trimmed, lite_peek, "catch")))) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_trimmed, lite_peek, "finally"))))))) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                         lite_i = lite_peek;
                     } else if (((((lite_peek) < (lite_n))) && ((((((((lite$textAt(lite_trimmed, lite_peek, 15119)) === (";"))) || (((lite$textAt(lite_trimmed, lite_peek, 15146)) === (")"))))) || (((lite$textAt(lite_trimmed, lite_peek, 15173)) === (",")))))))) {
                         lite_i = lite_peek;
                     } else if (((lite_peek) < (lite_n))) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\n"));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                         lite_atLineStart = true;
                         lite_i = lite_peek;
                     }
                     continue;
                 }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ((lite_baseIndent) + (liteFn$_p__p_$_p__p_$compiler$src$emit__format$indentSpaces(lite_blockDepth)))));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_atLineStart = false;
             }
             if (((((((lite_ch) === ("\""))) || (((lite_ch) === ("'"))))) || (((lite_ch) === ("`"))))) {
                 const lite_endQ = liteFn$_p__p_$_p__p_$compiler$src$emit__format$skipQuoted(lite_trimmed, lite_i);
                 void lite_endQ;
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_trimmed, lite_i, lite_endQ, 15668)));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_i = lite_endQ;
             } else if (((((((lite_ch) === ("/"))) && (((lite$addInt(lite_i, 1n, 15741)) < (lite_n))))) && (((lite$textAt(lite_trimmed, lite$addInt(lite_i, 1n, 15766), 15761)) === ("*"))))) {
                 const lite_endC = liteFn$_p__p_$_p__p_$compiler$src$emit__format$skipBlockComment(lite_trimmed, lite_i);
                 void lite_endC;
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_trimmed, lite_i, lite_endC, 15865)));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_i = lite_endC;
             } else if (((lite_ch) === ("("))) {
                 lite_parenDepth = lite$addInt(lite_parenDepth, 1n, 15970);
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "("));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_i = lite$addInt(lite_i, 1n, 16026);
             } else if (((lite_ch) === (")"))) {
                 if (((lite_parenDepth) > (0n))) {
                     lite_parenDepth = lite$subtractInt(lite_parenDepth, 1n, 16117);
                 }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ")"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_i = lite$addInt(lite_i, 1n, 16175);
             } else if (((lite_ch) === ("{"))) {
                 const lite_topIdx = lite$subtractInt(BigInt((lite_braceStack).length), 1n, 16252);
@@ -2549,11 +2549,11 @@ export function main(lite$write?: (text: string) => void): string {
                     }
                     if (((((lite_nextNonWs) < (lite_n))) && (((lite$textAt(lite_trimmed, lite_nextNonWs, 16878)) === ("}"))))) {
                         lite_changed = true;
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((("{\n") + (lite_baseIndent))) + (liteFn$_p__p_$_p__p_$compiler$src$emit__format$indentSpaces(lite_blockDepth)))) + ("}"))));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                         lite_i = lite$addInt(lite_nextNonWs, 1n, 17060);
                         let lite_afterEmpty = lite_i;
                         void lite_afterEmpty;
@@ -2561,20 +2561,20 @@ export function main(lite$write?: (text: string) => void): string {
                             lite_afterEmpty = lite$addInt(lite_afterEmpty, 1n, 17206);
                         }
                         if (((((lite_afterEmpty) < (lite_n))) && ((((((liteFn$lib$core$text$tp_String_op_wordAt(lite_trimmed, lite_afterEmpty, "else")) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_trimmed, lite_afterEmpty, "catch")))) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_trimmed, lite_afterEmpty, "finally"))))))) {
-                            {
-                                const lite$mb_recv = { v: lite_out };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                                lite_out = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                             lite_i = lite_afterEmpty;
                         } else if (((((lite_afterEmpty) < (lite_n))) && ((((((((lite$textAt(lite_trimmed, lite_afterEmpty, 17517)) === (";"))) || (((lite$textAt(lite_trimmed, lite_afterEmpty, 17550)) === (")"))))) || (((lite$textAt(lite_trimmed, lite_afterEmpty, 17583)) === (",")))))))) {
                             lite_i = lite_afterEmpty;
                         } else if (((lite_afterEmpty) < (lite_n))) {
-                            {
-                                const lite$mb_recv = { v: lite_out };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\n"));
-                                lite_out = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                             lite_atLineStart = true;
                             lite_i = lite_afterEmpty;
                         }
@@ -2583,22 +2583,22 @@ export function main(lite$write?: (text: string) => void): string {
                         void (lite_braceStack.push(1n));
                         void (lite_braceParenStack.push(lite_parenDepth));
                         lite_blockDepth = lite$addInt(lite_blockDepth, 1n, 18062);
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "{\n"));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                         lite_atLineStart = true;
                         lite_i = lite_nextNonWs;
                     }
                 } else {
                     void (lite_braceStack.push(0n));
                     void (lite_braceParenStack.push(lite_parenDepth));
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "{"));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_i = lite$addInt(lite_i, 1n, 18385);
                 }
             } else if (((lite_ch) === ("}"))) {
@@ -2615,11 +2615,11 @@ export function main(lite$write?: (text: string) => void): string {
                     if (((lite_blockDepth) > (0n))) {
                         lite_blockDepth = lite$subtractInt(lite_blockDepth, 1n, 18811);
                     }
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((("\n") + (lite_baseIndent))) + (liteFn$_p__p_$_p__p_$compiler$src$emit__format$indentSpaces(lite_blockDepth)))) + ("}"))));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_i = lite$addInt(lite_i, 1n, 18924);
                     let lite_peek = lite_i;
                     void lite_peek;
@@ -2627,37 +2627,37 @@ export function main(lite$write?: (text: string) => void): string {
                         lite_peek = lite$addInt(lite_peek, 1n, 19032);
                     }
                     if (((((lite_peek) < (lite_n))) && ((((((liteFn$lib$core$text$tp_String_op_wordAt(lite_trimmed, lite_peek, "else")) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_trimmed, lite_peek, "catch")))) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_trimmed, lite_peek, "finally"))))))) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                         lite_i = lite_peek;
                     } else if (((((lite_peek) < (lite_n))) && ((((((((lite$textAt(lite_trimmed, lite_peek, 19291)) === (";"))) || (((lite$textAt(lite_trimmed, lite_peek, 19318)) === (")"))))) || (((lite$textAt(lite_trimmed, lite_peek, 19345)) === (",")))))))) {
                         lite_i = lite_peek;
                     } else if (((lite_peek) < (lite_n))) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\n"));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                         lite_atLineStart = true;
                         lite_i = lite_peek;
                     }
                 } else {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "}"));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_i = lite$addInt(lite_i, 1n, 19641);
                 }
             } else if (((((((((((lite_ch) === (";"))) && (((lite_blockDepth) > (0n))))) && (((BigInt((lite_braceStack).length)) > (0n))))) && (((lite$listAt(lite_braceStack, lite$subtractInt(BigInt((lite_braceStack).length), 1n, 19770), 19750)) === (1n))))) && (((lite_parenDepth) === (lite$listAt(lite_braceParenStack, lite$subtractInt(BigInt((lite_braceParenStack).length), 1n, 19839), 19814)))))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ";"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_i = lite$addInt(lite_i, 1n, 19897);
                 let lite_peek = lite_i;
                 void lite_peek;
@@ -2666,20 +2666,20 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 if (((lite_peek) < (lite_n))) {
                     lite_changed = true;
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\n"));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_atLineStart = true;
                     lite_i = lite_peek;
                 }
             } else {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_ch));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_i = lite$addInt(lite_i, 1n, 20243);
             }
         }
@@ -2704,11 +2704,11 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         let lite_out: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_out;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_runStart = 0n;
         void lite_runStart;
         let lite_position = 0n;
@@ -2731,17 +2731,17 @@ export function main(lite$write?: (text: string) => void): string {
             }
             if (((lite_esc) !== (""))) {
                 if (((lite_position) > (lite_runStart))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_value, lite_runStart, lite_position, 1353)));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_esc));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_runStart = lite$addInt(lite_position, 1n, 1448);
             }
             lite_position = lite$addInt(lite_position, 1n, 1480);
@@ -2750,17 +2750,17 @@ export function main(lite$write?: (text: string) => void): string {
             return (((("\"") + (lite_value))) + ("\""));
         }
         if (((lite_runStart) < (lite_size))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_value, lite_runStart, lite_size, 1591)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
     void liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode;
@@ -4083,32 +4083,32 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_i) < (lite_n))) {
             if (((((((lite$addInt(lite_i, 1n, 3990)) < (lite_n))) && (((lite$textAt(lite_body, lite_i, 4007)) === ("/"))))) && (((lite$textAt(lite_body, lite$addInt(lite_i, 1n, 4034), 4029)) === ("*"))))) {
                 if (((lite_i) > (lite_runStart))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_body, lite_runStart, lite_i, 4098)));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "/ *"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_i = lite$addInt(lite_i, 2n, 4174);
                 lite_runStart = lite_i;
             } else if (((((((lite$addInt(lite_i, 1n, 4225)) < (lite_n))) && (((lite$textAt(lite_body, lite_i, 4242)) === ("*"))))) && (((lite$textAt(lite_body, lite$addInt(lite_i, 1n, 4269), 4264)) === ("/"))))) {
                 if (((lite_i) > (lite_runStart))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_body, lite_runStart, lite_i, 4333)));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "* /"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_i = lite$addInt(lite_i, 2n, 4409);
                 lite_runStart = lite_i;
             } else {
@@ -4119,11 +4119,11 @@ export function main(lite$write?: (text: string) => void): string {
             return lite_body;
         }
         if (((lite_runStart) < (lite_n))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_body, lite_runStart, lite_n, 4576)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
@@ -4598,11 +4598,11 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_ch;
             if (((lite_ch) === ("\""))) {
                 if (((lite_cursor) > (lite_runStart))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_source, lite_runStart, lite_cursor, 22470)));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 lite_cursor = lite$addInt(lite_cursor, 1n, 22526);
                 const lite_next = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_cursor, lite_prefix);
@@ -4617,11 +4617,11 @@ export function main(lite$write?: (text: string) => void): string {
             }
             if (((lite_ch) === ("\\"))) {
                 if (((lite_cursor) > (lite_runStart))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_source, lite_runStart, lite_cursor, 22901)));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 const lite_escapeStart = lite_cursor;
                 void lite_escapeStart;
@@ -4632,35 +4632,35 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_escaped = lite$textAt(lite_source, lite_cursor, 23156);
                 void lite_escaped;
                 if (((lite_escaped) === ("n"))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\n"));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 } else if (((lite_escaped) === ("t"))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\t"));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 } else if (((lite_escaped) === ("r"))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\r"));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 } else if (((lite_escaped) === ("\""))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 } else if (((lite_escaped) === ("\\"))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\"));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 } else {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_escapeStart, lite_prefix, (("unsupported string escape \\") + (lite_escaped)));
                 }
@@ -6539,11 +6539,11 @@ export function main(lite$write?: (text: string) => void): string {
                     return { ok: true, value: lite_seg, next: lite$addInt(lite_nextQuote, 1n, 3670), error: "" };
                 }
                 if (((lite_segLen) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_seg));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 return { ok: true, value: (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], "")), next: lite$addInt(lite_nextQuote, 1n, 3863), error: "" };
             }
@@ -6564,11 +6564,11 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 lite_hasEscapes = true;
                 if (((lite_decode) && (((lite_hit) > (lite_segRunStart))))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_seg, lite_segRunStart, lite_hit, 4420)));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 const lite_absSlash = lite$addInt(lite_pos, lite_hit, 4488);
                 void lite_absSlash;
@@ -6577,11 +6577,11 @@ export function main(lite$write?: (text: string) => void): string {
                         return { ok: false, value: "", next: lite_absSlash, error: "unterminated string escape" };
                     }
                     if (lite_decode) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                     lite_escapedQuote = true;
                     lite_pos = lite$addInt(lite_nextQuote, 1n, 4825);
@@ -6593,51 +6593,51 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_consumed;
                 if (((((lite_esc) === ("\\"))) || (((lite_esc) === ("/"))))) {
                     if (lite_decode) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_esc));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                 } else if (((lite_esc) === ("n"))) {
                     if (lite_decode) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\n"));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                 } else if (((lite_esc) === ("r"))) {
                     if (lite_decode) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\r"));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                 } else if (((lite_esc) === ("t"))) {
                     if (lite_decode) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\t"));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                 } else if (((lite_esc) === ("b"))) {
                     if (lite_decode) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$lib$core$text$tp_String_op_fromCodePoint(8n)).text));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                 } else if (((lite_esc) === ("f"))) {
                     if (lite_decode) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$lib$core$text$tp_String_op_fromCodePoint(12n)).text));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                 } else if (((lite_esc) === ("u"))) {
                     if (((lite$addInt(lite_absSlash, 5n, 5575)) >= (lite_size))) {
@@ -6661,47 +6661,47 @@ export function main(lite$write?: (text: string) => void): string {
                                 const lite_pairRes = liteFn$lib$core$text$tp_String_op_fromUtf16Strict(lite_pair);
                                 void lite_pairRes;
                                 if ((lite_pairRes).ok) {
-                                    {
-                                        const lite$mb_recv = { v: lite_out };
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_pairRes).text));
-                                        lite_out = lite$mb_recv.v;
-                                    }
+                                        return undefined;
+                                    })());
                                     lite_consumed = 12n;
                                 } else {
-                                    {
-                                        const lite$mb_recv = { v: lite_out };
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_source, lite_absSlash, lite$addInt(lite_absSlash, 6n, 6790), 6765)));
-                                        lite_out = lite$mb_recv.v;
-                                    }
+                                        return undefined;
+                                    })());
                                 }
                             } else {
-                                {
-                                    const lite$mb_recv = { v: lite_out };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_source, lite_absSlash, lite$addInt(lite_absSlash, 6n, 6935), 6910)));
-                                    lite_out = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             }
                         } else if (((((lite_code) >= (55296n))) && (((lite_code) <= (57343n))))) {
-                            {
-                                const lite$mb_recv = { v: lite_out };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_source, lite_absSlash, lite$addInt(lite_absSlash, 6n, 7103), 7078)));
-                                lite_out = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                         } else {
                             const lite_cpRes = liteFn$lib$core$text$tp_String_op_fromCodePoint(lite_code);
                             void lite_cpRes;
                             if ((lite_cpRes).ok) {
-                                {
-                                    const lite$mb_recv = { v: lite_out };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_cpRes).text));
-                                    lite_out = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             } else {
-                                {
-                                    const lite$mb_recv = { v: lite_out };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_source, lite_absSlash, lite$addInt(lite_absSlash, 6n, 7402), 7377)));
-                                    lite_out = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             }
                         }
                     }
@@ -6733,11 +6733,11 @@ export function main(lite$write?: (text: string) => void): string {
                 return { ok: true, value: "", next: lite$addInt(lite_nextQuote, 1n, 8332), error: "" };
             }
             if (((lite_segLen) > (lite_segRunStart))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_seg, lite_segRunStart, lite_segLen, 8426)));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             return { ok: true, value: (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], "")), next: lite$addInt(lite_nextQuote, 1n, 8542), error: "" };
         }
@@ -7187,11 +7187,11 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         let lite_out: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_out;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_runStart = 0n;
         void lite_runStart;
         let lite_i = 0n;
@@ -7220,33 +7220,33 @@ export function main(lite$write?: (text: string) => void): string {
             }
             if (((lite_esc) !== (""))) {
                 if (((lite_i) > (lite_runStart))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_value, lite_runStart, lite_i, 23337)));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_esc));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_runStart = lite$addInt(lite_i, 1n, 23418);
             }
             lite_i = lite$addInt(lite_i, 1n, 23443);
         }
         if (((lite_runStart) < (lite_size))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_value, lite_runStart, lite_size, 23501)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
     void liteFn$lib$data$json$quoteStringWithCodePoints;
@@ -7277,11 +7277,11 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         let lite_out: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_out;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_runStart = 0n;
         void lite_runStart;
         while (Boolean(true)) {
@@ -7291,62 +7291,62 @@ export function main(lite$write?: (text: string) => void): string {
                 break;
             }
             if (((lite_hit) > (lite_runStart))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_value, lite_runStart, lite_hit, 24522)));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             if (((lite_hit) === (lite_nextQuote))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\\""));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_nextQuote = liteFn$lib$core$text$tp_String_op_indexOf(lite_value, "\"", lite$addInt(lite_hit, 1n, 24661));
             } else if (((lite_hit) === (lite_nextSlash))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\\\"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_nextSlash = liteFn$lib$core$text$tp_String_op_indexOf(lite_value, "\\", lite$addInt(lite_hit, 1n, 24788));
             } else if (((lite_hit) === (lite_nextLf))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\n"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_nextLf = liteFn$lib$core$text$tp_String_op_indexOf(lite_value, "\n", lite$addInt(lite_hit, 1n, 24908));
             } else if (((lite_hit) === (lite_nextCr))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\r"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_nextCr = liteFn$lib$core$text$tp_String_op_indexOf(lite_value, "\r", lite$addInt(lite_hit, 1n, 25028));
             } else {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\t"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_nextTab = liteFn$lib$core$text$tp_String_op_indexOf(lite_value, "\t", lite$addInt(lite_hit, 1n, 25132));
             }
             lite_runStart = lite$addInt(lite_hit, 1n, 25171);
         }
         if (((lite_runStart) < (lite_size))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_value, lite_runStart, lite_size, 25228)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
     void liteFn$lib$data$json$quoteString;
@@ -7724,47 +7724,47 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_count;
         let lite_out: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_out;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "fn("));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_idx = 0n;
         void lite_idx;
         while (((lite_idx) < (lite_count))) {
             if (((lite_idx) > (0n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ","));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnParamComponent(lite_kind, lite_idx);
             void lite_comp;
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ":"));
-                lite_out = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_out };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (Boolean(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isFnKind((lite_comp).kind)) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnStripLabels((lite_comp).kind) : (lite_comp).kind)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_idx = lite$addInt(lite_idx, 1n, 10758);
         }
         const lite_res = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnResultKind(lite_kind);
         void lite_res;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "):"));
-            lite_out = lite$mb_recv.v;
-        }
-        {
-            const lite$mb_recv = { v: lite_out };
+            return undefined;
+        })());
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (Boolean((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnCloseParenIndex(lite_res)) >= (2n)))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnStripLabels(lite_res) : lite_res)));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
     void liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnStripLabels;
@@ -7872,27 +7872,27 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_actualComp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponent(lite_actualKind, lite_index);
             void lite_actualComp;
             if (((lite_index) > (0n))) {
-                {
-                    const lite$mb_recv = { v: lite_fieldsBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fieldsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                    lite_fieldsBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
-            {
-                const lite$mb_recv = { v: lite_fieldsBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fieldsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleObjectKey((lite_expectedComp).label, lite_index)));
-                lite_fieldsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_fieldsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fieldsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": lite$t."));
-                lite_fieldsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_fieldsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fieldsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_actualComp).prop));
-                lite_fieldsBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_index = lite$addInt(lite_index, 1n, 14126);
         }
         return (((((((("(() => { const lite$t = ") + (lite_actualCode))) + ("; return { "))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_fieldsBuf).chunks)], ""))))) + (" }; })()"));
@@ -9199,38 +9199,38 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_pCount;
         let lite_sigBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_sigBuf;
-        {
-            const lite$mb_recv = { v: lite_sigBuf };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_sigBuf; }, set v(lite$nv: { chunks: string[] }) { lite_sigBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "fn("));
-            lite_sigBuf = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_i = 0n;
         void lite_i;
         while (((lite_i) < (lite_pCount))) {
             if (((lite_i) > (0n))) {
-                {
-                    const lite$mb_recv = { v: lite_sigBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_sigBuf; }, set v(lite$nv: { chunks: string[] }) { lite_sigBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ","));
-                    lite_sigBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
-            {
-                const lite$mb_recv = { v: lite_sigBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_sigBuf; }, set v(lite$nv: { chunks: string[] }) { lite_sigBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnParamComponent(lite_kind, lite_i)).kind));
-                lite_sigBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_i = lite$addInt(lite_i, 1n, 50916);
         }
-        {
-            const lite$mb_recv = { v: lite_sigBuf };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_sigBuf; }, set v(lite$nv: { chunks: string[] }) { lite_sigBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "):"));
-            lite_sigBuf = lite$mb_recv.v;
-        }
-        {
-            const lite$mb_recv = { v: lite_sigBuf };
+            return undefined;
+        })());
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_sigBuf; }, set v(lite$nv: { chunks: string[] }) { lite_sigBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnResultKind(lite_kind)));
-            lite_sigBuf = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         const lite_sig = (liteFn$lib$core$list$tp_List_op_join([...((lite_sigBuf).chunks)], ""));
         void lite_sig;
         const lite_tag = (("lt_fnv_") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cStructHash(lite_sig)));
@@ -9457,29 +9457,29 @@ export function main(lite$write?: (text: string) => void): string {
         }
         let lite_out: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_out;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_count))));
-            lite_out = lite$mb_recv.v;
-        }
-        {
-            const lite$mb_recv = { v: lite_out };
+            return undefined;
+        })());
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ";"));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_idx = 0n;
         void lite_idx;
         while (((lite_idx) < (lite_count))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_keys, lite_idx, 58827))));
-                lite_out = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_out };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_values, lite_idx, 58890))));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_idx = lite$addInt(lite_idx, 1n, 58916);
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
@@ -10184,16 +10184,16 @@ export function main(lite$write?: (text: string) => void): string {
                         void lite_pk;
                         void (lite_newPayloads.push(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$substCanonicalKind(lite_genericParams, lite_pk, lite_bindings)));
                     }
-                    {
-                        const lite$mb_recv = { v: lite_encodedPairsBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedPairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedPairsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_cName))) + (":"))) + (lite_cName)))));
-                        lite_encodedPairsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_encodedPairsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedPairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedPairsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(liteFn$lib$core$list$tp_List_op_join(lite_newPayloads, ","))));
-                        lite_encodedPairsBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_ci = lite$addInt(lite_ci, 1n, 79575);
                 }
                 return (((((((((((("Enum<") + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_newHdr))) + (":"))) + (lite_newHdr)))))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText("$payload")))) + (liteFn$lib$core$int$tp_Int_op_toText((lite_info).count)))) + (";"))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_encodedPairsBuf).chunks)], ""))))) + (">"));
@@ -10598,39 +10598,39 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_ps;
                 let lite_vFieldsBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
                 void lite_vFieldsBuf;
-                {
-                    const lite$mb_recv = { v: lite_vFieldsBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_vFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_vFieldsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "readonly _t: "));
-                    lite_vFieldsBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_vFieldsBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_vFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_vFieldsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_ci))));
-                    lite_vFieldsBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 let lite_pi = 0n;
                 void lite_pi;
                 while (((lite_pi) < (BigInt((lite_ps).length)))) {
-                    {
-                        const lite$mb_recv = { v: lite_vFieldsBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_vFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_vFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; readonly _"));
-                        lite_vFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_vFieldsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_vFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_vFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_pi))));
-                        lite_vFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_vFieldsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_vFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_vFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                        lite_vFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_vFieldsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_vFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_vFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite$listAt(lite_ps, lite_pi, 94453))));
-                        lite_vFieldsBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_pi = lite$addInt(lite_pi, 1n, 94484);
                 }
                 void (lite_variants.push((((("{ ") + ((liteFn$lib$core$list$tp_List_op_join([...((lite_vFieldsBuf).chunks)], ""))))) + (" }"))));
@@ -10650,45 +10650,45 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_count;
             let lite_resultBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_resultBuf;
-            {
-                const lite$mb_recv = { v: lite_resultBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "{ "));
-                lite_resultBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_index = 0n;
             void lite_index;
             while (((lite_index) < (lite_count))) {
                 const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponent(lite_kind, lite_index);
                 void lite_comp;
                 if (((lite_index) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_resultBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                        lite_resultBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleObjectKey((lite_comp).label, lite_index)));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType((lite_comp).kind)));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_index = lite$addInt(lite_index, 1n, 95497);
             }
-            {
-                const lite$mb_recv = { v: lite_resultBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                lite_resultBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_out = (liteFn$lib$core$list$tp_List_op_join([...((lite_resultBuf).chunks)], ""));
         } else if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordKind(lite_kind)) {
             const lite_count = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordComponentCount(lite_kind);
@@ -10698,45 +10698,45 @@ export function main(lite$write?: (text: string) => void): string {
             } else {
                 let lite_resultBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
                 void lite_resultBuf;
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "{ "));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 let lite_index = 0n;
                 void lite_index;
                 while (((lite_index) < (lite_count))) {
                     const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordComponent(lite_kind, lite_index);
                     void lite_comp;
                     if (((lite_index) > (0n))) {
-                        {
-                            const lite$mb_recv = { v: lite_resultBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                            lite_resultBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
-                    {
-                        const lite$mb_recv = { v: lite_resultBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleObjectKey((lite_comp).label, lite_index)));
-                        lite_resultBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_resultBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                        lite_resultBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_resultBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType((lite_comp).kind)));
-                        lite_resultBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_index = lite$addInt(lite_index, 1n, 96191);
                 }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_out = (liteFn$lib$core$list$tp_List_op_join([...((lite_resultBuf).chunks)], ""));
             }
         } else if ((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnCloseParenIndex(lite_kind)) >= (2n)))) {
@@ -10750,29 +10750,29 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnParamComponent(lite_kind, lite_index);
                 void lite_comp;
                 if (((lite_index) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_paramsBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_paramsBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 const lite_paramLabel = (Boolean((((lite_comp).label) !== (""))) ? (("lite_") + ((lite_comp).label)) : (("lite_arg") + ((String(lite_index)))));
                 void lite_paramLabel;
-                {
-                    const lite$mb_recv = { v: lite_paramsBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_paramLabel));
-                    lite_paramsBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_paramsBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                    lite_paramsBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_paramsBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType((lite_comp).kind)));
-                    lite_paramsBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_index = lite$addInt(lite_index, 1n, 96838);
             }
             lite_out = (((((((("((") + ((liteFn$lib$core$list$tp_List_op_join([...((lite_paramsBuf).chunks)], ""))))) + (") => "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnResultKind(lite_kind))))) + (")"));
@@ -10830,93 +10830,91 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_ps: string[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$enumCasePayloads(lite_kind, lite_idx))];
                 void lite_ps;
                 if (((BigInt((lite_ps).length)) === (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_casesBuf };
-                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "case "));
-                        lite_casesBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_casesBuf };
-                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_idx))));
-                        lite_casesBuf = lite$mb_recv.v;
-                    }
                     void ((() => {
-                        const lite$mb_recv = { v: lite_casesBuf };
-                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": return "));
-                        lite_casesBuf = lite$mb_recv.v;
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
+                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "case "));
                         return undefined;
                     })());
-                    {
-                        const lite$mb_recv = { v: lite_casesBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
+                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_idx))));
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
+                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": return "));
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(((((lite_enumName) + ("."))) + (lite_cName)))));
-                        lite_casesBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_casesBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                        lite_casesBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 } else {
                     let lite_dispExprBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
                     void lite_dispExprBuf;
-                    {
-                        const lite$mb_recv = { v: lite_dispExprBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_dispExprBuf; }, set v(lite$nv: { chunks: string[] }) { lite_dispExprBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(((((((lite_enumName) + ("."))) + (lite_cName))) + ("(")))));
-                        lite_dispExprBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     let lite_pi = 0n;
                     void lite_pi;
                     while (((lite_pi) < (BigInt((lite_ps).length)))) {
                         if (((lite_pi) > (0n))) {
-                            {
-                                const lite$mb_recv = { v: lite_dispExprBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_dispExprBuf; }, set v(lite$nv: { chunks: string[] }) { lite_dispExprBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " + \", \""));
-                                lite_dispExprBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                         }
-                        {
-                            const lite$mb_recv = { v: lite_dispExprBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_dispExprBuf; }, set v(lite$nv: { chunks: string[] }) { lite_dispExprBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " + "));
-                            lite_dispExprBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_dispExprBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_dispExprBuf; }, set v(lite$nv: { chunks: string[] }) { lite_dispExprBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsDisplayValueCode(lite$listAt(lite_ps, lite_pi, 99672), (("value._") + ((String(lite_pi)))))));
-                            lite_dispExprBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                         lite_pi = lite$addInt(lite_pi, 1n, 99732);
                     }
-                    {
-                        const lite$mb_recv = { v: lite_dispExprBuf };
-                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " + \")\""));
-                        lite_dispExprBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_casesBuf };
-                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "case "));
-                        lite_casesBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_casesBuf };
-                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_idx))));
-                        lite_casesBuf = lite$mb_recv.v;
-                    }
                     void ((() => {
-                        const lite$mb_recv = { v: lite_casesBuf };
-                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": return "));
-                        lite_casesBuf = lite$mb_recv.v;
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_dispExprBuf; }, set v(lite$nv: { chunks: string[] }) { lite_dispExprBuf = lite$nv; } };
+                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " + \")\""));
                         return undefined;
                     })());
-                    {
-                        const lite$mb_recv = { v: lite_casesBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
+                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "case "));
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
+                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_idx))));
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
+                        void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": return "));
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$lib$core$list$tp_List_op_join([...((lite_dispExprBuf).chunks)], ""))));
-                        lite_casesBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_casesBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_casesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_casesBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                        lite_casesBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 lite_idx = lite$addInt(lite_idx, 1n, 100091);
             }
@@ -10949,11 +10947,11 @@ export function main(lite$write?: (text: string) => void): string {
             }
             let lite_resultBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_resultBuf;
-            {
-                const lite$mb_recv = { v: lite_resultBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(((lite_recName) + (" { ")))));
-                lite_resultBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_index = 0n;
             void lite_index;
             while (((lite_index) < (lite_count))) {
@@ -10961,26 +10959,26 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_comp;
                 const lite_separator = (Boolean(((lite_index) === (0n))) ? "" : ", ");
                 void lite_separator;
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " + "));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(((((lite_separator) + ((lite_comp).label))) + (" = ")))));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " + "));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsDisplayValueCode((lite_comp).kind, (("value.") + ((lite_comp).prop)))));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_index = lite$addInt(lite_index, 1n, 101539);
             }
             return (((((((((((((((("((value: ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite_kind)))) + ("): string => "))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_resultBuf).chunks)], ""))))) + (" + "))) + (liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(" }")))) + (")("))) + (lite_code))) + (")"));
@@ -10988,11 +10986,11 @@ export function main(lite$write?: (text: string) => void): string {
         if ((((((lite$textLength(lite_kind)) > (0n))) && (((lite$textAt(lite_kind, 0n, 4339)) === ("(")))))) {
             let lite_resultBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_resultBuf;
-            {
-                const lite$mb_recv = { v: lite_resultBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode("(")));
-                lite_resultBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             const lite_count = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponentCount(lite_kind);
             void lite_count;
             let lite_index = 0n;
@@ -11004,26 +11002,26 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_separator;
                 const lite_prefixText = (Boolean((((lite_comp).label) === (""))) ? lite_separator : ((((lite_separator) + ((lite_comp).label))) + ("=")));
                 void lite_prefixText;
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " + "));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$ts__literals$textLiteralCode(lite_prefixText)));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " + "));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsDisplayValueCode((lite_comp).kind, (("value.") + ((lite_comp).prop)))));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_index = lite$addInt(lite_index, 1n, 102399);
             }
             const lite_ending = (Boolean(((lite_count) === (1n))) ? ",)" : ")");
@@ -11121,45 +11119,45 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_count;
             let lite_resultBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_resultBuf;
-            {
-                const lite$mb_recv = { v: lite_resultBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "fn("));
-                lite_resultBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_index = 0n;
             void lite_index;
             while (((lite_index) < (lite_count))) {
                 const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnParamComponent(lite_kind, lite_index);
                 void lite_comp;
                 if (((lite_index) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_resultBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_resultBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 if ((((lite_comp).label) === (""))) {
-                    {
-                        const lite$mb_recv = { v: lite_resultBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_comp).kind)));
-                        lite_resultBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 } else {
-                    {
-                        const lite$mb_recv = { v: lite_resultBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_comp).label));
-                        lite_resultBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_resultBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                        lite_resultBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_resultBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_comp).kind)));
-                        lite_resultBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 lite_index = lite$addInt(lite_index, 1n, 105543);
             }
@@ -11172,54 +11170,54 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_count;
         let lite_resultBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_resultBuf;
-        {
-            const lite$mb_recv = { v: lite_resultBuf };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "("));
-            lite_resultBuf = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_index = 0n;
         void lite_index;
         while (((lite_index) < (lite_count))) {
             const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponent(lite_kind, lite_index);
             void lite_comp;
             if (((lite_index) > (0n))) {
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             if ((((lite_comp).label) === (""))) {
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_comp).kind)));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else {
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_comp).label));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_resultBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_comp).kind)));
-                    lite_resultBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             lite_index = lite$addInt(lite_index, 1n, 106195);
         }
         if (((((lite_count) === (1n))) && ((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponent(lite_kind, 0n)).label) === (""))))) {
-            {
-                const lite$mb_recv = { v: lite_resultBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_resultBuf; }, set v(lite$nv: { chunks: string[] }) { lite_resultBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ","));
-                lite_resultBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
         return (((liteFn$lib$core$list$tp_List_op_join([...((lite_resultBuf).chunks)], ""))) + (")"));
     }
@@ -11410,16 +11408,16 @@ export function main(lite$write?: (text: string) => void): string {
             } else {
                 return { ok: false, kind: "", next: lite_casesStart, error: (((((((("enum case ") + (lite_cName))) + (" requires an explicit "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_backingKind)))) + (" backing value")) };
             }
-            {
-                const lite$mb_recv = { v: lite_encodedPairsBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedPairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedPairsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_cName))) + (":"))) + (lite_cName)))));
-                lite_encodedPairsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_encodedPairsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedPairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedPairsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_valCode))) + (":"))) + (lite_valCode)))));
-                lite_encodedPairsBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_cIdx = lite$addInt(lite_cIdx, 1n, 113982);
         }
         const lite_canonical = (((((((((((("Enum<") + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_hdrText))) + (":"))) + (lite_hdrText)))))) + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_backingKind))) + (":"))) + (lite_backingKind)))))) + ((String(lite_caseCount))))) + (";"))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_encodedPairsBuf).chunks)], ""))))) + (">"));
@@ -11913,16 +11911,16 @@ export function main(lite$write?: (text: string) => void): string {
                         }
                         lite_payCsv = liteFn$lib$core$list$tp_List_op_join(lite_pKinds, ",");
                     }
-                    {
-                        const lite$mb_recv = { v: lite_encodedPairsBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedPairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedPairsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText((lite_nDec).text)));
-                        lite_encodedPairsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_encodedPairsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedPairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedPairsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_payCsv))) + (":"))) + (lite_payCsv)))));
-                        lite_encodedPairsBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_ci = lite$addInt(lite_ci, 1n, 135206);
                 }
                 return { kind: (((((((((((("Enum<") + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_effHdr))) + (":"))) + (lite_effHdr)))))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText("$payload")))) + ((String(lite_caseCount))))) + (";"))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_encodedPairsBuf).chunks)], ""))))) + (">")), next: lite_pCur };
@@ -12020,11 +12018,11 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_labels;
             let lite_kindTextBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_kindTextBuf;
-            {
-                const lite$mb_recv = { v: lite_kindTextBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "("));
-                lite_kindTextBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_count = 0n;
             void lite_count;
             let lite_hadComma = false;
@@ -12108,27 +12106,27 @@ export function main(lite$write?: (text: string) => void): string {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_errSource, lite_diagPos, lite_prefix, "unsupported tuple component type Unit");
                 }
                 if (((lite_count) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_kindTextBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ","));
-                        lite_kindTextBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_kindTextBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_label));
-                    lite_kindTextBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_kindTextBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ":"));
-                    lite_kindTextBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_kindTextBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_componentKind));
-                    lite_kindTextBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 if (((lite_count) === (0n))) {
                     lite_singleLabel = lite_label;
                     lite_singleKind = lite_componentKind;
@@ -12149,11 +12147,11 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 return { kind: lite_singleKind, next: lite_cursor };
             }
-            {
-                const lite$mb_recv = { v: lite_kindTextBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ")"));
-                lite_kindTextBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             return { kind: (liteFn$lib$core$list$tp_List_op_join([...((lite_kindTextBuf).chunks)], "")), next: lite_cursor };
         }
         if (((((lite_start) < (lite_size))) && (((lite$textAt(lite_source, lite_start, 144444)) === ("["))))) {
@@ -12185,11 +12183,11 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_paramLabels;
                 let lite_encodedBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
                 void lite_encodedBuf;
-                {
-                    const lite$mb_recv = { v: lite_encodedBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "fn("));
-                    lite_encodedBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 let lite_count = 0n;
                 void lite_count;
                 while (Boolean(true)) {
@@ -12226,27 +12224,27 @@ export function main(lite$write?: (text: string) => void): string {
                     const lite_paramType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeAtomWithSeen(lite_errSource, lite_errPos, lite_useLocalErr, lite_source, lite_paramStart, lite_prefix, lite_aliases, "function", lite_genericType, lite_seen);
                     void lite_paramType;
                     if (((lite_count) > (0n))) {
-                        {
-                            const lite$mb_recv = { v: lite_encodedBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ","));
-                            lite_encodedBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
-                    {
-                        const lite$mb_recv = { v: lite_encodedBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_label));
-                        lite_encodedBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_encodedBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ":"));
-                        lite_encodedBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_encodedBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_paramType).kind));
-                        lite_encodedBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_count = lite$addInt(lite_count, 1n, 147653);
                     lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_paramType).next, lite_prefix);
                     if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 147778)) === (","))))) {
@@ -12986,32 +12984,32 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_typed).next, lite_prefix);
                 if (((lite_count) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_encodedBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "|"));
-                        lite_encodedBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_encodedBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_parameterName));
-                    lite_encodedBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_encodedBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "="));
-                    lite_encodedBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_encodedBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_access));
-                    lite_encodedBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_encodedBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_typed).kind));
-                    lite_encodedBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_count = lite$addInt(lite_count, 1n, 183067);
                 if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 183112)) === (","))))) {
                     lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 183190), lite_prefix);
@@ -13148,32 +13146,32 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_typed).next, lite_prefix);
                 if (((lite_count) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_encodedBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "|"));
-                        lite_encodedBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_encodedBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_parameterName));
-                    lite_encodedBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_encodedBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "="));
-                    lite_encodedBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_encodedBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_access));
-                    lite_encodedBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_encodedBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_typed).kind));
-                    lite_encodedBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_count = lite$addInt(lite_count, 1n, 188562);
                 if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 188607)) === (","))))) {
                     lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 188685), lite_prefix);
@@ -13261,50 +13259,50 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_resultKind;
         let lite_out: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_out;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "fn("));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_idx = 0n;
         void lite_idx;
         while (((lite_idx) < (lite_count))) {
             if (((lite_idx) > (0n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ","));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             const lite_entry = lite$listAt(lite_params, lite$addInt(lite_first, lite_idx, 191969), 191963);
             void lite_entry;
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramNameOf(lite_entry)));
-                lite_out = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_out };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ":"));
-                lite_out = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_out };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite_entry)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_idx = lite$addInt(lite_idx, 1n, 192112);
         }
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "):"));
-            lite_out = lite$mb_recv.v;
-        }
-        {
-            const lite$mb_recv = { v: lite_out };
+            return undefined;
+        })());
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_resultKind));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
     void liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnCanonicalKind;
@@ -13694,16 +13692,16 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_idx = 0n;
         void lite_idx;
         while (((lite_idx) < (lite_count))) {
-            {
-                const lite$mb_recv = { v: lite_pairsBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_pairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_pairsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_names, lite_idx, 204775))));
-                lite_pairsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_pairsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_pairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_pairsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_vals, lite_idx, 204841))));
-                lite_pairsBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_idx = lite$addInt(lite_idx, 1n, 204867);
         }
         const lite_enumHeader = ((((((((lite_moduleIdentity) + ("#"))) + ((String(lite_declAt))))) + ("#"))) + (lite_enumName));
@@ -13791,16 +13789,16 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_idx = 0n;
         void lite_idx;
         while (((lite_idx) < (lite_count))) {
-            {
-                const lite$mb_recv = { v: lite_pairsBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_pairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_pairsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_names, lite_idx, 207717))));
-                lite_pairsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_pairsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_pairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_pairsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText(lite$listAt(lite_typesList, lite_idx, 207788))));
-                lite_pairsBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_idx = lite$addInt(lite_idx, 1n, 207814);
         }
         const lite_recHeader = ((((((((lite_moduleIdentity) + ("#"))) + ((String(lite_declAt))))) + ("#"))) + (lite_recName));
@@ -14115,16 +14113,16 @@ export function main(lite$write?: (text: string) => void): string {
                         }
                         lite_payCsv = liteFn$lib$core$list$tp_List_op_join(lite_pKinds, ",");
                     }
-                    {
-                        const lite$mb_recv = { v: lite_encodedPairsBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedPairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedPairsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText((lite_nDec).text)));
-                        lite_encodedPairsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_encodedPairsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedPairsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedPairsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_payCsv))) + (":"))) + (lite_payCsv)))));
-                        lite_encodedPairsBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_ci = lite$addInt(lite_ci, 1n, 219986);
                 }
                 return { ok: true, kind: (((((((((((("Enum<") + ((((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_effHdr))) + (":"))) + (lite_effHdr)))))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$encodeLengthPrefixedText("$payload")))) + ((String(lite_caseCount))))) + (";"))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_encodedPairsBuf).chunks)], ""))))) + (">")), next: lite_pCur };
@@ -16520,11 +16518,11 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_tok;
                 if ((((!(((lite_seenAdded).has(lite_tok))))) && (((liteFn$lib$core$text$tp_String_op_indexOf(lite_base, (((("|") + (lite_tok))) + ("|")), 0n)) < (0n))))) {
                     void (((lite_seenAdded).add(lite_tok), undefined));
-                    {
-                        const lite$mb_recv = { v: lite_added };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_added; }, set v(lite$nv: { chunks: string[] }) { lite_added = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ((lite_tok) + ("|"))));
-                        lite_added = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
             }
             lite_pos = lite$addInt(lite_endPos, 1n, 4019);
@@ -19360,26 +19358,26 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_fCloned = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$tsDeepCloneValueCode((lite_comp).kind, lite_fExpr);
                 void lite_fCloned;
                 if (((lite_fCloned) !== (lite_fExpr))) {
-                    {
-                        const lite$mb_recv = { v: lite_extraBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_extraBuf; }, set v(lite$nv: { chunks: string[] }) { lite_extraBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_extraBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_extraBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_extraBuf; }, set v(lite$nv: { chunks: string[] }) { lite_extraBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_comp).prop));
-                        lite_extraBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_extraBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_extraBuf; }, set v(lite$nv: { chunks: string[] }) { lite_extraBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                        lite_extraBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_extraBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_extraBuf; }, set v(lite$nv: { chunks: string[] }) { lite_extraBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_fCloned));
-                        lite_extraBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 lite_idx = lite$addInt(lite_idx, 1n, 16729);
             }
@@ -19844,77 +19842,77 @@ export function main(lite$write?: (text: string) => void): string {
                     const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponent(lite_kind, lite_index);
                     void lite_comp;
                     if (((lite_index) > (0n))) {
-                        {
-                            const lite$mb_recv = { v: lite_cCodeBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                            lite_cCodeBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "."));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cFieldName((lite_comp).prop)));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$frontend__context$zeroParsed(lite_target, (lite_comp).kind, lite_next)).code));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_index = lite$addInt(lite_index, 1n, 34309);
                 }
                 return { kind: lite_kind, code: (((((((((((("/*@T:") + (lite_kind))) + ("@*/(("))) + (lite_tag))) + ("){ "))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_cCodeBuf).chunks)], ""))))) + (" })")), intValue: 0n, textValue: "", constant: false, next: lite_next };
             }
             let lite_codeBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_codeBuf;
-            {
-                const lite$mb_recv = { v: lite_codeBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "{ "));
-                lite_codeBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_index = 0n;
             void lite_index;
             while (((lite_index) < (lite_count))) {
                 const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponent(lite_kind, lite_index);
                 void lite_comp;
                 if (((lite_index) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_codeBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_codeBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_codeBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleObjectKey((lite_comp).label, lite_index)));
-                    lite_codeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_codeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                    lite_codeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_codeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$frontend__context$zeroParsed(lite_target, (lite_comp).kind, lite_next)).code));
-                    lite_codeBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_index = lite$addInt(lite_index, 1n, 34946);
             }
-            {
-                const lite$mb_recv = { v: lite_codeBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                lite_codeBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             return { kind: lite_kind, code: (liteFn$lib$core$list$tp_List_op_join([...((lite_codeBuf).chunks)], "")), intValue: 0n, textValue: "", constant: false, next: lite_next };
         } else if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isMapKind(lite_kind)) {
             if (((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cMapTag(lite_kind)) !== (""))))) {
@@ -19947,32 +19945,32 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_pi;
                 while (((lite_pi) < (BigInt((lite_ps).length)))) {
                     if (((lite_pi) > (0n))) {
-                        {
-                            const lite$mb_recv = { v: lite_fInitBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fInitBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                            lite_fInitBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
-                    {
-                        const lite$mb_recv = { v: lite_fInitBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fInitBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ".f"));
-                        lite_fInitBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_fInitBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fInitBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_pi))));
-                        lite_fInitBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_fInitBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fInitBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                        lite_fInitBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_fInitBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fInitBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$frontend__context$zeroParsed(lite_target, lite$listAt(lite_ps, lite_pi, 36857), lite_next)).code));
-                        lite_fInitBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_pi = lite$addInt(lite_pi, 1n, 36899);
                 }
                 return { kind: lite_kind, code: (((((((((((("/*@T:") + (lite_kind))) + ("@*/(("))) + (lite_tag))) + ("){ .tag = 0, .u = { .c0 = { "))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_fInitBuf).chunks)], ""))))) + (" } } })")), intValue: 0n, textValue: "", constant: false, next: lite_next };
@@ -19981,34 +19979,34 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_tsT;
             let lite_tsInitBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_tsInitBuf;
-            {
-                const lite$mb_recv = { v: lite_tsInitBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_tsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_tsInitBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "_t: 0 as const"));
-                lite_tsInitBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_pi = 0n;
             void lite_pi;
             while (((lite_pi) < (BigInt((lite_ps).length)))) {
-                {
-                    const lite$mb_recv = { v: lite_tsInitBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_tsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_tsInitBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", _"));
-                    lite_tsInitBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_tsInitBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_tsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_tsInitBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_pi))));
-                    lite_tsInitBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_tsInitBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_tsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_tsInitBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                    lite_tsInitBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_tsInitBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_tsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_tsInitBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$frontend__context$zeroParsed(lite_target, lite$listAt(lite_ps, lite_pi, 37486), lite_next)).code));
-                    lite_tsInitBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_pi = lite$addInt(lite_pi, 1n, 37524);
             }
             return { kind: lite_kind, code: (((((((("({ ") + ((liteFn$lib$core$list$tp_List_op_join([...((lite_tsInitBuf).chunks)], ""))))) + (" } as "))) + (lite_tsT))) + (")")), intValue: 0n, textValue: "", constant: false, next: lite_next };
@@ -20031,32 +20029,32 @@ export function main(lite$write?: (text: string) => void): string {
                     const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordComponent(lite_kind, lite_index);
                     void lite_comp;
                     if (((lite_index) > (0n))) {
-                        {
-                            const lite$mb_recv = { v: lite_cCodeBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                            lite_cCodeBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "."));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cFieldName((lite_comp).prop)));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$frontend__context$zeroParsed(lite_target, (lite_comp).kind, lite_next)).code));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_index = lite$addInt(lite_index, 1n, 38704);
                 }
                 return { kind: lite_kind, code: (((((((((((("/*@T:") + (lite_kind))) + ("@*/(("))) + (lite_tag))) + ("){ "))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_cCodeBuf).chunks)], ""))))) + (" })")), intValue: 0n, textValue: "", constant: false, next: lite_next };
@@ -20066,45 +20064,45 @@ export function main(lite$write?: (text: string) => void): string {
             }
             let lite_codeBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_codeBuf;
-            {
-                const lite$mb_recv = { v: lite_codeBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "{ "));
-                lite_codeBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_index = 0n;
             void lite_index;
             while (((lite_index) < (lite_count))) {
                 const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$recordComponent(lite_kind, lite_index);
                 void lite_comp;
                 if (((lite_index) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_codeBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_codeBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_codeBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleObjectKey((lite_comp).label, lite_index)));
-                    lite_codeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_codeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                    lite_codeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_codeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$frontend__context$zeroParsed(lite_target, (lite_comp).kind, lite_next)).code));
-                    lite_codeBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_index = lite$addInt(lite_index, 1n, 39464);
             }
-            {
-                const lite$mb_recv = { v: lite_codeBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                lite_codeBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             return { kind: lite_kind, code: (liteFn$lib$core$list$tp_List_op_join([...((lite_codeBuf).chunks)], "")), intValue: 0n, textValue: "", constant: false, next: lite_next };
         } else if ((((((((lite$textLength(lite_kind)) > (5n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_kind, 0n, "List<")))) && (((lite$textAt(lite_kind, lite$subtractInt(lite$textLength(lite_kind), 1n, 14465), 14448)) === (">")))))) {
             if (((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cListTag(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$listElementKind(lite_kind))) !== (""))))) {
@@ -20159,42 +20157,42 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_pName = (("lite_") + ((String(lite_idx))));
                 void lite_pName;
                 if (((lite_idx) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_paramsCodeBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_paramsCodeBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_paramsCodeBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pName));
-                    lite_paramsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_paramsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                    lite_paramsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_paramsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType((lite_comp).kind)));
-                    lite_paramsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_voidStmtsBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_voidStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_voidStmtsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "void "));
-                    lite_voidStmtsBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_voidStmtsBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_voidStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_voidStmtsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pName));
-                    lite_voidStmtsBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_voidStmtsBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_voidStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_voidStmtsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                    lite_voidStmtsBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_idx = lite$addInt(lite_idx, 1n, 42058);
             }
             const lite_paramsCode = (liteFn$lib$core$list$tp_List_op_join([...((lite_paramsCodeBuf).chunks)], ""));
@@ -20338,73 +20336,73 @@ export function main(lite$write?: (text: string) => void): string {
                     const lite_bStmt = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$cUnwrapIntoVar(lite_cVar, lite$listAt(lite_branchKinds, lite_ci, 47402), lite_bCode);
                     void lite_bStmt;
                     if (((lite_ci) === (0n))) {
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "if ("));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$listAt(lite_conditionCodes, 0n, 47546)));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ") { "));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bStmt));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     } else if (((lite_ci) < (lite$subtractInt(lite_branchCount, 1n, 47735)))) {
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " else if ("));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$listAt(lite_conditionCodes, lite_ci, 47849)));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ") { "));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bStmt));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     } else {
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " else { "));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bStmt));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_stmtBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_stmtBuf; }, set v(lite$nv: { chunks: string[] }) { lite_stmtBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                            lite_stmtBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                     lite_ci = lite$addInt(lite_ci, 1n, 48208);
                 }
@@ -20569,17 +20567,17 @@ export function main(lite$write?: (text: string) => void): string {
                     void lite_lbl;
                     if (((liteFn$lib$core$text$tp_String_op_indexOf(lite_tryCode, ((lite_lbl) + (":")), 0n)) < (0n))) {
                         if (((lite_cursor) > (lite_flushed))) {
-                            {
-                                const lite$mb_recv = { v: lite_out };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_tryCode, lite_flushed, lite_cursor, 54280)));
-                                lite_out = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                         }
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((((("{ { ") + (lite_finCode))) + (" } goto "))) + (lite_lbl))) + ("; }"))));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                         lite_cursor = lite$addInt(lite_semi, 1n, 54422);
                         lite_flushed = lite_cursor;
                         continue;
@@ -20629,17 +20627,16 @@ export function main(lite$write?: (text: string) => void): string {
                     const lite_retExpr = liteFn$lib$core$text$tp_String_op_trim(lite$textSlice(lite_tryCode, lite$addInt(lite_cursor, 6n, 55857), lite_semi, 55844));
                     void lite_retExpr;
                     if (((lite_cursor) > (lite_flushed))) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_tryCode, lite_flushed, lite_cursor, 55937)));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                     if (((((((((lite_retExpr) === (""))) || (((lite_fnRetKind) === (""))))) || (((lite_fnRetKind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) || (((lite_fnRetKind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) {
                         void ((() => {
-                            const lite$mb_recv = { v: lite_out };
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((("{ { ") + (lite_finCode))) + (" } return; }"))));
-                            lite_out = lite$mb_recv.v;
                             return undefined;
                         })());
                     } else {
@@ -20647,9 +20644,8 @@ export function main(lite$write?: (text: string) => void): string {
                         const lite_tmpVar = (((((("lt_fr_") + ((String(lite_finId))))) + ("_"))) + ((String(lite_rSeq))));
                         void lite_tmpVar;
                         void ((() => {
-                            const lite$mb_recv = { v: lite_out };
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((((((((((((((((("{ ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cValueType(lite_fnRetKind)))) + (" "))) + (lite_tmpVar))) + (" = ("))) + (lite_retExpr))) + ("); { "))) + (lite_finCode))) + (" } return "))) + (lite_tmpVar))) + ("; }"))));
-                            lite_out = lite$mb_recv.v;
                             return undefined;
                         })());
                     }
@@ -20666,11 +20662,11 @@ export function main(lite$write?: (text: string) => void): string {
             return lite_tryCode;
         }
         if (((lite_flushed) < (lite_size))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_tryCode, lite_flushed, lite_size, 56772)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
@@ -20713,17 +20709,17 @@ export function main(lite$write?: (text: string) => void): string {
                 }
             } else if (((((((((lite_ch) === (lite_firstCh))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_code, lite_cursor, lite_ident)))) && ((((((lite_cursor) === (0n))) || ((!(liteFn$lib$core$text$tp_String_op_isNameContinue(lite$textAt(lite_code, lite$subtractInt(lite_cursor, 1n, 57728), 57718)))))))))) && ((((((lite$addInt(lite_cursor, lite_idLen, 57771)) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameContinue(lite$textAt(lite_code, lite$addInt(lite_cursor, lite_idLen, 57809), 57799)))))))))) {
                 if (((lite_cursor) > (lite_flushed))) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_code, lite_flushed, lite_cursor, 57892)));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_replacement));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_cursor = lite$addInt(lite_cursor, lite_idLen, 57988);
                 lite_flushed = lite_cursor;
             } else {
@@ -20734,11 +20730,11 @@ export function main(lite$write?: (text: string) => void): string {
             return lite_code;
         }
         if (((lite_flushed) < (lite_size))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_code, lite_flushed, lite_size, 58174)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
@@ -21004,11 +21000,11 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_entryId = lite$textSlice(lite_raw, lite_cursor, lite_eqPos, 65348);
             void lite_entryId;
             if (((lite_entryId) !== (lite_excludeKey))) {
-                {
-                    const lite$mb_recv = { v: lite_kept };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kept; }, set v(lite$nv: { chunks: string[] }) { lite_kept = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_appendLine(lite$mb_recv, lite$textSlice(lite_raw, lite_cursor, lite_endPos, 65442)));
-                    lite_kept = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             lite_cursor = lite$addInt(lite_endPos, 1n, 65500);
         }
@@ -23733,23 +23729,23 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_s;
         let lite_out: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_out;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "|"));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         for (const lite_tok of (lite_s)) {
             void lite_tok;
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_tok));
-                lite_out = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_out };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "|"));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
@@ -25624,17 +25620,17 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_nextOk;
                 if (((lite_prevOk) && (lite_nextOk))) {
                     if (((lite_cursor) > (lite_flushed))) {
-                        {
-                            const lite$mb_recv = { v: lite_out };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_body, lite_flushed, lite_cursor, 68636)));
-                            lite_out = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_argCode));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_cursor = lite_afterPos;
                     lite_flushed = lite_cursor;
                     continue;
@@ -25646,11 +25642,11 @@ export function main(lite$write?: (text: string) => void): string {
             return lite_body;
         }
         if (((lite_flushed) < (lite_bLen))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_body, lite_flushed, lite_bLen, 68939)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
@@ -25897,17 +25893,17 @@ export function main(lite$write?: (text: string) => void): string {
                         void lite_body;
                         if (((((lite_p1) === (""))) && (((lite_rawArgs) === (""))))) {
                             if (((lite_nextFn) > (lite_copyFrom))) {
-                                {
-                                    const lite$mb_recv = { v: lite_out };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_code, lite_copyFrom, lite_nextFn, 77905)));
-                                    lite_out = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             }
-                            {
-                                const lite$mb_recv = { v: lite_out };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((("(") + (lite_body))) + (")"))));
-                                lite_out = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                             lite_copyFrom = lite_scan;
                             lite_cursor = lite_scan;
                             lite_changed = true;
@@ -25917,17 +25913,17 @@ export function main(lite$write?: (text: string) => void): string {
                             const lite_subArg = liteFn$_p__p_$_p__p_$compiler$src$reachability$widenInlineArgForTarget(lite_target, lite_rawArgs);
                             void lite_subArg;
                             if (((lite_nextFn) > (lite_copyFrom))) {
-                                {
-                                    const lite$mb_recv = { v: lite_out };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_code, lite_copyFrom, lite_nextFn, 78459)));
-                                    lite_out = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             }
-                            {
-                                const lite$mb_recv = { v: lite_out };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((("(") + (liteFn$_p__p_$_p__p_$compiler$src$reachability$replaceParamToken(lite_body, lite_p1, lite_subArg)))) + (")"))));
-                                lite_out = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                             lite_copyFrom = lite_scan;
                             lite_cursor = lite_scan;
                             lite_changed = true;
@@ -25948,17 +25944,17 @@ export function main(lite$write?: (text: string) => void): string {
                                 const lite_step2 = liteFn$_p__p_$_p__p_$compiler$src$reachability$replaceParamToken(lite_step1, lite_p2, lite_sub2);
                                 void lite_step2;
                                 if (((lite_nextFn) > (lite_copyFrom))) {
-                                    {
-                                        const lite$mb_recv = { v: lite_out };
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_code, lite_copyFrom, lite_nextFn, 79542)));
-                                        lite_out = lite$mb_recv.v;
-                                    }
+                                        return undefined;
+                                    })());
                                 }
-                                {
-                                    const lite$mb_recv = { v: lite_out };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((("(") + (lite_step2))) + (")"))));
-                                    lite_out = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                                 lite_copyFrom = lite_scan;
                                 lite_cursor = lite_scan;
                                 lite_changed = true;
@@ -25976,11 +25972,11 @@ export function main(lite$write?: (text: string) => void): string {
             return lite_code;
         }
         if (((lite_copyFrom) < (lite_cLen))) {
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice(lite_code, lite_copyFrom, lite_cLen, 80127)));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
@@ -26906,43 +26902,43 @@ export function main(lite$write?: (text: string) => void): string {
             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$expectSymbol(lite_source, lite_cursor, ")", lite_prefix);
             let lite_kindTextBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_kindTextBuf;
-            {
-                const lite$mb_recv = { v: lite_kindTextBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "("));
-                lite_kindTextBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_index = 0n;
             void lite_index;
             while (((lite_index) < (lite_count))) {
                 if (((lite_index) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_kindTextBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ","));
-                        lite_kindTextBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_kindTextBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$listAt(lite_labels, lite_index, 15312)));
-                    lite_kindTextBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_kindTextBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ":"));
-                    lite_kindTextBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_kindTextBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$listAt(lite_kinds, lite_index, 15403)));
-                    lite_kindTextBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_index = lite$addInt(lite_index, 1n, 15438);
             }
-            {
-                const lite$mb_recv = { v: lite_kindTextBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_kindTextBuf; }, set v(lite$nv: { chunks: string[] }) { lite_kindTextBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ")"));
-                lite_kindTextBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             const lite_tupleKind = (liteFn$lib$core$list$tp_List_op_join([...((lite_kindTextBuf).chunks)], ""));
             void lite_tupleKind;
             if (((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cStructTag(lite_tupleKind)) !== (""))))) {
@@ -26957,75 +26953,75 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_ci;
                 while (((lite_ci) < (lite_count))) {
                     if (((lite_ci) > (0n))) {
-                        {
-                            const lite$mb_recv = { v: lite_cCodeBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                            lite_cCodeBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "."));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cFieldName(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleRuntimeProp(lite$listAt(lite_labels, lite_ci, 16178), lite_ci))));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_cCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$listAt(lite_codes, lite_ci, 16276)));
-                        lite_cCodeBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_ci = lite$addInt(lite_ci, 1n, 16306);
                 }
                 return liteFn$_p__p_$_p__p_$compiler$src$frontend__context$withMarkers({ kind: lite_tupleKind, code: (((((((((((("/*@T:") + (lite_tupleKind))) + ("@*/(("))) + (lite_tag))) + ("){ "))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_cCodeBuf).chunks)], ""))))) + (" })")), intValue: 0n, textValue: "", constant: false, next: lite_cursor }, lite_tupleMarkers);
             }
             let lite_codeBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_codeBuf;
-            {
-                const lite$mb_recv = { v: lite_codeBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "{ "));
-                lite_codeBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_ti = 0n;
             void lite_ti;
             while (((lite_ti) < (lite_count))) {
                 if (((lite_ti) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_codeBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_codeBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_codeBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleObjectKey(lite$listAt(lite_labels, lite_ti, 16776), lite_ti)));
-                    lite_codeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_codeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                    lite_codeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_codeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$listAt(lite_codes, lite_ti, 16862)));
-                    lite_codeBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_ti = lite$addInt(lite_ti, 1n, 16888);
             }
-            {
-                const lite$mb_recv = { v: lite_codeBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_codeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_codeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                lite_codeBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             return liteFn$_p__p_$_p__p_$compiler$src$frontend__context$withMarkers({ kind: lite_tupleKind, code: (liteFn$lib$core$list$tp_List_op_join([...((lite_codeBuf).chunks)], "")), intValue: 0n, textValue: "", constant: false, next: lite_cursor }, lite_tupleMarkers);
         }
         let lite_groupedExpected = lite_expected;
@@ -27351,9 +27347,8 @@ export function main(lite$write?: (text: string) => void): string {
                         let lite_repBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
                         void lite_repBuf;
                         void ((() => {
-                            const lite$mb_recv = { v: lite_repBuf };
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_repBuf; }, set v(lite$nv: { chunks: string[] }) { lite_repBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "["));
-                            lite_repBuf = lite$mb_recv.v;
                             return undefined;
                         })());
                         let lite_ri = 0n;
@@ -27361,24 +27356,21 @@ export function main(lite$write?: (text: string) => void): string {
                         while (((lite_ri) < (lite_repeatCount))) {
                             if (((lite_ri) > (0n))) {
                                 void ((() => {
-                                    const lite$mb_recv = { v: lite_repBuf };
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_repBuf; }, set v(lite$nv: { chunks: string[] }) { lite_repBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                                    lite_repBuf = lite$mb_recv.v;
                                     return undefined;
                                 })());
                             }
                             void ((() => {
-                                const lite$mb_recv = { v: lite_repBuf };
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_repBuf; }, set v(lite$nv: { chunks: string[] }) { lite_repBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_elemValCode));
-                                lite_repBuf = lite$mb_recv.v;
                                 return undefined;
                             })());
                             lite_ri = lite$addInt(lite_ri, 1n, 33555);
                         }
                         void ((() => {
-                            const lite$mb_recv = { v: lite_repBuf };
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_repBuf; }, set v(lite$nv: { chunks: string[] }) { lite_repBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "]"));
-                            lite_repBuf = lite$mb_recv.v;
                             return undefined;
                         })());
                         return (liteFn$lib$core$list$tp_List_op_join([...((lite_repBuf).chunks)], ""));
@@ -27588,11 +27580,11 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_paramKinds;
         let lite_encodedKindBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_encodedKindBuf;
-        {
-            const lite$mb_recv = { v: lite_encodedKindBuf };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedKindBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedKindBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "fn("));
-            lite_encodedKindBuf = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_paramIdx = 0n;
         void lite_paramIdx;
         while (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 44695)) !== (")"))))) {
@@ -27630,27 +27622,27 @@ export function main(lite$write?: (text: string) => void): string {
             }
             void (lite_paramKinds.push(lite_pKind));
             if (((lite_paramIdx) > (0n))) {
-                {
-                    const lite$mb_recv = { v: lite_encodedKindBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedKindBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedKindBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ","));
-                    lite_encodedKindBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
-            {
-                const lite$mb_recv = { v: lite_encodedKindBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedKindBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedKindBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pName));
-                lite_encodedKindBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_encodedKindBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedKindBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedKindBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ":"));
-                lite_encodedKindBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_encodedKindBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedKindBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedKindBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pKind));
-                lite_encodedKindBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_paramIdx = lite$addInt(lite_paramIdx, 1n, 46256);
             if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 46297)) === (","))))) {
                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 46371), lite_prefix);
@@ -27710,11 +27702,11 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_tsParamsBuf;
         let lite_cParamsBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_cParamsBuf;
-        {
-            const lite$mb_recv = { v: lite_cParamsBuf };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cParamsBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "void *_env"));
-            lite_cParamsBuf = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_paramVoidBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_paramVoidBuf;
         const lite_paramRuntimes: string[] = [];
@@ -27731,62 +27723,62 @@ export function main(lite$write?: (text: string) => void): string {
             void (lite_paramRuntimes.push(lite_pRuntime));
             void (lite_fnLocals.push({ name: lite_pName, runtime: lite_pRuntime, kind: lite_pKind, mutable: false, writable: false, depth: lite_fnLexDepth, constant: false, code: "", intValue: 0n, textValue: "", initState: lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$INIT_STATE_INIT }));
             if (((lite_pBindIdx) > (0n))) {
-                {
-                    const lite$mb_recv = { v: lite_tsParamsBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_tsParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_tsParamsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                    lite_tsParamsBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
-            {
-                const lite$mb_recv = { v: lite_tsParamsBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_tsParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_tsParamsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pRuntime));
-                lite_tsParamsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_tsParamsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_tsParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_tsParamsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                lite_tsParamsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_tsParamsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_tsParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_tsParamsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite_pKind)));
-                lite_tsParamsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_cParamsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cParamsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                lite_cParamsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_cParamsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cParamsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cValueType(lite_pKind)));
-                lite_cParamsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_cParamsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cParamsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                lite_cParamsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_cParamsBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cParamsBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pRuntime));
-                lite_cParamsBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_paramVoidBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramVoidBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramVoidBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (Boolean(lite_isCFnLit) ? "(void)" : "void ")));
-                lite_paramVoidBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_paramVoidBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramVoidBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramVoidBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pRuntime));
-                lite_paramVoidBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_paramVoidBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_paramVoidBuf; }, set v(lite$nv: { chunks: string[] }) { lite_paramVoidBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                lite_paramVoidBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_pBindIdx = lite$addInt(lite_pBindIdx, 1n, 50448);
         }
         const lite_tsParamsCode = (liteFn$lib$core$list$tp_List_op_join([...((lite_tsParamsBuf).chunks)], ""));
@@ -27915,254 +27907,254 @@ export function main(lite$write?: (text: string) => void): string {
                 const lite_pName = (("a_") + ((String(lite_ci))));
                 void lite_pName;
                 if (((lite_ci) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_mkParamsBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkParamsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_mkParamsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkArgsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkArgsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkArgsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_mkArgsBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
                 if (lite_isCell) {
                     const lite_cellPtr = lite$textSlice(lite_cRt, 2n, lite$subtractInt(lite$textLength(lite_cRt), 1n, 55413), 55391);
                     void lite_cellPtr;
-                    {
-                        const lite$mb_recv = { v: lite_envFieldsBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cT));
-                        lite_envFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envFieldsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " *"));
-                        lite_envFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envFieldsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_fName));
-                        lite_envFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envFieldsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                        lite_envFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkParamsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkParamsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cT));
-                        lite_mkParamsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkParamsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkParamsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " *"));
-                        lite_mkParamsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkParamsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkParamsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pName));
-                        lite_mkParamsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkArgsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkArgsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkArgsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cellPtr));
-                        lite_mkArgsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "e->"));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_fName));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pName));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cT));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " *"));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cellPtr));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = (("));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_envType));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " *)_env)->"));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_fName));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; (void)"));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cellPtr));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envUnpackBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                        lite_envUnpackBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 } else {
-                    {
-                        const lite$mb_recv = { v: lite_envFieldsBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cT));
-                        lite_envFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envFieldsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                        lite_envFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envFieldsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_fName));
-                        lite_envFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_envFieldsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envFieldsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envFieldsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                        lite_envFieldsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkParamsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkParamsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cT));
-                        lite_mkParamsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkParamsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkParamsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                        lite_mkParamsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkParamsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkParamsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pName));
-                        lite_mkParamsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkArgsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkArgsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkArgsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__context$copiedValueCode(lite_target, lite_cK, lite_cRt)));
-                        lite_mkArgsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "e->"));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_fName));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_pName));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_mkInitsBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_mkInitsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_mkInitsBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                        lite_mkInitsBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     if (lite_cM) {
                         lite_bodyRewritten = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$cReplaceIdentToken(lite_bodyRewritten, lite_cRt, (((((((("(((") + (lite_envType))) + (" *)_env)->"))) + (lite_fName))) + (")")));
                     } else {
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cT));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cRt));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = (("));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_envType));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " *)_env)->"));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_fName));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; (void)"));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_cRt));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_envUnpackBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_envUnpackBuf; }, set v(lite$nv: { chunks: string[] }) { lite_envUnpackBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                            lite_envUnpackBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                 }
                 lite_ci = lite$addInt(lite_ci, 1n, 57915);
@@ -28639,26 +28631,26 @@ export function main(lite$write?: (text: string) => void): string {
             if (((((lite_shape) === ("record"))) && (((lite_bindName) !== ("_"))))) {
                 void (lite_seenRecBinds.push(lite_bindName));
             }
-            {
-                const lite$mb_recv = { v: lite_encodedBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_bindName))) + (":"))) + (lite_bindName)))));
-                lite_encodedBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_encodedBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_sourceField))) + (":"))) + (lite_sourceField)))));
-                lite_encodedBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_encodedBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_expectedKind))) + (":"))) + (lite_expectedKind)))));
-                lite_encodedBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_encodedBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_encodedBuf; }, set v(lite$nv: { chunks: string[] }) { lite_encodedBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_clauseMode))) + (":"))) + (lite_clauseMode)))));
-                lite_encodedBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_lastMode = lite_clauseMode;
             lite_lastExpected = lite_expectedKind;
             lite_count = lite$addInt(lite_count, 1n, 76472);
@@ -28803,26 +28795,26 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 lite_targetKind = lite_expectedKind;
             }
-            {
-                const lite$mb_recv = { v: lite_out };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_bindName))) + (":"))) + (lite_bindName)))));
-                lite_out = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_out };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_propExpr))) + (":"))) + (lite_propExpr)))));
-                lite_out = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_out };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_srcKind))) + (":"))) + (lite_srcKind)))));
-                lite_out = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_out };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (((((liteFn$lib$core$int$tp_Int_op_toText(lite$textLength(lite_targetKind))) + (":"))) + (lite_targetKind)))));
-                lite_out = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_clIndex = lite$addInt(lite_clIndex, 1n, 82540);
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
@@ -29209,32 +29201,32 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_pi;
             while (((lite_pi) < (BigInt((lite_argCodes).length)))) {
                 if (((lite_pi) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_fieldsInitBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fieldsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fieldsInitBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                        lite_fieldsInitBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_fieldsInitBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fieldsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fieldsInitBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ".f"));
-                    lite_fieldsInitBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_fieldsInitBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fieldsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fieldsInitBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_pi))));
-                    lite_fieldsInitBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_fieldsInitBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fieldsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fieldsInitBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                    lite_fieldsInitBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_fieldsInitBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_fieldsInitBuf; }, set v(lite$nv: { chunks: string[] }) { lite_fieldsInitBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$listAt(lite_argCodes, lite_pi, 101956)));
-                    lite_fieldsInitBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_pi = lite$addInt(lite_pi, 1n, 101982);
             }
             return (((((((((((((((((((("/*@T:") + (lite_enumKind))) + ("@*/(("))) + (lite_tag))) + ("){ .tag = "))) + ((String(lite_caseIdx))))) + (", .u = { .c"))) + ((String(lite_caseIdx))))) + (" = { "))) + ((liteFn$lib$core$list$tp_List_op_join([...((lite_fieldsInitBuf).chunks)], ""))))) + (" } } })"));
@@ -29243,44 +29235,44 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_tsT;
         let lite_objBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_objBuf;
-        {
-            const lite$mb_recv = { v: lite_objBuf };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_objBuf; }, set v(lite$nv: { chunks: string[] }) { lite_objBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "_t: "));
-            lite_objBuf = lite$mb_recv.v;
-        }
-        {
-            const lite$mb_recv = { v: lite_objBuf };
+            return undefined;
+        })());
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_objBuf; }, set v(lite$nv: { chunks: string[] }) { lite_objBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_caseIdx))));
-            lite_objBuf = lite$mb_recv.v;
-        }
-        {
-            const lite$mb_recv = { v: lite_objBuf };
+            return undefined;
+        })());
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_objBuf; }, set v(lite$nv: { chunks: string[] }) { lite_objBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " as const"));
-            lite_objBuf = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         let lite_pi = 0n;
         void lite_pi;
         while (((lite_pi) < (BigInt((lite_argCodes).length)))) {
-            {
-                const lite$mb_recv = { v: lite_objBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_objBuf; }, set v(lite$nv: { chunks: string[] }) { lite_objBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", _"));
-                lite_objBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_objBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_objBuf; }, set v(lite$nv: { chunks: string[] }) { lite_objBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_pi))));
-                lite_objBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_objBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_objBuf; }, set v(lite$nv: { chunks: string[] }) { lite_objBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                lite_objBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_objBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_objBuf; }, set v(lite$nv: { chunks: string[] }) { lite_objBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$listAt(lite_argCodes, lite_pi, 102545)));
-                lite_objBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_pi = lite$addInt(lite_pi, 1n, 102567);
         }
         return (((((((("({ ") + ((liteFn$lib$core$list$tp_List_op_join([...((lite_objBuf).chunks)], ""))))) + (" } as "))) + (lite_tsT))) + (")"));
@@ -30478,31 +30470,31 @@ export function main(lite$write?: (text: string) => void): string {
                             }
                             const lite_prefixKw = (Boolean(lite_isFirstIf) ? "if (" : " else if (");
                             void lite_prefixKw;
-                            {
-                                const lite$mb_recv = { v: lite_ifPartsBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_ifPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_ifPartsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_prefixKw));
-                                lite_ifPartsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_ifPartsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_ifPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_ifPartsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_condCode));
-                                lite_ifPartsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_ifPartsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_ifPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_ifPartsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ") { "));
-                                lite_ifPartsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_ifPartsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_ifPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_ifPartsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_branch).code));
-                                lite_ifPartsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_ifPartsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_ifPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_ifPartsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                                lite_ifPartsBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                             lite_ifCursor = (lite_branch).next;
                             lite_isFirstIf = false;
                             const lite_afterBranch = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_ifCursor, lite_prefix);
@@ -30525,21 +30517,21 @@ export function main(lite$write?: (text: string) => void): string {
                                     if ((((lite_elseBranch).kind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))) {
                                         lite_allBranchesExit = false;
                                     }
-                                    {
-                                        const lite$mb_recv = { v: lite_ifPartsBuf };
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_ifPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_ifPartsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " else { "));
-                                        lite_ifPartsBuf = lite$mb_recv.v;
-                                    }
-                                    {
-                                        const lite$mb_recv = { v: lite_ifPartsBuf };
+                                        return undefined;
+                                    })());
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_ifPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_ifPartsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_elseBranch).code));
-                                        lite_ifPartsBuf = lite$mb_recv.v;
-                                    }
-                                    {
-                                        const lite$mb_recv = { v: lite_ifPartsBuf };
+                                        return undefined;
+                                    })());
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_ifPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_ifPartsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                                        lite_ifPartsBuf = lite$mb_recv.v;
-                                    }
+                                        return undefined;
+                                    })());
                                     lite_ifCursor = (lite_elseBranch).next;
                                     break;
                                 }
@@ -30661,37 +30653,37 @@ export function main(lite$write?: (text: string) => void): string {
                                     lite_allArmsExit = false;
                                 }
                                 if (((lite_armCount) === (0n))) {
-                                    {
-                                        const lite$mb_recv = { v: lite_matchPartsBuf };
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "{ "));
-                                        lite_matchPartsBuf = lite$mb_recv.v;
-                                    }
-                                    {
-                                        const lite$mb_recv = { v: lite_matchPartsBuf };
+                                        return undefined;
+                                    })());
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_arm).code));
-                                        lite_matchPartsBuf = lite$mb_recv.v;
-                                    }
-                                    {
-                                        const lite$mb_recv = { v: lite_matchPartsBuf };
+                                        return undefined;
+                                    })());
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                                        lite_matchPartsBuf = lite$mb_recv.v;
-                                    }
+                                        return undefined;
+                                    })());
                                 } else {
-                                    {
-                                        const lite$mb_recv = { v: lite_matchPartsBuf };
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " else { "));
-                                        lite_matchPartsBuf = lite$mb_recv.v;
-                                    }
-                                    {
-                                        const lite$mb_recv = { v: lite_matchPartsBuf };
+                                        return undefined;
+                                    })());
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_arm).code));
-                                        lite_matchPartsBuf = lite$mb_recv.v;
-                                    }
-                                    {
-                                        const lite$mb_recv = { v: lite_matchPartsBuf };
+                                        return undefined;
+                                    })());
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                                        lite_matchPartsBuf = lite$mb_recv.v;
-                                    }
+                                        return undefined;
+                                    })());
                                 }
                                 lite_armCount = lite$addInt(lite_armCount, 1n, 176397);
                                 lite_matchCursor = (lite_arm).next;
@@ -30738,31 +30730,31 @@ export function main(lite$write?: (text: string) => void): string {
                                 }
                                 const lite_armKw = (Boolean(((lite_armCount) === (0n))) ? "if (" : " else if (");
                                 void lite_armKw;
-                                {
-                                    const lite$mb_recv = { v: lite_matchPartsBuf };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_armKw));
-                                    lite_matchPartsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_matchPartsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_condCode));
-                                    lite_matchPartsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_matchPartsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ") { "));
-                                    lite_matchPartsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_matchPartsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_arm).code));
-                                    lite_matchPartsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_matchPartsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_matchPartsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_matchPartsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                                    lite_matchPartsBuf = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                                 lite_armCount = lite$addInt(lite_armCount, 1n, 179733);
                                 lite_matchCursor = (lite_arm).next;
                             }
@@ -32890,11 +32882,11 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_baseAcc;
         let lite_outBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_outBuf;
-        {
-            const lite$mb_recv = { v: lite_outBuf };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_outBuf; }, set v(lite$nv: { chunks: string[] }) { lite_outBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_baseAcc));
-            lite_outBuf = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         const lite_seen: Set<string> = new Set<string>();
         void lite_seen;
         let lite_added = 0n;
@@ -32919,16 +32911,16 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_tag;
                 if (((((liteFn$lib$core$text$tp_String_op_indexOf(lite_baseAcc, lite_tag, 0n)) < (0n))) && ((!(((lite_seen).has(lite_tok))))))) {
                     void (((lite_seen).add(lite_tok), undefined));
-                    {
-                        const lite$mb_recv = { v: lite_outBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_outBuf; }, set v(lite$nv: { chunks: string[] }) { lite_outBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_tok));
-                        lite_outBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_outBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_outBuf; }, set v(lite$nv: { chunks: string[] }) { lite_outBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "|"));
-                        lite_outBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     lite_added = lite$addInt(lite_added, 1n, 307855);
                 }
             }
@@ -33136,26 +33128,26 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_exprCode;
                 const lite_rt = liteFn$_p__p_$_p__p_$compiler$src$frontend__ir$localRuntimeName(lite_target, lite_baseLocals, lite_name, "", lite_armDepth);
                 void lite_rt;
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_rt));
-                    lite_out = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                    lite_out = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_exprCode));
-                    lite_out = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             lite_pos = lite$addInt(lite_lineEnd, 1n, 313418);
         }
@@ -34185,11 +34177,11 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) {
             let lite_cOrBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_cOrBuf;
-            {
-                const lite$mb_recv = { v: lite_cOrBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cOrBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cOrBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "/*@COR@*/bool lt_or = false; "));
-                lite_cOrBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_i = 0n;
             void lite_i;
             while (((lite_i) < (lite_altCount))) {
@@ -34197,42 +34189,42 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_c;
                 const lite_assigns = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$emitPatAssignments(lite_target, lite_locals, lite_armDepth, lite$listAt(lite_altBindings, lite_i, 356359));
                 void lite_assigns;
-                {
-                    const lite$mb_recv = { v: lite_cOrBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cOrBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cOrBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "if (!lt_or && ("));
-                    lite_cOrBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_cOrBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cOrBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cOrBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_c));
-                    lite_cOrBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_cOrBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cOrBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cOrBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ")) { "));
-                    lite_cOrBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_cOrBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cOrBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cOrBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_assigns));
-                    lite_cOrBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_cOrBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_cOrBuf; }, set v(lite$nv: { chunks: string[] }) { lite_cOrBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "lt_or = true; } "));
-                    lite_cOrBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_i = lite$addInt(lite_i, 1n, 356597);
             }
             lite_orCondCode = (liteFn$lib$core$list$tp_List_op_join([...((lite_cOrBuf).chunks)], ""));
         } else {
             let lite_iifeBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
             void lite_iifeBuf;
-            {
-                const lite$mb_recv = { v: lite_iifeBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_iifeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_iifeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "(() => { "));
-                lite_iifeBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             let lite_i = 0n;
             void lite_i;
             while (((lite_i) < (lite_altCount))) {
@@ -34240,38 +34232,36 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_c;
                 const lite_assigns = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$emitPatAssignments(lite_target, lite_locals, lite_armDepth, lite$listAt(lite_altBindings, lite_i, 356939));
                 void lite_assigns;
-                {
-                    const lite$mb_recv = { v: lite_iifeBuf };
-                    void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "if ("));
-                    lite_iifeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_iifeBuf };
-                    void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_c));
-                    lite_iifeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_iifeBuf };
-                    void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ") { "));
-                    lite_iifeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_iifeBuf };
-                    void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_assigns));
-                    lite_iifeBuf = lite$mb_recv.v;
-                }
                 void ((() => {
-                    const lite$mb_recv = { v: lite_iifeBuf };
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_iifeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_iifeBuf = lite$nv; } };
+                    void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "if ("));
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_iifeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_iifeBuf = lite$nv; } };
+                    void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_c));
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_iifeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_iifeBuf = lite$nv; } };
+                    void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ") { "));
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_iifeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_iifeBuf = lite$nv; } };
+                    void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_assigns));
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_iifeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_iifeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "return true; } "));
-                    lite_iifeBuf = lite$mb_recv.v;
                     return undefined;
                 })());
                 lite_i = lite$addInt(lite_i, 1n, 357169);
             }
             void ((() => {
-                const lite$mb_recv = { v: lite_iifeBuf };
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_iifeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_iifeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "return false; })()"));
-                lite_iifeBuf = lite$mb_recv.v;
                 return undefined;
             })());
             lite_orCondCode = (liteFn$lib$core$list$tp_List_op_join([...((lite_iifeBuf).chunks)], ""));
@@ -34292,16 +34282,16 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_t2 = (Boolean(((lite_t1) >= (0n))) ? liteFn$lib$core$text$tp_String_op_indexOf((lite_first).bindings, "\t", lite$addInt(lite_t1, 1n, 357744)) : (-1n));
             void lite_t2;
             if (((((((lite_t1) > (lite_bPos))) && (((lite_t2) > (lite_t1))))) && (((lite_t2) < (lite_lineEnd))))) {
-                {
-                    const lite$mb_recv = { v: lite_declBindingsBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declBindingsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declBindingsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite$textSlice((lite_first).bindings, lite_bPos, lite_t2, 357870)));
-                    lite_declBindingsBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_declBindingsBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declBindingsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declBindingsBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\t\n"));
-                    lite_declBindingsBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             lite_bPos = lite$addInt(lite_lineEnd, 1n, 357969);
         }
@@ -34389,124 +34379,124 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_armsCodeBuf;
         if (lite_isCTarget) {
             if ((!(lite_canTernary))) {
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cValueType((lite_subj).kind)));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_subjVar));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_subj).code));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; (void)"));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_subjVar));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; bool "));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_doneVar));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = false; "));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
         } else if (lite_canTernary) {
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "let "));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_doneVar));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": boolean = false; "));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         } else {
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "const "));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_subjVar));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_subjTsType));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_subj).code));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; void "));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_subjVar));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; let "));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_doneVar));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_armsCodeBuf };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": boolean = false; "));
-                lite_armsCodeBuf = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
         }
         const lite_ternaryConds: string[] = [];
         void lite_ternaryConds;
@@ -34661,146 +34651,146 @@ export function main(lite$write?: (text: string) => void): string {
                         if (lite_isCTarget) {
                             const lite_bCType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cValueType(lite_bKind);
                             void lite_bCType;
-                            {
-                                const lite$mb_recv = { v: lite_declStmtsBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bCType));
-                                lite_declStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_declStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                                lite_declStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_declStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bRt));
-                                lite_declStmtsBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                             if (((lite_bExpr) === (""))) {
                                 const lite_bZero = (liteFn$_p__p_$_p__p_$compiler$src$frontend__context$zeroParsed(lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C, lite_bKind, 0n)).code;
                                 void lite_bZero;
-                                {
-                                    const lite$mb_recv = { v: lite_declStmtsBuf };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                                    lite_declStmtsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_declStmtsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bZero));
-                                    lite_declStmtsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_declStmtsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                                    lite_declStmtsBuf = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             } else {
-                                {
-                                    const lite$mb_recv = { v: lite_declStmtsBuf };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                                    lite_declStmtsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_assignStmtsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_assignStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_assignStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bRt));
-                                    lite_assignStmtsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_assignStmtsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_assignStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_assignStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                                    lite_assignStmtsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_assignStmtsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_assignStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_assignStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bExpr));
-                                    lite_assignStmtsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_assignStmtsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_assignStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_assignStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                                    lite_assignStmtsBuf = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             }
-                            {
-                                const lite$mb_recv = { v: lite_voidStmtsBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_voidStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_voidStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "(void)"));
-                                lite_voidStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_voidStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_voidStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_voidStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bRt));
-                                lite_voidStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_voidStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_voidStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_voidStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                                lite_voidStmtsBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                         } else {
                             const lite_bTsType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite_bKind);
                             void lite_bTsType;
-                            {
-                                const lite$mb_recv = { v: lite_declStmtsBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "let "));
-                                lite_declStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_declStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bRt));
-                                lite_declStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_declStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "!: "));
-                                lite_declStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_declStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bTsType));
-                                lite_declStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_declStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_declStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_declStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                                lite_declStmtsBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                             if (((lite_bExpr) !== (""))) {
-                                {
-                                    const lite$mb_recv = { v: lite_assignStmtsBuf };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_assignStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_assignStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bRt));
-                                    lite_assignStmtsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_assignStmtsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_assignStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_assignStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = "));
-                                    lite_assignStmtsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_assignStmtsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_assignStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_assignStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bExpr));
-                                    lite_assignStmtsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_assignStmtsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_assignStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_assignStmtsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                                    lite_assignStmtsBuf = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             }
-                            {
-                                const lite$mb_recv = { v: lite_voidStmtsBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_voidStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_voidStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "void "));
-                                lite_voidStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_voidStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_voidStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_voidStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bRt));
-                                lite_voidStmtsBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_voidStmtsBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_voidStmtsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_voidStmtsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "; "));
-                                lite_voidStmtsBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                         }
                         const lite_bindIsConst = (((lite_subj).constant) && (((lite_bExpr) === (lite_subjVar))));
                         void lite_bindIsConst;
@@ -34936,56 +34926,56 @@ export function main(lite$write?: (text: string) => void): string {
                     lite_winAssignStmts = lite_assignStmts;
                     lite_winVoidStmts = lite_voidStmts;
                 } else {
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "if (!"));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_doneVar));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ") { "));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_declStmts));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_assignStmts));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_voidStmts));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_doneVar));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " = true; "));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bodyEmit));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
-                    {
-                        const lite$mb_recv = { v: lite_armsCodeBuf };
+                        return undefined;
+                    })());
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " } "));
-                        lite_armsCodeBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                     if (lite_canTernary) {
                         if (((((lite_declStmts) !== (""))) || ((((lite_branch).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) {
                             lite_canTernary = false;
@@ -35016,36 +35006,36 @@ export function main(lite$write?: (text: string) => void): string {
                     return (((((((("if (") + (lite_pCheck))) + (") { "))) + (lite_innerMatch))) + (" }"));
                 })()));
                 void lite_armCheck;
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "if (!"));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_doneVar));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ") { "));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_declStmts));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_armCheck));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_armsCodeBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_armsCodeBuf; }, set v(lite$nv: { chunks: string[] }) { lite_armsCodeBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " } "));
-                    lite_armsCodeBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_emittedRuntimeArms = lite$addInt(lite_emittedRuntimeArms, 1n, 377494);
                 if (lite_canTernary) {
                     if (((((lite_declStmts) !== (""))) || ((((lite_branch).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) {
@@ -35910,11 +35900,11 @@ export function main(lite$write?: (text: string) => void): string {
             if (lite_isPass1) {
                 let lite_passMarkersBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
                 void lite_passMarkersBuf;
-                {
-                    const lite$mb_recv = { v: lite_passMarkersBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_passMarkersBuf; }, set v(lite$nv: { chunks: string[] }) { lite_passMarkersBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_passMarkers));
-                    lite_passMarkersBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 let lite_bIdx = 0n;
                 void lite_bIdx;
                 let lite_allBranchesNever = ((lite_passBranchCount) > (0n));
@@ -35924,26 +35914,26 @@ export function main(lite$write?: (text: string) => void): string {
                     void lite_bKind;
                     if (((lite_bKind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))) {
                         lite_allBranchesNever = false;
-                        {
-                            const lite$mb_recv = { v: lite_passMarkersBuf };
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_passMarkersBuf; }, set v(lite$nv: { chunks: string[] }) { lite_passMarkersBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (String(lite_condId))));
-                            lite_passMarkersBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_passMarkersBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_passMarkersBuf; }, set v(lite$nv: { chunks: string[] }) { lite_passMarkersBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "="));
-                            lite_passMarkersBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_passMarkersBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_passMarkersBuf; }, set v(lite$nv: { chunks: string[] }) { lite_passMarkersBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_bKind));
-                            lite_passMarkersBuf = lite$mb_recv.v;
-                        }
-                        {
-                            const lite$mb_recv = { v: lite_passMarkersBuf };
+                            return undefined;
+                        })());
+                        void ((() => {
+                            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_passMarkersBuf; }, set v(lite$nv: { chunks: string[] }) { lite_passMarkersBuf = lite$nv; } };
                             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\n"));
-                            lite_passMarkersBuf = lite$mb_recv.v;
-                        }
+                            return undefined;
+                        })());
                     }
                     lite_bIdx = lite$addInt(lite_bIdx, 1n, 423229);
                 }
@@ -35998,27 +35988,27 @@ export function main(lite$write?: (text: string) => void): string {
                             const lite_stmtPart = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$condBranchStmtCode(lite_target, lite_resolvedPreThenKind, lite_condValVar, lite$listAt(lite_passBranchKinds, lite_cIdx, 425564), lite$listAt(lite_passBranchCodes, lite_cIdx, 425587));
                             void lite_stmtPart;
                             if (((lite_emittedCondCount) === (0n))) {
-                                {
-                                    const lite$mb_recv = { v: lite_rawIfBuf };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_stmtPart));
-                                    lite_rawIfBuf = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             } else {
-                                {
-                                    const lite$mb_recv = { v: lite_rawIfBuf };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " else { "));
-                                    lite_rawIfBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_rawIfBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_stmtPart));
-                                    lite_rawIfBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_rawIfBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                                    lite_rawIfBuf = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                             }
                             lite_hitConstTrue = true;
                             break;
@@ -36030,31 +36020,31 @@ export function main(lite$write?: (text: string) => void): string {
                             void lite_stmtPart;
                             const lite_condExprWrap = (Boolean(lite_isCCond) ? lite$listAt(lite_passCondCodes, lite_cIdx, 426384) : (((("Boolean(") + (lite$listAt(lite_passCondCodes, lite_cIdx, 426426)))) + (")")));
                             void lite_condExprWrap;
-                            {
-                                const lite$mb_recv = { v: lite_rawIfBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_kwPrefix));
-                                lite_rawIfBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_rawIfBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_condExprWrap));
-                                lite_rawIfBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_rawIfBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ") { "));
-                                lite_rawIfBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_rawIfBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_stmtPart));
-                                lite_rawIfBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_rawIfBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                                lite_rawIfBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                             lite_emittedCondCount = lite$addInt(lite_emittedCondCount, 1n, 426774);
                         }
                         lite_cIdx = lite$addInt(lite_cIdx, 1n, 426833);
@@ -36063,27 +36053,27 @@ export function main(lite$write?: (text: string) => void): string {
                         const lite_elsePart = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$condBranchStmtCode(lite_target, lite_resolvedPreThenKind, lite_condValVar, lite$listAt(lite_passBranchKinds, lite$subtractInt(lite_passBranchCount, 1n, 427038), 427022), lite$listAt(lite_passBranchCodes, lite$subtractInt(lite_passBranchCount, 1n, 427076), 427060));
                         void lite_elsePart;
                         if (((lite_emittedCondCount) === (0n))) {
-                            {
-                                const lite$mb_recv = { v: lite_rawIfBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_elsePart));
-                                lite_rawIfBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                         } else {
-                            {
-                                const lite$mb_recv = { v: lite_rawIfBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " else { "));
-                                lite_rawIfBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_rawIfBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_elsePart));
-                                lite_rawIfBuf = lite$mb_recv.v;
-                            }
-                            {
-                                const lite$mb_recv = { v: lite_rawIfBuf };
+                                return undefined;
+                            })());
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_rawIfBuf; }, set v(lite$nv: { chunks: string[] }) { lite_rawIfBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                                lite_rawIfBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                         }
                     }
                     lite_rawIfStmt = (liteFn$lib$core$list$tp_List_op_join([...((lite_rawIfBuf).chunks)], ""));
@@ -36908,12 +36898,16 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_vCode;
             return ((((((((((((((lite_setRuntime) + ("(&"))) + ((lite_entry).runtime))) + (", "))) + (lite_keyCode))) + (", "))) + (lite_vCode))) + (")"));
         }
-        const lite_isRec = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordKind((lite_entry).kind);
+        const lite_isRec = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordOrDistinctRecord((lite_entry).kind);
         void lite_isRec;
         const lite_alreadyBoxed = ((lite_isRec) && (liteFn$lib$core$text$tp_String_op_endsWith((lite_entry).runtime, ".v")));
         void lite_alreadyBoxed;
-        const lite_boxExpr = (Boolean(lite_alreadyBoxed) ? lite$textSlice((lite_entry).runtime, 0n, lite$subtractInt(lite$textLength((lite_entry).runtime), 2n, 471309), 471277) : "");
+        const lite_boxExpr = (Boolean(lite_alreadyBoxed) ? lite$textSlice((lite_entry).runtime, 0n, lite$subtractInt(lite$textLength((lite_entry).runtime), 2n, 471321), 471289) : "");
         void lite_boxExpr;
+        const lite_tsRecType = (Boolean(((lite_isRec) && ((!(lite_alreadyBoxed))))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType((lite_entry).kind) : "");
+        void lite_tsRecType;
+        const lite_liveBox = (Boolean(((lite_isRec) && ((!(lite_alreadyBoxed))))) ? (((((((((((((((((((("const lite$ib: { v: ") + (lite_tsRecType))) + (" } = { get v(): "))) + (lite_tsRecType))) + (" { return "))) + ((lite_entry).runtime))) + ("; }, set v(lite$nv: "))) + (lite_tsRecType))) + (") { "))) + ((lite_entry).runtime))) + (" = lite$nv; } };")) : "");
+        void lite_liveBox;
         if (lite_isCompound) {
             const lite_tsKeyType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite_keyKind);
             void lite_tsKeyType;
@@ -36922,7 +36916,7 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_nextVal = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$compoundAssignCode(lite_target, lite_source, lite_opPos, lite_prefix, lite_valKind, "lite$cv", lite_compBaseOp, lite_valParsed);
             void lite_nextVal;
             if (((lite_isRec) && ((!(lite_alreadyBoxed))))) {
-                return (((((((((((((((((((((((((((("(() => { const lite$ck: ") + (lite_tsKeyType))) + (" = "))) + (lite_keyCode))) + ("; const lite$cv = "))) + (lite_curRead))) + ("; const lite$ib = { v: "))) + ((lite_entry).runtime))) + (" }; "))) + (lite_setRuntime))) + ("(lite$ib, lite$ck, "))) + (lite_nextVal))) + ("); "))) + ((lite_entry).runtime))) + (" = lite$ib.v; })()"));
+                return (((((((((((((((((((((((("(() => { const lite$ck: ") + (lite_tsKeyType))) + (" = "))) + (lite_keyCode))) + ("; const lite$cv = "))) + (lite_curRead))) + ("; "))) + (lite_liveBox))) + (" "))) + (lite_setRuntime))) + ("(lite$ib, lite$ck, "))) + (lite_nextVal))) + ("); })()"));
             }
             const lite_recvArg = (Boolean(lite_alreadyBoxed) ? lite_boxExpr : (lite_entry).runtime);
             void lite_recvArg;
@@ -36931,7 +36925,7 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_vCode = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$assignValueCode(lite_target, lite_valKind, (lite_valParsed).kind, (lite_valParsed).code);
         void lite_vCode;
         if (((lite_isRec) && ((!(lite_alreadyBoxed))))) {
-            return (((((((((((((((((((("(() => { const lite$ib = { v: ") + ((lite_entry).runtime))) + (" }; "))) + (lite_setRuntime))) + ("(lite$ib, "))) + (lite_keyCode))) + (", "))) + (lite_vCode))) + ("); "))) + ((lite_entry).runtime))) + (" = lite$ib.v; })()"));
+            return (((((((((((((((("(() => { ") + (lite_liveBox))) + (" "))) + (lite_setRuntime))) + ("(lite$ib, "))) + (lite_keyCode))) + (", "))) + (lite_vCode))) + ("); })()"));
         }
         const lite_recvArg = (Boolean(lite_alreadyBoxed) ? lite_boxExpr : (lite_entry).runtime);
         void lite_recvArg;
@@ -36944,54 +36938,54 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_prefix;
         const lite_size = lite$textLength(lite_source);
         void lite_size;
-        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_openBracket, 1n, 472884), lite_prefix);
+        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_openBracket, 1n, 473119), lite_prefix);
         void lite_cursor;
         let lite_depth = 0n;
         void lite_depth;
         while (((lite_cursor) < (lite_size))) {
-            const lite_ch = lite$textAt(lite_source, lite_cursor, 472964);
+            const lite_ch = lite$textAt(lite_source, lite_cursor, 473199);
             void lite_ch;
             if (((lite_ch) === ("\""))) {
-                lite_cursor = lite$addInt(lite_cursor, 1n, 473028);
+                lite_cursor = lite$addInt(lite_cursor, 1n, 473263);
                 while (((lite_cursor) < (lite_size))) {
-                    const lite_sc = lite$textAt(lite_source, lite_cursor, 473095);
+                    const lite_sc = lite$textAt(lite_source, lite_cursor, 473330);
                     void lite_sc;
                     if (((lite_sc) === ("\\"))) {
-                        lite_cursor = lite$addInt(lite_cursor, 2n, 473155);
+                        lite_cursor = lite$addInt(lite_cursor, 2n, 473390);
                         continue;
                     }
                     if (((lite_sc) === ("\""))) {
-                        lite_cursor = lite$addInt(lite_cursor, 1n, 473220);
+                        lite_cursor = lite$addInt(lite_cursor, 1n, 473455);
                         break;
                     }
-                    lite_cursor = lite$addInt(lite_cursor, 1n, 473266);
+                    lite_cursor = lite$addInt(lite_cursor, 1n, 473501);
                 }
                 continue;
             }
             if (((((((lite_ch) === ("["))) || (((lite_ch) === ("("))))) || (((lite_ch) === ("{"))))) {
-                lite_depth = lite$addInt(lite_depth, 1n, 473392);
-                lite_cursor = lite$addInt(lite_cursor, 1n, 473425);
+                lite_depth = lite$addInt(lite_depth, 1n, 473627);
+                lite_cursor = lite$addInt(lite_cursor, 1n, 473660);
                 continue;
             }
             if (((lite_ch) === ("]"))) {
                 if (((lite_depth) === (0n))) {
                     return false;
                 }
-                lite_depth = lite$subtractInt(lite_depth, 1n, 473555);
-                lite_cursor = lite$addInt(lite_cursor, 1n, 473588);
+                lite_depth = lite$subtractInt(lite_depth, 1n, 473790);
+                lite_cursor = lite$addInt(lite_cursor, 1n, 473823);
                 continue;
             }
             if (((((lite_ch) === (")"))) || (((lite_ch) === ("}"))))) {
                 if (((lite_depth) > (0n))) {
-                    lite_depth = lite$subtractInt(lite_depth, 1n, 473702);
+                    lite_depth = lite$subtractInt(lite_depth, 1n, 473937);
                 }
-                lite_cursor = lite$addInt(lite_cursor, 1n, 473737);
+                lite_cursor = lite$addInt(lite_cursor, 1n, 473972);
                 continue;
             }
             if (((((lite_depth) === (0n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_cursor, "..")))) {
                 return true;
             }
-            lite_cursor = lite$addInt(lite_cursor, 1n, 473895);
+            lite_cursor = lite$addInt(lite_cursor, 1n, 474130);
         }
         return false;
     }
@@ -37002,13 +36996,13 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_runtime) === (""))) {
             return (-1n);
         }
-        let lite_i = lite$subtractInt(BigInt((lite_locals).length), 1n, 474156);
+        let lite_i = lite$subtractInt(BigInt((lite_locals).length), 1n, 474391);
         void lite_i;
         while (((lite_i) >= (0n))) {
-            if ((((lite$listAt(lite_locals, lite_i, 474197)).runtime) === (lite_runtime))) {
+            if ((((lite$listAt(lite_locals, lite_i, 474432)).runtime) === (lite_runtime))) {
                 return lite_i;
             }
-            lite_i = lite$subtractInt(lite_i, 1n, 474247);
+            lite_i = lite$subtractInt(lite_i, 1n, 474482);
         }
         return (-1n);
     }
@@ -37034,7 +37028,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_locIdx) < (0n))) {
             return true;
         }
-        const lite_loc = lite$listAt(lite_locals, lite_locIdx, 475021);
+        const lite_loc = lite$listAt(lite_locals, lite_locIdx, 475256);
         void lite_loc;
         if ((!((lite_loc).writable))) {
             return false;
@@ -37050,7 +37044,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_selfIdx = liteFn$_p__p_$_p__p_$compiler$src$symbol__table$localIndex(lite_locals, "$self");
         void lite_selfIdx;
-        if (((((lite_selfIdx) >= (0n))) && ((((lite_loc).depth) < ((lite$listAt(lite_locals, lite_selfIdx, 475311)).depth))))) {
+        if (((((lite_selfIdx) >= (0n))) && ((((lite_loc).depth) < ((lite$listAt(lite_locals, lite_selfIdx, 475546)).depth))))) {
             return true;
         }
         if (lite_hasClosureHazard) {
@@ -37069,22 +37063,22 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_prefixes;
         let lite_i = 0n;
         void lite_i;
-        while (((lite$addInt(lite_i, 1n, 475720)) < (BigInt((lite_fields).length)))) {
-            void (lite_prefixes.push((((((("(") + (lite$listAt(lite_prefixes, lite_i, 475789)))) + (")."))) + (lite$listAt(lite_fields, lite_i, 475808)))));
-            lite_i = lite$addInt(lite_i, 1n, 475823);
+        while (((lite$addInt(lite_i, 1n, 475955)) < (BigInt((lite_fields).length)))) {
+            void (lite_prefixes.push((((((("(") + (lite$listAt(lite_prefixes, lite_i, 476024)))) + (")."))) + (lite$listAt(lite_fields, lite_i, 476043)))));
+            lite_i = lite$addInt(lite_i, 1n, 476058);
         }
         let lite_acc = lite_valueExpr;
         void lite_acc;
-        let lite_j = lite$subtractInt(BigInt((lite_fields).length), 1n, 475890);
+        let lite_j = lite$subtractInt(BigInt((lite_fields).length), 1n, 476125);
         void lite_j;
         while (((lite_j) >= (0n))) {
-            lite_acc = (((((((((((("{ ...(") + (lite$listAt(lite_prefixes, lite_j, 475947)))) + ("), "))) + (lite$listAt(lite_fields, lite_j, 475967)))) + (": "))) + (lite_acc))) + (" }"));
-            lite_j = lite$subtractInt(lite_j, 1n, 476001);
+            lite_acc = (((((((((((("{ ...(") + (lite$listAt(lite_prefixes, lite_j, 476182)))) + ("), "))) + (lite$listAt(lite_fields, lite_j, 476202)))) + (": "))) + (lite_acc))) + (" }"));
+            lite_j = lite$subtractInt(lite_j, 1n, 476236);
         }
         return ((((((lite_rootRt) + (" = "))) + (lite_acc))) + (";"));
     }
     void liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$tsFieldWritebackStmt;
-    function liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target: string, lite_source: string, lite_openParen: bigint, lite_errPos: bigint, lite_isModuleFn: boolean, lite_calleeDisplay: string, lite_callRuntime: string, lite_callParams: string[], lite_callFirst: bigint, lite_callCount: bigint, lite_callResult: string, lite_hasRecv: boolean, lite_recvCode: string, lite_recvWritebackLocal: string, lite_recvWritebackBox: string, lite_recvWritebackStmt: string, lite_recvRootRuntime: string, lite_initGenBindings: string, lite_callExpectedRet: string, lite_prefix: string, lite_locals: { name: string; runtime: string; kind: string; mutable: boolean; writable: boolean; depth: bigint; constant: boolean; code: string; intValue: bigint; textValue: string; initState: string }[], lite_functions: { name: string; runtime: string; result: string; first: bigint; count: bigint; declAt: bigint }[], lite_params: string[], lite_currentName: string, lite_ctxs: { id: bigint; tag: string; kind: string; phase: string; iifeDepth: bigint; valKind: string; valVar: string; label: string; iterLabel: string; countVar: string; itemVar: string; itemKind: string; indexVar: string; hasIndex: boolean; colVar: string }[], lite_iifeDepth: bigint, lite_inferMode: boolean, lite_aliases: { name: string; target: string; at: bigint; end: bigint; depth: bigint }[]): { kind: string; code: string; intValue: bigint; textValue: string; constant: boolean; next: bigint } {
+    function liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target: string, lite_source: string, lite_openParen: bigint, lite_errPos: bigint, lite_isModuleFn: boolean, lite_calleeDisplay: string, lite_callRuntime: string, lite_callParams: string[], lite_callFirst: bigint, lite_callCount: bigint, lite_callResult: string, lite_hasRecv: boolean, lite_recvCode: string, lite_recvWritebackLocal: string, lite_recvWritebackBox: string, lite_recvWritebackStmt: string, lite_recvWritebackKind: string, lite_recvRootRuntime: string, lite_initGenBindings: string, lite_callExpectedRet: string, lite_prefix: string, lite_locals: { name: string; runtime: string; kind: string; mutable: boolean; writable: boolean; depth: bigint; constant: boolean; code: string; intValue: bigint; textValue: string; initState: string }[], lite_functions: { name: string; runtime: string; result: string; first: bigint; count: bigint; declAt: bigint }[], lite_params: string[], lite_currentName: string, lite_ctxs: { id: bigint; tag: string; kind: string; phase: string; iifeDepth: bigint; valKind: string; valVar: string; label: string; iterLabel: string; countVar: string; itemVar: string; itemKind: string; indexVar: string; hasIndex: boolean; colVar: string }[], lite_iifeDepth: bigint, lite_inferMode: boolean, lite_aliases: { name: string; target: string; at: bigint; end: bigint; depth: bigint }[]): { kind: string; code: string; intValue: bigint; textValue: string; constant: boolean; next: bigint } {
         void lite_target;
         void lite_source;
         void lite_openParen;
@@ -37101,6 +37095,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_recvWritebackLocal;
         void lite_recvWritebackBox;
         void lite_recvWritebackStmt;
+        void lite_recvWritebackKind;
         void lite_recvRootRuntime;
         void lite_initGenBindings;
         void lite_callExpectedRet;
@@ -37117,7 +37112,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_size;
         const lite_isGenericCall = ((lite_isModuleFn) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_callRuntime, 0n, "$gen:")));
         void lite_isGenericCall;
-        const lite_genTplKey = (Boolean(lite_isGenericCall) ? lite$textSlice(lite_callRuntime, 5n, lite$textLength(lite_callRuntime), 477061) : "");
+        const lite_genTplKey = (Boolean(lite_isGenericCall) ? lite$textSlice(lite_callRuntime, 5n, lite$textLength(lite_callRuntime), 477329) : "");
         void lite_genTplKey;
         let lite_genParams = "";
         void lite_genParams;
@@ -37147,7 +37142,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_explicitLabels: string[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$collectExplicitCallLabels(lite_source, lite_openParen, lite_prefix))];
         void lite_explicitLabels;
-        const lite_argIifeDepth = (Boolean(((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_TS))) && (liteFn$_p__p_$_p__p_$compiler$src$frontend__context$callReordersArgs(lite_source, lite_openParen, lite_prefix, lite_callParams, lite_callFirst, lite_callCount)))) ? lite$addInt(lite_iifeDepth, 1n, 478065) : lite_iifeDepth);
+        const lite_argIifeDepth = (Boolean(((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_TS))) && (liteFn$_p__p_$_p__p_$compiler$src$frontend__context$callReordersArgs(lite_source, lite_openParen, lite_prefix, lite_callParams, lite_callFirst, lite_callCount)))) ? lite$addInt(lite_iifeDepth, 1n, 478333) : lite_iifeDepth);
         void lite_argIifeDepth;
         let lite_callMarkers = "";
         void lite_callMarkers;
@@ -37164,7 +37159,7 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_initIdx) < (lite_callCount))) {
             void (lite_initSlots.push((-1n)));
             void (lite_initExplicit.push(false));
-            lite_initIdx = lite$addInt(lite_initIdx, 1n, 478439);
+            lite_initIdx = lite$addInt(lite_initIdx, 1n, 478707);
         }
         lite_slotEntry = [...(lite_initSlots)];
         lite_slotExplicit = [...(lite_initExplicit)];
@@ -37182,9 +37177,11 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_mutRecLocalRuntimes;
         const lite_mutRecWritebackStmts: string[] = [];
         void lite_mutRecWritebackStmts;
+        const lite_mutRecKinds: string[] = [];
+        void lite_mutRecKinds;
         const lite_mutArgRuntimes: string[] = [];
         void lite_mutArgRuntimes;
-        if (((((lite_hasRecv) && (((lite_callFirst) > (0n))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$subtractInt(lite_callFirst, 1n, 478923), 478913)), 0n, "mut ")))) {
+        if (((((lite_hasRecv) && (((lite_callFirst) > (0n))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$subtractInt(lite_callFirst, 1n, 479231), 479221)), 0n, "mut ")))) {
             if (((lite_recvRootRuntime) !== (""))) {
                 void (lite_mutArgRuntimes.push(lite_recvRootRuntime));
                 if ((!(liteFn$lib$core$text$tp_String_op_endsWith(lite_recvRootRuntime, ".v")))) {
@@ -37194,7 +37191,7 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_recvWritebackLocal) !== (""))) {
                 void (lite_mutArgRuntimes.push(lite_recvWritebackLocal));
             } else if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_recvCode, 0n, "&")) {
-                void (lite_mutArgRuntimes.push(lite$textSlice(lite_recvCode, 1n, lite$textLength(lite_recvCode), 479393)));
+                void (lite_mutArgRuntimes.push(lite$textSlice(lite_recvCode, 1n, lite$textLength(lite_recvCode), 479701)));
             } else {
                 void (lite_mutArgRuntimes.push(lite_recvCode));
                 void (lite_mutArgRuntimes.push(((lite_recvCode) + (".v"))));
@@ -37204,29 +37201,30 @@ export function main(lite$write?: (text: string) => void): string {
             void (lite_mutRecBoxNames.push(lite_recvWritebackBox));
             void (lite_mutRecLocalRuntimes.push(lite_recvWritebackLocal));
             void (lite_mutRecWritebackStmts.push(lite_recvWritebackStmt));
+            void (lite_mutRecKinds.push(lite_recvWritebackKind));
         }
         let lite_entryCount = 0n;
         void lite_entryCount;
-        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_openParen, 1n, 479931), lite_prefix);
+        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_openParen, 1n, 480292), lite_prefix);
         void lite_cursor;
-        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 479977)) !== (")"))))) {
+        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 480338)) !== (")"))))) {
             while (Boolean(true)) {
                 if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, lite_cursor)) {
-                    const lite_argNameStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 480138), lite_prefix);
+                    const lite_argNameStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 480499), lite_prefix);
                     void lite_argNameStart;
-                    if (((((lite_argNameStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_argNameStart, 480206))))))) {
+                    if (((((lite_argNameStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_argNameStart, 480567))))))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_argNameStart, lite_prefix, "expected parameter name after =");
                     }
                     const lite_argNameEnd = (lite$textSkipWhile(lite_source, lite_argNameStart, false));
                     void lite_argNameEnd;
-                    const lite_label = lite$textSlice(lite_source, lite_argNameStart, lite_argNameEnd, 480450);
+                    const lite_label = lite$textSlice(lite_source, lite_argNameStart, lite_argNameEnd, 480811);
                     void lite_label;
                     if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_label)) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$unsupportedFeature(lite_source, lite_argNameStart, lite_label, lite_prefix);
                     }
                     const lite_afterIdent = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_argNameEnd, lite_prefix);
                     void lite_afterIdent;
-                    if (((((((lite_afterIdent) < (lite_size))) && (((lite$textAt(lite_source, lite_afterIdent, 480724)) !== (","))))) && (((lite$textAt(lite_source, lite_afterIdent, 480758)) !== (")"))))) {
+                    if (((((((lite_afterIdent) < (lite_size))) && (((lite$textAt(lite_source, lite_afterIdent, 481085)) !== (","))))) && (((lite$textAt(lite_source, lite_afterIdent, 481119)) !== (")"))))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_afterIdent, lite_prefix, "shorthand argument requires a bare identifier");
                     }
                     const lite_slot = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$findParamSlot(lite_callParams, lite_callFirst, lite_callCount, lite_label);
@@ -37234,12 +37232,12 @@ export function main(lite$write?: (text: string) => void): string {
                     if (((lite_slot) < (0n))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_argNameStart, lite_prefix, (((((("unknown parameter ") + (lite_label))) + (" in call to "))) + (lite_calleeDisplay)));
                     }
-                    if (lite$listAt(lite_slotExplicit, lite_slot, 481205)) {
+                    if (lite$listAt(lite_slotExplicit, lite_slot, 481566)) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_argNameStart, lite_prefix, (((((("duplicate named argument ") + (lite_label))) + (" in call to "))) + (lite_calleeDisplay)));
                     }
                     lite_slotExplicit = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$setBoolAt(lite_slotExplicit, lite_slot, true))];
                     lite_slotEntry = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$setIntAt(lite_slotEntry, lite_slot, lite_entryCount))];
-                    const lite_rawArgExpected = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_slot, 481582), 481572));
+                    const lite_rawArgExpected = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_slot, 481943), 481933));
                     void lite_rawArgExpected;
                     const lite_argExpected = (Boolean(lite_isGenericCall) ? liteFn$_p__p_$_p__p_$compiler$src$generics$substKindForExpected(lite_genParams, lite_rawArgExpected, lite_genBindings) : lite_rawArgExpected);
                     void lite_argExpected;
@@ -37252,28 +37250,28 @@ export function main(lite$write?: (text: string) => void): string {
                         const lite_uErr = liteFn$_p__p_$_p__p_$compiler$src$generics$unifyKindMut(lite_genParams, lite_rawArgExpected, (lite_arg).kind, lite_genBindings);
                         void lite_uErr;
                         if (((lite_uErr) !== (""))) {
-                            liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_argNameStart, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slot, 1n, 482345)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
+                            liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_argNameStart, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slot, 1n, 482706)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
                         }
                     }
                     void (lite_entryPositions.push(lite_argNameStart));
                     void (lite_entrySlots.push(lite_slot));
                     void (lite_entryKinds.push((lite_arg).kind));
                     void (lite_entryCodes.push((lite_arg).code));
-                    lite_entryCount = lite$addInt(lite_entryCount, 1n, 482677);
+                    lite_entryCount = lite$addInt(lite_entryCount, 1n, 483038);
                     lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_arg).next, lite_prefix);
                 } else {
                     let lite_namedLabel = "";
                     void lite_namedLabel;
                     let lite_rhsStart = (-1n);
                     void lite_rhsStart;
-                    if (((((lite_cursor) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 482892))))) {
+                    if (((((lite_cursor) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 483253))))) {
                         const lite_labelEnd = (lite$textSkipWhile(lite_source, lite_cursor, false));
                         void lite_labelEnd;
                         const lite_afterLabel = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_labelEnd, lite_prefix);
                         void lite_afterLabel;
                         if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, lite_afterLabel)) {
-                            lite_namedLabel = lite$textSlice(lite_source, lite_cursor, lite_labelEnd, 483166);
-                            lite_rhsStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterLabel, 1n, 483263), lite_prefix);
+                            lite_namedLabel = lite$textSlice(lite_source, lite_cursor, lite_labelEnd, 483527);
+                            lite_rhsStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterLabel, 1n, 483624), lite_prefix);
                         }
                     }
                     if (((lite_namedLabel) !== (""))) {
@@ -37285,12 +37283,12 @@ export function main(lite$write?: (text: string) => void): string {
                         if (((lite_slot) < (0n))) {
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((("unknown parameter ") + (lite_namedLabel))) + (" in call to "))) + (lite_calleeDisplay)));
                         }
-                        if (lite$listAt(lite_slotExplicit, lite_slot, 483796)) {
+                        if (lite$listAt(lite_slotExplicit, lite_slot, 484157)) {
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((("duplicate named argument ") + (lite_namedLabel))) + (" in call to "))) + (lite_calleeDisplay)));
                         }
                         lite_slotExplicit = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$setBoolAt(lite_slotExplicit, lite_slot, true))];
                         lite_slotEntry = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$setIntAt(lite_slotEntry, lite_slot, lite_entryCount))];
-                        const lite_rawArgExpected = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_slot, 484192), 484182));
+                        const lite_rawArgExpected = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_slot, 484553), 484543));
                         void lite_rawArgExpected;
                         if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawArgExpected, 0n, "mut ")) {
                             const lite_lease = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$tryParseGroupedMutLease(lite_source, lite_rhsStart, lite_prefix, false);
@@ -37298,24 +37296,24 @@ export function main(lite$write?: (text: string) => void): string {
                             if ((!((lite_lease).matched))) {
                                 if ((lite_lease).sawMut) {
                                     if ((((lite_lease).nameEnd) > ((lite_lease).nameStart))) {
-                                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, (lite_lease).nameEnd, lite_prefix, (("expected ) after mut ") + (lite$textSlice(lite_source, (lite_lease).nameStart, (lite_lease).nameEnd, 484633))));
+                                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, (lite_lease).nameEnd, lite_prefix, (("expected ) after mut ") + (lite$textSlice(lite_source, (lite_lease).nameStart, (lite_lease).nameEnd, 484994))));
                                     }
                                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, (lite_lease).nameStart, lite_prefix, "expected a binding name after mut");
                                 }
-                                liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_rhsStart, lite_prefix, (((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slot, 1n, 484942)))))) + (" of "))) + (lite_calleeDisplay))) + (" requires mut argument")));
+                                liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_rhsStart, lite_prefix, (((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slot, 1n, 485303)))))) + (" of "))) + (lite_calleeDisplay))) + (" requires mut argument")));
                             }
                             const lite_mNameStart = (lite_lease).nameStart;
                             void lite_mNameStart;
                             const lite_mNameEnd = (lite_lease).nameEnd;
                             void lite_mNameEnd;
-                            const lite_mListName = lite$textSlice(lite_source, lite_mNameStart, lite_mNameEnd, 485186);
+                            const lite_mListName = lite$textSlice(lite_source, lite_mNameStart, lite_mNameEnd, 485547);
                             void lite_mListName;
                             const lite_mIdx = liteFn$_p__p_$_p__p_$compiler$src$symbol__table$localIndex(lite_locals, lite_mListName);
                             void lite_mIdx;
                             if (((lite_mIdx) < (0n))) {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_mNameStart, lite_prefix, (("unknown value ") + (lite_mListName)));
                             }
-                            const lite_mEntry = lite$listAt(lite_locals, lite_mIdx, 485436);
+                            const lite_mEntry = lite$listAt(lite_locals, lite_mIdx, 485797);
                             void lite_mEntry;
                             if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isMutContainerKind((lite_mEntry).kind)))) {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_mNameStart, lite_prefix, ((((lite_calleeDisplay) + (" requires a List, Map, Set, or record value, got "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_mEntry).kind))));
@@ -37324,25 +37322,26 @@ export function main(lite$write?: (text: string) => void): string {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_mNameStart, lite_prefix, (((("cannot mutate ") + (lite_mListName))) + (" without mut")));
                             }
                             if (lite_isGenericCall) {
-                                const lite_rawBaseMut = lite$textSlice(lite_rawArgExpected, 4n, lite$textLength(lite_rawArgExpected), 486006);
+                                const lite_rawBaseMut = lite$textSlice(lite_rawArgExpected, 4n, lite$textLength(lite_rawArgExpected), 486367);
                                 void lite_rawBaseMut;
                                 const lite_uErr = liteFn$_p__p_$_p__p_$compiler$src$generics$unifyKindMut(lite_genParams, lite_rawBaseMut, (lite_mEntry).kind, lite_genBindings);
                                 void lite_uErr;
                                 if (((lite_uErr) !== (""))) {
-                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_rhsStart, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slot, 1n, 486290)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
+                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_rhsStart, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slot, 1n, 486651)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
                                 }
                             }
                             let lite_mCode = (Boolean(((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) ? (("&") + ((lite_mEntry).runtime)) : (lite_mEntry).runtime);
                             void lite_mCode;
                             if (((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_TS))) && (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordOrDistinctRecord((lite_mEntry).kind)))) {
                                 if (liteFn$lib$core$text$tp_String_op_endsWith((lite_mEntry).runtime, ".v")) {
-                                    lite_mCode = lite$textSlice((lite_mEntry).runtime, 0n, lite$subtractInt(lite$textLength((lite_mEntry).runtime), 2n, 486764), 486731);
+                                    lite_mCode = lite$textSlice((lite_mEntry).runtime, 0n, lite$subtractInt(lite$textLength((lite_mEntry).runtime), 2n, 487125), 487092);
                                 } else {
                                     const lite_boxName = (("lite$mb") + (liteFn$lib$core$int$tp_Int_op_toText(BigInt((lite_mutRecBoxNames).length))));
                                     void lite_boxName;
                                     void (lite_mutRecBoxNames.push(lite_boxName));
                                     void (lite_mutRecLocalRuntimes.push((lite_mEntry).runtime));
                                     void (lite_mutRecWritebackStmts.push(""));
+                                    void (lite_mutRecKinds.push((lite_mEntry).kind));
                                     lite_mCode = lite_boxName;
                                 }
                             }
@@ -37351,7 +37350,7 @@ export function main(lite$write?: (text: string) => void): string {
                             void (lite_entrySlots.push(lite_slot));
                             void (lite_entryKinds.push((("mut ") + ((lite_mEntry).kind))));
                             void (lite_entryCodes.push(lite_mCode));
-                            lite_entryCount = lite$addInt(lite_entryCount, 1n, 487575);
+                            lite_entryCount = lite$addInt(lite_entryCount, 1n, 488007);
                             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_lease).next, lite_prefix);
                         } else {
                             const lite_argExpected = (Boolean(lite_isGenericCall) ? liteFn$_p__p_$_p__p_$compiler$src$generics$substKindForExpected(lite_genParams, lite_rawArgExpected, lite_genBindings) : lite_rawArgExpected);
@@ -37365,14 +37364,14 @@ export function main(lite$write?: (text: string) => void): string {
                                 const lite_uErr = liteFn$_p__p_$_p__p_$compiler$src$generics$unifyKindMut(lite_genParams, lite_rawArgExpected, (lite_arg).kind, lite_genBindings);
                                 void lite_uErr;
                                 if (((lite_uErr) !== (""))) {
-                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_rhsStart, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slot, 1n, 488522)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
+                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_rhsStart, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slot, 1n, 488954)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
                                 }
                             }
                             void (lite_entryPositions.push(lite_rhsStart));
                             void (lite_entrySlots.push(lite_slot));
                             void (lite_entryKinds.push((lite_arg).kind));
                             void (lite_entryCodes.push((lite_arg).code));
-                            lite_entryCount = lite$addInt(lite_entryCount, 1n, 488906);
+                            lite_entryCount = lite$addInt(lite_entryCount, 1n, 489338);
                             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_arg).next, lite_prefix);
                         }
                     } else {
@@ -37381,22 +37380,22 @@ export function main(lite$write?: (text: string) => void): string {
                         let lite_scan = 0n;
                         void lite_scan;
                         while (((lite_scan) < (lite_callCount))) {
-                            if (((lite$listAt(lite_slotEntry, lite_scan, 489193)) < (0n))) {
+                            if (((lite$listAt(lite_slotEntry, lite_scan, 489625)) < (0n))) {
                                 lite_nextSlot = lite_scan;
                                 break;
                             }
-                            lite_scan = lite$addInt(lite_scan, 1n, 489340);
+                            lite_scan = lite$addInt(lite_scan, 1n, 489772);
                         }
                         if (((lite_nextSlot) < (0n))) {
                             const lite_suffix = (Boolean(((lite_callCount) === (1n))) ? " argument" : " arguments");
                             void lite_suffix;
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_errPos, lite_prefix, (((((((((("function ") + (lite_calleeDisplay))) + (" expects "))) + ((String(lite_callCount))))) + (lite_suffix))) + (", got more")));
                         }
-                        const lite_slotName = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramNameOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_nextSlot, 489741), 489731));
+                        const lite_slotName = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramNameOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_nextSlot, 490173), 490163));
                         void lite_slotName;
                         const lite_isOverwrittenPos = (((liteFn$lib$core$list$tp_List_op_indexOf__G_String(lite_explicitLabels, lite_slotName)) >= (0n)));
                         void lite_isOverwrittenPos;
-                        const lite_rawPosExpected = (Boolean(lite_isOverwrittenPos) ? "" : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_nextSlot, 489941), 489931)));
+                        const lite_rawPosExpected = (Boolean(lite_isOverwrittenPos) ? "" : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_nextSlot, 490373), 490363)));
                         void lite_rawPosExpected;
                         lite_slotEntry = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$setIntAt(lite_slotEntry, lite_nextSlot, lite_entryCount))];
                         if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawPosExpected, 0n, "mut ")) {
@@ -37405,24 +37404,24 @@ export function main(lite$write?: (text: string) => void): string {
                             if ((!((lite_lease).matched))) {
                                 if ((lite_lease).sawMut) {
                                     if ((((lite_lease).nameEnd) > ((lite_lease).nameStart))) {
-                                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, (lite_lease).nameEnd, lite_prefix, (("expected ) after mut ") + (lite$textSlice(lite_source, (lite_lease).nameStart, (lite_lease).nameEnd, 490465))));
+                                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, (lite_lease).nameEnd, lite_prefix, (("expected ) after mut ") + (lite$textSlice(lite_source, (lite_lease).nameStart, (lite_lease).nameEnd, 490897))));
                                     }
                                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, (lite_lease).nameStart, lite_prefix, "expected a binding name after mut");
                                 }
-                                liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_nextSlot, 1n, 490776)))))) + (" of "))) + (lite_calleeDisplay))) + (" requires mut argument")));
+                                liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_nextSlot, 1n, 491208)))))) + (" of "))) + (lite_calleeDisplay))) + (" requires mut argument")));
                             }
                             const lite_mNameStart = (lite_lease).nameStart;
                             void lite_mNameStart;
                             const lite_mNameEnd = (lite_lease).nameEnd;
                             void lite_mNameEnd;
-                            const lite_mListName = lite$textSlice(lite_source, lite_mNameStart, lite_mNameEnd, 491020);
+                            const lite_mListName = lite$textSlice(lite_source, lite_mNameStart, lite_mNameEnd, 491452);
                             void lite_mListName;
                             const lite_mIdx = liteFn$_p__p_$_p__p_$compiler$src$symbol__table$localIndex(lite_locals, lite_mListName);
                             void lite_mIdx;
                             if (((lite_mIdx) < (0n))) {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_mNameStart, lite_prefix, (("unknown value ") + (lite_mListName)));
                             }
-                            const lite_mEntry = lite$listAt(lite_locals, lite_mIdx, 491270);
+                            const lite_mEntry = lite$listAt(lite_locals, lite_mIdx, 491702);
                             void lite_mEntry;
                             if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isMutContainerKind((lite_mEntry).kind)))) {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_mNameStart, lite_prefix, ((((lite_calleeDisplay) + (" requires a List, Map, Set, or record value, got "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_mEntry).kind))));
@@ -37431,25 +37430,26 @@ export function main(lite$write?: (text: string) => void): string {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_mNameStart, lite_prefix, (((("cannot mutate ") + (lite_mListName))) + (" without mut")));
                             }
                             if (lite_isGenericCall) {
-                                const lite_rawBaseMut = lite$textSlice(lite_rawPosExpected, 4n, lite$textLength(lite_rawPosExpected), 491840);
+                                const lite_rawBaseMut = lite$textSlice(lite_rawPosExpected, 4n, lite$textLength(lite_rawPosExpected), 492272);
                                 void lite_rawBaseMut;
                                 const lite_uErr = liteFn$_p__p_$_p__p_$compiler$src$generics$unifyKindMut(lite_genParams, lite_rawBaseMut, (lite_mEntry).kind, lite_genBindings);
                                 void lite_uErr;
                                 if (((lite_uErr) !== (""))) {
-                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_nextSlot, 1n, 492126)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
+                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_nextSlot, 1n, 492558)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
                                 }
                             }
                             let lite_mCode = (Boolean(((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) ? (("&") + ((lite_mEntry).runtime)) : (lite_mEntry).runtime);
                             void lite_mCode;
                             if (((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_TS))) && (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordOrDistinctRecord((lite_mEntry).kind)))) {
                                 if (liteFn$lib$core$text$tp_String_op_endsWith((lite_mEntry).runtime, ".v")) {
-                                    lite_mCode = lite$textSlice((lite_mEntry).runtime, 0n, lite$subtractInt(lite$textLength((lite_mEntry).runtime), 2n, 492600), 492567);
+                                    lite_mCode = lite$textSlice((lite_mEntry).runtime, 0n, lite$subtractInt(lite$textLength((lite_mEntry).runtime), 2n, 493032), 492999);
                                 } else {
                                     const lite_boxName = (("lite$mb") + (liteFn$lib$core$int$tp_Int_op_toText(BigInt((lite_mutRecBoxNames).length))));
                                     void lite_boxName;
                                     void (lite_mutRecBoxNames.push(lite_boxName));
                                     void (lite_mutRecLocalRuntimes.push((lite_mEntry).runtime));
                                     void (lite_mutRecWritebackStmts.push(""));
+                                    void (lite_mutRecKinds.push((lite_mEntry).kind));
                                     lite_mCode = lite_boxName;
                                 }
                             }
@@ -37458,7 +37458,7 @@ export function main(lite$write?: (text: string) => void): string {
                             void (lite_entrySlots.push(lite_nextSlot));
                             void (lite_entryKinds.push((("mut ") + ((lite_mEntry).kind))));
                             void (lite_entryCodes.push(lite_mCode));
-                            lite_entryCount = lite$addInt(lite_entryCount, 1n, 493413);
+                            lite_entryCount = lite$addInt(lite_entryCount, 1n, 493916);
                             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_lease).next, lite_prefix);
                         } else {
                             const lite_posExpected = (Boolean(((lite_isGenericCall) && (((lite_rawPosExpected) !== (""))))) ? liteFn$_p__p_$_p__p_$compiler$src$generics$substKindForExpected(lite_genParams, lite_rawPosExpected, lite_genBindings) : lite_rawPosExpected);
@@ -37472,21 +37472,21 @@ export function main(lite$write?: (text: string) => void): string {
                                 const lite_uErr = liteFn$_p__p_$_p__p_$compiler$src$generics$unifyKindMut(lite_genParams, lite_rawPosExpected, (lite_arg).kind, lite_genBindings);
                                 void lite_uErr;
                                 if (((lite_uErr) !== (""))) {
-                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_nextSlot, 1n, 494411)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
+                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_nextSlot, 1n, 494914)))))) + (" of "))) + (lite_calleeDisplay))) + (": "))) + (lite_uErr)));
                                 }
                             }
                             void (lite_entryPositions.push(lite_cursor));
                             void (lite_entrySlots.push(lite_nextSlot));
                             void (lite_entryKinds.push((lite_arg).kind));
                             void (lite_entryCodes.push((lite_arg).code));
-                            lite_entryCount = lite$addInt(lite_entryCount, 1n, 494797);
+                            lite_entryCount = lite$addInt(lite_entryCount, 1n, 495300);
                             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_arg).next, lite_prefix);
                         }
                     }
                 }
-                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 494975)) === (","))))) {
-                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 495053), lite_prefix);
-                    if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 495111)) === (")"))))) {
+                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 495478)) === (","))))) {
+                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 495556), lite_prefix);
+                    if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 495614)) === (")"))))) {
                         break;
                     }
                 } else {
@@ -37500,10 +37500,10 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_checkSlot = 0n;
         void lite_checkSlot;
         while (((lite_checkSlot) < (lite_callCount))) {
-            if (((lite$listAt(lite_slotEntry, lite_checkSlot, 495381)) >= (0n))) {
-                lite_filledCount = lite$addInt(lite_filledCount, 1n, 495411);
+            if (((lite$listAt(lite_slotEntry, lite_checkSlot, 495884)) >= (0n))) {
+                lite_filledCount = lite$addInt(lite_filledCount, 1n, 495914);
             }
-            lite_checkSlot = lite$addInt(lite_checkSlot, 1n, 495437);
+            lite_checkSlot = lite$addInt(lite_checkSlot, 1n, 495940);
         }
         if (((lite_filledCount) !== (lite_callCount))) {
             const lite_suffix = (Boolean(((lite_callCount) === (1n))) ? " argument" : " arguments");
@@ -37558,7 +37558,7 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_tpRaw;
                 const lite_tpIsMut = liteFn$lib$core$text$tp_String_op_startsWithAt(lite_tpRaw, 0n, "mut ");
                 void lite_tpIsMut;
-                const lite_tpBase = (Boolean(lite_tpIsMut) ? lite$textSlice(lite_tpRaw, 4n, lite$textLength(lite_tpRaw), 497535) : lite_tpRaw);
+                const lite_tpBase = (Boolean(lite_tpIsMut) ? lite$textSlice(lite_tpRaw, 4n, lite$textLength(lite_tpRaw), 498038) : lite_tpRaw);
                 void lite_tpBase;
                 const lite_tpConcrete = liteFn$_p__p_$_p__p_$compiler$src$generics$substKind(lite_genParams, lite_tpBase, lite_genBindings);
                 void lite_tpConcrete;
@@ -37576,7 +37576,7 @@ export function main(lite$write?: (text: string) => void): string {
                 if ((((!(lite_hasRecv))) || (((lite_tpIdx) > (0n))))) {
                     void (lite_substSlotKinds.push(lite_tpFull));
                 }
-                lite_tpIdx = lite$addInt(lite_tpIdx, 1n, 498382);
+                lite_tpIdx = lite$addInt(lite_tpIdx, 1n, 498885);
             }
             if ((!(lite_inferMode))) {
                 const lite_bindingsEnc = liteFn$_p__p_$_p__p_$compiler$src$generics$encodeBindings(lite_genParams, lite_genBindings);
@@ -37591,36 +37591,36 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_slotIdx = 0n;
         void lite_slotIdx;
         while (((lite_slotIdx) < (lite_callCount))) {
-            const lite_k = lite$listAt(lite_slotEntry, lite_slotIdx, 498811);
+            const lite_k = lite$listAt(lite_slotEntry, lite_slotIdx, 499314);
             void lite_k;
             if (((lite_k) !== (lite_slotIdx))) {
                 lite_isIdentityOrder = false;
             }
-            const lite_argExpected = (Boolean(lite_isGenericCall) ? lite$listAt(lite_substSlotKinds, lite_slotIdx, 498932) : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_slotIdx, 498989), 498979)));
+            const lite_argExpected = (Boolean(lite_isGenericCall) ? lite$listAt(lite_substSlotKinds, lite_slotIdx, 499435) : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_slotIdx, 499492), 499482)));
             void lite_argExpected;
             const lite_isMutExp = liteFn$lib$core$text$tp_String_op_startsWithAt(lite_argExpected, 0n, "mut ");
             void lite_isMutExp;
-            const lite_isMutAct = liteFn$lib$core$text$tp_String_op_startsWithAt(lite$listAt(lite_entryKinds, lite_k, 499092), 0n, "mut ");
+            const lite_isMutAct = liteFn$lib$core$text$tp_String_op_startsWithAt(lite$listAt(lite_entryKinds, lite_k, 499595), 0n, "mut ");
             void lite_isMutAct;
-            const lite_chkExp = (Boolean(lite_isMutExp) ? lite$textSlice(lite_argExpected, 4n, lite$textLength(lite_argExpected), 499164) : lite_argExpected);
+            const lite_chkExp = (Boolean(lite_isMutExp) ? lite$textSlice(lite_argExpected, 4n, lite$textLength(lite_argExpected), 499667) : lite_argExpected);
             void lite_chkExp;
-            const lite_chkAct = (Boolean(lite_isMutAct) ? lite$textSlice(lite$listAt(lite_entryKinds, lite_k, 499262), 4n, lite$textLength(lite$listAt(lite_entryKinds, lite_k, 499285)), 499265) : lite$listAt(lite_entryKinds, lite_k, 499318));
+            const lite_chkAct = (Boolean(lite_isMutAct) ? lite$textSlice(lite$listAt(lite_entryKinds, lite_k, 499765), 4n, lite$textLength(lite$listAt(lite_entryKinds, lite_k, 499788)), 499768) : lite$listAt(lite_entryKinds, lite_k, 499821));
             void lite_chkAct;
             if ((((Boolean(lite_isMutExp) !== Boolean(lite_isMutAct))) || ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isCompatibleKind(lite_chkExp, lite_chkAct)))))) {
-                liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite$listAt(lite_entryPositions, lite_k, 499454), lite_prefix, (((((((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slotIdx, 1n, 499489)))))) + (" of "))) + (lite_calleeDisplay))) + (" must be "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_argExpected)))) + (", got "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite$listAt(lite_entryKinds, lite_k, 499629)))));
+                liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite$listAt(lite_entryPositions, lite_k, 499957), lite_prefix, (((((((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_slotIdx, 1n, 499992)))))) + (" of "))) + (lite_calleeDisplay))) + (" must be "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_argExpected)))) + (", got "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite$listAt(lite_entryKinds, lite_k, 500132)))));
             }
-            lite_slotIdx = lite$addInt(lite_slotIdx, 1n, 499661);
+            lite_slotIdx = lite$addInt(lite_slotIdx, 1n, 500164);
         }
         let lite_callHasFnArg = (!(lite_isModuleFn));
         void lite_callHasFnArg;
         let lite_ckIdx = 0n;
         void lite_ckIdx;
         while (((lite_ckIdx) < (lite_entryCount))) {
-            if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$containsFnKind(lite$listAt(lite_entryKinds, lite_ckIdx, 499806))) {
+            if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$containsFnKind(lite$listAt(lite_entryKinds, lite_ckIdx, 500309))) {
                 lite_callHasFnArg = true;
                 break;
             }
-            lite_ckIdx = lite$addInt(lite_ckIdx, 1n, 499892);
+            lite_ckIdx = lite$addInt(lite_ckIdx, 1n, 500395);
         }
         const lite_callClosureHazard = ((lite_callHasFnArg) || (liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$localsHasLocalClosure(lite_locals)));
         void lite_callClosureHazard;
@@ -37637,16 +37637,16 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_pIdx = 0n;
             void lite_pIdx;
             while (((lite_pIdx) < (lite_callCount))) {
-                const lite_argExpected = (Boolean(lite_isGenericCall) ? lite$listAt(lite_substSlotKinds, lite_pIdx, 500283) : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_pIdx, 500337), 500327)));
+                const lite_argExpected = (Boolean(lite_isGenericCall) ? lite$listAt(lite_substSlotKinds, lite_pIdx, 500786) : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_pIdx, 500840), 500830)));
                 void lite_argExpected;
                 if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_argExpected, 0n, "mut ")) {
-                    void (lite_finalArgs.push(lite$listAt(lite_entryCodes, lite_pIdx, 500452)));
+                    void (lite_finalArgs.push(lite$listAt(lite_entryCodes, lite_pIdx, 500955)));
                 } else {
-                    const lite_needsSnap = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$readOnlyArgNeedsSnapshot(lite$listAt(lite_entryCodes, lite_pIdx, 500546), lite_locals, lite_mutArgRuntimes, lite_callClosureHazard);
+                    const lite_needsSnap = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$readOnlyArgNeedsSnapshot(lite$listAt(lite_entryCodes, lite_pIdx, 501049), lite_locals, lite_mutArgRuntimes, lite_callClosureHazard);
                     void lite_needsSnap;
-                    void (lite_finalArgs.push(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$readOnlyArgWithSnapshot(lite_target, lite_argExpected, lite$listAt(lite_entryKinds, lite_pIdx, 500696), lite$listAt(lite_entryCodes, lite_pIdx, 500714), lite_needsSnap)));
+                    void (lite_finalArgs.push(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$readOnlyArgWithSnapshot(lite_target, lite_argExpected, lite$listAt(lite_entryKinds, lite_pIdx, 501199), lite$listAt(lite_entryCodes, lite_pIdx, 501217), lite_needsSnap)));
                 }
-                lite_pIdx = lite$addInt(lite_pIdx, 1n, 500772);
+                lite_pIdx = lite$addInt(lite_pIdx, 1n, 501275);
             }
             const lite_targetCallee = (Boolean(lite_isModuleFn) ? lite_effRuntime : (((("(") + (lite_effRuntime))) + (")")));
             void lite_targetCallee;
@@ -37667,12 +37667,12 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_kIdx = 0n;
             void lite_kIdx;
             while (((lite_kIdx) < (lite_entryCount))) {
-                const lite_targetSlot = lite$listAt(lite_entrySlots, lite_kIdx, 501554);
+                const lite_targetSlot = lite$listAt(lite_entrySlots, lite_kIdx, 502057);
                 void lite_targetSlot;
-                if (((lite$listAt(lite_slotEntry, lite_targetSlot, 501586)) !== (lite_kIdx))) {
-                    void (lite_discarded.push((((("(void)(") + (lite$listAt(lite_entryCodes, lite_kIdx, 501671)))) + (")"))));
+                if (((lite$listAt(lite_slotEntry, lite_targetSlot, 502089)) !== (lite_kIdx))) {
+                    void (lite_discarded.push((((("(void)(") + (lite$listAt(lite_entryCodes, lite_kIdx, 502174)))) + (")"))));
                 }
-                lite_kIdx = lite$addInt(lite_kIdx, 1n, 501723);
+                lite_kIdx = lite$addInt(lite_kIdx, 1n, 502226);
             }
             const lite_reorderedArgs: string[] = [];
             void lite_reorderedArgs;
@@ -37682,18 +37682,18 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_sIdx = 0n;
             void lite_sIdx;
             while (((lite_sIdx) < (lite_callCount))) {
-                const lite_k = lite$listAt(lite_slotEntry, lite_sIdx, 501927);
+                const lite_k = lite$listAt(lite_slotEntry, lite_sIdx, 502430);
                 void lite_k;
-                const lite_argExpected = (Boolean(lite_isGenericCall) ? lite$listAt(lite_substSlotKinds, lite_sIdx, 501995) : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_sIdx, 502049), 502039)));
+                const lite_argExpected = (Boolean(lite_isGenericCall) ? lite$listAt(lite_substSlotKinds, lite_sIdx, 502498) : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_sIdx, 502552), 502542)));
                 void lite_argExpected;
                 if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_argExpected, 0n, "mut ")) {
-                    void (lite_reorderedArgs.push(lite$listAt(lite_entryCodes, lite_k, 502168)));
+                    void (lite_reorderedArgs.push(lite$listAt(lite_entryCodes, lite_k, 502671)));
                 } else {
-                    const lite_needsSnap = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$readOnlyArgNeedsSnapshot(lite$listAt(lite_entryCodes, lite_k, 502259), lite_locals, lite_mutArgRuntimes, lite_callClosureHazard);
+                    const lite_needsSnap = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$readOnlyArgNeedsSnapshot(lite$listAt(lite_entryCodes, lite_k, 502762), lite_locals, lite_mutArgRuntimes, lite_callClosureHazard);
                     void lite_needsSnap;
-                    void (lite_reorderedArgs.push(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$readOnlyArgWithSnapshot(lite_target, lite_argExpected, lite$listAt(lite_entryKinds, lite_k, 502410), lite$listAt(lite_entryCodes, lite_k, 502425), lite_needsSnap)));
+                    void (lite_reorderedArgs.push(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$readOnlyArgWithSnapshot(lite_target, lite_argExpected, lite$listAt(lite_entryKinds, lite_k, 502913), lite$listAt(lite_entryCodes, lite_k, 502928), lite_needsSnap)));
                 }
-                lite_sIdx = lite$addInt(lite_sIdx, 1n, 502480);
+                lite_sIdx = lite$addInt(lite_sIdx, 1n, 502983);
             }
             const lite_callExpr = (Boolean((!(lite_isModuleFn))) ? (() => {
                 const lite_callFnKind = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$fnCanonicalKind(lite_callParams, lite_callFirst, lite_callCount, lite_effResult);
@@ -37721,28 +37721,28 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_kIdx;
             while (((lite_kIdx) < (lite_entryCount))) {
                 if ((!(lite_callDiverged))) {
-                    const lite_targetSlot = lite$listAt(lite_entrySlots, lite_kIdx, 503566);
+                    const lite_targetSlot = lite$listAt(lite_entrySlots, lite_kIdx, 504069);
                     void lite_targetSlot;
-                    if (((lite$listAt(lite_entryKinds, lite_kIdx, 503603)) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))) {
-                        void (lite_evalStmts.push((((("return ") + (lite$listAt(lite_entryCodes, lite_kIdx, 503700)))) + (";"))));
+                    if (((lite$listAt(lite_entryKinds, lite_kIdx, 504106)) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))) {
+                        void (lite_evalStmts.push((((("return ") + (lite$listAt(lite_entryCodes, lite_kIdx, 504203)))) + (";"))));
                         lite_callDiverged = true;
-                    } else if (((lite$listAt(lite_slotEntry, lite_targetSlot, 503791)) === (lite_kIdx))) {
+                    } else if (((lite$listAt(lite_slotEntry, lite_targetSlot, 504294)) === (lite_kIdx))) {
                         const lite_temp = (("lite$arg") + ((String(lite_kIdx))));
                         void lite_temp;
-                        const lite_argExpected = (Boolean(lite_isGenericCall) ? lite$listAt(lite_substSlotKinds, lite_targetSlot, 503938) : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_targetSlot, 503998), 503988)));
+                        const lite_argExpected = (Boolean(lite_isGenericCall) ? lite$listAt(lite_substSlotKinds, lite_targetSlot, 504441) : liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_callParams, lite$addInt(lite_callFirst, lite_targetSlot, 504501), 504491)));
                         void lite_argExpected;
-                        const lite_argRhs = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_argExpected, 0n, "mut ")) ? lite$listAt(lite_entryCodes, lite_kIdx, 504122) : (() => {
-                            const lite_needsSnap = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$readOnlyArgNeedsSnapshot(lite$listAt(lite_entryCodes, lite_kIdx, 504230), lite_locals, lite_mutArgRuntimes, lite_callClosureHazard);
+                        const lite_argRhs = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_argExpected, 0n, "mut ")) ? lite$listAt(lite_entryCodes, lite_kIdx, 504625) : (() => {
+                            const lite_needsSnap = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$readOnlyArgNeedsSnapshot(lite$listAt(lite_entryCodes, lite_kIdx, 504733), lite_locals, lite_mutArgRuntimes, lite_callClosureHazard);
                             void lite_needsSnap;
-                            return liteFn$_p__p_$_p__p_$compiler$src$frontend__context$readOnlyArgWithSnapshot(lite_target, lite_argExpected, lite$listAt(lite_entryKinds, lite_kIdx, 504365), lite$listAt(lite_entryCodes, lite_kIdx, 504383), lite_needsSnap);
+                            return liteFn$_p__p_$_p__p_$compiler$src$frontend__context$readOnlyArgWithSnapshot(lite_target, lite_argExpected, lite$listAt(lite_entryKinds, lite_kIdx, 504868), lite$listAt(lite_entryCodes, lite_kIdx, 504886), lite_needsSnap);
                         })());
                         void lite_argRhs;
                         void (lite_evalStmts.push((((((((("const ") + (lite_temp))) + (" = "))) + (lite_argRhs))) + (";"))));
                     } else {
-                        void (lite_evalStmts.push((((("void (") + (lite$listAt(lite_entryCodes, lite_kIdx, 504598)))) + (");"))));
+                        void (lite_evalStmts.push((((("void (") + (lite$listAt(lite_entryCodes, lite_kIdx, 505101)))) + (");"))));
                     }
                 }
-                lite_kIdx = lite$addInt(lite_kIdx, 1n, 504669);
+                lite_kIdx = lite$addInt(lite_kIdx, 1n, 505172);
             }
             if (lite_callDiverged) {
                 lite_emittedCode = (((("(() => { ") + (liteFn$lib$core$list$tp_List_op_join(lite_evalStmts, " ")))) + (" })()"));
@@ -37756,8 +37756,8 @@ export function main(lite$write?: (text: string) => void): string {
                 let lite_sIdx = 0n;
                 void lite_sIdx;
                 while (((lite_sIdx) < (lite_callCount))) {
-                    void (lite_slotTemps.push((("lite$arg") + (liteFn$lib$core$int$tp_Int_op_toText(lite$listAt(lite_slotEntry, lite_sIdx, 505086))))));
-                    lite_sIdx = lite$addInt(lite_sIdx, 1n, 505131);
+                    void (lite_slotTemps.push((("lite$arg") + (liteFn$lib$core$int$tp_Int_op_toText(lite$listAt(lite_slotEntry, lite_sIdx, 505589))))));
+                    lite_sIdx = lite$addInt(lite_sIdx, 1n, 505634);
                 }
                 const lite_targetCallee = (Boolean(lite_isModuleFn) ? lite_effRuntime : "lite$fn");
                 void lite_targetCallee;
@@ -37768,30 +37768,33 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_emittedCode = (((((((("(() => { ") + (liteFn$lib$core$list$tp_List_op_join(lite_evalStmts, " ")))) + (" "))) + (lite_retStmt))) + (" })()"));
             }
         }
-        if (((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_TS))) && (((BigInt((lite_mutRecBoxNames).length)) > (0n))))) && (((lite_emittedResultKind) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))))) {
+        if (((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_TS))) && (((BigInt((lite_mutRecBoxNames).length)) > (0n))))) {
             const lite_wbSetup: string[] = [];
             void lite_wbSetup;
-            const lite_wbAssign: string[] = [];
-            void lite_wbAssign;
             let lite_bi = 0n;
             void lite_bi;
             const lite_bCount = BigInt((lite_mutRecBoxNames).length);
             void lite_bCount;
             while (((lite_bi) < (lite_bCount))) {
-                const lite_bName = lite$listAt(lite_mutRecBoxNames, lite_bi, 505865);
+                const lite_bName = lite$listAt(lite_mutRecBoxNames, lite_bi, 506281);
                 void lite_bName;
-                const lite_bLoc = lite$listAt(lite_mutRecLocalRuntimes, lite_bi, 505910);
+                const lite_bLoc = lite$listAt(lite_mutRecLocalRuntimes, lite_bi, 506326);
                 void lite_bLoc;
-                const lite_wbStmt = lite$listAt(lite_mutRecWritebackStmts, lite_bi, 505958);
+                const lite_bTsType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite$listAt(lite_mutRecKinds, lite_bi, 506387));
+                void lite_bTsType;
+                const lite_wbStmt = lite$listAt(lite_mutRecWritebackStmts, lite_bi, 506436);
                 void lite_wbStmt;
-                void (lite_wbSetup.push((((((((("const ") + (lite_bName))) + (" = { v: "))) + (lite_bLoc))) + (" };"))));
-                void (lite_wbAssign.push((Boolean(((lite_wbStmt) !== (""))) ? lite_wbStmt : ((((((lite_bLoc) + (" = "))) + (lite_bName))) + (".v;")))));
-                lite_bi = lite$addInt(lite_bi, 1n, 506165);
+                const lite_setBody = (Boolean(((lite_wbStmt) !== (""))) ? lite_wbStmt : ((lite_bLoc) + (" = lite$nv;")));
+                void lite_setBody;
+                void (lite_wbSetup.push((((((((((((((((((((((((("const ") + (lite_bName))) + (": { v: "))) + (lite_bTsType))) + (" } = { get v(): "))) + (lite_bTsType))) + (" { return "))) + (lite_bLoc))) + ("; }, set v(lite$nv: "))) + (lite_bTsType))) + (") { "))) + (lite_setBody))) + (" } };"))));
+                lite_bi = lite$addInt(lite_bi, 1n, 506734);
             }
-            if (((lite_emittedResultKind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))) {
-                lite_emittedCode = (((((((((((("(() => { ") + (liteFn$lib$core$list$tp_List_op_join(lite_wbSetup, " ")))) + (" void ("))) + (lite_emittedCode))) + ("); "))) + (liteFn$lib$core$list$tp_List_op_join(lite_wbAssign, " ")))) + (" return undefined; })()"));
+            if (((lite_emittedResultKind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_NEVER))) {
+                lite_emittedCode = (((((((("(((): never => { ") + (liteFn$lib$core$list$tp_List_op_join(lite_wbSetup, " ")))) + (" return "))) + (lite_emittedCode))) + ("; })())"));
+            } else if (((lite_emittedResultKind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))) {
+                lite_emittedCode = (((((((("(() => { ") + (liteFn$lib$core$list$tp_List_op_join(lite_wbSetup, " ")))) + (" void ("))) + (lite_emittedCode))) + ("); return undefined; })()"));
             } else {
-                lite_emittedCode = (((((((((((((((("(((): ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite_emittedResultKind)))) + (" => { "))) + (liteFn$lib$core$list$tp_List_op_join(lite_wbSetup, " ")))) + (" const lite$mr = "))) + (lite_emittedCode))) + ("; "))) + (liteFn$lib$core$list$tp_List_op_join(lite_wbAssign, " ")))) + (" return lite$mr; })())"));
+                lite_emittedCode = (((((((((((("(((): ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tsFunctionType(lite_emittedResultKind)))) + (" => { "))) + (liteFn$lib$core$list$tp_List_op_join(lite_wbSetup, " ")))) + (" return "))) + (lite_emittedCode))) + ("; })())"));
             }
         }
         return liteFn$_p__p_$_p__p_$compiler$src$frontend__context$withMarkers({ kind: lite_emittedResultKind, code: lite_emittedCode, intValue: 0n, textValue: "", constant: false, next: lite_cursor }, lite_callMarkers);
@@ -37819,7 +37822,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_iifeDepth;
         void lite_inferMode;
         void lite_aliases;
-        return liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target, lite_source, lite_openParen, lite_errPos, lite_isModuleFn, lite_calleeDisplay, lite_callRuntime, lite_callParams, lite_callFirst, lite_callCount, lite_callResult, false, "", "", "", "", "", "", lite_callExpectedRet, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
+        return liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target, lite_source, lite_openParen, lite_errPos, lite_isModuleFn, lite_calleeDisplay, lite_callRuntime, lite_callParams, lite_callFirst, lite_callCount, lite_callResult, false, "", "", "", "", "", "", "", lite_callExpectedRet, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
     }
     void liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCall;
     function liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseCoreTypeOpHardCall(lite_target: string, lite_source: string, lite_labelStart: bigint, lite_openParen: bigint, lite_receiver: { kind: string; code: string; intValue: bigint; textValue: string; constant: boolean; next: bigint }, lite_recvLocalIdx: bigint, lite_runtime: string, lite_opLabel: string, lite_isMutRecv: boolean, lite_prefix: string, lite_locals: { name: string; runtime: string; kind: string; mutable: boolean; writable: boolean; depth: bigint; constant: boolean; code: string; intValue: bigint; textValue: string; initState: string }[], lite_functions: { name: string; runtime: string; result: string; first: bigint; count: bigint; declAt: bigint }[], lite_params: string[], lite_currentName: string, lite_ctxs: { id: bigint; tag: string; kind: string; phase: string; iifeDepth: bigint; valKind: string; valVar: string; label: string; iterLabel: string; countVar: string; itemVar: string; itemKind: string; indexVar: string; hasIndex: boolean; colVar: string }[], lite_iifeDepth: bigint, lite_inferMode: boolean, lite_aliases: { name: string; target: string; at: bigint; end: bigint; depth: bigint }[]): { kind: string; code: string; intValue: bigint; textValue: string; constant: boolean; next: bigint } {
@@ -37841,12 +37844,12 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_iifeDepth;
         void lite_inferMode;
         void lite_aliases;
-        if (((lite_isMutRecv) && ((((((lite_recvLocalIdx) < (0n))) || ((!((lite$listAt(lite_locals, lite_recvLocalIdx, 508188)).writable)))))))) {
+        if (((lite_isMutRecv) && ((((((lite_recvLocalIdx) < (0n))) || ((!((lite$listAt(lite_locals, lite_recvLocalIdx, 508849)).writable)))))))) {
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("cannot call mutating operation ") + (lite_opLabel))) + (" on read-only value")));
         }
         const lite_mutRt = (Boolean(lite_isMutRecv) ? (lite_receiver).code : "");
         void lite_mutRt;
-        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_openParen, 1n, 508451), lite_prefix);
+        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_openParen, 1n, 509112), lite_prefix);
         void lite_cursor;
         let lite_markers = (Boolean(lite_inferMode) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers("", lite_receiver) : "");
         void lite_markers;
@@ -38221,7 +38224,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_functions;
         void lite_params;
         void lite_inferMode;
-        const lite_opInfo = lite$listAt(lite_functions, lite_opIdx, 530025);
+        const lite_opInfo = lite$listAt(lite_functions, lite_opIdx, 530686);
         void lite_opInfo;
         const lite_targetKind = (Boolean(((lite_resolvedType) !== (""))) ? lite_resolvedType : lite_aliasTplKind);
         void lite_targetKind;
@@ -38233,14 +38236,14 @@ export function main(lite$write?: (text: string) => void): string {
         const lite_isStatic = (liteFn$lib$core$text$tp_String_op_startsWithAt((lite_opInfo).name, 0n, "$statictypeop:"));
         void lite_isStatic;
         if (liteFn$lib$core$text$tp_String_op_startsWithAt((lite_opInfo).runtime, 0n, "$gen:")) {
-            const lite_tpl = liteFn$_p__p_$_p__p_$compiler$src$generics$getTemplate(liteFn$_p__p_$_p__p_$compiler$src$generics$findTemplate(lite$textSlice((lite_opInfo).runtime, 5n, lite$textLength((lite_opInfo).runtime), 530421)));
+            const lite_tpl = liteFn$_p__p_$_p__p_$compiler$src$generics$getTemplate(liteFn$_p__p_$_p__p_$compiler$src$generics$findTemplate(lite$textSlice((lite_opInfo).runtime, 5n, lite$textLength((lite_opInfo).runtime), 531082)));
             void lite_tpl;
             const lite_rawB: Map<string, string> = new Map<string, string>();
             void lite_rawB;
             if ((!(lite_isStatic))) {
-                const lite_rawRecv = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, (lite_opInfo).first, 530571));
+                const lite_rawRecv = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, (lite_opInfo).first, 531232));
                 void lite_rawRecv;
-                const lite_baseRecv = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawRecv, 0n, "mut ")) ? lite$textSlice(lite_rawRecv, 4n, lite$textLength(lite_rawRecv), 530656) : lite_rawRecv);
+                const lite_baseRecv = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawRecv, 0n, "mut ")) ? lite$textSlice(lite_rawRecv, 4n, lite$textLength(lite_rawRecv), 531317) : lite_rawRecv);
                 void lite_baseRecv;
                 if (((liteFn$_p__p_$_p__p_$compiler$src$generics$unifyKindMut((lite_tpl).genericParams, lite_baseRecv, lite_targetKind, lite_rawB)) !== (""))) {
                     if (((lite_targetParamsCsv) === (""))) {
@@ -38264,7 +38267,7 @@ export function main(lite$write?: (text: string) => void): string {
                 void lite_pDec;
                 const lite_ownerParamsCsv = (lite_pDec).text;
                 void lite_ownerParamsCsv;
-                const lite_ownerTplKind = lite$textSlice((lite_tpl).selfTarget, (lite_pDec).next, lite$textLength((lite_tpl).selfTarget), 531857);
+                const lite_ownerTplKind = lite$textSlice((lite_tpl).selfTarget, (lite_pDec).next, lite$textLength((lite_tpl).selfTarget), 532518);
                 void lite_ownerTplKind;
                 const lite_ownerB: Map<string, string> = new Map<string, string>();
                 void lite_ownerB;
@@ -38301,9 +38304,9 @@ export function main(lite$write?: (text: string) => void): string {
         }
         if (((((lite_resolvedType) !== (""))) && ((!(lite_inferMode))))) {
             if ((!(lite_isStatic))) {
-                const lite_rawRecv = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, (lite_opInfo).first, 533126));
+                const lite_rawRecv = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, (lite_opInfo).first, 533787));
                 void lite_rawRecv;
-                const lite_baseRecv = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawRecv, 0n, "mut ")) ? lite$textSlice(lite_rawRecv, 4n, lite$textLength(lite_rawRecv), 533211) : lite_rawRecv);
+                const lite_baseRecv = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawRecv, 0n, "mut ")) ? lite$textSlice(lite_rawRecv, 4n, lite$textLength(lite_rawRecv), 533872) : lite_rawRecv);
                 void lite_baseRecv;
                 if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isCompatibleKind(lite_baseRecv, lite_resolvedType)))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_memberStart, lite_prefix, (((((((((("operation ") + (lite_memberName))) + (" requires "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_baseRecv)))) + (", got "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_resolvedType))));
@@ -38341,19 +38344,19 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_iifeDepth;
         void lite_inferMode;
         void lite_aliases;
-        const lite_info = lite$listAt(lite_functions, lite_opIdx, 535027);
+        const lite_info = lite$listAt(lite_functions, lite_opIdx, 535688);
         void lite_info;
         if ((liteFn$lib$core$text$tp_String_op_startsWithAt((lite_info).name, 0n, "$statictypeop:"))) {
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("operation ") + (lite_opLabel))) + (" is a type-level operation with no Self receiver; call it on the type instead")));
         }
-        const lite_recvExpected = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, (lite_info).first, 535273));
+        const lite_recvExpected = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, (lite_info).first, 535934));
         void lite_recvExpected;
         const lite_isMutRecv = liteFn$lib$core$text$tp_String_op_startsWithAt(lite_recvExpected, 0n, "mut ");
         void lite_isMutRecv;
-        const lite_baseExpected = (Boolean(lite_isMutRecv) ? lite$textSlice(lite_recvExpected, 4n, lite$textLength(lite_recvExpected), 535390) : lite_recvExpected);
+        const lite_baseExpected = (Boolean(lite_isMutRecv) ? lite$textSlice(lite_recvExpected, 4n, lite$textLength(lite_recvExpected), 536051) : lite_recvExpected);
         void lite_baseExpected;
         if (((lite_isMutRecv) && ((!(lite_explicitMut))))) {
-            if (((((lite_recvLocalIdx) < (0n))) || ((!((lite$listAt(lite_locals, lite_recvLocalIdx, 535528)).writable))))) {
+            if (((((lite_recvLocalIdx) < (0n))) || ((!((lite$listAt(lite_locals, lite_recvLocalIdx, 536189)).writable))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("cannot call mutating operation ") + (lite_opLabel))) + (" on read-only value")));
             }
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((((((("mutating operation ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_receiver).kind)))) + ("."))) + (lite_opLabel))) + (" requires mut at call site")));
@@ -38371,7 +38374,7 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_concreteRecvExpected = lite_baseExpected;
         void lite_concreteRecvExpected;
         if (lite_isGenOp) {
-            const lite_tplKey = lite$textSlice((lite_info).runtime, 5n, lite$textLength((lite_info).runtime), 536513);
+            const lite_tplKey = lite$textSlice((lite_info).runtime, 5n, lite$textLength((lite_info).runtime), 537174);
             void lite_tplKey;
             const lite_tplIdx = (lite$mapGetOr((lite$m$_p__p_$_p__p_$compiler$src$generics$templateByKey), lite_tplKey, (-1n)));
             void lite_tplIdx;
@@ -38410,13 +38413,15 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_recvWritebackBox;
         let lite_recvWritebackStmt = "";
         void lite_recvWritebackStmt;
+        let lite_recvWritebackKind = "";
+        void lite_recvWritebackKind;
         let lite_recvRootRt = "";
         void lite_recvRootRt;
         if (lite_isMutRecv) {
-            if (((((lite_recvLocalIdx) < (0n))) || ((!((lite$listAt(lite_locals, lite_recvLocalIdx, 538147)).writable))))) {
+            if (((((lite_recvLocalIdx) < (0n))) || ((!((lite$listAt(lite_locals, lite_recvLocalIdx, 538841)).writable))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("cannot call mutating operation ") + (lite_opLabel))) + (" on read-only value")));
             }
-            const lite_locEntry = lite$listAt(lite_locals, lite_recvLocalIdx, 538333);
+            const lite_locEntry = lite$listAt(lite_locals, lite_recvLocalIdx, 539027);
             void lite_locEntry;
             lite_recvRootRt = (lite_locEntry).runtime;
             if (((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) {
@@ -38425,13 +38430,15 @@ export function main(lite$write?: (text: string) => void): string {
                 if (((lite_recvFieldPath) !== (""))) {
                     lite_recvWritebackBox = "lite$mb_recv";
                     lite_recvWritebackLocal = (lite_receiver).code;
-                    lite_recvWritebackStmt = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$tsFieldWritebackStmt((lite_locEntry).runtime, lite_recvFieldPath, (("lite$mb_recv") + (".v")));
+                    lite_recvWritebackStmt = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$tsFieldWritebackStmt((lite_locEntry).runtime, lite_recvFieldPath, "lite$nv");
+                    lite_recvWritebackKind = (lite_receiver).kind;
                     lite_recvCode = lite_recvWritebackBox;
                 } else if (liteFn$lib$core$text$tp_String_op_endsWith((lite_locEntry).runtime, ".v")) {
-                    lite_recvCode = lite$textSlice((lite_locEntry).runtime, 0n, lite$subtractInt(lite$textLength((lite_locEntry).runtime), 2n, 539035), 539000);
+                    lite_recvCode = lite$textSlice((lite_locEntry).runtime, 0n, lite$subtractInt(lite$textLength((lite_locEntry).runtime), 2n, 539766), 539731);
                 } else {
                     lite_recvWritebackBox = "lite$mb_recv";
                     lite_recvWritebackLocal = (lite_locEntry).runtime;
+                    lite_recvWritebackKind = (lite_receiver).kind;
                     lite_recvCode = "lite$mb_recv";
                 }
             } else {
@@ -38443,13 +38450,13 @@ export function main(lite$write?: (text: string) => void): string {
             let lite_rpIdx = 1n;
             void lite_rpIdx;
             while (((lite_rpIdx) < ((lite_info).count))) {
-                const lite_rpKind = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, lite$addInt((lite_info).first, lite_rpIdx, 539483), 539472));
+                const lite_rpKind = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, lite$addInt((lite_info).first, lite_rpIdx, 540265), 540254));
                 void lite_rpKind;
                 if (((liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rpKind, 0n, "mut ")) || (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$containsFnKind(lite_rpKind)))) {
                     lite_recvParamHazard = true;
                     break;
                 }
-                lite_rpIdx = lite$addInt(lite_rpIdx, 1n, 539669);
+                lite_rpIdx = lite$addInt(lite_rpIdx, 1n, 540451);
             }
             const lite_emptyMutRts: string[] = [];
             void lite_emptyMutRts;
@@ -38459,7 +38466,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_calleeDisp = ((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_receiver).kind)) + ("."))) + (lite_opLabel));
         void lite_calleeDisp;
-        const lite_callRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target, lite_source, lite_openParen, lite_labelStart, true, lite_calleeDisp, (lite_info).runtime, lite_params, lite$addInt((lite_info).first, 1n, 540163), lite$subtractInt((lite_info).count, 1n, 540179), (lite_info).result, true, lite_recvCode, lite_recvWritebackLocal, lite_recvWritebackBox, lite_recvWritebackStmt, lite_recvRootRt, lite_initGenBindings, lite_callExpectedRet, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
+        const lite_callRes = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target, lite_source, lite_openParen, lite_labelStart, true, lite_calleeDisp, (lite_info).runtime, lite_params, lite$addInt((lite_info).first, 1n, 540945), lite$subtractInt((lite_info).count, 1n, 540961), (lite_info).result, true, lite_recvCode, lite_recvWritebackLocal, lite_recvWritebackBox, lite_recvWritebackStmt, lite_recvWritebackKind, lite_recvRootRt, lite_initGenBindings, lite_callExpectedRet, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
         void lite_callRes;
         if (lite_inferMode) {
             return liteFn$_p__p_$_p__p_$compiler$src$frontend__context$withMarkers(lite_callRes, liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers("", lite_receiver), lite_callRes));
@@ -38486,7 +38493,7 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_aliases;
         const lite_size = lite$textLength(lite_source);
         void lite_size;
-        const lite_recvName = lite$textSlice(lite_source, lite_mNameStart, lite_mNameEnd, 541135);
+        const lite_recvName = lite$textSlice(lite_source, lite_mNameStart, lite_mNameEnd, 541936);
         void lite_recvName;
         if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_recvName)) {
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$unsupportedFeature(lite_source, lite_mNameStart, lite_recvName, lite_prefix);
@@ -38496,7 +38503,7 @@ export function main(lite$write?: (text: string) => void): string {
         if (((lite_recvIdx) < (0n))) {
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_mNameStart, lite_prefix, (("unknown value ") + (lite_recvName)));
         }
-        const lite_entry = lite$listAt(lite_locals, lite_recvIdx, 541448);
+        const lite_entry = lite$listAt(lite_locals, lite_recvIdx, 542249);
         void lite_entry;
         if ((((lite_entry).initState) !== (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$INIT_STATE_INIT))) {
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_mNameStart, lite_prefix, (("cannot read uninitialized local ") + (lite_recvName)));
@@ -38512,20 +38519,20 @@ export function main(lite$write?: (text: string) => void): string {
         while (Boolean(true)) {
             const lite_dotPos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_pos, lite_prefix);
             void lite_dotPos;
-            if (((((lite_dotPos) >= (lite_size))) || (((lite$textAt(lite_source, lite_dotPos, 541874)) !== ("."))))) {
+            if (((((lite_dotPos) >= (lite_size))) || (((lite$textAt(lite_source, lite_dotPos, 542675)) !== ("."))))) {
                 if (((BigInt((lite_fieldPath).length)) === (0n))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_dotPos, lite_prefix, (("expected .operation(...) after mut ") + (lite_recvName)));
                 }
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_dotPos, lite_prefix, (((((("expected .operation(...) after mut ") + (lite_recvName))) + ("."))) + (liteFn$lib$core$list$tp_List_op_join(lite_fieldPath, "."))));
             }
-            const lite_labelStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_dotPos, 1n, 542249), lite_prefix);
+            const lite_labelStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_dotPos, 1n, 543050), lite_prefix);
             void lite_labelStart;
-            if (((((lite_labelStart) < (lite_size))) && (((lite$textAt(lite_source, lite_labelStart, 542303)) === ("$"))))) {
-                const lite_hookEnd = (Boolean(((((lite$addInt(lite_labelStart, 1n, 542364)) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite$addInt(lite_labelStart, 1n, 542400), 542386))))) ? liteFn$lib$core$text$tp_String_op_skipName(lite_source, lite$addInt(lite_labelStart, 1n, 542464)) : lite$addInt(lite_labelStart, 1n, 542517));
+            if (((((lite_labelStart) < (lite_size))) && (((lite$textAt(lite_source, lite_labelStart, 543104)) === ("$"))))) {
+                const lite_hookEnd = (Boolean(((((lite$addInt(lite_labelStart, 1n, 543165)) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite$addInt(lite_labelStart, 1n, 543201), 543187))))) ? liteFn$lib$core$text$tp_String_op_skipName(lite_source, lite$addInt(lite_labelStart, 1n, 543265)) : lite$addInt(lite_labelStart, 1n, 543318));
                 void lite_hookEnd;
-                liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("compiler hook ") + (lite$textSlice(lite_source, lite_labelStart, lite_hookEnd, 542616)))) + (" cannot be called directly; use [...] indexing")));
+                liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("compiler hook ") + (lite$textSlice(lite_source, lite_labelStart, lite_hookEnd, 543417)))) + (" cannot be called directly; use [...] indexing")));
             }
-            if (((((lite_labelStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_labelStart, 542750))))))) {
+            if (((((lite_labelStart) >= (lite_size))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_labelStart, 543551))))))) {
                 if (((BigInt((lite_fieldPath).length)) === (0n))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("expected operation name after mut ") + (lite_recvName))) + (".")));
                 }
@@ -38533,11 +38540,11 @@ export function main(lite$write?: (text: string) => void): string {
             }
             const lite_labelEnd = (lite$textSkipWhile(lite_source, lite_labelStart, false));
             void lite_labelEnd;
-            const lite_label = lite$textSlice(lite_source, lite_labelStart, lite_labelEnd, 543171);
+            const lite_label = lite$textSlice(lite_source, lite_labelStart, lite_labelEnd, 543972);
             void lite_label;
             const lite_afterLabel = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_labelEnd, lite_prefix);
             void lite_afterLabel;
-            if (((((lite_afterLabel) < (lite_size))) && (((lite$textAt(lite_source, lite_afterLabel, 543307)) === ("."))))) {
+            if (((((lite_afterLabel) < (lite_size))) && (((lite$textAt(lite_source, lite_afterLabel, 544108)) === ("."))))) {
                 if ((((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordKind(lite_curKind)))) && ((!((((((lite$textLength(lite_curKind)) > (0n))) && (((lite$textAt(lite_curKind, 0n, 4339)) === ("(")))))))))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((((("cannot access field ") + (lite_label))) + (" on "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_curKind))));
                 }
@@ -38564,7 +38571,7 @@ export function main(lite$write?: (text: string) => void): string {
             if (((lite_opIdx) < (0n))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((((("type ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_curKind)))) + (" has no operation "))) + (lite_label)));
             }
-            if (((((lite_afterLabel) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterLabel, 544724)) !== ("("))))) {
+            if (((((lite_afterLabel) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterLabel, 545525)) !== ("("))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((((((("type operation ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_curKind)))) + ("."))) + (lite_label))) + (" must be called with (...)")));
             }
             const lite_recvParsed = { kind: lite_curKind, code: lite_curCode, intValue: (lite_entry).intValue, textValue: (lite_entry).textValue, constant: false, next: lite_pos };
@@ -38594,31 +38601,31 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_recvLocalIdx = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$findLocalIndexByRuntime(lite_locals, (lite_left).code);
         void lite_recvLocalIdx;
         while (Boolean(true)) {
-            if ((((((lite_left).next) > (0n))) && (((lite$textAt(lite_source, lite$subtractInt((lite_left).next, 1n, 545954), 545941)) === ("}"))))) {
+            if ((((((lite_left).next) > (0n))) && (((lite$textAt(lite_source, lite$subtractInt((lite_left).next, 1n, 546755), 546742)) === ("}"))))) {
                 break;
             }
             const lite_postPosition = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_left).next, lite_prefix);
             void lite_postPosition;
             const lite_sourceLen = lite$textLength(lite_source);
             void lite_sourceLen;
-            if (((((lite_postPosition) < (lite_sourceLen))) && (((lite$textAt(lite_source, lite_postPosition, 546132)) === ("."))))) {
+            if (((((lite_postPosition) < (lite_sourceLen))) && (((lite$textAt(lite_source, lite_postPosition, 546933)) === ("."))))) {
                 const lite_curRecvLocalIdx = lite_recvLocalIdx;
                 void lite_curRecvLocalIdx;
                 lite_recvLocalIdx = (-1n);
-                const lite_labelStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 546299), lite_prefix);
+                const lite_labelStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 547100), lite_prefix);
                 void lite_labelStart;
-                if (((((lite_labelStart) < (lite_sourceLen))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_labelStart, 546362))))) {
+                if (((((lite_labelStart) < (lite_sourceLen))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_labelStart, 547163))))) {
                     let lite_end = lite_labelStart;
                     void lite_end;
                     let lite_fieldIndex = 0n;
                     void lite_fieldIndex;
-                    while (((((lite_end) < (lite_sourceLen))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_end, 546513))))) {
-                        lite_fieldIndex = lite$addInt(lite$multiplyInt(lite_fieldIndex, 10n, 546577), liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$decimalDigit(lite$textAt(lite_source, lite_end, 546611)), 546582);
-                        lite_end = lite$addInt(lite_end, 1n, 546651);
+                    while (((((lite_end) < (lite_sourceLen))) && (liteFn$lib$core$text$tp_String_op_isDigit(lite$textAt(lite_source, lite_end, 547314))))) {
+                        lite_fieldIndex = lite$addInt(lite$multiplyInt(lite_fieldIndex, 10n, 547378), liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$decimalDigit(lite$textAt(lite_source, lite_end, 547412)), 547383);
+                        lite_end = lite$addInt(lite_end, 1n, 547452);
                     }
                     if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isArrayKind((lite_left).kind)) {
                         if (((lite_fieldIndex) >= (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$arrayExtent((lite_left).kind)))) {
-                            liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("array index ") + (lite$textSlice(lite_source, lite_labelStart, lite_end, 546882)))) + (" out of bounds")));
+                            liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("array index ") + (lite$textSlice(lite_source, lite_labelStart, lite_end, 547683)))) + (" out of bounds")));
                         }
                         const lite_arrElKind = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$arrayElementKind((lite_left).kind);
                         void lite_arrElKind;
@@ -38626,31 +38633,31 @@ export function main(lite$write?: (text: string) => void): string {
                         void lite_arrElemCode;
                         lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$withMarkers({ kind: lite_arrElKind, code: lite_arrElemCode, intValue: 0n, textValue: "", constant: false, next: lite_end }, (Boolean(lite_inferMode) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers("", lite_left) : ""));
                     } else if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isEnumKind((lite_left).kind)) {
-                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_postPosition, lite_prefix, (("enum values do not support positional field access .") + (lite$textSlice(lite_source, lite_labelStart, lite_end, 547826))));
+                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_postPosition, lite_prefix, (("enum values do not support positional field access .") + (lite$textSlice(lite_source, lite_labelStart, lite_end, 548627))));
                     } else if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordKind((lite_left).kind)) {
-                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_postPosition, lite_prefix, (("record values do not support positional field access .") + (lite$textSlice(lite_source, lite_labelStart, lite_end, 548039))));
+                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_postPosition, lite_prefix, (("record values do not support positional field access .") + (lite$textSlice(lite_source, lite_labelStart, lite_end, 548840))));
                     } else if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isTupleKind((lite_left).kind)))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_postPosition, lite_prefix, "field access requires a tuple or module value");
                     } else {
                         const lite_comp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$tupleComponent((lite_left).kind, lite_fieldIndex);
                         void lite_comp;
                         if ((((lite_comp).kind) === (""))) {
-                            liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (("tuple has no field ") + (lite$textSlice(lite_source, lite_labelStart, lite_end, 548475))));
+                            liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (("tuple has no field ") + (lite$textSlice(lite_source, lite_labelStart, lite_end, 549276))));
                         }
                         const lite_tProp = (Boolean(((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cFieldName((lite_comp).prop) : (lite_comp).prop);
                         void lite_tProp;
                         lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$withMarkers({ kind: (lite_comp).kind, code: (((((("(") + ((lite_left).code))) + (")."))) + (lite_tProp)), intValue: 0n, textValue: "", constant: false, next: lite_end }, (Boolean(lite_inferMode) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers("", lite_left) : ""));
                     }
-                } else if (((((lite_labelStart) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_labelStart, 548976)) === ("$"))))) {
-                    const lite_hookEnd = (Boolean(((((lite$addInt(lite_labelStart, 1n, 549041)) < (lite$textLength(lite_source)))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite$addInt(lite_labelStart, 1n, 549088), 549074))))) ? liteFn$lib$core$text$tp_String_op_skipName(lite_source, lite$addInt(lite_labelStart, 1n, 549156)) : lite$addInt(lite_labelStart, 1n, 549217));
+                } else if (((((lite_labelStart) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_labelStart, 549777)) === ("$"))))) {
+                    const lite_hookEnd = (Boolean(((((lite$addInt(lite_labelStart, 1n, 549842)) < (lite$textLength(lite_source)))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite$addInt(lite_labelStart, 1n, 549889), 549875))))) ? liteFn$lib$core$text$tp_String_op_skipName(lite_source, lite$addInt(lite_labelStart, 1n, 549957)) : lite$addInt(lite_labelStart, 1n, 550018));
                     void lite_hookEnd;
-                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("compiler hook ") + (lite$textSlice(lite_source, lite_labelStart, lite_hookEnd, 549324)))) + (" cannot be called directly; use [...] indexing")));
-                } else if (((((lite_labelStart) >= (lite$textLength(lite_source)))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_labelStart, 549470))))))) {
+                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((("compiler hook ") + (lite$textSlice(lite_source, lite_labelStart, lite_hookEnd, 550125)))) + (" cannot be called directly; use [...] indexing")));
+                } else if (((((lite_labelStart) >= (lite$textLength(lite_source)))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_labelStart, 550271))))))) {
                     break;
                 } else {
                     const lite_labelEnd = (lite$textSkipWhile(lite_source, lite_labelStart, false));
                     void lite_labelEnd;
-                    const lite_label = lite$textSlice(lite_source, lite_labelStart, lite_labelEnd, 549634);
+                    const lite_label = lite$textSlice(lite_source, lite_labelStart, lite_labelEnd, 550435);
                     void lite_label;
                     if ((((lite_left).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_MODULE))) {
                         const lite_qualified = (((((lite_left).textValue) + ("."))) + (lite_label));
@@ -38662,7 +38669,7 @@ export function main(lite$write?: (text: string) => void): string {
                         } else {
                             const lite_afterMemberLabel = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_labelEnd, lite_prefix);
                             void lite_afterMemberLabel;
-                            if (((((((lite_afterMemberLabel) < (lite$textLength(lite_source)))) && ((((((((lite$textAt(lite_source, lite_afterMemberLabel, 550300)) === ("."))) || (((lite$textAt(lite_source, lite_afterMemberLabel, 550338)) === ("{"))))) || (((lite$textAt(lite_source, lite_afterMemberLabel, 550376)) === ("<")))))))) && ((((liteFn$_p__p_$_p__p_$compiler$src$symbol__table$findAlias(lite_aliases, lite_qualified))) >= (0n))))) {
+                            if (((((((lite_afterMemberLabel) < (lite$textLength(lite_source)))) && ((((((((lite$textAt(lite_source, lite_afterMemberLabel, 551101)) === ("."))) || (((lite$textAt(lite_source, lite_afterMemberLabel, 551139)) === ("{"))))) || (((lite$textAt(lite_source, lite_afterMemberLabel, 551177)) === ("<")))))))) && ((((liteFn$_p__p_$_p__p_$compiler$src$symbol__table$findAlias(lite_aliases, lite_qualified))) >= (0n))))) {
                                 let lite_modTypeKind = "";
                                 void lite_modTypeKind;
                                 let lite_modTypeOwnerKey = "";
@@ -38673,7 +38680,7 @@ export function main(lite$write?: (text: string) => void): string {
                                 void lite_modAliasTplKind;
                                 let lite_modDotOrBracePos = lite_afterMemberLabel;
                                 void lite_modDotOrBracePos;
-                                const lite_isModTypeApp = ((lite$textAt(lite_source, lite_afterMemberLabel, 550791)) === ("<"));
+                                const lite_isModTypeApp = ((lite$textAt(lite_source, lite_afterMemberLabel, 551592)) === ("<"));
                                 void lite_isModTypeApp;
                                 if (lite_isModTypeApp) {
                                     if (lite_inferMode) {
@@ -38694,7 +38701,7 @@ export function main(lite$write?: (text: string) => void): string {
                                         lite_modTypeOwnerKey = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$typeOpOwnerKey(lite_modTypeKind);
                                         lite_modDotOrBracePos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_parsedModType).next, lite_prefix);
                                     }
-                                } else if (((lite$textAt(lite_source, lite_afterMemberLabel, 552109)) === ("."))) {
+                                } else if (((lite$textAt(lite_source, lite_afterMemberLabel, 552910)) === ("."))) {
                                     const lite_genInfo = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$genericAliasTemplateInfo(lite_source, lite_labelStart, lite_prefix, lite_aliases, lite_qualified);
                                     void lite_genInfo;
                                     if ((((lite_genInfo).ownerKey) !== (""))) {
@@ -38739,7 +38746,7 @@ export function main(lite$write?: (text: string) => void): string {
                                         }
                                     }
                                 }
-                                if (((((lite_modDotOrBracePos) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_modDotOrBracePos, 555342)) === ("{"))))) {
+                                if (((((lite_modDotOrBracePos) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_modDotOrBracePos, 556143)) === ("{"))))) {
                                     if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordKind(lite_modTypeKind)))) {
                                         if (lite_inferMode) {
                                             return { kind: "", code: "", intValue: 0n, textValue: "", constant: false, next: lite_exprStart };
@@ -38747,20 +38754,20 @@ export function main(lite$write?: (text: string) => void): string {
                                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (("record construction requires a record type, got ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_modTypeKind))));
                                     }
                                     lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseRecordLiteral(lite_target, lite_source, lite_modDotOrBracePos, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_modTypeKind, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
-                                } else if (((((lite_modDotOrBracePos) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_modDotOrBracePos, 556144)) === ("."))))) {
-                                    const lite_caseStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_modDotOrBracePos, 1n, 556262), lite_prefix);
+                                } else if (((((lite_modDotOrBracePos) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_modDotOrBracePos, 556945)) === ("."))))) {
+                                    const lite_caseStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_modDotOrBracePos, 1n, 557063), lite_prefix);
                                     void lite_caseStart;
-                                    if (((((lite_caseStart) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_caseStart, 556350)) === ("$"))))) {
-                                        const lite_hookEnd = (Boolean(((((lite$addInt(lite_caseStart, 1n, 556433)) < (lite$textLength(lite_source)))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite$addInt(lite_caseStart, 1n, 556479), 556466))))) ? liteFn$lib$core$text$tp_String_op_skipName(lite_source, lite$addInt(lite_caseStart, 1n, 556566)) : lite$addInt(lite_caseStart, 1n, 556666));
+                                    if (((((lite_caseStart) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_caseStart, 557151)) === ("$"))))) {
+                                        const lite_hookEnd = (Boolean(((((lite$addInt(lite_caseStart, 1n, 557234)) < (lite$textLength(lite_source)))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite$addInt(lite_caseStart, 1n, 557280), 557267))))) ? liteFn$lib$core$text$tp_String_op_skipName(lite_source, lite$addInt(lite_caseStart, 1n, 557367)) : lite$addInt(lite_caseStart, 1n, 557467));
                                         void lite_hookEnd;
-                                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_caseStart, lite_prefix, (((("compiler hook ") + (lite$textSlice(lite_source, lite_caseStart, lite_hookEnd, 556812)))) + (" cannot be referenced directly; use [...] indexing")));
+                                        liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_caseStart, lite_prefix, (((("compiler hook ") + (lite$textSlice(lite_source, lite_caseStart, lite_hookEnd, 557613)))) + (" cannot be referenced directly; use [...] indexing")));
                                     }
-                                    if (((((lite_caseStart) >= (lite$textLength(lite_source)))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_caseStart, 557007))))))) {
+                                    if (((((lite_caseStart) >= (lite$textLength(lite_source)))) || ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_caseStart, 557808))))))) {
                                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_caseStart, lite_prefix, (((("expected member name after ") + (lite_qualified))) + (".")));
                                     }
                                     const lite_caseEnd = (lite$textSkipWhile(lite_source, lite_caseStart, false));
                                     void lite_caseEnd;
-                                    const lite_caseName = lite$textSlice(lite_source, lite_caseStart, lite_caseEnd, 557320);
+                                    const lite_caseName = lite$textSlice(lite_source, lite_caseStart, lite_caseEnd, 558121);
                                     void lite_caseName;
                                     let lite_handledModMember = false;
                                     void lite_handledModMember;
@@ -38811,7 +38818,7 @@ export function main(lite$write?: (text: string) => void): string {
                                 if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_labelEnd, lite_prefix))) {
                                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, "module members are immutable");
                                 }
-                                const lite_member = lite$listAt(lite_locals, lite_memberIndex, 561220);
+                                const lite_member = lite$listAt(lite_locals, lite_memberIndex, 562021);
                                 void lite_member;
                                 lite_left = { kind: (lite_member).kind, code: (lite_member).runtime, intValue: (lite_member).intValue, textValue: (lite_member).textValue, constant: (lite_member).constant, next: lite_labelEnd };
                             }
@@ -38837,26 +38844,26 @@ export function main(lite$write?: (text: string) => void): string {
                             } else if (liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isIntKind(lite_backing)) {
                                 const lite_vcLen = lite$textLength((lite_cInfo).valueCode);
                                 void lite_vcLen;
-                                if (((((lite_vcLen) >= (2n))) && (((lite$textAt((lite_cInfo).valueCode, lite$subtractInt(lite_vcLen, 1n, 562486), 562477)) === ("n"))))) {
-                                    const lite_isNeg = ((lite$textAt((lite_cInfo).valueCode, 0n, 562557)) === ("-"));
+                                if (((((lite_vcLen) >= (2n))) && (((lite$textAt((lite_cInfo).valueCode, lite$subtractInt(lite_vcLen, 1n, 563287), 563278)) === ("n"))))) {
+                                    const lite_isNeg = ((lite$textAt((lite_cInfo).valueCode, 0n, 563358)) === ("-"));
                                     void lite_isNeg;
                                     const lite_dStart = (Boolean(lite_isNeg) ? 1n : 0n);
                                     void lite_dStart;
-                                    if (((lite_dStart) < (lite$subtractInt(lite_vcLen, 1n, 562690)))) {
-                                        const lite_mag = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$parseDigits((lite_cInfo).valueCode, lite_dStart, lite$subtractInt(lite_vcLen, 1n, 562789));
+                                    if (((lite_dStart) < (lite$subtractInt(lite_vcLen, 1n, 563491)))) {
+                                        const lite_mag = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$parseDigits((lite_cInfo).valueCode, lite_dStart, lite$subtractInt(lite_vcLen, 1n, 563590));
                                         void lite_mag;
                                         lite_evConst = true;
-                                        lite_evInt = (Boolean(lite_isNeg) ? lite$negateInt(lite_mag, 562902) : lite_mag);
+                                        lite_evInt = (Boolean(lite_isNeg) ? lite$negateInt(lite_mag, 563703) : lite_mag);
                                     }
                                     if (((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) {
-                                        lite_emittedValCode = liteFn$_p__p_$_p__p_$compiler$src$frontend__ir$targetIntLiteralCode(lite_target, lite_evInt, false, lite$textSlice((lite_cInfo).valueCode, 0n, lite$subtractInt(lite_vcLen, 1n, 563146), 563131));
+                                        lite_emittedValCode = liteFn$_p__p_$_p__p_$compiler$src$frontend__ir$targetIntLiteralCode(lite_target, lite_evInt, false, lite$textSlice((lite_cInfo).valueCode, 0n, lite$subtractInt(lite_vcLen, 1n, 563947), 563932));
                                     }
                                 }
                             } else if (((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && ((((((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT32))) || (((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT)))))))) {
                                 if (((liteFn$lib$core$text$tp_String_op_startsWithAt(lite_emittedValCode, 0n, "Number(\"")) && (((lite$textLength(lite_emittedValCode)) > (10n))))) {
-                                    lite_emittedValCode = lite$textSlice(lite_emittedValCode, 8n, lite$subtractInt(lite$textLength(lite_emittedValCode), 2n, 563515), 563482);
+                                    lite_emittedValCode = lite$textSlice(lite_emittedValCode, 8n, lite$subtractInt(lite$textLength(lite_emittedValCode), 2n, 564316), 564283);
                                 } else if (((liteFn$lib$core$text$tp_String_op_startsWithAt(lite_emittedValCode, 0n, "Math.fround(Number(\"")) && (((lite$textLength(lite_emittedValCode)) > (23n))))) {
-                                    lite_emittedValCode = lite$textSlice(lite_emittedValCode, 20n, lite$subtractInt(lite$textLength(lite_emittedValCode), 3n, 563748), 563714);
+                                    lite_emittedValCode = lite$textSlice(lite_emittedValCode, 20n, lite$subtractInt(lite$textLength(lite_emittedValCode), 3n, 564549), 564515);
                                 }
                             } else if (((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_STRING))))) {
                                 lite_emittedValCode = (((("LT_STR(") + (lite_emittedValCode))) + (")"));
@@ -38872,10 +38879,10 @@ export function main(lite$write?: (text: string) => void): string {
                             while (((lite_ci) < (lite_cCount))) {
                                 const lite_rawVal = (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$enumCaseAt((lite_left).kind, lite_ci)).valueCode;
                                 void lite_rawVal;
-                                const lite_itemVal = (Boolean(((((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isIntKind(lite_backing)))) && (((lite$textLength(lite_rawVal)) >= (2n))))) && (((lite$textAt(lite_rawVal, lite$subtractInt(lite$textLength(lite_rawVal), 1n, 564691), 564672)) === ("n"))))) ? lite$textSlice(lite_rawVal, 0n, lite$subtractInt(lite$textLength(lite_rawVal), 1n, 564769), 564744) : (Boolean(((((((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isIntKind(lite_backing)))) && (((lite$textLength(lite_rawVal)) >= (4n))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawVal, 0n, "(-")))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawVal, lite$subtractInt(lite$textLength(lite_rawVal), 2n, 564963), "n)")))) ? ((lite$textSlice(lite_rawVal, 0n, lite$subtractInt(lite$textLength(lite_rawVal), 2n, 565040), 565015)) + (")")) : (Boolean(((((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && ((((((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT32))) || (((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT)))))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawVal, 0n, "Number(\"")))) && (((lite$textLength(lite_rawVal)) > (10n))))) ? lite$textSlice(lite_rawVal, 8n, lite$subtractInt(lite$textLength(lite_rawVal), 2n, 565275), 565250) : (Boolean(((((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && ((((((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT32))) || (((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT)))))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawVal, 0n, "Math.fround(Number(\"")))) && (((lite$textLength(lite_rawVal)) > (23n))))) ? lite$textSlice(lite_rawVal, 20n, lite$subtractInt(lite$textLength(lite_rawVal), 3n, 565517), 565491) : (Boolean(((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_STRING))))) ? (((("LT_STR(") + (lite_rawVal))) + (")")) : lite_rawVal)))));
+                                const lite_itemVal = (Boolean(((((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isIntKind(lite_backing)))) && (((lite$textLength(lite_rawVal)) >= (2n))))) && (((lite$textAt(lite_rawVal, lite$subtractInt(lite$textLength(lite_rawVal), 1n, 565492), 565473)) === ("n"))))) ? lite$textSlice(lite_rawVal, 0n, lite$subtractInt(lite$textLength(lite_rawVal), 1n, 565570), 565545) : (Boolean(((((((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isIntKind(lite_backing)))) && (((lite$textLength(lite_rawVal)) >= (4n))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawVal, 0n, "(-")))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawVal, lite$subtractInt(lite$textLength(lite_rawVal), 2n, 565764), "n)")))) ? ((lite$textSlice(lite_rawVal, 0n, lite$subtractInt(lite$textLength(lite_rawVal), 2n, 565841), 565816)) + (")")) : (Boolean(((((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && ((((((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT32))) || (((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT)))))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawVal, 0n, "Number(\"")))) && (((lite$textLength(lite_rawVal)) > (10n))))) ? lite$textSlice(lite_rawVal, 8n, lite$subtractInt(lite$textLength(lite_rawVal), 2n, 566076), 566051) : (Boolean(((((((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && ((((((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT32))) || (((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT)))))))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_rawVal, 0n, "Math.fround(Number(\"")))) && (((lite$textLength(lite_rawVal)) > (23n))))) ? lite$textSlice(lite_rawVal, 20n, lite$subtractInt(lite$textLength(lite_rawVal), 3n, 566318), 566292) : (Boolean(((((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) && (((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_STRING))))) ? (((("LT_STR(") + (lite_rawVal))) + (")")) : lite_rawVal)))));
                                 void lite_itemVal;
                                 void (lite_vals.push(lite_itemVal));
-                                lite_ci = lite$addInt(lite_ci, 1n, 565876);
+                                lite_ci = lite$addInt(lite_ci, 1n, 566677);
                             }
                             const lite_lookupCode = (Boolean(((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$TARGET_C))) ? (() => {
                                 const lite_cElemType = (Boolean(liteFn$_p__p_$_p__p_$compiler$src$numeric__literals$isIntKind(lite_backing)) ? "const int64_t" : (Boolean(((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_BOOL))) ? "const bool" : (Boolean((((((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT32))) || (((lite_backing) === (lite$m$_p__p_$_p__p_$compiler$src$numeric__literals$KIND_FLOAT)))))) ? "const double" : "const lt_str")));
@@ -38901,7 +38908,7 @@ export function main(lite$write?: (text: string) => void): string {
                         const lite_afterOpLabel = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_labelEnd, lite_prefix);
                         void lite_afterOpLabel;
                         if (((lite_opIdx) >= (0n))) {
-                            if (((((lite_afterOpLabel) >= (lite_sourceLen))) || (((lite$textAt(lite_source, lite_afterOpLabel, 567803)) !== ("("))))) {
+                            if (((((lite_afterOpLabel) >= (lite_sourceLen))) || (((lite$textAt(lite_source, lite_afterOpLabel, 568604)) !== ("("))))) {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_labelStart, lite_prefix, (((((((("type operation ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_left).kind)))) + ("."))) + (lite_label))) + (" must be called with (...)")));
                             }
                             lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseTypeOpDotCall(lite_target, lite_source, lite_labelStart, lite_afterOpLabel, lite_left, lite_curRecvLocalIdx, lite_opIdx, lite_label, false, "", lite_expected, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
@@ -38926,13 +38933,13 @@ export function main(lite$write?: (text: string) => void): string {
                         }
                     }
                 }
-            } else if (((((lite_postPosition) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_postPosition, 569872)) === ("["))))) {
+            } else if (((((lite_postPosition) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_postPosition, 570673)) === ("["))))) {
                 const lite_isSliceBrk = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$isBracketRangeSlice(lite_source, lite_postPosition, lite_prefix);
                 void lite_isSliceBrk;
                 const lite_getHook = (Boolean((!(lite_isSliceBrk))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$resolveIndexHookOp(lite_target, lite_source, lite_postPosition, lite_prefix, (lite_left).kind, "$getIndex", lite_functions, lite_params, lite_inferMode) : { found: false, runtime: "", keyKind: "", valKind: "", resultKind: "" });
                 void lite_getHook;
                 if ((lite_getHook).found) {
-                    const lite_indexStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 570372), lite_prefix);
+                    const lite_indexStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 571173), lite_prefix);
                     void lite_indexStart;
                     const lite_key = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite_indexStart, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, (lite_getHook).keyKind, 0n, lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
                     void lite_key;
@@ -38958,7 +38965,7 @@ export function main(lite$write?: (text: string) => void): string {
                     if ((((((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isListKind((lite_left).kind)))) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isArrayKind((lite_left).kind)))))) && ((!(lite_isStrSlice))))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_postPosition, lite_prefix, (((("type ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_left).kind)))) + (" does not define $getIndex for indexing")));
                     }
-                    const lite_indexStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 572565), lite_prefix);
+                    const lite_indexStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 573366), lite_prefix);
                     void lite_indexStart;
                     let lite_isRangeSlice = false;
                     void lite_isRangeSlice;
@@ -38977,13 +38984,13 @@ export function main(lite$write?: (text: string) => void): string {
                     if (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_indexStart, "..")) {
                         lite_isRangeSlice = true;
                         lite_isIncSlice = liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_indexStart, "..=");
-                        const lite_afterDots = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_indexStart, ((Boolean(lite_isIncSlice) ? 3n : 2n)), 573269), lite_prefix);
+                        const lite_afterDots = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_indexStart, ((Boolean(lite_isIncSlice) ? 3n : 2n)), 574070), lite_prefix);
                         void lite_afterDots;
-                        if (((((lite_afterDots) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_afterDots, 573376)) === ("]"))))) {
+                        if (((((lite_afterDots) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_afterDots, 574177)) === ("]"))))) {
                             if (lite_isIncSlice) {
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_afterDots, lite_prefix, "expected end index after ..=");
                             }
-                            lite_sliceCloseNext = lite$addInt(lite_afterDots, 1n, 573618);
+                            lite_sliceCloseNext = lite$addInt(lite_afterDots, 1n, 574419);
                         } else {
                             const lite_endParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite_afterDots, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_INT, 0n, lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
                             void lite_endParsed;
@@ -39014,13 +39021,13 @@ export function main(lite$write?: (text: string) => void): string {
                             }
                             lite_sliceStartCode = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$assignValueCode(lite_target, lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_INT, (lite_index).kind, (lite_index).code);
                             lite_isIncSlice = liteFn$lib$core$text$tp_String_op_startsWithAt(lite_source, lite_afterFirst, "..=");
-                            const lite_afterDots = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFirst, ((Boolean(lite_isIncSlice) ? 3n : 2n)), 575851), lite_prefix);
+                            const lite_afterDots = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterFirst, ((Boolean(lite_isIncSlice) ? 3n : 2n)), 576652), lite_prefix);
                             void lite_afterDots;
-                            if (((((lite_afterDots) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_afterDots, 575962)) === ("]"))))) {
+                            if (((((lite_afterDots) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_afterDots, 576763)) === ("]"))))) {
                                 if (lite_isIncSlice) {
                                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_afterDots, lite_prefix, "expected end index after ..=");
                                 }
-                                lite_sliceCloseNext = lite$addInt(lite_afterDots, 1n, 576220);
+                                lite_sliceCloseNext = lite$addInt(lite_afterDots, 1n, 577021);
                             } else {
                                 const lite_endParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite_afterDots, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_INT, 0n, lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
                                 void lite_endParsed;
@@ -39064,7 +39071,7 @@ export function main(lite$write?: (text: string) => void): string {
                         }
                     }
                 }
-            } else if ((((((lite_left).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_MODULE_FUNCTION))) || ((((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isFnKind((lite_left).kind)) && (((lite_postPosition) < (lite$textLength(lite_source)))))) && (((lite$textAt(lite_source, lite_postPosition, 580819)) === ("(")))))))) {
+            } else if ((((((lite_left).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_MODULE_FUNCTION))) || ((((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isFnKind((lite_left).kind)) && (((lite_postPosition) < (lite$textLength(lite_source)))))) && (((lite$textAt(lite_source, lite_postPosition, 581620)) === ("(")))))))) {
                 const lite_isModuleFn = (((lite_left).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_MODULE_FUNCTION));
                 void lite_isModuleFn;
                 let lite_handleUserCall = (!(lite_isModuleFn));
@@ -39086,15 +39093,15 @@ export function main(lite$write?: (text: string) => void): string {
                 let lite_preGenBindings = "";
                 void lite_preGenBindings;
                 if (lite_isModuleFn) {
-                    const lite_info = lite$listAt(lite_functions, (lite_left).intValue, 581360);
+                    const lite_info = lite$listAt(lite_functions, (lite_left).intValue, 582161);
                     void lite_info;
                     lite_calleeDisplay = (lite_left).textValue;
                     const lite_codeSep = liteFn$lib$core$text$tp_String_op_indexOf((lite_left).code, "|", 0n);
                     void lite_codeSep;
-                    const lite_posText = (Boolean(((lite_codeSep) < (0n))) ? (lite_left).code : lite$textSlice((lite_left).code, 0n, lite_codeSep, 581551));
+                    const lite_posText = (Boolean(((lite_codeSep) < (0n))) ? (lite_left).code : lite$textSlice((lite_left).code, 0n, lite_codeSep, 582352));
                     void lite_posText;
                     if (((lite_codeSep) >= (0n))) {
-                        lite_preGenBindings = lite$textSlice((lite_left).code, lite$addInt(lite_codeSep, 1n, 581667), lite$textLength((lite_left).code), 581653);
+                        lite_preGenBindings = lite$textSlice((lite_left).code, lite$addInt(lite_codeSep, 1n, 582468), lite$textLength((lite_left).code), 582454);
                     }
                     lite_errPos = (Boolean(((lite_posText) !== (""))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$parseDigits(lite_posText, 0n, lite$textLength(lite_posText)) : lite_exprStart);
                     let lite_listOpName = "";
@@ -39171,8 +39178,8 @@ export function main(lite$write?: (text: string) => void): string {
                         lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseSetIntrinsicCall(lite_target, lite_source, lite_postPosition, lite_setOpName, lite_setOpName, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
                     } else if ((((lite_info).count) < (0n))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_errPos, lite_prefix, "host output functions are standalone statements");
-                    } else if (((((liteFn$lib$core$text$tp_String_op_startsWithAt((lite_info).runtime, 0n, "$gen:")) && (((lite_postPosition) < (lite$textLength(lite_source)))))) && (((lite$textAt(lite_source, lite_postPosition, 585380)) === ("<"))))) {
-                        const lite_tplKey = lite$textSlice((lite_info).runtime, 5n, lite$textLength((lite_info).runtime), 585449);
+                    } else if (((((liteFn$lib$core$text$tp_String_op_startsWithAt((lite_info).runtime, 0n, "$gen:")) && (((lite_postPosition) < (lite$textLength(lite_source)))))) && (((lite$textAt(lite_source, lite_postPosition, 586181)) === ("<"))))) {
+                        const lite_tplKey = lite$textSlice((lite_info).runtime, 5n, lite$textLength((lite_info).runtime), 586250);
                         void lite_tplKey;
                         const lite_tpl = liteFn$_p__p_$_p__p_$compiler$src$generics$getTemplate((lite$mapGetOr((lite$m$_p__p_$_p__p_$compiler$src$generics$templateByKey), lite_tplKey, (-1n))));
                         void lite_tpl;
@@ -39196,9 +39203,9 @@ export function main(lite$write?: (text: string) => void): string {
                                 void (lite_remainingSpecs.push(lite_sp));
                             }
                         }
-                        let lite_tpCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 586383), lite_prefix);
+                        let lite_tpCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 587184), lite_prefix);
                         void lite_tpCursor;
-                        if (((((lite_tpCursor) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_tpCursor, 586458)) === (">"))))) {
+                        if (((((lite_tpCursor) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_tpCursor, 587259)) === (">"))))) {
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_tpCursor, lite_prefix, (("expected at least one type argument in call to ") + (lite_calleeDisplay)));
                         }
                         const lite_explicitKinds: string[] = [];
@@ -39212,7 +39219,7 @@ export function main(lite$write?: (text: string) => void): string {
                                 }
                                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_tpCursor, lite_prefix, (((((((("function ") + (lite_calleeDisplay))) + (" expects "))) + (liteFn$lib$core$int$tp_Int_op_toText(BigInt((lite_remainingSpecs).length))))) + (" comptime argument(s)")));
                             }
-                            const lite_pSpec = lite$listAt(lite_remainingSpecs, lite_tpIdx, 587271);
+                            const lite_pSpec = lite$listAt(lite_remainingSpecs, lite_tpIdx, 588072);
                             void lite_pSpec;
                             if (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isTypeParamKind((lite_pSpec).kind)) {
                                 if (lite_inferMode) {
@@ -39243,25 +39250,25 @@ export function main(lite$write?: (text: string) => void): string {
                                 void (lite_explicitKinds.push((lite_valArg).token));
                                 lite_tpCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_valArg).next, lite_prefix);
                             }
-                            lite_tpIdx = lite$addInt(lite_tpIdx, 1n, 589043);
-                            if (((((lite_tpCursor) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_tpCursor, 589113)) === (","))))) {
-                                lite_tpCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_tpCursor, 1n, 589209), lite_prefix);
-                                if (((((lite_tpCursor) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_tpCursor, 589292)) === (">"))))) {
+                            lite_tpIdx = lite$addInt(lite_tpIdx, 1n, 589844);
+                            if (((((lite_tpCursor) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_tpCursor, 589914)) === (","))))) {
+                                lite_tpCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_tpCursor, 1n, 590010), lite_prefix);
+                                if (((((lite_tpCursor) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_tpCursor, 590093)) === (">"))))) {
                                     break;
                                 }
                             } else {
                                 break;
                             }
                         }
-                        if (((((lite_tpCursor) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_tpCursor, 589500)) !== (">"))))) {
+                        if (((((lite_tpCursor) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_tpCursor, 590301)) !== (">"))))) {
                             if (lite_inferMode) {
                                 return { kind: "", code: "", intValue: 0n, textValue: "", constant: false, next: lite_exprStart };
                             }
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_tpCursor, lite_prefix, (("expected > after type arguments in call to ") + (lite_calleeDisplay)));
                         }
-                        const lite_callOpenParen = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_tpCursor, 1n, 589935), lite_prefix);
+                        const lite_callOpenParen = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_tpCursor, 1n, 590736), lite_prefix);
                         void lite_callOpenParen;
-                        if (((((lite_callOpenParen) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_callOpenParen, 590015)) !== ("("))))) {
+                        if (((((lite_callOpenParen) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_callOpenParen, 590816)) !== ("("))))) {
                             if (lite_inferMode) {
                                 return { kind: "", code: "", intValue: 0n, textValue: "", constant: false, next: lite_exprStart };
                             }
@@ -39273,13 +39280,13 @@ export function main(lite$write?: (text: string) => void): string {
                         let lite_ei = 0n;
                         void lite_ei;
                         while (((lite_ei) < (BigInt((lite_remainingSpecs).length)))) {
-                            void (((lite_expMap).set((lite$listAt(lite_remainingSpecs, lite_ei, 590842)).name, lite$listAt(lite_explicitKinds, lite_ei, 590866)), undefined));
-                            lite_ei = lite$addInt(lite_ei, 1n, 590904);
+                            void (((lite_expMap).set((lite$listAt(lite_remainingSpecs, lite_ei, 591643)).name, lite$listAt(lite_explicitKinds, lite_ei, 591667)), undefined));
+                            lite_ei = lite$addInt(lite_ei, 1n, 591705);
                         }
                         const lite_explicitBindingsEnc = liteFn$_p__p_$_p__p_$compiler$src$generics$encodePartialBindings((lite_tpl).genericParams, lite_expMap);
                         void lite_explicitBindingsEnc;
-                        lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target, lite_source, lite_callOpenParen, lite_errPos, true, lite_calleeDisplay, (lite_info).runtime, lite_params, (lite_info).first, (lite_info).count, (lite_info).result, false, "", "", "", "", "", lite_explicitBindingsEnc, lite_expected, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
-                    } else if (((((lite_postPosition) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_postPosition, 591443)) !== ("("))))) {
+                        lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target, lite_source, lite_callOpenParen, lite_errPos, true, lite_calleeDisplay, (lite_info).runtime, lite_params, (lite_info).first, (lite_info).count, (lite_info).result, false, "", "", "", "", "", "", lite_explicitBindingsEnc, lite_expected, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
+                    } else if (((((lite_postPosition) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_postPosition, 592248)) !== ("("))))) {
                         if (liteFn$lib$core$text$tp_String_op_startsWithAt((lite_info).runtime, 0n, "$gen:")) {
                             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_errPos, lite_prefix, (((("cannot use generic function ") + (lite_calleeDisplay))) + (" as a value without calling it")));
                         }
@@ -39297,53 +39304,53 @@ export function main(lite$write?: (text: string) => void): string {
                             void lite_wRet;
                             let lite_wParamsBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
                             void lite_wParamsBuf;
-                            {
-                                const lite$mb_recv = { v: lite_wParamsBuf };
+                            void ((() => {
+                                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_wParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_wParamsBuf = lite$nv; } };
                                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "void *_env"));
-                                lite_wParamsBuf = lite$mb_recv.v;
-                            }
+                                return undefined;
+                            })());
                             let lite_wArgsBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
                             void lite_wArgsBuf;
                             let lite_wi = 0n;
                             void lite_wi;
                             while (((lite_wi) < ((lite_info).count))) {
-                                const lite_pK = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, lite$addInt((lite_info).first, lite_wi, 592551), 592540));
+                                const lite_pK = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, lite$addInt((lite_info).first, lite_wi, 593356), 593345));
                                 void lite_pK;
                                 const lite_aName = (("lt_a_") + ((String(lite_wi))));
                                 void lite_aName;
-                                {
-                                    const lite$mb_recv = { v: lite_wParamsBuf };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_wParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_wParamsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                                    lite_wParamsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_wParamsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_wParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_wParamsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$frontend__types$cValueType(lite_pK)));
-                                    lite_wParamsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_wParamsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_wParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_wParamsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " "));
-                                    lite_wParamsBuf = lite$mb_recv.v;
-                                }
-                                {
-                                    const lite$mb_recv = { v: lite_wParamsBuf };
+                                    return undefined;
+                                })());
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_wParamsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_wParamsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_aName));
-                                    lite_wParamsBuf = lite$mb_recv.v;
-                                }
+                                    return undefined;
+                                })());
                                 if (((lite_wi) > (0n))) {
-                                    {
-                                        const lite$mb_recv = { v: lite_wArgsBuf };
+                                    void ((() => {
+                                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_wArgsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_wArgsBuf = lite$nv; } };
                                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                                        lite_wArgsBuf = lite$mb_recv.v;
-                                    }
+                                        return undefined;
+                                    })());
                                 }
-                                {
-                                    const lite$mb_recv = { v: lite_wArgsBuf };
+                                void ((() => {
+                                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_wArgsBuf; }, set v(lite$nv: { chunks: string[] }) { lite_wArgsBuf = lite$nv; } };
                                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_aName));
-                                    lite_wArgsBuf = lite$mb_recv.v;
-                                }
-                                lite_wi = lite$addInt(lite_wi, 1n, 593024);
+                                    return undefined;
+                                })());
+                                lite_wi = lite$addInt(lite_wi, 1n, 593829);
                             }
                             const lite_wParams = (liteFn$lib$core$list$tp_List_op_join([...((lite_wParamsBuf).chunks)], ""));
                             void lite_wParams;
@@ -39358,7 +39365,7 @@ export function main(lite$write?: (text: string) => void): string {
                             lite_left = { kind: lite_fnValKind, code: (lite_info).runtime, intValue: 0n, textValue: "", constant: false, next: (lite_left).next };
                         }
                     } else if (liteFn$lib$core$text$tp_String_op_startsWithAt((lite_info).runtime, 0n, "lite$")) {
-                        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 594181), lite_prefix);
+                        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_postPosition, 1n, 594986), lite_prefix);
                         void lite_cursor;
                         const lite_argumentCodes: string[] = [];
                         void lite_argumentCodes;
@@ -39368,9 +39375,9 @@ export function main(lite$write?: (text: string) => void): string {
                         void lite_argumentCount;
                         const lite_size = lite$textLength(lite_source);
                         void lite_size;
-                        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 594433)) !== (")"))))) {
+                        if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 595238)) !== (")"))))) {
                             while (Boolean(true)) {
-                                const lite_isNamed = (Boolean(liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, lite_cursor)) ? true : (Boolean(((((lite_cursor) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 594640))))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite$textSkipWhile(lite_source, lite_cursor, false)), lite_prefix)) : false));
+                                const lite_isNamed = (Boolean(liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, lite_cursor)) ? true : (Boolean(((((lite_cursor) < (lite_size))) && (liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 595445))))) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isSingleEquals(lite_source, liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite$textSkipWhile(lite_source, lite_cursor, false)), lite_prefix)) : false));
                                 void lite_isNamed;
                                 if (lite_isNamed) {
                                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (("named arguments are not supported for host function ") + (lite_calleeDisplay)));
@@ -39380,7 +39387,7 @@ export function main(lite$write?: (text: string) => void): string {
                                     void lite_suffix;
                                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_errPos, lite_prefix, (((((((((("function ") + (lite_calleeDisplay))) + (" expects "))) + (liteFn$lib$core$int$tp_Int_op_toText((lite_info).count)))) + (lite_suffix))) + (", got more")));
                                 }
-                                const lite_argExpected = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, lite$addInt((lite_info).first, lite_argumentCount, 595479), 595468));
+                                const lite_argExpected = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$paramKindOf(lite$listAt(lite_params, lite$addInt((lite_info).first, lite_argumentCount, 596284), 596273));
                                 void lite_argExpected;
                                 const lite_argument = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite_cursor, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_argExpected, 0n, lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
                                 void lite_argument;
@@ -39388,14 +39395,14 @@ export function main(lite$write?: (text: string) => void): string {
                                     lite_callMarkers = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers(lite_callMarkers, lite_argument);
                                 }
                                 if ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isCompatibleKind(lite_argExpected, (lite_argument).kind)))) {
-                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_argumentCount, 1n, 595978)))))) + (" of "))) + (lite_calleeDisplay))) + (" must be "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_argExpected)))) + (", got "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_argument).kind))));
+                                    liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, (((((((((((((("argument ") + (liteFn$lib$core$int$tp_Int_op_toText((lite$addInt(lite_argumentCount, 1n, 596783)))))) + (" of "))) + (lite_calleeDisplay))) + (" must be "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_argExpected)))) + (", got "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_argument).kind))));
                                 }
                                 void (lite_argumentCodes.push(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$assignReadOnlyArgCode(lite_target, lite_argExpected, (lite_argument).kind, (lite_argument).code)));
-                                lite_argumentCount = lite$addInt(lite_argumentCount, 1n, 596368);
+                                lite_argumentCount = lite$addInt(lite_argumentCount, 1n, 597173);
                                 lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_argument).next, lite_prefix);
-                                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 596516)) === (","))))) {
-                                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 596610), lite_prefix);
-                                    if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 596684)) === (")"))))) {
+                                if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 597321)) === (","))))) {
+                                    lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_cursor, 1n, 597415), lite_prefix);
+                                    if (((((lite_cursor) < (lite_size))) && (((lite$textAt(lite_source, lite_cursor, 597489)) === (")"))))) {
                                         break;
                                     }
                                 } else {
@@ -39447,12 +39454,12 @@ export function main(lite$write?: (text: string) => void): string {
                 }
                 if (lite_handleUserCall) {
                     if (((lite_preGenBindings) !== (""))) {
-                        lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target, lite_source, lite_postPosition, lite_errPos, lite_isModuleFn, lite_calleeDisplay, lite_callRuntime, lite_callParams, lite_callFirst, lite_callCount, lite_callResult, false, "", "", "", "", "", lite_preGenBindings, lite_expected, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
+                        lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCallWithRecv(lite_target, lite_source, lite_postPosition, lite_errPos, lite_isModuleFn, lite_calleeDisplay, lite_callRuntime, lite_callParams, lite_callFirst, lite_callCount, lite_callResult, false, "", "", "", "", "", "", lite_preGenBindings, lite_expected, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
                     } else {
                         lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseUserOrIndirectCall(lite_target, lite_source, lite_postPosition, lite_errPos, lite_isModuleFn, lite_calleeDisplay, lite_callRuntime, lite_callParams, lite_callFirst, lite_callCount, lite_callResult, lite_expected, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
                     }
                 }
-            } else if (((((lite_postPosition) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_postPosition, 600222)) === ("("))))) {
+            } else if (((((lite_postPosition) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_postPosition, 601031)) === ("("))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_postPosition, lite_prefix, (("cannot call non-function value of type ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_left).kind))));
             } else {
                 break;
@@ -39479,7 +39486,7 @@ export function main(lite$write?: (text: string) => void): string {
         let lite_left = lite_initialLeft;
         void lite_left;
         while (Boolean(true)) {
-            if ((((((lite_left).next) > (0n))) && (((lite$textAt(lite_source, lite$subtractInt((lite_left).next, 1n, 601000), 600987)) === ("}"))))) {
+            if ((((((lite_left).next) > (0n))) && (((lite$textAt(lite_source, lite$subtractInt((lite_left).next, 1n, 601809), 601796)) === ("}"))))) {
                 break;
             }
             const lite_operatorPosition = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_left).next, lite_prefix);
@@ -39502,18 +39509,18 @@ export function main(lite$write?: (text: string) => void): string {
             if ((((lite_operator).text) === ("**"))) {
                 let lite_signPosition = lite_exprStart;
                 void lite_signPosition;
-                while (((((lite_signPosition) < (lite_sourceLen))) && ((((((lite$textAt(lite_source, lite_signPosition, 601529)) === ("+"))) || (((lite$textAt(lite_source, lite_signPosition, 601563)) === ("-")))))))) {
-                    if (((lite$textAt(lite_source, lite_signPosition, 601616)) === ("-"))) {
+                while (((((lite_signPosition) < (lite_sourceLen))) && ((((((lite$textAt(lite_source, lite_signPosition, 602338)) === ("+"))) || (((lite$textAt(lite_source, lite_signPosition, 602372)) === ("-")))))))) {
+                    if (((lite$textAt(lite_source, lite_signPosition, 602425)) === ("-"))) {
                         liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_operatorPosition, lite_prefix, "group a negative power base as (-base) or negate the completed power as -(base ** exponent)");
                     }
-                    lite_signPosition = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_signPosition, 1n, 601894), lite_prefix);
+                    lite_signPosition = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_signPosition, 1n, 602703), lite_prefix);
                 }
             }
-            const lite_rightMinimum = (Boolean((((lite_operator).text) === ("**"))) ? lite_level : lite$addInt(lite_level, 1n, 602004));
+            const lite_rightMinimum = (Boolean((((lite_operator).text) === ("**"))) ? lite_level : lite$addInt(lite_level, 1n, 602813));
             void lite_rightMinimum;
             const lite_rightExpected = (Boolean(((((((((lite_operator).text) === ("=="))) || ((((lite_operator).text) === ("=!=")))))) && ((((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isEnumKind((lite_left).kind)) || (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isDistinctKind((lite_left).kind))))))) ? (lite_left).kind : "");
             void lite_rightExpected;
-            const lite_right = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite$addInt(lite_operatorPosition, (lite_operator).width, 602250), lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_rightExpected, lite_rightMinimum, lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
+            const lite_right = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite$addInt(lite_operatorPosition, (lite_operator).width, 603059), lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_rightExpected, lite_rightMinimum, lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
             void lite_right;
             let lite_opMarkers = (Boolean(lite_inferMode) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers(liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers("", lite_left), lite_right) : "");
             void lite_opMarkers;
@@ -39534,7 +39541,7 @@ export function main(lite$write?: (text: string) => void): string {
                         let lite_nextOp = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$comparisonOperatorAt(lite_source, lite_nextPos);
                         void lite_nextOp;
                         while (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isComparison((lite_nextOp).text)) {
-                            const lite_operand = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite$addInt(lite_nextPos, (lite_nextOp).width, 603402), lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, "", lite$addInt(lite_level, 1n, 603476), lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
+                            const lite_operand = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite$addInt(lite_nextPos, (lite_nextOp).width, 604211), lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, "", lite$addInt(lite_level, 1n, 604285), lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
                             void lite_operand;
                             lite_opMarkers = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers(lite_opMarkers, lite_operand);
                             lite_chainEnd = (lite_operand).next;
@@ -39588,7 +39595,7 @@ export function main(lite$write?: (text: string) => void): string {
                         let lite_nextOp = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$comparisonOperatorAt(lite_source, lite_nextPos);
                         void lite_nextOp;
                         while (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isComparison((lite_nextOp).text)) {
-                            const lite_operand = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite$addInt(lite_nextPos, (lite_nextOp).width, 606446), lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, "", lite$addInt(lite_level, 1n, 606520), lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
+                            const lite_operand = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite$addInt(lite_nextPos, (lite_nextOp).width, 607255), lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, "", lite$addInt(lite_level, 1n, 607329), lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
                             void lite_operand;
                             lite_opMarkers = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers(lite_opMarkers, lite_operand);
                             lite_chainEnd = (lite_operand).next;
@@ -39673,7 +39680,7 @@ export function main(lite$write?: (text: string) => void): string {
                     let lite_value = (((lite_firstPair).intValue) !== (0n));
                     void lite_value;
                     while (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isComparison((lite_nextOperator).text)) {
-                        const lite_operand = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite$addInt(lite_nextPosition, (lite_nextOperator).width, 611771), lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, "", lite$addInt(lite_level, 1n, 611851), lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
+                        const lite_operand = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite$addInt(lite_nextPosition, (lite_nextOperator).width, 612580), lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, "", lite$addInt(lite_level, 1n, 612660), lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
                         void lite_operand;
                         if (lite_inferMode) {
                             lite_opMarkers = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$collectParsedMarkers(lite_opMarkers, lite_operand);
@@ -39687,7 +39694,7 @@ export function main(lite$write?: (text: string) => void): string {
                         if (lite_constant) {
                             lite_value = ((lite_value) && ((((lite_pair).intValue) !== (0n))));
                         }
-                        lite_count = lite$addInt(lite_count, 1n, 612482);
+                        lite_count = lite$addInt(lite_count, 1n, 613291);
                         lite_previous = lite_operand;
                         lite_end = (lite_operand).next;
                         lite_nextPosition = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_end, lite_prefix);
@@ -39804,7 +39811,7 @@ export function main(lite$write?: (text: string) => void): string {
             lite_leaderStart = lite_start;
             const lite_leaderEnd = (lite$textSkipWhile(lite_source, lite_start, false));
             void lite_leaderEnd;
-            lite_leaderText = lite$textSlice(lite_source, lite_start, lite_leaderEnd, 620019);
+            lite_leaderText = lite$textSlice(lite_source, lite_start, lite_leaderEnd, 620828);
             lite_start = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_leaderEnd, lite_prefix);
             if (((liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_start, "and")) || (liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_start, "or")))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_start, lite_prefix, (((("leading ") + (lite_leaderText))) + (" may appear only once")));
@@ -39812,7 +39819,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         let lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__context$intParsed("", 0n, true, lite_start);
         void lite_left;
-        const lite_ch = lite$textAt(lite_source, lite_start, 620362);
+        const lite_ch = lite$textAt(lite_source, lite_start, 621171);
         void lite_ch;
         if (((lite_ch) === ("("))) {
             lite_left = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseParenOrTupleExpr(lite_target, lite_source, lite_start, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_expected, lite_minimum, lite_ctxs, lite_iifeDepth, lite_inferMode, lite_aliases);
@@ -39903,16 +39910,16 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_inner;
         let lite_parenCount = 0n;
         void lite_parenCount;
-        while (((((lite_inner) < (lite_sourceLen))) && (((lite$textAt(lite_source, lite_inner, 626455)) === ("("))))) {
-            lite_parenCount = lite$addInt(lite_parenCount, 1n, 626506);
-            lite_inner = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_inner, 1n, 626559), lite_prefix);
+        while (((((lite_inner) < (lite_sourceLen))) && (((lite$textAt(lite_source, lite_inner, 627264)) === ("("))))) {
+            lite_parenCount = lite$addInt(lite_parenCount, 1n, 627315);
+            lite_inner = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_inner, 1n, 627368), lite_prefix);
         }
         if ((!(liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_inner, "if")))) {
             return [];
         }
         const lite_result: { kind: string; name: string; runtime: string; code: string; intValue: bigint; textValue: string }[] = [];
         void lite_result;
-        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_inner, 2n, 626715), lite_prefix);
+        let lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_inner, 2n, 627524), lite_prefix);
         void lite_cursor;
         let lite_isFirst = true;
         void lite_isFirst;
@@ -39953,12 +39960,12 @@ export function main(lite$write?: (text: string) => void): string {
                 let lite_matched = true;
                 void lite_matched;
                 while (((lite_remaining) > (0n))) {
-                    if (((((lite_end) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_end, 629007)) !== (")"))))) {
+                    if (((((lite_end) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_end, 629816)) !== (")"))))) {
                         lite_matched = false;
                         break;
                     }
-                    lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_end, 1n, 629159), lite_prefix);
-                    lite_remaining = lite$subtractInt(lite_remaining, 1n, 629211);
+                    lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_end, 1n, 629968), lite_prefix);
+                    lite_remaining = lite$subtractInt(lite_remaining, 1n, 630020);
                 }
                 const lite_statementNext = (Boolean(lite_matched) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$consumeStatementEnd(lite_source, lite_end, lite_prefix) : (-1n));
                 void lite_statementNext;
@@ -39969,13 +39976,13 @@ export function main(lite$write?: (text: string) => void): string {
                 void (lite_result.push({ kind: lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$ITEM_KIND_END, name: "", runtime: "", code: "", intValue: lite_statementNext, textValue: "" }));
                 return [...(lite_result)];
             }
-            const lite_afterElse = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterBranch, 4n, 629843), lite_prefix);
+            const lite_afterElse = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterBranch, 4n, 630652), lite_prefix);
             void lite_afterElse;
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$rejectMisplacedTag(lite_source, lite_afterElse, lite_prefix, "block tag cannot appear after else");
             if ((!(liteFn$lib$core$text$tp_String_op_wordAt(lite_source, lite_afterElse, "if")))) {
                 return [];
             }
-            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterElse, 2n, 630091), lite_prefix);
+            lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterElse, 2n, 630900), lite_prefix);
         }
         return [];
     }
@@ -39998,9 +40005,9 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_inner;
         let lite_parenCount = 0n;
         void lite_parenCount;
-        while (((((lite_inner) < (lite_sourceLen))) && (((lite$textAt(lite_source, lite_inner, 630668)) === ("("))))) {
-            lite_parenCount = lite$addInt(lite_parenCount, 1n, 630719);
-            lite_inner = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_inner, 1n, 630772), lite_prefix);
+        while (((((lite_inner) < (lite_sourceLen))) && (((lite$textAt(lite_source, lite_inner, 631477)) === ("("))))) {
+            lite_parenCount = lite$addInt(lite_parenCount, 1n, 631528);
+            lite_inner = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_inner, 1n, 631581), lite_prefix);
         }
         const lite_ifKwPos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipOptionalScanTag(lite_source, lite_inner, lite_prefix, "if");
         void lite_ifKwPos;
@@ -40015,12 +40022,12 @@ export function main(lite$write?: (text: string) => void): string {
                 let lite_matched = true;
                 void lite_matched;
                 while (((lite_remaining) > (0n))) {
-                    if (((((lite_end) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_end, 631258)) !== (")"))))) {
+                    if (((((lite_end) >= (lite$textLength(lite_source)))) || (((lite$textAt(lite_source, lite_end, 632067)) !== (")"))))) {
                         lite_matched = false;
                         break;
                     }
-                    lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_end, 1n, 631410), lite_prefix);
-                    lite_remaining = lite$subtractInt(lite_remaining, 1n, 631462);
+                    lite_end = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_end, 1n, 632219), lite_prefix);
+                    lite_remaining = lite$subtractInt(lite_remaining, 1n, 632271);
                 }
                 if (((lite_matched) && (((liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$consumeStatementEnd(lite_source, lite_end, lite_prefix)) >= (0n))))) {
                     const lite_parsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite_inner, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, lite_expected, (-1n), lite_ctxs, 0n, false, "", lite_aliases);
@@ -40052,13 +40059,13 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_end;
             const lite_nextCheck = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipItemSeparators(lite_source, lite_end, lite_prefix);
             void lite_nextCheck;
-            lite_isTailClose = ((((lite_nextCheck) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_nextCheck, 632781)) === ("}"))));
+            lite_isTailClose = ((((lite_nextCheck) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_nextCheck, 633590)) === ("}"))));
         }
         const lite_expected = (Boolean(lite_isTailClose) ? (Boolean((((((((lite$textLength(lite_currentResult)) > (5n))) && (liteFn$lib$core$text$tp_String_op_startsWithAt(lite_currentResult, 0n, "List<")))) && (((lite$textAt(lite_currentResult, lite$subtractInt(lite$textLength(lite_currentResult), 1n, 14465), 14448)) === (">")))))) ? (("Tail") + (lite_currentResult)) : lite_currentResult) : "");
         void lite_expected;
         const lite_trimmedStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_position, lite_prefix);
         void lite_trimmedStart;
-        const lite_stmtSink = (Boolean(((((lite_trimmedStart) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_trimmedStart, 633092)) === ("{"))))) ? "exprOut" : "");
+        const lite_stmtSink = (Boolean(((((lite_trimmedStart) < (lite$textLength(lite_source)))) && (((lite$textAt(lite_source, lite_trimmedStart, 633901)) === ("{"))))) ? "exprOut" : "");
         void lite_stmtSink;
         const lite_stmtMin = (Boolean((((!(lite_isTailClose))) || (((lite_currentResult) === (lite$m$_p__p_$_p__p_$compiler$src$frontend__ir$VALUE_KIND_UNIT))))) ? (-2n) : 0n);
         void lite_stmtMin;
@@ -40071,7 +40078,7 @@ export function main(lite$write?: (text: string) => void): string {
         }
         const lite_next = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipItemSeparators(lite_source, lite_ended, lite_prefix);
         void lite_next;
-        const lite_returned = ((((((((lite_currentName) !== (""))) && (lite_valueTail))) && (((lite_next) < (lite$textLength(lite_source)))))) && (((lite$textAt(lite_source, lite_next, 633753)) === ("}"))));
+        const lite_returned = ((((((((lite_currentName) !== (""))) && (lite_valueTail))) && (((lite_next) < (lite$textLength(lite_source)))))) && (((lite$textAt(lite_source, lite_next, 634562)) === ("}"))));
         void lite_returned;
         if (((lite_returned) && ((!(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isCompatibleKind(lite_currentResult, (lite_parsed).kind)))))) {
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_position, lite_prefix, (((((((((("cannot return ") + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind((lite_parsed).kind)))) + (" from function "))) + (lite_currentName))) + (" returning "))) + (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$displayKind(lite_currentResult))));
@@ -40097,19 +40104,19 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_aliases;
         const lite_size = lite$textLength(lite_source);
         void lite_size;
-        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_recPos, 6n, 635017), lite_prefix);
+        const lite_gp = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$scanComptimeTypeParams(lite_source, lite$addInt(lite_recPos, 6n, 635826), lite_prefix);
         void lite_gp;
         if ((!((lite_gp).ok))) {
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, (lite_gp).errPos, lite_prefix, (lite_gp).errMsg);
         }
         const lite_bracePos = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_gp).next, lite_prefix);
         void lite_bracePos;
-        if (((((lite_bracePos) >= (lite_size))) || (((lite$textAt(lite_source, lite_bracePos, 635211)) !== ("{"))))) {
+        if (((((lite_bracePos) >= (lite_size))) || (((lite$textAt(lite_source, lite_bracePos, 636020)) !== ("{"))))) {
             liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_bracePos, lite_prefix, "expected { after record");
         }
         const lite_scopedAliases: { name: string; target: string; at: bigint; end: bigint; depth: bigint }[] = [...(liteFn$_p__p_$_p__p_$compiler$src$frontend__types$aliasesUpToDepth(lite_aliases, lite_aliasDepth))];
         void lite_scopedAliases;
-        const lite_resolvedRecParams = (Boolean((lite_gp).hasParams) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__types$resolveComptimeParamSpecs(lite_source, lite$addInt(lite_recPos, 6n, 635480), lite_prefix, lite_scopedAliases, (lite_gp).paramsCsv) : "");
+        const lite_resolvedRecParams = (Boolean((lite_gp).hasParams) ? liteFn$_p__p_$_p__p_$compiler$src$frontend__types$resolveComptimeParamSpecs(lite_source, lite$addInt(lite_recPos, 6n, 636289), lite_prefix, lite_scopedAliases, (lite_gp).paramsCsv) : "");
         void lite_resolvedRecParams;
         const lite_seenRec: string[] = [...([(((((String(lite_aliasDepth))) + (":"))) + (lite_recName))])];
         void lite_seenRec;
@@ -40121,25 +40128,25 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_defaultCodes;
         let lite_markers = "";
         void lite_markers;
-        let lite_cursor = lite$addInt(lite_bracePos, 1n, 635794);
+        let lite_cursor = lite$addInt(lite_bracePos, 1n, 636603);
         void lite_cursor;
         while (Boolean(true)) {
             lite_cursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipItemSeparators(lite_source, lite_cursor, lite_prefix);
             if (((lite_cursor) >= (lite_size))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_bracePos, lite_prefix, "expected } after record fields");
             }
-            if (((lite$textAt(lite_source, lite_cursor, 636026)) === ("}"))) {
-                lite_cursor = lite$addInt(lite_cursor, 1n, 636074);
+            if (((lite$textAt(lite_source, lite_cursor, 636835)) === ("}"))) {
+                lite_cursor = lite$addInt(lite_cursor, 1n, 636883);
                 break;
             }
-            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 636130))))) {
+            if ((!(liteFn$lib$core$text$tp_String_op_isNameStart(lite$textAt(lite_source, lite_cursor, 636939))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_cursor, lite_prefix, "expected a record field name");
             }
             const lite_fStart = lite_cursor;
             void lite_fStart;
             const lite_fEnd = (lite$textSkipWhile(lite_source, lite_fStart, false));
             void lite_fEnd;
-            const lite_fName = lite$textSlice(lite_source, lite_fStart, lite_fEnd, 636341);
+            const lite_fName = lite$textSlice(lite_source, lite_fStart, lite_fEnd, 637150);
             void lite_fName;
             if (liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$isReservedWord(lite_fName)) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$unsupportedFeature(lite_source, lite_fStart, lite_fName, lite_prefix);
@@ -40150,10 +40157,10 @@ export function main(lite$write?: (text: string) => void): string {
             void (lite_fieldNames.push(lite_fName));
             const lite_afterField = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite_fEnd, lite_prefix);
             void lite_afterField;
-            if (((((lite_afterField) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterField, 636765)) !== (":"))))) {
+            if (((((lite_afterField) >= (lite_size))) || (((lite$textAt(lite_source, lite_afterField, 637574)) !== (":"))))) {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_afterField, lite_prefix, (("expected : after record field ") + (lite_fName)));
             }
-            const lite_typeStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterField, 1n, 636955), lite_prefix);
+            const lite_typeStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterField, 1n, 637764), lite_prefix);
             void lite_typeStart;
             const lite_fieldType = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$parseTypeWithSeen(lite_source, lite_fStart, true, lite_source, lite_typeStart, lite_prefix, lite_scopedAliases, "record field", lite_resolvedRecParams, lite_seenRec);
             void lite_fieldType;
@@ -40170,7 +40177,7 @@ export function main(lite$write?: (text: string) => void): string {
                 if ((((lite_gp).hasParams) && (liteFn$_p__p_$_p__p_$compiler$src$frontend__types$kindHasAnyGenericParam(lite_resolvedRecParams, (lite_fieldType).kind)))) {
                     liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_afterType, lite_prefix, (((("default initializer on generic-typed field ") + (lite_fName))) + (" is not supported yet")));
                 }
-                const lite_defStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterType, 1n, 637790), lite_prefix);
+                const lite_defStart = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, lite$addInt(lite_afterType, 1n, 638599), lite_prefix);
                 void lite_defStart;
                 const lite_defParsed = liteFn$_p__p_$_p__p_$compiler$src$frontend__expr$parseBinaryCtx(lite_target, lite_source, lite_defStart, lite_prefix, lite_locals, lite_functions, lite_params, lite_currentName, (lite_fieldType).kind, 0n, lite_ctxs, lite_iifeDepth, lite_inferMode, "", lite_aliases);
                 void lite_defParsed;
@@ -40190,11 +40197,11 @@ export function main(lite$write?: (text: string) => void): string {
                 lite_lastTokenPos = (lite_defParsed).next;
                 lite_nextCursor = liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$skipTrivia(lite_source, (lite_defParsed).next, lite_prefix);
             }
-            if (((((lite_nextCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_nextCursor, 638881)) === (";"))))) {
-                lite_cursor = lite$addInt(lite_nextCursor, 1n, 638937);
-            } else if (((((lite_nextCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_nextCursor, 638989)) === ("}"))))) {
+            if (((((lite_nextCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_nextCursor, 639690)) === (";"))))) {
+                lite_cursor = lite$addInt(lite_nextCursor, 1n, 639746);
+            } else if (((((lite_nextCursor) < (lite_size))) && (((lite$textAt(lite_source, lite_nextCursor, 639798)) === ("}"))))) {
                 lite_cursor = lite_nextCursor;
-            } else if (((((lite_lastTokenPos) > (0n))) && (((lite$textAt(lite_source, lite$subtractInt(lite_lastTokenPos, 1n, 639108), 639092)) === ("}"))))) {
+            } else if (((((lite_lastTokenPos) > (0n))) && (((lite$textAt(lite_source, lite$subtractInt(lite_lastTokenPos, 1n, 639917), 639901)) === ("}"))))) {
                 lite_cursor = lite_nextCursor;
             } else {
                 liteFn$_p__p_$_p__p_$compiler$src$frontend__syntax$failAt(lite_source, lite_nextCursor, lite_prefix, (("expected ; or } after record field ") + (lite_fName)));
@@ -40210,12 +40217,12 @@ export function main(lite$write?: (text: string) => void): string {
             void lite_tplSeen;
             const lite_aliasIdx = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$aliasIndexAt(lite_aliases, lite_nameStart);
             void lite_aliasIdx;
-            const lite_aliasTarget = (Boolean(((lite_aliasIdx) >= (0n))) ? (lite$listAt(lite_aliases, lite_aliasIdx, 639740)).target : "");
+            const lite_aliasTarget = (Boolean(((lite_aliasIdx) >= (0n))) ? (lite$listAt(lite_aliases, lite_aliasIdx, 640549)).target : "");
             void lite_aliasTarget;
             const lite_innerRaw = (Boolean(liteFn$lib$core$text$tp_String_op_startsWithAt(lite_aliasTarget, 0n, "@genraw:")) ? (() => {
                 const lite_pDec = liteFn$_p__p_$_p__p_$compiler$src$frontend__types$decodeLengthPrefixedAt(lite_aliasTarget, 8n);
                 void lite_pDec;
-                return (Boolean((((lite_pDec).next) >= (0n))) ? lite$textSlice(lite_aliasTarget, (lite_pDec).next, lite$textLength(lite_aliasTarget), 639947) : "");
+                return (Boolean((((lite_pDec).next) >= (0n))) ? lite$textSlice(lite_aliasTarget, (lite_pDec).next, lite$textLength(lite_aliasTarget), 640756) : "");
             })() : lite_aliasTarget);
             void lite_innerRaw;
             return liteFn$_p__p_$_p__p_$compiler$src$frontend__types$resolveGenericTypeText(lite_source, lite_nameStart, lite_prefix, lite_scopedAliases, lite_innerRaw, lite_resolvedRecParams, lite_tplSeen);
@@ -45239,49 +45246,49 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_parameterKind = (Boolean(lite_isMutParam) ? lite$textSlice(lite_rawParameterKind, 4n, lite$textLength(lite_rawParameterKind), 2157) : lite_rawParameterKind);
             void lite_parameterKind;
             if ((((BigInt(((lite_result).chunks).length))) > (0n))) {
-                {
-                    const lite$mb_recv = { v: lite_result };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ", "));
-                    lite_result = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
-            {
-                const lite$mb_recv = { v: lite_result };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "lite_"));
-                lite_result = lite$mb_recv.v;
-            }
-            {
-                const lite$mb_recv = { v: lite_result };
+                return undefined;
+            })());
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_parameterName));
-                lite_result = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             if (((lite_isMutParam) && ((liteFn$_p__p_$_p__p_$compiler$src$frontend__types$isRecordOrDistinctRecord(lite_parameterKind))))) {
-                {
-                    const lite$mb_recv = { v: lite_result };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": { v: "));
-                    lite_result = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_result };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$frontend$tsFunctionType(lite_parameterKind))));
-                    lite_result = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_result };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " }"));
-                    lite_result = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else {
-                {
-                    const lite$mb_recv = { v: lite_result };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, ": "));
-                    lite_result = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_result };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$frontend$tsFunctionType(lite_parameterKind))));
-                    lite_result = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             if (((lite_separator) < (0n))) {
                 break;
@@ -48336,24 +48343,24 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_mainStopped;
         let lite_activeTriesBuf: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_activeTriesBuf;
-        {
-            const lite$mb_recv = { v: lite_activeTriesBuf };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_activeTriesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_activeTriesBuf = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "|"));
-            lite_activeTriesBuf = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         for (const lite_tryItem of (lite_effectiveItems)) {
             void lite_tryItem;
             if (((((((((lite_tryItem).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_TRANSFER_CATCH))) || ((((lite_tryItem).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_LOOP_TRANSFER_CATCH)))))) && ((((lite_tryItem).runtime) !== (""))))) {
-                {
-                    const lite$mb_recv = { v: lite_activeTriesBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_activeTriesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_activeTriesBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_tryItem).runtime));
-                    lite_activeTriesBuf = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_activeTriesBuf };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_activeTriesBuf; }, set v(lite$nv: { chunks: string[] }) { lite_activeTriesBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "|"));
-                    lite_activeTriesBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
         }
         const lite_activeTries = (liteFn$lib$core$list$tp_List_op_join([...((lite_activeTriesBuf).chunks)], ""));
@@ -48569,28 +48576,28 @@ export function main(lite$write?: (text: string) => void): string {
                     void lite_emitted;
                     liteFn$_p__p_$_p__p_$compiler$src$emit__ts$outLine(((((((((lite_indent) + ("lite$emit("))) + (lite_emitted))) + (lite_ending))) + (");")));
                 }
-                {
-                    const lite$mb_recv = { v: lite_lineBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_lineBuf; }, set v(lite$nv: { chunks: string[] }) { lite_lineBuf = lite$nv; } };
                     void (((void ((((lite$mb_recv.v).chunks).length = 0, undefined)))));
-                    lite_lineBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_count = 0n;
             } else if ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_MAIN_STOP))) {
                 lite_mainStopped = true;
             } else if ((((((((((((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_IMPORT))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_FUNCTION))))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_TYPE_OP))))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_VALUE))))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_PUBLIC_TYPE))))) || ((((lite_item).kind) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$ITEM_KIND_NOOP))))) {
             } else {
                 if (((lite_count) > (0n))) {
-                    {
-                        const lite$mb_recv = { v: lite_lineBuf };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_lineBuf; }, set v(lite$nv: { chunks: string[] }) { lite_lineBuf = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, " + \" \" + "));
-                        lite_lineBuf = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
-                {
-                    const lite$mb_recv = { v: lite_lineBuf };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_lineBuf; }, set v(lite$nv: { chunks: string[] }) { lite_lineBuf = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (liteFn$_p__p_$_p__p_$compiler$src$emit__ts$displayValueCode((lite_item).kind, (lite_item).code))));
-                    lite_lineBuf = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
                 lite_count = lite$addInt(lite_count, 1n, 221477);
             }
         }
@@ -49137,92 +49144,92 @@ export function main(lite$write?: (text: string) => void): string {
         void lite_s;
         let lite_out: { chunks: string[] } = (((lite$rc: { chunks: string[] }) => ({ ...lite$rc, chunks: [...(lite$rc.chunks)] }))({ chunks: [] }));
         void lite_out;
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         const lite_codePoints: bigint[] = [...(lite$unicodeToCodePoints(lite_s))];
         void lite_codePoints;
         for (const lite_cp of (lite_codePoints)) {
             void lite_cp;
             if (((lite_cp) === (34n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\\""));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_cp) === (92n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\\\"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_cp) === (8n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\b"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_cp) === (12n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\f"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_cp) === (10n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\n"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_cp) === (13n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\r"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_cp) === (9n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\t"));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_cp) < (32n))) {
-                {
-                    const lite$mb_recv = { v: lite_out };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\\u00"));
-                    lite_out = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$host__fs$hexDigit(lite$divideInt(lite_cp, 16n, 20065))));
-                    lite_out = lite$mb_recv.v;
-                }
-                {
-                    const lite$mb_recv = { v: lite_out };
+                    return undefined;
+                })());
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, liteFn$_p__p_$_p__p_$compiler$src$host__fs$hexDigit(lite$remainderInt(lite_cp, 16n, 20112))));
-                    lite_out = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else {
                 const lite_one: bigint[] = [...([lite_cp])];
                 void lite_one;
                 const lite_dec = lite$unicodeFromCodePoints(lite_one);
                 void lite_dec;
                 if ((lite_dec).ok) {
-                    {
-                        const lite$mb_recv = { v: lite_out };
+                    void ((() => {
+                        const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
                         void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (lite_dec).text));
-                        lite_out = lite$mb_recv.v;
-                    }
+                        return undefined;
+                    })());
                 }
             }
         }
-        {
-            const lite$mb_recv = { v: lite_out };
+        void ((() => {
+            const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_out; }, set v(lite$nv: { chunks: string[] }) { lite_out = lite$nv; } };
             void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "\""));
-            lite_out = lite$mb_recv.v;
-        }
+            return undefined;
+        })());
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_out).chunks)], ""));
     }
     void liteFn$_p__p_$_p__p_$compiler$src$host__fs$quoteJson;
@@ -49350,11 +49357,11 @@ export function main(lite$write?: (text: string) => void): string {
         while (((lite_index) < (lite_size))) {
             const lite_ch = lite$textAt(lite_path, lite_index, 2575);
             void lite_ch;
-            {
-                const lite$mb_recv = { v: lite_result };
+            void ((() => {
+                const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                 void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (Boolean(((lite_ch) === ("\\"))) ? "/" : lite_ch)));
-                lite_result = lite$mb_recv.v;
-            }
+                return undefined;
+            })());
             lite_index = lite$addInt(lite_index, 1n, 2670);
         }
         return (liteFn$lib$core$list$tp_List_op_join([...((lite_result).chunks)], ""));
@@ -49515,43 +49522,43 @@ export function main(lite$write?: (text: string) => void): string {
             const lite_ch = lite$textAt(lite_logical, lite_index, 6122);
             void lite_ch;
             if (((((lite_ch.length === 1 && ((lite_ch >= "a" && lite_ch <= "z") || (lite_ch >= "A" && lite_ch <= "Z"))))) || (((lite_ch.length === 1 && lite_ch >= "0" && lite_ch <= "9"))))) {
-                {
-                    const lite$mb_recv = { v: lite_result };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, lite_ch));
-                    lite_result = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_ch) === ("/"))) {
-                {
-                    const lite$mb_recv = { v: lite_result };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (Boolean(((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS))) ? "$" : "_s_")));
-                    lite_result = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_ch) === ("-"))) {
-                {
-                    const lite$mb_recv = { v: lite_result };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (Boolean(((lite_target) === (lite$m$_p__p_$_p__p_$compiler$src$frontend$TARGET_TS))) ? "__" : "_d_")));
-                    lite_result = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_ch) === ("_"))) {
-                {
-                    const lite$mb_recv = { v: lite_result };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "_u_"));
-                    lite_result = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else if (((lite_ch) === ("."))) {
-                {
-                    const lite$mb_recv = { v: lite_result };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, "_p_"));
-                    lite_result = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             } else {
                 const lite_code = liteFn$_p__p_$_p__p_$compiler$src$modules$asciiCode(lite_ch);
                 void lite_code;
-                {
-                    const lite$mb_recv = { v: lite_result };
+                void ((() => {
+                    const lite$mb_recv: { v: { chunks: string[] } } = { get v(): { chunks: string[] } { return lite_result; }, set v(lite$nv: { chunks: string[] }) { lite_result = lite$nv; } };
                     void (liteFn$lib$util$text__builder$tp_TextBuilder_op_append(lite$mb_recv, (Boolean(((lite_code) >= (0n))) ? (((("_a") + ((String(lite_code))))) + ("_")) : "_z_")));
-                    lite_result = lite$mb_recv.v;
-                }
+                    return undefined;
+                })());
             }
             lite_index = lite$addInt(lite_index, 1n, 6762);
         }
