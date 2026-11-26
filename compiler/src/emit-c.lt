@@ -4624,9 +4624,10 @@ emitCSoftBuiltinHelpers := fn(calls: Set<String>): Unit {
         outLine("    if (out == NULL) { fprintf(stderr, \"MemoryFault: cannot allocate text\\n\"); exit(1); }");
         outLine("    int needed = 0; int seen = 0; uint32_t cp = 0u; uint8_t lo = 0x80u; uint8_t hi = 0xBFu;");
         outLine("    for (int64_t i = 0; i < bytes.len; ) {");
-        outLine("        if (out_len + 4u > cap) { cap *= 2u; uint8_t *nb = realloc(out, cap + 1u); if (nb == NULL) { fprintf(stderr, \"MemoryFault: cannot grow text\\n\"); exit(1); } out = nb; }");
+        outLine("        if (out_len + 8u > cap) { cap *= 2u; uint8_t *nb = realloc(out, cap + 1u); if (nb == NULL) { fprintf(stderr, \"MemoryFault: cannot grow text\\n\"); exit(1); } out = nb; }");
         outLine("        int64_t raw = bytes.data[i];");
         outLine("        if (raw < 0 || raw > 255) {");
+        outLine("            if (needed > 0) { out[out_len++] = 0xEFu; out[out_len++] = 0xBFu; out[out_len++] = 0xBDu; cp_count += 1; }");
         outLine("            needed = 0; seen = 0; cp = 0u; lo = 0x80u; hi = 0xBFu;");
         outLine("            out[out_len++] = 0xEFu; out[out_len++] = 0xBFu; out[out_len++] = 0xBDu; cp_count += 1; i += 1;");
         outLine("            continue;");
