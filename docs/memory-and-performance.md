@@ -352,7 +352,7 @@ In short-lived CLI commands this behavior stays invisible, while long-running or
 - Avoiding unnecessary `toCodePoints()` and `List<Int>` byte-boxing round-trips via C11 soft-builtin fast paths for UTF-8 and stream I/O.
 - Bounding parallel worker memory and avoiding giant monolithic JSON stdout round-trips.
 
-Automatic C11 scope/ownership reclamation remains a tracked compiler gap. See [C11 heap reclamation](lite://doc/compiler/gaps#topic-queue).
+Automatic C11 scope/ownership reclamation remains a tracked compiler gap. See [C11 heap reclamation](lite://doc/compiler/gaps#topic-queue) and the owner-confirmed [C11 memory and codegen architecture plan](lite://doc/c11-memory-and-codegen-plan).
 
 ## Generic collection requirements
 

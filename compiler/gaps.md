@@ -239,7 +239,8 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   automatic freeing until process exit (only `extra/surface` has opt-in
   `scratchMark`/`scratchRewind` string-slab checkpoints). Batch C11 tools
   therefore retain intermediate allocations in RSS until exit; see
-  [current C11 runtime allocation behavior](lite://doc/memory-and-performance#current-c11-runtime-allocation-behavior-gap).
+  [current C11 runtime allocation behavior](lite://doc/memory-and-performance#current-c11-runtime-allocation-behavior-gap)
+  and the [C11 memory, raw values, and codegen plan](lite://doc/c11-memory-and-codegen-plan).
 - [x] **C output argument faults:** `var zero := 0;
   outputLine("prefix", 1 / zero);` must evaluate arguments before printing any
   part of the call. C now matches T00/TS and prints no partial call on a fault.
