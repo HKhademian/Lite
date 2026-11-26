@@ -12,6 +12,12 @@ Core facilities cover [I/O](lite://module/core/io), [text](lite://module/core/te
 
 Use [scalar math](lite://module/math/scalar), [random](lite://module/math/random), [vectors](lite://module/math/vector), [matrices](lite://module/math/matrix), and [geometry](lite://module/math/geom).
 
+Use `Vec<T, N>` for any supported numeric component type, or `IVec<N>` and
+`FVec<N>` for `Int` and `Float`. The dimension-specific aliases are
+`Vec2<T>`, `IVec2`, `FVec2`, `Vec3<T>`, `IVec3`, `FVec3`, `Vec4<T>`,
+`IVec4`, and `FVec4`. All support the same constructors, such as
+`IVec4.from([1, 2, 3, 4])`.
+
 ## Data Structures (`lib/ds/` — 11 modules)
 
 See [grids](lite://module/ds/grid), [pools](lite://module/ds/pool), and other data structures in the generated reference.

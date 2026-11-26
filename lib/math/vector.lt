@@ -7,29 +7,38 @@ pub Vec := record<T: Type<math.Numeric>, N: Int> {
     data: [T; N];
 }
 
+/** Integer vector with `N` components. */
+pub IVec := alias<N: Int> Vec<Int, N>;
+
+/** Floating-point vector with `N` components. */
+pub FVec := alias<N: Int> Vec<Float, N>;
+
 /** Generic 2D vector alias over `Vec<T, 2>`. */
 pub Vec2 := alias<T: Type<math.Numeric>> Vec<T, 2>;
+
+/** 2D integer vector alias. */
+pub IVec2 := alias IVec<2>;
+
+/** 2D floating-point vector alias. */
+pub FVec2 := alias FVec<2>;
 
 /** Generic 3D vector alias over `Vec<T, 3>`. */
 pub Vec3 := alias<T: Type<math.Numeric>> Vec<T, 3>;
 
+/** 3D integer vector alias. */
+pub IVec3 := alias IVec<3>;
+
+/** 3D floating-point vector alias. */
+pub FVec3 := alias FVec<3>;
+
 /** Generic 4D vector alias over `Vec<T, 4>`. */
 pub Vec4 := alias<T: Type<math.Numeric>> Vec<T, 4>;
 
-/** 2D integer vector alias. */
-pub IVec2 := alias Vec<Int, 2>;
-
-/** 3D integer vector alias. */
-pub IVec3 := alias Vec<Int, 3>;
-
-/** 2D floating-point vector alias. */
-pub FVec2 := alias Vec<Float, 2>;
-
-/** 3D floating-point vector alias. */
-pub FVec3 := alias Vec<Float, 3>;
+/** 4D integer vector alias. */
+pub IVec4 := alias IVec<4>;
 
 /** 4D floating-point vector alias. */
-pub FVec4 := alias Vec<Float, 4>;
+pub FVec4 := alias FVec<4>;
 
 /** Constructs a generic `Vec<T, N>` from a fixed array `[T; N]`. */
 pub Vec.from := fn<T: Type<math.Numeric>, N: Int>(data: [T; N]): Self<T, N> {

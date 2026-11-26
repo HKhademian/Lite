@@ -109,6 +109,11 @@ functionalSrc :=
 "    and near(vec.vec2(3.0, 4.0).normalize().x(), 0.6)\n" +
 "    and near(vf32a.dot(vf32b), 8.25);\n" +
 "io.outputLine(\"vecN\", vecCheck);\n" +
+"iv5: vec.IVec<5> = vec.IVec.from([1, 2, 3, 4, 5]);\n" +
+"fv5: vec.FVec<5> = vec.FVec<5>.splat(1.5);\n" +
+"iv4: vec.Vec4<Int> = vec.IVec4.from([1, 2, 3, 4]);\n" +
+"io.outputLine(\"vector aliases\", iv5.dim() == 5 and iv5.get(4) == 5,\n" +
+"    fv5.dim() == 5 and near(fv5.get(4), 1.5), iv4.dim() == 4 and iv4.w() == 4);\n" +
 "\n" +
 "/* 3. math/geom generic Box<T, N>, Ray<T, N>, Segment<T, N>, Ball<T, N>, and 2D/3D shapes */\n" +
 "iboxA := geom.Box.fromMinMax(vec.vec2(0, 0), vec.vec2(4, 6));\n" +
@@ -176,6 +181,7 @@ functionalSrc :=
 expectedOut :=
 "scalar true true\n" +
 "vecN true\n" +
+"vector aliases true true true\n" +
 "geom true\n";
 
 emptyEnv: List<String> = [];
