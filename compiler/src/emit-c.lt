@@ -6106,8 +6106,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         if frontend.isFloatScalarKind(baseItemKind) or item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT or
         (frontend.isDistinctKind(item.textValue) and frontend.isFloatScalarKind(frontend.distinctBaseKind(item.textValue))) or
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isFloatScalarKind(baseDiscardKind)) { floatValues = true; }
-        if baseItemKind == frontend.VALUE_KIND_FLOAT8 or (item.kind == frontend.ITEM_KIND_DISCARD and baseDiscardKind == frontend.VALUE_KIND_FLOAT8) or item.textValue == frontend.VALUE_KIND_FLOAT8 or item.textValue.indexOf("Float8", 0) >= 0 or item.code.indexOf("Float8", 0) >= 0 { float8Values = true; floatValues = true; }
-        if baseItemKind == frontend.VALUE_KIND_FLOAT16 or (item.kind == frontend.ITEM_KIND_DISCARD and baseDiscardKind == frontend.VALUE_KIND_FLOAT16) or item.textValue == frontend.VALUE_KIND_FLOAT16 or item.textValue.indexOf("Float16", 0) >= 0 or item.code.indexOf("Float16", 0) >= 0 { float16Values = true; floatValues = true; }
+        if baseItemKind == frontend.VALUE_KIND_FLOAT8 or (item.kind == frontend.ITEM_KIND_DISCARD and baseDiscardKind == frontend.VALUE_KIND_FLOAT8) or ((item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT) and frontend.distinctBaseKind(item.textValue) == frontend.VALUE_KIND_FLOAT8) { float8Values = true; floatValues = true; }
+        if baseItemKind == frontend.VALUE_KIND_FLOAT16 or (item.kind == frontend.ITEM_KIND_DISCARD and baseDiscardKind == frontend.VALUE_KIND_FLOAT16) or ((item.kind == frontend.ITEM_KIND_LOCAL_FLOAT or item.kind == frontend.ITEM_KIND_VAR_FLOAT or item.kind == frontend.ITEM_KIND_ASSIGN_FLOAT) and frontend.distinctBaseKind(item.textValue) == frontend.VALUE_KIND_FLOAT16) { float16Values = true; floatValues = true; }
         if baseItemKind == frontend.VALUE_KIND_FLOAT32 or (item.kind == frontend.ITEM_KIND_DISCARD and baseDiscardKind == frontend.VALUE_KIND_FLOAT32) { float32Values = true; }
         if item.kind == frontend.ITEM_KIND_UNREACHABLE { hasUnreachable = true; }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
@@ -6116,8 +6116,12 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             checkCFunctionSignature(item);
             baseRetKind := frontend.distinctBaseKind(item.code);
             if frontend.isFloatScalarKind(baseRetKind) { floatValues = true; }
+            if baseRetKind == frontend.VALUE_KIND_FLOAT8 { float8Values = true; }
+            if baseRetKind == frontend.VALUE_KIND_FLOAT16 { float16Values = true; }
             if baseRetKind == frontend.VALUE_KIND_FLOAT32 { float32Values = true; }
             if item.textValue.indexOf("=Float", 0) >= 0 { floatValues = true; }
+            if item.textValue.indexOf("=Float8", 0) >= 0 { float8Values = true; }
+            if item.textValue.indexOf("=Float16", 0) >= 0 { float16Values = true; }
             if item.textValue.indexOf("=Float32", 0) >= 0 { float32Values = true; }
         } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
             if fnDepth > 0 { fnDepth = fnDepth - 1; }
