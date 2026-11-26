@@ -1,7 +1,7 @@
 {
-  "note": "Phase 6 (independent OptConfig safety switches, --sanitize presets, unchecked List/Array & Float bit casts, and 18 pure-Lite + native-override soft builtins). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
-  "recorded": "2026-11-26",
-  "sourceSha256": "32789bf5fa1cc6dde0566f0490ca5a13fa9d6cb575c8555533d490c8e49b0187",
+  "note": "Phase 7 (borrowed zero-copy Slice<T>, non-escaping slice borrow checking, splitAt(mid), String.bytes(), core/slice module, and TS/C11 codegen). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "recorded": "2026-11-27",
+  "sourceSha256": "2a4e03989ca4e501c772dd6b28022f488e88dd5223cd582e1a96493fa334b325",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
