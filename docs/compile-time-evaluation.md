@@ -92,12 +92,13 @@ remaining alternatives.
 It also investigates an [explicit runtime counterpart](lite://repo/research/investigations/INV-062-implicit-known-values-and-module-initialization.md#possible-explicit-runtime-counterpart)
 for expressing the opposite stage intent. Its syntax and exact guarantees are open.
 
-The staging boundary still matters for effects. Reading a line or fetching a URL
-while compiling is a different observable action from doing so when the
-compiled program runs. Any implicit policy must make clear which invocation
-occurs, at what stage, and how build inputs and repeated builds behave. Do not
-assume that a pure-only model is the user's chosen restriction, or silently
-move an ordinary runtime effect into the build under the existing design.
+For first-stage `.lt` module initialization, build-time effects require an
+explicit `comptime { ... }` block. The rule covers direct and transitive
+effects. A bare `seed := io.readInt();` is rejected before reading input.
+`seed := comptime { io.readInt() };` reads during compilation and makes the
+result available to the program. Pure calls on known inputs can still supply
+known values implicitly. Build input tracking and repeat-build behavior remain
+open. See [module initialization](lite://doc/modules-and-packages#compile-time-known-initial-definitions).
 
 ## Compile-time-required inputs
 

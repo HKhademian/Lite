@@ -259,7 +259,8 @@ effects: the user explicitly wants file, input, and network operations to be
 possible during compilation. A module initializer with `comptime { fetch(...) }`
 could have a known result *and* a build-time effect. Conversely, creating a
 function whose body can perform runtime I/O does not itself perform that I/O.
-Whether effectful initializers must be explicit or may be implicit is open.
+The 2026-11-26 first-stage decision requires explicit `comptime { ... }` for
+direct and transitive module initializer effects.
 
 ## Interactions that need decisions
 
@@ -373,14 +374,13 @@ the first-stage compile-time-known module-initialization direction, with
 `var` and `mut` allowed for known initial values. Investigate proof and
 failure boundaries, detailed module write/access rules, function declarations not invoked
 merely by definition, and runtime initialization for runtime-only needs.
-Preserve the user's requested effectful compile-time capability. Whether
-ordinary effects can run implicitly during compilation remains a user-facing
-design choice, not a conclusion of this note. Investigate an explicit runtime
+Preserve the requested effectful compile-time capability through explicit
+`comptime { ... }` in first-stage module initializers. Investigate an explicit runtime
 stage guarantee as a possible counterpart, including its effect timing and
 optimization implications; it is not yet selected.
 
 To complete the selected direction, resolve its precise scope, how implicit
 evaluation is triggered and fails, materialization, initialization order,
-symbol lookup, and the chosen behavior for explicit and implicit effects. Complete the aspect-to-case list
+symbol lookup, and execution and tracking of explicit effects. Complete the aspect-to-case list
 with independent cases for accepted programs, errors, stage-specific output,
 input variations, and combined features.

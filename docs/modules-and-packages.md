@@ -159,7 +159,9 @@ An initializer requiring the eventual program's runtime input cannot supply
 the first stage's compile-time-known initial value. Applications may still
 perform runtime setup in runtime code; its placement, any dedicated
 initialization mechanism, and runtime-dependent module initialization in later
-stages remain open. Explicit compile-time effects such as file reads are not banned.
+stages remain open. Selected 2026-11-26 for the first stage: effects in a module
+initializer must run inside an explicit `comptime { ... }` block. This applies
+to direct effects and effects reached through ordinary function calls.
 Storage and target materialization may require generated setup work; this rule
 does not forbid loaders, relocations or equivalent implementation steps.
 
@@ -186,6 +188,10 @@ Pending cases, not executable passes:
 - An explicit compile-time file read can supply an initial value when its
   result is suitable for the target; that read is not repeated at program
   startup merely to recover the result.
+- With build input `42`, `seed := comptime { io.readInt() };` reads once during
+  compilation and supplies `42` to the program. A bare `seed := io.readInt();`
+  and a bare call to a function wrapping that read are rejected before reading
+  any input.
 - A runtime-input-dependent top-level initializer is rejected under the first
   stage rule; declaring a function whose body reads runtime input is distinct.
 - Known initial values admit `var`, `mut` and `var mut` declarations in the
