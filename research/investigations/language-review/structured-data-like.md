@@ -232,7 +232,7 @@ braces resemble an executable block. A named tuple such as
 `data := (name = "Ali", grade = 10)` is another existing surface, but the user
 asks whether a tuple is the desired concept for anonymous data.
 
-The [record literal boundary review](../../../docs/record-literal-boundaries.md#requested-inferred-inline-form)
+The [record literal boundary review](../../../docs/record-literal-boundaries.md#contextual-record-literals-and-executable-blocks)
 already records a requested inferred record form and its unselected parsing and
 identity choices. In particular, a single-field brace form can resemble an
 assignment inside a block, and empty `{}` already has an executable-block
