@@ -1,0 +1,123 @@
+/* Pure-Lite SHA-256 and SHA-512 verification using [UInt32; 64]/[UInt64; 80] and native bitwise/rotate/wrapping builtins. */
+
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+crypto := import "core/crypto";
+fs := import "core/file";
+io := import "core/io";
+path := import "core/path";
+proc := import "core/process";
+project := import "util/project";
+test := import "core/test";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+builtTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+builtC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + builtC.error, builtC.ok);
+tsComp := builtTs.path;
+cComp := builtC.path;
+
+ccInfo := compilerTest.probeCc();
+test.check("C compiler available", ccInfo.available);
+
+/* 1. Direct runtime & host-builtin FIPS 180-4 SHA-256 / SHA-512 / HMAC checks. */
+test.checkText("sha256 empty", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", crypto.sha256Text(""));
+test.checkText("sha256 abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", crypto.sha256Text("abc"));
+test.checkText("sha256 448-bit", "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", crypto.sha256Text("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"));
+test.checkText("sha512 empty", "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e", crypto.sha512Text(""));
+test.checkText("sha512 abc", "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f", crypto.sha512Text("abc"));
+
+/* 2. Compile & run pure-Lite SHA-256 and SHA-512 (--builtin-mode core/crypto=pure) on both TS and C11. */
+paritySrc := [
+    "crypto := import \"core/crypto\";",
+    "io := import \"core/io\";",
+    "a1000 := \"a\".repeat(1000);",
+    "rdr := io.Reader.fromText(\"abc\");",
+    "rHash := crypto.sha256Reader(rdr);",
+    "_ := rdr.close();",
+    "io.outputLine(rHash.ok, rHash.hex);",
+    "io.outputLine(crypto.sha256Text(\"\"));",
+    "io.outputLine(crypto.sha256Text(\"abc\"));",
+    "io.outputLine(crypto.sha256Bytes([]));",
+    "io.outputLine(crypto.sha256Text(\"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq\"));",
+    "io.outputLine(crypto.sha256Text(a1000));",
+    "io.outputLine(crypto.sha512Text(\"\"));",
+    "io.outputLine(crypto.sha512Text(\"abc\"));",
+    "io.outputLine(crypto.sha512Text(\"abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu\"));",
+    "io.outputLine(crypto.sha512Bytes([0, 255, 170, 85]));",
+    "io.outputLine(crypto.hmacSha256Bytes(\"key\".utf8Encode(), \"The quick brown fox jumps over the lazy dog\".utf8Encode()));"
+].join("\n");
+
+expectedOut := [
+    "true ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
+    "41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3",
+    "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
+    "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f",
+    "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909",
+    "ab41c30af6adf9fb6e6a5f7c5d707fb33f98d2ae74526e9d3cf46fee43ee48a921c64cb5e4aec8b4e5f0fa1464557091864314bbb4e3214d454284d2f5274e00",
+    "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8"
+].join("\n") + "\n";
+
+tsCompRes := compilerTest.compileStdinWithOpts(root, tsComp, root, paritySrc, path.join(root, "main.lts"), "", ["--builtin-mode", "core/crypto=pure"]);
+test.checkInt("ts pure sha compile status: " + tsCompRes.stderr, 0, tsCompRes.status);
+tsRun := compilerTest.checkAndRunTs(root, tsCompRes.stdout);
+test.checkInt("ts pure sha run status: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("ts pure sha output", expectedOut, tsRun.stdout);
+
+cCompRes := compilerTest.compileStdinWithOpts(root, cComp, root, paritySrc, path.join(root, "main.lts"), "", ["--builtin-mode", "core/crypto=pure"]);
+test.checkInt("c pure sha compile status: " + cCompRes.stderr, 0, cCompRes.status);
+test.checkText("c pure sha compile stderr", "", cCompRes.stderr);
+
+/* 3. Inspect emitted C11 to confirm stack-inline [UInt32; 64]/[UInt64; 80] and native rotate ops, zero LUTs. */
+test.check("c pure sha uses lt_arr_u32_64", cCompRes.stdout.contains("lt_arr_u32_64"));
+test.check("c pure sha uses lt_arr_u64_80", cCompRes.stdout.contains("lt_arr_u64_80"));
+test.check("c pure sha uses lt_rotr_u32", cCompRes.stdout.contains("lt_rotr_u32("));
+test.check("c pure sha uses lt_rotr_u64", cCompRes.stdout.contains("lt_rotr_u64("));
+test.check("c pure sha has zero buildNibbleTable", not cCompRes.stdout.contains("buildNibbleTable"));
+test.check("c pure sha has zero xor4/and4 LUTs", not cCompRes.stdout.contains("xor4") and not cCompRes.stdout.contains("and4"));
+
+cRun := compilerTest.compileAndRunC(cCompRes.stdout, ccInfo.cc, "");
+test.checkInt("c pure sha run status: " + cRun.stderr, 0, cRun.status);
+test.checkText("c pure sha output", expectedOut, cRun.stdout);
+
+/* 4. Benchmark 1 MB pure-Lite SHA-256 at C11 -O3. */
+benchDirRes := fs.makeTempDir("lite-pure-sha-bench-");
+test.check("temp dir created: " + benchDirRes.error, benchDirRes.ok);
+benchDir := benchDirRes.path;
+benchSrc := [
+    "crypto := import \"core/crypto\";",
+    "io := import \"core/io\";",
+    "time := import \"core/time\";",
+    "buf: mut List<Int> = [];",
+    "var i := 0;",
+    "loop i < 1048576 {",
+    "    mut buf.pushBack(i % 251);",
+    "    i += 1;",
+    "}",
+    "t0 := time.monotonicNs();",
+    "digest := crypto.sha256Bytes(buf);",
+    "t1 := time.monotonicNs();",
+    "io.outputLine(digest, (t1 - t0) / 1000000);"
+].join("\n");
+benchComp := compilerTest.compileStdinWithOpts(root, cComp, root, benchSrc, path.join(root, "bench.lts"), "", ["--builtin-mode", "core/crypto=pure"]);
+test.checkInt("c bench compile status: " + benchComp.stderr, 0, benchComp.status);
+benchCFile := path.join(benchDir, "bench.c");
+benchBin := path.join(benchDir, "bench");
+_wb := fs.writeText(benchCFile, benchComp.stdout);
+emptyArgs: List<String> = [];
+ccRes := proc.run(ccInfo.cc, ["-std=c11", "-O3", "-Wall", "-Wextra", "-Werror", benchCFile, "-o", benchBin, "-lm"], benchDir, emptyArgs, true, "");
+test.checkInt("c bench -O3 cc status: " + ccRes.stderr, 0, ccRes.status);
+binRes := proc.run(benchBin, emptyArgs, benchDir, emptyArgs, true, "");
+test.checkInt("c bench run status: " + binRes.stderr, 0, binRes.status);
+io.outputLine("pure-Lite C11 -O3 1MB SHA-256 (hash ms):", binRes.stdout.trim());
+test.check("c bench output has digest", binRes.stdout.contains(" "));
+_rm := fs.remove(benchDir);
+
+test.done("crypto-pure-sha");

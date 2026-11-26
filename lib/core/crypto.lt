@@ -10,7 +10,6 @@ pub randomBytes := fn(count: Int): List<Int>;
 
 b64Alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 hexAlphabet := "0123456789abcdef";
-pow32 := 4294967296;
 
 /** Validates that every integer in `bytes` falls within `0..255`. */
 checkByteRange := fn(bytes: List<Int>): Unit {
@@ -22,40 +21,7 @@ checkByteRange := fn(bytes: List<Int>): Unit {
     }
 };
 
-/** Precomputes a 256-entry 4-bit bitwise lookup table for XOR (`isXor`) or AND. */
-buildNibbleTable := fn(isXor: Bool): List<Int> {
-    out: mut List<Int> = [];
-    var a := 0;
-    loop a < 16 {
-        var b := 0;
-        loop b < 16 {
-            var x := a;
-            var y := b;
-            var res := 0;
-            var bit := 1;
-            var k := 0;
-            loop k < 4 {
-                ax := x % 2;
-                by := y % 2;
-                hit := if isXor { ax =!= by } else { ax == 1 and by == 1 };
-                if hit { res += bit; }
-                x /= 2;
-                y /= 2;
-                bit *= 2;
-                k += 1;
-            }
-            (mut out).pushBack(res);
-            b += 1;
-        }
-        a += 1;
-    }
-    out
-};
-
-xor4 := buildNibbleTable(true);
-and4 := buildNibbleTable(false);
-
-k256: List<Int> = [
+k256: [UInt32; 64] = [
 1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221,
 3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580,
 3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986,
@@ -66,140 +32,75 @@ k256: List<Int> = [
 1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298
 ];
 
-k512Hi: List<Int> = [
-1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221,
-3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580,
-3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986,
-2554220882, 2821834349, 2952996808, 3210313671, 3336571891, 3584528711, 113926993, 338241895,
-666307205, 773529912, 1294757372, 1396182291, 1695183700, 1986661051, 2177026350, 2456956037,
-2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909, 275423344,
-430227734, 506948616, 659060556, 883997877, 958139571, 1322822218, 1537002063, 1747873779,
-1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298,
-3391569614, 3515267271, 3940187606, 4118630271, 116418474, 174292421, 289380356, 460393269,
-685471733, 852142971, 1017036298, 1126000580, 1288033470, 1501505948, 1607167915, 1816402316
+k512: [UInt64; 80] = [
+4794697086780616226, 8158064640168781261, 13096744586834688815, 16840607885511220156,
+4131703408338449720, 6480981068601479193, 10538285296894168987, 12329834152419229976,
+15566598209576043074, 1334009975649890238, 2608012711638119052, 6128411473006802146,
+8268148722764581231, 9286055187155687089, 11230858885718282805, 13951009754708518548,
+16472876342353939154, 17275323862435702243, 1135362057144423861, 2597628984639134821,
+3308224258029322869, 5365058923640841347, 6679025012923562964, 8573033837759648693,
+10970295158949994411, 12119686244451234320, 12683024718118986047, 13788192230050041572,
+14330467153632333762, 15395433587784984357, 489312712824947311, 1452737877330783856,
+2861767655752347644, 3322285676063803686, 5560940570517711597, 5996557281743188959,
+7280758554555802590, 8532644243296465576, 9350256976987008742, 10552545826968843579,
+11727347734174303076, 12113106623233404929, 14000437183269869457, 14369950271660146224,
+15101387698204529176, 15463397548674623760, 17586052441742319658, 1182934255886127544,
+1847814050463011016, 2177327727835720531, 2830643537854262169, 3796741975233480872,
+4115178125766777443, 5681478168544905931, 6601373596472566643, 7507060721942968483,
+8399075790359081724, 8693463985226723168, 9568029438360202098, 10144078919501101548,
+10430055236837252648, 11840083180663258601, 13761210420658862357, 14299343276471374635,
+14566680578165727644, 15097957966210449927, 16922976911328602910, 17689382322260857208,
+500013540394364858, 748580250866718886, 1242879168328830382, 1977374033974150939,
+2944078676154940804, 3659926193048069267, 4368137639120453308, 4836135668995329356,
+5532061633213252278, 6448918945643986474, 6902733635092675308, 7801388544844847127
 ];
-
-k512Lo: List<Int> = [
-3609767458, 602891725, 3964484399, 2173295548, 4081628472, 3053834265, 2937671579, 3664609560,
-2734883394, 1164996542, 1323610764, 3590304994, 4068182383, 991336113, 633803317, 3479774868,
-2666613458, 944711139, 2341262773, 2007800933, 1495990901, 1856431235, 3175218132, 2198950837,
-3999719339, 766784016, 2566594879, 3203337956, 1034457026, 2466948901, 3758326383, 168717936,
-1188179964, 1546045734, 1522805485, 2643833823, 2343527390, 1014477480, 1206759142, 344077627,
-1290863460, 3158454273, 3505952657, 106217008, 3606008344, 1432725776, 1467031594, 851169720,
-3100823752, 1363258195, 3750685593, 3785050280, 3318307427, 3812723403, 2003034995, 3602036899,
-1575990012, 1125592928, 2716904306, 442776044, 593698344, 3733110249, 2999351573, 3815920427,
-3928383900, 566280711, 3454069534, 4000239992, 1914138554, 2731055270, 3203993006, 320620315,
-587496836, 1086792851, 365543100, 2618297676, 3409855158, 4234509866, 987167468, 1246189591
-];
-
-/** Computes 32-bit three-way bitwise XOR via precomputed 4-bit lookup tables. */
-xor3_32 := fn(a: Int, b: Int, c: Int): Int {
-    var x := a;
-    var y := b;
-    var z := c;
-    var acc := 0;
-    var mul := 1;
-    var step := 0;
-    loop step < 8 {
-        xy := xor4[(x % 16) * 16 + (y % 16)];
-        acc += xor4[xy * 16 + (z % 16)] * mul;
-        x /= 16;
-        y /= 16;
-        z /= 16;
-        mul *= 16;
-        step += 1;
-    }
-    acc
-};
-
-/** Computes the SHA-256 `Ch(e, f, g)` 32-bit bitwise choice function. */
-ch32 := fn(e: Int, f: Int, g: Int): Int {
-    var ve := e;
-    var vf := f;
-    var vg := g;
-    var acc := 0;
-    var mul := 1;
-    var step := 0;
-    loop step < 8 {
-        ne := ve % 16;
-        nf := vf % 16;
-        ng := vg % 16;
-        fxor := xor4[nf * 16 + ng];
-        acc += xor4[ng * 16 + and4[ne * 16 + fxor]] * mul;
-        ve /= 16;
-        vf /= 16;
-        vg /= 16;
-        mul *= 16;
-        step += 1;
-    }
-    acc
-};
-
-/** Computes the SHA-256 `Maj(a, b, c)` 32-bit bitwise majority function. */
-maj32 := fn(a: Int, b: Int, c: Int): Int {
-    var va := a;
-    var vb := b;
-    var vc := c;
-    var acc := 0;
-    var mul := 1;
-    var step := 0;
-    loop step < 8 {
-        na := va % 16;
-        nb := vb % 16;
-        nc := vc % 16;
-        abAnd := and4[na * 16 + nb];
-        abXor := xor4[na * 16 + nb];
-        acc += xor4[abAnd * 16 + and4[nc * 16 + abXor]] * mul;
-        va /= 16;
-        vb /= 16;
-        vc /= 16;
-        mul *= 16;
-        step += 1;
-    }
-    acc
-};
 
 /** Formats an unsigned 32-bit integer as 8 lowercase hexadecimal digits. */
-word32Hex := fn(word: Int): String {
+word32Hex := fn(word: UInt32): String {
     var out := "";
-    var div := 268435456;
     var step := 0;
     loop step < 8 {
-        nib := (word / div) % 16;
+        nib := cast<Int>(word.shiftRight(28 - step * 4).bitAnd(15));
         out += hexAlphabet.at(nib);
-        div /= 16;
         step += 1;
     }
     out
 };
 
-/** Compresses one 64-byte SHA-256 block into the eight 32-bit state words. */
+/** Formats an unsigned 64-bit integer as 16 lowercase hexadecimal digits. */
+word64Hex := fn(word: UInt64): String {
+    var out := "";
+    var step := 0;
+    loop step < 16 {
+        nib := cast<Int>(word.shiftRight(60 - step * 4).bitAnd(15));
+        out += hexAlphabet.at(nib);
+        step += 1;
+    }
+    out
+};
+
+/** Compresses one 64-byte SHA-256 block into the eight 32-bit state words using stack-inline schedule storage. */
 sha256Compress := fn(
-h0In: Int, h1In: Int, h2In: Int, h3In: Int,
-h4In: Int, h5In: Int, h6In: Int, h7In: Int,
+h0In: UInt32, h1In: UInt32, h2In: UInt32, h3In: UInt32,
+h4In: UInt32, h5In: UInt32, h6In: UInt32, h7In: UInt32,
 block: List<Int>, offset: Int
-): (h0: Int, h1: Int, h2: Int, h3: Int, h4: Int, h5: Int, h6: Int, h7: Int) {
-    w: mut List<Int> = [];
+): (h0: UInt32, h1: UInt32, h2: UInt32, h3: UInt32, h4: UInt32, h5: UInt32, h6: UInt32, h7: UInt32) {
+    var w: [UInt32; 64];
     var i := 0;
     loop i < 16 {
         p := offset + i * 4;
-        mut w.pushBack(block[p] * 16777216 + block[p + 1] * 65536 + block[p + 2] * 256 + block[p + 3]);
+        w[i] = cast<UInt32>(block[p]).shiftLeft(24)
+        .bitOr(cast<UInt32>(block[p + 1]).shiftLeft(16))
+        .bitOr(cast<UInt32>(block[p + 2]).shiftLeft(8))
+        .bitOr(cast<UInt32>(block[p + 3]));
         i += 1;
     }
     loop i < 64 {
         w15 := w[i - 15];
-        s0 := xor3_32(
-        (w15 / 128) + (w15 % 128) * 33554432,
-        (w15 / 262144) + (w15 % 262144) * 16384,
-        w15 / 8
-        );
+        s0 := w15.rotateRight(7).bitXor(w15.rotateRight(18)).bitXor(w15.shiftRight(3));
         w2 := w[i - 2];
-        s1 := xor3_32(
-        (w2 / 131072) + (w2 % 131072) * 32768,
-        (w2 / 524288) + (w2 % 524288) * 8192,
-        w2 / 1024
-        );
-        mut w.pushBack((w[i - 16] + s0 + w[i - 7] + s1) % pow32);
+        s1 := w2.rotateRight(17).bitXor(w2.rotateRight(19)).bitXor(w2.shiftRight(10));
+        w[i] = w[i - 16].wrappingAdd(s0).wrappingAdd(w[i - 7]).wrappingAdd(s1);
         i += 1;
     }
 
@@ -213,46 +114,38 @@ block: List<Int>, offset: Int
     var h := h7In;
     var r := 0;
     loop r < 64 {
-        capS1 := xor3_32(
-        (e / 64) + (e % 64) * 67108864,
-        (e / 2048) + (e % 2048) * 2097152,
-        (e / 33554432) + (e % 33554432) * 128
-        );
-        ch := ch32(e, f, g);
-        temp1 := (h + capS1 + ch + k256[r] + w[r]) % pow32;
-        capS0 := xor3_32(
-        (a / 4) + (a % 4) * 1073741824,
-        (a / 8192) + (a % 8192) * 524288,
-        (a / 4194304) + (a % 4194304) * 1024
-        );
-        maj := maj32(a, b, c);
-        temp2 := (capS0 + maj) % pow32;
+        capS1 := e.rotateRight(6).bitXor(e.rotateRight(11)).bitXor(e.rotateRight(25));
+        ch := e.bitAnd(f).bitXor(e.bitNot().bitAnd(g));
+        temp1 := h.wrappingAdd(capS1).wrappingAdd(ch).wrappingAdd(k256[r]).wrappingAdd(w[r]);
+        capS0 := a.rotateRight(2).bitXor(a.rotateRight(13)).bitXor(a.rotateRight(22));
+        maj := a.bitAnd(b).bitXor(a.bitAnd(c)).bitXor(b.bitAnd(c));
+        temp2 := capS0.wrappingAdd(maj);
         h = g;
         g = f;
         f = e;
-        e = (d + temp1) % pow32;
+        e = d.wrappingAdd(temp1);
         d = c;
         c = b;
         b = a;
-        a = (temp1 + temp2) % pow32;
+        a = temp1.wrappingAdd(temp2);
         r += 1;
     }
     (
-    h0 = (h0In + a) % pow32,
-    h1 = (h1In + b) % pow32,
-    h2 = (h2In + c) % pow32,
-    h3 = (h3In + d) % pow32,
-    h4 = (h4In + e) % pow32,
-    h5 = (h5In + f) % pow32,
-    h6 = (h6In + g) % pow32,
-    h7 = (h7In + h) % pow32
+    h0 = h0In.wrappingAdd(a),
+    h1 = h1In.wrappingAdd(b),
+    h2 = h2In.wrappingAdd(c),
+    h3 = h3In.wrappingAdd(d),
+    h4 = h4In.wrappingAdd(e),
+    h5 = h5In.wrappingAdd(f),
+    h6 = h6In.wrappingAdd(g),
+    h7 = h7In.wrappingAdd(h)
     )
 };
 
 /** Pads and hashes the remaining SHA-256 tail block(s) and returns the lowercase hex digest. */
 sha256FinalizeTail := fn(
-h0In: Int, h1In: Int, h2In: Int, h3In: Int,
-h4In: Int, h5In: Int, h6In: Int, h7In: Int,
+h0In: UInt32, h1In: UInt32, h2In: UInt32, h3In: UInt32,
+h4In: UInt32, h5In: UInt32, h6In: UInt32, h7In: UInt32,
 tail: List<Int>, totalBytes: Int
 ): String {
     var h0 := h0In;
@@ -271,16 +164,11 @@ tail: List<Int>, totalBytes: Int
     loop (padded.length() % 64) =!= 56 {
         mut padded.pushBack(0);
     }
-    var bitLen := totalBytes * 8;
-    lenBytes: mut List<Int> = [];
+    bitLen := cast<UInt64>(totalBytes).shiftLeft(3);
     var k := 0;
     loop k < 8 {
-        mut lenBytes.pushFront(bitLen % 256);
-        bitLen /= 256;
+        mut padded.pushBack(cast<Int>(bitLen.shiftRight(56 - k * 8).bitAnd(255)));
         k += 1;
-    }
-    loop lenBytes as lb {
-        mut padded.pushBack(lb);
     }
     totalPadded := padded.length();
     var pos := 0;
@@ -299,14 +187,14 @@ pub sha256Reader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String
     if not reader.ok() {
         return (ok = false, hex = "", error = reader.error());
     }
-    var h0 := 1779033703;
-    var h1 := 3144134277;
-    var h2 := 1013904242;
-    var h3 := 2773480762;
-    var h4 := 1359893119;
-    var h5 := 2600822924;
-    var h6 := 528734635;
-    var h7 := 1541459225;
+    var h0: UInt32 = 1779033703;
+    var h1: UInt32 = 3144134277;
+    var h2: UInt32 = 1013904242;
+    var h3: UInt32 = 2773480762;
+    var h4: UInt32 = 1359893119;
+    var h5: UInt32 = 2600822924;
+    var h6: UInt32 = 528734635;
+    var h7: UInt32 = 1541459225;
     var totalBytes := 0;
     var tail: mut List<Int> = [];
     loop true {
@@ -351,14 +239,14 @@ pub sha256Reader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String
 pub sha256Bytes := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
     total := bytes.length();
-    var h0 := 1779033703;
-    var h1 := 3144134277;
-    var h2 := 1013904242;
-    var h3 := 2773480762;
-    var h4 := 1359893119;
-    var h5 := 2600822924;
-    var h6 := 528734635;
-    var h7 := 1541459225;
+    var h0: UInt32 = 1779033703;
+    var h1: UInt32 = 3144134277;
+    var h2: UInt32 = 1013904242;
+    var h3: UInt32 = 2773480762;
+    var h4: UInt32 = 1359893119;
+    var h5: UInt32 = 2600822924;
+    var h6: UInt32 = 528734635;
+    var h7: UInt32 = 1541459225;
     var pos := 0;
     loop pos + 64 <= total {
         st := sha256Compress(h0, h1, h2, h3, h4, h5, h6, h7, bytes, pos);
@@ -396,39 +284,6 @@ pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String) {
     hashed
 };
 
-/** Returns `2^bits` for unsigned 32-bit shift computations. */
-pow2Arr := fn(bits: Int): Int {
-    var out := 1;
-    var i := 0;
-    loop i < bits {
-        out *= 2;
-        i += 1;
-    }
-    out
-};
-
-/** Rotates a 64-bit word (`hi`, `lo`) right by `shift` bits. */
-rotr64 := fn(hi: Int, lo: Int, shift: Int): (hi: Int, lo: Int) {
-    if shift == 0 { return (hi = hi, lo = lo); }
-    if shift < 32 {
-        d := pow2Arr(shift);
-        m := pow2Arr(32 - shift);
-        return (hi = (hi / d) + (lo % d) * m, lo = (lo / d) + (hi % d) * m);
-    }
-    s := shift - 32;
-    if s == 0 { return (hi = lo, lo = hi); }
-    d := pow2Arr(s);
-    m := pow2Arr(32 - s);
-    (hi = (lo / d) + (hi % d) * m, lo = (hi / d) + (lo % d) * m)
-};
-
-/** Logically shifts a 64-bit word (`hi`, `lo`) right by `shift` bits (`shift < 32`). */
-shr64 := fn(hi: Int, lo: Int, shift: Int): (hi: Int, lo: Int) {
-    d := pow2Arr(shift);
-    m := pow2Arr(32 - shift);
-    (hi = hi / d, lo = (lo / d) + (hi % d) * m)
-};
-
 /** Returns the lowercase hexadecimal SHA-512 digest of raw `0..255` byte values. */
 pub sha512Bytes := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
@@ -441,120 +296,96 @@ pub sha512Bytes := fn(bytes: List<Int>): String {
     loop (padded.length() % 128) =!= 112 {
         mut padded.pushBack(0);
     }
-    var bitLen := total * 8;
-    lenBytes: mut List<Int> = [];
+    bitLenHi := cast<UInt64>(total).shiftRight(61);
+    bitLenLo := cast<UInt64>(total).shiftLeft(3);
     var k := 0;
-    loop k < 16 {
-        mut lenBytes.pushFront(bitLen % 256);
-        bitLen /= 256;
+    loop k < 8 {
+        mut padded.pushBack(cast<Int>(bitLenHi.shiftRight(56 - k * 8).bitAnd(255)));
         k += 1;
     }
-    loop lenBytes as lb {
-        mut padded.pushBack(lb);
+    k = 0;
+    loop k < 8 {
+        mut padded.pushBack(cast<Int>(bitLenLo.shiftRight(56 - k * 8).bitAnd(255)));
+        k += 1;
     }
 
-    var h0Hi := 1779033703; var h0Lo := 4089235720;
-    var h1Hi := 3144134277; var h1Lo := 2227873595;
-    var h2Hi := 1013904242; var h2Lo := 4271175723;
-    var h3Hi := 2773480762; var h3Lo := 1595750129;
-    var h4Hi := 1359893119; var h4Lo := 2917565137;
-    var h5Hi := 2600822924; var h5Lo := 725511199;
-    var h6Hi := 528734635; var h6Lo := 4215389547;
-    var h7Hi := 1541459225; var h7Lo := 327033209;
+    var h0: UInt64 = 7640891576956012808;
+    var h1: UInt64 = 13503953896175478587;
+    var h2: UInt64 = 4354685564936845355;
+    var h3: UInt64 = 11912009170470909681;
+    var h4: UInt64 = 5840696475078001361;
+    var h5: UInt64 = 11170449401992604703;
+    var h6: UInt64 = 2270897969802886507;
+    var h7: UInt64 = 6620516959819538809;
 
     totalPadded := padded.length();
     var offset := 0;
+    var w: [UInt64; 80];
     loop offset < totalPadded {
-        wHi: mut List<Int> = [];
-        wLo: mut List<Int> = [];
         var i := 0;
         loop i < 16 {
             p := offset + i * 8;
-            mut wHi.pushBack(padded[p] * 16777216 + padded[p + 1] * 65536 + padded[p + 2] * 256 + padded[p + 3]);
-            mut wLo.pushBack(padded[p + 4] * 16777216 + padded[p + 5] * 65536 + padded[p + 6] * 256 + padded[p + 7]);
+            w[i] = cast<UInt64>(padded[p]).shiftLeft(56)
+            .bitOr(cast<UInt64>(padded[p + 1]).shiftLeft(48))
+            .bitOr(cast<UInt64>(padded[p + 2]).shiftLeft(40))
+            .bitOr(cast<UInt64>(padded[p + 3]).shiftLeft(32))
+            .bitOr(cast<UInt64>(padded[p + 4]).shiftLeft(24))
+            .bitOr(cast<UInt64>(padded[p + 5]).shiftLeft(16))
+            .bitOr(cast<UInt64>(padded[p + 6]).shiftLeft(8))
+            .bitOr(cast<UInt64>(padded[p + 7]));
             i += 1;
         }
         loop i < 80 {
-            x0 := rotr64(wHi[i - 15], wLo[i - 15], 1);
-            x1 := rotr64(wHi[i - 15], wLo[i - 15], 8);
-            x2 := shr64(wHi[i - 15], wLo[i - 15], 7);
-            s0Hi := xor3_32(x0.hi, x1.hi, x2.hi);
-            s0Lo := xor3_32(x0.lo, x1.lo, x2.lo);
-            y0 := rotr64(wHi[i - 2], wLo[i - 2], 19);
-            y1 := rotr64(wHi[i - 2], wLo[i - 2], 61);
-            y2 := shr64(wHi[i - 2], wLo[i - 2], 6);
-            s1Hi := xor3_32(y0.hi, y1.hi, y2.hi);
-            s1Lo := xor3_32(y0.lo, y1.lo, y2.lo);
-            sumLo := wLo[i - 16] + s0Lo + wLo[i - 7] + s1Lo;
-            sumHi := wHi[i - 16] + s0Hi + wHi[i - 7] + s1Hi + (sumLo / pow32);
-            mut wHi.pushBack(sumHi % pow32);
-            mut wLo.pushBack(sumLo % pow32);
+            w15 := w[i - 15];
+            s0 := w15.rotateRight(1).bitXor(w15.rotateRight(8)).bitXor(w15.shiftRight(7));
+            w2 := w[i - 2];
+            s1 := w2.rotateRight(19).bitXor(w2.rotateRight(61)).bitXor(w2.shiftRight(6));
+            w[i] = w[i - 16].wrappingAdd(s0).wrappingAdd(w[i - 7]).wrappingAdd(s1);
             i += 1;
         }
 
-        var aHi := h0Hi; var aLo := h0Lo;
-        var bHi := h1Hi; var bLo := h1Lo;
-        var cHi := h2Hi; var cLo := h2Lo;
-        var dHi := h3Hi; var dLo := h3Lo;
-        var eHi := h4Hi; var eLo := h4Lo;
-        var fHi := h5Hi; var fLo := h5Lo;
-        var gHi := h6Hi; var gLo := h6Lo;
-        var hHi := h7Hi; var hLo := h7Lo;
+        var a := h0;
+        var b := h1;
+        var c := h2;
+        var d := h3;
+        var e := h4;
+        var f := h5;
+        var g := h6;
+        var h := h7;
 
         var r := 0;
         loop r < 80 {
-            r14 := rotr64(eHi, eLo, 14);
-            r18 := rotr64(eHi, eLo, 18);
-            r41 := rotr64(eHi, eLo, 41);
-            sig1Hi := xor3_32(r14.hi, r18.hi, r41.hi);
-            sig1Lo := xor3_32(r14.lo, r18.lo, r41.lo);
-            chHi := ch32(eHi, fHi, gHi);
-            chLo := ch32(eLo, fLo, gLo);
-            t1Lo := hLo + sig1Lo + chLo + k512Lo[r] + wLo[r];
-            t1Hi := (hHi + sig1Hi + chHi + k512Hi[r] + wHi[r] + (t1Lo / pow32)) % pow32;
-            t1LoMod := t1Lo % pow32;
+            sig1 := e.rotateRight(14).bitXor(e.rotateRight(18)).bitXor(e.rotateRight(41));
+            ch := e.bitAnd(f).bitXor(e.bitNot().bitAnd(g));
+            temp1 := h.wrappingAdd(sig1).wrappingAdd(ch).wrappingAdd(k512[r]).wrappingAdd(w[r]);
+            sig0 := a.rotateRight(28).bitXor(a.rotateRight(34)).bitXor(a.rotateRight(39));
+            maj := a.bitAnd(b).bitXor(a.bitAnd(c)).bitXor(b.bitAnd(c));
+            temp2 := sig0.wrappingAdd(maj);
 
-            r28 := rotr64(aHi, aLo, 28);
-            r34 := rotr64(aHi, aLo, 34);
-            r39 := rotr64(aHi, aLo, 39);
-            sig0Hi := xor3_32(r28.hi, r34.hi, r39.hi);
-            sig0Lo := xor3_32(r28.lo, r34.lo, r39.lo);
-            majHi := maj32(aHi, bHi, cHi);
-            majLo := maj32(aLo, bLo, cLo);
-            t2Lo := sig0Lo + majLo;
-            t2Hi := (sig0Hi + majHi + (t2Lo / pow32)) % pow32;
-            t2LoMod := t2Lo % pow32;
-
-            hHi = gHi; hLo = gLo;
-            gHi = fHi; gLo = fLo;
-            fHi = eHi; fLo = eLo;
-            neLo := dLo + t1LoMod;
-            eHi = (dHi + t1Hi + (neLo / pow32)) % pow32;
-            eLo = neLo % pow32;
-            dHi = cHi; dLo = cLo;
-            cHi = bHi; cLo = bLo;
-            bHi = aHi; bLo = aLo;
-            naLo := t1LoMod + t2LoMod;
-            aHi = (t1Hi + t2Hi + (naLo / pow32)) % pow32;
-            aLo = naLo % pow32;
+            h = g;
+            g = f;
+            f = e;
+            e = d.wrappingAdd(temp1);
+            d = c;
+            c = b;
+            b = a;
+            a = temp1.wrappingAdd(temp2);
             r += 1;
         }
 
-        s0 := h0Lo + aLo; h0Hi = (h0Hi + aHi + (s0 / pow32)) % pow32; h0Lo = s0 % pow32;
-        s1 := h1Lo + bLo; h1Hi = (h1Hi + bHi + (s1 / pow32)) % pow32; h1Lo = s1 % pow32;
-        s2 := h2Lo + cLo; h2Hi = (h2Hi + cHi + (s2 / pow32)) % pow32; h2Lo = s2 % pow32;
-        s3 := h3Lo + dLo; h3Hi = (h3Hi + dHi + (s3 / pow32)) % pow32; h3Lo = s3 % pow32;
-        s4 := h4Lo + eLo; h4Hi = (h4Hi + eHi + (s4 / pow32)) % pow32; h4Lo = s4 % pow32;
-        s5 := h5Lo + fLo; h5Hi = (h5Hi + fHi + (s5 / pow32)) % pow32; h5Lo = s5 % pow32;
-        s6 := h6Lo + gLo; h6Hi = (h6Hi + gHi + (s6 / pow32)) % pow32; h6Lo = s6 % pow32;
-        s7 := h7Lo + hLo; h7Hi = (h7Hi + hHi + (s7 / pow32)) % pow32; h7Lo = s7 % pow32;
+        h0 = h0.wrappingAdd(a);
+        h1 = h1.wrappingAdd(b);
+        h2 = h2.wrappingAdd(c);
+        h3 = h3.wrappingAdd(d);
+        h4 = h4.wrappingAdd(e);
+        h5 = h5.wrappingAdd(f);
+        h6 = h6.wrappingAdd(g);
+        h7 = h7.wrappingAdd(h);
         offset += 128;
     }
 
-    word32Hex(h0Hi) + word32Hex(h0Lo) + word32Hex(h1Hi) + word32Hex(h1Lo) +
-    word32Hex(h2Hi) + word32Hex(h2Lo) + word32Hex(h3Hi) + word32Hex(h3Lo) +
-    word32Hex(h4Hi) + word32Hex(h4Lo) + word32Hex(h5Hi) + word32Hex(h5Lo) +
-    word32Hex(h6Hi) + word32Hex(h6Lo) + word32Hex(h7Hi) + word32Hex(h7Lo)
+    word64Hex(h0) + word64Hex(h1) + word64Hex(h2) + word64Hex(h3) +
+    word64Hex(h4) + word64Hex(h5) + word64Hex(h6) + word64Hex(h7)
 };
 
 /** Returns the lowercase hexadecimal SHA-512 digest of UTF-8 `value`. */
@@ -574,19 +405,7 @@ isHexChar := fn(ch: String): Bool {
 
 /** Computes the bitwise XOR of two byte values (`0..255`). */
 byteXor := fn(left: Int, right: Int): Int {
-    var a := left;
-    var b := right;
-    var bit := 1;
-    var out := 0;
-    loop bit < 256 {
-        if a % 2 =!= b % 2 {
-            out += bit;
-        }
-        a = a / 2;
-        b = b / 2;
-        bit *= 2;
-    }
-    out
+    left.bitXor(right)
 }
 
 /** Returns true when `encoded` is valid standard RFC 4648 padded base64 text. */
