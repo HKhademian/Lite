@@ -24,6 +24,8 @@ mut fnCtxByRuntime: Map<String, String>;
 mut ambientContexts: List<AmbientContext> = [];
 mut ambientByModule: Map<String, List<AmbientContext>>;
 mut modulesWithMutGlobals: List<String> = [];
+mut lastBranchInitRows: List<String> = [];
+mut blockInitFlags: Map<String, String>;
 
 /** Resets all context registries before a fresh compilation graph. */
 pub resetAll := fn(): Unit {
@@ -31,6 +33,39 @@ pub resetAll := fn(): Unit {
     mut ambientContexts.clear();
     mut ambientByModule.clear();
     mut modulesWithMutGlobals.clear();
+    mut lastBranchInitRows.clear();
+    mut blockInitFlags.clear();
+};
+
+/** Registers an active block-local C11 1-byte init guard for `rt` during enclosing block lowering. */
+pub registerBlockInitFlag := fn(rt: String, flagName: String): Unit {
+    if rt =!= "" and flagName =!= "" { mut blockInitFlags.set(rt, flagName); }
+};
+
+/** Unregisters the block-local C11 1-byte init guard for `rt` when leaving its declaring block. */
+pub unregisterBlockInitFlag := fn(rt: String): Unit {
+    if rt =!= "" { _ := mut blockInitFlags.remove(rt); }
+};
+
+/** Looks up any active enclosing block-local C11 1-byte init guard for `rt`, or `""`. */
+pub lookupBlockInitFlag := fn(rt: String): String {
+    if rt == "" { "" } else { blockInitFlags.getOr(rt, "") }
+};
+
+/** Replaces stored outer-local `runtime\tinitState\tcode` rows captured at exit of the most recent stmt/branch block. */
+pub setLastBranchInitRows := fn(rows: List<String>): Unit {
+    mut lastBranchInitRows.clear();
+    loop rows as r { mut lastBranchInitRows.pushBack(r); }
+};
+
+/** Clears any stored outer-local branch init rows before entering a newstmt/branch block. */
+pub clearLastBranchInitRows := fn(): Unit {
+    mut lastBranchInitRows.clear();
+};
+
+/** Returns stored outer-local `runtime\tinitState\tcode` rows from the last finished stmt/branch block. */
+pub getLastBranchInitRows := fn(): List<String> {
+    lastBranchInitRows
 };
 
 /** Marks `moduleKey` (empty string maps to `"$root"`) as declaring or transitively importing a module-level `mut` binding. */

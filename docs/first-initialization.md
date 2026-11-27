@@ -1,17 +1,13 @@
 # First initialization and definite initialization
 
-Status: **whole-value first initialization with = and path-sensitive checks selected, 2026-10-19; conditional `else { ? }` reservation and branch-correlated initialization selected 2026-10-25; scalar/tuple/fixed-array locals implemented in the igniter, 2026-11-01**. A fixed binding declared with = ? may receive its first complete value once on each execution path. Later whole-value replacement requires var. Field/element construction and initialization through callees need separate contracts.
+Status: **whole-value first initialization with = and path-sensitive checks selected, 2026-10-19; conditional `else { ? }` reservation and branch-correlated initialization selected 2026-10-25; Phase 14 definite initialization, immutable `Bool` predicate correlation, dynamic 1-byte C11 init/drop guards for owned values, and uninitialized-array slice rejection implemented on TS and C11**. A fixed binding declared with = ? or a partial conditional initializer may receive its first complete value once on each execution path. Later whole-value replacement requires var. Field/element construction and initialization through callees remain future work.
 
-Implementation checkpoint, 2026-11-01: the igniter implements `x: Type = ?` for
-scalar, flat-tuple and fixed-array locals. Reads before the first whole-value `=`
-are rejected, the first write is permitted without `var`, later replacement
-requires `var`, and definite initialization is joined across `if` and
-subjectless `match` paths. Loop bodies do not establish initialization after the
-loop. A guarded write such as `x = if flag { value }` records may-initialization
-but not definite initialization, so a later unguarded first write is rejected as
-a possible replacement. Conditional `else { ? }` reservation and its branch
-correlation, field/element construction and initialization through callees
-remain unimplemented.
+Implementation note (Phase 14): the compiler tracks definite initialization across scalar, tuple, fixed-array, record, enum, list, map, set, and `Rc` locals:
+- Partial conditional initializers (`a := if flag { v };`, `else { ? }`, and `if flag { ? } else { v }`) leave the binding uninitialized on `{ ? }` / omitted `else` paths rather than synthesizing zero fallbacks; reading before every reaching path initializes the binding is rejected.
+- Immutable `Bool` predicates (`flag` / `not flag`, where `flag` lacks `var`) correlate across `if` / `else` branches, early-return / diverging guards, preserved intermediate statements, and exhaustive `match` joins so single-write first initialization on the uncovered branch (`if not flag { a = fallback; }`) proves full initialization.
+- On C11, a 1-byte `uint8_t lt_init_<rt>` init/drop guard is emitted **only** for dynamically maybe-initialized owned locals (never for ordinary definitely-initialized owned locals or scalar partial locals), preventing uninitialized drops and leaks across early returns and overwrites.
+- Slicing an uninitialized or partially initialized `[T; N]` array (`arr[a..b]`, `mut arr[a..b]`) is rejected unless all elements along that path are initialized; partial `Slice<T>` and `dyn Interface` conditional bindings are likewise rejected.
+- Field/element partial construction and callee write-only contracts remain unimplemented.
 
 The selected [union-local declaration rule](lite://doc/union-initialization-policy#bare-local-declarations) zero-initializes bare typed declarations, including unions. Explicitly reserved union storage (`= ?`) remains uninitialized and reuses the no-read-before-initialization rules below.
 

@@ -23,7 +23,7 @@ pub BlockState := alias (returned: Bool, stopped: Bool, branchesReturned: Bool, 
 pub BlockDecl := alias (name: String, depth: Int);
 
 /** One outer local initialization and callable-dependency update recorded at the end of a conditional branch. */
-pub BranchUpdate := alias (depth: Int, runtime: String, initState: String, code: String);
+pub BranchUpdate := alias (depth: Int, arm: Int, runtime: String, initState: String, code: String);
 
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
 pub Operator := alias (text: String, width: Int);
@@ -47,6 +47,16 @@ pub INIT_STATE_INIT := "init";
 pub INIT_STATE_UNINIT := "uninit";
 pub INIT_STATE_UNINIT_ASSIGNED := "uninit_assigned";
 pub INIT_STATE_MAYBE := "maybe";
+pub INIT_STATE_COND_T_PREFIX := "cond_t:";
+pub INIT_STATE_COND_F_PREFIX := "cond_f:";
+
+pub isInitStateMaybe := fn(s: String): Bool {
+    s == INIT_STATE_MAYBE or s.startsWithAt(0, INIT_STATE_COND_T_PREFIX) or s.startsWithAt(0, INIT_STATE_COND_F_PREFIX)
+};
+
+pub isInitStateUninit := fn(s: String): Bool {
+    s == INIT_STATE_UNINIT or s == INIT_STATE_UNINIT_ASSIGNED
+};
 
 pub BLOCK_KIND_FUNCTION := "function";
 pub BLOCK_KIND_SCOPE := "scope";

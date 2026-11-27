@@ -205,20 +205,22 @@ parseFinallyClause := fn(target: String, source: String, afterFinWordPos: Int, p
 /** Emits a `try { ... } finally { ... }` IIFE result for Pass 1 (marker-carrying) or Pass 2 codegen. */
 finishFinallyIife := fn(tryBody: String, finParsed: Parsed, normalKind: String, leftForMarkers: Parsed, inferMode: Bool): Parsed {
     finalKind := if finParsed.kind == ir.VALUE_KIND_NEVER { ir.VALUE_KIND_NEVER } else { normalKind };
+    pinitText := if leftForMarkers.textValue.startsWithAt(0, "$pinit:") { leftForMarkers.textValue } else { "" };
     if inferMode {
         merged := ctx.collectParsedMarkers(ctx.collectParsedMarkers("", leftForMarkers), finParsed);
-        return ctx.withMarkers((kind = finalKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), merged);
+        return ctx.withMarkers((kind = finalKind, code = "", intValue = 0, textValue = pinitText, constant = false, next = finParsed.next), merged);
     }
     (kind = finalKind, code = "(() => { try { " + tryBody + " } finally { " + finParsed.code + " } })()",
-    intValue = 0, textValue = "", constant = false, next = finParsed.next)
+    intValue = 0, textValue = pinitText, constant = false, next = finParsed.next)
 };
 
 /** Wraps a C11 expression/block with a `finally` clause, rewriting early `return` and outer `goto` exits to run `finParsed.code`. */
 finishFinallyC := fn(tryCode: String, finParsed: Parsed, normalKind: String, leftForMarkers: Parsed, inferMode: Bool, ctxs: List<ConstructCtx>, finId: Int): Parsed {
     finalKind := if finParsed.kind == ir.VALUE_KIND_NEVER { ir.VALUE_KIND_NEVER } else { normalKind };
+    pinitText := if leftForMarkers.textValue.startsWithAt(0, "$pinit:") { leftForMarkers.textValue } else { "" };
     if inferMode {
         merged := ctx.collectParsedMarkers(ctx.collectParsedMarkers("", leftForMarkers), finParsed);
-        return ctx.withMarkers((kind = finalKind, code = "", intValue = 0, textValue = "", constant = false, next = finParsed.next), merged);
+        return ctx.withMarkers((kind = finalKind, code = "", intValue = 0, textValue = pinitText, constant = false, next = finParsed.next), merged);
     }
     fnIdx := ctx.findCtxByKindIndex(ctxs, "fn");
     fnRetKind := if fnIdx >= 0 { ctxs[fnIdx].valKind } else { "" };
@@ -231,9 +233,13 @@ finishFinallyC := fn(tryCode: String, finParsed: Parsed, normalKind: String, lef
     finVar := "lt_finv_" + finId.toText();
     unwrapped := ctx.cUnwrapIntoVar(finVar, normalKind, tryCode);
     rewritten := ctx.cRewriteFinallyExits(unwrapped, finParsed.code, fnRetKind, finId);
-    (kind = finalKind, code = "/*@CBLK:" + finVar + "@*/" + types.cValueType(normalKind) + " " + finVar + " = " +
-    ctx.zeroParsed(ir.TARGET_C, normalKind, 0).code + "; { " + rewritten + " { " + finParsed.code + " } }",
-    intValue = 0, textValue = "", constant = false, next = finParsed.next)
+    finDecl := if pinitText =!= "" and types.cTypeNeedsDrop(normalKind) {
+        types.cValueType(normalKind) + " " + finVar + "; memset(&" + finVar + ", 0, sizeof(" + finVar + "));"
+    } else {
+        types.cValueType(normalKind) + " " + finVar + " = " + ctx.zeroParsed(ir.TARGET_C, normalKind, 0).code + ";"
+    };
+    (kind = finalKind, code = "/*@CBLK:" + finVar + "@*/" + finDecl + " { " + rewritten + " { " + finParsed.code + " } }",
+    intValue = 0, textValue = pinitText, constant = false, next = finParsed.next)
 };
 
 /** Attempts to parse an optionally parenthesized `mut` binding lease (`mut x`, `mut .item`, `(mut x)`, `(((((mut x)))))`, `mut (x)`). */
@@ -1361,7 +1367,8 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     loop locals as outerEntry {
         if outerEntry.name =!= "$self" and outerEntry.name =!= "$self_fn_rt" and not outerEntry.name.startsWithAt(0, "$ctxborrow:") and outerEntry.depth >= -1 {
             capturedInit := if outerEntry.initState == ir.INIT_STATE_UNINIT_ASSIGNED { ir.INIT_STATE_INIT }
-            else if outerEntry.initState == ir.INIT_STATE_UNINIT and not outerEntry.mutable { ir.INIT_STATE_MAYBE }
+            else if (outerEntry.initState == ir.INIT_STATE_UNINIT or ir.isInitStateMaybe(outerEntry.initState)) and not outerEntry.mutable { ir.INIT_STATE_MAYBE }
+            else if ir.isInitStateMaybe(outerEntry.initState) { ir.INIT_STATE_MAYBE }
             else { outerEntry.initState };
             capturedConst := if outerEntry.mutable or outerEntry.writable { false } else { outerEntry.constant };
             isCtxEntry := outerEntry.name.startsWithAt(0, "$ctxslot:") or outerEntry.textValue.startsWithAt(0, "ctx_param:");
@@ -2937,42 +2944,104 @@ blockDeclStmt := fn(target: String, declKw: String, runtime: String, kind: Strin
     }
 };
 
-/** Emits one assignment statement inside a block for TS or C11, dropping any overwritten owned C11 value and unwrapping `/*@CBLK:<ret>@*/<body>` cleanly. */
-blockAssignStmt := fn(target: String, runtime: String, kind: String, valCode: String): String {
+/** Emits one assignment statement inside a block for TS or C11, dropping any overwritten owned C11 value and optionally maintaining a 1-byte init guard. */
+blockAssignStmtGuarded := fn(target: String, runtime: String, kind: String, valCode: String, initFlag: String): String {
     dropFn := if target == ir.TARGET_C and kind =!= "" { types.cDropFnForKind(kind) } else { "" };
+    setFlag := if target == ir.TARGET_C and initFlag =!= "" { " " + initFlag + " = 1;" } else { "" };
+    guardDrop := if dropFn =!= "" {
+        if initFlag =!= "" { "if (" + initFlag + ") { " + dropFn + "(&(" + runtime + ")); } " }
+        else { dropFn + "(&(" + runtime + ")); " }
+    } else { "" };
     if target == ir.TARGET_C and valCode.startsWithAt(0, "/*@CBLK:") {
         endHdr := valCode.indexOf("@*/", 8);
         retVar := valCode.slice(8, endHdr);
         blkBody := valCode.slice(endHdr + 3, valCode.length());
-        dropCode := if dropFn =!= "" { dropFn + "(&(" + runtime + ")); " } else { "" };
-        "{ " + blkBody + " " + dropCode + runtime + " = " + retVar + "; }"
+        "{ " + blkBody + " " + guardDrop + runtime + " = " + retVar + ";" + setFlag + " }"
     } else if dropFn =!= "" {
         tVar := freshCOwnedTemp("lt_ow_");
-        "{ " + types.cValueType(kind) + " " + tVar + " = " + valCode + "; " + dropFn + "(&(" + runtime + ")); " + runtime + " = " + tVar + "; }"
+        "{ " + types.cValueType(kind) + " " + tVar + " = " + valCode + "; " + guardDrop + runtime + " = " + tVar + ";" + setFlag + " }"
     } else {
         runtime + " = " + valCode + ";"
+    }
+};
+
+/** Emits one assignment statement inside a block for TS or C11, dropping any overwritten owned C11 value and unwrapping `/*@CBLK:<ret>@*/<body>` cleanly. */
+blockAssignStmt := fn(target: String, runtime: String, kind: String, valCode: String): String {
+    blockAssignStmtGuarded(target, runtime, kind, valCode, "")
+};
+
+/** Pushes a local declaration into `stmts`, tracking C11 owned cleanup, optional 1-byte init/drop guard, and tagged block pre-decls. */
+pushBlockDeclCFlagged := fn(
+    isTaggedBody: Bool, target: String, declKw: String, rt: String, kind: String, tsAnn: String, initCode: String,
+    needsInitFlag: Bool, isReserved: Bool,
+    preDecls: mut List<String>, stmts: mut List<String>, owned: mut List<(stmtIdx: Int, rt: String, kind: String, initFlag: String)>
+): Unit {
+    cNeedsDrop := target == ir.TARGET_C and not rt.startsWithAt(0, "(*lt_cell_") and types.cTypeNeedsDrop(kind);
+    if cNeedsDrop and needsInitFlag {
+        initFlag := "lt_init_" + rt;
+        rewrittenInit := initCode.split("__LT_PINIT_FLAG__").join(initFlag);
+        cType := types.cValueType(kind);
+        flagDecl := "uint8_t " + initFlag + " = 0; (void)" + initFlag + ";";
+        if isTaggedBody {
+            mut preDecls.pushBack(flagDecl);
+            mut preDecls.pushBack(cType + " " + rt + "; memset(&" + rt + ", 0, sizeof(" + rt + ")); (void)" + rt + ";");
+            if not isReserved {
+                if rewrittenInit.startsWithAt(0, "/*@CBLK:") {
+                    endHdr := rewrittenInit.indexOf("@*/", 8);
+                    retVar := rewrittenInit.slice(8, endHdr);
+                    blkBody := rewrittenInit.slice(endHdr + 3, rewrittenInit.length());
+                    mut stmts.pushBack("{ " + blkBody + " " + rt + " = " + retVar + "; }");
+                } else {
+                    mut stmts.pushBack(rt + " = " + rewrittenInit + "; " + initFlag + " = 1;");
+                }
+            }
+            mut owned.pushBack((stmtIdx = -1, =rt, =kind, =initFlag));
+        } else {
+            if isReserved {
+                mut stmts.pushBack(flagDecl + " " + cType + " " + rt + "; memset(&" + rt + ", 0, sizeof(" + rt + ")); (void)" + rt + ";");
+            } else if rewrittenInit.startsWithAt(0, "/*@CBLK:") {
+                endHdr := rewrittenInit.indexOf("@*/", 8);
+                retVar := rewrittenInit.slice(8, endHdr);
+                blkBody := rewrittenInit.slice(endHdr + 3, rewrittenInit.length());
+                mut stmts.pushBack(flagDecl + " " + cType + " " + rt + "; memset(&" + rt + ", 0, sizeof(" + rt + ")); { " + blkBody + " " + rt + " = " + retVar + "; } (void)" + rt + ";");
+            } else {
+                mut stmts.pushBack("uint8_t " + initFlag + " = 1; (void)" + initFlag + "; " + cType + " " + rt + " = " + rewrittenInit + "; (void)" + rt + ";");
+            }
+            mut owned.pushBack((stmtIdx = stmts.length() - 1, =rt, =kind, =initFlag));
+        }
+        contexts.registerBlockInitFlag(rt, initFlag);
+        return;
+    }
+    if target == ir.TARGET_C and isTaggedBody and not rt.startsWithAt(0, "(*lt_cell_") and types.cTypeNeedsDrop(kind) {
+        mut preDecls.pushBack(types.cValueType(kind) + " " + rt + " = " + ctx.zeroParsed(target, kind, 0).code + "; (void)" + rt + ";");
+        mut stmts.pushBack(blockAssignStmt(target, rt, "", initCode));
+        mut owned.pushBack((stmtIdx = -1, =rt, =kind, initFlag = ""));
+    } else {
+        effInitCode := if target == ir.TARGET_C and needsInitFlag and isReserved {
+            "memset_zero"
+        } else { initCode };
+        if effInitCode == "memset_zero" and target == ir.TARGET_C and not rt.startsWithAt(0, "(*lt_cell_") {
+            cTypeZ := types.cValueType(kind);
+            mut stmts.pushBack(cTypeZ + " " + rt + "; memset(&" + rt + ", 0, sizeof(" + rt + ")); (void)" + rt + ";");
+        } else {
+            mut stmts.pushBack(blockDeclStmt(target, declKw, rt, kind, tsAnn, initCode));
+        }
+        if cNeedsDrop {
+            mut owned.pushBack((stmtIdx = stmts.length() - 1, =rt, =kind, initFlag = ""));
+        }
     }
 };
 
 /** Pushes a local declaration into `stmts`, tracking C11 owned cleanup and pre-declaring zero-init slots for tagged blocks. */
 pushBlockDeclC := fn(
     isTaggedBody: Bool, target: String, declKw: String, rt: String, kind: String, tsAnn: String, initCode: String,
-    preDecls: mut List<String>, stmts: mut List<String>, owned: mut List<(stmtIdx: Int, rt: String, kind: String)>
+    preDecls: mut List<String>, stmts: mut List<String>, owned: mut List<(stmtIdx: Int, rt: String, kind: String, initFlag: String)>
 ): Unit {
-    if target == ir.TARGET_C and isTaggedBody and not rt.startsWithAt(0, "(*lt_cell_") and types.cTypeNeedsDrop(kind) {
-        mut preDecls.pushBack(types.cValueType(kind) + " " + rt + " = " + ctx.zeroParsed(target, kind, 0).code + "; (void)" + rt + ";");
-        mut stmts.pushBack(blockAssignStmt(target, rt, "", initCode));
-        mut owned.pushBack((stmtIdx = -1, =rt, =kind));
-    } else {
-        mut stmts.pushBack(blockDeclStmt(target, declKw, rt, kind, tsAnn, initCode));
-        if target == ir.TARGET_C and not rt.startsWithAt(0, "(*lt_cell_") and types.cTypeNeedsDrop(kind) {
-            mut owned.pushBack((stmtIdx = stmts.length() - 1, =rt, =kind));
-        }
-    }
+    pushBlockDeclCFlagged(isTaggedBody, target, declKw, rt, kind, tsAnn, initCode, false, false, mut preDecls, mut stmts, mut owned);
 };
 
 /** Builds C11 cleanup statements dropping `owned` locals declared before `beforeStmtIdx` (or all if `< 0`) and releasing `cells`. */
-buildBlockDropStmt := fn(owned: List<(stmtIdx: Int, rt: String, kind: String)>, cells: List<(ptr: String, kind: String)>, beforeStmtIdx: Int): String {
+buildBlockDropStmt := fn(owned: List<(stmtIdx: Int, rt: String, kind: String, initFlag: String)>, cells: List<(ptr: String, kind: String)>, beforeStmtIdx: Int): String {
     mut buf: tb.TextBuilder;
     var oi := owned.length() - 1;
     loop oi >= 0 {
@@ -2980,10 +3049,22 @@ buildBlockDropStmt := fn(owned: List<(stmtIdx: Int, rt: String, kind: String)>, 
         if beforeStmtIdx < 0 or o.stmtIdx < beforeStmtIdx {
             dFn := types.cDropFnForKind(o.kind);
             if dFn =!= "" {
-                mut buf.append(dFn);
-                mut buf.append("(&");
-                mut buf.append(o.rt);
-                mut buf.append("); ");
+                if o.initFlag =!= "" {
+                    mut buf.append("if (");
+                    mut buf.append(o.initFlag);
+                    mut buf.append(") { ");
+                    mut buf.append(dFn);
+                    mut buf.append("(&");
+                    mut buf.append(o.rt);
+                    mut buf.append("); ");
+                    mut buf.append(o.initFlag);
+                    mut buf.append(" = 0; } ");
+                } else {
+                    mut buf.append(dFn);
+                    mut buf.append("(&");
+                    mut buf.append(o.rt);
+                    mut buf.append("); ");
+                }
             }
         }
         oi = oi - 1;
@@ -3015,7 +3096,7 @@ buildBlockDropStmt := fn(owned: List<(stmtIdx: Int, rt: String, kind: String)>, 
 /** Applies C11 block-owned + boxed-cell exit-drop rewrites to `stmts` and appends `fullDrop` when not `blockExits`. */
 finalizeCBlockStmts := fn(
     stmts: List<String>,
-    owned: List<(stmtIdx: Int, rt: String, kind: String)>,
+    owned: List<(stmtIdx: Int, rt: String, kind: String, initFlag: String)>,
     cells: List<(ptr: String, kind: String)>,
     fnRetKind: String,
     startPos: Int,
@@ -3038,6 +3119,139 @@ finalizeCBlockStmts := fn(
         if fullDrop =!= "" { mut parts.pushBack(fullDrop); }
     }
     parts.join(" ")
+};
+
+/** Returns `(rt, negated)` when `source[condStart..condEnd)` (after stripping parens and leading `not`) is an immutable initialized `Bool` local. */
+pub extractImmBoolPredicate := fn(source: String, condStart: Int, condEnd: Int, prefix: String, locals: List<Local>): (rt: String, negated: Bool) {
+    var lo := syntax.skipTrivia(source, condStart, prefix);
+    var hi := condEnd;
+    loop hi > lo {
+        ch := source.at(hi - 1);
+        if ch == " " or ch == "\t" or ch == "\n" or ch == "\r" {
+            hi = hi - 1;
+        } else {
+            break;
+        }
+    }
+    var neg := false;
+    loop lo < hi {
+        if source.at(lo) == "(" and source.at(hi - 1) == ")" and syntax.scanParenEnd(source, lo, prefix) == hi {
+            lo = syntax.skipTrivia(source, lo + 1, prefix);
+            hi = hi - 1;
+            loop hi > lo {
+                c := source.at(hi - 1);
+                if c == " " or c == "\t" or c == "\n" or c == "\r" { hi = hi - 1; } else { break; }
+            }
+            continue;
+        }
+        if lo + 3 <= hi and source.wordAt(lo, "not") {
+            afterNot := syntax.skipTrivia(source, lo + 3, prefix);
+            if afterNot > lo + 3 {
+                neg = not neg;
+                lo = afterNot;
+                continue;
+            }
+        }
+        break;
+    }
+    if lo >= hi or not source.at(lo).isNameStart() { return (rt = "", negated = false); }
+    nameEnd := source.skipName(lo);
+    if syntax.skipTrivia(source, nameEnd, prefix) < hi { return (rt = "", negated = false); }
+    ident := source.slice(lo, nameEnd);
+    if syntax.isReservedWord(ident) or ident == "true" or ident == "false" { return (rt = "", negated = false); }
+    idx := sym.localIndex(locals, ident);
+    if idx < 0 { return (rt = "", negated = false); }
+    loc := locals[idx];
+    if loc.depth < 0 or loc.kind =!= ir.VALUE_KIND_BOOL or loc.mutable or loc.initState =!= ir.INIT_STATE_INIT {
+        return (rt = "", negated = false);
+    }
+    (rt = loc.runtime, negated = neg)
+};
+
+/** Captures outer-local init updates above `outerLen` inside `blockLocals` into `contexts` when finishing a stmt/branch block. */
+saveBlockExitBranchRows := fn(blockLocals: List<Local>, outerLen: Int, maxOuterDepth: Int): Unit {
+    mut rows: List<String> = [];
+    mut seenRts: List<String> = [];
+    var rev := blockLocals.length() - 1;
+    loop rev >= outerLen {
+        l := blockLocals[rev];
+        if l.depth >= 0 and l.depth <= maxOuterDepth and not seenRts.contains(l.runtime) {
+            mut seenRts.pushBack(l.runtime);
+            mut rows.pushBack(l.runtime + "\t" + l.initState + "\t" + l.code);
+        }
+        rev = rev - 1;
+    }
+    contexts.setLastBranchInitRows(rows);
+};
+
+/** Appends saved outer-local init updates from `contexts` into `updates` for `(blockDepth, armIdx)`. */
+collectBlockExitBranchUpdates := fn(blockDepth: Int, armIdx: Int, updates: List<ir.BranchUpdate>): List<ir.BranchUpdate> {
+    mut out: List<ir.BranchUpdate> = updates;
+    loop contexts.getLastBranchInitRows() as row {
+        t1 := row.indexOf("\t", 0);
+        t2 := if t1 >= 0 { row.indexOf("\t", t1 + 1) } else { -1 };
+        if t1 > 0 and t2 > t1 {
+            mut out.pushBack((depth = blockDepth, arm = armIdx, runtime = row.slice(0, t1),
+            initState = row.slice(t1 + 1, t2), code = row.slice(t2 + 1, row.length())));
+        }
+    }
+    contexts.clearLastBranchInitRows();
+    out
+};
+
+/** Looks up the 1-byte C11 init guard identifier tracked in `owned` (or enclosing active blocks) for `rt`, or `""`. */
+findBlockOwnedInitFlag := fn(owned: List<(stmtIdx: Int, rt: String, kind: String, initFlag: String)>, rt: String): String {
+    var i := owned.length() - 1;
+    loop i >= 0 {
+        if owned[i].rt == rt and owned[i].initFlag =!= "" {
+            return owned[i].initFlag;
+        }
+        i = i - 1;
+    }
+    contexts.lookupBlockInitFlag(rt)
+};
+
+/** Unregisters active block-local C11 init guards registered by `owned` when leaving a block. */
+unregisterBlockOwnedInitFlags := fn(owned: List<(stmtIdx: Int, rt: String, kind: String, initFlag: String)>): Unit {
+    loop owned as o {
+        if o.initFlag =!= "" {
+            contexts.unregisterBlockInitFlag(o.rt);
+        }
+    }
+};
+
+/** Parses a declaration initializer inside a block, allowing a direct or parenthesized partial if to yield `$pinit:` state. */
+parseBlockInitExpr := fn(target: String, source: String, position: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, bodyDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    sourceLen := source.length();
+    var inner := syntax.skipTrivia(source, position, prefix);
+    var parenCount := 0;
+    loop inner < sourceLen and source.at(inner) == "(" {
+        parenCount = parenCount + 1;
+        inner = syntax.skipTrivia(source, inner + 1, prefix);
+    }
+    ifKwPos := syntax.skipOptionalScanTag(source, inner, prefix, "if");
+    if ifKwPos >= 0 and source.wordAt(ifKwPos, "if") {
+        scannedEnd := syntax.scanIfChainEnd(source, inner, prefix, false, true);
+        if scannedEnd >= 0 {
+            var end := syntax.skipTrivia(source, scannedEnd, prefix);
+            var remaining := parenCount;
+            var matched := true;
+            loop remaining > 0 {
+                if end >= source.length() or source.at(end) =!= ")" {
+                    matched = false;
+                    break;
+                }
+                end = syntax.skipTrivia(source, end + 1, prefix);
+                remaining = remaining - 1;
+            }
+            if matched and syntax.consumeStatementEnd(source, end, prefix) >= 0 {
+                parsed := parseBinaryCtx(target, source, inner, prefix, locals, functions, params, currentName, expected, -1, ctxs, bodyDepth, inferMode, "", aliases);
+                return (kind = parsed.kind, code = parsed.code, intValue = parsed.intValue,
+                textValue = parsed.textValue, constant = parsed.constant, next = end);
+            }
+        }
+    }
+    parseBinaryCtx(target, source, position, prefix, locals, functions, params, currentName, expected, 0, ctxs, bodyDepth, inferMode, "", aliases)
 };
 
 /** Parses a braced block expression `{ ... }` and returns its evaluated target expression. */
@@ -3079,7 +3293,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     };
     mut statements: List<String> = [];
     mut blockCells: List<(ptr: String, kind: String)> = [];
-    mut blockOwned: List<(stmtIdx: Int, rt: String, kind: String)> = [];
+    mut blockOwned: List<(stmtIdx: Int, rt: String, kind: String, initFlag: String)> = [];
     mut taggedPreDecls: List<String> = [];
     if hasFnInBlock {
         preScannedLocals := infer.appendBlockFutureLocals(target, source, start, prefix, blockLexDepth, seedBag, blockAssignedBag, blockAliases, functions, params, blockLocals);
@@ -3905,7 +4119,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 afterRawIfTailCheck := if rawStmtIfEnd >= 0 { syntax.skipItemSeparators(source, rawStmtIfEnd, prefix) } else { -1 };
                 isLoopTailPatternIf := isLoopBody and afterRawIfTailCheck >= 0 and afterRawIfTailCheck < blockSourceSize and source.at(afterRawIfTailCheck) == "}";
                 var useValueIf := stmtIfHasThen or (syntax.ifChainHasPattern(source, itemStart, prefix) and not isLoopTailPatternIf);
-                if (not isStmtBody) and not useValueIf {
+                if (not isStmtBody) and not useValueIf and not (isLoopBody and syntax.ifChainIsPartialOrReserved(source, itemStart, prefix)) {
                     valIfEnd := syntax.scanValueIfEnd(source, itemStart, prefix, false);
                     if valIfEnd >= 0 {
                         afterValIf := syntax.skipItemSeparators(source, valIfEnd, prefix);
@@ -3926,6 +4140,13 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     var ifCursor := afterItemName;
                     var isFirstIf := true;
                     var brIdxLoop := 0;
+                    var ifCondCount := 0;
+                    var firstIfPredRt := "";
+                    var firstIfPredNeg := false;
+                    var ifB1Live := false;
+                    var ifB2Live := false;
+                    var ifLiveBranches := 0;
+                    var mut ifStmtUpdates: List<ir.BranchUpdate> = [];
                     ifBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = ir.CTX_KIND_IF, phase = ir.CTX_PHASE_BODY,
                     iifeDepth = bodyDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
                     countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
@@ -3993,16 +4214,55 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         beforeOpen := syntax.skipTrivia(source, condParsed.next, prefix);
                         syntax.rejectMisplacedTag(source, beforeOpen, prefix, if isFirstIf { "block tag cannot appear before { in if" } else { "block tag cannot appear before { in else if" });
                         openPos := syntax.expectSymbol(source, beforeOpen, "{", prefix);
-                        branch := parseBinaryCtx(target, source, openPos - 1, prefix, blockLocals, functions, params, currentName, ifBranchExpected, 0, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
-                        if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, branch); }
-                        if branch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
-                        prefixKw := if isFirstIf { "if (" } else { " else if (" };
-                        mut ifPartsBuf.append(prefixKw);
-                        mut ifPartsBuf.append(condCode);
-                        mut ifPartsBuf.append(") { ");
-                        mut ifPartsBuf.append(branch.code);
-                        mut ifPartsBuf.append(" }");
-                        ifCursor = branch.next;
+                        if isFirstIf {
+                            /* Track immutable Bool predicate and outer-local branch updates inside blocks. */
+                        }
+                        predIfHere := if isFirstIf { extractImmBoolPredicate(source, ifCursor, condParsed.next, prefix, blockLocals) } else { (rt = "", negated = false) };
+                        brLocMark := sym.localMark();
+                        brInLocals := if isFirstIf and predIfHere.rt =!= "" { ctx.narrowLocalsForPredicate(blockLocals, predIfHere.rt, not predIfHere.negated) } else { blockLocals };
+                        if isLoopTailPartialIf and syntax.isReservedBranchBlock(source, openPos - 1, prefix) >= 0 {
+                            resBrEnd := syntax.isReservedBranchBlock(source, openPos - 1, prefix);
+                            prefixKw := if isFirstIf { "if (" } else { " else if (" };
+                            mut ifPartsBuf.append(prefixKw);
+                            mut ifPartsBuf.append(condCode);
+                            mut ifPartsBuf.append(") { }");
+                            ifCursor = resBrEnd;
+                            allBranchesExit = false;
+                            if isFirstIf {
+                                firstIfPredRt = predIfHere.rt;
+                                firstIfPredNeg = predIfHere.negated;
+                                ifB1Live = true;
+                                ifLiveBranches = ifLiveBranches + 1;
+                            } else {
+                                ifLiveBranches = ifLiveBranches + 1;
+                            }
+                            ifCondCount = ifCondCount + 1;
+                        } else {
+                            contexts.clearLastBranchInitRows();
+                            branch := parseBinaryCtx(target, source, openPos - 1, prefix, brInLocals, functions, params, currentName, ifBranchExpected, 0, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
+                            if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, branch); }
+                            if branch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
+                            ifCondCount = ifCondCount + 1;
+                            if isFirstIf {
+                                firstIfPredRt = predIfHere.rt;
+                                firstIfPredNeg = predIfHere.negated;
+                                ifB1Live = branch.kind =!= ir.VALUE_KIND_NEVER;
+                            }
+                            if branch.kind =!= ir.VALUE_KIND_NEVER {
+                                ifStmtUpdates = collectBlockExitBranchUpdates(1, if isFirstIf { 1 } else { 0 }, ifStmtUpdates);
+                                ifLiveBranches = ifLiveBranches + 1;
+                            } else {
+                                contexts.clearLastBranchInitRows();
+                            }
+                            sym.rewindLocalsTo(brLocMark);
+                            prefixKw := if isFirstIf { "if (" } else { " else if (" };
+                            mut ifPartsBuf.append(prefixKw);
+                            mut ifPartsBuf.append(condCode);
+                            mut ifPartsBuf.append(") { ");
+                            mut ifPartsBuf.append(branch.code);
+                            mut ifPartsBuf.append(" }");
+                            ifCursor = branch.next;
+                        }
                         isFirstIf = false;
                         afterBranch := syntax.skipTrivia(source, ifCursor, prefix);
                         if afterBranch < blockSourceSize and source.wordAt(afterBranch, "else") {
@@ -4013,9 +4273,28 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             } else {
                                 hasElseBranch = true;
                                 elseOpen := syntax.expectSymbol(source, afterElse, "{", prefix);
-                                elseBranch := parseBinaryCtx(target, source, elseOpen - 1, prefix, blockLocals, functions, params, currentName, ifBranchExpected, 0, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
+                                if isLoopTailPartialIf and syntax.isReservedBranchBlock(source, elseOpen - 1, prefix) >= 0 {
+                                    elseResEnd := syntax.isReservedBranchBlock(source, elseOpen - 1, prefix);
+                                    allBranchesExit = false;
+                                    ifCondCount = 2;
+                                    if elseResEnd >= 0 { ifB2Live = true; ifLiveBranches = ifLiveBranches + 1; }
+                                    ifCursor = elseResEnd;
+                                    break;
+                                }
+                                elseLocMark := sym.localMark();
+                                elseInLocals := if ifCondCount == 1 and firstIfPredRt =!= "" { ctx.narrowLocalsForPredicate(blockLocals, firstIfPredRt, firstIfPredNeg) } else { blockLocals };
+                                contexts.clearLastBranchInitRows();
+                                elseBranch := parseBinaryCtx(target, source, elseOpen - 1, prefix, elseInLocals, functions, params, currentName, ifBranchExpected, 0, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
                                 if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, elseBranch); }
-                                if elseBranch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
+                                if elseBranch.kind =!= ir.VALUE_KIND_NEVER {
+                                    allBranchesExit = false;
+                                    ifB2Live = true;
+                                    ifStmtUpdates = collectBlockExitBranchUpdates(1, 2, ifStmtUpdates);
+                                    ifLiveBranches = ifLiveBranches + 1;
+                                } else {
+                                    contexts.clearLastBranchInitRows();
+                                }
+                                sym.rewindLocalsTo(elseLocMark);
                                 mut ifPartsBuf.append(" else { ");
                                 mut ifPartsBuf.append(elseBranch.code);
                                 mut ifPartsBuf.append(" }");
@@ -4033,6 +4312,10 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         statementCount = statementCount + 1;
                         if target == ir.TARGET_TS and not inferMode {
                             blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, ifParts);
+                        }
+                        if not (hasElseBranch and allBranchesExit) {
+                            preIfLen := ctx.localsCount(blockLocals);
+                            blockLocals = ctx.joinBranchLocalsWithPred(blockLocals, preIfLen, 1, hasElseBranch, ifLiveBranches, ifStmtUpdates, firstIfPredRt, firstIfPredNeg, ifCondCount, ifB1Live, ifB2Live);
                         }
                     }
                     if (not hasElseBranch and allBranchesExit) or isLoopTailPartialIf {
@@ -4062,11 +4345,31 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 if not useValueMatch and isSubjectStmtMatch {
                     isStatement = true;
+                    contexts.clearLastBranchInitRows();
                     subStmt := if isLoopTailMatch {
                         parseSubjectMatchLoopTail(target, source, itemStart, prefix, blockLocals, functions, params, currentName, expected, ctxs, bodyDepth, inferMode, blockAliases)
                     } else {
                         parseSubjectMatchStmt(target, source, itemStart, prefix, blockLocals, functions, params, currentName, ctxs, bodyDepth, inferMode, blockAliases)
                     };
+                    if not isLoopTailMatch {
+                        loop contexts.getLastBranchInitRows() as mRow {
+                            t1 := mRow.indexOf("\t", 0);
+                            t2 := if t1 >= 0 { mRow.indexOf("\t", t1 + 1) } else { -1 };
+                            if t1 > 0 and t2 > t1 {
+                                mRt := mRow.slice(0, t1);
+                                mInit := mRow.slice(t1 + 1, t2);
+                                mCode := mRow.slice(t2 + 1, mRow.length());
+                                mIdx := trace.latestActiveLocalByRuntime(blockLocals, mRt);
+                                if mIdx >= 0 {
+                                    ml := blockLocals[mIdx];
+                                    mut blockLocals.pushBack((name = ml.name, runtime = ml.runtime, kind = ml.kind,
+                                    mutable = ml.mutable, writable = ml.writable, depth = ml.depth, constant = false,
+                                    code = if ml.code =!= "" { ml.code } else { mCode }, intValue = 0, textValue = "", initState = mInit));
+                                }
+                            }
+                        }
+                    }
+                    contexts.clearLastBranchInitRows();
                     if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, subStmt); }
                     (mut statements).pushBack(subStmt.code);
                     statementCount = statementCount + 1;
@@ -4570,14 +4873,17 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 var afterLocal := syntax.skipTrivia(source, localEnd, prefix);
                 var declParsed := ctx.intParsed("", 0, true, afterLocal);
                 var declInitState := ir.INIT_STATE_INIT;
+                var declIsReserved := false;
                 var varDiverged := false;
                 if source.startsWithAt(afterLocal, ":=") {
-                    declParsed = parseBinaryCtx(target, source, syntax.skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                    declParsed = parseBlockInitExpr(target, source, syntax.skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", ctxs, bodyDepth, inferMode, blockAliases);
                     if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, declParsed); }
                     if target == ir.TARGET_TS and not inferMode and not blockExits {
                         trace.checkTraceSafety(source, localStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                     }
                     ctx.rejectNonValueBinding(source, localStart, prefix, declParsed.kind, localName);
+                    declInitState = ctx.extractPartialInitState(declParsed.textValue);
+                    declParsed = (kind = declParsed.kind, code = declParsed.code, intValue = declParsed.intValue, textValue = ctx.stripPartialInitTag(declParsed.textValue), constant = declParsed.constant, next = declParsed.next);
                     if declWritable and not types.isMutContainerKind(declParsed.kind) {
                         syntax.failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + types.displayKind(declParsed.kind));
                     }
@@ -4605,11 +4911,12 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             if types.isRcKind(typed.kind) { syntax.failAt(source, localStart, prefix, "reserved storage is not supported for Rc"); }
                             if types.isSliceKind(typed.kind) { syntax.failAt(source, localStart, prefix, "reserved storage is not supported for Slice"); }
                             declInitState = if trace.tokenInPipeBag(blockAssignedBag, localName) { ir.INIT_STATE_UNINIT_ASSIGNED } else { ir.INIT_STATE_UNINIT };
+                            declIsReserved = true;
                             declParsed = ctx.zeroParsed(target, typed.kind, reservedEnd);
                         } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                             declParsed = ctx.zeroParsed(target, typed.kind, zeroEnd);
                         } else {
-                            initParsed := parseBinaryCtx(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                            initParsed := parseBlockInitExpr(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, ctxs, bodyDepth, inferMode, blockAliases);
                             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, initParsed); }
                             if not types.isCompatibleKind(typed.kind, initParsed.kind) {
                                 syntax.failAt(source, localStart, prefix, "cannot initialize " + types.displayKind(typed.kind) + " with " + types.displayKind(initParsed.kind));
@@ -4617,9 +4924,10 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             if target == ir.TARGET_TS and not inferMode and not blockExits {
                                 trace.checkTraceSafety(source, localStart, prefix, initParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                             }
+                            declInitState = ctx.extractPartialInitState(initParsed.textValue);
                             varDiverged = initParsed.kind == ir.VALUE_KIND_NEVER;
-                            converted := ctx.assignValueCode(target, typed.kind, initParsed.kind, initParsed.code);
-                            declParsed = (kind = typed.kind, code = converted, intValue = initParsed.intValue, textValue = initParsed.textValue, constant = initParsed.constant, next = initParsed.next);
+                            converted := if declInitState == ir.INIT_STATE_INIT { ctx.assignValueCode(target, typed.kind, initParsed.kind, initParsed.code) } else { ctx.stripPartialInitTag(initParsed.code) };
+                            declParsed = (kind = typed.kind, code = converted, intValue = initParsed.intValue, textValue = ctx.stripPartialInitTag(initParsed.textValue), constant = initParsed.constant, next = initParsed.next);
                         }
                     } else {
                         declParsed = ctx.zeroParsed(target, typed.kind, afterType);
@@ -4645,10 +4953,10 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         mut statements.pushBack(stmtReturnPrefix + "(" + declParsed.code + ");");
                         blockExits = true;
                     } else {
-                        varInitCode := ctx.assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code);
+                        varInitCode := if declInitState == ir.INIT_STATE_INIT { ctx.assignValueCode(target, declParsed.kind, declParsed.kind, declParsed.code) } else { declParsed.code };
                         tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
-                        pushBlockDeclC(isTaggedBody, target, "let ", runtime, declParsed.kind, tsTypeAnn, varInitCode, mut taggedPreDecls, mut statements, mut blockOwned);
-                        mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, declParsed.kind, varInitCode) { runtime } else { "" });
+                        pushBlockDeclCFlagged(isTaggedBody, target, "let ", runtime, declParsed.kind, tsTypeAnn, varInitCode, declInitState =!= ir.INIT_STATE_INIT, declIsReserved, mut taggedPreDecls, mut statements, mut blockOwned);
+                        mut stmtOwners.pushBack(if declInitState == ir.INIT_STATE_INIT and reach.isPrunableExprForTarget(target, declParsed.kind, varInitCode) { runtime } else { "" });
                         mut stmtDeps.pushBack(varInitCode);
                         trackedStmtCount = trackedStmtCount + 1;
                     }
@@ -4679,11 +4987,14 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if not source.startsWithAt(afterLocal, ":=") {
                     syntax.failAt(source, afterLocal, prefix, "expected := after mut local name " + localName);
                 }
-                declParsed := parseBinaryCtx(target, source, syntax.skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                rawMutParsed := parseBlockInitExpr(target, source, syntax.skipTrivia(source, afterLocal + 2, prefix), prefix, blockLocals, functions, params, currentName, "", ctxs, bodyDepth, inferMode, blockAliases);
+                declInitState := ctx.extractPartialInitState(rawMutParsed.textValue);
+                declParsed := (kind = rawMutParsed.kind, code = rawMutParsed.code, intValue = rawMutParsed.intValue, textValue = ctx.stripPartialInitTag(rawMutParsed.textValue), constant = rawMutParsed.constant, next = rawMutParsed.next);
                 if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, declParsed); }
                 if target == ir.TARGET_TS and not inferMode and not blockExits {
                     trace.checkTraceSafety(source, localStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                 }
+                ctx.rejectNonValueBinding(source, localStart, prefix, declParsed.kind, localName);
                 if not types.isMutContainerKind(declParsed.kind) {
                     syntax.failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + types.displayKind(declParsed.kind));
                 }
@@ -4695,17 +5006,17 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                 }
                 runtime := trace.claimOrMakeLocalRuntime(target, blockLocals, localName, "", blockLexDepth);
-                mutFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(declParsed.kind) { trace.computeCallableRhsDeps(declParsed.code) } else { "" };
+                mutFnDeps := if target == ir.TARGET_TS and not inferMode and declInitState == ir.INIT_STATE_INIT and types.containsFnKind(declParsed.kind) { trace.computeCallableRhsDeps(declParsed.code) } else { "" };
                 mut declaredInBlock.pushBack(localName);
                 mut blockLocals.pushBack((name = localName, runtime = runtime, kind = declParsed.kind,
                 mutable = false, writable = true, depth = blockLexDepth, constant = false, code = mutFnDeps,
-                intValue = declParsed.intValue, textValue = mutBorrow.textValue, initState = ir.INIT_STATE_INIT));
+                intValue = declParsed.intValue, textValue = mutBorrow.textValue, initState = declInitState));
                 if not blockExits {
-                    mutInitCode := ctx.copiedValueCode(target, declParsed.kind, declParsed.code);
+                    mutInitCode := if declInitState == ir.INIT_STATE_INIT { ctx.copiedValueCode(target, declParsed.kind, declParsed.code) } else { declParsed.code };
                     tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
-                    mutDeclKw := if target == ir.TARGET_TS and types.isRecordOrDistinctRecord(declParsed.kind) { "let " } else { "const " };
-                    pushBlockDeclC(isTaggedBody, target, mutDeclKw, runtime, declParsed.kind, tsTypeAnn, mutInitCode, mut taggedPreDecls, mut statements, mut blockOwned);
-                    mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, declParsed.kind, mutInitCode) { runtime } else { "" });
+                    mutDeclKw := if declInitState == ir.INIT_STATE_INIT and not (target == ir.TARGET_TS and types.isRecordOrDistinctRecord(declParsed.kind)) { "const " } else { "let " };
+                    pushBlockDeclCFlagged(isTaggedBody, target, mutDeclKw, runtime, declParsed.kind, tsTypeAnn, mutInitCode, declInitState =!= ir.INIT_STATE_INIT, false, mut taggedPreDecls, mut statements, mut blockOwned);
+                    mut stmtOwners.pushBack(if declInitState == ir.INIT_STATE_INIT and reach.isPrunableExprForTarget(target, declParsed.kind, mutInitCode) { runtime } else { "" });
                     mut stmtDeps.pushBack(mutInitCode);
                     trackedStmtCount = trackedStmtCount + 1;
                     statementCount = statementCount + 1;
@@ -4758,7 +5069,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 isStatement = true;
                 if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
                 ctx.rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
-                declParsed := parseBinaryCtx(target, source, syntax.skipTrivia(source, afterItemName + 2, prefix), prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                rawInfParsed := parseBlockInitExpr(target, source, syntax.skipTrivia(source, afterItemName + 2, prefix), prefix, blockLocals, functions, params, currentName, "", ctxs, bodyDepth, inferMode, blockAliases);
+                declInitState := ctx.extractPartialInitState(rawInfParsed.textValue);
+                declParsed := (kind = rawInfParsed.kind, code = rawInfParsed.code, intValue = rawInfParsed.intValue, textValue = ctx.stripPartialInitTag(rawInfParsed.textValue), constant = rawInfParsed.constant, next = rawInfParsed.next);
                 if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, declParsed); }
                 if target == ir.TARGET_TS and not inferMode and not blockExits {
                     trace.checkTraceSafety(source, itemStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
@@ -4773,16 +5086,17 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                 }
                 runtime := trace.claimOrMakeLocalRuntime(target, blockLocals, itemName, "", blockLexDepth);
-                valFnDeps := if target == ir.TARGET_TS and not inferMode and types.containsFnKind(declParsed.kind) { trace.computeCallableRhsDeps(declParsed.code) } else { "" };
+                valFnDeps := if target == ir.TARGET_TS and not inferMode and declInitState == ir.INIT_STATE_INIT and types.containsFnKind(declParsed.kind) { trace.computeCallableRhsDeps(declParsed.code) } else { "" };
                 mut declaredInBlock.pushBack(itemName);
                 mut blockLocals.pushBack((name = itemName, runtime = runtime, kind = declParsed.kind,
-                mutable = false, writable = valWritable, depth = blockLexDepth, constant = declParsed.constant, code = valFnDeps,
-                intValue = declParsed.intValue, textValue = valBorrow.textValue, initState = ir.INIT_STATE_INIT));
+                mutable = false, writable = valWritable, depth = blockLexDepth, constant = if declInitState == ir.INIT_STATE_INIT { declParsed.constant } else { false }, code = valFnDeps,
+                intValue = declParsed.intValue, textValue = valBorrow.textValue, initState = declInitState));
                 if not blockExits {
-                    valInitCode := ctx.copiedValueCode(target, declParsed.kind, declParsed.code);
+                    valInitCode := if declInitState == ir.INIT_STATE_INIT { ctx.copiedValueCode(target, declParsed.kind, declParsed.code) } else { declParsed.code };
                     tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(declParsed.kind) { ": " + types.tsFunctionType(declParsed.kind) } else { "" };
-                    pushBlockDeclC(isTaggedBody, target, "const ", runtime, declParsed.kind, tsTypeAnn, valInitCode, mut taggedPreDecls, mut statements, mut blockOwned);
-                    mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, declParsed.kind, valInitCode) { runtime } else { "" });
+                    valDeclKw := if declInitState == ir.INIT_STATE_INIT { "const " } else { "let " };
+                    pushBlockDeclCFlagged(isTaggedBody, target, valDeclKw, runtime, declParsed.kind, tsTypeAnn, valInitCode, declInitState =!= ir.INIT_STATE_INIT, false, mut taggedPreDecls, mut statements, mut blockOwned);
+                    mut stmtOwners.pushBack(if declInitState == ir.INIT_STATE_INIT and reach.isPrunableExprForTarget(target, declParsed.kind, valInitCode) { runtime } else { "" });
                     mut stmtDeps.pushBack(valInitCode);
                     trackedStmtCount = trackedStmtCount + 1;
                     statementCount = statementCount + 1;
@@ -4816,6 +5130,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 afterType := syntax.skipTrivia(source, typed.next, prefix);
                 var declParsed := ctx.zeroParsed(target, typed.kind, afterType);
                 var declInitState := ir.INIT_STATE_INIT;
+                var declIsReserved := false;
                 if syntax.isSingleEquals(source, afterType) {
                     rhsStart := syntax.skipTrivia(source, afterType + 1, prefix);
                     reservedEnd := syntax.isReservedInitMarker(source, rhsStart, prefix);
@@ -4827,11 +5142,14 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         if types.isRcKind(typed.kind) { syntax.failAt(source, annStart, prefix, "reserved storage is not supported for Rc"); }
                         if types.isSliceKind(typed.kind) { syntax.failAt(source, annStart, prefix, "reserved storage is not supported for Slice"); }
                         declInitState = if trace.tokenInPipeBag(blockAssignedBag, annName) { ir.INIT_STATE_UNINIT_ASSIGNED } else { ir.INIT_STATE_UNINIT };
+                        declIsReserved = true;
                         declParsed = ctx.zeroParsed(target, typed.kind, reservedEnd);
                     } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                         declParsed = ctx.zeroParsed(target, typed.kind, zeroEnd);
                     } else {
-                        declParsed = parseBinaryCtx(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                        rawAnnParsed := parseBlockInitExpr(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, ctxs, bodyDepth, inferMode, blockAliases);
+                        declInitState = ctx.extractPartialInitState(rawAnnParsed.textValue);
+                        declParsed = (kind = rawAnnParsed.kind, code = rawAnnParsed.code, intValue = rawAnnParsed.intValue, textValue = ctx.stripPartialInitTag(rawAnnParsed.textValue), constant = rawAnnParsed.constant, next = rawAnnParsed.next);
                         if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, declParsed); }
                         if not types.isCompatibleKind(typed.kind, declParsed.kind) {
                             syntax.failAt(source, annStart, prefix, "cannot initialize " + types.displayKind(typed.kind) + " with " + types.displayKind(declParsed.kind));
@@ -4849,7 +5167,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                 }
                 runtime := trace.claimOrMakeLocalRuntime(target, blockLocals, annName, "", blockLexDepth);
-                declCode := ctx.assignValueCode(target, typed.kind, declParsed.kind, declParsed.code);
+                declCode := if declInitState == ir.INIT_STATE_INIT or declIsReserved { ctx.assignValueCode(target, typed.kind, declParsed.kind, declParsed.code) } else { declParsed.code };
                 annFnDeps := if target == ir.TARGET_TS and not inferMode and declInitState == ir.INIT_STATE_INIT and types.containsFnKind(typed.kind) { trace.computeCallableRhsDeps(declParsed.code) } else { "" };
                 mut declaredInBlock.pushBack(annName);
                 mut blockLocals.pushBack((name = annName, runtime = runtime, kind = typed.kind,
@@ -4862,8 +5180,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     } else {
                         declKw := if declInitState == ir.INIT_STATE_INIT and not (target == ir.TARGET_TS and effWritable and types.isRecordOrDistinctRecord(typed.kind)) { "const " } else { "let " };
                         tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(typed.kind) { ": " + types.tsFunctionType(typed.kind) } else { "" };
-                        pushBlockDeclC(isTaggedBody, target, declKw, runtime, typed.kind, tsTypeAnn, declCode, mut taggedPreDecls, mut statements, mut blockOwned);
-                        mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, typed.kind, declCode) { runtime } else { "" });
+                        pushBlockDeclCFlagged(isTaggedBody, target, declKw, runtime, typed.kind, tsTypeAnn, declCode, declInitState =!= ir.INIT_STATE_INIT, declIsReserved, mut taggedPreDecls, mut statements, mut blockOwned);
+                        mut stmtOwners.pushBack(if declInitState == ir.INIT_STATE_INIT and reach.isPrunableExprForTarget(target, typed.kind, declCode) { runtime } else { "" });
                         mut stmtDeps.pushBack(declCode);
                         trackedStmtCount = trackedStmtCount + 1;
                     }
@@ -5083,9 +5401,79 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if index < 0 { syntax.failAt(source, itemStart, prefix, "unknown value " + itemName); }
                 entry := blockLocals[index];
                 if entry.initState == ir.INIT_STATE_INIT and not entry.mutable { syntax.failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
-                if entry.initState == ir.INIT_STATE_MAYBE and not entry.mutable { syntax.failAt(source, itemStart, prefix, "cannot assign to possibly initialized immutable local " + itemName); }
+                assignRhsStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
+                emptyPartialItems: List<Item> = [];
+                blkPartialItems := if not inferMode {
+                    parsePartialAssignIf(target, source, assignRhsStart, prefix, blockLocals, functions, params, currentName, itemStart, entry.kind, itemName, entry.runtime, ctxs, blockAliases)
+                } else { emptyPartialItems };
+                if blkPartialItems.length() > 0 {
+                    var blkPartialMeta := "";
+                    var blkPartialEnd := assignRhsStart;
+                    loop blkPartialItems as pi {
+                        if pi.kind == ir.ITEM_KIND_END { blkPartialEnd = pi.intValue; blkPartialMeta = pi.textValue; }
+                    }
+                    if not ctx.partialAssignAllowedForImmutable(entry, blkPartialMeta) {
+                        syntax.failAt(source, itemStart, prefix, "cannot assign to possibly initialized immutable local " + itemName);
+                    }
+                    sliceBorrows.checkCanMutateBinding(blockLocals, entry.runtime, itemName, source, itemStart, prefix);
+                    blkPInitFlag := findBlockOwnedInitFlag(blockOwned, entry.runtime);
+                    mut bpBuf: tb.TextBuilder;
+                    var bpNeedsClose := false;
+                    var bpFnDeps := entry.code;
+                    loop blkPartialItems as pi {
+                        if pi.kind == ir.ITEM_KIND_END {
+                            continue;
+                        } else if pi.kind == ir.ITEM_KIND_IF {
+                            if bpNeedsClose { mut bpBuf.append(" } "); }
+                            mut bpBuf.append("if (");
+                            mut bpBuf.append(pi.code);
+                            mut bpBuf.append(") { ");
+                            bpNeedsClose = true;
+                        } else if pi.kind == ir.ITEM_KIND_ELSE_IF {
+                            if bpNeedsClose { mut bpBuf.append(" } "); }
+                            mut bpBuf.append("else if (");
+                            mut bpBuf.append(pi.code);
+                            mut bpBuf.append(") { ");
+                            bpNeedsClose = true;
+                        } else if pi.kind == ir.ITEM_KIND_ELSE {
+                            if bpNeedsClose { mut bpBuf.append(" } "); }
+                            mut bpBuf.append("else { ");
+                            bpNeedsClose = true;
+                        } else if pi.kind == ir.ITEM_KIND_END_IF {
+                            if bpNeedsClose { mut bpBuf.append(" }"); bpNeedsClose = false; }
+                        } else {
+                            if target == ir.TARGET_TS and pi.code =!= "" {
+                                trace.checkTraceSafety(source, itemStart, prefix, pi.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+                                if types.containsFnKind(entry.kind) {
+                                    bpFnDeps = trace.mergeCallableLocalDeps(bpFnDeps, trace.computeCallableRhsDeps(pi.code));
+                                }
+                            }
+                            mut bpBuf.append(blockAssignStmtGuarded(target, entry.runtime, entry.kind, pi.code, blkPInitFlag));
+                        }
+                    }
+                    bpCode := bpBuf.build();
+                    if target == ir.TARGET_TS and not blockExits {
+                        blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, bpCode);
+                    }
+                    nextPInit := ctx.computePartialAssignNextInitState(entry, blkPartialMeta);
+                    bpLocalCode := if target == ir.TARGET_TS and types.containsFnKind(entry.kind) { bpFnDeps } else { entry.runtime };
+                    mut blockLocals.pushBack((name = entry.name, runtime = entry.runtime, kind = entry.kind,
+                    mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = bpLocalCode,
+                    intValue = 0, textValue = "", initState = nextPInit));
+                    if not blockExits {
+                        mut statements.pushBack(bpCode);
+                        mut stmtOwners.pushBack("");
+                        mut stmtDeps.pushBack(entry.runtime + " " + bpCode);
+                        trackedStmtCount = trackedStmtCount + 1;
+                        statementCount = statementCount + 1;
+                    }
+                    blockConstant = false;
+                    cursor = blkPartialEnd;
+                    continue;
+                }
+                if ir.isInitStateMaybe(entry.initState) and not entry.mutable { syntax.failAt(source, itemStart, prefix, "cannot assign to possibly initialized immutable local " + itemName); }
                 sliceBorrows.checkCanMutateBinding(blockLocals, entry.runtime, itemName, source, itemStart, prefix);
-                rhs := parseBinaryCtx(target, source, syntax.skipTrivia(source, afterItemName + 1, prefix), prefix, blockLocals, functions, params, currentName, entry.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                rhs := parseBinaryCtx(target, source, assignRhsStart, prefix, blockLocals, functions, params, currentName, entry.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                 if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, rhs); }
                 if not types.isCompatibleKind(entry.kind, rhs.kind) {
                     syntax.failAt(source, itemStart, prefix, "cannot assign " + types.displayKind(rhs.kind) + " to " + types.displayKind(entry.kind) + " local " + itemName);
@@ -5116,9 +5504,10 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         mut statements.pushBack(stmtReturnPrefix + "(" + rhsCode + ");");
                         blockExits = true;
                     } else {
-                        mut statements.pushBack(blockAssignStmt(target, entry.runtime, entry.kind, rhsCode));
+                        assignInitFlag := findBlockOwnedInitFlag(blockOwned, entry.runtime);
+                        mut statements.pushBack(blockAssignStmtGuarded(target, entry.runtime, entry.kind, rhsCode, assignInitFlag));
                         isLocalOwner := not ir.localsRangeUsesRuntime(blockLocals, outerLocalsLen, entry.runtime);
-                        assignOwner := if isLocalOwner and reach.isPrunableExprForTarget(target, entry.kind, rhsCode) { entry.runtime } else { "" };
+                        assignOwner := if isLocalOwner and assignInitFlag == "" and reach.isPrunableExprForTarget(target, entry.kind, rhsCode) { entry.runtime } else { "" };
                         assignDeps := if assignOwner =!= "" { rhsCode } else { entry.runtime + " " + rhsCode };
                         mut stmtOwners.pushBack(assignOwner);
                         mut stmtDeps.pushBack(assignDeps);
@@ -5258,10 +5647,14 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         }
     }
     if isStmtBody {
+        if not blockExits {
+            saveBlockExitBranchRows(blockLocals, outerLocalsLen, blockLexDepth - 1);
+        }
         fnCtxIdxS := if target == ir.TARGET_C { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
         fnRetKS := if fnCtxIdxS >= 0 { ctxs[fnCtxIdxS].valKind } else { "" };
         stmtCode := if target == ir.TARGET_C { finalizeCBlockStmts(statements, blockOwned, blockCells, fnRetKS, start, blockExits) } else { statements.join(" ") };
         stmtKind := if blockExits { ir.VALUE_KIND_NEVER } else { ir.VALUE_KIND_UNIT };
+        unregisterBlockOwnedInitFlags(blockOwned);
         return ctx.withMarkers((kind = stmtKind, code = stmtCode, intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
     }
@@ -5285,6 +5678,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         fnRetKF := if fnCtxIdxF >= 0 { ctxs[fnCtxIdxF].valKind } else { "" };
         finCode := if target == ir.TARGET_C { finalizeCBlockStmts(statements, blockOwned, blockCells, fnRetKF, start, blockExits) } else { statements.join(" ") };
         finKind := if blockExits { ir.VALUE_KIND_NEVER } else { ir.VALUE_KIND_UNIT };
+        unregisterBlockOwnedInitFlags(blockOwned);
         return ctx.withMarkers((kind = finKind, code = finCode, intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
     }
@@ -5338,6 +5732,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             catchRet := if expected == ir.VALUE_KIND_UNIT { "return;" } else { "return lite$transferVal;" };
             fnBodyJoined = "try { " + fnBodyJoined + " } catch (lite$err) { if (lite$hasTransfer(lite$err, 0)) { " + catchRet + " } throw lite$err; }";
         }
+        unregisterBlockOwnedInitFlags(blockOwned);
         return ctx.withMarkers((kind = expected, code = fnBodyJoined, intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { blockMarkers } else { "" });
     }
@@ -5363,6 +5758,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             } else {
                 ir.VALUE_KIND_UNIT
             };
+            unregisterBlockOwnedInitFlags(blockOwned);
             return ctx.withMarkers((kind = tailPlaceholderKind, code = "", intValue = if blockExits { 1 } else { 0 },
             textValue = "", constant = false, next = cursor), blockMarkers);
         }
@@ -5421,6 +5817,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         fnCtxIdxLp := if target == ir.TARGET_C { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
         fnRetKLp := if fnCtxIdxLp >= 0 { ctxs[fnCtxIdxLp].valKind } else { "" };
         loopBodyJoined := if target == ir.TARGET_C { finalizeCBlockStmts(statements, blockOwned, blockCells, fnRetKLp, start, blockExits) } else { statements.join(" ") };
+        unregisterBlockOwnedInitFlags(blockOwned);
         return ctx.withMarkers((kind = if blockExits { ir.VALUE_KIND_NEVER } else { topLoopValKind }, code = loopBodyJoined,
         intValue = 0, textValue = "", constant = false, next = cursor),
         if inferMode { ctx.filterOtherMarkers(blockMarkers, topLoopId) } else { "" });
@@ -5513,6 +5910,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         };
         bodyJoined := rawJoined;
         if target == ir.TARGET_C {
+            unregisterBlockOwnedInitFlags(blockOwned);
             needsCLbl := reach.codeUsesTextCall(bodyJoined, "goto " + topLabel + ";");
             cBodyWithLbl := if needsCLbl {
                 bodyJoined + " " + topLabel + ": ;" + (if fullDropC =!= "" { " " + fullDropC } else { "" })
@@ -5590,6 +5988,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 };
                 normKindC := if blockExits { ir.VALUE_KIND_NEVER } else { blockKind };
                 dummyBaseC := (kind = normKindC, code = "", intValue = 0, textValue = "", constant = false, next = cursor);
+                unregisterBlockOwnedInitFlags(blockOwned);
                 return ctx.withMarkers(finishFinallyC(tryBlockC, finParsed, normKindC, dummyBaseC, inferMode, ctxs, afterUntaggedClose),
                 if inferMode { blockMarkers } else { "" });
             }
@@ -5618,6 +6017,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     fnCtxIdxBlk := if target == ir.TARGET_C { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
     fnRetKBlk := if fnCtxIdxBlk >= 0 { ctxs[fnCtxIdxBlk].valKind } else { "" };
     if blockExits {
+        unregisterBlockOwnedInitFlags(blockOwned);
         if target == ir.TARGET_C {
             mut exitStmtsParts: List<String> = [];
             if blockOwned.length() > 0 or blockCells.length() > 0 {
@@ -5641,10 +6041,17 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         if inferMode { blockMarkers } else { "" });
     }
     if statementCount == 0 and blockCells.length() == 0 and blockOwned.length() == 0 {
+        if isBranchBody {
+            saveBlockExitBranchRows(blockLocals, outerLocalsLen, blockLexDepth - 1);
+        }
         baseBlock := (kind = blockKind, code = blockCode, intValue = blockInt, textValue = blockText, constant = blockConstant, next = cursor);
         return if inferMode and blockMarkers =!= "" { ctx.withMarkers(baseBlock, blockMarkers) } else { baseBlock };
     }
     if target == ir.TARGET_C {
+        unregisterBlockOwnedInitFlags(blockOwned);
+        if isBranchBody {
+            saveBlockExitBranchRows(blockLocals, outerLocalsLen, blockLexDepth - 1);
+        }
         mut cPartsEnd: List<String> = [];
         if blockOwned.length() > 0 or blockCells.length() > 0 {
             var nsi := 0;
@@ -5684,6 +6091,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     } else {
         "return " + ctx.copiedValueCode(target, blockKind, blockCode) + ";"
     };
+    if isBranchBody {
+        saveBlockExitBranchRows(blockLocals, outerLocalsLen, blockLexDepth - 1);
+    }
     ctx.withMarkers((kind = blockKind, code = "(() => { " + statements.join(" ") + " " + returnCode + " })()",
     intValue = 0, textValue = "", constant = false, next = cursor),
     if inferMode { blockMarkers } else { "" })
@@ -6188,10 +6598,11 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                         elemDecl := if iterUsedInBody {
                             types.cListElemType(seqTag) + " " + loopIterVar + " = " + seqVar + ".data[" + seqI + "]; "
                         } else { "" };
+                        brkDropLbl := if reach.codeUsesTextCall(cBodyWithCont, "goto " + cBrkLbl + ";") { cBrkLbl + ": ; " } else { "" };
                         "{ lt_list_" + seqTag + " " + seqVar + " = " + seqInit + "; " +
                         "int64_t " + seqVar + "_n = lt_list_" + seqTag + "_len(" + seqVar + "); " +
                         "for (int64_t " + seqI + " = 0; " + seqI + " < " + seqVar + "_n; " + seqI + " += 1) { " +
-                        elemDecl + metaStep + cBodyWithCont + " } lt_list_" + seqTag + "_drop(&" + seqVar + "); }"
+                        elemDecl + metaStep + cBodyWithCont + " } " + brkDropLbl + "lt_list_" + seqTag + "_drop(&" + seqVar + "); }"
                     }
                 } else {
                     "while (" + condCode + ") { " + metaStep + cBodyWithCont + " }"
@@ -6216,7 +6627,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             };
             needsLoopLabel := not isCLoop and (reach.codeUsesTextCall(rawLoopStmt, "break " + loopLabel + ";") or
             reach.codeUsesTextCall(rawLoopStmt, "continue " + loopLabel + ";"));
-            labeledLoop := if isCLoop and reach.codeUsesTextCall(rawLoopStmt, "goto " + cBrkLbl + ";") {
+            labeledLoop := if isCLoop and reach.codeUsesTextCall(rawLoopStmt, "goto " + cBrkLbl + ";") and not reach.codeUsesTextCall(rawLoopStmt, cBrkLbl + ": ;") {
                 rawLoopStmt + " " + cBrkLbl + ": ;"
             } else if needsLoopLabel {
                 loopLabel + ": " + rawLoopStmt
@@ -7388,6 +7799,11 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         syntax.failAt(source, subjStart, prefix, "expected { after match subject");
     }
     subj := parseBinaryCtx(target, source, subjStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+    subjPred := if subj.kind == ir.VALUE_KIND_BOOL {
+        extractImmBoolPredicate(source, subjStart, subj.next, prefix, locals)
+    } else {
+        (rt = "", negated = false)
+    };
     afterSubj := syntax.skipTrivia(source, subj.next, prefix);
     syntax.rejectMisplacedTag(source, afterSubj, prefix, "block tag cannot appear before { in match");
     if afterSubj > subjOpen {
@@ -7473,6 +7889,12 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     var winAssignStmts := "";
     var winVoidStmts := "";
     isComptimeSubjMatch := sym.localIndex(locals, "$comptimeActive") >= 0;
+    var stmtMatchTrueLive := false;
+    var stmtMatchFalseLive := false;
+    var stmtMatchHasTrueArm := false;
+    var stmtMatchHasFalseArm := false;
+    var stmtMatchLiveArms := 0;
+    var mut stmtMatchUpdates: List<ir.BranchUpdate> = [];
     loop true {
         cursor = syntax.skipItemSeparators(source, cursor, prefix);
         if cursor >= size {
@@ -7524,8 +7946,18 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             cursor = syntax.scanBraceEnd(source, deadArmOpen, prefix);
             continue;
         }
-        /* Build arm-local scope with pattern bindings. */
-        mut armLocals: List<Local> = locals;
+        /* Build arm-local scope with pattern bindings and optional Bool predicate narrowing. */
+        effArmBoolMask := if pat.boolMask == 1 or pat.boolMask == 2 { pat.boolMask }
+        else if pat.irrefutable and boolMask == 1 { 2 }
+        else if pat.irrefutable and boolMask == 2 { 1 }
+        else { 0 };
+        mut armLocals: List<Local> = if subjPred.rt =!= "" and effArmBoolMask == 1 and not source.wordAt(afterPat, "if") {
+            ctx.narrowLocalsForPredicate(locals, subjPred.rt, true)
+        } else if subjPred.rt =!= "" and effArmBoolMask == 2 and not source.wordAt(afterPat, "if") {
+            ctx.narrowLocalsForPredicate(locals, subjPred.rt, false)
+        } else {
+            locals
+        };
         mut declStmtsBuf: tb.TextBuilder;
         mut assignStmtsBuf: tb.TextBuilder;
         mut voidStmtsBuf: tb.TextBuilder;
@@ -7646,7 +8078,25 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         armBodyStart := syntax.skipTrivia(source, armOpen + 1, prefix);
         bodySink := if mode == "loopTail" { "loopBody" } else if mode == "stmt" { "stmt" } else { "branch" };
         armExpected := if mode == "stmt" { "" } else { expected };
+        if mode == "stmt" { contexts.clearLastBranchInitRows(); }
         branch := parseBinaryCtx(target, source, armOpen, prefix, armLocals, functions, params, currentName, armExpected, 0, ctxs, iifeDepth, inferMode, bodySink, aliases);
+        if mode == "stmt" {
+            armIdxSub := if subjPred.rt =!= "" and not hasGuard and effArmBoolMask == 1 {
+                stmtMatchHasTrueArm = true;
+                if branch.kind =!= ir.VALUE_KIND_NEVER { stmtMatchTrueLive = true; }
+                1
+            } else if subjPred.rt =!= "" and not hasGuard and effArmBoolMask == 2 {
+                stmtMatchHasFalseArm = true;
+                if branch.kind =!= ir.VALUE_KIND_NEVER { stmtMatchFalseLive = true; }
+                2
+            } else { 0 };
+            if branch.kind =!= ir.VALUE_KIND_NEVER {
+                stmtMatchUpdates = collectBlockExitBranchUpdates(1, armIdxSub, stmtMatchUpdates);
+                stmtMatchLiveArms = stmtMatchLiveArms + 1;
+            } else {
+                contexts.clearLastBranchInitRows();
+            }
+        }
         sym.rewindLocalsTo(armLocMark);
         if inferMode { matchMarkers = ctx.collectParsedMarkers(matchMarkers, branch); }
         if branch.kind =!= ir.VALUE_KIND_NEVER { allNever = false; }
@@ -7831,6 +8281,17 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         return (code = "/*@CBLK:" + cRetTok + "@*/" + cDecl + cSubjLead + armsCode + subjDropStmt, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers,
         isDirect = true, constant = false, intValue = 0, textValue = "");
     }
+    if mode == "stmt" {
+        subjExhaustive := sawIrrefutable or (subj.kind == ir.VALUE_KIND_BOOL and boolMask == 3) or (enumTotalCases > 0 and coveredEnumCount == enumTotalCases);
+        isBoolSplit := subjPred.rt =!= "" and stmtMatchHasTrueArm and stmtMatchHasFalseArm and armCount == 2;
+        if not (subjExhaustive and stmtMatchLiveArms == 0) {
+            preMatchLen := locals.length();
+            joinedMatchLocals := ctx.joinBranchLocalsWithPred(locals, preMatchLen, 1, subjExhaustive, stmtMatchLiveArms, stmtMatchUpdates, subjPred.rt, false, if isBoolSplit { 1 } else { 0 }, stmtMatchTrueLive, stmtMatchFalseLive);
+            saveBlockExitBranchRows(joinedMatchLocals, preMatchLen, ir.maxLocalLexDepth(locals));
+        } else {
+            contexts.clearLastBranchInitRows();
+        }
+    }
     (code = armsCode + subjDropStmt, kind = finalKind, allNever = allNever, next = cursor, markers = matchMarkers, isDirect = false, constant = false, intValue = 0, textValue = "")
 };
 
@@ -7840,6 +8301,7 @@ parseSubjectMatchLoopTail := fn(target: String, source: String, matchStart: Int,
     iifeDepth = iifeDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
     countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
     res := parseSubjectMatchBody(target, source, matchStart, prefix, locals, functions, params, currentName, expected, matchBarrierCtxs, iifeDepth, inferMode, "loopTail", "", "", aliases);
+    contexts.clearLastBranchInitRows();
     stmtCode := if res.isDirect {
         if res.code == "" { "" } else { "{ " + res.code + " }" }
     } else {
@@ -8093,7 +8555,8 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
     afterOptThenTrivia := if afterOptThen >= 0 { syntax.skipTrivia(source, afterOptThen, prefix) } else { -1 };
     hasActualFinally := afterOptThenTrivia >= 0 and source.wordAt(afterOptThenTrivia, "finally");
     hasPatternIf := condParseKind == ir.CTX_KIND_IF and syntax.ifChainHasPattern(source, condParseStart, prefix);
-    useIifeCond := condParseTag =!= "" or hasActualThen or hasActualFinally or hasPatternIf;
+    isPartialOrReservedIf := condParseKind == ir.CTX_KIND_IF and syntax.ifChainIsPartialOrReserved(source, condParseStart, prefix);
+    useIifeCond := condParseTag =!= "" or hasActualThen or hasActualFinally or hasPatternIf or isPartialOrReservedIf;
     if not useIifeCond {
         isComptimeExpr := sym.localIndex(locals, "$comptimeActive") >= 0;
         condBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = condParseKind, phase = ir.CTX_PHASE_BODY,
@@ -8109,6 +8572,8 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             if condition.kind =!= ir.VALUE_KIND_BOOL {
                 syntax.failAt(source, conditionStart, prefix, "if condition must be Bool");
             }
+            ternPred := extractImmBoolPredicate(source, conditionStart, condition.next, prefix, locals);
+            var ternCondCount := 1;
             conditionCode := if condition.constant {
                 ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
             } else {
@@ -8131,7 +8596,10 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             if isComptimeExpr and conditionState == 0 {
                 cursor = syntax.scanBraceEnd(source, cursor - 1, prefix);
             } else {
-                first := parseBinaryCtx(target, source, cursor - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
+                firstLocMark := sym.localMark();
+                firstLocals := ctx.narrowLocalsForPredicate(locals, ternPred.rt, not ternPred.negated);
+                first := parseBinaryCtx(target, source, cursor - 1, prefix, firstLocals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
+                sym.rewindLocalsTo(firstLocMark);
                 if inferMode { ifMarkers = ctx.collectParsedMarkers(ifMarkers, first); }
                 cursor = first.next;
                 resultKind = first.kind;
@@ -8181,6 +8649,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                 afterElse := syntax.skipTrivia(source, afterBranch + 4, prefix);
                 syntax.rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
                 if source.wordAt(afterElse, "if") {
+                    ternCondCount = ternCondCount + 1;
                     elseConditionStart := syntax.skipTrivia(source, afterElse + 2, prefix);
                     syntax.rejectHeaderBlockTag(source, elseConditionStart, prefix, "else if");
                     if isComptimeExpr and comptimeWon {
@@ -8238,7 +8707,10 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                         break;
                     }
                     elseBranchStart := syntax.skipTrivia(source, open, prefix);
-                    branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
+                    elseLocMark := sym.localMark();
+                    elseLocals := if ternCondCount == 1 and ternPred.rt =!= "" { ctx.narrowLocalsForPredicate(locals, ternPred.rt, ternPred.negated) } else { locals };
+                    branch := parseBinaryCtx(target, source, open - 1, prefix, elseLocals, functions, params, currentName, expected, 0, condBarrierCtxs, iifeDepth, inferMode, "branch", aliases);
+                    sym.rewindLocalsTo(elseLocMark);
                     if inferMode { ifMarkers = ctx.collectParsedMarkers(ifMarkers, branch); }
                     joinedKind := types.joinBranchKind(resultKind, branch.kind);
                     if joinedKind == "" {
@@ -8398,6 +8870,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
     condTagDisplay := if condParseTag =!= "" { condParseTag } else { condParseKind };
     passCount := if inferMode { 1 } else { 2 };
     var resolvedPreThenKind := "";
+    var resolvedCondInitState := ir.INIT_STATE_INIT;
     var condOuterMarkers := "";
     var condEndCursor := condParseStart;
     var condStmtCode := "";
@@ -8426,14 +8899,18 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         mut passCondStates: List<Int> = [];
         mut passBranchCodes: List<String> = [];
         mut passBranchKinds: List<String> = [];
+        mut passBranchReserved: List<Bool> = [];
         var passResultKind := "";
         var passBranchCount := 0;
         var passHasElse := false;
         var passPartialNoElseAt := -1;
+        var passPredRt := "";
+        var passPredNeg := false;
         var passSubjectStmt := "";
         var passPatStmt := "";
         var cursor := 0;
         isComptimeIife := sym.localIndex(locals, "$comptimeActive") >= 0;
+        isPartialDeclC := not isPass1 and resolvedCondInitState =!= ir.INIT_STATE_INIT and isCCond and types.cTypeNeedsDrop(resolvedPreThenKind);
         if condParseKind == ir.CTX_KIND_IF and hasPatternIf {
             fnCtxIdxPat := if isCCond { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
             fnRetKPat := if fnCtxIdxPat >= 0 { ctxs[fnCtxIdxPat].valKind } else { "" };
@@ -8449,11 +8926,13 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             cursor = brRes0.next;
             mut passBranchCodes.pushBack(brRes0.branch.code);
             mut passBranchKinds.pushBack(brRes0.branch.kind);
+            mut passBranchReserved.pushBack(false);
             passResultKind = brRes0.branch.kind;
             passBranchCount = 1;
             if not isPass1 {
                 stmtPart0 := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, brRes0.branch.kind, brRes0.branch.code);
-                mut patChainBuf.append(wrapPatternIfClauses(target, brRes0.clauses, patFlagVar + " = true; " + stmtPart0, fnRetKPat, condParseStart));
+                patSetFlag0 := if isPartialDeclC and brRes0.branch.kind =!= ir.VALUE_KIND_NEVER { " __LT_PINIT_FLAG__ = 1;" } else { "" };
+                mut patChainBuf.append(wrapPatternIfClauses(target, brRes0.clauses, patFlagVar + " = true; " + stmtPart0 + patSetFlag0, fnRetKPat, condParseStart));
             }
             var patBrIdx := 1;
             loop true {
@@ -8483,31 +8962,47 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     cursor = brResI.next;
                     mut passBranchCodes.pushBack(brResI.branch.code);
                     mut passBranchKinds.pushBack(brResI.branch.kind);
+                    mut passBranchReserved.pushBack(false);
                     passBranchCount = passBranchCount + 1;
                     if not isPass1 {
                         stmtPartI := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, brResI.branch.kind, brResI.branch.code);
-                        mut patChainBuf.append(" if (!" + patFlagVar + ") " + wrapPatternIfClauses(target, brResI.clauses, patFlagVar + " = true; " + stmtPartI, fnRetKPat, elseCondStart));
+                        patSetFlagI := if isPartialDeclC and brResI.branch.kind =!= ir.VALUE_KIND_NEVER { " __LT_PINIT_FLAG__ = 1;" } else { "" };
+                        mut patChainBuf.append(" if (!" + patFlagVar + ") " + wrapPatternIfClauses(target, brResI.clauses, patFlagVar + " = true; " + stmtPartI + patSetFlagI, fnRetKPat, elseCondStart));
                     }
                     patBrIdx = patBrIdx + 1;
                 } else {
                     open := syntax.expectSymbol(source, afterElse, "{", prefix);
                     passHasElse = true;
-                    elseBranchStart := syntax.skipTrivia(source, open, prefix);
-                    branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
-                    if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, branch); }
-                    joinedKind := types.joinBranchKind(passResultKind, branch.kind);
-                    if joinedKind == "" {
-                        syntax.failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
-                        types.displayKind(passResultKind) + " and " + types.displayKind(branch.kind));
-                    }
-                    passResultKind = joinedKind;
-                    cursor = branch.next;
-                    mut passBranchCodes.pushBack(branch.code);
-                    mut passBranchKinds.pushBack(branch.kind);
-                    passBranchCount = passBranchCount + 1;
-                    if not isPass1 {
-                        elsePart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, branch.kind, branch.code);
-                        mut patChainBuf.append(" if (!" + patFlagVar + ") { " + elsePart + " }");
+                    elseResPat := syntax.isReservedBranchBlock(source, open - 1, prefix);
+                    if elseResPat >= 0 {
+                        if hasActualThen or minimum >= 0 {
+                            syntax.failAt(source, open - 1, prefix, "partial conditional with ? requires a declaration or assignment target");
+                        }
+                        cursor = elseResPat;
+                        mut passBranchCodes.pushBack("");
+                        mut passBranchKinds.pushBack("$reserved");
+                        mut passBranchReserved.pushBack(true);
+                        passBranchCount = passBranchCount + 1;
+                    } else {
+                        elseBranchStart := syntax.skipTrivia(source, open, prefix);
+                        branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
+                        if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, branch); }
+                        joinedKind := types.joinBranchKind(passResultKind, branch.kind);
+                        if joinedKind == "" {
+                            syntax.failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
+                            types.displayKind(passResultKind) + " and " + types.displayKind(branch.kind));
+                        }
+                        passResultKind = joinedKind;
+                        cursor = branch.next;
+                        mut passBranchCodes.pushBack(branch.code);
+                        mut passBranchKinds.pushBack(branch.kind);
+                        mut passBranchReserved.pushBack(false);
+                        passBranchCount = passBranchCount + 1;
+                        if not isPass1 {
+                            elsePart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, branch.kind, branch.code);
+                            patSetFlagE := if isPartialDeclC and branch.kind =!= ir.VALUE_KIND_NEVER { " __LT_PINIT_FLAG__ = 1;" } else { "" };
+                            mut patChainBuf.append(" if (!" + patFlagVar + ") { " + elsePart + patSetFlagE + " }");
+                        }
                     }
                     break;
                 }
@@ -8524,6 +9019,9 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             if cond0.kind =!= ir.VALUE_KIND_BOOL {
                 syntax.failAt(source, condStart0, prefix, "if condition must be Bool");
             }
+            cond0Pred := extractImmBoolPredicate(source, condStart0, cond0.next, prefix, locals);
+            passPredRt = cond0Pred.rt;
+            passPredNeg = cond0Pred.negated;
             cond0Code := if cond0.constant {
                 ir.targetBoolLiteralCode(target, cond0.intValue =!= 0)
             } else {
@@ -8537,13 +9035,27 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             if isComptimeIife and cond0State == 0 {
                 cursor = syntax.scanBraceEnd(source, cursor - 1, prefix);
             } else {
-                first := parseBinaryCtx(target, source, cursor - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
-                if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, first); }
-                cursor = first.next;
-                mut passBranchCodes.pushBack(first.code);
-                mut passBranchKinds.pushBack(first.kind);
-                passResultKind = first.kind;
-                passBranchCount = 1;
+                resEnd0 := syntax.isReservedBranchBlock(source, cursor - 1, prefix);
+                if resEnd0 >= 0 {
+                    cursor = resEnd0;
+                    mut passBranchCodes.pushBack("");
+                    mut passBranchKinds.pushBack("$reserved");
+                    mut passBranchReserved.pushBack(true);
+                    passResultKind = "$reserved";
+                    passBranchCount = 1;
+                } else {
+                    firstLocMarkIife := sym.localMark();
+                    firstLocalsIife := ctx.narrowLocalsForPredicate(locals, cond0Pred.rt, not cond0Pred.negated);
+                    first := parseBinaryCtx(target, source, cursor - 1, prefix, firstLocalsIife, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
+                    sym.rewindLocalsTo(firstLocMarkIife);
+                    if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, first); }
+                    cursor = first.next;
+                    mut passBranchCodes.pushBack(first.code);
+                    mut passBranchKinds.pushBack(first.kind);
+                    mut passBranchReserved.pushBack(false);
+                    passResultKind = first.kind;
+                    passBranchCount = 1;
+                }
                 if isComptimeIife and cond0State == 1 {
                     passComptimeWon = true;
                     passHasElse = true;
@@ -8594,19 +9106,33 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                         cursor = syntax.scanBraceEnd(source, open - 1, prefix);
                         continue;
                     }
-                    elseBranchStart := syntax.skipTrivia(source, open, prefix);
-                    branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
-                    if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, branch); }
-                    joinedKind := types.joinBranchKind(passResultKind, branch.kind);
-                    if joinedKind == "" {
-                        syntax.failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
-                        types.displayKind(passResultKind) + " and " + types.displayKind(branch.kind));
+                    resEndI := syntax.isReservedBranchBlock(source, open - 1, prefix);
+                    if resEndI >= 0 {
+                        cursor = resEndI;
+                        mut passBranchCodes.pushBack("");
+                        mut passBranchKinds.pushBack("$reserved");
+                        mut passBranchReserved.pushBack(true);
+                        passBranchCount = passBranchCount + 1;
+                    } else {
+                        elseBranchStart := syntax.skipTrivia(source, open, prefix);
+                        branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
+                        if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, branch); }
+                        if passResultKind == "$reserved" or passResultKind == "" {
+                            passResultKind = branch.kind;
+                        } else {
+                            joinedKind := types.joinBranchKind(passResultKind, branch.kind);
+                            if joinedKind == "" {
+                                syntax.failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
+                                types.displayKind(passResultKind) + " and " + types.displayKind(branch.kind));
+                            }
+                            passResultKind = joinedKind;
+                        }
+                        cursor = branch.next;
+                        mut passBranchCodes.pushBack(branch.code);
+                        mut passBranchKinds.pushBack(branch.kind);
+                        mut passBranchReserved.pushBack(false);
+                        passBranchCount = passBranchCount + 1;
                     }
-                    passResultKind = joinedKind;
-                    cursor = branch.next;
-                    mut passBranchCodes.pushBack(branch.code);
-                    mut passBranchKinds.pushBack(branch.kind);
-                    passBranchCount = passBranchCount + 1;
                     if isComptimeIife and elseCondState == 1 {
                         passComptimeWon = true;
                         passHasElse = true;
@@ -8621,19 +9147,36 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                         break;
                     }
                     passHasElse = true;
-                    elseBranchStart := syntax.skipTrivia(source, open, prefix);
-                    branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
-                    if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, branch); }
-                    joinedKind := types.joinBranchKind(passResultKind, branch.kind);
-                    if joinedKind == "" {
-                        syntax.failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
-                        types.displayKind(passResultKind) + " and " + types.displayKind(branch.kind));
+                    resEndE := syntax.isReservedBranchBlock(source, open - 1, prefix);
+                    if resEndE >= 0 {
+                        cursor = resEndE;
+                        mut passBranchCodes.pushBack("");
+                        mut passBranchKinds.pushBack("$reserved");
+                        mut passBranchReserved.pushBack(true);
+                        passBranchCount = passBranchCount + 1;
+                    } else {
+                        elseBranchStart := syntax.skipTrivia(source, open, prefix);
+                        elseLocMarkIife := sym.localMark();
+                        elseLocalsIife := if passCondStates.length() == 1 and passPredRt =!= "" { ctx.narrowLocalsForPredicate(locals, passPredRt, passPredNeg) } else { locals };
+                        branch := parseBinaryCtx(target, source, open - 1, prefix, elseLocalsIife, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
+                        sym.rewindLocalsTo(elseLocMarkIife);
+                        if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, branch); }
+                        if passResultKind == "$reserved" or passResultKind == "" {
+                            passResultKind = branch.kind;
+                        } else {
+                            joinedKind := types.joinBranchKind(passResultKind, branch.kind);
+                            if joinedKind == "" {
+                                syntax.failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
+                                types.displayKind(passResultKind) + " and " + types.displayKind(branch.kind));
+                            }
+                            passResultKind = joinedKind;
+                        }
+                        cursor = branch.next;
+                        mut passBranchCodes.pushBack(branch.code);
+                        mut passBranchKinds.pushBack(branch.kind);
+                        mut passBranchReserved.pushBack(false);
+                        passBranchCount = passBranchCount + 1;
                     }
-                    passResultKind = joinedKind;
-                    cursor = branch.next;
-                    mut passBranchCodes.pushBack(branch.code);
-                    mut passBranchKinds.pushBack(branch.kind);
-                    passBranchCount = passBranchCount + 1;
                     break;
                 }
             }
@@ -8747,37 +9290,100 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             mut passMarkersBuf.append(passMarkers);
             var bIdx := 0;
             var allBranchesNever := passBranchCount > 0;
+            var hasAnyReserved := false;
+            var nonReservedCount := 0;
+            var allNonResNever := true;
             loop bIdx < passBranchCount {
                 bKind := passBranchKinds[bIdx];
-                if bKind =!= ir.VALUE_KIND_NEVER {
+                isResB := bIdx < passBranchReserved.length() and passBranchReserved[bIdx];
+                if isResB or bKind == "$reserved" {
+                    hasAnyReserved = true;
                     allBranchesNever = false;
-                    mut passMarkersBuf.append(condId.toText());
-                    mut passMarkersBuf.append("=");
-                    mut passMarkersBuf.append(bKind);
-                    mut passMarkersBuf.append("\n");
+                } else {
+                    nonReservedCount = nonReservedCount + 1;
+                    if bKind =!= ir.VALUE_KIND_NEVER {
+                        allBranchesNever = false;
+                        allNonResNever = false;
+                        mut passMarkersBuf.append(condId.toText());
+                        mut passMarkersBuf.append("=");
+                        mut passMarkersBuf.append(bKind);
+                        mut passMarkersBuf.append("\n");
+                    }
                 }
                 bIdx = bIdx + 1;
             }
             passMarkers = passMarkersBuf.build();
-            if passHasElse {
+            if hasAnyReserved and (hasActualThen or minimum >= 0) {
+                syntax.failAt(source, condParseStart, prefix, "partial conditional with ? requires a declaration or assignment target");
+            }
+            if passHasElse and not hasAnyReserved {
                 resolvedPreThenKind = ctx.inferKindFromMarkers(passMarkers, condId, condTagDisplay, source, condParseTagAt, prefix, allBranchesNever);
+                resolvedCondInitState = ir.INIT_STATE_INIT;
             } else {
-                partialStopped := if minimum == -1 { allBranchesNever } else { false };
-                prePartial := ctx.inferKindFromMarkers(passMarkers, condId, condTagDisplay, source, condParseTagAt, prefix, partialStopped);
+                partialStopped := if minimum == -1 { allNonResNever } else { false };
+                prePartial := if nonReservedCount == 0 {
+                    ir.VALUE_KIND_NEVER
+                } else {
+                    ctx.inferKindFromMarkers(passMarkers, condId, condTagDisplay, source, condParseTagAt, prefix, partialStopped)
+                };
                 if minimum == -1 {
                     if prePartial == ir.VALUE_KIND_NEVER {
-                        if expected == "" or expected.startsWithAt(0, "TailList<") {
+                        if nonReservedCount == 0 or expected == "" or expected.startsWithAt(0, "TailList<") {
                             syntax.failAt(source, condParseStart, prefix, "partial conditional declaration needs a normally completing value branch; add else");
                         }
                         resolvedPreThenKind = expected;
                     } else {
                         resolvedPreThenKind = prePartial;
                     }
+                    if condParseKind == ir.CTX_KIND_IF and not hasPatternIf and passCondStates.length() == 1 and passBranchCount >= 1 {
+                        cSt0 := passCondStates[0];
+                        r0 := passBranchReserved.length() > 0 and passBranchReserved[0];
+                        r1 := if passHasElse and passBranchReserved.length() >= 2 { passBranchReserved[1] } else { true };
+                        if (isComptimeIife or passPredRt == "") and cSt0 == 1 {
+                            resolvedCondInitState = if r0 { ir.INIT_STATE_UNINIT } else { ir.INIT_STATE_INIT };
+                        } else if (isComptimeIife or passPredRt == "") and cSt0 == 0 {
+                            resolvedCondInitState = if passHasElse and not r1 { ir.INIT_STATE_INIT } else { ir.INIT_STATE_UNINIT };
+                        } else {
+                            b1St := if r0 { ir.INIT_STATE_UNINIT } else { ir.INIT_STATE_INIT };
+                            b1Lv := passBranchKinds[0] =!= ir.VALUE_KIND_NEVER;
+                            b2St := if passHasElse and passBranchCount >= 2 and not r1 { ir.INIT_STATE_INIT } else { ir.INIT_STATE_UNINIT };
+                            b2Lv := if passHasElse and passBranchCount >= 2 { passBranchKinds[1] =!= ir.VALUE_KIND_NEVER } else { true };
+                            tSt := if passPredNeg { b2St } else { b1St };
+                            tLv := if passPredNeg { b2Lv } else { b1Lv };
+                            fSt := if passPredNeg { b1St } else { b2St };
+                            fLv := if passPredNeg { b1Lv } else { b2Lv };
+                            resolvedCondInitState = ctx.joinPredStates(passPredRt, ir.INIT_STATE_UNINIT, tSt, tLv, fSt, fLv);
+                        }
+                    } else {
+                        var allReachInit := passHasElse;
+                        var anyReachInit := false;
+                        var ri := 0;
+                        condLim := if passHasElse { passBranchCount - 1 } else { passBranchCount };
+                        loop ri < passBranchCount {
+                            deadC := ri < condLim and ri < passCondStates.length() and passCondStates[ri] == 0;
+                            if not deadC {
+                                isR := ri < passBranchReserved.length() and passBranchReserved[ri];
+                                if isR { allReachInit = false; }
+                                else { anyReachInit = true; }
+                            }
+                            ri = ri + 1;
+                        }
+                        resolvedCondInitState = if allReachInit { ir.INIT_STATE_INIT }
+                        else if not anyReachInit { ir.INIT_STATE_UNINIT }
+                        else { ir.INIT_STATE_MAYBE };
+                    }
+                    if resolvedCondInitState =!= ir.INIT_STATE_INIT and (types.isSliceKind(resolvedPreThenKind) or types.isDynKind(resolvedPreThenKind)) {
+                        syntax.failAt(source, condParseStart, prefix, "cannot leave " + types.displayKind(resolvedPreThenKind) + " binding uninitialized in partial conditional");
+                    }
+                    if resolvedCondInitState =!= ir.INIT_STATE_INIT and condHintExpected =!= "" and resolvedPreThenKind =!= ir.VALUE_KIND_NEVER and types.isCompatibleKind(condHintExpected, resolvedPreThenKind) {
+                        resolvedPreThenKind = condHintExpected;
+                    }
                 } else {
                     if prePartial =!= ir.VALUE_KIND_UNIT {
-                        syntax.failAt(source, passPartialNoElseAt, prefix, "value if requires a final else");
+                        syntax.failAt(source, if hasAnyReserved { condParseStart } else { passPartialNoElseAt }, prefix, "value if requires a final else");
                     }
                     resolvedPreThenKind = ir.VALUE_KIND_UNIT;
+                    resolvedCondInitState = ir.INIT_STATE_INIT;
                 }
             }
             condOuterMarkers = ctx.filterOtherMarkers(passMarkers, condId);
@@ -8798,8 +9404,12 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                 var hitConstTrue := false;
                 loop cIdx < condCount {
                     cState := passCondStates[cIdx];
+                    isResC := cIdx < passBranchReserved.length() and passBranchReserved[cIdx];
+                    stmtPart := if isResC { "" } else {
+                        sBase := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
+                        if isPartialDeclC and passBranchKinds[cIdx] =!= ir.VALUE_KIND_NEVER { sBase + " __LT_PINIT_FLAG__ = 1;" } else { sBase }
+                    };
                     if cState == 1 {
-                        stmtPart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
                         if emittedCondCount == 0 {
                             mut rawIfBuf.append(stmtPart);
                         } else {
@@ -8812,7 +9422,6 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     }
                     if cState =!= 0 {
                         kwPrefix := if emittedCondCount == 0 { "if (" } else { " else if (" };
-                        stmtPart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[cIdx], passBranchCodes[cIdx]);
                         condExprWrap := if isCCond { passCondCodes[cIdx] } else { "Boolean(" + passCondCodes[cIdx] + ")" };
                         mut rawIfBuf.append(kwPrefix);
                         mut rawIfBuf.append(condExprWrap);
@@ -8824,13 +9433,18 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
                     cIdx = cIdx + 1;
                 }
                 if not hitConstTrue and passHasElse {
-                    elsePart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[passBranchCount - 1], passBranchCodes[passBranchCount - 1]);
-                    if emittedCondCount == 0 {
-                        mut rawIfBuf.append(elsePart);
-                    } else {
-                        mut rawIfBuf.append(" else { ");
-                        mut rawIfBuf.append(elsePart);
-                        mut rawIfBuf.append(" }");
+                    elseIdx := passBranchCount - 1;
+                    isResE := elseIdx < passBranchReserved.length() and passBranchReserved[elseIdx];
+                    if not isResE {
+                        elseBase := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[elseIdx], passBranchCodes[elseIdx]);
+                        elsePart := if isPartialDeclC and passBranchKinds[elseIdx] =!= ir.VALUE_KIND_NEVER { elseBase + " __LT_PINIT_FLAG__ = 1;" } else { elseBase };
+                        if emittedCondCount == 0 {
+                            mut rawIfBuf.append(elsePart);
+                        } else {
+                            mut rawIfBuf.append(" else { ");
+                            mut rawIfBuf.append(elsePart);
+                            mut rawIfBuf.append(" }");
+                        }
                     }
                 }
                 rawIfStmt = rawIfBuf.build();
@@ -8920,11 +9534,21 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             }
         }
     } else if inferMode {
-        left = ctx.withMarkers((kind = resolvedPreThenKind, code = "", intValue = 0, textValue = "", constant = false, next = condEndCursor), condOuterMarkers);
+        pinitTag := if resolvedCondInitState =!= ir.INIT_STATE_INIT { "$pinit:" + resolvedCondInitState } else { "" };
+        left = ctx.withMarkers((kind = resolvedPreThenKind, code = "", intValue = 0, textValue = pinitTag, constant = false, next = condEndCursor), condOuterMarkers);
     } else if isCCond {
         if resolvedPreThenKind == ir.VALUE_KIND_UNIT or resolvedPreThenKind == ir.VALUE_KIND_NEVER {
             left = (kind = resolvedPreThenKind, code = "/*@CBLK:0@*/{ " + condStmtCode + " }",
             intValue = 0, textValue = "", constant = false, next = condEndCursor);
+        } else if resolvedCondInitState =!= ir.INIT_STATE_INIT {
+            cDeclInit := if types.cTypeNeedsDrop(resolvedPreThenKind) {
+                types.cValueType(resolvedPreThenKind) + " " + condValVar + "; memset(&" + condValVar + ", 0, sizeof(" + condValVar + "));"
+            } else {
+                types.cValueType(resolvedPreThenKind) + " " + condValVar + " = " + ctx.zeroParsed(target, resolvedPreThenKind, 0).code + ";"
+            };
+            left = (kind = resolvedPreThenKind,
+            code = "/*@CBLK:" + condValVar + "@*/" + cDeclInit + " { " + condStmtCode + " }",
+            intValue = 0, textValue = "$pinit:" + resolvedCondInitState, constant = false, next = condEndCursor);
         } else {
             left = (kind = resolvedPreThenKind,
             code = "/*@CBLK:" + condValVar + "@*/" + types.cValueType(resolvedPreThenKind) + " " + condValVar + " = " + ctx.zeroParsed(target, resolvedPreThenKind, 0).code + "; { " + condStmtCode + " }",
@@ -8933,6 +9557,8 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
     } else {
         valDecl := if resolvedPreThenKind == ir.VALUE_KIND_UNIT or resolvedPreThenKind == ir.VALUE_KIND_NEVER {
             ""
+        } else if resolvedCondInitState =!= ir.INIT_STATE_INIT {
+            "let " + condValVar + "!: " + types.tsFunctionType(resolvedPreThenKind) + "; "
         } else {
             "let " + condValVar + ": " + types.tsFunctionType(resolvedPreThenKind) + " = " + ctx.zeroParsed(target, resolvedPreThenKind, 0).code + "; "
         };
@@ -8945,7 +9571,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         };
         condIifeBody = valDecl + condStmtCode + finalRet;
         left = (kind = resolvedPreThenKind, code = "(() => { " + condIifeBody + " })()",
-        intValue = 0, textValue = "", constant = false, next = condEndCursor);
+        intValue = 0, textValue = if resolvedCondInitState =!= ir.INIT_STATE_INIT { "$pinit:" + resolvedCondInitState } else { "" }, constant = false, next = condEndCursor);
     }
     afterCondConstruct := syntax.skipTrivia(source, left.next, prefix);
     if hasActualThen and afterCondConstruct < source.length() and source.wordAt(afterCondConstruct, "then") {
@@ -14348,6 +14974,9 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     if not types.isSliceKind(left.kind) and rootIdx < 0 {
                         syntax.failAt(source, postPosition, prefix, "slice requires an addressable List, fixed Array, or Slice binding");
                     }
+                    if rootIdx >= 0 and locals[rootIdx].initState =!= ir.INIT_STATE_INIT {
+                        syntax.failAt(source, postPosition, prefix, "cannot slice uninitialized local " + locals[rootIdx].name);
+                    }
                     roProv := if rootIdx >= 0 {
                         rEntry := locals[rootIdx];
                         sliceBorrows.makeSliceProvenance("ro_slice", rEntry.runtime, rEntry.depth, rEntry.name, rEntry.textValue)
@@ -15142,15 +15771,28 @@ pub parsePartialAssignIf := fn(target: String, source: String, position: Int, pr
     }
     if not source.wordAt(inner, "if") { return []; }
     if syntax.ifChainHasPattern(source, inner, prefix) { return []; }
+    if not syntax.ifChainIsPartialOrReserved(source, inner, prefix) { return []; }
     mut result: List<Item> = [];
     var cursor := syntax.skipTrivia(source, inner + 2, prefix);
     var isFirst := true;
+    var condCount := 0;
+    var pred0Rt := "";
+    var pred0Neg := false;
+    var arm0Res := false;
+    var arm1Res := false;
+    var arm1IsElse := false;
     loop true {
         syntax.rejectHeaderBlockTag(source, cursor, prefix, if isFirst { "if" } else { "else if" });
         conditionStart := cursor;
         condition := parseExpressionCtx(target, source, conditionStart, prefix, locals, functions, params, currentName, ctxs, aliases);
         if condition.kind =!= ir.VALUE_KIND_BOOL {
             syntax.failAt(source, conditionStart, prefix, "if condition must be Bool");
+        }
+        condCount = condCount + 1;
+        if isFirst {
+            pred0 := extractImmBoolPredicate(source, conditionStart, condition.next, prefix, locals);
+            pred0Rt = pred0.rt;
+            pred0Neg = pred0.negated;
         }
         conditionCode := if condition.constant {
             ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
@@ -15160,16 +15802,25 @@ pub parsePartialAssignIf := fn(target: String, source: String, position: Int, pr
         beforeOpen := syntax.skipTrivia(source, condition.next, prefix);
         syntax.rejectMisplacedTag(source, beforeOpen, prefix, "block tag cannot appear before { in if");
         open := syntax.expectSymbol(source, beforeOpen, "{", prefix);
-        branchStart := syntax.skipTrivia(source, open, prefix);
-        branch := parseExpressionAsCtx(target, source, branchStart, prefix, locals, functions, params, currentName, targetKind, ctxs, aliases);
-        if not types.isCompatibleKind(targetKind, branch.kind) {
-            syntax.failAt(source, targetAt, prefix, "cannot assign " + types.displayKind(branch.kind) + " to " + types.displayKind(targetKind) + " local " + targetName);
-        }
-        cursor = syntax.expectSymbol(source, syntax.skipTrivia(source, branch.next, prefix), "}", prefix);
+        resEnd := syntax.isReservedBranchBlock(source, open - 1, prefix);
         mut result.pushBack((kind = if isFirst { ir.ITEM_KIND_IF } else { ir.ITEM_KIND_ELSE_IF }, name = "", runtime = "", code = conditionCode,
         intValue = 0, textValue = ""));
-        mut result.pushBack((kind = ir.ITEM_PREFIX_ASSIGN + ctx.storageKind(targetKind), name = targetName, runtime = targetRuntime,
-        code = ctx.assignValueCode(target, targetKind, branch.kind, branch.code), intValue = branch.intValue, textValue = ctx.storageTextPayload(targetKind, branch.textValue)));
+        if resEnd >= 0 {
+            if isFirst { arm0Res = true; }
+            cursor = resEnd;
+        } else {
+            branchStart := syntax.skipTrivia(source, open, prefix);
+            brLocMark := sym.localMark();
+            brLocals := if isFirst and pred0Rt =!= "" { ctx.narrowLocalsForPredicate(locals, pred0Rt, not pred0Neg) } else { locals };
+            branch := parseExpressionAsCtx(target, source, branchStart, prefix, brLocals, functions, params, currentName, targetKind, ctxs, aliases);
+            sym.rewindLocalsTo(brLocMark);
+            if not types.isCompatibleKind(targetKind, branch.kind) {
+                syntax.failAt(source, targetAt, prefix, "cannot assign " + types.displayKind(branch.kind) + " to " + types.displayKind(targetKind) + " local " + targetName);
+            }
+            cursor = syntax.expectSymbol(source, syntax.skipTrivia(source, branch.next, prefix), "}", prefix);
+            mut result.pushBack((kind = ir.ITEM_PREFIX_ASSIGN + ctx.storageKind(targetKind), name = targetName, runtime = targetRuntime,
+            code = ctx.assignValueCode(target, targetKind, branch.kind, branch.code), intValue = branch.intValue, textValue = ctx.storageTextPayload(targetKind, branch.textValue)));
+        }
         isFirst = false;
         afterBranch := syntax.skipTrivia(source, cursor, prefix);
         if not source.wordAt(afterBranch, "else") {
@@ -15188,14 +15839,62 @@ pub parsePartialAssignIf := fn(target: String, source: String, position: Int, pr
             if statementNext < 0 {
                 syntax.failAt(source, afterBranch, prefix, "value if requires a final else");
             }
+            meta := if condCount == 1 {
+                if arm0Res { "$noop" }
+                else if pred0Rt =!= "" { if pred0Neg { "$pred_f:" + pred0Rt } else { "$pred_t:" + pred0Rt } }
+                else { "" }
+            } else { "" };
             (mut result).pushBack((kind = ir.ITEM_KIND_END_IF, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
-            mut result.pushBack((kind = ir.ITEM_KIND_END, name = "", runtime = "", code = "", intValue = statementNext, textValue = ""));
+            mut result.pushBack((kind = ir.ITEM_KIND_END, name = "", runtime = "", code = "", intValue = statementNext, textValue = meta));
             return result;
         }
         afterElse := syntax.skipTrivia(source, afterBranch + 4, prefix);
         syntax.rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
         if not source.wordAt(afterElse, "if") {
-            return [];
+            elseOpen := syntax.expectSymbol(source, afterElse, "{", prefix);
+            elseResEnd := syntax.isReservedBranchBlock(source, elseOpen - 1, prefix);
+            arm1IsElse = true;
+            var endAfterElse := elseOpen;
+            if elseResEnd >= 0 {
+                arm1Res = true;
+                endAfterElse = elseResEnd;
+            } else {
+                elseBrStart := syntax.skipTrivia(source, elseOpen, prefix);
+                elseMark := sym.localMark();
+                elseLocs := if condCount == 1 and pred0Rt =!= "" { ctx.narrowLocalsForPredicate(locals, pred0Rt, pred0Neg) } else { locals };
+                elseBr := parseExpressionAsCtx(target, source, elseBrStart, prefix, elseLocs, functions, params, currentName, targetKind, ctxs, aliases);
+                sym.rewindLocalsTo(elseMark);
+                if not types.isCompatibleKind(targetKind, elseBr.kind) {
+                    syntax.failAt(source, targetAt, prefix, "cannot assign " + types.displayKind(elseBr.kind) + " to " + types.displayKind(targetKind) + " local " + targetName);
+                }
+                endAfterElse = syntax.expectSymbol(source, syntax.skipTrivia(source, elseBr.next, prefix), "}", prefix);
+                mut result.pushBack((kind = ir.ITEM_KIND_ELSE, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+                mut result.pushBack((kind = ir.ITEM_PREFIX_ASSIGN + ctx.storageKind(targetKind), name = targetName, runtime = targetRuntime,
+                code = ctx.assignValueCode(target, targetKind, elseBr.kind, elseBr.code), intValue = elseBr.intValue, textValue = ctx.storageTextPayload(targetKind, elseBr.textValue)));
+            }
+            var endE := syntax.skipTrivia(source, endAfterElse, prefix);
+            var remE := parenCount;
+            var okE := true;
+            loop remE > 0 {
+                if endE >= source.length() or source.at(endE) =!= ")" { okE = false; break; }
+                endE = syntax.skipTrivia(source, endE + 1, prefix);
+                remE = remE - 1;
+            }
+            stmtNextE := if okE { syntax.consumeStatementEnd(source, endE, prefix) } else { -1 };
+            if stmtNextE < 0 {
+                syntax.failAt(source, endAfterElse, prefix, "expected ; after conditional assignment");
+            }
+            metaE := if condCount == 1 and arm1IsElse {
+                if arm0Res and arm1Res { "$noop" }
+                else if (not arm0Res) and arm1Res {
+                    if pred0Rt =!= "" { if pred0Neg { "$pred_f:" + pred0Rt } else { "$pred_t:" + pred0Rt } } else { "" }
+                } else if arm0Res and (not arm1Res) {
+                    if pred0Rt =!= "" { if pred0Neg { "$pred_t:" + pred0Rt } else { "$pred_f:" + pred0Rt } } else { "" }
+                } else { "" }
+            } else { "" };
+            (mut result).pushBack((kind = ir.ITEM_KIND_END_IF, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
+            mut result.pushBack((kind = ir.ITEM_KIND_END, name = "", runtime = "", code = "", intValue = stmtNextE, textValue = metaE));
+            return result;
         }
         cursor = syntax.skipTrivia(source, afterElse + 2, prefix);
     }

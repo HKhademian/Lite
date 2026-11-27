@@ -2,8 +2,10 @@ io := import "core/io";
 
 flag := false;
 x := if flag { 5 };
+if not flag { x = 0; }
 io.outputLine(x);
 label := if flag { "yes" };
+if not flag { label = ""; }
 io.outputLine("[" + label + "]");
 var count := 10;
 count = if flag { 7 };

@@ -3,12 +3,12 @@
   "kind": "feature",
   "source": {
     "file": "partial-conditionals.lts",
-    "hash": "sha256:0f597824221f214b4a91b887aa0d0c8dd843631f29ea466d6fed2370feb8b5f9"
+    "hash": "sha256:ddc6c99a6cbba9b2caef70d74cc0db81695877f373c0775c96e04ab3d8e3cb0d"
   },
   "features": [
     "feature.control.branching.partial-conditionals"
   ],
-  "guideline": "Checks declaration defaults and no-write assignment for no-else conditionals.",
+  "guideline": "Checks definite initialization with correlated predicate fallback and no-write assignment for no-else conditionals.",
   "cases": [
     {
       "name": "defaults-and-no-write",

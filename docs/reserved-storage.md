@@ -1,18 +1,8 @@
 # Reserved storage without initialization
 
-Status: **value: Type = ? and whole-value first initialization with = selected, 2026-10-19; scalar/tuple/fixed-array locals implemented in the igniter, 2026-11-01; broader storage, ownership and partial-construction rules remain open**. The marker requests storage for an expected type without zero initialization or declared-default construction. The earlier generic reserve() spelling remains a separate proposal, not a selected synonym. Stack/heap selection, partial/callee construction, allocation failure, ownership, and cleanup remain undecided.
+Status: **value: Type = ? and whole-value first initialization with = selected, 2026-10-19; Phase 14 definite initialization, `else { ? }` branch correlation, owned-value C11 init/drop guards, and uninitialized-array slice rejection implemented; broader field/element and stack/heap placement rules remain open**. The marker requests storage for an expected type without zero initialization or declared-default construction. The earlier generic reserve() spelling remains a separate proposal, not a selected synonym. Stack/heap selection, partial/callee construction, and allocation failure remain undecided.
 
-Implementation checkpoint, 2026-11-01: the igniter accepts `name: Type = ?` on
-scalar, flat-tuple and fixed-array typed locals. Reading before the first
-whole-value `=` is a type error; that first write initializes the binding
-without `var`, later replacement requires `var`, and definite initialization is
-joined across `if` and subjectless `match` paths. A loop body does not establish
-initialization after the loop. A guarded first write (`x = if flag { value }`)
-does not establish definite initialization and blocks a later unguarded first
-write, because that later write would be a replacement on the guarded path.
-Branch correlation for `else { ? }` reservations remains unimplemented.
-Reserved List storage, partial/field construction, stack/heap placement and
-cleanup remain unimplemented.
+Implementation note (Phase 14): the compiler supports `name: Type = ?` for scalar, tuple, fixed-array, record, enum, and callable locals as well as `else { ? }` and partial no-`else` conditional initializers (`x := if flag { value };`) with immutable `Bool` predicate correlation (`flag`/`not flag`). Slicing an uninitialized `[T; N]` array is rejected until initialized on that path, and C11 emits a 1-byte `uint8_t lt_init_*` init/drop guard solely for dynamically maybe-initialized owned locals. Explicit direct `List`/`Map`/`Set`/`Rc`/`Slice`/`dyn` `= ?` declarations, partial field/element construction, and callee output contracts remain unimplemented.
 
 ## Selected initialization marker
 
@@ -129,7 +119,7 @@ Initializing reserved fields for the first time must be distinguished from assig
 
 Whole-value x = value is selected as first initialization without var when the compiler proves x has not already been initialized on any reaching path. Multiple assignment sites in mutually exclusive branches are allowed, but every path reaching a value use must have initialized x. Later replacement requires var. No fallback zero value is supplied to a missing branch. See [first initialization](lite://doc/first-initialization).
 
-A conditional `else { ? }` branch reuses this reserved state: the binding is initialized only on the non-`?` paths and requires branch-correlated definite initialization. A no-`else` conditional declaration without `?` uses its normal zero default instead. See [conditional reservation](lite://doc/first-initialization#conditional-reservation).
+A conditional `else { ? }` branch reuses this reserved state: the binding is initialized only on the non-`?` paths and requires branch-correlated definite initialization before reads. A no-`else` conditional initializer without `?` leaves the omitted branch uninitialized in the same way (definite initialization rather than a zero fallback). See [conditional reservation](lite://doc/first-initialization#conditional-reservation).
 
 Before that first write, the reserved binding permits whole-value initialization but no ordinary reads. Fixed storage is single-write; var storage is multi-write. In every currently selected case, a successful whole-value write makes the binding readable. Fixed storage then has no remaining write permission; var storage retains replacement permission and stays readable after later successful writes. Union read-flow rules apply after initialization and update the readable type without changing the write allowance. See the [single-write and multi-write examples](lite://doc/first-initialization#writable-before-initialization-readable-afterward).
 

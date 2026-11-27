@@ -21,7 +21,7 @@ Local := alias (name: String, runtime: String, kind: String, mutable: Bool, writ
 BlockDecl := alias (name: String, depth: Int);
 
 /** One outer local initialization and callable-dependency update matching `frontend-ir.BranchUpdate`. */
-BranchUpdate := alias (depth: Int, runtime: String, initState: String, code: String);
+BranchUpdate := alias (depth: Int, arm: Int, runtime: String, initState: String, code: String);
 
 /** Lexical control-flow and metadata context matching `frontend-ir.ConstructCtx`. */
 ConstructCtx := alias (id: Int, tag: String, kind: String, phase: String, iifeDepth: Int, valKind: String, valVar: String, label: String, iterLabel: String, countVar: String, itemVar: String, itemKind: String, indexVar: String, hasIndex: Bool, colVar: String);
@@ -285,7 +285,7 @@ pub isCFreshOwnedExpr := fn(code: String): Bool {
 /** Wraps target code in the backend's list-copy hook when `kind` is a List; `Never` and other kinds are unchanged. */
 pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     if types.isDistinctKind(kind) { return self(target, types.distinctBaseKind(kind), code); }
-    if kind == ir.VALUE_KIND_NEVER or (target == ir.TARGET_C and isCFreshOwnedExpr(code)) { code }
+    if kind == ir.VALUE_KIND_NEVER or (target == ir.TARGET_C and (isCFreshOwnedExpr(code) or code.startsWithAt(0, "/*@CBLK:"))) { code }
     else if types.isArrayKind(kind) and target == ir.TARGET_C and types.cArrayTag(kind) =!= "" {
         if not types.cTypeNeedsDrop(kind) {
             code
@@ -294,7 +294,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             if code.startsWithAt(0, aTag + "_copy(") or
             code.startsWithAt(0, aTag + "_move(") or
             code.startsWithAt(0, aTag + "_repeat(") or
-            code.startsWithAt(0, "/*@T:" + kind + "@*/" + aTag + "_repeat(") or
+            code.startsWithAt(0, "/*@T:") or
             code.startsWithAt(0, "((/*@T:" + kind + "@*/") or
             code.startsWithAt(0, "/*@CBLK:") {
                 code
@@ -310,8 +310,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
                 if code.startsWithAt(0, "lt_list_" + tag + "_from(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_from_scope(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_repeat(") or
-                code.startsWithAt(0, "/*@T:" + kind + "@*/lt_list_" + tag + "_repeat(") or
-                code.startsWithAt(0, "/*@T:" + kind + "@*/((void)") or
+                code.startsWithAt(0, "/*@T:") or
                 code.startsWithAt(0, "lt_list_" + tag + "_copy(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_move(") or
                 code.startsWithAt(0, "lt_list_" + tag + "_slice(") or
@@ -711,8 +710,117 @@ pub truncateLocals := fn(locals: List<Local>, targetLen: Int): List<Local> {
     locals.slice(0, targetLen)
 };
 
-/** Returns outer-local initialization and callable-dependency updates from `locals[preLen..)` appended to `updates` for `branchDepth`. */
-pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branchDepth: Int, updates: List<BranchUpdate>): List<BranchUpdate> {
+/** Extracts partial-conditional initState tagged onto `textValue` (`"$pinit:<state>"`), or `INIT_STATE_INIT`. */
+pub extractPartialInitState := fn(textValue: String): String {
+    if textValue.startsWithAt(0, "$pinit:") {
+        return textValue.slice(7, textValue.length());
+    }
+    ir.INIT_STATE_INIT
+};
+
+/** Strips `"$pinit:<state>"` metadata from `textValue`, returning ordinary borrow metadata unchanged. */
+pub stripPartialInitTag := fn(textValue: String): String {
+    if textValue.startsWithAt(0, "$pinit:") { return ""; }
+    textValue
+};
+
+/** Computes updated `initState` after a partial assignment with metadata `metaText`. */
+pub computePartialAssignNextInitState := fn(entry: Local, metaText: String): String {
+    if metaText == "$noop" { return entry.initState; }
+    if metaText.startsWithAt(0, "$pred_t:") {
+        prt := metaText.slice(8, metaText.length());
+        fState := narrowInitStateForPred(entry.initState, prt, false);
+        return joinPredStates(prt, entry.initState, ir.INIT_STATE_INIT, true, fState, true);
+    }
+    if metaText.startsWithAt(0, "$pred_f:") {
+        prt := metaText.slice(8, metaText.length());
+        tState := narrowInitStateForPred(entry.initState, prt, true);
+        return joinPredStates(prt, entry.initState, tState, true, ir.INIT_STATE_INIT, true);
+    }
+    if entry.initState == ir.INIT_STATE_INIT {
+        ir.INIT_STATE_INIT
+    } else if entry.mutable and entry.initState == ir.INIT_STATE_UNINIT_ASSIGNED {
+        ir.INIT_STATE_UNINIT_ASSIGNED
+    } else {
+        ir.INIT_STATE_MAYBE
+    }
+};
+
+/** True when an immutable binding in `entry.initState` is definitely uninitialized on every written branch of `metaText`. */
+pub partialAssignAllowedForImmutable := fn(entry: Local, metaText: String): Bool {
+    if entry.mutable { return true; }
+    if ir.isInitStateUninit(entry.initState) { return true; }
+    if entry.initState == ir.INIT_STATE_INIT { return false; }
+    if metaText == "$noop" { return true; }
+    if entry.initState.startsWithAt(0, ir.INIT_STATE_COND_T_PREFIX) and metaText.startsWithAt(0, "$pred_f:") {
+        return entry.initState.slice(ir.INIT_STATE_COND_T_PREFIX.length(), entry.initState.length()) == metaText.slice(8, metaText.length());
+    }
+    if entry.initState.startsWithAt(0, ir.INIT_STATE_COND_F_PREFIX) and metaText.startsWithAt(0, "$pred_t:") {
+        return entry.initState.slice(ir.INIT_STATE_COND_F_PREFIX.length(), entry.initState.length()) == metaText.slice(8, metaText.length());
+    }
+    false
+};
+
+/** Narrows `initState` when immutable Bool predicate `predRt` is known to hold (`predVal = true`) or not hold (`predVal = false`). */
+pub narrowInitStateForPred := fn(initState: String, predRt: String, predVal: Bool): String {
+    if predRt == "" { return initState; }
+    if initState == ir.INIT_STATE_COND_T_PREFIX + predRt {
+        return if predVal { ir.INIT_STATE_INIT } else { ir.INIT_STATE_UNINIT };
+    }
+    if initState == ir.INIT_STATE_COND_F_PREFIX + predRt {
+        return if predVal { ir.INIT_STATE_UNINIT } else { ir.INIT_STATE_INIT };
+    }
+    initState
+};
+
+/** Appends narrowed `Local` entries for any reached bindings whose `initState` correlates with `(predRt, predVal)`. */
+pub narrowLocalsForPredicate := fn(locals: List<Local>, predRt: String, predVal: Bool): List<Local> {
+    if predRt == "" { return locals; }
+    mut latestIdx: Map<String, Int>;
+    var i := 0;
+    loop locals as l {
+        if l.depth >= 0 and l.runtime =!= "" {
+            mut latestIdx.set(l.runtime, i);
+        }
+        i = i + 1;
+    }
+    mut out: List<Local> = locals;
+    var j := 0;
+    loop locals as l {
+        if l.depth >= 0 and l.runtime =!= "" and latestIdx.getOr(l.runtime, -1) == j {
+            narrowed := narrowInitStateForPred(l.initState, predRt, predVal);
+            if narrowed =!= l.initState {
+                mut out.pushBack((name = l.name, runtime = l.runtime, kind = l.kind,
+                mutable = l.mutable, writable = l.writable, depth = l.depth, constant = l.constant,
+                code = l.code, intValue = l.intValue, textValue = l.textValue, initState = narrowed));
+            }
+        }
+        j = j + 1;
+    }
+    out
+};
+
+/** Joins true-path and false-path initialization states for an optional immutable Bool predicate `predRt`. */
+pub joinPredStates := fn(predRt: String, preState: String, trueState: String, trueLive: Bool, falseState: String, falseLive: Bool): String {
+    if not trueLive and not falseLive { return ir.INIT_STATE_INIT; }
+    if trueLive and not falseLive { return trueState; }
+    if falseLive and not trueLive { return falseState; }
+    if trueState == ir.INIT_STATE_INIT and falseState == ir.INIT_STATE_INIT { return ir.INIT_STATE_INIT; }
+    if ir.isInitStateUninit(trueState) and ir.isInitStateUninit(falseState) {
+        return if ir.isInitStateUninit(preState) { preState } else { ir.INIT_STATE_UNINIT };
+    }
+    if predRt =!= "" and trueState == ir.INIT_STATE_INIT and ir.isInitStateUninit(falseState) {
+        return ir.INIT_STATE_COND_T_PREFIX + predRt;
+    }
+    if predRt =!= "" and ir.isInitStateUninit(trueState) and falseState == ir.INIT_STATE_INIT {
+        return ir.INIT_STATE_COND_F_PREFIX + predRt;
+    }
+    if trueState == falseState { return trueState; }
+    ir.INIT_STATE_MAYBE
+};
+
+/** Returns outer-local initialization and callable-dependency updates from `locals[preLen..)` appended to `updates` for `(branchDepth, armIdx)`. */
+pub recordBranchUpdatesForArm := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branchDepth: Int, armIdx: Int, updates: List<BranchUpdate>): List<BranchUpdate> {
     mut nextUpdates: List<BranchUpdate> = updates;
     var idx := 0;
     mut branchRuntimes: List<String> = [];
@@ -734,14 +842,19 @@ pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, b
         rt := branchRuntimes[rev];
         if not emitted.contains(rt) {
             mut emitted.pushBack(rt);
-            mut nextUpdates.pushBack((depth = branchDepth, runtime = rt, initState = branchStates[rev], code = branchCodes[rev]));
+            mut nextUpdates.pushBack((depth = branchDepth, arm = armIdx, runtime = rt, initState = branchStates[rev], code = branchCodes[rev]));
         }
     }
     nextUpdates
 };
 
-/** Joins `branchUpdates` for `blockDepth` into `locals`, returning updated `locals`. */
-pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasElse: Bool, liveBranchCount: Int, updates: List<BranchUpdate>): List<Local> {
+/** Returns outer-local initialization and callable-dependency updates from `locals[preLen..)` appended to `updates` for `branchDepth`. */
+pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branchDepth: Int, updates: List<BranchUpdate>): List<BranchUpdate> {
+    recordBranchUpdatesForArm(locals, preLen, maxDepth, branchDepth, 0, updates)
+};
+
+/** Joins `branchUpdates` for `blockDepth` into `locals`, preserving immutable Bool predicate correlations where sound. */
+pub joinBranchLocalsWithPred := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasElse: Bool, liveBranchCount: Int, updates: List<BranchUpdate>, predRt: String, predNegated: Bool, condCount: Int, b1Live: Bool, b2Live: Bool): List<Local> {
     mut here: List<BranchUpdate> = [];
     loop updates as u {
         if u.depth == blockDepth { mut here.pushBack(u); }
@@ -752,6 +865,29 @@ pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, ha
     loop here as u {
         if not seenRuntimes.contains(u.runtime) {
             mut seenRuntimes.pushBack(u.runtime);
+        }
+    }
+    isPredSplit := condCount == 1 and predRt =!= "";
+    if isPredSplit {
+        predT := ir.INIT_STATE_COND_T_PREFIX + predRt;
+        predF := ir.INIT_STATE_COND_F_PREFIX + predRt;
+        mut latestPre: Map<String, String>;
+        var pi := 0;
+        loop locals as pl {
+            if pi < preLen and pl.depth >= 0 and pl.runtime =!= "" {
+                mut latestPre.set(pl.runtime, pl.initState);
+            }
+            pi = pi + 1;
+        }
+        var pj := 0;
+        loop locals as pl {
+            if pj < preLen and pl.depth >= 0 and pl.runtime =!= "" {
+                st := latestPre.getOr(pl.runtime, "");
+                if (st == predT or st == predF) and not seenRuntimes.contains(pl.runtime) {
+                    mut seenRuntimes.pushBack(pl.runtime);
+                }
+            }
+            pj = pj + 1;
         }
     }
     loop seenRuntimes as rt {
@@ -774,16 +910,34 @@ pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, ha
             }
             var joined := pre.initState;
             if pre.initState =!= ir.INIT_STATE_INIT {
-                joined = ir.INIT_STATE_MAYBE;
-                if hasElse {
-                    var initCount := 0;
+                if isPredSplit {
+                    var b1State := narrowInitStateForPred(pre.initState, predRt, not predNegated);
+                    var b2State := narrowInitStateForPred(pre.initState, predRt, predNegated);
                     loop here as u {
-                        if u.runtime == rt and u.initState == ir.INIT_STATE_INIT { initCount = initCount + 1; }
+                        if u.runtime == rt and u.arm == 1 { b1State = u.initState; }
+                        else if u.runtime == rt and u.arm == 2 { b2State = u.initState; }
                     }
-                    if initCount == liveBranchCount { joined = ir.INIT_STATE_INIT; }
-                }
-                if pre.mutable and pre.initState == ir.INIT_STATE_UNINIT_ASSIGNED and joined == ir.INIT_STATE_MAYBE {
-                    joined = ir.INIT_STATE_UNINIT_ASSIGNED;
+                    effB2Live := if hasElse { b2Live } else { true };
+                    tState := if predNegated { b2State } else { b1State };
+                    tLive := if predNegated { effB2Live } else { b1Live };
+                    fState := if predNegated { b1State } else { b2State };
+                    fLive := if predNegated { b1Live } else { effB2Live };
+                    joined = joinPredStates(predRt, pre.initState, tState, tLive, fState, fLive);
+                    if pre.mutable and pre.initState == ir.INIT_STATE_UNINIT_ASSIGNED and joined == ir.INIT_STATE_MAYBE {
+                        joined = ir.INIT_STATE_UNINIT_ASSIGNED;
+                    }
+                } else {
+                    joined = ir.INIT_STATE_MAYBE;
+                    if hasElse {
+                        var initCount := 0;
+                        loop here as u {
+                            if u.runtime == rt and u.initState == ir.INIT_STATE_INIT { initCount = initCount + 1; }
+                        }
+                        if initCount == liveBranchCount { joined = ir.INIT_STATE_INIT; }
+                    }
+                    if pre.mutable and pre.initState == ir.INIT_STATE_UNINIT_ASSIGNED and joined == ir.INIT_STATE_MAYBE {
+                        joined = ir.INIT_STATE_UNINIT_ASSIGNED;
+                    }
                 }
             }
             if joined =!= pre.initState or (trackFn and mergedCode =!= pre.code) {
@@ -794,6 +948,11 @@ pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, ha
         }
     }
     nextLocals
+};
+
+/** Joins `branchUpdates` for `blockDepth` into `locals`, returning updated `locals`. */
+pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasElse: Bool, liveBranchCount: Int, updates: List<BranchUpdate>): List<Local> {
+    joinBranchLocalsWithPred(locals, preLen, blockDepth, hasElse, liveBranchCount, updates, "", false, 0, false, false)
 };
 
 /** Removes `branchUpdates` entries at `blockDepth`. */
@@ -842,7 +1001,7 @@ pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List
                     li = li + 1;
                 }
             }
-            nextInit := if pre.initState == ir.INIT_STATE_UNINIT or (pre.initState == ir.INIT_STATE_UNINIT_ASSIGNED and not pre.mutable) {
+            nextInit := if pre.initState == ir.INIT_STATE_UNINIT or (pre.initState == ir.INIT_STATE_UNINIT_ASSIGNED and not pre.mutable) or ir.isInitStateMaybe(pre.initState) {
                 ir.INIT_STATE_MAYBE
             } else {
                 pre.initState

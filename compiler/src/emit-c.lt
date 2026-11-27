@@ -4988,7 +4988,7 @@ countCIdentOcc := fn(code: String, ident: String): Int {
 };
 
 /** Builds C cleanup statements for `owned` entries with `depth >= minDepth` in reverse declaration order. */
-buildScopeDropStmt := fn(owned: List<(rt: String, kind: String, depth: Int)>, minDepth: Int): String {
+buildScopeDropStmt := fn(owned: List<(rt: String, kind: String, depth: Int, initFlag: String)>, minDepth: Int): String {
     mut buf: tb.TextBuilder;
     var i := owned.length() - 1;
     loop i >= 0 {
@@ -4996,10 +4996,22 @@ buildScopeDropStmt := fn(owned: List<(rt: String, kind: String, depth: Int)>, mi
         if o.depth >= minDepth {
             dFn := frontend.cDropFnForKind(o.kind);
             if dFn =!= "" {
-                mut buf.append(dFn);
-                mut buf.append("(&");
-                mut buf.append(o.rt);
-                mut buf.append("); ");
+                if o.initFlag =!= "" {
+                    mut buf.append("if (");
+                    mut buf.append(o.initFlag);
+                    mut buf.append(") { ");
+                    mut buf.append(dFn);
+                    mut buf.append("(&");
+                    mut buf.append(o.rt);
+                    mut buf.append("); ");
+                    mut buf.append(o.initFlag);
+                    mut buf.append(" = 0; } ");
+                } else {
+                    mut buf.append(dFn);
+                    mut buf.append("(&");
+                    mut buf.append(o.rt);
+                    mut buf.append("); ");
+                }
             }
         }
         i = i - 1;
@@ -5128,7 +5140,7 @@ analyzeMoveLastUses := fn(stream: frontend.Items, hoistedGlobals: frontend.Token
         it := stream[i];
         ownedK := cItemOwnedKind(it);
         rt := it.runtime;
-        if isCLocalDeclKind(it.kind) and ownedK =!= "" and rt =!= "" and
+        if isCLocalDeclKind(it.kind) and ownedK =!= "" and rt =!= "" and it.intValue =!= 1 and
         not frontend.tokenBucketHas(hoistedGlobals, rt) and not scopeLists.has(rt) {
             ops := cKindOps(ownedK);
             if ops.copyFn =!= "" and ops.moveFn =!= "" {
@@ -5202,7 +5214,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
     var seqLoopId := 0;
     mut loopSeqFlags: List<Int> = [];
     mut loopSeqReleases: List<String> = [];
-    mut scopeOwned: List<(rt: String, kind: String, depth: Int)> = [];
+    mut scopeOwned: List<(rt: String, kind: String, depth: Int, initFlag: String)> = [];
     mut loopOwnedDepths: List<Int> = [];
     var pendingLocFile := "";
     var pendingLocLine := 0;
@@ -5284,11 +5296,20 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             }
         }
         if isCLocalDeclKind(item.kind) {
+            ownedK := cItemOwnedKind(item);
+            needsInitFlag := item.intValue == 1 and ownedK =!= "";
+            initFlagName := if needsInitFlag { "lt_init_" + item.runtime } else { "" };
+            isHoisted := fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime);
+            if needsInitFlag {
+                code = code.split("__LT_PINIT_FLAG__").join(initFlagName);
+                if not isHoisted {
+                    outLine(indent + "uint8_t " + initFlagName + " = 0; (void)" + initFlagName + ";");
+                }
+            }
             if code.startsWithAt(0, "/*@CBLK:") {
                 endHdr := code.indexOf("@*/", 8);
                 retVar := code.slice(8, endHdr);
                 blkBody := code.slice(endHdr + 3, code.length());
-                isHoisted := fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime);
                 cTypePrefix := cDeclTypeItem(item);
                 unwrappedLoop := tryUnwrapDirectCLoopBinding(cTypePrefix, item.runtime, isHoisted, retVar, blkBody);
                 if unwrappedLoop.ok {
@@ -5298,32 +5319,54 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                     if not isHoisted {
                         outLine(indent + cTypePrefix + item.runtime + ";");
                     }
+                    if needsInitFlag {
+                        outLine(indent + "memset(&" + item.runtime + ", 0, sizeof(" + item.runtime + "));");
+                    }
                     outLine(indent + "{ " + blkBody + " " + item.runtime + " = " + retVar + "; }");
                 }
+            } else if code == "/*@CZEROMEMSET@*/" {
+                if not isHoisted {
+                    outLine(indent + cDeclTypeItem(item) + item.runtime + ";");
+                }
+                outLine(indent + "memset(&" + item.runtime + ", 0, sizeof(" + item.runtime + "));");
             } else if fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime) {
                 if not frontend.tokenBucketHas(constHoistedGlobals, item.runtime) {
                     outLine(indent + item.runtime + " = " + code + ";");
+                    if needsInitFlag { outLine(indent + initFlagName + " = 1;"); }
                 }
             } else {
                 outLine(indent + cDeclTypeItem(item) + item.runtime + " = " + code + ";");
+                if needsInitFlag { outLine(indent + initFlagName + " = 1;"); }
             }
             outLine(indent + "(void)" + item.runtime + ";");
-            ownedK := cItemOwnedKind(item);
             if ownedK =!= "" {
                 isHoistedG := fnResult == "" and blockDepth == 0 and frontend.tokenBucketHas(hoistedGlobals, item.runtime);
-                mut scopeOwned.pushBack((rt = item.runtime, kind = ownedK, depth = if isHoistedG { -1 } else { blockDepth }));
+                mut scopeOwned.pushBack((rt = item.runtime, kind = ownedK, depth = if isHoistedG { -1 } else { blockDepth }, initFlag = initFlagName));
             }
         } else if isCAssignKind(item.kind) {
             owKind := cItemOwnedKind(item);
             owDropFn := if owKind =!= "" { frontend.cDropFnForKind(owKind) } else { "" };
+            var owInitFlag := "";
+            var sIdxO := scopeOwned.length() - 1;
+            loop sIdxO >= 0 {
+                if scopeOwned[sIdxO].rt == item.runtime and scopeOwned[sIdxO].initFlag =!= "" {
+                    owInitFlag = scopeOwned[sIdxO].initFlag;
+                    break;
+                }
+                sIdxO = sIdxO - 1;
+            }
+            dropPreStmt := if owDropFn =!= "" {
+                if owInitFlag =!= "" { "if (" + owInitFlag + ") { " + owDropFn + "(&" + item.runtime + "); } " }
+                else { owDropFn + "(&" + item.runtime + "); " }
+            } else { "" };
+            setFlagStmt := if owInitFlag =!= "" { " " + owInitFlag + " = 1;" } else { "" };
             if code.startsWithAt(0, "/*@CBLK:") {
                 endHdr := code.indexOf("@*/", 8);
                 retVar := code.slice(8, endHdr);
                 blkBody := code.slice(endHdr + 3, code.length());
-                dropPre := if owDropFn =!= "" { owDropFn + "(&" + item.runtime + "); " } else { "" };
-                outLine(indent + "{ " + blkBody + " " + dropPre + item.runtime + " = " + retVar + "; }");
+                outLine(indent + "{ " + blkBody + " " + dropPreStmt + item.runtime + " = " + retVar + ";" + setFlagStmt + " }");
             } else if owDropFn =!= "" {
-                outLine(indent + "{ " + cScalarType(owKind) + " lt_ow = " + code + "; " + owDropFn + "(&" + item.runtime + "); " + item.runtime + " = lt_ow; }");
+                outLine(indent + "{ " + cScalarType(owKind) + " lt_ow = " + code + "; " + dropPreStmt + item.runtime + " = lt_ow;" + setFlagStmt + " }");
             } else {
                 outLine(indent + item.runtime + " = " + code + ";");
             }
@@ -5420,7 +5463,10 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             loop scopeOwned.length() > 0 and scopeOwned[scopeOwned.length() - 1].depth >= blockDepth {
                 popped := mut scopeOwned.popBack();
                 dFn := frontend.cDropFnForKind(popped.kind);
-                if dFn =!= "" { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+                if dFn =!= "" {
+                    if popped.initFlag =!= "" { outLine(indent + "if (" + popped.initFlag + ") { " + dFn + "(&" + popped.rt + "); " + popped.initFlag + " = 0; }"); }
+                    else { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+                }
             }
             indent = dedent(indent);
             outLine(indent + "} else {");
@@ -5429,7 +5475,10 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             loop scopeOwned.length() > 0 and scopeOwned[scopeOwned.length() - 1].depth >= blockDepth {
                 popped := mut scopeOwned.popBack();
                 dFn := frontend.cDropFnForKind(popped.kind);
-                if dFn =!= "" { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+                if dFn =!= "" {
+                    if popped.initFlag =!= "" { outLine(indent + "if (" + popped.initFlag + ") { " + dFn + "(&" + popped.rt + "); " + popped.initFlag + " = 0; }"); }
+                    else { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+                }
             }
             indent = dedent(indent);
             outLine(indent + "} else if (" + code + ") {");
@@ -5438,7 +5487,10 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             loop scopeOwned.length() > 0 and scopeOwned[scopeOwned.length() - 1].depth >= blockDepth {
                 popped := mut scopeOwned.popBack();
                 dFn := frontend.cDropFnForKind(popped.kind);
-                if dFn =!= "" { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+                if dFn =!= "" {
+                    if popped.initFlag =!= "" { outLine(indent + "if (" + popped.initFlag + ") { " + dFn + "(&" + popped.rt + "); " + popped.initFlag + " = 0; }"); }
+                    else { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+                }
             }
             indent = dedent(indent);
             outLine(indent + "}");
@@ -5595,7 +5647,10 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
             loop scopeOwned.length() > 0 and scopeOwned[scopeOwned.length() - 1].depth >= blockDepth {
                 popped := mut scopeOwned.popBack();
                 dFn := frontend.cDropFnForKind(popped.kind);
-                if dFn =!= "" { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+                if dFn =!= "" {
+                    if popped.initFlag =!= "" { outLine(indent + "if (" + popped.initFlag + ") { " + dFn + "(&" + popped.rt + "); " + popped.initFlag + " = 0; }"); }
+                    else { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+                }
             }
             if loopOwnedDepths.length() > 0 { _lp := mut loopOwnedDepths.popBack(); }
             isSeqEnd := if loopSeqFlags.length() > 0 { mut loopSeqFlags.popBack() == 1 } else { false };
@@ -5674,7 +5729,10 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
         popped := mut scopeOwned.popBack();
         if popped.depth >= minCleanD {
             dFn := frontend.cDropFnForKind(popped.kind);
-            if dFn =!= "" { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+            if dFn =!= "" {
+                if popped.initFlag =!= "" { outLine(indent + "if (" + popped.initFlag + ") { " + dFn + "(&" + popped.rt + "); " + popped.initFlag + " = 0; }"); }
+                else { outLine(indent + dFn + "(&" + popped.rt + ");"); }
+            }
         }
     }
 };
@@ -10847,6 +10905,9 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 } else if scanBlocks == 0 and isCLocalDeclKind(item.kind) and hoistedGlobals.has(item.runtime) and not emittedHoisted.has(item.runtime) {
                     mut emittedHoisted.add(item.runtime);
                     normInit := normalizeCBuiltinCalls(item.code);
+                    if item.intValue == 1 and cItemOwnedKind(item) =!= "" {
+                        outLine("static uint8_t lt_init_" + item.runtime + " = 0;");
+                    }
                     if constHoistedGlobals.has(item.runtime) {
                         outLine("static const " + cDeclTypeItem(item) + item.runtime + " = " + normInit + ";");
                     } else {

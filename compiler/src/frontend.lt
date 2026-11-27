@@ -42,7 +42,7 @@ BlockState := alias (returned: Bool, stopped: Bool, branchesReturned: Bool, bran
 /** Symbol declaration name owned directly by the block at `depth` for same-block uniqueness checks. */
 BlockDecl := alias (name: String, depth: Int);
 /** One outer local initialization and callable-dependency update recorded at the end of a conditional branch. */
-BranchUpdate := alias (depth: Int, runtime: String, initState: String, code: String);
+BranchUpdate := alias (depth: Int, arm: Int, runtime: String, initState: String, code: String);
 /** One recognized binary operator spelling and the number of source bytes it occupies. */
 Operator := alias (text: String, width: Int);
 /** One previously declared top-level function. */
@@ -760,9 +760,13 @@ truncateLocals := fn(locals: List<Local>, targetLen: Int): List<Local> { ctx.tru
 
 /** Returns outer-local initialization and callable-dependency updates from `locals[preLen..)` appended to `updates` for `branchDepth`. */
 recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branchDepth: Int, updates: List<BranchUpdate>): List<BranchUpdate> { ctx.recordBranchUpdates(locals, preLen, maxDepth, branchDepth, updates) };
+recordBranchUpdatesForArm := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branchDepth: Int, armIdx: Int, updates: List<BranchUpdate>): List<BranchUpdate> { ctx.recordBranchUpdatesForArm(locals, preLen, maxDepth, branchDepth, armIdx, updates) };
 
 /** Joins `branchUpdates` for `blockDepth` into `locals`, returning updated `locals`. */
 joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasElse: Bool, liveBranchCount: Int, updates: List<BranchUpdate>): List<Local> { ctx.joinBranchLocals(locals, preLen, blockDepth, hasElse, liveBranchCount, updates) };
+joinBranchLocalsWithPred := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasElse: Bool, liveBranchCount: Int, updates: List<BranchUpdate>, predRt: String, predNegated: Bool, condCount: Int, b1Live: Bool, b2Live: Bool): List<Local> {
+    ctx.joinBranchLocalsWithPred(locals, preLen, blockDepth, hasElse, liveBranchCount, updates, predRt, predNegated, condCount, b1Live, b2Live)
+};
 
 /** Removes `branchUpdates` entries at `blockDepth`. */
 popBranchUpdates := fn(updates: List<BranchUpdate>, blockDepth: Int): List<BranchUpdate> { ctx.popBranchUpdates(updates, blockDepth) };
@@ -2370,6 +2374,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     var liveBranchCount := 0;
     mut savedStates: List<BlockState> = [];
     var mut branchUpdates: List<BranchUpdate> = [];
+    mut branchPredStack: List<(depth: Int, predRt: String, negated: Bool, condCount: Int, b1Live: Bool)> = [];
     var mut stmtCtxs: List<ConstructCtx> = [];
     var nextStmtCtxId := 1;
     mut transferCodes: List<String> = [];
@@ -2601,9 +2606,23 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 var stateCount := 0;
                 loop savedStates { stateCount += 1; }
                 branchPreLen := savedStates[stateCount - 1].preLocalsLen;
+                hasPredTop := branchPredStack.length() > 0 and branchPredStack[branchPredStack.length() - 1].depth == blockCount - 1;
+                var curPredRt := "";
+                var curPredNeg := false;
+                var curPredConds := 0;
+                var curPredB1Live := false;
+                if hasPredTop {
+                    poppedP := mut branchPredStack.popBack();
+                    curPredRt = poppedP.predRt;
+                    curPredNeg = poppedP.negated;
+                    curPredConds = poppedP.condCount;
+                    curPredB1Live = poppedP.b1Live;
+                }
+                armNum := if hasPredTop and curPredConds == 1 { 1 } else { 0 };
                 if currentLive and not currentStopped {
-                    branchUpdates = recordBranchUpdates(locals, branchPreLen, depth - 1, blockCount, branchUpdates);
+                    branchUpdates = recordBranchUpdatesForArm(locals, branchPreLen, depth - 1, blockCount, armNum, branchUpdates);
                     liveBranchCount = liveBranchCount + 1;
+                    if hasPredTop and curPredConds == 1 { curPredB1Live = true; }
                 }
                 locals = truncateLocals(locals, branchPreLen);
                 branchesReturned = branchesReturned and currentReturned;
@@ -2619,6 +2638,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 loop true {
                     hasElse = not source.wordAt(afterElse, "if");
                     if not hasElse {
+                        curPredConds = curPredConds + 1;
                         rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
                         conditionStart := skipTrivia(source, afterElse + 2, prefix);
                         rejectHeaderBlockTag(source, conditionStart, prefix, "else if");
@@ -2673,7 +2693,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     droppedCondCtx := mut stmtCtxs.popBack();
                     if currentLive { mut items.pushBack((kind = ITEM_KIND_END_IF, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
                     parent := mut savedStates.popBack();
-                    locals = joinBranchLocals(truncateLocals(locals, parent.preLocalsLen), parent.preLocalsLen, blockCount + 1, false, liveBranchCount, branchUpdates);
+                    locals = joinBranchLocalsWithPred(truncateLocals(locals, parent.preLocalsLen), parent.preLocalsLen, blockCount + 1, false, liveBranchCount, branchUpdates, curPredRt, curPredNeg, curPredConds, curPredB1Live, false);
                     branchUpdates = popBranchUpdates(branchUpdates, blockCount + 1);
                     liveBranchCount = parent.liveBranchCount;
                     currentReturned = parent.returned;
@@ -2688,6 +2708,12 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         position = skipTrivia(source, position + 1, prefix);
                     }
                     continue;
+                }
+                if hasPredTop {
+                    mut branchPredStack.pushBack((depth = blockCount - 1, predRt = curPredRt, negated = curPredNeg, condCount = curPredConds, b1Live = curPredB1Live));
+                    if hasElse and curPredConds == 1 and curPredRt =!= "" {
+                        locals = ctx.narrowLocalsForPredicate(locals, curPredRt, curPredNeg);
+                    }
                 }
                 if hasInnerAlias { aliases = collectBlockTypeAliases(source, elseArmOpen, prefix, depth, aliases); }
                 if hasInnerFn and blockHasInnerFn(source, elseArmOpen, prefix) >= 0 {
@@ -2905,12 +2931,30 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             parent := mut savedStates.popBack();
             if blockKind == BLOCK_KIND_IF or blockKind == BLOCK_KIND_IF_VALUE or blockKind == BLOCK_KIND_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE or blockKind == BLOCK_KIND_MATCH_ELSE_VALUE {
+                hasPredEnd := branchPredStack.length() > 0 and branchPredStack[branchPredStack.length() - 1].depth == blockCount - 1;
+                var endPredRt := "";
+                var endPredNeg := false;
+                var endPredConds := 0;
+                var endB1Live := false;
+                var endB2Live := false;
+                if hasPredEnd {
+                    ep := mut branchPredStack.popBack();
+                    endPredRt = ep.predRt;
+                    endPredNeg = ep.negated;
+                    endPredConds = ep.condCount;
+                    endB1Live = ep.b1Live;
+                }
+                endArmNum := if hasPredEnd and endPredConds == 1 {
+                    if blockKind == BLOCK_KIND_ELSE { 2 } else { 1 }
+                } else { 0 };
                 if currentLive and not currentStopped {
-                    branchUpdates = recordBranchUpdates(locals, parent.preLocalsLen, depth, blockCount, branchUpdates);
+                    branchUpdates = recordBranchUpdatesForArm(locals, parent.preLocalsLen, depth, blockCount, endArmNum, branchUpdates);
                     liveBranchCount = liveBranchCount + 1;
+                    if endArmNum == 1 { endB1Live = true; }
+                    else if endArmNum == 2 { endB2Live = true; }
                 }
                 truncated := truncateLocals(locals, parent.preLocalsLen);
-                locals = joinBranchLocals(truncated, parent.preLocalsLen, blockCount, hasElse or blockKind == BLOCK_KIND_ELSE, liveBranchCount, branchUpdates);
+                locals = joinBranchLocalsWithPred(truncated, parent.preLocalsLen, blockCount, hasElse or blockKind == BLOCK_KIND_ELSE, liveBranchCount, branchUpdates, endPredRt, endPredNeg, endPredConds, endB1Live, endB2Live);
                 branchUpdates = popBranchUpdates(branchUpdates, blockCount);
             } else if blockKind == BLOCK_KIND_LOOP {
                 locals = joinLoopUpdates(locals, parent.preLocalsLen, depth);
@@ -3969,6 +4013,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
             var resolvedBranchOpen := -1;
             var resolvedCondCode := "";
+            var resolvedCondPredRt := "";
+            var resolvedCondPredNeg := false;
             var useComptimeScope := false;
             var skippedAllBranches := false;
             var skippedEndPos := -1;
@@ -4007,6 +4053,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     useComptimeScope = true;
                     break;
                 }
+                condPredHere := expr.extractImmBoolPredicate(source, curCondStart, condition.next, prefix, locals);
+                resolvedCondPredRt = condPredHere.rt;
+                resolvedCondPredNeg = condPredHere.negated;
                 resolvedCondCode = if condition.constant {
                     ir.targetBoolLiteralCode(target, condition.intValue =!= 0)
                 } else {
@@ -4057,6 +4106,12 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 if valueTailBranch { BLOCK_KIND_IF_VALUE } else { BLOCK_KIND_IF }
             };
             mut blocks.pushBack(pushedIfKind);
+            if not useComptimeScope {
+                mut branchPredStack.pushBack((depth = blockCount, predRt = resolvedCondPredRt, negated = resolvedCondPredNeg, condCount = 1, b1Live = false));
+                if resolvedCondPredRt =!= "" {
+                    locals = ctx.narrowLocalsForPredicate(locals, resolvedCondPredRt, not resolvedCondPredNeg);
+                }
+            }
             blockCount = blockCount + 1;
             depth = depth + 1;
             if hasInnerAlias {
@@ -4153,7 +4208,25 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 }
             }
             if isSubjectRootMatch {
+                contexts.clearLastBranchInitRows();
                 subStmt := expr.parseSubjectMatchStmt(target, source, nameStart, prefix, locals, functions, functionParams, currentName, stmtCtxs, 0, false, aliases);
+                loop contexts.getLastBranchInitRows() as mRow {
+                    t1 := mRow.indexOf("\t", 0);
+                    t2 := if t1 >= 0 { mRow.indexOf("\t", t1 + 1) } else { -1 };
+                    if t1 > 0 and t2 > t1 {
+                        mRt := mRow.slice(0, t1);
+                        mInit := mRow.slice(t1 + 1, t2);
+                        mCode := mRow.slice(t2 + 1, mRow.length());
+                        mIdx := latestActiveLocalByRuntime(locals, mRt);
+                        if mIdx >= 0 {
+                            ml := locals[mIdx];
+                            mut locals.pushBack((name = ml.name, runtime = ml.runtime, kind = ml.kind,
+                            mutable = ml.mutable, writable = ml.writable, depth = ml.depth, constant = false,
+                            code = if ml.code =!= "" { ml.code } else { mCode }, intValue = 0, textValue = "", initState = mInit));
+                        }
+                    }
+                }
+                contexts.clearLastBranchInitRows();
                 locals = checkStatementTrace(target, source, nameStart, prefix, subStmt.code, subStmt.kind == VALUE_KIND_NEVER, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 if currentLive and not currentStopped {
                     mut items.pushBack((kind = ITEM_KIND_CALL, name = "", runtime = "", code = subStmt.code,
@@ -4597,7 +4670,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if not source.startsWithAt(afterName, ":=") {
                 failAt(source, afterName, prefix, "expected := after mut local name " + localName);
             }
-            parsed := parseInitializerExpression(target, source, skipTrivia(source, afterName + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            rawMutParsed := parseInitializerExpression(target, source, skipTrivia(source, afterName + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            mutInitState := ctx.extractPartialInitState(rawMutParsed.textValue);
+            parsed := (kind = rawMutParsed.kind, code = rawMutParsed.code, intValue = rawMutParsed.intValue, textValue = ctx.stripPartialInitTag(rawMutParsed.textValue), constant = rawMutParsed.constant, next = rawMutParsed.next);
             locals = checkStatementTrace(target, source, localStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
             if not types.isMutContainerKind(parsed.kind) {
                 failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + displayKind(parsed.kind));
@@ -4608,16 +4683,19 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, localName, moduleKey, depth);
-            mutLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) { computeCallableRhsDeps(parsed.code) } else { parsed.code };
+            mutLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) {
+                if mutInitState == INIT_STATE_INIT { computeCallableRhsDeps(parsed.code) } else { "" }
+            } else { parsed.code };
             mut blockDecls.pushBack((name = localName, depth = depth));
             mut locals.pushBack((name = localName, runtime = runtime, kind = parsed.kind,
             mutable = false, writable = true, depth = depth, constant = false, code = mutLocalCode,
-            intValue = parsed.intValue, textValue = mutBorrow.textValue, initState = INIT_STATE_INIT));
+            intValue = parsed.intValue, textValue = mutBorrow.textValue, initState = mutInitState));
             if currentLive and not currentStopped {
-                itemCode := copiedValueCode(target, parsed.kind, parsed.code);
-                mutPrefix := if target == TARGET_TS and types.isRecordOrDistinctRecord(parsed.kind) { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
+                itemCode := if mutInitState == INIT_STATE_INIT { copiedValueCode(target, parsed.kind, parsed.code) } else { parsed.code };
+                mutPrefix := if mutInitState =!= INIT_STATE_INIT or (target == TARGET_TS and types.isRecordOrDistinctRecord(parsed.kind)) { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL };
+                mutIntVal := if mutInitState =!= INIT_STATE_INIT and target == TARGET_C and types.cTypeNeedsDrop(parsed.kind) { 1 } else { parsed.intValue };
                 mut items.pushBack((kind = mutPrefix + storageKind(parsed.kind), name = localName, runtime = runtime,
-                code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                code = itemCode, intValue = mutIntVal, textValue = itemTextPayload(parsed)));
                 if codeHasRawTransfer(itemCode) {
                     mut transferCodes.pushBack(itemCode);
                     transferCount = transferCount + 1;
@@ -4648,11 +4726,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             position = skipTrivia(source, position, prefix);
             var parsed := intParsed("", 0, true, position);
             var declInitState := INIT_STATE_INIT;
+            var declIsReserved := false;
             var rhsDiverged := false;
             var rawVarRhsCode := "";
             if source.startsWithAt(position, ":=") {
                 position = skipTrivia(source, position + 2, prefix);
-                parsed = parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+                rawInfVar := parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+                declInitState = ctx.extractPartialInitState(rawInfVar.textValue);
+                parsed = (kind = rawInfVar.kind, code = rawInfVar.code, intValue = rawInfVar.intValue, textValue = ctx.stripPartialInitTag(rawInfVar.textValue), constant = rawInfVar.constant, next = rawInfVar.next);
                 rawVarRhsCode = parsed.code;
                 locals = checkStatementTrace(target, source, localStart, prefix, rawVarRhsCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 rejectNonValueBinding(source, localStart, prefix, parsed.kind, localName);
@@ -4684,12 +4765,15 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         if types.isSliceKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for Slice"); }
                         if types.isDynKind(typed.kind) { failAt(source, localStart, prefix, "reserved storage is not supported for dyn Interface"); }
                         declInitState = if hasBlockDecl(blockAssignedDecls, depth, localName) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
+                        declIsReserved = true;
                         parsed = zeroParsed(target, typed.kind, reservedEnd);
                     } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                         if types.isDynKind(typed.kind) { failAt(source, localStart, prefix, "dyn Interface binding requires an initializer"); }
                         parsed = zeroParsed(target, typed.kind, zeroEnd);
                     } else {
-                        parsed = parseInitializerExpression(target, source, rhsStart, prefix, locals, functions, functionParams, currentName, typed.kind, stmtCtxs, aliases);
+                        rawVarAnn := parseInitializerExpression(target, source, rhsStart, prefix, locals, functions, functionParams, currentName, typed.kind, stmtCtxs, aliases);
+                        declInitState = ctx.extractPartialInitState(rawVarAnn.textValue);
+                        parsed = (kind = rawVarAnn.kind, code = rawVarAnn.code, intValue = rawVarAnn.intValue, textValue = ctx.stripPartialInitTag(rawVarAnn.textValue), constant = rawVarAnn.constant, next = rawVarAnn.next);
                         var coercedCode := "";
                         var coercedText := parsed.textValue;
                         var wasDynCoerced := false;
@@ -4708,7 +4792,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         rawVarRhsCode = if wasDynCoerced { coercedCode } else { parsed.code };
                         locals = checkStatementTrace(target, source, localStart, prefix, rawVarRhsCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                         rhsDiverged = parsed.kind == VALUE_KIND_NEVER;
-                        converted := if wasDynCoerced { coercedCode } else { assignValueCode(target, typed.kind, parsed.kind, parsed.code) };
+                        converted := if wasDynCoerced { coercedCode } else if declInitState == INIT_STATE_INIT { assignValueCode(target, typed.kind, parsed.kind, parsed.code) } else { parsed.code };
                         parsed = (kind = typed.kind, code = converted, intValue = parsed.intValue, textValue = coercedText, constant = parsed.constant, next = parsed.next);
                     }
                 } else {
@@ -4740,9 +4824,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         transferCount = transferCount + 1;
                     }
                 } else {
-                    itemCode := copiedValueCode(target, parsed.kind, parsed.code);
+                    itemCode := if declIsReserved and target == TARGET_C and types.cTypeNeedsDrop(parsed.kind) {
+                        "/*@CZEROMEMSET@*/"
+                    } else if declInitState == INIT_STATE_INIT {
+                        copiedValueCode(target, parsed.kind, parsed.code)
+                    } else {
+                        parsed.code
+                    };
+                    varItemInt := if declInitState =!= INIT_STATE_INIT and target == TARGET_C and types.cTypeNeedsDrop(parsed.kind) { 1 } else { parsed.intValue };
                     mut items.pushBack((kind = ITEM_PREFIX_VAR + storageKind(parsed.kind), name = localName, runtime = runtime,
-                    code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                    code = itemCode, intValue = varItemInt, textValue = itemTextPayload(parsed)));
                     if codeHasRawTransfer(itemCode) {
                         mut transferCodes.pushBack(itemCode);
                         transferCount = transferCount + 1;
@@ -5470,7 +5561,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             position = afterDeclare;
-            parsed := parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            rawValParsed := parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            valInitState := ctx.extractPartialInitState(rawValParsed.textValue);
+            parsed := (kind = rawValParsed.kind, code = rawValParsed.code, intValue = rawValParsed.intValue, textValue = ctx.stripPartialInitTag(rawValParsed.textValue), constant = rawValParsed.constant, next = rawValParsed.next);
             locals = checkStatementTrace(target, source, nameStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
             rejectNonValueBinding(source, nameStart, prefix, parsed.kind, name);
             valWritable := if types.isSliceKind(parsed.kind) { sliceBorrows.sliceExprIsMutable(parsed.textValue) } else { false };
@@ -5480,22 +5573,26 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, name, moduleKey, depth);
-            valLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) { computeCallableRhsDeps(parsed.code) } else { parsed.code };
+            valLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) {
+                if valInitState == INIT_STATE_INIT { computeCallableRhsDeps(parsed.code) } else { "" }
+            } else { parsed.code };
             mut blockDecls.pushBack((name = name, depth = depth));
             mut locals.pushBack((name = name, runtime = runtime, kind = parsed.kind,
-            mutable = false, writable = valWritable, depth = depth, constant = parsed.constant, code = valLocalCode,
-            intValue = parsed.intValue, textValue = valBorrow.textValue, initState = INIT_STATE_INIT));
+            mutable = false, writable = valWritable, depth = depth, constant = if valInitState == INIT_STATE_INIT { parsed.constant } else { false }, code = valLocalCode,
+            intValue = parsed.intValue, textValue = valBorrow.textValue, initState = valInitState));
             if depth == 0 and blockCount == 0 and publishedValues.has(name) {
                 mut items.pushBack((kind = ITEM_KIND_PUBLIC_VALUE, name = name, runtime = runtime, code = parsed.kind,
                 intValue = 0, textValue = ""));
             }
             if currentLive and not currentStopped {
-                itemCode := copiedValueCode(target, parsed.kind, parsed.code);
-                if depth == 0 and blockCount == 0 and isHostModuleIdentity(moduleIdentity) {
+                itemCode := if valInitState == INIT_STATE_INIT { copiedValueCode(target, parsed.kind, parsed.code) } else { parsed.code };
+                valDeclPrefix := if valInitState == INIT_STATE_INIT { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
+                if valInitState == INIT_STATE_INIT and depth == 0 and blockCount == 0 and isHostModuleIdentity(moduleIdentity) {
                     mut items.pushBack((kind = ITEM_KIND_PURE_GLOBAL, name = runtime, runtime = runtime, code = "", intValue = 0, textValue = ""));
                 }
-                (mut items).pushBack((kind = ITEM_PREFIX_LOCAL + storageKind(parsed.kind), name = name, runtime = runtime,
-                code = itemCode, intValue = parsed.intValue, textValue = itemTextPayload(parsed)));
+                valItemInt := if valInitState =!= INIT_STATE_INIT and target == TARGET_C and types.cTypeNeedsDrop(parsed.kind) { 1 } else { parsed.intValue };
+                (mut items).pushBack((kind = valDeclPrefix + storageKind(parsed.kind), name = name, runtime = runtime,
+                code = itemCode, intValue = valItemInt, textValue = itemTextPayload(parsed)));
                 if codeHasRawTransfer(itemCode) {
                     mut transferCodes.pushBack(itemCode);
                     transferCount = transferCount + 1;
@@ -5517,6 +5614,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             position = skipTrivia(source, typed.next, prefix);
             var parsed := zeroParsed(target, typed.kind, position);
             var declInitState := INIT_STATE_INIT;
+            var declIsReserved := false;
             if isSingleEquals(source, position) {
                 rhsStart := skipTrivia(source, position + 1, prefix);
                 reservedEnd := isReservedInitMarker(source, rhsStart, prefix);
@@ -5529,12 +5627,15 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if types.isSliceKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for Slice"); }
                     if types.isDynKind(typed.kind) { failAt(source, nameStart, prefix, "reserved storage is not supported for dyn Interface"); }
                     declInitState = if hasBlockDecl(blockAssignedDecls, depth, name) { INIT_STATE_UNINIT_ASSIGNED } else { INIT_STATE_UNINIT };
+                    declIsReserved = true;
                     parsed = zeroParsed(target, typed.kind, reservedEnd);
                 } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                     if types.isDynKind(typed.kind) { failAt(source, nameStart, prefix, "dyn Interface binding requires an initializer"); }
                     parsed = zeroParsed(target, typed.kind, zeroEnd);
                 } else {
-                    parsed = parseInitializerExpression(target, source, rhsStart, prefix, locals, functions, functionParams, currentName, typed.kind, stmtCtxs, aliases);
+                    rawAnn := parseInitializerExpression(target, source, rhsStart, prefix, locals, functions, functionParams, currentName, typed.kind, stmtCtxs, aliases);
+                    declInitState = ctx.extractPartialInitState(rawAnn.textValue);
+                    parsed = (kind = rawAnn.kind, code = rawAnn.code, intValue = rawAnn.intValue, textValue = ctx.stripPartialInitTag(rawAnn.textValue), constant = rawAnn.constant, next = rawAnn.next);
                     var coercedAnnCode := parsed.code;
                     var coercedAnnText := parsed.textValue;
                     var wasDynAnn := false;
@@ -5563,7 +5664,13 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, name, moduleKey, depth);
             rhsDiverged := parsed.kind == VALUE_KIND_NEVER;
-            assignedCode := assignValueCode(target, typed.kind, parsed.kind, parsed.code);
+            assignedCode := if declIsReserved and target == TARGET_C and types.cTypeNeedsDrop(typed.kind) {
+                "/*@CZEROMEMSET@*/"
+            } else if declInitState == INIT_STATE_INIT {
+                assignValueCode(target, typed.kind, parsed.kind, parsed.code)
+            } else {
+                parsed.code
+            };
             annLocalCode := if target == TARGET_TS and containsFnKind(typed.kind) {
                 if declInitState == INIT_STATE_INIT { computeCallableRhsDeps(parsed.code) } else { "" }
             } else { assignedCode };
@@ -5577,11 +5684,12 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     mut items.pushBack((kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",
                     code = assignedCode, intValue = 0, textValue = ""));
                 } else {
-                    if declItemPrefix == ITEM_PREFIX_LOCAL and depth == 0 and blockCount == 0 and isHostModuleIdentity(moduleIdentity) {
+                    if declItemPrefix == ITEM_PREFIX_LOCAL and declInitState == INIT_STATE_INIT and depth == 0 and blockCount == 0 and isHostModuleIdentity(moduleIdentity) {
                         mut items.pushBack((kind = ITEM_KIND_PURE_GLOBAL, name = runtime, runtime = runtime, code = "", intValue = 0, textValue = ""));
                     }
+                    annItemInt := if declInitState =!= INIT_STATE_INIT and target == TARGET_C and types.cTypeNeedsDrop(typed.kind) { 1 } else { parsed.intValue };
                     (mut items).pushBack((kind = declItemPrefix + storageKind(typed.kind), name = name, runtime = runtime,
-                    code = assignedCode, intValue = parsed.intValue, textValue = storageTextPayload(typed.kind, parsed.textValue)));
+                    code = assignedCode, intValue = annItemInt, textValue = storageTextPayload(typed.kind, parsed.textValue)));
                 }
                 if codeHasRawTransfer(assignedCode) {
                     mut transferCodes.pushBack(assignedCode);
@@ -5801,39 +5909,48 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if entry.initState == INIT_STATE_INIT and not entry.mutable {
                 failAt(source, nameStart, prefix, "cannot assign to immutable local " + name);
             }
-            if entry.initState == INIT_STATE_MAYBE and not entry.mutable {
-                failAt(source, nameStart, prefix, "cannot assign to possibly initialized immutable local " + name);
-            }
-            sliceBorrows.checkCanMutateBinding(locals, entry.runtime, name, source, nameStart, prefix);
             position = skipTrivia(source, position + 1, prefix);
             partialItems := parsePartialAssignIf(target, source, position, prefix, locals, functions, functionParams, currentName, nameStart, entry.kind, name, entry.runtime, stmtCtxs, aliases);
             var partialCount := 0;
-            var partialFnDeps := entry.code;
-            loop partialItems as partialItem {
+            var partialMeta := "";
+            loop partialItems as piChk {
                 partialCount = partialCount + 1;
-                if partialItem.kind == ITEM_KIND_END {
-                    position = partialItem.intValue;
-                } else {
-                    locals = checkStatementTrace(target, source, nameStart, prefix, partialItem.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
-                    if target == TARGET_TS and containsFnKind(entry.kind) and partialItem.code =!= "" {
-                        partialFnDeps = mergeCallableLocalDeps(partialFnDeps, computeCallableRhsDeps(partialItem.code));
-                    }
-                    if currentLive and not currentStopped {
-                        mut items.pushBack(partialItem);
-                        if codeHasRawTransfer(partialItem.code) {
-                            mut transferCodes.pushBack(partialItem.code);
-                            transferCount = transferCount + 1;
+                if piChk.kind == ITEM_KIND_END { partialMeta = piChk.textValue; }
+            }
+            if partialCount > 0 {
+                if not ctx.partialAssignAllowedForImmutable(entry, partialMeta) {
+                    failAt(source, nameStart, prefix, "cannot assign to possibly initialized immutable local " + name);
+                }
+                sliceBorrows.checkCanMutateBinding(locals, entry.runtime, name, source, nameStart, prefix);
+                var partialFnDeps := entry.code;
+                loop partialItems as partialItem {
+                    if partialItem.kind == ITEM_KIND_END {
+                        position = partialItem.intValue;
+                    } else {
+                        locals = checkStatementTrace(target, source, nameStart, prefix, partialItem.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                        if target == TARGET_TS and containsFnKind(entry.kind) and partialItem.code =!= "" {
+                            partialFnDeps = mergeCallableLocalDeps(partialFnDeps, computeCallableRhsDeps(partialItem.code));
+                        }
+                        if currentLive and not currentStopped {
+                            mut items.pushBack(partialItem);
+                            if codeHasRawTransfer(partialItem.code) {
+                                mut transferCodes.pushBack(partialItem.code);
+                                transferCount = transferCount + 1;
+                            }
                         }
                     }
                 }
-            }
-            if partialCount > 0 {
                 partialLocalCode := if target == TARGET_TS and containsFnKind(entry.kind) { partialFnDeps } else { entry.runtime };
+                nextPInit := ctx.computePartialAssignNextInitState(entry, partialMeta);
                 mut locals.pushBack((name = entry.name, runtime = entry.runtime, kind = entry.kind,
                 mutable = entry.mutable, writable = entry.writable, depth = entry.depth, constant = false, code = partialLocalCode,
-                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+                intValue = 0, textValue = "", initState = nextPInit));
                 continue;
             }
+            if ir.isInitStateMaybe(entry.initState) and not entry.mutable {
+                failAt(source, nameStart, prefix, "cannot assign to possibly initialized immutable local " + name);
+            }
+            sliceBorrows.checkCanMutateBinding(locals, entry.runtime, name, source, nameStart, prefix);
             parsed := parseExpressionAsCtx(target, source, position, prefix, locals, functions, functionParams, currentName, entry.kind, stmtCtxs, aliases);
             var assignCode := parsed.code;
             var assignText := parsed.textValue;

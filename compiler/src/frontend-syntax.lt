@@ -1246,6 +1246,46 @@ pub scanValueIfEnd := fn(source: String, position: Int, prefix: String, requireV
     scanIfChainEnd(source, position, prefix, requireValueBranches, false)
 };
 
+/** If `{ ... }` starting at `openBracePos` contains only `?` and trivia, returns `closeBrace + 1`, else `-1`. */
+pub isReservedBranchBlock := fn(source: String, openBracePos: Int, prefix: String): Int {
+    size := source.length();
+    if openBracePos < 0 or openBracePos >= size or source.at(openBracePos) =!= "{" { return -1; }
+    pos := skipTrivia(source, openBracePos + 1, prefix);
+    if pos >= size or source.at(pos) =!= "?" { return -1; }
+    afterQ := skipTrivia(source, pos + 1, prefix);
+    if afterQ >= size or source.at(afterQ) =!= "}" { return -1; }
+    afterQ + 1
+};
+
+/** True when a `[@tag] if` chain starting at `ifStart` lacks a final `else` or contains a `{ ? }` reserved branch. */
+pub ifChainIsPartialOrReserved := fn(source: String, ifStart: Int, prefix: String): Bool {
+    size := source.length();
+    var cursor := skipOptionalScanTag(source, ifStart, prefix, "if");
+    if cursor < 0 or not source.wordAt(cursor, "if") { return false; }
+    cursor = skipTrivia(source, cursor + 2, prefix);
+    var sawReserved := false;
+    loop true {
+        open := scanIfHeaderOpen(source, cursor, prefix);
+        if open < 0 { return false; }
+        if isReservedBranchBlock(source, open, prefix) >= 0 { sawReserved = true; }
+        end := scanBraceEnd(source, open, prefix);
+        if end < 0 { return false; }
+        after := skipTrivia(source, end, prefix);
+        if not source.wordAt(after, "else") {
+            return true;
+        }
+        afterElse := skipTrivia(source, after + 4, prefix);
+        if source.wordAt(afterElse, "if") {
+            cursor = skipTrivia(source, afterElse + 2, prefix);
+        } else {
+            if afterElse >= size or source.at(afterElse) =!= "{" { return false; }
+            if isReservedBranchBlock(source, afterElse, prefix) >= 0 { sawReserved = true; }
+            return sawReserved;
+        }
+    }
+    false
+};
+
 /** Scans from a `match` keyword to its opening `{`, reporting whether a subject expression precedes `{`. */
 pub scanMatchOpen := fn(source: String, matchPos: Int, prefix: String): (openPos: Int, isSubject: Bool) {
     size := source.length();
