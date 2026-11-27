@@ -349,9 +349,15 @@ export const snipsClientJs = `(function () {
       outBox.innerHTML = "";
       var head = document.createElement("div");
       head.className = "lite-inline-out-head";
-      var statusSpan = document.createElement("span");
-      statusSpan.setAttribute("role", "status");
-      statusSpan.textContent = "Running in browser...";
+      var summary = document.createElement("div");
+      summary.className = "lite-inline-out-summary";
+      summary.setAttribute("role", "status");
+      var statusLabel = document.createElement("strong");
+      statusLabel.textContent = "Running…";
+      var statusDetail = document.createElement("span");
+      statusDetail.className = "lite-inline-out-detail";
+      summary.appendChild(statusLabel);
+      summary.appendChild(statusDetail);
       var closeBtn = makeActionBtn("Hide");
       closeBtn.addEventListener("click", function () {
         stopRun();
@@ -359,7 +365,7 @@ export const snipsClientJs = `(function () {
         runBtn.disabled = false;
         runBtn.focus();
       });
-      head.appendChild(statusSpan);
+      head.appendChild(summary);
       head.appendChild(closeBtn);
       outBox.appendChild(head);
 
@@ -383,8 +389,9 @@ export const snipsClientJs = `(function () {
         var needsCli = /import\\s+"core\\/(file|path|process|time)"/.test(code);
         var needsInput = /io\\.input(Int|Line|Args|Text)/.test(code);
         outBox.className = "lite-inline-out " + (res.ok ? "is-ok" : "is-err");
-        statusSpan.textContent = res.ok
-          ? (frame ? "Canvas output" : "Ran in " + elapsed + " ms")
+        statusLabel.textContent = res.ok ? "Output" : "Error";
+        statusDetail.textContent = res.ok
+          ? elapsed + " ms"
           : (needsCli ? "Requires CLI / Host OS (./bin/lite run)" : "Compile / Runtime Error");
 
         if (frame) {
@@ -402,12 +409,13 @@ export const snipsClientJs = `(function () {
             workerClient: run.worker,
             pauseBtn: pauseBtn,
             onStatus: function (status) {
-              if (res.ok) statusSpan.textContent = status;
+              if (res.ok) statusDetail.textContent = elapsed + " ms · " + status;
               pauseBtn.textContent = status === "Paused" ? "Resume" : "Pause";
             },
             onError: function (stderr) {
               outBox.className = "lite-inline-out is-err";
-              statusSpan.textContent = "Canvas error";
+              statusLabel.textContent = "Error";
+              statusDetail.textContent = "Canvas update failed";
               appendOutput(stderr);
               stopRun();
             }
@@ -429,7 +437,8 @@ export const snipsClientJs = `(function () {
       } catch (err) {
         if (activeRun !== run) return;
         outBox.className = "lite-inline-out is-err";
-        statusSpan.textContent = "Runner unavailable";
+        statusLabel.textContent = "Error";
+        statusDetail.textContent = "Runner unavailable";
         appendOutput((err && err.message) || "Could not run snippet in this browser.");
         stopRun();
       } finally {

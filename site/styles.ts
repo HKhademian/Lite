@@ -3081,19 +3081,31 @@ a.is-completed .learn-done-dot {
 }
 
 /* Shared LocalStorage Snippets & Inline Docs Runner */
+pre.code-block:has(+ .lite-snip-bar) {
+  margin-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
 .lite-snip-bar {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 0.45rem;
-  margin-top: -0.95rem;
   margin-bottom: 1rem;
   padding: 0.38rem 0.6rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-top: none;
   border-radius: 0 0 var(--radius) var(--radius);
+}
+:is(.lite-snip-bar, .md-snippet-card):has(+ .lite-inline-out:not([hidden])) {
+  margin-bottom: 0;
+}
+.lite-snip-bar:has(+ .lite-inline-out:not([hidden])) {
+  border-radius: 0;
+}
+.md-snippet-card:has(+ .lite-inline-out:not([hidden])) {
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 .lite-snip-actions {
   display: inline-flex;
@@ -3141,25 +3153,23 @@ a.is-completed .learn-done-dot {
   color: var(--on-accent);
 }
 .lite-snip-btn.lite-snip-play {
-  color: var(--accent);
+  color: var(--tok-keyword);
   border-color: var(--accent);
   background: var(--accent-soft);
 }
 .lite-inline-out {
-  margin: -0.55rem 0 1.1rem;
+  margin: 0 0 1.1rem;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius);
+  border-top: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
   background: var(--surface-elevated);
   overflow: hidden;
 }
 .lite-inline-out[hidden] { display: none; }
-.lite-inline-out.is-ok { border-left-color: var(--ok); }
-.lite-inline-out.is-err { border-left-color: var(--err); }
 .lite-inline-out-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.35rem 0.7rem;
   background: var(--surface);
@@ -3168,8 +3178,17 @@ a.is-completed .learn-done-dot {
   font-weight: 600;
   color: var(--ink-muted);
 }
-.lite-inline-out.is-ok .lite-inline-out-head span { color: var(--ok); }
-.lite-inline-out.is-err .lite-inline-out-head span { color: var(--err); }
+.lite-inline-out-summary {
+  display: flex;
+  align-items: baseline;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+}
+.lite-inline-out-summary strong { color: var(--ink); }
+.lite-inline-out.is-err .lite-inline-out-summary strong { color: var(--err); }
+.lite-inline-out-detail { font-weight: 400; }
+.lite-inline-out-detail:empty { display: none; }
 .lite-inline-out-head button[hidden] { display: none; }
 .lite-inline-canvas {
   display: block;
