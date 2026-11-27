@@ -1,7 +1,7 @@
 {
-  "note": "Phase 11 (free/module/Type.op overloading, label/arity/mut/specificity ranking, selection-before-context, first-class overloaded fn/type-op values, bodyless impl overload resolution, core/interface Range + Index/IndexMut migration, and retirement of $getSlice/$getMutSlice). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Phase 12a Step 1 (dual-accept prefix mut on annotated variable definitions before repository cutover). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-27",
-  "sourceSha256": "ae8bd7b78b1c97f85ca5e4bf610f7ea2b13e2d8067207d78625d37a5688420aa",
+  "sourceSha256": "a05c0f5ba0a34f01fa2e38f3663ba928f769314fee466232823aa4ad88964a35",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
