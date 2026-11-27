@@ -4529,9 +4529,22 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             position = skipTrivia(source, position, prefix);
             continue;
         }
+        var fixedMutDecl := false;
         isMutDecl := if name == "mut" {
             mutProbe := skipTrivia(source, position, prefix);
-            mutProbe < size and source.at(mutProbe).isNameStart() and
+            if mutProbe < size and source.wordAt(mutProbe, "var") {
+                failAt(source, mutProbe, prefix, "write var mut, not mut var");
+            }
+            if mutProbe < size and source.at(mutProbe).isNameStart() {
+                mutAfter := skipTrivia(source, source.skipName(mutProbe), prefix);
+                if mutAfter < size and not source.startsWithAt(mutAfter, ":=") and source.at(mutAfter) == ":" and compoundAssignOp(source, mutAfter).width == 0 {
+                    fixedMutDecl = true;
+                    nameStart = mutProbe;
+                    name = source.slice(mutProbe, source.skipName(mutProbe));
+                    position = mutAfter;
+                }
+            }
+            not fixedMutDecl and mutProbe < size and source.at(mutProbe).isNameStart() and
             source.startsWithAt(skipTrivia(source, source.skipName(mutProbe), prefix), ":=")
         } else { false };
         if isMutDecl {
@@ -4608,9 +4621,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     declaredWritable = sliceBorrows.sliceExprIsMutable(parsed.textValue);
                 }
             } else if position < size and source.at(position) == ":" {
-                if declaredWritable { failAt(source, localStart, prefix, "var mut cannot be combined with explicit type annotation"); }
                 typed := parseLocalType(source, position + 1, prefix, aliases);
-                declaredWritable = typed.writable;
+                if declaredWritable and typed.writable {
+                    failAt(source, localStart, prefix, "duplicate mut qualifier on declaration " + localName);
+                }
+                declaredWritable = declaredWritable or typed.writable;
+                if declaredWritable and not types.isMutContainerKind(typed.kind) {
+                    failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record type, got " + displayKind(typed.kind));
+                }
                 position = skipTrivia(source, typed.next, prefix);
                 if isSingleEquals(source, position) {
                     rhsStart := skipTrivia(source, position + 1, prefix);
@@ -4635,7 +4653,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         var wasDynCoerced := false;
                         if types.isDynKind(typed.kind) {
                             dummyDrops: mut List<String> = [];
-                            dynC := expr.coerceToDynIfNeeded(target, source, localStart, prefix, typed.kind, typed.writable, parsed.kind, parsed.code, parsed.textValue, false, locals, functions, mut dummyDrops);
+                            dynC := expr.coerceToDynIfNeeded(target, source, localStart, prefix, typed.kind, declaredWritable, parsed.kind, parsed.code, parsed.textValue, false, locals, functions, mut dummyDrops);
                             if dynC.matched {
                                 wasDynCoerced = true;
                                 coercedCode = dynC.code;
@@ -5443,9 +5461,17 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             continue;
         }
-        if position < size and source.at(position) == ":" and compoundAssignOp(source, position).width == 0 {
+        if position < size and not source.startsWithAt(position, ":=") and source.at(position) == ":" and compoundAssignOp(source, position).width == 0 {
+            if isReservedWord(name) { unsupportedFeature(source, nameStart, name, prefix); }
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             typed := parseLocalType(source, position + 1, prefix, aliases);
+            if fixedMutDecl and typed.writable {
+                failAt(source, nameStart, prefix, "duplicate mut qualifier on declaration " + name);
+            }
+            effWritable := fixedMutDecl or typed.writable;
+            if effWritable and not types.isMutContainerKind(typed.kind) {
+                failAt(source, nameStart, prefix, "mut requires a List, Map, Set, or record type, got " + displayKind(typed.kind));
+            }
             position = skipTrivia(source, typed.next, prefix);
             var parsed := zeroParsed(target, typed.kind, position);
             var declInitState := INIT_STATE_INIT;
@@ -5472,7 +5498,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     var wasDynAnn := false;
                     if types.isDynKind(typed.kind) {
                         dummyDrops: mut List<String> = [];
-                        dynC := expr.coerceToDynIfNeeded(target, source, nameStart, prefix, typed.kind, typed.writable, parsed.kind, parsed.code, parsed.textValue, false, locals, functions, mut dummyDrops);
+                        dynC := expr.coerceToDynIfNeeded(target, source, nameStart, prefix, typed.kind, effWritable, parsed.kind, parsed.code, parsed.textValue, false, locals, functions, mut dummyDrops);
                         if dynC.matched {
                             wasDynAnn = true;
                             coercedAnnCode = dynC.code;
@@ -5488,7 +5514,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             } else if types.isDynKind(typed.kind) {
                 failAt(source, nameStart, prefix, "dyn Interface binding requires an initializer");
             }
-            annBorrow := sliceBorrows.borrowTagForBinding(typed.kind, typed.writable, parsed.textValue);
+            annBorrow := sliceBorrows.borrowTagForBinding(typed.kind, effWritable, parsed.textValue);
             if not annBorrow.ok { failAt(source, nameStart, prefix, annBorrow.error); }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
@@ -5501,9 +5527,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             } else { assignedCode };
             mut blockDecls.pushBack((name = name, depth = depth));
             mut locals.pushBack((name = name, runtime = runtime, kind = typed.kind,
-            mutable = false, writable = typed.writable, depth = depth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
+            mutable = false, writable = effWritable, depth = depth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
             code = annLocalCode, intValue = parsed.intValue, textValue = annBorrow.textValue, initState = declInitState));
-            declItemPrefix := if declInitState == INIT_STATE_INIT and not (target == TARGET_TS and typed.writable and types.isRecordOrDistinctRecord(typed.kind)) { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
+            declItemPrefix := if declInitState == INIT_STATE_INIT and not (target == TARGET_TS and effWritable and types.isRecordOrDistinctRecord(typed.kind)) { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
             if currentLive and not currentStopped {
                 if rhsDiverged {
                     mut items.pushBack((kind = expressionStatementKind(VALUE_KIND_NEVER, false, ITEM_KIND_CALL, currentResult), name = "", runtime = "",

@@ -464,9 +464,17 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
 pub parseDeclaration := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
     var cursor := index;
     var isVar := false;
+    var isMut := false;
     if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD and tokenAt(tokens, cursor).text == "var" {
         isVar = true;
         cursor = cursor + 1;
+    }
+    if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD and tokenAt(tokens, cursor).text == "mut" {
+        isMut = true;
+        cursor = cursor + 1;
+        if not isVar and tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD and tokenAt(tokens, cursor).text == "var" {
+            parseFail(tokenAt(tokens, cursor), prefix, "write var mut, not mut var");
+        }
     }
     token := tokenAt(tokens, cursor);
     if token.kind =!= lexer.TOKEN_KIND_NAME {
@@ -474,21 +482,25 @@ pub parseDeclaration := fn(tokens: lexer.Tokens, index: Int, prefix: String): (n
     }
     name := token.text;
     cursor = cursor + 1;
+    declPrefix := if isVar and isMut { "var mut " } else if isVar { "var " } else if isMut { "mut " } else { "" };
     var detail := "";
     if isSymbol(tokenAt(tokens, cursor), ":=") {
         expression := parseExpression(tokens, cursor + 1, prefix, 0);
-        detail = (if isVar { "var " } else { "" }) + ":= " + expression.text;
+        detail = declPrefix + ":= " + expression.text;
         cursor = expression.next;
     } else if isSymbol(tokenAt(tokens, cursor), ":") {
         cursor = cursor + 1;
         var mutableType := false;
         if tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_KEYWORD and tokenAt(tokens, cursor).text == "mut" {
+            if isMut {
+                parseFail(tokenAt(tokens, cursor), prefix, "duplicate mut qualifier");
+            }
             mutableType = true;
             cursor = cursor + 1;
         }
         parsedType := parseType(tokens, cursor, prefix);
         detail = (if isVar { "var " } else { "" }) +
-        (if mutableType { "mut " } else { "" }) + parsedType.text;
+        (if isMut or mutableType { "mut " } else { "" }) + parsedType.text;
         cursor = parsedType.next;
         if isSymbol(tokenAt(tokens, cursor), "=") {
             if isSymbol(tokenAt(tokens, cursor + 1), "?") {

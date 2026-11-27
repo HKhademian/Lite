@@ -93,7 +93,9 @@ pub DECL_BIND_VAL := "val";
 pub DECL_BIND_VAR := "var";
 
 pub DECL_TAG_ANN := "ann";
+pub DECL_TAG_MUT_ANN := "mutAnn";
 pub DECL_TAG_VAR_ANN := "varann";
+pub DECL_TAG_VAR_MUT_ANN := "varMutAnn";
 pub DECL_TAG_VAL := "val";
 pub DECL_TAG_VAR_VAL := "varval";
 pub DECL_TAG_VAR_MUT := "varmut";

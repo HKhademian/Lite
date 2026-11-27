@@ -4050,10 +4050,15 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     if not declWritable and types.isSliceKind(declParsed.kind) {
                         declWritable = sliceBorrows.sliceExprIsMutable(declParsed.textValue);
                     }
-                } else if afterLocal < source.length() and source.at(afterLocal) == ":" {
-                    if declWritable { syntax.failAt(source, localStart, prefix, "var mut cannot be combined with explicit type annotation"); }
+                } else if afterLocal < source.length() and not source.startsWithAt(afterLocal, ":=") and source.at(afterLocal) == ":" {
                     typed := types.parseLocalType(source, afterLocal + 1, prefix, blockAliases);
-                    declWritable = typed.writable;
+                    if declWritable and typed.writable {
+                        syntax.failAt(source, localStart, prefix, "duplicate mut qualifier on declaration " + localName);
+                    }
+                    declWritable = declWritable or typed.writable;
+                    if declWritable and not types.isMutContainerKind(typed.kind) {
+                        syntax.failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record type, got " + types.displayKind(typed.kind));
+                    }
                     afterType := syntax.skipTrivia(source, typed.next, prefix);
                     if syntax.isSingleEquals(source, afterType) {
                         rhsStart := syntax.skipTrivia(source, afterType + 1, prefix);
@@ -4117,6 +4122,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 blockConstant = false;
                 cursor = statementNext;
+            } else if itemName == "mut" and syntax.skipTrivia(source, itemEnd, prefix) < source.length() and
+            source.wordAt(syntax.skipTrivia(source, itemEnd, prefix), "var") {
+                syntax.failAt(source, syntax.skipTrivia(source, itemEnd, prefix), prefix, "write var mut, not mut var");
             } else if itemName == "mut" and
             syntax.skipTrivia(source, itemEnd, prefix) < source.length() and
             source.at(syntax.skipTrivia(source, itemEnd, prefix)).isNameStart() and
@@ -4244,11 +4252,30 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 blockConstant = false;
                 cursor = statementNext;
-            } else if afterItemName < source.length() and source.at(afterItemName) == ":" and syntax.compoundAssignOp(source, afterItemName).width == 0 {
+            } else if (itemName == "mut" and
+            syntax.skipTrivia(source, itemEnd, prefix) < source.length() and
+            source.at(syntax.skipTrivia(source, itemEnd, prefix)).isNameStart() and
+            syntax.skipTrivia(source, source.skipName(syntax.skipTrivia(source, itemEnd, prefix)), prefix) < source.length() and
+            not source.startsWithAt(syntax.skipTrivia(source, source.skipName(syntax.skipTrivia(source, itemEnd, prefix)), prefix), ":=") and
+            source.at(syntax.skipTrivia(source, source.skipName(syntax.skipTrivia(source, itemEnd, prefix)), prefix)) == ":" and
+            syntax.compoundAssignOp(source, syntax.skipTrivia(source, source.skipName(syntax.skipTrivia(source, itemEnd, prefix)), prefix)).width == 0) or
+            (afterItemName < source.length() and not source.startsWithAt(afterItemName, ":=") and source.at(afterItemName) == ":" and syntax.compoundAssignOp(source, afterItemName).width == 0) {
                 isStatement = true;
-                if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
-                ctx.rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
-                typed := types.parseLocalType(source, afterItemName + 1, prefix, blockAliases);
+                blkMutPrefix := itemName == "mut";
+                annStart := if blkMutPrefix { syntax.skipTrivia(source, itemEnd, prefix) } else { itemStart };
+                annEnd := if blkMutPrefix { source.skipName(annStart) } else { itemEnd };
+                annName := source.slice(annStart, annEnd);
+                annAfter := if blkMutPrefix { syntax.skipTrivia(source, annEnd, prefix) } else { afterItemName };
+                if syntax.isReservedWord(annName) { syntax.unsupportedFeature(source, annStart, annName, prefix); }
+                ctx.rejectDuplicateInBlockNames(source, annStart, prefix, declaredInBlock, annName);
+                typed := types.parseLocalType(source, annAfter + 1, prefix, blockAliases);
+                if blkMutPrefix and typed.writable {
+                    syntax.failAt(source, annStart, prefix, "duplicate mut qualifier on declaration " + annName);
+                }
+                effWritable := blkMutPrefix or typed.writable;
+                if effWritable and not types.isMutContainerKind(typed.kind) {
+                    syntax.failAt(source, annStart, prefix, "mut requires a List, Map, Set, or record type, got " + types.displayKind(typed.kind));
+                }
                 afterType := syntax.skipTrivia(source, typed.next, prefix);
                 var declParsed := ctx.zeroParsed(target, typed.kind, afterType);
                 var declInitState := ir.INIT_STATE_INIT;
@@ -4257,12 +4284,12 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     reservedEnd := syntax.isReservedInitMarker(source, rhsStart, prefix);
                     zeroEnd := syntax.isZeroInitLiteral(source, rhsStart, prefix);
                     if reservedEnd >= 0 {
-                        if types.isListKind(typed.kind) { syntax.failAt(source, itemStart, prefix, "reserved storage is not supported for List"); }
-                        if types.isMapKind(typed.kind) { syntax.failAt(source, itemStart, prefix, "reserved storage is not supported for Map"); }
-                        if types.isSetKind(typed.kind) { syntax.failAt(source, itemStart, prefix, "reserved storage is not supported for Set"); }
-                        if types.isRcKind(typed.kind) { syntax.failAt(source, itemStart, prefix, "reserved storage is not supported for Rc"); }
-                        if types.isSliceKind(typed.kind) { syntax.failAt(source, itemStart, prefix, "reserved storage is not supported for Slice"); }
-                        declInitState = if trace.tokenInPipeBag(blockAssignedBag, itemName) { ir.INIT_STATE_UNINIT_ASSIGNED } else { ir.INIT_STATE_UNINIT };
+                        if types.isListKind(typed.kind) { syntax.failAt(source, annStart, prefix, "reserved storage is not supported for List"); }
+                        if types.isMapKind(typed.kind) { syntax.failAt(source, annStart, prefix, "reserved storage is not supported for Map"); }
+                        if types.isSetKind(typed.kind) { syntax.failAt(source, annStart, prefix, "reserved storage is not supported for Set"); }
+                        if types.isRcKind(typed.kind) { syntax.failAt(source, annStart, prefix, "reserved storage is not supported for Rc"); }
+                        if types.isSliceKind(typed.kind) { syntax.failAt(source, annStart, prefix, "reserved storage is not supported for Slice"); }
+                        declInitState = if trace.tokenInPipeBag(blockAssignedBag, annName) { ir.INIT_STATE_UNINIT_ASSIGNED } else { ir.INIT_STATE_UNINIT };
                         declParsed = ctx.zeroParsed(target, typed.kind, reservedEnd);
                     } else if zeroEnd >= 0 and not numeric.isNumericKind(typed.kind) {
                         declParsed = ctx.zeroParsed(target, typed.kind, zeroEnd);
@@ -4270,33 +4297,33 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                         declParsed = parseBinaryCtx(target, source, rhsStart, prefix, blockLocals, functions, params, currentName, typed.kind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
                         if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, declParsed); }
                         if not types.isCompatibleKind(typed.kind, declParsed.kind) {
-                            syntax.failAt(source, itemStart, prefix, "cannot initialize " + types.displayKind(typed.kind) + " with " + types.displayKind(declParsed.kind));
+                            syntax.failAt(source, annStart, prefix, "cannot initialize " + types.displayKind(typed.kind) + " with " + types.displayKind(declParsed.kind));
                         }
                         if target == ir.TARGET_TS and not inferMode and not blockExits {
-                            trace.checkTraceSafety(source, itemStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
+                            trace.checkTraceSafety(source, annStart, prefix, declParsed.code, currentName, -1, blockLocals, functions, emptyFuturesHere, emptyItemsHere);
                         }
                     }
                 }
-                annBorrow := sliceBorrows.borrowTagForBinding(typed.kind, typed.writable, declParsed.textValue);
-                if not annBorrow.ok { syntax.failAt(source, itemStart, prefix, annBorrow.error); }
+                annBorrow := sliceBorrows.borrowTagForBinding(typed.kind, effWritable, declParsed.textValue);
+                if not annBorrow.ok { syntax.failAt(source, annStart, prefix, annBorrow.error); }
                 statementNext := syntax.consumeStatementEnd(source, declParsed.next, prefix);
-                if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + itemName); }
+                if statementNext < 0 { syntax.failAt(source, syntax.skipTrivia(source, declParsed.next, prefix), prefix, "expected ; after local declaration " + annName); }
                 if target == ir.TARGET_TS and not inferMode and not blockExits {
                     blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                 }
-                runtime := trace.claimOrMakeLocalRuntime(target, blockLocals, itemName, "", blockLexDepth);
+                runtime := trace.claimOrMakeLocalRuntime(target, blockLocals, annName, "", blockLexDepth);
                 declCode := ctx.assignValueCode(target, typed.kind, declParsed.kind, declParsed.code);
                 annFnDeps := if target == ir.TARGET_TS and not inferMode and declInitState == ir.INIT_STATE_INIT and types.containsFnKind(typed.kind) { trace.computeCallableRhsDeps(declParsed.code) } else { "" };
-                mut declaredInBlock.pushBack(itemName);
-                mut blockLocals.pushBack((name = itemName, runtime = runtime, kind = typed.kind,
-                mutable = false, writable = typed.writable, depth = blockLexDepth, constant = if declInitState == ir.INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
+                mut declaredInBlock.pushBack(annName);
+                mut blockLocals.pushBack((name = annName, runtime = runtime, kind = typed.kind,
+                mutable = false, writable = effWritable, depth = blockLexDepth, constant = if declInitState == ir.INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { declParsed.constant } else { false },
                 code = annFnDeps, intValue = declParsed.intValue, textValue = annBorrow.textValue, initState = declInitState));
                 if not blockExits {
                     if declParsed.kind == ir.VALUE_KIND_NEVER {
                         mut statements.pushBack(stmtReturnPrefix + "(" + declCode + ");");
                         blockExits = true;
                     } else {
-                        declKw := if declInitState == ir.INIT_STATE_INIT and not (target == ir.TARGET_TS and typed.writable and types.isRecordOrDistinctRecord(typed.kind)) { "const " } else { "let " };
+                        declKw := if declInitState == ir.INIT_STATE_INIT and not (target == ir.TARGET_TS and effWritable and types.isRecordOrDistinctRecord(typed.kind)) { "const " } else { "let " };
                         tsTypeAnn := if target == ir.TARGET_TS and types.needsTsTypeAnnotation(typed.kind) { ": " + types.tsFunctionType(typed.kind) } else { "" };
                         pushBlockDeclC(isTaggedBody, target, declKw, runtime, typed.kind, tsTypeAnn, declCode, mut taggedPreDecls, mut statements, mut blockOwned);
                         mut stmtOwners.pushBack(if reach.isPrunableExprForTarget(target, typed.kind, declCode) { runtime } else { "" });

@@ -800,32 +800,32 @@ pub resolveFutureDecls := fn(target: String, source: String, prefix: String, mod
                     declTag := decl.textValue.slice(0, sep);
                     posVal := syntax.parseDigits(decl.textValue, sep + 1, decl.textValue.length());
                     declRuntime := if useModuleRuntime { decl.runtime } else { "" };
-                    if declTag == ir.DECL_TAG_ANN or declTag == ir.DECL_TAG_VAR_ANN {
-                        declMutable := declTag == ir.DECL_TAG_VAR_ANN;
+                    if declTag == ir.DECL_TAG_ANN or declTag == ir.DECL_TAG_VAR_ANN or declTag == ir.DECL_TAG_MUT_ANN or declTag == ir.DECL_TAG_VAR_MUT_ANN {
+                        declMutable := declTag == ir.DECL_TAG_VAR_ANN or declTag == ir.DECL_TAG_VAR_MUT_ANN;
+                        forcedWritable := declTag == ir.DECL_TAG_MUT_ANN or declTag == ir.DECL_TAG_VAR_MUT_ANN;
                         if types.canPreResolveLocalType(source, posVal, prefix, scopedAliases) {
                             typed := types.parseLocalType(source, posVal, prefix, scopedAliases);
-                            if not (declMutable and typed.writable) {
-                                afterType := syntax.skipTrivia(source, typed.next, prefix);
-                                var futInit := ir.INIT_STATE_INIT;
-                                if syntax.isSingleEquals(source, afterType) {
-                                    rhsStart := syntax.skipTrivia(source, afterType + 1, prefix);
-                                    if syntax.isReservedInitMarker(source, rhsStart, prefix) >= 0 and not types.isListKind(typed.kind) {
-                                        futInit = if trace.tokenInPipeBag(assignedBag, decl.name) { ir.INIT_STATE_INIT }
-                                        else if declMutable { ir.INIT_STATE_UNINIT }
-                                        else { ir.INIT_STATE_MAYBE };
-                                    }
+                            effWritable := forcedWritable or typed.writable;
+                            afterType := syntax.skipTrivia(source, typed.next, prefix);
+                            var futInit := ir.INIT_STATE_INIT;
+                            if syntax.isSingleEquals(source, afterType) {
+                                rhsStart := syntax.skipTrivia(source, afterType + 1, prefix);
+                                if syntax.isReservedInitMarker(source, rhsStart, prefix) >= 0 and not types.isListKind(typed.kind) {
+                                    futInit = if trace.tokenInPipeBag(assignedBag, decl.name) { ir.INIT_STATE_INIT }
+                                    else if declMutable { ir.INIT_STATE_UNINIT }
+                                    else { ir.INIT_STATE_MAYBE };
                                 }
-                                (mut futureValues).pushBack((name = decl.name, runtime = declRuntime, kind = typed.kind,
-                                at = decl.intValue, mutable = declMutable, writable = typed.writable, initState = futInit));
-                                resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
-                                progressed = true;
                             }
+                            (mut futureValues).pushBack((name = decl.name, runtime = declRuntime, kind = typed.kind,
+                            at = decl.intValue, mutable = declMutable, writable = effWritable, initState = futInit));
+                            resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
+                            progressed = true;
                         }
                     } else {
                         declMutable := declTag == ir.DECL_TAG_VAR_VAL or declTag == ir.DECL_TAG_VAR_MUT;
                         declWritable := declTag == ir.DECL_TAG_VAR_MUT or declTag == ir.DECL_TAG_MUT_VAL;
                         inferred := tryInferRootExprKind(source, posVal, prefix, scopedAliases, functions, functionParams, locals, futureValues, "", 0, 24);
-                        if inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT and (not declWritable or types.isListKind(inferred.kind)) {
+                        if inferred.kind =!= "" and inferred.kind =!= ir.VALUE_KIND_UNIT and (not declWritable or types.isMutContainerKind(inferred.kind)) {
                             mut futureValues.pushBack((name = decl.name, runtime = declRuntime, kind = inferred.kind,
                             at = decl.intValue, mutable = declMutable, writable = declWritable, initState = ir.INIT_STATE_INIT));
                             resolvedBag = trace.appendPipeBag(resolvedBag, keyText);
@@ -1079,12 +1079,13 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                             }
                             position = rhsPos;
                             continue;
-                        } else if not isVarMut and afterLocal < limit and source.at(afterLocal) == ":" and syntax.compoundAssignOp(source, afterLocal).width == 0 {
+                        } else if afterLocal < limit and not source.startsWithAt(afterLocal, ":=") and source.at(afterLocal) == ":" and syntax.compoundAssignOp(source, afterLocal).width == 0 {
                             annStart := afterLocal + 1;
                             if not trace.tokenInPipeBag(seenDeclBag, localName) {
                                 seenDeclBag = trace.appendPipeBag(seenDeclBag, localName);
+                                annTag := if isVarMut { ir.DECL_TAG_VAR_MUT_ANN + "|" } else { ir.DECL_TAG_VAR_ANN + "|" };
                                 mut decls.pushBack((kind = ir.DECL_KIND_FUTURE_DECL, name = localName, runtime = "",
-                                code = "", intValue = localStart, textValue = ir.DECL_TAG_VAR_ANN + "|" + annStart.toText()));
+                                code = "", intValue = localStart, textValue = annTag + annStart.toText()));
                             }
                             position = skipTypeAnnotationSpan(source, annStart, limit, prefix);
                             continue;
@@ -1108,6 +1109,15 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
                             code = "", intValue = localStart, textValue = ir.DECL_TAG_MUT_VAL + "|" + rhsPos.toText()));
                         }
                         position = rhsPos;
+                        continue;
+                    } else if not syntax.isReservedWord(localName) and afterLocal < limit and not source.startsWithAt(afterLocal, ":=") and source.at(afterLocal) == ":" and syntax.compoundAssignOp(source, afterLocal).width == 0 {
+                        annStart := afterLocal + 1;
+                        if not trace.tokenInPipeBag(seenDeclBag, localName) {
+                            seenDeclBag = trace.appendPipeBag(seenDeclBag, localName);
+                            mut decls.pushBack((kind = ir.DECL_KIND_FUTURE_DECL, name = localName, runtime = "",
+                            code = "", intValue = localStart, textValue = ir.DECL_TAG_MUT_ANN + "|" + annStart.toText()));
+                        }
+                        position = skipTypeAnnotationSpan(source, annStart, limit, prefix);
                         continue;
                     }
                 }
@@ -1409,10 +1419,11 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                             code = "", intValue = localStart, textValue = kindTag + rhsPos.toText()));
                             position = rhsPos;
                             continue;
-                        } else if not isVarMut and afterLocal < size and source.at(afterLocal) == ":" and syntax.compoundAssignOp(source, afterLocal).width == 0 {
+                        } else if not source.startsWithAt(afterLocal, ":=") and afterLocal < size and source.at(afterLocal) == ":" and syntax.compoundAssignOp(source, afterLocal).width == 0 {
                             annStart := afterLocal + 1;
+                            annTag := if isVarMut { ir.DECL_TAG_VAR_MUT_ANN + "|" } else { ir.DECL_TAG_VAR_ANN + "|" };
                             mut decls.pushBack((kind = ir.DECL_KIND_FUTURE_DECL, name = localName, runtime = ir.moduleValueRuntime(target, moduleKey, localName),
-                            code = "", intValue = localStart, textValue = ir.DECL_TAG_VAR_ANN + "|" + annStart.toText()));
+                            code = "", intValue = localStart, textValue = annTag + annStart.toText()));
                             position = skipTypeAnnotationSpan(source, annStart, size, prefix);
                             continue;
                         }
@@ -1432,6 +1443,12 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                         mut decls.pushBack((kind = ir.DECL_KIND_FUTURE_DECL, name = localName, runtime = ir.moduleValueRuntime(target, moduleKey, localName),
                         code = "", intValue = localStart, textValue = ir.DECL_TAG_MUT_VAL + "|" + rhsPos.toText()));
                         position = rhsPos;
+                        continue;
+                    } else if not syntax.isReservedWord(localName) and not source.startsWithAt(afterLocal, ":=") and afterLocal < size and source.at(afterLocal) == ":" and syntax.compoundAssignOp(source, afterLocal).width == 0 {
+                        annStart := afterLocal + 1;
+                        mut decls.pushBack((kind = ir.DECL_KIND_FUTURE_DECL, name = localName, runtime = ir.moduleValueRuntime(target, moduleKey, localName),
+                        code = "", intValue = localStart, textValue = ir.DECL_TAG_MUT_ANN + "|" + annStart.toText()));
+                        position = skipTypeAnnotationSpan(source, annStart, size, prefix);
                         continue;
                     }
                 }
