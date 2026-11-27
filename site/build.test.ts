@@ -199,6 +199,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'docs/handbook/math-vectors-and-matrices.html',
     'docs/handbook/data-structures-and-memory.html',
     'docs/handbook/native-c11-and-optimization.html',
+    'docs/handbook/unions-fallibles-and-errors.html',
+    'docs/handbook/interfaces-contexts-and-overloading.html',
+    'docs/handbook/slices-simd-and-layout.html',
+    'docs/handbook/comptime-defaults-and-variance.html',
     'docs/design/overview.html',
     'docs/design/start-here.html',
     'docs/proposals/LP-0001-operation-specific-panic-recovery.html',
@@ -220,11 +224,11 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(docsIndex.includes('href="design/spec-overview.html">Specification</a>'));
   assert(docsIndex.includes('href="../tools/#cli">CLI reference</a>'));
   const languageReference = readFileSync(join(out, 'docs/reference.html'), 'utf8');
-  assert.equal(languageReference.match(/class="portal-card reference-chapter"/g)?.length, 11);
+  assert.equal(languageReference.match(/class="portal-card reference-chapter"/g)?.length, 15);
   assert(languageReference.includes('href="handbook/numbers-operators-and-strings.html#utf-8-round-trip"'));
   const handbookSingle = readFileSync(join(out, 'docs/handbook/single-page.html'), 'utf8');
   assert(handbookSingle.includes('The Lite Handbook (Single-Page Edition)'));
-  assert(handbookSingle.includes('All 11 Handbook chapters on one page'));
+  assert(handbookSingle.includes('All 15 Handbook chapters on one page'));
   assert(handbookSingle.includes('id="chapter-bindings-and-mutability"'));
   assert(handbookSingle.includes('Continue to <a href="#chapter-bindings-and-mutability"'));
   assert(handbookSingle.includes('#h5-nominal-record-types--name-shorthand'));
@@ -2229,8 +2233,8 @@ test('academy-state runtime initializes window.LiteAcademy and aggregates progre
   assert.equal(lessonsStat.textContent, '1');
   assert.equal(gymStat.textContent, '2');
   assert.equal(hbStat.textContent, '1');
-  assert.equal(hbProgLabel.textContent, '1 / 11 chapters read');
-  assert.equal(hbProgFill.style.width, '9%');
+  assert.equal(hbProgLabel.textContent, '1 / 15 chapters read');
+  assert.equal(hbProgFill.style.width, '7%');
 });
 
 test('lite:// internal URI parser, resolver, broken-link rejection, and link-graph.json integrity', () => {

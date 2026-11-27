@@ -141,21 +141,29 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     "language/learn/handbook/extra/graphics-surfaces-and-play.md",
     "language/learn/handbook/extra/math-vectors-and-matrices.md",
     "language/learn/handbook/extra/data-structures-and-memory.md",
-    "language/learn/handbook/tooling/native-c11-and-optimization.md"
+    "language/learn/handbook/tooling/native-c11-and-optimization.md",
+    "language/learn/handbook/types/unions-fallibles-and-errors.md",
+    "language/learn/handbook/types/interfaces-contexts-and-overloading.md",
+    "language/learn/handbook/types/slices-simd-and-layout.md",
+    "language/learn/handbook/execution/comptime-defaults-and-variance.md"
     ];
     hbSlugs: List<String> = [
     "overview-and-setup", "bindings-and-mutability", "numbers-operators-and-strings",
     "conditionals-match-and-loops", "tuples-arrays-lists-and-aliases",
     "blocks-wiring-and-closures", "imports-visibility-and-io",
     "graphics-surfaces-and-play", "math-vectors-and-matrices",
-    "data-structures-and-memory", "native-c11-and-optimization"
+    "data-structures-and-memory", "native-c11-and-optimization",
+    "unions-fallibles-and-errors", "interfaces-contexts-and-overloading",
+    "slices-simd-and-layout", "comptime-defaults-and-variance"
     ];
     hbNavs: List<String> = [
     "1. Overview & Setup", "2. Bindings & Mutability", "3. Numbers, Operators & Strings",
     "4. Conditionals, Match & Loops", "5. Tuples, Arrays, Lists & Aliases",
     "6. Blocks, Wiring & Closures", "7. Imports, Visibility & I/O",
     "8. Graphics, Surfaces & Lite Play", "9. Math, Vectors, Matrices & Grids",
-    "10. Data Structures & Memory Pools", "11. Native C11, Optimization & Tooling"
+    "10. Data Structures & Memory Pools", "11. Native C11, Optimization & Tooling",
+    "12. Unions, Fallibles & Errors", "13. Interfaces, Contexts & Overloading",
+    "14. Slices, SIMD, SoA & Layout", "15. Comptime, Defaults & Variance"
     ];
     hbSums: List<String> = [
     "Explicit imports, dual-target TS & C11 toolchain, ./bin/lite commands, file kinds, and nestable comments.",
@@ -168,7 +176,11 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     "extra/canvas, extra/surface desktop windows, extra/color, extra/audio, extra/board, extra/timer, and ./bin/lite play.",
     "math/scalar, math/random, Vec<T, N> and Vec2..4 math/vector, math/matrix transforms, math/geom primitives, and ds/grid.",
     "ds/arena, ds/pool, ds/intern, ds/lru, ds/ring, ds/deque, ds/heap, ds/bitset, ds/sparse, ds/spatial, data/json, and data/csv.",
-    "Dual-target TS & C11 parity, 3-generation self-hosting, ./bin/lite build, -O0..-O3/-Os, and ./bin/lite ignite."
+    "Dual-target TS & C11 parity, 3-generation self-hosting, ./bin/lite build, -O0..-O3/-Os, and ./bin/lite ignite.",
+    "Plain A | B unions, flow narrowing, Option<T>, T ! E / T!, postfix ! propagation, and else(err) recovery.",
+    "Nominal interface/impl, associated types, defaults, dyn dispatch, lexical context(...)/$context.lt, and overloading.",
+    "Non-escaping Slice<T>, splitAt, bit-packed slices, @packed/@align, Float niches, Simd<T, N>, SoA<R>, and Rc<T>.",
+    "Portable comptime { ... }, Stage-1 .lt init, unified alias, parameter defaults with ?:, and callable variance."
     ];
 
     mut metaSrcs: List<String> = [];

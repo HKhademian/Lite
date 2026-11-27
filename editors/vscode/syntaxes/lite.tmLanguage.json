@@ -19,19 +19,19 @@
     },
     {
       "name": "keyword.control.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:if|else|match|loop|as|then|finally|return|break|continue|raise)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:if|else|match|loop|as|then|finally|return|break|continue|raise|do|comptime|context)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "storage.modifier.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:pub|var|mut)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:pub|var|mut|dyn|distinct)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "storage.type.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:fn|record|enum|type)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:fn|record|enum|interface|impl|alias|type)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "keyword.operator.word.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:and|or|not)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:and|or|not|cast)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "keyword.control.import.lite",
@@ -39,7 +39,7 @@
     },
     {
       "name": "support.type.lite",
-      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:Int64|Int32|Int16|Int8|Int|Float64|Float32|Float|Double|String|Bool|Never|List|Map|Set|Array|Self)(?![\\p{L}\\p{M}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{M}\\p{N}_])(?:UInt64|UInt32|UInt16|UInt8|UInt4|UInt2|UInt1|Int64|Int32|Int16|Int8|Int4|Int2|Int1|Int|Float64|Float32|Float16|Float8|Float|Double|String|Bool|Never|Void|List|Map|Set|Array|Slice|Option|Result|Error|SimdNative|Simd|SoA|Rc|VmArena|SlotPool|Self)(?![\\p{L}\\p{M}\\p{N}_])"
     },
     {
       "name": "support.variable.property.lite",
@@ -63,7 +63,7 @@
     },
     {
       "name": "keyword.operator.lite",
-      "match": "(?:>!=|<!=|=!=|:/=|:%=|:=|==|>=|<=|>!|<!|\\*\\*|\\+=|-=|\\*=|/=|%=|:/|:%|[+*/%=<>!?|&-])"
+      "match": "(?:>!=|<!=|=!=|:/=|:%=|\\.\\.=|:=|==|>=|<=|>!|<!|\\*\\*|\\+=|-=|\\*=|/=|%=|:/|:%|\\.\\.|[+*/%=<>!?|-])"
     },
     {
       "name": "punctuation.section.brackets.lite",

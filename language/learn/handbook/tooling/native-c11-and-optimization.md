@@ -54,3 +54,7 @@ When you run any `./bin/lite` command, the igniter automatically materializes na
 - [`./bin/lite bench`](lite://tool/bench-release) records reproducible compiler and runtime benchmarks.
 
 Explore the full CLI reference in [Tools](lite://tool) and architecture details in [Compiler Overview](lite://doc/compiler/overview).
+
+## Next Chapter
+
+Continue to [Unions, Fallibles & Errors](lite://handbook/unions-fallibles-and-errors).

@@ -81,6 +81,44 @@ Re-declaring the same name inside the **same** `{ ... }` block is rejected by th
 
 See [Declarations & Assignment](lite://doc/declarations-and-assignment) and [Mutability](lite://doc/mutability).
 
+## Path-Sensitive Definite Initialization & `Bool` Correlation
+
+When a binding starts uninitialized with `= ?` or through a partial conditional initializer (`a := if ready { 10 };`), the compiler tracks initialization across branches, early returns, and immutable `Bool` predicates (`flag` / `not flag`). On C11, a lightweight 1-byte init guard is emitted **only** when an owned binding may dynamically remain uninitialized:
+
+```lite
+io := import "core/io";
+
+chooseLabel := fn(hasName: Bool): String {
+    msg: String = ?;
+    if hasName {
+        msg = "Ada";
+    }
+    if not hasName {
+        msg = "Anonymous";
+    }
+    msg
+};
+
+io.outputLine(chooseLabel(true), chooseLabel(false));
+```
+
+See [First Initialization](lite://doc/first-initialization).
+
+## Conditional `if` Pattern Binding
+
+You can test and bind a value in a single condition using `if pattern := expr`, optionally guarded by `and`:
+
+```lite
+io := import "core/io";
+opt := import "core/option";
+
+showPositive := fn(v: opt.Option<Int>): String {
+    if .Some(n) := v and n > 0 { "positive:" + n.toText() } else { "other" }
+};
+
+io.outputLine(showPositive(.Some(7)), showPositive(.Some(-2)), showPositive(.None));
+```
+
 ## Next Chapter
 
 Continue to [Numbers, Operators & Strings](lite://handbook/numbers-operators-and-strings).

@@ -81,6 +81,17 @@ test('highlightLite highlights newer built-in types and operators', () => {
   assert(typeOpHtml.includes('<span class="tok-type">Self</span>'), 'missing type highlight: Self');
   assert(typeOpHtml.includes('<span class="tok-type">Array</span>'), 'missing type highlight: Array');
 
+  const modernHtml = highlightLite('@packed Show := interface { f: fn(s: Slice<UInt4>, d: dyn Show) context(x: Int4): Option<Float16> ! Error; }; impl Show for X; v := do { comptime { cast<Simd<Float8, 4>>(1 ..= 4) } };');
+  for (const kw of ['interface', 'impl', 'dyn', 'context', 'do', 'comptime', 'cast', '@packed']) {
+    assert(modernHtml.includes(`<span class="tok-keyword">${kw}</span>`), `missing Phase 5-18 keyword highlight: ${kw}`);
+  }
+  for (const ty of ['Slice', 'UInt4', 'Int4', 'Option', 'Float16', 'Error', 'Simd', 'Float8']) {
+    assert(modernHtml.includes(`<span class="tok-type">${ty}</span>`), `missing Phase 5-18 type highlight: ${ty}`);
+  }
+  for (const op of ['..=']) {
+    assert(modernHtml.includes(`<span class="tok-op">${op}</span>`), `missing Phase 5-18 operator highlight: ${op}`);
+  }
+
   const programView = formatCodeView([
     'export function main(): string {',
     '    const lite$out: string[] = [];',

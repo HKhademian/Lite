@@ -139,6 +139,25 @@ io.outputLine(tags, set.size(tags), set.has(tags, "lite"));
 
 See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Enums & Variants](lite://doc/enums-and-variants), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), [Typed Maps](lite://doc/maps), [Typed Sets](lite://doc/sets), and [Type Aliases](lite://doc/type-aliases).
 
+## Dependent Record Defaults & Structural `{ ... }` Records
+
+Nominal record fields can reference earlier declared fields in their default expressions (with omitted defaults evaluated in declaration order after written overrides). Outside nominal constructors, standalone `{ ... }` literals construct anonymous structural records (`Record<$anon;...>`) directly—and `{}` creates an empty structural record:
+
+```lite
+io := import "core/io";
+
+Span := record {
+    start: Int = 2;
+    end: Int = start + 10;
+};
+
+s := Span { start = 5 };
+entry := { "label" = "total", value = s.end - s.start };
+io.outputLine(s.start, s.end, entry."label", entry.value);
+```
+
+See also [Comptime, Defaults & Variance](lite://handbook/comptime-defaults-and-variance) for unified symbol/function `alias` declarations.
+
 ## Next Chapter
 
 Continue to [Blocks, Wiring & Closures](lite://handbook/blocks-wiring-and-closures).

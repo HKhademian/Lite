@@ -243,7 +243,9 @@ handbookSourceForSlug := fn(slug: String): String {
     "conditionals-match-and-loops", "tuples-arrays-lists-and-aliases",
     "blocks-wiring-and-closures", "imports-visibility-and-io",
     "graphics-surfaces-and-play", "math-vectors-and-matrices",
-    "data-structures-and-memory", "native-c11-and-optimization"
+    "data-structures-and-memory", "native-c11-and-optimization",
+    "unions-fallibles-and-errors", "interfaces-contexts-and-overloading",
+    "slices-simd-and-layout", "comptime-defaults-and-variance"
     ];
     hbPaths: List<String> = [
     "language/learn/handbook/getting-started/overview-and-setup.md",
@@ -256,7 +258,11 @@ handbookSourceForSlug := fn(slug: String): String {
     "language/learn/handbook/extra/graphics-surfaces-and-play.md",
     "language/learn/handbook/extra/math-vectors-and-matrices.md",
     "language/learn/handbook/extra/data-structures-and-memory.md",
-    "language/learn/handbook/tooling/native-c11-and-optimization.md"
+    "language/learn/handbook/tooling/native-c11-and-optimization.md",
+    "language/learn/handbook/types/unions-fallibles-and-errors.md",
+    "language/learn/handbook/types/interfaces-contexts-and-overloading.md",
+    "language/learn/handbook/types/slices-simd-and-layout.md",
+    "language/learn/handbook/execution/comptime-defaults-and-variance.md"
     ];
     hit := hbSlugs.indexOf(slug);
     if hit >= 0 { hbPaths[hit] } else { "" }

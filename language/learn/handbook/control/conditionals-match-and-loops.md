@@ -117,6 +117,28 @@ io.outputLine(result);
 
 See [Conditionals](lite://doc/conditionals), [Match](lite://doc/match), [Loops](lite://doc/loops), and [Finally](lite://doc/finally).
 
+## Writable Iteration (`loop mut`), Contextual `.static()`, & Standalone `do` Blocks
+
+Use `loop mut seq` to modify mutable elements in place through `.item` (or a named `as` binding), contextual `.static(...)` constructors when a binding's nominal type is already known, and explicit `do { ... }` when evaluating a scoped multi-statement expression:
+
+```lite
+io := import "core/io";
+rnd := import "math/random";
+
+mut rng: rnd.Rng = .create(42);
+roll := do {
+    a := mut rng.rangeInt(0, 100);
+    b := mut rng.rangeInt(0, 100);
+    a + b
+};
+
+mut nums := [1, 2, 3, 4];
+loop mut nums {
+    .item *= 10;
+}
+io.outputLine(roll, nums);
+```
+
 ## Next Chapter
 
 Continue to [Tuples, Arrays, Lists & Aliases](lite://handbook/tuples-arrays-lists-and-aliases).

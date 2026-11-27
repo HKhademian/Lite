@@ -10,13 +10,19 @@ export function escapeHtml(text: string): string {
 }
 
 const liteKeywords = new Set([
-  'alias', 'as', 'and', 'break', 'cast', 'continue', 'distinct', 'else', 'enum', 'false', 'finally', 'fn', 'if',
-  'import', 'loop', 'match', 'mut', 'not', 'or', 'pub', 'record', 'return',
-  'self', 'then', 'true', 'var', 'while',
+  'alias', 'as', 'and', 'break', 'cast', 'comptime', 'context', 'continue', 'distinct', 'do', 'dyn', 'else', 'enum', 'false', 'finally', 'fn', 'if',
+  'impl', 'import', 'interface', 'loop', 'match', 'mut', 'not', 'or', 'pub', 'raise', 'record', 'return',
+  'self', 'then', 'true', 'type', 'using', 'var', 'while',
 ]);
 
 const liteTypes = new Set([
-  'Bool', 'Int', 'Int8', 'Int16', 'Int32', 'Int64', 'Float', 'Float32', 'Float64', 'Double', 'String', 'Unit', 'Void', 'Never', 'List', 'Map', 'Set', 'Array', 'Self',
+  'Bool',
+  'Int', 'Int1', 'Int2', 'Int4', 'Int8', 'Int16', 'Int32', 'Int64',
+  'UInt1', 'UInt2', 'UInt4', 'UInt8', 'UInt16', 'UInt32', 'UInt64',
+  'Float', 'Float8', 'Float16', 'Float32', 'Float64', 'Double',
+  'String', 'Unit', 'Void', 'Never',
+  'List', 'Map', 'Set', 'Array', 'Slice', 'Option', 'Result', 'Error',
+  'Simd', 'SimdNative', 'SoA', 'Rc', 'VmArena', 'SlotPool', 'Self',
 ]);
 
 const liteMetaProps = new Set([
@@ -181,12 +187,12 @@ function highlightCode(source: string, keywords: ReadonlySet<string>, types: Rea
     // Multi-char operators
     const two = source.slice(i, i + 2);
     const three = source.slice(i, i + 3);
-    if (['===', '!==', '=!=', ':/=', ':%=', '<!=', '>!='].includes(three)) {
+    if (['===', '!==', '=!=', ':/=', ':%=', '<!=', '>!=', '..='].includes(three)) {
       out.push(`<span class="tok-op">${escapeHtml(three)}</span>`);
       i += 3;
       continue;
     }
-    if ([':=', '==', '!=', '<=', '>=', '=>', '->', '**', ':/', ':%', '+=', '-=', '*=', '/=', '%=', '<!', '>!'].includes(two)) {
+    if ([':=', '==', '!=', '<=', '>=', '=>', '->', '**', ':/', ':%', '+=', '-=', '*=', '/=', '%=', '<!', '>!', '..'].includes(two)) {
       out.push(`<span class="tok-op">${escapeHtml(two)}</span>`);
       i += 2;
       continue;

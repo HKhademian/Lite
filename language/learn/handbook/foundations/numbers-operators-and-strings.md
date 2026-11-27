@@ -100,6 +100,24 @@ io.outputLine("utf8-bytes:", utf8Bytes.map(fn(x: Int): String { x.toText() }).jo
 [Learn walkthrough](lite://learn/strings-and-unicode) ·
 [Practice scalar and byte counts](lite://gym/drills/utf8-roundtrip-count)
 
+## Complete Numeric Ladder, Bitwise & Wrapping Arithmetic
+
+Alongside default 64-bit `Int` and `Float`, Lite supports the full fixed-width signed/unsigned ladder (`Int1`, `Int2`, `Int4`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt1`, `UInt2`, `UInt4`, `UInt8`, `UInt16`, `UInt32`, `UInt64`) and compact floating-point widths (`Float8` OCP E4M3, `Float16` binary16, `Float32`, `Float64`/`Double`).
+
+Ordinary `+`, `-`, `*` remain overflow-checked; when wrapping/saturating modular arithmetic or bit manipulation is intended, use explicit methods (`.wrappingAdd`, `.saturatingAdd`, `.uncheckedAdd`, `.bitAnd`, `.bitOr`, `.shiftLeft`, `.rotateRight`):
+
+```lite
+io := import "core/io";
+
+nibble: UInt4 = 12;
+masked: UInt4 = nibble.wrappingAdd(7).bitAnd(15);
+packed: UInt8 = cast<UInt8>(nibble).shiftLeft(4).bitOr(5);
+half: Float16 = 1.5;
+io.outputLine(nibble, masked, packed, half);
+```
+
+See [Numbers and Ranges](lite://doc/numbers) and [C11 Memory & Codegen Plan](lite://doc/c11-memory-and-codegen-plan#1-tier-0--raw-inline-values--complete-numeric-ladder).
+
 ## Next Chapter
 
 Continue to [Conditionals, Match & Loops](lite://handbook/conditionals-match-and-loops).

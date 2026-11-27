@@ -172,3 +172,21 @@ test('type-attached operations, Self, Array, and index hooks highlight cleanly',
   has(rows, 1, '$getIndex', 'entity.name.function.lite');
   has(rows, 1, 'Self', 'support.type.lite');
 });
+test('Phases 5-18 keywords, layout attributes, numeric types, and operators highlight cleanly', async () => {
+  const rows = await tokenize('@packed Header := record { tag: UInt4; val: Float16; };\nShow := interface { show: fn(self: Self): String; };\nimpl Show for Header;\nrun := fn(s: mut Slice<Int4>, d: dyn Show) context(tag: String): Int! {\n  comptime { cast<UInt8>(1).wrappingAdd(2).shiftLeft(1) }\n}\nxs := arr[0..=3];');
+  has(rows, 0, '@packed', 'entity.name.label.lite');
+  has(rows, 0, 'UInt4', 'support.type.lite');
+  has(rows, 0, 'Float16', 'support.type.lite');
+  has(rows, 1, 'interface', 'storage.type.lite');
+  has(rows, 2, 'impl', 'storage.type.lite');
+  has(rows, 3, 'Slice', 'support.type.lite');
+  has(rows, 3, 'Int4', 'support.type.lite');
+  has(rows, 3, 'dyn', 'storage.modifier.lite');
+  has(rows, 3, 'context', 'keyword.control.lite');
+  has(rows, 4, 'comptime', 'keyword.control.lite');
+  has(rows, 4, 'cast', 'keyword.operator.word.lite');
+  has(rows, 4, 'UInt8', 'support.type.lite');
+  has(rows, 4, 'wrappingAdd', 'entity.name.function.call.lite');
+  has(rows, 4, 'shiftLeft', 'entity.name.function.call.lite');
+  has(rows, 6, '..=', 'keyword.operator.lite');
+});
