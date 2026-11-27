@@ -1,7 +1,7 @@
 {
-  "note": "Phase 12 (prefix mut cutover, aligned context mut placement, contextual static calls, and writable loop iteration). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Phase 13 (standalone do blocks, pattern binding in if, dependent record defaults, and transitive mut-global snapshot check). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-27",
-  "sourceSha256": "2800ff7d5976a45feb6aea969e9b51ce390cdf60b08481a68e4be28004130e44",
+  "sourceSha256": "5030872fdee01c7fe28efd5d33b75e453bd5e01552d6d9a3093ddcd260704e97",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
