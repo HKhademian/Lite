@@ -2,6 +2,9 @@
 
 Status: **existing-name conditional tests, binding-free : Type patterns, remaining-subject narrowing across match arms, stable existing-binding narrowing after early exits, and false-branch narrowing through else/else if selected; early-exit and false-branch rules selected on 2026-10-24; stability, broader logical flow, and full type-test rules need formalization**.
 
+> [!NOTE]
+> **Phase 15 implementation checkpoint:** Value-level `expr: Type` tests (supporting union targets and `not`/`and`/`or` propagation), `if cond` / `else if` / `else` remainder narrowing, early-exit narrowing, `match` `: Type` / `name: Type` arms with remaining-subject exhaustiveness and unreachable-arm rejection, `if x: T := expr` union narrowing, and closure-capture handling for narrowed mutable bindings are implemented and verified in `phase15-unions-and-fallibles.test.lts`.
+
 ## Purpose
 
 Test an existing value's active type without redeclaring its name. Where that test is known to hold, the compiler permits operations of the narrower type. This changes static knowledge, not the stored value or its declared type.

@@ -1,0 +1,413 @@
+/* Phase 15 verification: runtime unions (normalization, widening, equality, owned drop/copy/move), type tests & flow narrowing, match & if := patterns, fallible functions T ! E / T!, core/error.Error + ToError, .ok/.err, Unit!, postfix ! propagation & unwinds, else(err) recovery, TS strict + C11 -Werror + ASan/LSan/UBSan + LITE_CHECK_LEAKS=1 parity, and 22+ rejection cases. */
+
+test := import "core/test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+emptyBytes := fn(): List<Int> {
+    xs: List<Int> = [];
+    xs
+};
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccProbe := compilerTest.probeCc();
+
+runAll := fn(label: String, src: String, expectedOut: String): Unit {
+    tsCompRes := compilerTest.compileStdin(root, tsComp, src, "");
+    test.checkInt(label + " ts compile: " + tsCompRes.stderr, 0, tsCompRes.status);
+    tsChk := compilerTest.checkTsCode(root, tsCompRes.stdout);
+    test.check(label + " tsc --strict: " + tsChk.error, tsChk.ok);
+    tsRun := compilerTest.checkAndRunTs(root, tsCompRes.stdout);
+    test.checkInt(label + " ts run status: " + tsRun.stderr, 0, tsRun.status);
+    test.checkText(label + " ts stdout", expectedOut, tsRun.stdout);
+
+    if not ccProbe.available {
+        return;
+    }
+    cCompRes := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt(label + " c compile: " + cCompRes.stderr, 0, cCompRes.status);
+    tmpDir := fs.makeTempDir("lite-p15-");
+    test.check(label + " makeTempDir", tmpDir.ok);
+    cPath := path.join(tmpDir.path, "prog.c");
+    wC := fs.writeText(cPath, cCompRes.stdout);
+    test.check(label + " write prog.c", wC.ok);
+
+    vmBin := path.join(tmpDir.path, "prog_vm");
+    ccVmOut := path.join(tmpDir.path, "cc_vm.out");
+    ccVmErr := path.join(tmpDir.path, "cc_vm.err");
+    ccVm := proc.runBytes(ccProbe.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", cPath, "-o", vmBin, "-lm"], tmpDir.path, [], 30000, emptyBytes(), ccVmOut, ccVmErr);
+    test.checkInt(label + " cc vm: " + fs.readText(ccVmErr).text, 0, ccVm.status);
+    runVmOut := path.join(tmpDir.path, "run_vm.out");
+    runVmErr := path.join(tmpDir.path, "run_vm.err");
+    runVm := proc.runBytes(vmBin, [], tmpDir.path, ["LITE_CHECK_LEAKS=1"], 10000, emptyBytes(), runVmOut, runVmErr);
+    test.checkInt(label + " vm status: " + fs.readText(runVmErr).text, 0, runVm.status);
+    test.checkText(label + " vm stderr", "", fs.readText(runVmErr).text);
+    test.checkText(label + " vm stdout parity", expectedOut, fs.readText(runVmOut).text);
+
+    sanBin := path.join(tmpDir.path, "prog_san");
+    ccSanOut := path.join(tmpDir.path, "cc_san.out");
+    ccSanErr := path.join(tmpDir.path, "cc_san.err");
+    ccSan := proc.runBytes(ccProbe.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", cPath, "-o", sanBin, "-lm"], tmpDir.path, [], 30000, emptyBytes(), ccSanOut, ccSanErr);
+    test.checkInt(label + " cc san: " + fs.readText(ccSanErr).text, 0, ccSan.status);
+    runSanOut := path.join(tmpDir.path, "run_san.out");
+    runSanErr := path.join(tmpDir.path, "run_san.err");
+    runSan := proc.runBytes(sanBin, [], tmpDir.path, ["LITE_CHECK_LEAKS=1"], 10000, emptyBytes(), runSanOut, runSanErr);
+    test.checkInt(label + " san status: " + fs.readText(runSanErr).text, 0, runSan.status);
+    test.checkText(label + " san stderr", "", fs.readText(runSanErr).text);
+    test.checkText(label + " san stdout parity", expectedOut, fs.readText(runSanOut).text);
+    _ := fs.remove(tmpDir.path);
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccProbe.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. Union normalization, widening, equality, owned payloads (String/List/Record), display, leading |. */
+runAll("union-norm-widening-owned",
+"io := import \"core/io\";\n" +
+"A := alias Int | String;\n" +
+"B := alias String | Int;\n" +
+"C := alias (| Int | String) | (String | Bool);\n" +
+"Single := alias Int | Int;\n" +
+"Item := record { tag: String; nums: List<Int>; }\n" +
+"Wide := alias Int | String | Item | List<Int>;\n" +
+"\n" +
+"takeB := fn(v: B): String { match v { s: String { s } n: Int { \"i=\" + n.toText() } } };\n" +
+"describe := fn(v: Wide): String {\n" +
+"    match v {\n" +
+"        n: Int { \"int:\" + n.toText() }\n" +
+"        s: String { \"str:\" + s }\n" +
+"        xs: List<Int> { \"list:\" + xs.length().toText() }\n" +
+"        it: Item { \"rec:\" + it.tag + \":\" + it.nums.length().toText() }\n" +
+"    }\n" +
+"};\n" +
+"\n" +
+"a1: A = 42;\n" +
+"a2: A = \"hello\";\n" +
+"s1: Single = 7;\n" +
+"b1: B = a1;\n" +
+"b2: B = \"hello\";\n" +
+"c1: C = a2;\n" +
+"c2: C = true;\n" +
+"io.outputLine(takeB(a1));\n" +
+"io.outputLine(takeB(a2));\n" +
+"io.outputLine(s1);\n" +
+"io.outputLine(a1 == b1);\n" +
+"io.outputLine(a2 == b2);\n" +
+"io.outputLine(a1 == a2);\n" +
+"io.outputLine(a2 =!= c2);\n" +
+"io.outputLine(c1);\n" +
+"io.outputLine(c2);\n" +
+"w1: Wide = a2;\n" +
+"w2List: List<Int> = [10, 20, 30];\n" +
+"w2: Wide = w2List;\n" +
+"w3: Wide = Item { tag = \"ok\", nums = [1, 2] };\n" +
+"var w4: Wide = w3;\n" +
+"w4 = 99;\n" +
+"io.outputLine(describe(w1));\n" +
+"io.outputLine(describe(w2));\n" +
+"io.outputLine(describe(w3));\n" +
+"io.outputLine(describe(w4));\n",
+"i=42\nhello\n7\ntrue\ntrue\nfalse\ntrue\nhello\ntrue\nstr:hello\nlist:3\nrec:ok:2\nint:99\n");
+
+/* 2. Type tests (: T, : (A | B)), flow narrowing (if/else-if/else, not, and, or, early exit), and var reassignment un-narrowing. */
+runAll("union-type-tests-and-narrowing",
+"io := import \"core/io\";\n" +
+"Val := alias String | Float | Int;\n" +
+"classify := fn(v: Val): String {\n" +
+"    if v: String {\n" +
+"        return \"S:\" + v.length().toText();\n" +
+"    } else if v: Float {\n" +
+"        return \"F:\" + v.toText();\n" +
+"    } else {\n" +
+"        return \"I:\" + (v + 1).toText();\n" +
+"    }\n" +
+"};\n" +
+"checkAndOr := fn(a: Int | String, b: Int | String): String {\n" +
+"    res1 := if not a: String and a > 0 { \"pos:\" + (a * 2).toText() } else { \"other\" };\n" +
+"    res2 := if a: (String | Int) and b: String { res1 + \":\" + b } else { res1 + \":no\" };\n" +
+"    if not a: Int or a > 100 { res2 + \"!\" } else { res2 }\n" +
+"};\n" +
+"earlyExit := fn(v: Val): String {\n" +
+"    if not v: String {\n" +
+"        if v: Int { return \"earlyInt:\" + (v + 10).toText(); }\n" +
+"        return \"earlyFloat:\" + v.toText();\n" +
+"    }\n" +
+"    \"tailStr:\" + v\n" +
+"};\n" +
+"varMutReset := fn(): String {\n" +
+"    var x: Int | String = 5;\n" +
+"    var out := \"\";\n" +
+"    if x: Int {\n" +
+"        out = (x + 1).toText();\n" +
+"        x = \"reset\";\n" +
+"    }\n" +
+"    if x: String { out = out + \":\" + x; }\n" +
+"    out\n" +
+"};\n" +
+"mkVal := fn(k: Int): Val { if k == 0 { \"abc\" } else if k == 1 { 2.5 } else { 9 } };\n" +
+"io.outputLine(classify(\"hi\"));\n" +
+"io.outputLine(classify(1.5));\n" +
+"io.outputLine(classify(41));\n" +
+"io.outputLine(checkAndOr(5, \"ok\"));\n" +
+"io.outputLine(checkAndOr(\"z\", \"ok\"));\n" +
+"io.outputLine(earlyExit(\"yes\"));\n" +
+"io.outputLine(earlyExit(7));\n" +
+"io.outputLine(varMutReset());\n" +
+"io.outputLine(mkVal(0): String);\n" +
+"io.outputLine(mkVal(2): (Float | Int));\n" +
+"io.outputLine(mkVal(0): Int);\n",
+"S:2\nF:1.5\nI:42\npos:10:ok\nother:ok!\ntailStr:yes\nearlyInt:17\n6:reset\ntrue\ntrue\nfalse\n");
+
+/* 3. match remaining-subject narrowing (_ and value) and if x: T := expr pattern binding. */
+runAll("union-match-and-if-pattern",
+"io := import \"core/io\";\n" +
+"Val := alias String | Float | Int | Bool;\n" +
+"handleNum := fn(n: Float | Int): String {\n" +
+"    if n: Int { \"int(\" + n.toText() + \")\" } else { \"flt(\" + n.toText() + \")\" }\n" +
+"};\n" +
+"runMatch := fn(v: Val): String {\n" +
+"    match v {\n" +
+"        : String { \"str:\" + v }\n" +
+"        : Bool { if v { \"bool:T\" } else { \"bool:F\" } }\n" +
+"        _ { handleNum(v) + \"/\" + handleNum(_) }\n" +
+"    }\n" +
+"};\n" +
+"guardMatch := fn(v: Int | String): String {\n" +
+"    match v {\n" +
+"        n: Int if n > 10 { \"big:\" + n.toText() }\n" +
+"        : String or : Int { \"small\" }\n" +
+"    }\n" +
+"};\n" +
+"mkUnion := fn(f: Bool): Int | String { if f { \"patStr\" } else { 12 } };\n" +
+"io.outputLine(runMatch(\"hi\"));\n" +
+"io.outputLine(runMatch(true));\n" +
+"io.outputLine(runMatch(5));\n" +
+"io.outputLine(runMatch(3.5));\n" +
+"io.outputLine(guardMatch(20));\n" +
+"io.outputLine(guardMatch(3));\n" +
+"io.outputLine(guardMatch(\"abc\"));\n" +
+"if s: String := mkUnion(true) and s.length() == 6 {\n" +
+"    io.outputLine(\"matched:\" + s);\n" +
+"}\n" +
+"if n: Int := mkUnion(false) {\n" +
+"    io.outputLine(n + 8);\n" +
+"}\n",
+"str:hi\nbool:T\nint(5)/int(5)\nflt(3.5)/flt(3.5)\nbig:20\nsmall\nsmall\nmatched:patStr\n20\n");
+
+/* 4. Result<T, E>, T! shorthand (core/error.Error + ToError), .ok/.err, implicit success lifting, Unit!, widening, equality, zero init. */
+runAll("fallibles-result-error-toerror-unit",
+"io := import \"core/io\";\n" +
+"errs := import \"core/error\";\n" +
+"\n" +
+"ParseErr := enum { Empty; BadSyntax(String); }\n" +
+"impl errs.ToError for ParseErr {\n" +
+"    toError := fn(self: ParseErr): errs.Error {\n" +
+"        match self {\n" +
+"            .Empty { errs.Error.new(\"Error\", \"empty input\") }\n" +
+"            .BadSyntax(msg) { errs.Error.withCode(\"ParseErr\", msg, 400) }\n" +
+"        }\n" +
+"    };\n" +
+"}\n" +
+"\n" +
+"parsePos := fn(s: String): Int ! ParseErr {\n" +
+"    if s == \"\" { return .err(.Empty); }\n" +
+"    if s == \"bad\" { return .err(.BadSyntax(\"oops\")); }\n" +
+"    42\n" +
+"};\n" +
+"parseGeneral := fn(s: String): Int! {\n" +
+"    if s == \"raw\" { return .err(errs.Error { message = \"rawerr\" }); }\n" +
+"    v := parsePos(s)!;\n" +
+"    v + 1\n" +
+"};\n" +
+"checkNonEmpty := fn(s: String): Unit! {\n" +
+"    if s == \"\" { return .err(ParseErr.Empty); }\n" +
+"    if s == \"ret\" { return; }\n" +
+"};\n" +
+"checkUnitErr := fn(fail: Bool): Unit ! Unit {\n" +
+"    if fail { return .err; }\n" +
+"    return .ok;\n" +
+"};\n" +
+"\n" +
+"z: Int ! ParseErr;\n" +
+"zCmp: Int ! String;\n" +
+"w: (Int | String) ! (ParseErr | Bool) = z;\n" +
+"io.outputLine(zCmp == .ok(0));\n" +
+"io.outputLine(match z { .ok(v) { v.toText() } .err(e) { \"err\" } });\n" +
+"io.outputLine(match w { .ok(v) { if v: Int { v.toText() } else { v } } .err(e) { \"err\" } });\n" +
+"io.outputLine(match parseGeneral(\"ok\") { .ok(n) { n.toText() } .err(e) { e.format() } });\n" +
+"io.outputLine(match parseGeneral(\"\") { .ok(n) { n.toText() } .err(e) { e.format() } });\n" +
+"io.outputLine(match parseGeneral(\"bad\") { .ok(n) { n.toText() } .err(e) { e.format() } });\n" +
+"io.outputLine(match parseGeneral(\"raw\") { .ok(n) { n.toText() } .err(e) { e.format() } });\n" +
+"if .ok := checkNonEmpty(\"ok\") { io.outputLine(\"u_ok\"); }\n" +
+"if .ok := checkNonEmpty(\"ret\") { io.outputLine(\"u_ret\"); }\n" +
+"if .err(e) := checkNonEmpty(\"\") { io.outputLine(\"u_err:\" + e.message); }\n" +
+"if .err := checkUnitErr(true) { io.outputLine(\"unit_err\"); }\n" +
+"if .ok := checkUnitErr(false) { io.outputLine(\"unit_ok\"); }\n",
+"true\n0\n0\n43\nError: empty input\nParseErr(400): oops\nError: rawerr\nu_ok\nu_ret\nu_err:empty input\nunit_err\nunit_ok\n");
+
+/* 5. Postfix ! chains, closures, finally + owned locals drop on propagation error, and else(err)/else recovery. */
+runAll("postfix-bang-unwind-closure-and-else",
+"io := import \"core/io\";\n" +
+"errs := import \"core/error\";\n" +
+"\n" +
+"User := record { name: String; tags: List<String>; }\n" +
+"loadUser := fn(ok: Bool): User! {\n" +
+"    if not ok { return .err(errs.Error.new(\"Error\", \"missing\")); }\n" +
+"    User { name = \"Ada\", tags = [\"a\", \"b\"] }\n" +
+"};\n" +
+"getFirstTag := fn(ok: Bool): String! {\n" +
+"    owned := \"local_\" + \"buf\";\n" +
+"    mut xs := [owned, \"extra\"];\n" +
+"    var finLog := \"clean\";\n" +
+"    res := do {\n" +
+"        u := loadUser(ok)!;\n" +
+"        xs[0] + \":\" + u.name + \":\" + u.tags.length().toText()\n" +
+"    } finally {\n" +
+"        finLog = finLog + \"_ran\";\n" +
+"        io.outputLine(finLog);\n" +
+"    };\n" +
+"    res\n" +
+"};\n" +
+"stepVal := fn(n: Int): Int ! String {\n" +
+"    if n < 0 { return .err(\"neg\"); }\n" +
+"    n * 10\n" +
+"};\n" +
+"recoverSame := fn(n: Int): Int { stepVal(n) else(e) { 0 - e.length() } };\n" +
+"recoverUnion := fn(n: Int): Int | String { stepVal(n) else(e) { \"err:\" + e } };\n" +
+"recoverExit := fn(n: Int): Int {\n" +
+"    owned := \"exit_\" + \"str\";\n" +
+"    v := stepVal(n) else(e) { return 0 - owned.length(); };\n" +
+"    v + owned.length()\n" +
+"};\n" +
+"\n" +
+"io.outputLine(match getFirstTag(true) { .ok(s) { s } .err(e) { e.message } });\n" +
+"io.outputLine(match getFirstTag(false) { .ok(s) { s } .err(e) { e.message } });\n" +
+"closer := fn(x: Int): Int ! String {\n" +
+"    a := stepVal(x)!;\n" +
+"    b := stepVal(x + 1)!;\n" +
+"    a + b\n" +
+"};\n" +
+"io.outputLine(match closer(2) { .ok(v) { v.toText() } .err(e) { e } });\n" +
+"io.outputLine(match closer(-1) { .ok(v) { v.toText() } .err(e) { e } });\n" +
+"io.outputLine(recoverSame(3));\n" +
+"io.outputLine(recoverSame(-5));\n" +
+"io.outputLine(recoverUnion(-2));\n" +
+"io.outputLine(recoverExit(3));\n" +
+"io.outputLine(recoverExit(-1));\n",
+"clean_ran\nlocal_buf:Ada:2\nclean_ran\nmissing\n50\nneg\n30\n-3\nerr:neg\n38\n-8\n");
+
+/* 6. Compile-time rejection matrix (22 checks across TS + C11). */
+expectRejectBoth("reject-union-contextual-zero-decl",
+"x: Int | String = 0;\n",
+"ambiguous 0 initializer");
+
+expectRejectBoth("reject-union-contextual-zero-field",
+"Holder := record { v: Int | String; }\n" +
+"h := Holder { v = 0 };\n",
+"ambiguous 0 initializer");
+
+expectRejectBoth("reject-union-unchecked-narrowing",
+"x: Int | String = \"hi\";\n" +
+"n: Int = x;\n",
+"cannot initialize Int with");
+
+expectRejectBoth("reject-union-match-nonexhaustive",
+"f := fn(x: Int | String): Int { match x { n: Int { n } } };\n",
+"match requires an exhaustive fallback arm");
+
+expectRejectBoth("reject-union-match-unreachable-after-all-covered",
+"f := fn(x: Int | String): Int { match x { n: Int { n } s: String { s.length() } _ { 0 } } };\n",
+"unreachable match arm");
+
+expectRejectBoth("reject-union-match-disjoint-type",
+"f := fn(x: Int | String): Int { match x { b: Bool { 1 } _ { 0 } } };\n",
+"no common member");
+
+expectRejectBoth("reject-result-match-nonexhaustive",
+"f := fn(r: Int ! String): Int { match r { .ok(n) { n } } };\n",
+"match requires an exhaustive fallback arm");
+
+expectRejectBoth("reject-type-test-never",
+"f := fn(x: Int | String): Bool { return x: Never; };\n",
+"unsupported type test type Never");
+
+expectRejectBoth("reject-result-invalid-dot-case",
+"f := fn(): Int ! String { .bad(1) };\n",
+"type Int ! String has no static operation");
+
+expectRejectBoth("reject-result-unit-ok-with-payload",
+"f := fn(): Unit ! String { .ok(1) };\n",
+"takes no payload arguments");
+
+expectRejectBoth("reject-else-err-binding-unit-err",
+"mk := fn(): Int ! Unit { .ok(1) };\n" +
+"f := fn(): Int { mk() else(e) { 0 } };\n",
+"Result error type is Unit");
+
+expectRejectBoth("reject-postfix-bang-non-result",
+"f := fn(): Int { 42! };\n",
+"postfix ! requires a Result value");
+
+expectRejectBoth("reject-postfix-bang-outside-fn",
+"mk := fn(): Int ! String { 1 };\n" +
+"x := mk()!;\n",
+"outside a fallible function");
+
+expectRejectBoth("reject-postfix-bang-non-fallible-fn",
+"mk := fn(): Int ! String { 1 };\n" +
+"f := fn(): Int { mk()! };\n",
+"enclosing function to return a fallible type");
+
+expectRejectBoth("reject-postfix-bang-in-finally",
+"mk := fn(): Int ! String { 1 };\n" +
+"f := fn(): Int ! String {\n" +
+"    do { 1 } finally { _ := mk()!; }\n" +
+"};\n",
+"cannot propagate error out of finally");
+
+expectRejectBoth("reject-postfix-bang-incompatible-error",
+"mk := fn(): Int ! Bool { .err(true) };\n" +
+"f := fn(): Int ! String { mk()! };\n",
+"cannot propagate into function error type");
+
+expectRejectBoth("reject-if-typed-bind-on-non-union",
+"if x: Int := 42 { }\n",
+"typed binding pattern in if requires a destructuring pattern");
+
+expectRejectBoth("reject-distinct-over-union",
+"Bad := distinct (Int | String);\n",
+"cannot define distinct over union");
+
+expectRejectBoth("reject-result-var-rewrapping-wrong-err",
+"mk := fn(): Int ! String { .err(42) };\n",
+"expected String, got Int");
+
+expectRejectBoth("reject-non-unit-result-missing-return",
+"f := fn(): Int ! String { x := 1; };\n",
+"must return");
+
+expectRejectBoth("reject-result-unchecked-unwrap-assign",
+"mk := fn(): Int ! String { 1 };\n" +
+"f := fn(): Int { mk() };\n",
+"cannot return Int ! String from function");
+
+expectRejectBoth("reject-result-if-else-incompatible-fallback",
+"mk := fn(): Int ! String { .err(\"e\") };\n" +
+"f := fn(): Int { mk() else { \"bad\" } };\n",
+"cannot return Int | String");
+

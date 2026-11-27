@@ -108,8 +108,114 @@ pub compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
     if operator == "==" { left == right } else { left =!= right }
 };
 
+/** Monotonic suffix counter for C11 union/result conversion temporaries. */
+var cUnionTmpSeq := 0;
+
+/** Returns true when `kind` supports `==` / `=!=` value comparison (including unions/results of comparable scalars). */
+isEqualityComparableKind := fn(kind: String): Bool {
+    base := types.distinctBaseKind(kind);
+    if numeric.isNumericKind(base) or base == ir.VALUE_KIND_STRING or base == ir.VALUE_KIND_BOOL or base == ir.VALUE_KIND_UNIT or
+    (types.isEnumKind(base) and not types.isPayloadEnumKind(base)) {
+        return true;
+    }
+    if types.isUnionKind(base) {
+        loop types.unionMembers(base) as m {
+            if not self(m) { return false; }
+        }
+        return true;
+    }
+    if types.isResultKind(base) {
+        return self(types.resultOkKind(base)) and self(types.resultErrKind(base));
+    }
+    false
+};
+
+/** Emits a TS or C11 `==` / `=!=` expression for two union or result expressions of identical canonical `kind`. */
+unionOrResultEqExpr := fn(target: String, kind: String, leftCode: String, rightCode: String, negate: Bool): String {
+    if target == ir.TARGET_C {
+        tag := types.cStructTag(kind);
+        if tag == "" { return if negate { "true" } else { "false" }; }
+        if leftCode.startsWithAt(0, "/*@CBLK:") or rightCode.startsWithAt(0, "/*@CBLK:") {
+            cUnionTmpSeq = cUnionTmpSeq + 1;
+            sid := cUnionTmpSeq.toText();
+            lVar := "lt_eql_" + sid;
+            rVar := "lt_eqr_" + sid;
+            resVar := "lt_eqb_" + sid;
+            cT := types.cValueType(kind);
+            lInit := if leftCode.startsWithAt(0, "/*@CBLK:") { cUnwrapIntoVar(lVar, kind, leftCode) } else { lVar + " = " + leftCode + ";" };
+            rInit := if rightCode.startsWithAt(0, "/*@CBLK:") { cUnwrapIntoVar(rVar, kind, rightCode) } else { rVar + " = " + rightCode + ";" };
+            dropFn := types.cDropFnForKind(kind);
+            lDrop := if dropFn =!= "" and (leftCode.startsWithAt(0, "/*@CBLK:") or isCFreshOwnedExpr(leftCode)) { " " + dropFn + "(&" + lVar + ");" } else { "" };
+            rDrop := if dropFn =!= "" and (rightCode.startsWithAt(0, "/*@CBLK:") or isCFreshOwnedExpr(rightCode)) { " " + dropFn + "(&" + rVar + ");" } else { "" };
+            eqCall := tag + "_eq(" + lVar + ", " + rVar + ")";
+            resAssign := resVar + " = " + (if negate { "!" + eqCall } else { eqCall }) + ";";
+            return "/*@CBLK:" + resVar + "@*/bool " + resVar + "; { " + cT + " " + lVar + "; " + cT + " " + rVar + "; " + lInit + " " + rInit + " " + resAssign + lDrop + rDrop + " }";
+        }
+        rawEq := tag + "_eq(" + leftCode + ", " + rightCode + ")";
+        return if negate { "(!" + rawEq + ")" } else { rawEq };
+    }
+    tsT := types.tsFunctionType(kind);
+    if types.isUnionKind(kind) {
+        mems := types.unionMembers(kind);
+        mut casesBuf: tb.TextBuilder;
+        var ui := 0;
+        loop ui < mems.length() {
+            m := mems[ui];
+            mut casesBuf.append("case ");
+            mut casesBuf.append(ui.toText());
+            mut casesBuf.append(": return ");
+            if m == ir.VALUE_KIND_UNIT {
+                mut casesBuf.append("true");
+            } else if types.isUnionKind(m) or types.isResultKind(m) {
+                mut casesBuf.append(self(target, m, "(a as { _u: " + ui.toText() + "; _v: " + types.tsFunctionType(m) + " })._v", "(b as { _u: " + ui.toText() + "; _v: " + types.tsFunctionType(m) + " })._v", false));
+            } else {
+                mut casesBuf.append("((a as { _u: " + ui.toText() + "; _v: " + types.tsFunctionType(m) + " })._v === (b as { _u: " + ui.toText() + "; _v: " + types.tsFunctionType(m) + " })._v)");
+            }
+            mut casesBuf.append("; ");
+            ui = ui + 1;
+        }
+        tsEq := "((a: " + tsT + ", b: " + tsT + "): boolean => { if (a._u !== b._u) return false; switch (a._u) { " + casesBuf.build() + "default: return false; } })(" + leftCode + ", " + rightCode + ")";
+        return if negate { "(!" + tsEq + ")" } else { tsEq };
+    }
+    okK := types.resultOkKind(kind);
+    errK := types.resultErrKind(kind);
+    okEq := if okK == ir.VALUE_KIND_UNIT {
+        "true"
+    } else if types.isUnionKind(okK) or types.isResultKind(okK) {
+        self(target, okK, "(a as { _r: 0; _v: " + types.tsFunctionType(okK) + " })._v", "(b as { _r: 0; _v: " + types.tsFunctionType(okK) + " })._v", false)
+    } else {
+        "((a as { _r: 0; _v: " + types.tsFunctionType(okK) + " })._v === (b as { _r: 0; _v: " + types.tsFunctionType(okK) + " })._v)"
+    };
+    errEq := if errK == ir.VALUE_KIND_UNIT {
+        "true"
+    } else if types.isUnionKind(errK) or types.isResultKind(errK) {
+        self(target, errK, "(a as { _r: 1; _e: " + types.tsFunctionType(errK) + " })._e", "(b as { _r: 1; _e: " + types.tsFunctionType(errK) + " })._e", false)
+    } else {
+        "((a as { _r: 1; _e: " + types.tsFunctionType(errK) + " })._e === (b as { _r: 1; _e: " + types.tsFunctionType(errK) + " })._e)"
+    };
+    tsResEq := "((a: " + tsT + ", b: " + tsT + "): boolean => a._r === b._r && (a._r === 0 ? " + okEq + " : " + errEq + "))(" + leftCode + ", " + rightCode + ")";
+    if negate { "(!" + tsResEq + ")" } else { tsResEq }
+};
+
 /** Checks and folds or lowers one comparison expression at operator offset `at`, then returns its Bool parsed value. */
 pub compareParsed := fn(target: String, source: String, at: Int, operator: String, left: Parsed, right: Parsed, prefix: String): Parsed {
+    if target == ir.TARGET_C and not (types.isUnionKind(left.kind) or types.isResultKind(left.kind) or types.isUnionKind(right.kind) or types.isResultKind(right.kind)) and (left.code.startsWithAt(0, "/*@CBLK:") or right.code.startsWithAt(0, "/*@CBLK:")) {
+        cUnionTmpSeq = cUnionTmpSeq + 1;
+        sid := cUnionTmpSeq.toText();
+        lVar := "lt_cl_" + sid;
+        rVar := "lt_cr_" + sid;
+        resVar := "lt_cmp_" + sid;
+        lSyn: Parsed = (kind = left.kind, code = lVar, intValue = left.intValue, textValue = left.textValue, constant = false, next = left.next);
+        rSyn: Parsed = (kind = right.kind, code = rVar, intValue = right.intValue, textValue = right.textValue, constant = false, next = right.next);
+        inner := self(target, source, at, operator, lSyn, rSyn, prefix);
+        lInit := if left.code.startsWithAt(0, "/*@CBLK:") { cUnwrapIntoVar(lVar, left.kind, left.code) } else { lVar + " = " + left.code + ";" };
+        rInit := if right.code.startsWithAt(0, "/*@CBLK:") { cUnwrapIntoVar(rVar, right.kind, right.code) } else { rVar + " = " + right.code + ";" };
+        lDropFn := types.cDropFnForKind(left.kind);
+        rDropFn := types.cDropFnForKind(right.kind);
+        lDrop := if lDropFn =!= "" and (left.code.startsWithAt(0, "/*@CBLK:") or isCFreshOwnedExpr(left.code)) { " " + lDropFn + "(&" + lVar + ");" } else { "" };
+        rDrop := if rDropFn =!= "" and (right.code.startsWithAt(0, "/*@CBLK:") or isCFreshOwnedExpr(right.code)) { " " + rDropFn + "(&" + rVar + ");" } else { "" };
+        return boolParsed("/*@CBLK:" + resVar + "@*/bool " + resVar + "; { " + types.cValueType(left.kind) + " " + lVar + "; " + types.cValueType(right.kind) + " " + rVar + "; " + lInit + " " + rInit + " " + resVar + " = " + inner.code + ";" + lDrop + rDrop + " }", false, false, right.next);
+    }
     if numeric.isSignedIntKind(left.kind) and numeric.isSignedIntKind(right.kind) {
         if left.constant and right.constant {
             value := compareIntegers(operator, left.intValue, right.intValue);
@@ -136,6 +242,26 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
         return boolParsed(ir.targetComparisonChainCode(target, codes, kinds, operators, 1, at), false, false, right.next);
     }
     if left.kind =!= right.kind {
+        if (types.isUnionKind(left.kind) or types.isResultKind(left.kind)) and types.isCompatibleKind(left.kind, right.kind) {
+            if operator =!= "==" and operator =!= "=!=" {
+                syntax.failAt(source, at, prefix, "operator " + operator + " requires Int operands");
+            }
+            if not isEqualityComparableKind(left.kind) {
+                syntax.failAt(source, at, prefix, "cannot compare " + types.displayKind(left.kind) + " values containing non-comparable members");
+            }
+            promotedR := assignReadOnlyArgCode(target, left.kind, right.kind, right.code);
+            return boolParsed(unionOrResultEqExpr(target, left.kind, left.code, promotedR, operator == "=!="), false, false, right.next);
+        }
+        if (types.isUnionKind(right.kind) or types.isResultKind(right.kind)) and types.isCompatibleKind(right.kind, left.kind) {
+            if operator =!= "==" and operator =!= "=!=" {
+                syntax.failAt(source, at, prefix, "operator " + operator + " requires Int operands");
+            }
+            if not isEqualityComparableKind(right.kind) {
+                syntax.failAt(source, at, prefix, "cannot compare " + types.displayKind(right.kind) + " values containing non-comparable members");
+            }
+            promotedL := assignReadOnlyArgCode(target, right.kind, left.kind, left.code);
+            return boolParsed(unionOrResultEqExpr(target, right.kind, promotedL, right.code, operator == "=!="), false, false, right.next);
+        }
         syntax.failAt(source, at, prefix, "cannot compare " + types.displayKind(left.kind) + " and " + types.displayKind(right.kind));
     }
     if types.isDistinctKind(left.kind) {
@@ -186,6 +312,15 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     }
     if left.kind == ir.VALUE_KIND_NEVER {
         syntax.failAt(source, at, prefix, "cannot compare Never values");
+    }
+    if types.isUnionKind(left.kind) or types.isResultKind(left.kind) {
+        if operator =!= "==" and operator =!= "=!=" {
+            syntax.failAt(source, at, prefix, "operator " + operator + " requires Int operands");
+        }
+        if not isEqualityComparableKind(left.kind) {
+            syntax.failAt(source, at, prefix, "cannot compare " + types.displayKind(left.kind) + " values containing non-comparable members");
+        }
+        return boolParsed(unionOrResultEqExpr(target, left.kind, left.code, right.code, operator == "=!="), false, false, right.next);
     }
     if types.isPayloadEnumKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare payload-bearing enum values; use match");
@@ -423,7 +558,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             code
         }
     }
-    else if target == ir.TARGET_C and (types.isTupleKind(kind) or types.isRecordKind(kind) or types.isPayloadEnumKind(kind)) and types.cTypeNeedsDrop(kind) {
+    else if target == ir.TARGET_C and (types.isTupleKind(kind) or types.isRecordKind(kind) or types.isPayloadEnumKind(kind) or types.isUnionKind(kind) or types.isResultKind(kind)) and types.cTypeNeedsDrop(kind) {
         tag := types.cStructTag(kind);
         if tag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, tag + "_copy(") and not code.startsWithAt(0, tag + "_move(") {
             tag + "_copy(" + code + ")"
@@ -431,7 +566,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             code
         }
     }
-    else if target == ir.TARGET_TS and (types.isTupleKind(kind) or types.isRecordKind(kind)) and types.cTypeHasListField(kind) {
+    else if target == ir.TARGET_TS and (types.isTupleKind(kind) or types.isRecordKind(kind) or types.isUnionKind(kind) or types.isResultKind(kind)) and types.cTypeHasListField(kind) {
         if not code.startsWithAt(0, "(((lite$rc:") and not code.startsWithAt(0, "{ ") and code =!= "{}" {
             tsDeepCloneValueCode(kind, code)
         } else {
@@ -483,6 +618,41 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
         }
         return "(((lite$soac: " + types.tsFunctionType(kind) + ") => ({ " + colEntries.join(", ") + " }))(" + expr + "))";
     }
+    if types.isUnionKind(kind) {
+        mems := types.unionMembers(kind);
+        mut casesBuf: tb.TextBuilder;
+        var hasClone := false;
+        var ui := 0;
+        loop ui < mems.length() {
+            m := mems[ui];
+            if m =!= ir.VALUE_KIND_UNIT {
+                cloned := self(m, "lite$uv._v");
+                if cloned =!= "lite$uv._v" {
+                    hasClone = true;
+                    mut casesBuf.append("case ");
+                    mut casesBuf.append(ui.toText());
+                    mut casesBuf.append(": return { _u: ");
+                    mut casesBuf.append(ui.toText());
+                    mut casesBuf.append(" as const, _v: ");
+                    mut casesBuf.append(cloned);
+                    mut casesBuf.append(" }; ");
+                }
+            }
+            ui = ui + 1;
+        }
+        if not hasClone { return expr; }
+        return "(((lite$uv: " + types.tsFunctionType(kind) + "): " + types.tsFunctionType(kind) + " => { switch (lite$uv._u) { " + casesBuf.build() + "default: return lite$uv; } })(" + expr + "))";
+    }
+    if types.isResultKind(kind) {
+        okK := types.resultOkKind(kind);
+        errK := types.resultErrKind(kind);
+        okCloned := if okK == ir.VALUE_KIND_UNIT { "lite$rv._v" } else { self(okK, "lite$rv._v") };
+        errCloned := if errK == ir.VALUE_KIND_UNIT { "lite$rv._e" } else { self(errK, "lite$rv._e") };
+        if okCloned == "lite$rv._v" and errCloned == "lite$rv._e" { return expr; }
+        okBranch := if okCloned == "lite$rv._v" { "lite$rv" } else { "{ _r: 0 as const, _v: " + okCloned + " }" };
+        errBranch := if errCloned == "lite$rv._e" { "lite$rv" } else { "{ _r: 1 as const, _e: " + errCloned + " }" };
+        return "(((lite$rv: " + types.tsFunctionType(kind) + "): " + types.tsFunctionType(kind) + " => (lite$rv._r === 0 ? " + okBranch + " : " + errBranch + "))(" + expr + "))";
+    }
     if types.isRecordKind(kind) or types.isTupleKind(kind) {
         isRec := types.isRecordKind(kind);
         cnt := if isRec { types.recordComponentCount(kind) } else { types.tupleComponentCount(kind) };
@@ -508,10 +678,197 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
     expr
 };
 
-/** Converts compatible tuples or widening integer/float values on assignment/call/return, or copies lists when needed; `Never` passes through unchanged. */
-pub assignValueCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
+/** Converts single/narrower union or success/result values into `expectedKind`, preserving or copying ownership as requested by `copyOwned`. */
+convertUnionOrResultCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String, copyOwned: Bool): String {
+    if expectedKind == actualKind {
+        return if copyOwned { copiedValueCode(target, expectedKind, actualCode) } else { actualCode };
+    }
+    if types.isUnionKind(expectedKind) {
+        if not types.isUnionKind(actualKind) {
+            idx := types.unionMemberIndex(expectedKind, actualKind);
+            if idx < 0 { return actualCode; }
+            if target == ir.TARGET_C {
+                expTag := types.cStructTag(expectedKind);
+                if actualKind == ir.VALUE_KIND_UNIT {
+                    return if actualCode == "0" or actualCode == "/*@T:Unit@*/0" {
+                        "/*@T:" + expectedKind + "@*/" + expTag + "_mk_" + idx.toText() + "()"
+                    } else {
+                        "/*@T:" + expectedKind + "@*/((void)(" + actualCode + "), " + expTag + "_mk_" + idx.toText() + "())"
+                    };
+                }
+                vCode := if copyOwned { copiedValueCode(target, actualKind, actualCode) } else { actualCode };
+                if vCode.startsWithAt(0, "/*@CBLK:") {
+                    cUnionTmpSeq = cUnionTmpSeq + 1;
+                    sid := cUnionTmpSeq.toText();
+                    pVar := "lt_up_" + sid;
+                    dVar := "lt_ud_" + sid;
+                    return "/*@CBLK:" + dVar + "@*/" + expTag + " " + dVar + "; { " + types.cValueType(actualKind) + " " + pVar + "; " + cUnwrapIntoVar(pVar, actualKind, vCode) + " " + dVar + " = /*@T:" + expectedKind + "@*/" + expTag + "_mk_" + idx.toText() + "(" + pVar + "); }";
+                }
+                return "/*@T:" + expectedKind + "@*/" + expTag + "_mk_" + idx.toText() + "(" + vCode + ")";
+            }
+            tsT := types.tsFunctionType(expectedKind);
+            if actualKind == ir.VALUE_KIND_UNIT {
+                return "((() => { void (" + actualCode + "); return ({ _u: " + idx.toText() + " as const } as " + tsT + "); })())";
+            }
+            vCode := if copyOwned { copiedValueCode(target, actualKind, actualCode) } else { actualCode };
+            return "({ _u: " + idx.toText() + " as const, _v: " + vCode + " } as " + tsT + ")";
+        }
+        actMems := types.unionMembers(actualKind);
+        if target == ir.TARGET_C {
+            expTag := types.cStructTag(expectedKind);
+            actTag := types.cStructTag(actualKind);
+            cUnionTmpSeq = cUnionTmpSeq + 1;
+            sid := cUnionTmpSeq.toText();
+            srcVar := "lt_uw_s_" + sid;
+            dstVar := "lt_uw_d_" + sid;
+            isFresh := isCFreshOwnedExpr(actualCode);
+            mut swBuf: tb.TextBuilder;
+            var ai := 0;
+            loop ai < actMems.length() {
+                am := actMems[ai];
+                ti := types.unionMemberIndex(expectedKind, am);
+                if ti >= 0 {
+                    mut swBuf.append("case ");
+                    mut swBuf.append(ai.toText());
+                    mut swBuf.append(": ");
+                    mut swBuf.append(dstVar);
+                    mut swBuf.append(" = ");
+                    mut swBuf.append(expTag);
+                    mut swBuf.append("_mk_");
+                    mut swBuf.append(ti.toText());
+                    if am == ir.VALUE_KIND_UNIT {
+                        mut swBuf.append("(); ");
+                    } else {
+                        fExpr := srcVar + ".u.m" + ai.toText();
+                        argExpr := if copyOwned and not isFresh { copiedValueCode(target, am, fExpr) } else { fExpr };
+                        mut swBuf.append("(");
+                        mut swBuf.append(argExpr);
+                        mut swBuf.append("); ");
+                    }
+                    mut swBuf.append("break; ");
+                }
+                ai = ai + 1;
+            }
+            srcUnwrap := if actualCode.startsWithAt(0, "/*@CBLK:") { cUnwrapIntoVar(srcVar, actualKind, actualCode) } else { srcVar + " = " + actualCode + ";" };
+            return "/*@CBLK:" + dstVar + "@*/" + expTag + " " + dstVar + "; { " + actTag + " " + srcVar + "; " + srcUnwrap + " switch (" + srcVar + ".tag) { " + swBuf.build() + "default: " + dstVar + " = (" + expTag + "){ .tag = -1, .u = { ._empty = 0 } }; break; } }";
+        }
+        tsAct := types.tsFunctionType(actualKind);
+        tsExp := types.tsFunctionType(expectedKind);
+        mut casesBuf: tb.TextBuilder;
+        var ai := 0;
+        loop ai < actMems.length() {
+            am := actMems[ai];
+            ti := types.unionMemberIndex(expectedKind, am);
+            if ti >= 0 {
+                mut casesBuf.append("case ");
+                mut casesBuf.append(ai.toText());
+                mut casesBuf.append(": return { _u: ");
+                mut casesBuf.append(ti.toText());
+                if am == ir.VALUE_KIND_UNIT {
+                    mut casesBuf.append(" as const }; ");
+                } else {
+                    rawV := "(lite$uw as { _u: " + ai.toText() + "; _v: " + types.tsFunctionType(am) + " })._v";
+                    vCode := if copyOwned { copiedValueCode(target, am, rawV) } else { rawV };
+                    mut casesBuf.append(" as const, _v: ");
+                    mut casesBuf.append(vCode);
+                    mut casesBuf.append(" }; ");
+                }
+            }
+            ai = ai + 1;
+        }
+        return "((lite$uw: " + tsAct + "): " + tsExp + " => { switch (lite$uw._u) { " + casesBuf.build() + "default: return lite$uw as unknown as " + tsExp + "; } })(" + actualCode + ")";
+    }
+    if types.isResultKind(expectedKind) {
+        okExp := types.resultOkKind(expectedKind);
+        errExp := types.resultErrKind(expectedKind);
+        if not types.isResultKind(actualKind) {
+            if target == ir.TARGET_C {
+                expTag := types.cStructTag(expectedKind);
+                if okExp == ir.VALUE_KIND_UNIT {
+                    return if actualCode == "0" or actualCode == "/*@T:Unit@*/0" {
+                        "/*@T:" + expectedKind + "@*/" + expTag + "_ok()"
+                    } else {
+                        "/*@T:" + expectedKind + "@*/((void)(" + actualCode + "), " + expTag + "_ok())"
+                    };
+                }
+                vCode := if copyOwned { convertValueWithCopy(target, okExp, actualKind, actualCode, true) } else { convertValueWithCopy(target, okExp, actualKind, actualCode, false) };
+                if vCode.startsWithAt(0, "/*@CBLK:") {
+                    cUnionTmpSeq = cUnionTmpSeq + 1;
+                    sid := cUnionTmpSeq.toText();
+                    pVar := "lt_rp_" + sid;
+                    dVar := "lt_rd_" + sid;
+                    return "/*@CBLK:" + dVar + "@*/" + expTag + " " + dVar + "; { " + types.cValueType(okExp) + " " + pVar + "; " + cUnwrapIntoVar(pVar, okExp, vCode) + " " + dVar + " = /*@T:" + expectedKind + "@*/" + expTag + "_ok(" + pVar + "); }";
+                }
+                return "/*@T:" + expectedKind + "@*/" + expTag + "_ok(" + vCode + ")";
+            }
+            tsExp := types.tsFunctionType(expectedKind);
+            if okExp == ir.VALUE_KIND_UNIT {
+                return "((() => { void (" + actualCode + "); return ({ _r: 0 as const } as " + tsExp + "); })())";
+            }
+            vCode := convertValueWithCopy(target, okExp, actualKind, actualCode, copyOwned);
+            return "({ _r: 0 as const, _v: " + vCode + " } as " + tsExp + ")";
+        }
+        okAct := types.resultOkKind(actualKind);
+        errAct := types.resultErrKind(actualKind);
+        if target == ir.TARGET_C {
+            expTag := types.cStructTag(expectedKind);
+            actTag := types.cStructTag(actualKind);
+            cUnionTmpSeq = cUnionTmpSeq + 1;
+            sid := cUnionTmpSeq.toText();
+            srcVar := "lt_rw_s_" + sid;
+            dstVar := "lt_rw_d_" + sid;
+            isFresh := isCFreshOwnedExpr(actualCode);
+            okArg := if okExp == ir.VALUE_KIND_UNIT { "" } else {
+                rawOk := if copyOwned and not isFresh and types.cCopyFnForKind(okAct) =!= "" and okAct == okExp {
+                    types.cCopyFnForKind(okAct) + "(" + srcVar + ".u.ok)"
+                } else {
+                    convExpr := convertValueWithCopy(target, okExp, okAct, srcVar + ".u.ok", copyOwned and not isFresh);
+                    convExpr
+                };
+                rawOk
+            };
+            errArg := if errExp == ir.VALUE_KIND_UNIT { "" } else {
+                convertValueWithCopy(target, errExp, errAct, srcVar + ".u.err", copyOwned and not isFresh)
+            };
+            okAssign := if okArg.startsWithAt(0, "/*@CBLK:") {
+                okTmp := "lt_rw_ov_" + sid;
+                "{ " + types.cValueType(okExp) + " " + okTmp + "; " + cUnwrapIntoVar(okTmp, okExp, okArg) + " " + dstVar + " = " + expTag + "_ok(" + okTmp + "); }"
+            } else if okExp == ir.VALUE_KIND_UNIT {
+                dstVar + " = " + expTag + "_ok();"
+            } else {
+                dstVar + " = " + expTag + "_ok(" + okArg + ");"
+            };
+            errAssign := if errArg.startsWithAt(0, "/*@CBLK:") {
+                errTmp := "lt_rw_ev_" + sid;
+                "{ " + types.cValueType(errExp) + " " + errTmp + "; " + cUnwrapIntoVar(errTmp, errExp, errArg) + " " + dstVar + " = " + expTag + "_err(" + errTmp + "); }"
+            } else if errExp == ir.VALUE_KIND_UNIT {
+                dstVar + " = " + expTag + "_err();"
+            } else {
+                dstVar + " = " + expTag + "_err(" + errArg + ");"
+            };
+            srcResUnwrap := if actualCode.startsWithAt(0, "/*@CBLK:") { cUnwrapIntoVar(srcVar, actualKind, actualCode) } else { srcVar + " = " + actualCode + ";" };
+            return "/*@CBLK:" + dstVar + "@*/" + expTag + " " + dstVar + "; { " + actTag + " " + srcVar + "; " + srcResUnwrap + " if (" + srcVar + ".tag == 0) { " + okAssign + " } else if (" + srcVar + ".tag == 1) { " + errAssign + " } else { " + dstVar + " = (" + expTag + "){ .tag = -1, .u = { ._empty = 0 } }; } }";
+        }
+        tsAct := types.tsFunctionType(actualKind);
+        tsExp := types.tsFunctionType(expectedKind);
+        okConv := if okExp == ir.VALUE_KIND_UNIT { "{ _r: 0 as const }" } else { "{ _r: 0 as const, _v: " + convertValueWithCopy(target, okExp, okAct, "(lite$rw as { _r: 0; _v: " + types.tsFunctionType(okAct) + " })._v", copyOwned) + " }" };
+        errConv := if errExp == ir.VALUE_KIND_UNIT { "{ _r: 1 as const }" } else { "{ _r: 1 as const, _e: " + convertValueWithCopy(target, errExp, errAct, "(lite$rw as { _r: 1; _e: " + types.tsFunctionType(errAct) + " })._e", copyOwned) + " }" };
+        return "((lite$rw: " + tsAct + "): " + tsExp + " => (lite$rw._r === 0 ? " + okConv + " : " + errConv + "))(" + actualCode + ")";
+    }
+    actualCode
+};
+
+/** Narrows a wider union value (`srcUnionKind`) to a narrower sub-union (`dstUnionKind`), copying owned payloads when needed. */
+pub convertUnionNarrowCode := fn(target: String, dstUnionKind: String, srcUnionKind: String, srcCode: String): String {
+    convertUnionOrResultCode(target, dstUnionKind, srcUnionKind, srcCode, true)
+};
+
+/** Shared scalar/tuple/union/result conversion helper parameterized by ownership copy (`copyOwned`). */
+convertValueWithCopy := fn(target: String, expectedKind: String, actualKind: String, actualCode: String, copyOwned: Bool): String {
     if actualKind == ir.VALUE_KIND_NEVER {
         actualCode
+    } else if types.isUnionKind(expectedKind) or types.isResultKind(expectedKind) {
+        convertUnionOrResultCode(target, expectedKind, actualKind, actualCode, copyOwned)
     } else if expectedKind == ir.VALUE_KIND_FLOAT8 and actualKind =!= ir.VALUE_KIND_FLOAT8 and numeric.isNumericKind(actualKind) {
         ir.targetFloat8OperandCode(target, actualKind, actualCode)
     } else if expectedKind == ir.VALUE_KIND_FLOAT16 and actualKind =!= ir.VALUE_KIND_FLOAT16 and numeric.isNumericKind(actualKind) {
@@ -524,30 +881,21 @@ pub assignValueCode := fn(target: String, expectedKind: String, actualKind: Stri
         "((" + types.cValueType(expectedKind) + ")(" + actualCode + "))"
     } else if expectedKind =!= actualKind and types.tupleShapeMatches(expectedKind, actualKind) {
         types.convertTupleValueForTarget(target, expectedKind, actualKind, actualCode)
-    } else {
+    } else if copyOwned {
         copiedValueCode(target, expectedKind, actualCode)
+    } else {
+        actualCode
     }
 };
 
-/** Converts read-only call arguments without cloning (zero-copy immutable reference on both TS and C11; performs only scalar widening and tuple layout conversion). */
+/** Converts compatible tuples, unions, results, or widening numeric values on assignment/call/return, copying owned values when needed. */
+pub assignValueCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
+    convertValueWithCopy(target, expectedKind, actualKind, actualCode, true)
+};
+
+/** Converts read-only call arguments without cloning (zero-copy immutable reference on both TS and C11; performs only scalar widening, tuple layout, union/result wrapping). */
 pub assignReadOnlyArgCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String): String {
-    if actualKind == ir.VALUE_KIND_NEVER {
-        actualCode
-    } else if expectedKind == ir.VALUE_KIND_FLOAT8 and actualKind =!= ir.VALUE_KIND_FLOAT8 and numeric.isNumericKind(actualKind) {
-        ir.targetFloat8OperandCode(target, actualKind, actualCode)
-    } else if expectedKind == ir.VALUE_KIND_FLOAT16 and actualKind =!= ir.VALUE_KIND_FLOAT16 and numeric.isNumericKind(actualKind) {
-        ir.targetFloat16OperandCode(target, actualKind, actualCode)
-    } else if expectedKind == ir.VALUE_KIND_FLOAT32 and (numeric.isIntKind(actualKind) or actualKind == ir.VALUE_KIND_FLOAT8 or actualKind == ir.VALUE_KIND_FLOAT16) {
-        ir.targetFloat32OperandCode(target, actualKind, actualCode)
-    } else if expectedKind == ir.VALUE_KIND_FLOAT and (numeric.isIntKind(actualKind) or actualKind == ir.VALUE_KIND_FLOAT8 or actualKind == ir.VALUE_KIND_FLOAT16 or actualKind == ir.VALUE_KIND_FLOAT32) {
-        ir.targetFloatOperandCode(target, actualKind, actualCode)
-    } else if expectedKind =!= actualKind and numeric.isIntKind(expectedKind) and numeric.isIntKind(actualKind) and target == ir.TARGET_C {
-        "((" + types.cValueType(expectedKind) + ")(" + actualCode + "))"
-    } else if expectedKind =!= actualKind and types.tupleShapeMatches(expectedKind, actualKind) {
-        types.convertTupleValueForTarget(target, expectedKind, actualKind, actualCode)
-    } else {
-        actualCode
-    }
+    convertValueWithCopy(target, expectedKind, actualKind, actualCode, false)
 };
 
 /** Converts read-only call arguments, emitting a snapshot (C11 CoW refcount bump or TS copy) only when `needsSnapshot` is true. */
@@ -1110,6 +1458,37 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         }
         return (kind = kind, code = "({ " + cols.join(", ") + " } as " + types.tsFunctionType(kind) + ")", intValue = 0, textValue = "", constant = false, next = next);
     }
+    else if types.isUnionKind(kind) {
+        if target == ir.TARGET_C {
+            tag := types.cStructTag(kind);
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ .tag = -1, .u = { ._empty = 0 } })", intValue = 0, textValue = "", constant = false, next = next);
+        }
+        mem0 := types.unionMembers(kind)[0];
+        tsT := types.tsFunctionType(kind);
+        zCode := if mem0 == ir.VALUE_KIND_UNIT {
+            "({ _u: 0 as const } as " + tsT + ")"
+        } else {
+            "({ _u: 0 as const, _v: " + self(target, mem0, next).code + " } as " + tsT + ")"
+        };
+        (kind = kind, code = zCode, intValue = 0, textValue = "", constant = false, next = next)
+    }
+    else if types.isResultKind(kind) {
+        okK := types.resultOkKind(kind);
+        if target == ir.TARGET_C {
+            tag := types.cStructTag(kind);
+            if okK == ir.VALUE_KIND_UNIT {
+                return (kind = kind, code = "/*@T:" + kind + "@*/" + tag + "_ok()", intValue = 0, textValue = "", constant = false, next = next);
+            }
+            return (kind = kind, code = "/*@T:" + kind + "@*/" + tag + "_ok(" + self(target, okK, next).code + ")", intValue = 0, textValue = "", constant = false, next = next);
+        }
+        tsT := types.tsFunctionType(kind);
+        zCode := if okK == ir.VALUE_KIND_UNIT {
+            "({ _r: 0 as const } as " + tsT + ")"
+        } else {
+            "({ _r: 0 as const, _v: " + self(target, okK, next).code + " } as " + tsT + ")"
+        };
+        (kind = kind, code = zCode, intValue = 0, textValue = "", constant = false, next = next)
+    }
     else if types.isPayloadEnumKind(kind) {
         ps := types.enumCasePayloads(kind, 0);
         if target == ir.TARGET_C {
@@ -1510,6 +1889,9 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
                     cursor = cursor + 1;
                 }
             }
+        } else if ch == "/" and tryCode.startsWithAt(cursor, "/*") {
+            endC := tryCode.indexOf("*/", cursor + 2);
+            cursor = if endC >= 0 { endC + 2 } else { size };
         } else if ch == "g" and tryCode.startsWithAt(cursor, "goto ") and
         (cursor == 0 or not tryCode.at(cursor - 1).isNameContinue()) {
             lblStart := cursor + 5;
@@ -1541,6 +1923,9 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
                         else if s2 == sc { scan = scan + 1; break; }
                         else { scan = scan + 1; }
                     }
+                } else if sc == "/" and tryCode.startsWithAt(scan, "/*") {
+                    endC := tryCode.indexOf("*/", scan + 2);
+                    scan = if endC >= 0 { endC + 2 } else { size };
                 } else if sc == "(" or sc == "{" or sc == "[" {
                     depth = depth + 1; scan = scan + 1;
                 } else if sc == ")" or sc == "}" or sc == "]" {
@@ -1690,6 +2075,9 @@ pub cRewriteExitDrops := fn(bodyCode: String, retDropStmt: String, loopDropStmt:
                 else if fc == "/" and bodyCode.startsWithAt(cursor, "/*@CFN_END@*/") { fnDepth -= 1; cursor += 13; }
                 else { cursor += 1; }
             }
+        } else if ch == "/" and bodyCode.startsWithAt(cursor, "/*") {
+            endC := bodyCode.indexOf("*/", cursor + 2);
+            cursor = if endC >= 0 { endC + 2 } else { size };
         } else if ch == "{" {
             braceDepth = braceDepth + 1;
             cursor = cursor + 1;
@@ -1772,6 +2160,9 @@ pub cRewriteExitDrops := fn(bodyCode: String, retDropStmt: String, loopDropStmt:
                         else if s2 == sc { scan = scan + 1; break; }
                         else { scan = scan + 1; }
                     }
+                } else if sc == "/" and bodyCode.startsWithAt(scan, "/*") {
+                    endC := bodyCode.indexOf("*/", scan + 2);
+                    scan = if endC >= 0 { endC + 2 } else { size };
                 } else if sc == "(" or sc == "{" or sc == "[" {
                     depth = depth + 1; scan = scan + 1;
                 } else if sc == ")" or sc == "}" or sc == "]" {
@@ -1956,9 +2347,9 @@ pub blockCompletion := fn(kind: String, completed: Bool, branchesComplete: Bool,
     else { hasElse and branchesComplete and completed }
 };
 
-/** True when emitted target code contains a raw `lite$throwTransfer(` substring worth quote-aware inspection. */
+/** True when emitted target code contains a raw `lite$throwTransfer(` or `lite$throwProp(` substring worth quote-aware inspection. */
 pub codeHasRawTransfer := fn(code: String): Bool {
-    code =!= "" and code.indexOf("lite$throwTransfer(", 0) >= 0
+    code =!= "" and (code.indexOf("lite$throwTransfer(", 0) >= 0 or code.indexOf("lite$throwProp(", 0) >= 0)
 };
 
 /** True when `parsed` encodes Pass 1 exit markers in `textValue`. */
@@ -2212,7 +2603,7 @@ pub storageKind := fn(kind: String): String {
     match {
         types.isListKind(kind) or types.isArrayKind(kind) { "List" }
         types.isTupleKind(kind) { "Tuple" }
-        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isDynKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) { "Record" }
+        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isDynKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) or types.isUnionKind(kind) or types.isResultKind(kind) { "Record" }
         types.isFnKind(kind) { "Fn" }
         numeric.isIntKind(kind) { ir.VALUE_KIND_INT }
         numeric.isFloatKind(kind) { ir.VALUE_KIND_FLOAT }
@@ -2222,7 +2613,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isDynKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isDynKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) or types.isUnionKind(kind) or types.isResultKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

@@ -2,6 +2,9 @@
 
 Status: **selected 2026-10-18: plain unions ignore member order, flatten nested plain unions, and remove duplicate type identities after transparent-alias resolution**. Distinct record declarations and enum cases retain identity. Automatic member admission and checked narrowing are selected separately. Subtype absorption, broader assignability, recursive alias legality, representation, and ABI remain separate contracts.
 
+> [!NOTE]
+> **Phase 15 implementation checkpoint:** Runtime `A | B` union normalization (member sorting/deduplication, flattening nested plain unions, leading `|` collapsing, and transparent alias expansion), TS (`_u`) and C11 tagged-union storage with deterministic `_drop`/`_copy`/`_move`/`_eq`/`_print`, safe member/sub-union widening, and rejection of contextual `0` initializers and `distinct` over unions are implemented and verified in `phase15-unions-and-fallibles.test.lts`.
+
 Direct [union-target type tests](lite://doc/type-tests-and-narrowing#union-targets-in-type-tests-selected) use this normalization on input and target members. For closed distinct types, success keeps shared members and failure the input remainder; target-only members never widen the input.
 
 ## One type despite spelling differences

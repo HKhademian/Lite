@@ -1321,9 +1321,212 @@ cAlignasPrefix := fn(align: Int, baseType: String): String {
     if align <= 0 { "" } else { "_Alignas((" + align.toText() + " > _Alignof(" + baseType + ")) ? " + align.toText() + " : _Alignof(" + baseType + ")) " }
 };
 
-/** Emits portable ISO C11 typedef, optional deep copy, and optional print helper for one tuple, nominal record, or payload enum `kind`. */
-emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool, config: optCfg.OptConfig): Unit {
+/** Builds a C11 equality expression between scalar/string/nested union/result fields `aExpr` and `bExpr` of `kind`. */
+cScalarUnionMemberEqExpr := fn(kind: String, aExpr: String, bExpr: String): String {
+    base := frontend.distinctBaseKind(kind);
+    if base == frontend.VALUE_KIND_UNIT { "true" }
+    else if base == frontend.VALUE_KIND_STRING { "lt_text_eq(" + aExpr + ", " + bExpr + ")" }
+    else if base == frontend.VALUE_KIND_FLOAT8 { "(lt_f8_to_f64(" + aExpr + ") == lt_f8_to_f64(" + bExpr + "))" }
+    else if base == frontend.VALUE_KIND_FLOAT16 { "(lt_f16_to_f64(" + aExpr + ") == lt_f16_to_f64(" + bExpr + "))" }
+    else if frontend.isUnionKind(base) or frontend.isResultKind(base) {
+        sTag := frontend.cStructTag(base);
+        if sTag =!= "" { sTag + "_eq(" + aExpr + ", " + bExpr + ")" } else { "false" }
+    } else if frontend.isIntScalarKind(base) or frontend.isFloatScalarKind(base) or base == frontend.VALUE_KIND_BOOL or (frontend.isEnumKind(base) and not frontend.isPayloadEnumKind(base)) {
+        "(" + aExpr + " == " + bExpr + ")"
+    } else {
+        "false"
+    }
+};
+
+/** Emits portable ISO C11 typedef, optional deep copy, and optional print helper for one tuple, nominal record, payload enum, union, or result `kind`. */
+emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool, needEq: Bool, config: optCfg.OptConfig): Unit {
     tag := frontend.cStructTag(kind);
+    if frontend.isUnionKind(kind) {
+        mems := frontend.unionMembers(kind);
+        mut uFieldsBuf: tb.TextBuilder;
+        mut uFieldsBuf.append("int _empty; ");
+        var mi := 0;
+        loop mi < mems.length() {
+            m := mems[mi];
+            if m =!= frontend.VALUE_KIND_UNIT {
+                mut uFieldsBuf.append(cScalarType(m));
+                mut uFieldsBuf.append(" m");
+                mut uFieldsBuf.append(mi.toText());
+                mut uFieldsBuf.append("; ");
+            }
+            mi = mi + 1;
+        }
+        outLine("typedef struct { int64_t tag; union { " + uFieldsBuf.build() + "} u; } " + tag + ";");
+        outLine("LT_INLINE int64_t " + tag + "_tag(" + tag + " v) { return v.tag; }");
+        mi = 0;
+        loop mi < mems.length() {
+            m := mems[mi];
+            if m == frontend.VALUE_KIND_UNIT {
+                outLine("LT_INLINE " + tag + " " + tag + "_mk_" + mi.toText() + "(void) { return (" + tag + "){ .tag = " + mi.toText() + ", .u = { ._empty = 0 } }; }");
+            } else {
+                mC := cScalarType(m);
+                outLine("LT_INLINE " + mC + " " + tag + "_v_" + mi.toText() + "(" + tag + " v) { return v.u.m" + mi.toText() + "; }");
+                outLine("LT_INLINE " + tag + " " + tag + "_mk_" + mi.toText() + "(" + mC + " f0) { return (" + tag + "){ .tag = " + mi.toText() + ", .u = { .m" + mi.toText() + " = f0 } }; }");
+            }
+            mi = mi + 1;
+        }
+        if frontend.cTypeNeedsDrop(kind) {
+            outLine("LT_INLINE void " + tag + "_drop(" + tag + " *v) {");
+            outLine("    switch (v->tag) {");
+            var di := 0;
+            loop di < mems.length() {
+                m := mems[di];
+                if m =!= frontend.VALUE_KIND_UNIT {
+                    dFn := cKindOps(m).dropFn;
+                    if dFn =!= "" {
+                        outLine("        case " + di.toText() + ": " + dFn + "(&v->u.m" + di.toText() + "); break;");
+                    }
+                }
+                di = di + 1;
+            }
+            outLine("        default: break;");
+            outLine("    }");
+            outLine("    memset(&v->u, 0, sizeof(v->u));");
+            outLine("    v->tag = -1;");
+            outLine("}");
+            outLine("LT_INLINE " + tag + " " + tag + "_move(" + tag + " *v) { " + tag + " r = *v; memset(&v->u, 0, sizeof(v->u)); v->tag = -1; return r; }");
+        }
+        if needCopy and frontend.cTypeNeedsDrop(kind) {
+            outLine("LT_INLINE " + tag + " " + tag + "_copy(" + tag + " src) {");
+            outLine("    switch (src.tag) {");
+            var ci := 0;
+            loop ci < mems.length() {
+                m := mems[ci];
+                if m =!= frontend.VALUE_KIND_UNIT {
+                    cFn := cKindOps(m).copyFn;
+                    if cFn =!= "" {
+                        outLine("        case " + ci.toText() + ": return " + tag + "_mk_" + ci.toText() + "(" + cFn + "(src.u.m" + ci.toText() + "));");
+                    }
+                }
+                ci = ci + 1;
+            }
+            outLine("        default: return src;");
+            outLine("    }");
+            outLine("}");
+        }
+        if needPrint {
+            outLine("static int " + tag + "_print(" + tag + " v) {");
+            outLine("    switch (v.tag) {");
+            var pi := 0;
+            loop pi < mems.length() {
+                m := mems[pi];
+                if m == frontend.VALUE_KIND_UNIT {
+                    outLine("        case " + pi.toText() + ": (void)v; return printf(\"Unit\");");
+                } else {
+                    outLine("        case " + pi.toText() + ": return " + cCall(m, "v.u.m" + pi.toText()) + ";");
+                }
+                pi = pi + 1;
+            }
+            outLine("        default: (void)v; return 0;");
+            outLine("    }");
+            outLine("}");
+        }
+        if needEq {
+            outLine("LT_INLINE bool " + tag + "_eq(" + tag + " a, " + tag + " b) {");
+            outLine("    if (a.tag != b.tag) { return false; }");
+            outLine("    switch (a.tag) {");
+            var ei := 0;
+            loop ei < mems.length() {
+                m := mems[ei];
+                eqBody := if m == frontend.VALUE_KIND_UNIT {
+                    "true"
+                } else {
+                    cScalarUnionMemberEqExpr(m, "a.u.m" + ei.toText(), "b.u.m" + ei.toText())
+                };
+                outLine("        case " + ei.toText() + ": return " + eqBody + ";");
+                ei = ei + 1;
+            }
+            outLine("        default: (void)a; (void)b; return false;");
+            outLine("    }");
+            outLine("}");
+        }
+        outLine("");
+        return;
+    }
+    if frontend.isResultKind(kind) {
+        okK := frontend.resultOkKind(kind);
+        errK := frontend.resultErrKind(kind);
+        mut rFieldsBuf: tb.TextBuilder;
+        mut rFieldsBuf.append("int _empty; ");
+        if okK =!= frontend.VALUE_KIND_UNIT {
+            mut rFieldsBuf.append(cScalarType(okK) + " ok; ");
+        }
+        if errK =!= frontend.VALUE_KIND_UNIT {
+            mut rFieldsBuf.append(cScalarType(errK) + " err; ");
+        }
+        outLine("typedef struct { int64_t tag; union { " + rFieldsBuf.build() + "} u; } " + tag + ";");
+        outLine("LT_INLINE int64_t " + tag + "_tag(" + tag + " v) { return v.tag; }");
+        if okK == frontend.VALUE_KIND_UNIT {
+            outLine("LT_INLINE " + tag + " " + tag + "_ok(void) { return (" + tag + "){ .tag = 0, .u = { ._empty = 0 } }; }");
+        } else {
+            okC := cScalarType(okK);
+            outLine("LT_INLINE " + okC + " " + tag + "_v_ok(" + tag + " v) { return v.u.ok; }");
+            outLine("LT_INLINE " + tag + " " + tag + "_ok(" + okC + " f0) { return (" + tag + "){ .tag = 0, .u = { .ok = f0 } }; }");
+        }
+        if errK == frontend.VALUE_KIND_UNIT {
+            outLine("LT_INLINE " + tag + " " + tag + "_err(void) { return (" + tag + "){ .tag = 1, .u = { ._empty = 0 } }; }");
+        } else {
+            errC := cScalarType(errK);
+            outLine("LT_INLINE " + errC + " " + tag + "_v_err(" + tag + " v) { return v.u.err; }");
+            outLine("LT_INLINE " + tag + " " + tag + "_err(" + errC + " f0) { return (" + tag + "){ .tag = 1, .u = { .err = f0 } }; }");
+        }
+        if frontend.cTypeNeedsDrop(kind) {
+            okDrop := if okK =!= frontend.VALUE_KIND_UNIT { cKindOps(okK).dropFn } else { "" };
+            errDrop := if errK =!= frontend.VALUE_KIND_UNIT { cKindOps(errK).dropFn } else { "" };
+            outLine("LT_INLINE void " + tag + "_drop(" + tag + " *v) {");
+            outLine("    if (v->tag == 0) { " + (if okDrop =!= "" { okDrop + "(&v->u.ok);" } else { "" }) + " }");
+            outLine("    else if (v->tag == 1) { " + (if errDrop =!= "" { errDrop + "(&v->u.err);" } else { "" }) + " }");
+            outLine("    memset(&v->u, 0, sizeof(v->u));");
+            outLine("    v->tag = -1;");
+            outLine("}");
+            outLine("LT_INLINE " + tag + " " + tag + "_move(" + tag + " *v) { " + tag + " r = *v; memset(&v->u, 0, sizeof(v->u)); v->tag = -1; return r; }");
+        }
+        if needCopy and frontend.cTypeNeedsDrop(kind) {
+            okCopy := if okK =!= frontend.VALUE_KIND_UNIT { cKindOps(okK).copyFn } else { "" };
+            errCopy := if errK =!= frontend.VALUE_KIND_UNIT { cKindOps(errK).copyFn } else { "" };
+            outLine("LT_INLINE " + tag + " " + tag + "_copy(" + tag + " src) {");
+            if okCopy =!= "" {
+                outLine("    if (src.tag == 0) { return " + tag + "_ok(" + okCopy + "(src.u.ok)); }");
+            }
+            if errCopy =!= "" {
+                outLine("    if (src.tag == 1) { return " + tag + "_err(" + errCopy + "(src.u.err)); }");
+            }
+            outLine("    return src;");
+            outLine("}");
+        }
+        if needPrint {
+            outLine("static int " + tag + "_print(" + tag + " v) {");
+            if okK == frontend.VALUE_KIND_UNIT {
+                outLine("    if (v.tag == 0) { (void)v; return printf(\".ok\"); }");
+            } else {
+                outLine("    if (v.tag == 0) { if (printf(\".ok(\") < 0) { return -1; } if (" + cCall(okK, "v.u.ok") + " < 0) { return -1; } return printf(\")\"); }");
+            }
+            if errK == frontend.VALUE_KIND_UNIT {
+                outLine("    if (v.tag == 1) { (void)v; return printf(\".err\"); }");
+            } else {
+                outLine("    if (v.tag == 1) { if (printf(\".err(\") < 0) { return -1; } if (" + cCall(errK, "v.u.err") + " < 0) { return -1; } return printf(\")\"); }");
+            }
+            outLine("    (void)v; return 0;");
+            outLine("}");
+        }
+        if needEq {
+            outLine("LT_INLINE bool " + tag + "_eq(" + tag + " a, " + tag + " b) {");
+            outLine("    if (a.tag != b.tag) { return false; }");
+            okEq := if okK == frontend.VALUE_KIND_UNIT { "true" } else { cScalarUnionMemberEqExpr(okK, "a.u.ok", "b.u.ok") };
+            errEq := if errK == frontend.VALUE_KIND_UNIT { "true" } else { cScalarUnionMemberEqExpr(errK, "a.u.err", "b.u.err") };
+            outLine("    if (a.tag == 0) { return " + okEq + "; }");
+            outLine("    if (a.tag == 1) { return " + errEq + "; }");
+            outLine("    (void)a; (void)b; return false;");
+            outLine("}");
+        }
+        outLine("");
+        return;
+    }
     if frontend.isPayloadEnumKind(kind) {
         cc := frontend.enumCaseCount(kind);
         eAttrs := frontend.enumLayoutAttrs(kind);
@@ -6054,6 +6257,30 @@ collectSubKinds := fn(kind: String): List<String> {
         (mut out).pushBack("O|" + kind);
         return out;
     }
+    if frontend.isUnionKind(kind) {
+        if frontend.cStructTag(kind) == "" { return out; }
+        loop frontend.unionMembers(kind) as um {
+            if um =!= frontend.VALUE_KIND_UNIT {
+                sub := self(um);
+                loop sub as s { mut out.pushBack(s); }
+            }
+        }
+        (mut out).pushBack("S|" + kind);
+        return out;
+    }
+    if frontend.isResultKind(kind) {
+        if frontend.cStructTag(kind) == "" { return out; }
+        okK := frontend.resultOkKind(kind);
+        errK := frontend.resultErrKind(kind);
+        if okK =!= frontend.VALUE_KIND_UNIT {
+            loop self(okK) as s { mut out.pushBack(s); }
+        }
+        if errK =!= frontend.VALUE_KIND_UNIT {
+            loop self(errK) as s { mut out.pushBack(s); }
+        }
+        (mut out).pushBack("S|" + kind);
+        return out;
+    }
     if frontend.isPayloadEnumKind(kind) {
         if frontend.cStructTag(kind) == "" { return out; }
         cc := frontend.enumCaseCount(kind);
@@ -6199,6 +6426,31 @@ collectTypeFlags := fn(kind: String): List<String> {
         (mut out).pushBack("O:" + tag);
         subR := self(frontend.soaRecordKind(kind));
         loop subR as s { mut out.pushBack(s); }
+        return out;
+    }
+    if frontend.isUnionKind(kind) {
+        tag := frontend.cStructTag(kind);
+        if tag == "" { return out; }
+        (mut out).pushBack("S:" + tag);
+        loop frontend.unionMembers(kind) as um {
+            if um =!= frontend.VALUE_KIND_UNIT {
+                loop self(um) as s { mut out.pushBack(s); }
+            }
+        }
+        return out;
+    }
+    if frontend.isResultKind(kind) {
+        tag := frontend.cStructTag(kind);
+        if tag == "" { return out; }
+        (mut out).pushBack("S:" + tag);
+        okK := frontend.resultOkKind(kind);
+        errK := frontend.resultErrKind(kind);
+        if okK =!= frontend.VALUE_KIND_UNIT {
+            loop self(okK) as s { mut out.pushBack(s); }
+        }
+        if errK =!= frontend.VALUE_KIND_UNIT {
+            loop self(errK) as s { mut out.pushBack(s); }
+        }
         return out;
     }
     if frontend.isPayloadEnumKind(kind) {
@@ -9657,6 +9909,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     mut seenTypeKeys: Set<String>;
     mut printTypeKeys: Set<String>;
     mut copyTypeKeys: Set<String>;
+    mut eqTypeKeys: Set<String>;
     mut convExpKinds: List<String> = [];
     mut convActKinds: List<String> = [];
     mut seenConvNames: Set<String>;
@@ -9937,6 +10190,13 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                     if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
                 }
             }
+            if usesIntHelper(calls, sTag + "_eq(") {
+                eqFlags := collectTypeFlags(sKind);
+                loop eqFlags as ef {
+                    if ef == "STR" { mut eqTypeKeys.add("STR"); }
+                    else if ef =!= "FLOAT" and ef =!= "FLOAT32" { mut eqTypeKeys.add(ef); }
+                }
+            }
         } else if oe.startsWithAt(0, "A|") {
             aKind := oe.slice(2, oe.length());
             aTag := frontend.cArrayTag(aKind);
@@ -10029,7 +10289,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             hasStrMapOrSet = true;
         }
     }
-    needStrEq := usesIntHelper(calls, "lt_text_eq(") or hasStrMapOrSet;
+    needStrEq := usesIntHelper(calls, "lt_text_eq(") or hasStrMapOrSet or eqTypeKeys.has("STR");
     needStrHash := hasStrMapOrSet;
     outLine("typedef struct { uint64_t byte_len; int64_t cp_len; } lt_str_jumbo_hdr;");
     outLine("typedef union {");
@@ -10770,7 +11030,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             sTag := frontend.cStructTag(payload);
             sNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "S:" + sTag);
             sNeedPrint := frontend.tokenBucketHas(printTypeKeys, "S:" + sTag);
-            emitCStructHelpers(payload, sNeedCopy, sNeedPrint, config);
+            sNeedEq := usesIntHelper(calls, sTag + "_eq(") or frontend.tokenBucketHas(eqTypeKeys, "S:" + sTag);
+            emitCStructHelpers(payload, sNeedCopy, sNeedPrint, sNeedEq, config);
         }
     }
     loop sliceSplitKinds as spKind {

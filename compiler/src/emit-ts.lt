@@ -2946,6 +2946,21 @@ emitBuiltinHelpers := fn(calls: String, config: optCfg.OptConfig): Unit {
         outLine("}");
         outLine("");
     }
+    if usesBuiltin(calls, "throwProp") {
+        outLine("const lite$propToken = {};");
+        outLine("let lite$propErr: unknown = undefined;");
+        outLine("function lite$throwProp(err: unknown): never {");
+        outLine("    throw { token: lite$propToken, err };");
+        outLine("}");
+        outLine("function lite$hasProp(e: unknown): boolean {");
+        outLine("    if (typeof e === \"object\" && e !== null && \"token\" in e && e.token === lite$propToken && \"err\" in e) {");
+        outLine("        lite$propErr = e.err;");
+        outLine("        return true;");
+        outLine("    }");
+        outLine("    return false;");
+        outLine("}");
+        outLine("");
+    }
     if usesBuiltin(calls, "u64AddCarry") {
         outLine("function lite$u64AddCarry(a: bigint, b: bigint, carry: boolean): { sum: bigint; carry: boolean } {");
         outLine("    const mask = (1n << 64n) - 1n;");
@@ -4163,7 +4178,20 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         } else if item.kind == frontend.ITEM_KIND_TRANSFER_CATCH {
             indent = dedent(indent);
             outLine(indent + "} catch (lite$err) {");
-            if item.code == frontend.VALUE_KIND_UNIT {
+            if item.name == "prop" or item.name == "both" {
+                errRet := if frontend.isResultKind(item.code) and frontend.resultErrKind(item.code) == frontend.VALUE_KIND_UNIT {
+                    "{ _r: 1 as const } as " + tsFunctionType(item.code)
+                } else {
+                    "{ _r: 1 as const, _e: lite$propErr as " + tsFunctionType(frontend.resultErrKind(item.code)) + " } as " + tsFunctionType(item.code)
+                };
+                if item.name == "prop" {
+                    outLine(indent + "    if (lite$hasProp(lite$err)) { return (" + errRet + "); } else { throw lite$err; }");
+                } else if item.code == frontend.VALUE_KIND_UNIT {
+                    outLine(indent + "    if (lite$hasTransfer(lite$err, 0)) { return; } else if (lite$hasProp(lite$err)) { return (" + errRet + "); } else { throw lite$err; }");
+                } else {
+                    outLine(indent + "    if (lite$hasTransfer(lite$err, 0)) { return lite$transferVal; } else if (lite$hasProp(lite$err)) { return (" + errRet + "); } else { throw lite$err; }");
+                }
+            } else if item.code == frontend.VALUE_KIND_UNIT {
                 outLine(indent + "    if (lite$hasTransfer(lite$err, 0)) { return; } else { throw lite$err; }");
             } else {
                 outLine(indent + "    if (lite$hasTransfer(lite$err, 0)) { return lite$transferVal; } else { throw lite$err; }");

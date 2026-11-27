@@ -237,50 +237,35 @@ expectRejectBoth("reject-distinct-not-in-base-union",
 "_ := f(m);\n",
 "does not satisfy constraint");
 
-expectRejectBoth("reject-union-in-var-type",
+runBoth("allow-union-runtime-positions-phase15",
+"io := import \"core/io\";\n" +
 "Numeric := alias Int | Float;\n" +
-"x: Numeric = 1;\n",
-"Type<...> constraints");
-
-expectRejectBoth("reject-union-in-fn-param",
-"Numeric := alias Int | Float;\n" +
-"f := fn(x: Numeric): Int { 1 };\n",
-"Type<...> constraints");
-
-expectRejectBoth("reject-union-in-record-field",
-"Numeric := alias Int | Float;\n" +
-"Bad := record { v: Numeric; }\n",
-"Type<...> constraints");
-
-expectRejectBoth("reject-union-in-list",
-"Numeric := alias Int | Float;\n" +
-"xs: List<Numeric> = [];\n",
-"Type<...> constraints");
-
-expectRejectBoth("reject-union-in-fixed-array",
-"Numeric := alias Int | Float;\n" +
-"arr: [Numeric; 2];\n",
-"Type<...> constraints");
-
-expectRejectBoth("reject-union-in-map-value",
-"Numeric := alias Int | Float;\n" +
-"m: Map<String, Numeric>;\n",
-"Type<...> constraints");
+"Hold := record { v: Numeric; }\n" +
+"Box := record<T: Type> { v: T; }\n" +
+"takeNum := fn(x: Int | Float): Int { if x: Int { x } else { 0 } };\n" +
+"main := fn(): Unit {\n" +
+"    x: Numeric = 7;\n" +
+"    h := Hold { v = x };\n" +
+"    xs: List<Numeric> = [x, 1.5];\n" +
+"    mut arr: [Numeric; 2];\n" +
+"    arr[0] = 3;\n" +
+"    arr[1] = 2.5;\n" +
+"    mut m: Map<String, Numeric>;\n" +
+"    mut m.set(\"a\", 9);\n" +
+"    b := Box<Numeric> { v = 4 };\n" +
+"    io.outputLine(takeNum(h.v));\n" +
+"    io.outputLine(xs.length());\n" +
+"    io.outputLine(takeNum(arr[0]));\n" +
+"    io.outputLine(takeNum(m.get(\"a\").value));\n" +
+"    io.outputLine(takeNum(b.v));\n" +
+"};\n" +
+"main();\n",
+"7\n2\n3\n9\n4\n");
 
 expectRejectBoth("reject-union-in-distinct",
 "Numeric := alias Int | Float;\n" +
 "Bad := distinct Numeric;\n",
-"Type<...> constraints");
-
-expectRejectBoth("reject-union-as-generic-type-arg",
-"Numeric := alias Int | Float;\n" +
-"Box := record<T: Type> { v: T; }\n" +
-"bad: Box<Numeric>;\n",
-"Type<...> constraints");
-
-expectRejectBoth("reject-inline-union-outside-constraint",
-"bad := fn(x: Int | Float): Int { 1 };\n",
-"type set union is only allowed in alias declarations and Type<...> constraints");
+"cannot define distinct over union");
 
 expectRejectBoth("reject-typeop-constraint-violation",
 "Numeric := alias Int | Float;\n" +

@@ -2,6 +2,9 @@
 
 Status: **ordinary typed outcomes and first-class Result handling established; capture/extraction LP-0009/LP-0010, manual failure/inference LP-0012, recovery/exit refinements LP-0013–LP-0015, recapture LP-0016, Result occurrence patterns LP-0017, and implicit panics without effect declarations LP-0018 selected**. Concrete classification, untyped recovery binding, construction/origin APIs, ownership, and transport still need contracts.
 
+> [!NOTE]
+> **Phase 15 implementation checkpoint:** First-class `T ! E` and `T!` (`core/error.Error` + `ToError`), `.ok`/`.err` constructors and pattern matching, `zero(T ! E) = .ok(zero(T))`, implicit success lifting, `Unit ! E` bare `return;`/fallthrough, postfix `!` error propagation (across functions, closures, and `finally` blocks), and `else(err)`/`else` union-or-collapsed local recovery are implemented and verified in `phase15-unions-and-fallibles.test.lts`. Flat panic capture `({ ... })?` and aggregate failure groups remain deferred.
+
 Normative page for the Result model: `T ! E`, declared failures, propagation, and stored outcomes. [Failure capture and unwrapping](lite://doc/failure-capture-and-unwrapping) owns explicit postfix ? boundaries, flat error/panic outcomes, and extraction after recovery. [Expression recovery](lite://doc/expression-recovery) owns the `else`/filter surface; [checked fault policy](lite://doc/checked-fault-policy) owns typed-panic triggers; [finally](lite://doc/finally) owns cleanup ordering. See the [normative page map](lite://doc/normative-pages).
 
 ## Purpose

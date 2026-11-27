@@ -15,6 +15,9 @@ tb := import "util/text-builder";
 /** One transparent type alias matching `frontend-ir.AliasDecl`. */
 AliasDecl := alias (name: String, target: String, at: Int, end: Int, depth: Int);
 
+/** Canonical built-in `core/error.Error` record kind used by `T!` and implicit error values. */
+pub CORE_ERROR_KIND := "Record<core/error#0#Error;kind:String,message:String,code:Int>";
+
 /** True for type-constructor names that later slices will admit, not scalar, flat named-tuple or List aliases yet. */
 pub isUnsupportedAliasTarget := fn(name: String): Bool {
     name == "List" or name == "Float" or name == "Double" or name == "Array" or
@@ -987,6 +990,15 @@ pub containsSliceKind := fn(kind: String): Bool {
         }
         return false;
     }
+    if isUnionKind(kind) {
+        loop unionMembers(kind) as um {
+            if self(um) { return true; }
+        }
+        return false;
+    }
+    if isResultKind(kind) {
+        return self(resultOkKind(kind)) or self(resultErrKind(kind));
+    }
     if isFnKind(kind) {
         var pi := 0;
         pc := fnParamCount(kind);
@@ -1124,6 +1136,15 @@ pub containsDynKind := fn(kind: String): Bool {
         }
         return false;
     }
+    if isUnionKind(kind) {
+        loop unionMembers(kind) as um {
+            if self(um) { return true; }
+        }
+        return false;
+    }
+    if isResultKind(kind) {
+        return self(resultOkKind(kind)) or self(resultErrKind(kind));
+    }
     if isFnKind(kind) {
         var pi := 0;
         pc := fnParamCount(kind);
@@ -1203,7 +1224,7 @@ pub unionMembers := fn(kind: String): List<String> {
     single
 };
 
-/** Flattens nested `Union<...>` entries and deduplicates preserving declaration order (`""` -> `""`, 1 -> `flat[0]`, 2+ -> `Union<...>`). */
+/** Flattens nested `Union<...>` entries, deduplicates, and sorts lexicographically (`""` -> `""`, 1 -> `flat[0]`, 2+ -> `Union<...>`). */
 pub buildUnionKind := fn(members: List<String>): String {
     mut flat: List<String> = [];
     loop members as m {
@@ -1216,7 +1237,83 @@ pub buildUnionKind := fn(members: List<String>): String {
     n := flat.length();
     if n == 0 { return ""; }
     if n == 1 { return flat[0]; }
+    var i := 1;
+    loop i < n {
+        key := flat[i];
+        var j := i - 1;
+        loop j >= 0 and key.compare(flat[j]) < 0 {
+            flat[j + 1] = flat[j];
+            j = j - 1;
+        }
+        flat[j + 1] = key;
+        i = i + 1;
+    }
     "Union<" + flat.join(",") + ">"
+};
+
+/** True when `kind` is a canonical fallible result type `Result<OkKind,ErrKind>`. */
+pub isResultKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 8 and kind.startsWithAt(0, "Result<") and kind.at(size - 1) == ">" and skipKindToken(kind, 0) == size and splitTopLevelKinds(kind.slice(7, size - 1)).length() == 2
+};
+
+/** Returns the success type `T` of canonical `Result<T,E>`. */
+pub resultOkKind := fn(kind: String): String {
+    if not isResultKind(kind) { return ""; }
+    splitTopLevelKinds(kind.slice(7, kind.length() - 1))[0]
+};
+
+/** Returns the error type `E` of canonical `Result<T,E>`. */
+pub resultErrKind := fn(kind: String): String {
+    if not isResultKind(kind) { return ""; }
+    splitTopLevelKinds(kind.slice(7, kind.length() - 1))[1]
+};
+
+/** Builds canonical `Result<OkKind,ErrKind>` while preserving its success/error boundary. */
+pub buildResultKind := fn(okKind: String, errKind: String): String {
+    "Result<" + okKind + "," + errKind + ">"
+};
+
+/** Returns the zero-based tag index of exact `member` inside normalized `uKind`, or -1. */
+pub unionMemberIndex := fn(uKind: String, member: String): Int {
+    if uKind == member and member =!= "" and not isUnionKind(uKind) { return 0; }
+    if not isUnionKind(uKind) { return -1; }
+    mems := unionMembers(uKind);
+    var i := 0;
+    loop i < mems.length() {
+        if mems[i] == member { return i; }
+        i = i + 1;
+    }
+    -1
+};
+
+/** True when every normalized union member of `subKind` is also a member of `supKind`. */
+pub unionContainsAll := fn(supKind: String, subKind: String): Bool {
+    supMems := unionMembers(supKind);
+    loop unionMembers(subKind) as m {
+        if not supMems.contains(m) { return false; }
+    }
+    true
+};
+
+/** Intersects union members of `aKind` and `bKind`, returning normalized `Union<...>`, single kind, or `""`. */
+pub unionIntersect := fn(aKind: String, bKind: String): String {
+    bMems := unionMembers(bKind);
+    mut inter: List<String> = [];
+    loop unionMembers(aKind) as m {
+        if bMems.contains(m) { mut inter.pushBack(m); }
+    }
+    buildUnionKind(inter)
+};
+
+/** Subtracts members of `removeKind` from `baseKind`, returning normalized remaining kind or `""`. */
+pub unionSubtract := fn(baseKind: String, removeKind: String): String {
+    remMems := unionMembers(removeKind);
+    mut rem: List<String> = [];
+    loop unionMembers(baseKind) as m {
+        if not remMems.contains(m) { mut rem.pushBack(m); }
+    }
+    buildUnionKind(rem)
 };
 
 /** True when a parameter spec kind represents a constrained `Type<...>` parameter. */
@@ -1927,6 +2024,15 @@ cIsSupportedElem := fn(kind: String): Bool {
             }
             ci = ci + 1;
         }
+    } else if isUnionKind(kind) {
+        ok = true;
+        loop unionMembers(kind) as um {
+            if um =!= ir.VALUE_KIND_UNIT and not self(um) { ok = false; break; }
+        }
+    } else if isResultKind(kind) {
+        okK := resultOkKind(kind);
+        errK := resultErrKind(kind);
+        ok = (okK == ir.VALUE_KIND_UNIT or self(okK)) and (errK == ir.VALUE_KIND_UNIT or self(errK));
     } else if isFnKind(kind) {
         pCount := fnParamCount(kind);
         var paramsOk := true;
@@ -1982,10 +2088,10 @@ pub cFnTag := fn(kind: String): String {
     tag
 };
 
-/** Maps a C-supported tuple, nominal record, or payload enum kind to its deterministic C11 typedef name `lt_s_...`, or `""` if unsupported. */
+/** Maps a C-supported tuple, nominal record, payload enum, union, or result kind to its deterministic C11 typedef name `lt_s_...`, or `""` if unsupported. */
 pub cStructTag := fn(kind: String): String {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) { return ""; }
+    if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) and not isUnionKind(kind) and not isResultKind(kind) { return ""; }
     cached := cStructTagCache.get(kind);
     if cached.found { return cached.value; }
     tag := if cIsSupportedElem(kind) { "lt_s_" + cStructHash(kind) } else { "" };
@@ -1993,14 +2099,14 @@ pub cStructTag := fn(kind: String): String {
     tag
 };
 
-/** True when `kind` is a list/wildcard-array/map/set/rc/soa or a fixed array/tuple/record/payload-enum transitively containing one. */
+/** True when `kind` is a list/wildcard-array/map/set/rc/soa or a fixed array/tuple/record/payload-enum/union/result transitively containing one. */
 pub cTypeHasListField := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
     if isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isRcKind(kind) or isSoaKind(kind) { return true; }
     if isArrayKind(kind) {
         return if arrayExtent(kind) < 0 { true } else { self(arrayElementKind(kind)) };
     }
-    if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) { return false; }
+    if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) and not isUnionKind(kind) and not isResultKind(kind) { return false; }
     cached := cHasListCache.get(kind);
     if cached.found { return cached.value; }
     var res := false;
@@ -2018,6 +2124,12 @@ pub cTypeHasListField := fn(kind: String): Bool {
             if self(recordComponent(kind, i).kind) { res = true; break; }
             i = i + 1;
         }
+    } else if isUnionKind(kind) {
+        loop unionMembers(kind) as um {
+            if self(um) { res = true; break; }
+        }
+    } else if isResultKind(kind) {
+        res = self(resultOkKind(kind)) or self(resultErrKind(kind));
     } else {
         count := enumCaseCount(kind);
         var ci := 0;
@@ -2039,7 +2151,7 @@ pub cTypeNeedsDrop := fn(kind: String): Bool {
     if isArrayKind(kind) {
         return if arrayExtent(kind) < 0 { true } else { self(arrayElementKind(kind)) };
     }
-    if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) { return false; }
+    if not isTupleKind(kind) and not isRecordKind(kind) and not isPayloadEnumKind(kind) and not isUnionKind(kind) and not isResultKind(kind) { return false; }
     cached := cNeedsDropCache.get(kind);
     if cached.found { return cached.value; }
     var res := false;
@@ -2057,6 +2169,14 @@ pub cTypeNeedsDrop := fn(kind: String): Bool {
             if self(recordComponent(kind, i).kind) { res = true; break; }
             i = i + 1;
         }
+    } else if isUnionKind(kind) {
+        loop unionMembers(kind) as um {
+            if um =!= ir.VALUE_KIND_UNIT and self(um) { res = true; break; }
+        }
+    } else if isResultKind(kind) {
+        okK := resultOkKind(kind);
+        errK := resultErrKind(kind);
+        res = (okK =!= ir.VALUE_KIND_UNIT and self(okK)) or (errK =!= ir.VALUE_KIND_UNIT and self(errK));
     } else {
         count := enumCaseCount(kind);
         var ci := 0;
@@ -2186,7 +2306,7 @@ cNonArrayListTag := fn(elemKind: String): String {
     else if isRcKind(elemKind) { cRcTag(elemKind) }
     else if isSimdKind(elemKind) { cSimdTag(elemKind) }
     else if isSoaKind(elemKind) { cSoaTag(elemKind) }
-    else if isTupleKind(elemKind) or isRecordKind(elemKind) or isPayloadEnumKind(elemKind) { cStructTag(elemKind) }
+    else if isTupleKind(elemKind) or isRecordKind(elemKind) or isPayloadEnumKind(elemKind) or isUnionKind(elemKind) or isResultKind(elemKind) { cStructTag(elemKind) }
     else if isFnKind(elemKind) { cFnTag(elemKind) }
     else { "" }
 };
@@ -2427,7 +2547,7 @@ pub encodeRecordDefaultsFromAliases := fn(aliases: List<AliasDecl>, recordKind: 
 
 /** True when TS local/var declarations of `kind` require an explicit type annotation (empty lists, maps, arrays, records, enums, or callables). */
 pub needsTsTypeAnnotation := fn(kind: String): Bool {
-    isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isSliceKind(kind) or isSimdKind(kind) or isSoaKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or isDistinctKind(kind) or containsFnKind(kind)
+    isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isSliceKind(kind) or isSimdKind(kind) or isSoaKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or isDistinctKind(kind) or isUnionKind(kind) or isResultKind(kind) or containsFnKind(kind)
 };
 
 /** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
@@ -2477,6 +2597,21 @@ exactShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
     if isArrayKind(expectedKind) and isArrayKind(actualKind) {
         return arrayExtent(expectedKind) == arrayExtent(actualKind) and
         self(arrayElementKind(expectedKind), arrayElementKind(actualKind));
+    }
+    if isUnionKind(expectedKind) and isUnionKind(actualKind) {
+        eMems := unionMembers(expectedKind);
+        aMems := unionMembers(actualKind);
+        if eMems.length() =!= aMems.length() { return false; }
+        var idx := 0;
+        loop idx < eMems.length() {
+            if not self(eMems[idx], aMems[idx]) { return false; }
+            idx = idx + 1;
+        }
+        return true;
+    }
+    if isResultKind(expectedKind) and isResultKind(actualKind) {
+        return self(resultOkKind(expectedKind), resultOkKind(actualKind)) and
+        self(resultErrKind(expectedKind), resultErrKind(actualKind));
     }
     if isTupleKind(expectedKind) and isTupleKind(actualKind) {
         count := tupleComponentCount(expectedKind);
@@ -2538,6 +2673,12 @@ pub containsFnKind := fn(kind: String): Bool {
             }
             ci = ci + 1;
         }
+    } else if isUnionKind(kind) {
+        loop unionMembers(kind) as um {
+            if self(um) { res = true; break; }
+        }
+    } else if isResultKind(kind) {
+        res = self(resultOkKind(kind)) or self(resultErrKind(kind));
     }
     (mut containsFnCache).set(kind, res);
     res
@@ -2790,6 +2931,15 @@ pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
         }
         return false;
     }
+    if isUnionKind(kind) {
+        loop unionMembers(kind) as um {
+            if self(genericParams, um) { return true; }
+        }
+        return false;
+    }
+    if isResultKind(kind) {
+        return self(genericParams, resultOkKind(kind)) or self(genericParams, resultErrKind(kind));
+    }
     args := nominalTypeArgs(kind);
     loop args as a {
         if self(genericParams, a) { return true; }
@@ -2925,6 +3075,16 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
         }
         return contexts.buildCanonicalCtxKind(sSlots);
     }
+    if isUnionKind(pattern) {
+        mut subMems: List<String> = [];
+        loop unionMembers(pattern) as um {
+            mut subMems.pushBack(self(genericParams, um, bindings));
+        }
+        return buildUnionKind(subMems);
+    }
+    if isResultKind(pattern) {
+        return buildResultKind(self(genericParams, resultOkKind(pattern), bindings), self(genericParams, resultErrKind(pattern), bindings));
+    }
     if isRecordKind(pattern) {
         if not kindHasAnyGenericParam(genericParams, pattern) { return pattern; }
         semi := recordHeaderSemi(pattern);
@@ -3030,6 +3190,15 @@ packedRecordFieldUnsafe := fn(kind: String): Bool {
             ci = ci + 1;
         }
         return false;
+    }
+    if isUnionKind(kind) {
+        loop unionMembers(kind) as um {
+            if self(um) { return true; }
+        }
+        return false;
+    }
+    if isResultKind(kind) {
+        return self(resultOkKind(kind)) or self(resultErrKind(kind));
     }
     false
 };
@@ -3197,7 +3366,42 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         return "";
     }
     if isUnionKind(kind) {
-        return "type set union " + displayKind(kind) + " can only be used inside Type<...> constraints";
+        loop unionMembers(kind) as um {
+            if um == ir.VALUE_KIND_NEVER {
+                return "unsupported union member " + displayKind(um);
+            }
+            if isInterfaceKind(um) {
+                return "interface " + displayKind(um) + " cannot appear in union value type";
+            }
+            bErr := borrowedStorageError(um);
+            if bErr =!= "" { return bErr; }
+            if um =!= ir.VALUE_KIND_UNIT {
+                err := self(um, allowGenericParams);
+                if err =!= "" { return err; }
+            }
+        }
+        return "";
+    }
+    if isResultKind(kind) {
+        okK := resultOkKind(kind);
+        errK := resultErrKind(kind);
+        if okK == ir.VALUE_KIND_NEVER { return "unsupported fallible success type Never"; }
+        if errK == ir.VALUE_KIND_NEVER { return "unsupported fallible error type Never"; }
+        if isInterfaceKind(okK) { return "interface " + displayKind(okK) + " cannot be used as fallible success type"; }
+        if isInterfaceKind(errK) { return "interface " + displayKind(errK) + " cannot be used as fallible error type"; }
+        okBErr := borrowedStorageError(okK);
+        if okBErr =!= "" { return okBErr; }
+        errBErr := borrowedStorageError(errK);
+        if errBErr =!= "" { return errBErr; }
+        if okK =!= ir.VALUE_KIND_UNIT {
+            okErr := self(okK, allowGenericParams);
+            if okErr =!= "" { return okErr; }
+        }
+        if errK =!= ir.VALUE_KIND_UNIT {
+            eErr := self(errK, allowGenericParams);
+            if eErr =!= "" { return eErr; }
+        }
+        return "";
     }
     if isInterfaceKind(kind) {
         return "interface " + displayKind(kind) + " cannot be used directly as a value type; use T: Type<" + displayKind(kind) + "> for static dispatch or dyn " + displayKind(kind) + " for dynamic dispatch";
@@ -3382,10 +3586,33 @@ pub tupleShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
 
 /** True when `actualKind` is directly `expectedKind`, `Never` into a known target, losslessly widens numerically, or matches a compatible tuple/callable shape. */
 pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
-    (expectedKind =!= "" and actualKind == ir.VALUE_KIND_NEVER) or expectedKind == actualKind or
+    if (expectedKind =!= "" and actualKind == ir.VALUE_KIND_NEVER) or expectedKind == actualKind or
     numeric.numericWidens(expectedKind, actualKind) or tupleShapeMatches(expectedKind, actualKind) or
     exactShapeMatches(expectedKind, actualKind) or
-    (isArrayKind(expectedKind) and arrayExtent(expectedKind) == -1 and isArrayKind(actualKind) and self(arrayElementKind(expectedKind), arrayElementKind(actualKind)))
+    (isArrayKind(expectedKind) and arrayExtent(expectedKind) == -1 and isArrayKind(actualKind) and self(arrayElementKind(expectedKind), arrayElementKind(actualKind))) {
+        return true;
+    }
+    if isUnionKind(expectedKind) {
+        if unionContainsAll(expectedKind, actualKind) { return true; }
+        eMems := unionMembers(expectedKind);
+        loop unionMembers(actualKind) as am {
+            var matched := false;
+            loop eMems as em {
+                if em == am or exactShapeMatches(em, am) { matched = true; break; }
+            }
+            if not matched { return false; }
+        }
+        return true;
+    }
+    if isResultKind(expectedKind) {
+        okExp := resultOkKind(expectedKind);
+        errExp := resultErrKind(expectedKind);
+        if not isResultKind(actualKind) {
+            return self(okExp, actualKind);
+        }
+        return self(okExp, resultOkKind(actualKind)) and self(errExp, resultErrKind(actualKind));
+    }
+    false
 };
 
 /** Encodes a `Map<String, String>` binding table into `name=kind|...` in `paramCsv` order. */
@@ -3508,6 +3735,23 @@ unifyImplPatternMut := fn(genericParams: String, pattern: String, actual: String
             i = i + 1;
         }
         return self(genericParams, fnResultKind(pattern), fnResultKind(actual), mut bindings);
+    }
+    if isUnionKind(pattern) {
+        if not isUnionKind(actual) { return false; }
+        pMems := unionMembers(pattern);
+        aMems := unionMembers(actual);
+        if pMems.length() =!= aMems.length() { return false; }
+        var ui := 0;
+        loop ui < pMems.length() {
+            if not self(genericParams, pMems[ui], aMems[ui], mut bindings) { return false; }
+            ui = ui + 1;
+        }
+        return true;
+    }
+    if isResultKind(pattern) {
+        return isResultKind(actual) and
+        self(genericParams, resultOkKind(pattern), resultOkKind(actual), mut bindings) and
+        self(genericParams, resultErrKind(pattern), resultErrKind(actual), mut bindings);
     }
     pArgs := nominalTypeArgs(pattern);
     if pArgs.length() > 0 {
@@ -3700,6 +3944,12 @@ pub findMatchingImplsByKey := fn(actualKind: String, reqKey: String): List<(impl
         mut out.pushBack((implIdx = ci, bindingsEncoded = encodeImplBindings(imp.genericParams, bindings), arg0 = arg0, arg1 = arg1));
     }
     out
+};
+
+/** Finds a visible conformance from `actualKind` to `core/error.ToError` on `target`. */
+pub findToErrorImpl := fn(target: String, actualKind: String): (found: Bool, implIdx: Int, bindingsEncoded: String) {
+    modKey := if target == ir.TARGET_TS { "lib$core$error" } else { "lib_s_core_s_error" };
+    findImplForConcrete(actualKind, "Iface<" + modKey + "#ToError>")
 };
 
 /** True when concrete `actualKind` satisfies closed-union, single-interface, or multi-bound `All<...>` constraint `constraintKind`. */
@@ -3929,6 +4179,34 @@ pub tsFunctionType := fn(kind: String): String {
         }
         mut ctxFieldsBuf.append(" }");
         out = ctxFieldsBuf.build();
+    } else if isUnionKind(kind) {
+        mems := unionMembers(kind);
+        mut uParts: List<String> = [];
+        var ui := 0;
+        loop ui < mems.length() {
+            m := mems[ui];
+            if m == ir.VALUE_KIND_UNIT {
+                mut uParts.pushBack("{ readonly _u: " + ui.toText() + " }");
+            } else {
+                mut uParts.pushBack("{ readonly _u: " + ui.toText() + "; readonly _v: " + self(m) + " }");
+            }
+            ui = ui + 1;
+        }
+        out = "(" + uParts.join(" | ") + ")";
+    } else if isResultKind(kind) {
+        okK := resultOkKind(kind);
+        errK := resultErrKind(kind);
+        okPart := if okK == ir.VALUE_KIND_UNIT {
+            "{ readonly _r: 0 }"
+        } else {
+            "{ readonly _r: 0; readonly _v: " + self(okK) + " }"
+        };
+        errPart := if errK == ir.VALUE_KIND_UNIT {
+            "{ readonly _r: 1 }"
+        } else {
+            "{ readonly _r: 1; readonly _e: " + self(errK) + " }"
+        };
+        out = "(" + okPart + " | " + errPart + ")";
     } else if isFnKind(kind) {
         count := fnParamCount(kind);
         mut paramsBuf: tb.TextBuilder;
@@ -4070,6 +4348,32 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
         }
         return "((value: " + tsFunctionType(kind) + "): string => " + resultBuf.build() + " + " + tsLiteral.textLiteralCode(" }") + ")(" + code + ")";
     }
+    if isUnionKind(kind) {
+        mems := unionMembers(kind);
+        mut casesBuf: tb.TextBuilder;
+        var ui := 0;
+        loop ui < mems.length() {
+            m := mems[ui];
+            mut casesBuf.append("case ");
+            mut casesBuf.append(ui.toText());
+            mut casesBuf.append(": return ");
+            if m == ir.VALUE_KIND_UNIT {
+                mut casesBuf.append("\"Unit\"");
+            } else {
+                mut casesBuf.append(self(m, "value._v"));
+            }
+            mut casesBuf.append("; ");
+            ui = ui + 1;
+        }
+        return "((value: " + tsFunctionType(kind) + "): string => { switch (value._u) { " + casesBuf.build() + "default: return \"\"; } })(" + code + ")";
+    }
+    if isResultKind(kind) {
+        okK := resultOkKind(kind);
+        errK := resultErrKind(kind);
+        okExpr := if okK == ir.VALUE_KIND_UNIT { "\".ok\"" } else { "(\".ok(\" + " + self(okK, "value._v") + " + \")\")" };
+        errExpr := if errK == ir.VALUE_KIND_UNIT { "\".err\"" } else { "(\".err(\" + " + self(errK, "value._e") + " + \")\")" };
+        return "((value: " + tsFunctionType(kind) + "): string => value._r === 0 ? " + okExpr + " : " + errExpr + ")(" + code + ")";
+    }
     if isTupleKind(kind) {
         mut resultBuf: tb.TextBuilder;
         mut resultBuf.append(tsLiteral.textLiteralCode("("));
@@ -4131,6 +4435,16 @@ pub displayKind := fn(kind: String): String {
             mut parts.pushBack(self(m));
         }
         return parts.join(" | ");
+    }
+    if isResultKind(kind) {
+        okK := resultOkKind(kind);
+        errK := resultErrKind(kind);
+        okStr := if isUnionKind(okK) or isResultKind(okK) { "(" + self(okK) + ")" } else { self(okK) };
+        if errK == CORE_ERROR_KIND {
+            return okStr + "!";
+        }
+        errStr := if isUnionKind(errK) or isResultKind(errK) { "(" + self(errK) + ")" } else { self(errK) };
+        return okStr + " ! " + errStr;
     }
     if isRecordKind(kind) { return recordDisplayName(kind); }
     if isDistinctKind(kind) { return distinctDisplayName(kind); }
@@ -4715,6 +5029,19 @@ parseContextClauseWith := fn(
     (ctxKind = contexts.buildCanonicalCtxKind(slots), next = cursor)
 };
 
+/** True when `pos` starts a syntactically valid type atom or leading `|` union marker (not `=`, `{`, `}`, `,`, `)`, `>`, `]`, `;`, or reserved non-type keyword). */
+startsTypeTokenAt := fn(source: String, pos: Int, prefix: String): Bool {
+    size := source.length();
+    if pos >= size { return false; }
+    ch := source.at(pos);
+    if ch == "(" or ch == "[" { return true; }
+    if ch == "|" and not source.startsWithAt(pos, "||") { return true; }
+    if not ch.isNameStart() { return false; }
+    end := source.skipName(pos);
+    w := source.slice(pos, end);
+    not syntax.isReservedWord(w) or w == "fn" or w == "dyn"
+};
+
 /** Internal helper parsing one atomic source or alias type (excluding top-level `|` type unions). */
 parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
     size := source.length();
@@ -4723,10 +5050,16 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         end := skipKindToken(source, start);
         if end > start + 7 and source.at(end - 1) == ">" {
             uKind := source.slice(start, end);
-            if context =!= "alias" and context =!= "constraint" {
-                syntax.failAt(errSource, errPos, prefix, "type set union " + displayKind(uKind) + " can only be used inside Type<...> constraints");
-            }
             return (kind = uKind, next = end);
+        }
+    }
+    if not useLocalErr and start < size and source.startsWithAt(start, "Result<") {
+        end := skipKindToken(source, start);
+        if end > start + 8 and source.at(end - 1) == ">" {
+            rKind := source.slice(start, end);
+            if isResultKind(rKind) {
+                return (kind = rKind, next = end);
+            }
         }
     }
     if not useLocalErr and start < size and source.startsWithAt(start, "@enumraw:") {
@@ -4769,7 +5102,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                     }
                     mut pKinds: List<String> = [];
                     loop payItems as rp {
-                        pRes := self(errSource, errPos, false, rp, 0, prefix, aliases, "enum payload", genericType, seen);
+                        pRes := parseTypeWithSeen(errSource, errPos, false, rp, 0, prefix, aliases, "enum payload", genericType, seen);
                         if syntax.skipTrivia(rp, pRes.next, prefix) < rp.length() {
                             syntax.failAt(errSource, errPos, prefix, "unexpected text in enum case " + nDec.text + " payload");
                         }
@@ -4819,7 +5152,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             fName := decodeLengthPrefixedAt(source, cur);
             fType := decodeLengthPrefixedAt(source, fName.next);
             cur = fType.next;
-            resolvedField := self(errSource, errPos, false, fType.text, 0, prefix, aliases, "record field", genericType, seen);
+            resolvedField := parseTypeWithSeen(errSource, errPos, false, fType.text, 0, prefix, aliases, "record field", genericType, seen);
             if syntax.skipTrivia(fType.text, resolvedField.next, prefix) < fType.text.length() {
                 syntax.failAt(errSource, errPos, prefix, "unexpected text after type");
             }
@@ -4848,12 +5181,15 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if rawTarget.text == "" {
             syntax.failAt(errSource, errPos, prefix, "expected a type after distinct");
         }
-        resolvedBase := self(errSource, errPos, false, rawTarget.text, 0, prefix, aliases, "distinct", genericType, seen);
+        resolvedBase := parseTypeWithSeen(errSource, errPos, false, rawTarget.text, 0, prefix, aliases, "distinct", genericType, seen);
         if syntax.skipTrivia(rawTarget.text, resolvedBase.next, prefix) < rawTarget.text.length() {
             syntax.failAt(errSource, errPos, prefix, "unexpected text after type");
         }
         if resolvedBase.kind == ir.VALUE_KIND_UNIT or resolvedBase.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, errPos, prefix, "unsupported distinct underlying type " + displayKind(resolvedBase.kind));
+        }
+        if isUnionKind(resolvedBase.kind) {
+            syntax.failAt(errSource, errPos, prefix, "cannot define distinct over union " + displayKind(resolvedBase.kind));
         }
         effHdr := if genericType =!= "" { hdr.text + "<" + splitCommaNames(genericType).join(",") + ">" } else { hdr.text };
         return (kind = "Distinct<" + encodeLengthPrefixedText(effHdr) + resolvedBase.kind + ">", next = rawTarget.next);
@@ -4874,6 +5210,14 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         var singleLabel := "";
         var singleKind := "";
         var hadColon := false;
+        if cursor < size and source.at(cursor) == "|" and not source.startsWithAt(cursor, "||") {
+            grouped := parseTypeWithSeen(errSource, errPos, useLocalErr, source, cursor, prefix, aliases, context, genericType, seen);
+            closeG := syntax.skipTrivia(source, grouped.next, prefix);
+            if closeG >= size or source.at(closeG) =!= ")" {
+                syntax.failAt(errSource, if useLocalErr { closeG } else { errPos }, prefix, "expected ) in grouped union type");
+            }
+            return (kind = grouped.kind, next = closeG + 1);
+        }
         loop true {
             if cursor >= size {
                 syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected ) in tuple type");
@@ -4882,60 +5226,57 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 cursor = cursor + 1;
                 break;
             }
-            if source.at(cursor) == "(" {
-                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "nested tuple types are not supported");
-            }
             var label := "";
             var componentStart := cursor;
             if source.at(cursor) == ":" {
                 hadColon = true;
                 cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-                if cursor < size and source.at(cursor) == "(" {
-                    syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "nested tuple types are not supported");
-                }
-                if cursor >= size or not source.at(cursor).isNameStart() {
+                if cursor >= size or not startsTypeTokenAt(source, cursor, prefix) {
                     syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected a tuple field type");
                 }
                 componentStart = cursor;
             } else {
-                if not source.at(cursor).isNameStart() {
+                if source.at(cursor).isNameStart() {
+                    firstStart := cursor;
+                    firstEnd := source.skipName(cursor);
+                    firstName := source.slice(firstStart, firstEnd);
+                    afterFirst := syntax.skipTrivia(source, firstEnd, prefix);
+                    if afterFirst < size and source.at(afterFirst) == ":" {
+                        label = firstName;
+                        if syntax.isReservedWord(label) {
+                            syntax.unsupportedFeature(errSource, if useLocalErr { firstStart } else { errPos }, label, prefix);
+                        }
+                        if labels.contains(label) {
+                            syntax.failAt(errSource, if useLocalErr { firstStart } else { errPos }, prefix, "duplicate tuple field " + label);
+                        }
+                        (mut labels).pushBack(label);
+                        cursor = syntax.skipTrivia(source, afterFirst + 1, prefix);
+                        if cursor >= size or not startsTypeTokenAt(source, cursor, prefix) {
+                            syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected a tuple field type");
+                        }
+                        componentStart = cursor;
+                    }
+                } else if not startsTypeTokenAt(source, cursor, prefix) {
                     syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected a tuple field name");
                 }
-                firstStart := cursor;
-                firstEnd := source.skipName(cursor);
-                firstName := source.slice(firstStart, firstEnd);
-                afterFirst := syntax.skipTrivia(source, firstEnd, prefix);
-                if afterFirst < size and source.at(afterFirst) == ":" {
-                    label = firstName;
-                    if syntax.isReservedWord(label) {
-                        syntax.unsupportedFeature(errSource, if useLocalErr { firstStart } else { errPos }, label, prefix);
-                    }
-                    if labels.contains(label) {
-                        syntax.failAt(errSource, if useLocalErr { firstStart } else { errPos }, prefix, "duplicate tuple field " + label);
-                    }
-                    (mut labels).pushBack(label);
-                    cursor = syntax.skipTrivia(source, afterFirst + 1, prefix);
-                    if cursor < size and source.at(cursor) == "(" {
-                        syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "nested tuple types are not supported");
-                    }
-                    if cursor >= size or not source.at(cursor).isNameStart() {
-                        syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected a tuple field type");
-                    }
-                    componentStart = cursor;
-                }
             }
-            parsedComponent := self(errSource, errPos, useLocalErr, source, componentStart, prefix, aliases, "tuple field", genericType, seen);
+            isSingleCandidate := count == 0 and label == "" and not hadColon;
+            compCtx := if isSingleCandidate { context } else { "tuple field" };
+            parsedComponent := parseTypeWithSeen(errSource, errPos, useLocalErr, source, componentStart, prefix, aliases, compCtx, genericType, seen);
             componentKind := parsedComponent.kind;
-            cursor = parsedComponent.next;
+            cursor = syntax.skipTrivia(source, parsedComponent.next, prefix);
             diagPos := if useLocalErr { componentStart } else { errPos };
-            if isTupleKind(componentKind) {
-                syntax.failAt(errSource, diagPos, prefix, "nested tuple types are not supported");
-            }
-            if isListKind(componentKind) {
-                syntax.failAt(errSource, diagPos, prefix, "list types inside tuples are not supported");
-            }
-            if componentKind == ir.VALUE_KIND_UNIT {
-                syntax.failAt(errSource, diagPos, prefix, "unsupported tuple component type Unit");
+            willBeTuple := (count > 0) or hadColon or hadComma or (cursor < size and source.at(cursor) == ",");
+            if willBeTuple {
+                if isTupleKind(componentKind) {
+                    syntax.failAt(errSource, diagPos, prefix, "nested tuple types are not supported");
+                }
+                if isListKind(componentKind) {
+                    syntax.failAt(errSource, diagPos, prefix, "list types inside tuples are not supported");
+                }
+                if componentKind == ir.VALUE_KIND_UNIT {
+                    syntax.failAt(errSource, diagPos, prefix, "unsupported tuple component type Unit");
+                }
             }
             if containsDynKind(componentKind) {
                 syntax.failAt(errSource, diagPos, prefix, "borrowed dyn Interface cannot be stored in owning container or type definition");
@@ -4946,7 +5287,6 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             mut kindTextBuf.append(componentKind);
             if count == 0 { singleLabel = label; singleKind = componentKind; }
             count = count + 1;
-            cursor = syntax.skipTrivia(source, cursor, prefix);
             if cursor < size and source.at(cursor) == "," {
                 hadComma = true;
                 cursor = syntax.skipTrivia(source, cursor + 1, prefix);
@@ -4966,7 +5306,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     }
     if start < size and source.at(start) == "[" {
         elemStart := syntax.skipTrivia(source, start + 1, prefix);
-        inner := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "array element", genericType, seen);
+        inner := parseTypeWithSeen(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "array element", genericType, seen);
         if inner.kind == ir.VALUE_KIND_UNIT {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported array element type Unit");
         }
@@ -5016,7 +5356,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                         paramStart = syntax.skipTrivia(source, afterName + 1, prefix);
                     }
                 }
-                paramType := self(errSource, errPos, useLocalErr, source, paramStart, prefix, aliases, "function", genericType, seen);
+                paramType := parseTypeWithSeen(errSource, errPos, useLocalErr, source, paramStart, prefix, aliases, "function", genericType, seen);
                 if count > 0 { mut encodedBuf.append(","); }
                 mut encodedBuf.append(label);
                 mut encodedBuf.append(":");
@@ -5042,7 +5382,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             if afterClose >= size or source.at(afterClose) =!= ":" {
                 syntax.failAt(errSource, if useLocalErr { afterClose } else { errPos }, prefix, "expected : after function parameter types");
             }
-            retType := self(errSource, errPos, useLocalErr, source, afterClose + 1, prefix, aliases, "function", genericType, seen);
+            retType := parseTypeWithSeen(errSource, errPos, useLocalErr, source, afterClose + 1, prefix, aliases, "function", genericType, seen);
             if containsDynKind(retType.kind) {
                 syntax.failAt(errSource, if useLocalErr { afterClose + 1 } else { errPos }, prefix, "borrowed dyn Interface cannot escape via function return type");
             }
@@ -5088,7 +5428,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if innerStart >= size or source.at(innerStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "expected a list element type");
         }
-        inner := self(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, "list element", genericType, seen);
+        inner := parseTypeWithSeen(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, "list element", genericType, seen);
         if isListKind(inner.kind) {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "nested list types are not supported");
         }
@@ -5107,7 +5447,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if innerStart >= size or source.at(innerStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "expected an array element type");
         }
-        inner := self(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, "array element", genericType, seen);
+        inner := parseTypeWithSeen(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, "array element", genericType, seen);
         if inner.kind == ir.VALUE_KIND_UNIT {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "unsupported array element type Unit");
         }
@@ -5147,7 +5487,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if valStart >= size or source.at(valStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { valStart } else { errPos }, prefix, "expected a map value type");
         }
-        valParsed := self(errSource, errPos, useLocalErr, source, valStart, prefix, aliases, "map value", genericType, seen);
+        valParsed := parseTypeWithSeen(errSource, errPos, useLocalErr, source, valStart, prefix, aliases, "map value", genericType, seen);
         if valParsed.kind == ir.VALUE_KIND_UNIT or valParsed.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, if useLocalErr { valStart } else { errPos }, prefix, "unsupported map value type " + displayKind(valParsed.kind));
         }
@@ -5185,7 +5525,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if elemStart >= size or source.at(elemStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected an Rc payload type");
         }
-        elemParsed := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "Rc payload", genericType, seen);
+        elemParsed := parseTypeWithSeen(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "Rc payload", genericType, seen);
         if elemParsed.kind == ir.VALUE_KIND_UNIT or elemParsed.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported Rc element type " + displayKind(elemParsed.kind));
         }
@@ -5397,7 +5737,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 }
                 pSpec := paramSpecs[argIdx];
                 if isTypeParamKind(pSpec.kind) {
-                    argParsed := self(errSource, errPos, useLocalErr, source, argCursor, prefix, aliases, "type argument", genericType, seen);
+                    argParsed := parseTypeWithSeen(errSource, errPos, useLocalErr, source, argCursor, prefix, aliases, "type argument", genericType, seen);
                     mut argKinds.pushBack(argParsed.kind);
                     argCursor = syntax.skipTrivia(source, argParsed.next, prefix);
                 } else {
@@ -5451,7 +5791,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 mut nextSeen: List<String> = [];
                 loop seen as sEntry { mut nextSeen.pushBack(sEntry); }
                 (mut nextSeen).pushBack(seenKey);
-                resolved := self(errSource, aliasItem.at, false, tplBody, 0, prefix, scopedTplAliases, "alias", resolvedTplParamsCsv, nextSeen);
+                resolved := parseTypeWithSeen(errSource, aliasItem.at, false, tplBody, 0, prefix, scopedTplAliases, "alias", resolvedTplParamsCsv, nextSeen);
                 trailing := syntax.skipTrivia(tplBody, resolved.next, prefix);
                 if trailing < tplBody.length() {
                     syntax.failAt(errSource, aliasItem.at, prefix, "unexpected text after type");
@@ -5488,39 +5828,20 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         mut nextSeen: List<String> = seen;
         mut nextSeen.pushBack(seenKey);
         scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
-        resolved := self(errSource, aliasItem.at, false, aliasItem.target, 0, prefix, scopedAliases, "alias", "", nextSeen);
-        var trailing := syntax.skipTrivia(aliasItem.target, resolved.next, prefix);
-        var resolvedAliasKind := resolved.kind;
-        if trailing < (aliasItem.target).length() and (aliasItem.target).at(trailing) == "|" and not (aliasItem.target).startsWithAt(trailing, "||") {
-            if context =!= "alias" and context =!= "constraint" {
-                syntax.failAt(errSource, nameStart, prefix, "type set union " + aliasItem.target + " can only be used inside Type<...> constraints");
-            }
-            if resolved.kind == ir.VALUE_KIND_UNIT or resolved.kind == ir.VALUE_KIND_NEVER {
-                syntax.failAt(errSource, aliasItem.at, prefix, "unsupported type set member " + displayKind(resolved.kind));
-            }
-            mut uMembers: List<String> = [resolved.kind];
-            loop trailing < (aliasItem.target).length() and (aliasItem.target).at(trailing) == "|" and not (aliasItem.target).startsWithAt(trailing, "||") {
-                uNext := syntax.skipTrivia(aliasItem.target, trailing + 1, prefix);
-                uAtom := self(errSource, aliasItem.at, false, aliasItem.target, uNext, prefix, scopedAliases, "alias", "", nextSeen);
-                if uAtom.kind == ir.VALUE_KIND_UNIT or uAtom.kind == ir.VALUE_KIND_NEVER {
-                    syntax.failAt(errSource, aliasItem.at, prefix, "unsupported type set member " + displayKind(uAtom.kind));
-                }
-                mut uMembers.pushBack(uAtom.kind);
-                trailing = syntax.skipTrivia(aliasItem.target, uAtom.next, prefix);
-            }
-            resolvedAliasKind = buildUnionKind(uMembers);
-        }
+        aliasCtx := if context == "constraint" { "constraint" } else { "alias" };
+        resolved := parseTypeWithSeen(errSource, aliasItem.at, false, aliasItem.target, 0, prefix, scopedAliases, aliasCtx, "", nextSeen);
+        trailing := syntax.skipTrivia(aliasItem.target, resolved.next, prefix);
         if trailing < (aliasItem.target).length() {
             syntax.failAt(errSource, aliasItem.at, prefix, "unexpected text after type");
         }
-        if isUnionKind(resolvedAliasKind) and context =!= "alias" and context =!= "constraint" {
-            syntax.failAt(errSource, nameStart, prefix, "type set union " + displayKind(resolvedAliasKind) + " can only be used inside Type<...> constraints");
-        }
-        return (kind = resolvedAliasKind, next = after);
+        return (kind = resolved.kind, next = after);
     }
     if not useLocalErr and isUnsupportedAliasTarget(name) {
         unsupportedAliasTarget(errSource, errPos, prefix, name);
         return (kind = "", next = after);
+    }
+    if name == "Error" {
+        return (kind = CORE_ERROR_KIND, next = after);
     }
     if name.indexOf(".", 0) >= 0 or not useLocalErr {
         syntax.failAt(errSource, nameStart, prefix, "unknown type alias " + name);
@@ -5530,49 +5851,122 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     (kind = "", next = after)
 };
 
-/** Parses one source or alias type (including closed `|` type unions in `alias` and `constraint` contexts) with cycle tracking `seen`. */
+/** Parses one source or alias type (including `|` unions, optional leading `|`, `!` fallibles, and attached `T!`) with cycle tracking `seen`. */
 pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
-    first := parseTypeAtomWithSeen(errSource, errPos, useLocalErr, source, position, prefix, aliases, context, genericType, seen);
     size := source.length();
+    var start := syntax.skipTrivia(source, position, prefix);
+    var hadLeadingBar := false;
+    if start < size and source.at(start) == "|" and not source.startsWithAt(start, "||") {
+        hadLeadingBar = true;
+        start = syntax.skipTrivia(source, start + 1, prefix);
+    }
+    first := parseTypeAtomWithSeen(errSource, errPos, useLocalErr, source, start, prefix, aliases, context, genericType, seen);
+    var endBeforeTrivia := first.next;
     var cursor := syntax.skipTrivia(source, first.next, prefix);
+    var leftKind := first.kind;
     if cursor < size and source.at(cursor) == "|" and not source.startsWithAt(cursor, "||") {
-        if context =!= "alias" and context =!= "constraint" {
-            syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "type set union is only allowed in alias declarations and Type<...> constraints");
+        if leftKind == ir.VALUE_KIND_NEVER or (context == "constraint" and leftKind == ir.VALUE_KIND_UNIT) {
+            syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, if context == "constraint" { "unsupported type set member " + displayKind(leftKind) } else { "unsupported union member " + displayKind(leftKind) });
         }
-        if first.kind == ir.VALUE_KIND_UNIT or first.kind == ir.VALUE_KIND_NEVER {
-            syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "unsupported type set member " + displayKind(first.kind));
+        if isInterfaceKind(leftKind) {
+            msg := if context == "constraint" { "interface " + displayKind(leftKind) + " cannot appear in closed | type union; use comma-separated bounds Type<A, B>" } else { "interface " + displayKind(leftKind) + " cannot appear in union value type" };
+            syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, msg);
         }
-        if isInterfaceKind(first.kind) {
-            syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "interface " + displayKind(first.kind) + " cannot appear in closed | type union; use comma-separated bounds Type<A, B>");
+        if context =!= "constraint" {
+            lbErr := borrowedStorageError(leftKind);
+            if lbErr =!= "" { syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, lbErr); }
+        } else if genericType =!= "" and kindHasAnyGenericParam(genericType, leftKind) {
+            syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, "type set union members must be concrete types");
         }
-        if genericType =!= "" and kindHasAnyGenericParam(genericType, first.kind) {
-            syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "type set union members must be concrete types");
-        }
-        mut members: List<String> = [first.kind];
+        mut members: List<String> = [leftKind];
         loop cursor < size and source.at(cursor) == "|" and not source.startsWithAt(cursor, "||") {
             nextStart := syntax.skipTrivia(source, cursor + 1, prefix);
             atom := parseTypeAtomWithSeen(errSource, errPos, useLocalErr, source, nextStart, prefix, aliases, context, genericType, seen);
-            if atom.kind == ir.VALUE_KIND_UNIT or atom.kind == ir.VALUE_KIND_NEVER {
-                syntax.failAt(errSource, if useLocalErr { nextStart } else { errPos }, prefix, "unsupported type set member " + displayKind(atom.kind));
+            if atom.kind == ir.VALUE_KIND_NEVER or (context == "constraint" and atom.kind == ir.VALUE_KIND_UNIT) {
+                syntax.failAt(errSource, if useLocalErr { nextStart } else { errPos }, prefix, if context == "constraint" { "unsupported type set member " + displayKind(atom.kind) } else { "unsupported union member " + displayKind(atom.kind) });
             }
             if isInterfaceKind(atom.kind) {
-                syntax.failAt(errSource, if useLocalErr { nextStart } else { errPos }, prefix, "interface " + displayKind(atom.kind) + " cannot appear in closed | type union; use comma-separated bounds Type<A, B>");
+                msg := if context == "constraint" { "interface " + displayKind(atom.kind) + " cannot appear in closed | type union; use comma-separated bounds Type<A, B>" } else { "interface " + displayKind(atom.kind) + " cannot appear in union value type" };
+                syntax.failAt(errSource, if useLocalErr { nextStart } else { errPos }, prefix, msg);
             }
-            if genericType =!= "" and kindHasAnyGenericParam(genericType, atom.kind) {
+            if context =!= "constraint" {
+                abErr := borrowedStorageError(atom.kind);
+                if abErr =!= "" { syntax.failAt(errSource, if useLocalErr { nextStart } else { errPos }, prefix, abErr); }
+            } else if genericType =!= "" and kindHasAnyGenericParam(genericType, atom.kind) {
                 syntax.failAt(errSource, if useLocalErr { nextStart } else { errPos }, prefix, "type set union members must be concrete types");
             }
             mut members.pushBack(atom.kind);
+            endBeforeTrivia = atom.next;
             cursor = syntax.skipTrivia(source, atom.next, prefix);
         }
-        return (kind = buildUnionKind(members), next = cursor);
+        leftKind = buildUnionKind(members);
+    } else if hadLeadingBar {
+        if leftKind == ir.VALUE_KIND_NEVER or isInterfaceKind(leftKind) or (context == "constraint" and leftKind == ir.VALUE_KIND_UNIT) {
+            syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, "unsupported union member " + displayKind(leftKind));
+        }
+        if context =!= "constraint" {
+            lbErr := borrowedStorageError(leftKind);
+            if lbErr =!= "" { syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, lbErr); }
+        }
     }
-    if isUnionKind(first.kind) and context =!= "alias" and context =!= "constraint" {
-        syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "type set union " + displayKind(first.kind) + " can only be used inside Type<...> constraints");
+    if isInterfaceKind(leftKind) and context =!= "alias" and context =!= "constraint" and context =!= "dyn" and context =!= "impl" {
+        syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, "interface " + displayKind(leftKind) + " cannot be used directly as a value type; use T: Type<" + displayKind(leftKind) + "> for static dispatch or dyn " + displayKind(leftKind) + " for dynamic dispatch");
     }
-    if isInterfaceKind(first.kind) and context =!= "alias" and context =!= "constraint" and context =!= "dyn" and context =!= "impl" {
-        syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "interface " + displayKind(first.kind) + " cannot be used directly as a value type; use T: Type<" + displayKind(first.kind) + "> for static dispatch or dyn " + displayKind(first.kind) + " for dynamic dispatch");
+    if cursor < size and source.at(cursor) == "!" {
+        if context == "constraint" {
+            syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "fallible ! type cannot be used inside Type<...> constraints");
+        }
+        if leftKind == ir.VALUE_KIND_NEVER {
+            syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, "unsupported fallible success type Never");
+        }
+        lbErr := borrowedStorageError(leftKind);
+        if lbErr =!= "" { syntax.failAt(errSource, if useLocalErr { start } else { errPos }, prefix, lbErr); }
+        isAttached := cursor == endBeforeTrivia;
+        afterBang := syntax.skipTrivia(source, cursor + 1, prefix);
+        if afterBang < size and source.at(afterBang) == "!" {
+            syntax.failAt(errSource, if useLocalErr { afterBang } else { errPos }, prefix, "unexpected ! in fallible type; parenthesize as (T!) ! E if intended");
+        }
+        if not startsTypeTokenAt(source, afterBang, prefix) {
+            if not isAttached {
+                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "detached fallible suffix ! requires an explicit error type; attach ! directly for T! shorthand");
+            }
+            return (kind = buildResultKind(leftKind, CORE_ERROR_KIND), next = cursor + 1);
+        }
+        var errStart := afterBang;
+        if errStart < size and source.at(errStart) == "|" and not source.startsWithAt(errStart, "||") {
+            errStart = syntax.skipTrivia(source, errStart + 1, prefix);
+        }
+        errFirst := parseTypeAtomWithSeen(errSource, errPos, useLocalErr, source, errStart, prefix, aliases, context, genericType, seen);
+        if errFirst.kind == ir.VALUE_KIND_NEVER or isInterfaceKind(errFirst.kind) {
+            syntax.failAt(errSource, if useLocalErr { errStart } else { errPos }, prefix, "unsupported fallible error type " + displayKind(errFirst.kind));
+        }
+        eb0 := borrowedStorageError(errFirst.kind);
+        if eb0 =!= "" { syntax.failAt(errSource, if useLocalErr { errStart } else { errPos }, prefix, eb0); }
+        var errEnd := errFirst.next;
+        var errCursor := syntax.skipTrivia(source, errFirst.next, prefix);
+        var errKind := errFirst.kind;
+        if errCursor < size and source.at(errCursor) == "|" and not source.startsWithAt(errCursor, "||") {
+            mut errMembers: List<String> = [errFirst.kind];
+            loop errCursor < size and source.at(errCursor) == "|" and not source.startsWithAt(errCursor, "||") {
+                eNextStart := syntax.skipTrivia(source, errCursor + 1, prefix);
+                eAtom := parseTypeAtomWithSeen(errSource, errPos, useLocalErr, source, eNextStart, prefix, aliases, context, genericType, seen);
+                if eAtom.kind == ir.VALUE_KIND_NEVER or isInterfaceKind(eAtom.kind) {
+                    syntax.failAt(errSource, if useLocalErr { eNextStart } else { errPos }, prefix, "unsupported fallible error type " + displayKind(eAtom.kind));
+                }
+                eb := borrowedStorageError(eAtom.kind);
+                if eb =!= "" { syntax.failAt(errSource, if useLocalErr { eNextStart } else { errPos }, prefix, eb); }
+                mut errMembers.pushBack(eAtom.kind);
+                errEnd = eAtom.next;
+                errCursor = syntax.skipTrivia(source, eAtom.next, prefix);
+            }
+            errKind = buildUnionKind(errMembers);
+        }
+        if errCursor < size and source.at(errCursor) == "!" {
+            syntax.failAt(errSource, if useLocalErr { errCursor } else { errPos }, prefix, "chained fallible ! types must be parenthesized");
+        }
+        return (kind = buildResultKind(leftKind, errKind), next = errEnd);
     }
-    first
+    (kind = leftKind, next = endBeforeTrivia)
 };
 
 /** Resolves one scalar, flat named-tuple, array, list, or callable type text, following transparent aliases and rejecting unknown names, nested tuples, unsupported targets and cycles. */
@@ -6141,11 +6535,15 @@ collectSingleTypeTarget := fn(source: String, position: Int, prefix: String): (t
     }
 };
 
-/** Reads one raw alias target type (or closed `A | B | ...` union) from `position`. */
+/** Reads one raw alias/field target type (including leading `|`, `A | B`, `!`, and `T!`) from `position`. */
 pub collectTypeTarget := fn(source: String, position: Int, prefix: String): (text: String, next: Int) {
     start := syntax.skipTrivia(source, position, prefix);
-    first := collectSingleTypeTarget(source, start, prefix);
     size := source.length();
+    var firstStart := start;
+    if firstStart < size and source.at(firstStart) == "|" and not source.startsWithAt(firstStart, "||") {
+        firstStart = syntax.skipTrivia(source, firstStart + 1, prefix);
+    }
+    first := collectSingleTypeTarget(source, firstStart, prefix);
     var endPos := first.next;
     loop true {
         after := syntax.skipTrivia(source, endPos, prefix);
@@ -6155,6 +6553,34 @@ pub collectTypeTarget := fn(source: String, position: Int, prefix: String): (tex
             endPos = nxt.next;
         } else {
             break;
+        }
+    }
+    afterUnion := syntax.skipTrivia(source, endPos, prefix);
+    if afterUnion < size and source.at(afterUnion) == "!" {
+        afterBang := syntax.skipTrivia(source, afterUnion + 1, prefix);
+        if not startsTypeTokenAt(source, afterBang, prefix) {
+            endPos = afterUnion + 1;
+        } else {
+            var rhsStart := afterBang;
+            if rhsStart < size and source.at(rhsStart) == "|" and not source.startsWithAt(rhsStart, "||") {
+                rhsStart = syntax.skipTrivia(source, rhsStart + 1, prefix);
+            }
+            rhs0 := collectSingleTypeTarget(source, rhsStart, prefix);
+            if rhs0.next > rhsStart {
+                endPos = rhs0.next;
+                loop true {
+                    afterR := syntax.skipTrivia(source, endPos, prefix);
+                    if afterR < size and source.at(afterR) == "|" and not source.startsWithAt(afterR, "||") {
+                        nxtR := collectSingleTypeTarget(source, afterR + 1, prefix);
+                        if nxtR.next <= endPos { break; }
+                        endPos = nxtR.next;
+                    } else {
+                        break;
+                    }
+                }
+            } else {
+                endPos = afterUnion + 1;
+            }
         }
     }
     (text = source.slice(start, endPos), next = endPos)
@@ -6390,7 +6816,11 @@ pub collectRecordTargetWithAttrs := fn(source: String, bracePos: Int, prefix: St
         mut pairsBuf.append(encodeLengthPrefixedText(typesList[idx]));
         idx = idx + 1;
     }
-    recHeader := moduleIdentity + "#" + declAt.toText() + "#" + recName + attrSuffix;
+    recHeader := if (moduleIdentity == "lite.core.error.v1" or moduleIdentity == "lib$core$error" or moduleIdentity == "lib_s_core_s_error") and recName == "Error" and attrSuffix == "" {
+        "core/error#0#Error"
+    } else {
+        moduleIdentity + "#" + declAt.toText() + "#" + recName + attrSuffix
+    };
     (text = "@recraw:" + encodeLengthPrefixedText(recHeader) + count.toText() + ";" + pairsBuf.build(), next = closeEnd)
 };
 
@@ -6610,7 +7040,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
                     if not splitPayloadTypeTexts(rawPay, prefix, mut payItems) { return (ok = false, kind = "", next = start); }
                     mut pKinds: List<String> = [];
                     loop payItems as rp {
-                        pRes := self(rp, 0, prefix, aliases, genericType, seen, depthLeft - 1, false);
+                        pRes := canResolveTypeAt(rp, 0, prefix, aliases, genericType, seen, depthLeft - 1);
                         if not pRes.ok or pRes.kind == ir.VALUE_KIND_UNIT or pRes.kind == ir.VALUE_KIND_NEVER or
                         syntax.skipTrivia(rp, pRes.next, prefix) < rp.length() {
                             return (ok = false, kind = "", next = start);
@@ -6638,10 +7068,17 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
     if source.startsWithAt(start, "Union<") {
         end := skipKindToken(source, start);
         if end > start + 7 and source.at(end - 1) == ">" {
-            if not allowUnion { return (ok = false, kind = "", next = start); }
             uKind := source.slice(start, end);
             if not isUnionKind(uKind) { return (ok = false, kind = "", next = start); }
             return (ok = true, kind = uKind, next = end);
+        }
+    }
+    if source.startsWithAt(start, "Result<") {
+        end := skipKindToken(source, start);
+        if end > start + 8 and source.at(end - 1) == ">" {
+            rKind := source.slice(start, end);
+            if not isResultKind(rKind) { return (ok = false, kind = "", next = start); }
+            return (ok = true, kind = rKind, next = end);
         }
     }
     if source.startsWithAt(start, "@recraw:") {
@@ -6661,7 +7098,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             fType := decodeLengthPrefixedAt(source, fName.next);
             if fName.next < 0 or fType.next < 0 { return (ok = false, kind = "", next = start); }
             cur = fType.next;
-            resolvedField := self(fType.text, 0, prefix, aliases, genericType, seen, depthLeft - 1, false);
+            resolvedField := canResolveTypeAt(fType.text, 0, prefix, aliases, genericType, seen, depthLeft - 1);
             if not resolvedField.ok or resolvedField.kind == ir.VALUE_KIND_UNIT or
             syntax.skipTrivia(fType.text, resolvedField.next, prefix) < fType.text.length() {
                 return (ok = false, kind = "", next = start);
@@ -6683,8 +7120,8 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if hdr.next < 0 { return (ok = false, kind = "", next = start); }
         rawTarget := decodeLengthPrefixedAt(source, hdr.next);
         if rawTarget.next < 0 or rawTarget.text == "" { return (ok = false, kind = "", next = start); }
-        resolvedBase := self(rawTarget.text, 0, prefix, aliases, genericType, seen, depthLeft - 1, false);
-        if not resolvedBase.ok or resolvedBase.kind == ir.VALUE_KIND_UNIT or resolvedBase.kind == ir.VALUE_KIND_NEVER or
+        resolvedBase := canResolveTypeAt(rawTarget.text, 0, prefix, aliases, genericType, seen, depthLeft - 1);
+        if not resolvedBase.ok or resolvedBase.kind == ir.VALUE_KIND_UNIT or resolvedBase.kind == ir.VALUE_KIND_NEVER or isUnionKind(resolvedBase.kind) or
         syntax.skipTrivia(rawTarget.text, resolvedBase.next, prefix) < rawTarget.text.length() {
             return (ok = false, kind = "", next = start);
         }
@@ -6700,13 +7137,20 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
     ch := source.at(start);
     if ch == "(" {
         var cursor := syntax.skipTrivia(source, start + 1, prefix);
+        if cursor < size and source.at(cursor) == "|" and not source.startsWithAt(cursor, "||") {
+            grouped := canResolveTypeAt(source, cursor, prefix, aliases, genericType, seen, depthLeft - 1);
+            if not grouped.ok { return grouped; }
+            closeG := syntax.skipTrivia(source, grouped.next, prefix);
+            if closeG >= size or source.at(closeG) =!= ")" { return (ok = false, kind = "", next = closeG); }
+            return (ok = true, kind = grouped.kind, next = closeG + 1);
+        }
         mut labels: List<String> = [];
         mut parts: List<String> = [];
         var count := 0;
         var hasNamed := false;
         var hadComma := false;
+        var singleKind := "";
         loop cursor < size and source.at(cursor) =!= ")" {
-            if source.at(cursor) == "(" { return (ok = false, kind = "", next = cursor); }
             var label := "";
             var fieldStart := cursor;
             if source.at(cursor).isNameStart() {
@@ -6721,19 +7165,18 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
                     hasNamed = true;
                     mut labels.pushBack(label);
                     fieldStart = syntax.skipTrivia(source, colonPos + 1, prefix);
-                    if fieldStart >= size or source.at(fieldStart) == "(" {
-                        return (ok = false, kind = "", next = fieldStart);
-                    }
                 }
             }
-            parsedField := self(source, fieldStart, prefix, aliases, genericType, seen, depthLeft - 1, false);
+            parsedField := canResolveTypeAt(source, fieldStart, prefix, aliases, genericType, seen, depthLeft - 1);
             if not parsedField.ok { return (ok = false, kind = "", next = fieldStart); }
-            if isTupleKind(parsedField.kind) or isListKind(parsedField.kind) or parsedField.kind == ir.VALUE_KIND_UNIT {
+            cursor = syntax.skipTrivia(source, parsedField.next, prefix);
+            willBeTuple := (count > 0) or hasNamed or hadComma or (cursor < size and source.at(cursor) == ",");
+            if willBeTuple and (isTupleKind(parsedField.kind) or isListKind(parsedField.kind) or parsedField.kind == ir.VALUE_KIND_UNIT) {
                 return (ok = false, kind = "", next = fieldStart);
             }
             (mut parts).pushBack(label + ":" + parsedField.kind);
+            if count == 0 { singleKind = parsedField.kind; }
             count = count + 1;
-            cursor = syntax.skipTrivia(source, parsedField.next, prefix);
             if cursor < size and source.at(cursor) == "," {
                 hadComma = true;
                 cursor = syntax.skipTrivia(source, cursor + 1, prefix);
@@ -6745,13 +7188,16 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if cursor >= size or source.at(cursor) =!= ")" {
             return (ok = false, kind = "", next = cursor);
         }
-        if count == 0 or (count == 1 and not hasNamed and not hadComma) {
+        if count == 0 {
             return (ok = false, kind = "", next = start);
+        }
+        if count == 1 and not hasNamed and not hadComma {
+            return (ok = true, kind = singleKind, next = cursor + 1);
         }
         return (ok = true, kind = "(" + parts.join(",") + ")", next = cursor + 1);
     }
     if ch == "[" {
-        elem := self(source, start + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        elem := canResolveTypeAt(source, start + 1, prefix, aliases, genericType, seen, depthLeft - 1);
         if not elem.ok or elem.kind == ir.VALUE_KIND_UNIT { return (ok = false, kind = "", next = start); }
         afterElem := syntax.skipTrivia(source, elem.next, prefix);
         if afterElem >= size or source.at(afterElem) =!= ";" {
@@ -6786,7 +7232,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
                     pTypeStart = syntax.skipTrivia(source, pColon + 1, prefix);
                 }
             }
-            parsedParam := self(source, pTypeStart, prefix, aliases, genericType, seen, depthLeft - 1, false);
+            parsedParam := canResolveTypeAt(source, pTypeStart, prefix, aliases, genericType, seen, depthLeft - 1);
             if not parsedParam.ok { return (ok = false, kind = "", next = pTypeStart); }
             (mut paramParts).pushBack(pLabel + ":" + parsedParam.kind);
             pCursor = syntax.skipTrivia(source, parsedParam.next, prefix);
@@ -6857,7 +7303,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if afterClose >= size or source.at(afterClose) =!= ":" {
             return (ok = false, kind = "", next = afterClose);
         }
-        retType := self(source, afterClose + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        retType := canResolveTypeAt(source, afterClose + 1, prefix, aliases, genericType, seen, depthLeft - 1);
         if not retType.ok { return (ok = false, kind = "", next = afterClose + 1); }
         return (ok = true, kind = "fn(" + paramParts.join(",") + ")" + fnAtCtxSuffix(fnCtxKind) + ":" + retType.kind, next = retType.next);
     }
@@ -6903,7 +7349,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if afterList >= size or source.at(afterList) =!= "<" {
             return (ok = false, kind = "", next = afterList);
         }
-        elem := self(source, afterList + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        elem := canResolveTypeAt(source, afterList + 1, prefix, aliases, genericType, seen, depthLeft - 1);
         if not elem.ok or isListKind(elem.kind) or elem.kind == ir.VALUE_KIND_UNIT {
             return (ok = false, kind = "", next = afterList + 1);
         }
@@ -6918,7 +7364,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if afterArr >= size or source.at(afterArr) =!= "<" {
             return (ok = false, kind = "", next = afterArr);
         }
-        elem := self(source, afterArr + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        elem := canResolveTypeAt(source, afterArr + 1, prefix, aliases, genericType, seen, depthLeft - 1);
         if not elem.ok or elem.kind == ir.VALUE_KIND_UNIT {
             return (ok = false, kind = "", next = afterArr + 1);
         }
@@ -6947,7 +7393,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if comma >= size or source.at(comma) =!= "," {
             return (ok = false, kind = "", next = comma);
         }
-        valRes := self(source, comma + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        valRes := canResolveTypeAt(source, comma + 1, prefix, aliases, genericType, seen, depthLeft - 1);
         if not valRes.ok or valRes.kind == ir.VALUE_KIND_UNIT or valRes.kind == ir.VALUE_KIND_NEVER {
             return (ok = false, kind = "", next = comma + 1);
         }
@@ -6977,7 +7423,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if afterRc >= size or source.at(afterRc) =!= "<" {
             return (ok = false, kind = "", next = afterRc);
         }
-        elemRes := self(source, afterRc + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        elemRes := canResolveTypeAt(source, afterRc + 1, prefix, aliases, genericType, seen, depthLeft - 1);
         if not elemRes.ok or elemRes.kind == ir.VALUE_KIND_UNIT or elemRes.kind == ir.VALUE_KIND_NEVER {
             return (ok = false, kind = "", next = afterRc + 1);
         }
@@ -7111,7 +7557,10 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         return (ok = true, kind = name, next = afterName);
     }
     aliasIdx := findAlias(aliases, name);
-    if aliasIdx < 0 { return (ok = false, kind = "", next = afterName); }
+    if aliasIdx < 0 {
+        if name == "Error" { return (ok = true, kind = CORE_ERROR_KIND, next = afterName); }
+        return (ok = false, kind = "", next = afterName);
+    }
     aliasItem := aliases[aliasIdx];
     seenKey := (aliasItem.depth).toText() + ":" + name;
     if aliasItem.target == "" {
@@ -7190,7 +7639,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             }
             pSpec := paramSpecs[argIdx];
             if isTypeParamKind(pSpec.kind) {
-                argParsed := self(source, argCursor, prefix, aliases, genericType, seen, depthLeft - 1, false);
+                argParsed := canResolveTypeAt(source, argCursor, prefix, aliases, genericType, seen, depthLeft - 1);
                 if not argParsed.ok { return (ok = false, kind = "", next = argCursor); }
                 mut argKinds.pushBack(argParsed.kind);
                 argCursor = syntax.skipTrivia(source, argParsed.next, prefix);
@@ -7240,7 +7689,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             mut nextSeen: List<String> = [];
             loop seen as sEntry { mut nextSeen.pushBack(sEntry); }
             (mut nextSeen).pushBack(seenKey);
-            resolved := self(tplBody, 0, prefix, scopedTplAliases, resolvedTplParamsCsv, nextSeen, depthLeft - 1, true);
+            resolved := canResolveTypeAt(tplBody, 0, prefix, scopedTplAliases, resolvedTplParamsCsv, nextSeen, depthLeft - 1);
             if not resolved.ok or syntax.skipTrivia(tplBody, resolved.next, prefix) < tplBody.length() {
                 return (ok = false, kind = "", next = afterClose);
             }
@@ -7266,9 +7715,6 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             if validateCanonicalKind(instKind, genericType) =!= "" {
                 return (ok = false, kind = "", next = afterClose);
             }
-            if isUnionKind(instKind) and not allowUnion {
-                return (ok = false, kind = "", next = afterClose);
-            }
         }
         return (ok = true, kind = instKind, next = afterClose);
     }
@@ -7279,44 +7725,35 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
     loop seen as entry { mut nextSeen.pushBack(entry); }
     (mut nextSeen).pushBack(seenKey);
     scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
-    resolved := self(aliasItem.target, 0, prefix, scopedAliases, "", nextSeen, depthLeft - 1, true);
+    resolved := if allowUnion {
+        canResolveConstraintTypeAt(aliasItem.target, 0, prefix, scopedAliases, "", nextSeen, depthLeft - 1)
+    } else {
+        canResolveTypeAt(aliasItem.target, 0, prefix, scopedAliases, "", nextSeen, depthLeft - 1)
+    };
     if not resolved.ok { return (ok = false, kind = "", next = afterName); }
-    var trailing := syntax.skipTrivia(aliasItem.target, resolved.next, prefix);
-    var resolvedAliasKind := resolved.kind;
-    if trailing < (aliasItem.target).length() and (aliasItem.target).at(trailing) == "|" and not (aliasItem.target).startsWithAt(trailing, "||") {
-        if not allowUnion { return (ok = false, kind = "", next = afterName); }
-        if resolved.kind == ir.VALUE_KIND_UNIT or resolved.kind == ir.VALUE_KIND_NEVER {
-            return (ok = false, kind = "", next = afterName);
-        }
-        mut uMembers: List<String> = [resolved.kind];
-        loop trailing < (aliasItem.target).length() and (aliasItem.target).at(trailing) == "|" and not (aliasItem.target).startsWithAt(trailing, "||") {
-            nextElemPos := syntax.skipTrivia(aliasItem.target, trailing + 1, prefix);
-            uElem := self(aliasItem.target, nextElemPos, prefix, scopedAliases, "", nextSeen, depthLeft - 1, true);
-            if not uElem.ok or uElem.kind == ir.VALUE_KIND_UNIT or uElem.kind == ir.VALUE_KIND_NEVER {
-                return (ok = false, kind = "", next = afterName);
-            }
-            mut uMembers.pushBack(uElem.kind);
-            trailing = syntax.skipTrivia(aliasItem.target, uElem.next, prefix);
-        }
-        resolvedAliasKind = buildUnionKind(uMembers);
-    }
+    trailing := syntax.skipTrivia(aliasItem.target, resolved.next, prefix);
     if trailing < (aliasItem.target).length() {
         return (ok = false, kind = "", next = afterName);
     }
-    if (isUnionKind(resolvedAliasKind) or isInterfaceKind(resolvedAliasKind)) and not allowUnion {
+    if isInterfaceKind(resolved.kind) and not allowUnion {
         return (ok = false, kind = "", next = afterName);
     }
-    (ok = true, kind = resolvedAliasKind, next = afterName)
+    (ok = true, kind = resolved.kind, next = afterName)
 };
 
 /** Non-failing type resolver permitting closed union `A | B` expressions (used inside `Type<...>` bounds). */
 pub canResolveConstraintTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String, seen: List<String>, depthLeft: Int): (ok: Bool, kind: String, next: Int) {
-    atom0 := canResolveTypeAtomAt(source, position, prefix, aliases, genericType, seen, depthLeft, true);
-    if not atom0.ok { return atom0; }
     size := source.length();
+    var start := syntax.skipTrivia(source, position, prefix);
+    if start < size and source.at(start) == "|" and not source.startsWithAt(start, "||") {
+        start = syntax.skipTrivia(source, start + 1, prefix);
+    }
+    atom0 := canResolveTypeAtomAt(source, start, prefix, aliases, genericType, seen, depthLeft, true);
+    if not atom0.ok { return atom0; }
+    var endBeforeTrivia := atom0.next;
     var cursor := syntax.skipTrivia(source, atom0.next, prefix);
     if cursor >= size or source.at(cursor) =!= "|" or source.startsWithAt(cursor, "||") {
-        return atom0;
+        return (ok = true, kind = atom0.kind, next = endBeforeTrivia);
     }
     if atom0.kind == ir.VALUE_KIND_UNIT or atom0.kind == ir.VALUE_KIND_NEVER or isInterfaceKind(atom0.kind) {
         return (ok = false, kind = "", next = cursor);
@@ -7329,14 +7766,94 @@ pub canResolveConstraintTypeAt := fn(source: String, position: Int, prefix: Stri
             return (ok = false, kind = "", next = cursor);
         }
         mut members.pushBack(elem.kind);
+        endBeforeTrivia = elem.next;
         cursor = syntax.skipTrivia(source, elem.next, prefix);
     }
-    (ok = true, kind = buildUnionKind(members), next = cursor)
+    (ok = true, kind = buildUnionKind(members), next = endBeforeTrivia)
 };
 
-/** Non-failing single-type resolver mirroring `parseTypeAt` for expressions and declarations. */
+/** Non-failing type resolver mirroring `parseTypeAt` (supports runtime unions, optional leading `|`, `!`, and `T!`). */
 pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String, seen: List<String>, depthLeft: Int): (ok: Bool, kind: String, next: Int) {
-    canResolveTypeAtomAt(source, position, prefix, aliases, genericType, seen, depthLeft, false)
+    if depthLeft <= 0 { return (ok = false, kind = "", next = position); }
+    size := source.length();
+    var start := syntax.skipTrivia(source, position, prefix);
+    var hadLeadingBar := false;
+    if start < size and source.at(start) == "|" and not source.startsWithAt(start, "||") {
+        hadLeadingBar = true;
+        start = syntax.skipTrivia(source, start + 1, prefix);
+    }
+    atom0 := canResolveTypeAtomAt(source, start, prefix, aliases, genericType, seen, depthLeft, false);
+    if not atom0.ok { return atom0; }
+    var endBeforeTrivia := atom0.next;
+    var cursor := syntax.skipTrivia(source, atom0.next, prefix);
+    var leftKind := atom0.kind;
+    if cursor < size and source.at(cursor) == "|" and not source.startsWithAt(cursor, "||") {
+        if leftKind == ir.VALUE_KIND_NEVER or isInterfaceKind(leftKind) or borrowedStorageError(leftKind) =!= "" {
+            return (ok = false, kind = "", next = cursor);
+        }
+        mut members: List<String> = [leftKind];
+        loop cursor < size and source.at(cursor) == "|" and not source.startsWithAt(cursor, "||") {
+            nextPos := syntax.skipTrivia(source, cursor + 1, prefix);
+            elem := canResolveTypeAtomAt(source, nextPos, prefix, aliases, genericType, seen, depthLeft, false);
+            if not elem.ok or elem.kind == ir.VALUE_KIND_NEVER or isInterfaceKind(elem.kind) or borrowedStorageError(elem.kind) =!= "" {
+                return (ok = false, kind = "", next = cursor);
+            }
+            mut members.pushBack(elem.kind);
+            endBeforeTrivia = elem.next;
+            cursor = syntax.skipTrivia(source, elem.next, prefix);
+        }
+        leftKind = buildUnionKind(members);
+    } else if hadLeadingBar {
+        if leftKind == ir.VALUE_KIND_NEVER or isInterfaceKind(leftKind) or borrowedStorageError(leftKind) =!= "" {
+            return (ok = false, kind = "", next = start);
+        }
+    }
+    if cursor < size and source.at(cursor) == "!" {
+        if leftKind == ir.VALUE_KIND_NEVER or isInterfaceKind(leftKind) or borrowedStorageError(leftKind) =!= "" {
+            return (ok = false, kind = "", next = cursor);
+        }
+        isAttached := cursor == endBeforeTrivia;
+        afterBang := syntax.skipTrivia(source, cursor + 1, prefix);
+        if afterBang < size and source.at(afterBang) == "!" {
+            return (ok = false, kind = "", next = afterBang);
+        }
+        if not startsTypeTokenAt(source, afterBang, prefix) {
+            if not isAttached {
+                return (ok = false, kind = "", next = cursor);
+            }
+            return (ok = true, kind = buildResultKind(leftKind, CORE_ERROR_KIND), next = cursor + 1);
+        }
+        var errStart := afterBang;
+        if errStart < size and source.at(errStart) == "|" and not source.startsWithAt(errStart, "||") {
+            errStart = syntax.skipTrivia(source, errStart + 1, prefix);
+        }
+        err0 := canResolveTypeAtomAt(source, errStart, prefix, aliases, genericType, seen, depthLeft, false);
+        if not err0.ok or err0.kind == ir.VALUE_KIND_NEVER or isInterfaceKind(err0.kind) or borrowedStorageError(err0.kind) =!= "" {
+            return (ok = false, kind = "", next = cursor);
+        }
+        var errEnd := err0.next;
+        var errCursor := syntax.skipTrivia(source, err0.next, prefix);
+        var errKind := err0.kind;
+        if errCursor < size and source.at(errCursor) == "|" and not source.startsWithAt(errCursor, "||") {
+            mut errMems: List<String> = [err0.kind];
+            loop errCursor < size and source.at(errCursor) == "|" and not source.startsWithAt(errCursor, "||") {
+                eNext := syntax.skipTrivia(source, errCursor + 1, prefix);
+                eAtom := canResolveTypeAtomAt(source, eNext, prefix, aliases, genericType, seen, depthLeft, false);
+                if not eAtom.ok or eAtom.kind == ir.VALUE_KIND_NEVER or isInterfaceKind(eAtom.kind) or borrowedStorageError(eAtom.kind) =!= "" {
+                    return (ok = false, kind = "", next = errCursor);
+                }
+                mut errMems.pushBack(eAtom.kind);
+                errEnd = eAtom.next;
+                errCursor = syntax.skipTrivia(source, eAtom.next, prefix);
+            }
+            errKind = buildUnionKind(errMems);
+        }
+        if errCursor < size and source.at(errCursor) == "!" {
+            return (ok = false, kind = "", next = errCursor);
+        }
+        return (ok = true, kind = buildResultKind(leftKind, errKind), next = errEnd);
+    }
+    (ok = true, kind = leftKind, next = endBeforeTrivia)
 };
 
 /** Non-failing resolution and intersection of comptime `<...>` parameter specs for header guards. */
@@ -7534,5 +8051,18 @@ pub joinBranchKind := fn(current: String, nextKind: String): String {
     if numeric.numericWidens(current, nextKind) { return current; }
     if numeric.numericWidens(nextKind, current) { return nextKind; }
     if fnShapeMatches(current, nextKind) { return fnStripLabels(current); }
+    ""
+};
+
+/** Joins two branch kinds allowing incompatible branches to widen into an expected `Union` or `Result`. */
+pub joinBranchKindWithExpected := fn(expected: String, current: String, nextKind: String): String {
+    direct := joinBranchKind(current, nextKind);
+    if direct =!= "" { return direct; }
+    normExp := if expected.startsWithAt(0, "Tail") { expected.slice(4, expected.length()) } else { expected };
+    if normExp =!= "" and (isUnionKind(normExp) or isResultKind(normExp)) {
+        if isCompatibleKind(normExp, current) and isCompatibleKind(normExp, nextKind) {
+            return normExp;
+        }
+    }
     ""
 };
