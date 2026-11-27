@@ -4022,9 +4022,14 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 isStatement = true;
                 var localStart := syntax.skipTrivia(source, itemEnd, prefix);
                 var declWritable := false;
+                if source.wordAt(localStart, "var") {
+                    syntax.failAt(source, localStart, prefix, "duplicate var qualifier");
+                }
                 if source.wordAt(localStart, "mut") {
                     declWritable = true;
                     localStart = syntax.skipTrivia(source, localStart + 3, prefix);
+                    if source.wordAt(localStart, "mut") { syntax.failAt(source, localStart, prefix, "duplicate mut qualifier"); }
+                    if source.wordAt(localStart, "var") { syntax.failAt(source, localStart, prefix, "duplicate var qualifier"); }
                 }
                 if localStart >= source.length() or not source.at(localStart).isNameStart() {
                     syntax.failAt(source, localStart, prefix, "expected local name after var");
@@ -4125,6 +4130,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             } else if itemName == "mut" and syntax.skipTrivia(source, itemEnd, prefix) < source.length() and
             source.wordAt(syntax.skipTrivia(source, itemEnd, prefix), "var") {
                 syntax.failAt(source, syntax.skipTrivia(source, itemEnd, prefix), prefix, "write var mut, not mut var");
+            } else if itemName == "mut" and syntax.skipTrivia(source, itemEnd, prefix) < source.length() and
+            source.wordAt(syntax.skipTrivia(source, itemEnd, prefix), "mut") {
+                syntax.failAt(source, syntax.skipTrivia(source, itemEnd, prefix), prefix, "duplicate mut qualifier");
             } else if itemName == "mut" and
             syntax.skipTrivia(source, itemEnd, prefix) < source.length() and
             source.at(syntax.skipTrivia(source, itemEnd, prefix)).isNameStart() and

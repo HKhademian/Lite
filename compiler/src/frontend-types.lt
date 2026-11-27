@@ -4669,11 +4669,10 @@ parseContextClauseWith := fn(
     mut slots: List<contexts.CtxSlot> = [];
     mut slotNames: List<String> = [];
     loop cursor < size and source.at(cursor) =!= ")" {
-        var isMut := false;
         if source.wordAt(cursor, "mut") {
-            isMut = true;
-            cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+            syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "place mut on the context slot type (e.g. context(name: mut Type))");
         }
+        var isMut := false;
         if cursor >= size or not source.at(cursor).isNameStart() {
             syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected context slot name");
         }
@@ -5797,21 +5796,16 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
 /** Parses one local type annotation: an optional `mut` list grant, then a scalar, a transparent alias or a flat named tuple; Unit has no local zero value. */
 pub parseLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): (kind: String, writable: Bool, next: Int) {
     start := syntax.skipTrivia(source, position, prefix);
-    var cursor := start;
-    var writable := false;
+    cursor := start;
     if source.wordAt(cursor, "mut") {
-        writable = true;
-        cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+        syntax.failAt(source, cursor, prefix, "place mut before the variable name (e.g. mut name: Type)");
     }
     typed := parseTypeAt(source, cursor, prefix, aliases, "local", "");
     if typed.kind == ir.VALUE_KIND_UNIT {
         name := source.slice(cursor, source.skipName(cursor));
         syntax.failAt(source, cursor, prefix, "unsupported local type " + name);
     }
-    if writable and not isMutContainerKind(typed.kind) {
-        syntax.failAt(source, start, prefix, "mut requires a List, Map, Set, or record type, got " + displayKind(typed.kind));
-    }
-    (kind = typed.kind, writable = writable, next = typed.next)
+    (kind = typed.kind, writable = false, next = typed.next)
 };
 
 /** Returns a copy of `aliases` with `Self` bound at `depth` to `selfTarget` (`ownerKind` or `"$Family:<Name>"`). */
@@ -6821,8 +6815,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             loop cCursor < size and source.at(cCursor) =!= ")" {
                 var cIsMut := false;
                 if source.wordAt(cCursor, "mut") {
-                    cIsMut = true;
-                    cCursor = syntax.skipTrivia(source, cCursor + 3, prefix);
+                    return (ok = false, kind = "", next = cCursor);
                 }
                 if cCursor >= size or not source.at(cCursor).isNameStart() {
                     return (ok = false, kind = "", next = cCursor);
@@ -7382,9 +7375,9 @@ pub canResolveComptimeParamSpecs := fn(prefix: String, aliases: List<AliasDecl>,
 
 /** Non-failing guard checking whether `parseLocalType` can succeed at `position`. */
 pub canPreResolveLocalType := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): Bool {
-    var cursor := syntax.skipTrivia(source, position, prefix);
+    cursor := syntax.skipTrivia(source, position, prefix);
     if source.wordAt(cursor, "mut") {
-        cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+        return false;
     }
     emptySeen: List<String> = [];
     canResolveTypeAt(source, cursor, prefix, aliases, "", emptySeen, 32).ok
@@ -7481,10 +7474,8 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
         if cCur < size and source.at(cCur) == ")" { return false; }
         mut cNames: List<String> = [];
         loop cCur < size and source.at(cCur) =!= ")" {
-            var cMut := false;
             if source.wordAt(cCur, "mut") {
-                cMut = true;
-                cCur = syntax.skipTrivia(source, cCur + 3, prefix);
+                return false;
             }
             if cCur >= size or not source.at(cCur).isNameStart() { return false; }
             cnEnd := source.skipName(cCur);
@@ -7495,7 +7486,6 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
             if cCur >= size or source.at(cCur) =!= ":" { return false; }
             cCur = syntax.skipTrivia(source, cCur + 1, prefix);
             if source.wordAt(cCur, "mut") {
-                if cMut { return false; }
                 cCur = syntax.skipTrivia(source, cCur + 3, prefix);
             }
             cType := canResolveTypeAt(source, cCur, prefix, aliases, genericType, emptySeen, 32);

@@ -3571,11 +3571,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             var explicitSlotKind := "";
             if position < size and source.at(position) == ":" and not source.startsWithAt(position, ":=") {
                 typePos := skipTrivia(source, position + 1, prefix);
-                var annStart := typePos;
+                annStart := typePos;
                 if source.wordAt(annStart, "mut") {
                     if ambMut { failAt(source, annStart, prefix, "duplicate mut qualifier on ambient context " + cSlotName); }
-                    ambMut = true;
-                    annStart = skipTrivia(source, annStart + 3, prefix);
+                    failAt(source, annStart, prefix, "place mut before the context name (e.g. context mut " + cSlotName + ": ...)");
                 }
                 parsedSlotT := types.parseTypeAt(source, annStart, prefix, aliases, "context", "");
                 if parsedSlotT.kind == VALUE_KIND_UNIT {
@@ -4535,6 +4534,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if mutProbe < size and source.wordAt(mutProbe, "var") {
                 failAt(source, mutProbe, prefix, "write var mut, not mut var");
             }
+            if mutProbe < size and source.wordAt(mutProbe, "mut") {
+                failAt(source, mutProbe, prefix, "duplicate mut qualifier");
+            }
             if mutProbe < size and source.at(mutProbe).isNameStart() {
                 mutAfter := skipTrivia(source, source.skipName(mutProbe), prefix);
                 if mutAfter < size and not source.startsWithAt(mutAfter, ":=") and source.at(mutAfter) == ":" and compoundAssignOp(source, mutAfter).width == 0 {
@@ -4591,9 +4593,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if name == "var" {
             position = skipTrivia(source, position, prefix);
             var declaredWritable := false;
+            if source.wordAt(position, "var") {
+                failAt(source, position, prefix, "duplicate var qualifier");
+            }
             if source.wordAt(position, "mut") {
                 declaredWritable = true;
                 position = skipTrivia(source, position + 3, prefix);
+                if source.wordAt(position, "mut") { failAt(source, position, prefix, "duplicate mut qualifier"); }
+                if source.wordAt(position, "var") { failAt(source, position, prefix, "duplicate var qualifier"); }
             }
             if position >= size or not source.at(position).isNameStart() {
                 failAt(source, position, prefix, "expected local name after var");

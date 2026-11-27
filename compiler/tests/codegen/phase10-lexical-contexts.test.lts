@@ -306,9 +306,13 @@ compilerTest.assertCompileErrorContains(root, tsComp, "reject context slot shado
     "bad := fn(x: Int) context(x: Bool): Int { x };",
     "conflicts with parameter of the same name");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate mut qualifier on context slot",
-    "bad := fn() context(mut x: mut Int): Int { x };",
-    "duplicate mut");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject prefix mut on context slot parameter",
+    "bad := fn() context(mut x: Int): Int { x };",
+    "place mut on the context slot type");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject suffix mut on ambient context",
+    "context x: mut Int := 1;",
+    "place mut before the context name");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate mut qualifier on ambient context",
     "context mut x: mut Int := 1;",
