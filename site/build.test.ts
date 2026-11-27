@@ -447,15 +447,21 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert.equal(buildMeta.lessons, 25);
   assert.equal(buildMeta.tutorials, 3);
   assert.equal(buildMeta.gymExercises, 56);
-  assert.equal(buildMeta.modules, 40);
+  const modulePages = readdirSync(join(out, 'modules'), { recursive: true })
+    .filter(file => file !== 'index.html' && file.endsWith('.html'));
+  assert.equal(buildMeta.modules, modulePages.length);
   assert(buildMeta.docsPages >= 200);
   assert(existsSync(join(out, 'docs/design/site-architecture.html')));
   assert(existsSync(join(out, 'docs/design/maps.html')));
   assert(existsSync(join(out, 'docs/design/sets.html')));
   assert(existsSync(join(out, 'modules/core/array.html')));
   assert(existsSync(join(out, 'modules/core/map.html')));
+  assert(existsSync(join(out, 'modules/core/option.html')));
   assert(existsSync(join(out, 'modules/core/rc.html')));
   assert(existsSync(join(out, 'modules/core/set.html')));
+  assert(existsSync(join(out, 'modules/core/simd.html')));
+  assert(existsSync(join(out, 'modules/core/slice.html')));
+  assert(existsSync(join(out, 'modules/core/soa.html')));
   assert(existsSync(join(out, 'modules/math/scalar.html')));
   assert(existsSync(join(out, 'modules/math/random.html')));
   assert(existsSync(join(out, 'modules/math/vector.html')));
