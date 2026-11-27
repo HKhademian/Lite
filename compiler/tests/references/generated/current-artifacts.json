@@ -1,7 +1,7 @@
 {
-  "note": "Phase 13 (standalone do blocks, pattern binding in if, dependent record defaults, and transitive mut-global snapshot check). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Phase 14 (definite initialization for partial expressions, immutable Bool predicate correlation, dynamic 1-byte C11 init/drop guards only for maybe-initialized owned locals, and uninitialized-array slice rejection). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-27",
-  "sourceSha256": "5030872fdee01c7fe28efd5d33b75e453bd5e01552d6d9a3093ddcd260704e97",
+  "sourceSha256": "f2576ce1e9cdefefaee3d98069a62fa489eba4cc51f8465ce6950c6a3524af72",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
