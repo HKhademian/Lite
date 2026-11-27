@@ -1,7 +1,7 @@
 {
-  "note": "Phase 10 (lexical contexts, package $context.lt defaults, context(...) requirements & order normalization, context (...) { ... } overrides, borrow/exclusivity checks, static generic inference, indirect/closure context preservation, and single const lt_ctx_* projection ABI). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Phase 11 (free/module/Type.op overloading, label/arity/mut/specificity ranking, selection-before-context, first-class overloaded fn/type-op values, bodyless impl overload resolution, core/interface Range + Index/IndexMut migration, and retirement of $getSlice/$getMutSlice). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-27",
-  "sourceSha256": "a320671052dded9c48fb8473db2ed8e2053b669abb70f6d78683de45cd248290",
+  "sourceSha256": "ae8bd7b78b1c97f85ca5e4bf610f7ea2b13e2d8067207d78625d37a5688420aa",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
