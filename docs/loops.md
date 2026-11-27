@@ -117,6 +117,24 @@ See [last-item/index access](lite://doc/loop-last-item) for zero/empty behavior 
 
 For loops, leading-dot access uses the loop context without searching outward. Inside a conditional (`if` / `match`), unambiguous loop fields (`.item`, `.index`, `.count`) resolve to the enclosing loop, while `.value` still requires an explicit loop `@tag` (because conditionals also have a `.value` concept in `then`). Ambiguous leading-dot metadata reads (e.g. colliding with an expected enum case) are rejected. Named `@tag` access selects a lexical context explicitly. No implicit ordinary variables or dynamically allocated tag objects are required.
 
+## Writable iteration
+
+Selected direction, 2026-11-27. Compiler support is pending. `loop mut source` grants writable access to the current element for each iteration. The source must itself permit writable access and provide a writable element location. The optional `as` binder and `.item` name the same place with the same access. Choosing a name requires no additional `mut`.
+
+```text
+loop mut rngs as r {
+    _ := mut r.nextInt();
+}
+
+loop mut rngs {
+    _ := mut .item.nextInt();
+}
+```
+
+These are alternative loops. Each advances the elements in place and leaves the same collection state when started from the same seeds. The source grant makes the element writable. The `mut` in each call grants that access to `nextInt` under the ordinary receiver rule. Omitting `as` gives access through `.item`.
+
+Pending verification cases cover equal final element states for the two forms on TS and C11, rejection of a writable loop over a read-only source, and a diagnostic when `r` and `.item` are both supplied as writable arguments to the same call. The writable borrow ends with the iteration, including on `continue` or `break`. It cannot escape into `then`. An ordinary local initializer such as `mut copy := .item` follows the normal initialization and ownership rules.
+
 ## Normal result and completion
 
 ```text
