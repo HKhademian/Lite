@@ -7,7 +7,7 @@ add := fn(x: Int): Int { x * 10 };
 rootForward := fn(): Int { lateRoot + n };
 lateRoot := 100;
 
-blockWire := {
+blockWire := do {
     even := fn(k: Int): Bool {
         if k == 0 { true } else { odd(k - 1) }
     };
@@ -25,13 +25,13 @@ blockWire := {
     if even(n) { countdown(n) + callAdd() } else { sumSelf(n) + callAdd() }
 };
 
-levelVal := {
+levelVal := do {
     get1 := fn(): Int { level };
-    inner2 := {
+    inner2 := do {
         get2 := fn(): Int { level };
-        inner3 := {
+        inner3 := do {
             get3 := fn(): Int { level };
-            inner4 := {
+            inner4 := do {
                 get4 := fn(): Int { level };
                 level := 4;
                 get4()
@@ -47,13 +47,13 @@ levelVal := {
 };
 level := 1;
 
-eagerShadow := {
+eagerShadow := do {
     n := n + 10;
     n
 };
 
 var outerMut := 1;
-mixedOrder := {
+mixedOrder := do {
     outerMut = 2;
     get := fn(): Int { outerMut };
     outerMut := 4;

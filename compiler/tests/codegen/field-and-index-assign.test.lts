@@ -72,7 +72,7 @@ blockAssignProg :=
 "    m[\"hits\"] += 1;\n" +
 "    xs[.index] += .item;\n" +
 "}\n" +
-"res := {\n" +
+"res := do {\n" +
 "    h.pos.y = 99;\n" +
 "    h.hp\n" +
 "};\n" +

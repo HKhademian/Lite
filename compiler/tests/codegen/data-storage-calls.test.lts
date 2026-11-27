@@ -265,7 +265,7 @@ destrSrc := [
     "y += 5;",
     "(z,) := (99,);",
     "{ (a, a) := (1, 2); (_, _) := (3, 4); io.outputLine(a); }",
-    "v := { () := bump(); (p) := 3; var (q) := 4; q += 1; (r, s) := (q, p * 2); r + s };",
+    "v := do { () := bump(); (p) := 3; var (q) := 4; q += 1; (r, s) := (q, p * 2); r + s };",
     "io.outputLine(ticks, x, y, z, v);"
 ].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "tuple-destructuring", destrSrc, "2\n2 42 15 99 11\n");
@@ -278,7 +278,7 @@ destrRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "(x) := ();", m1 = "cannot declare a Unit local x", m2 = ""),
     (bad = "io := import \"core/io\"; (x) := io.exit(1);", m1 = "cannot declare a Never local x", m2 = ""),
     (bad = "(dup, dup) := (1, 2);", m1 = "duplicate top-level value dup", m2 = ""),
-    (bad = "{ var x := { () := 1; x }; }", m1 = "tuple destructuring requires Unit for (), got Int", m2 = "")
+    (bad = "{ var x := do { () := 1; x }; }", m1 = "tuple destructuring requires Unit for (), got Int", m2 = "")
 ];
 assertRejectsAny("tuple-destructuring", destrRej);
 
@@ -296,7 +296,7 @@ namedArrDestrSrc := [
     "[a0, a1: Int, _] := arr;",
     "var [fwdA, fwdB] := [4, 5];",
     "fwdB += 1;",
-    "innerArr := {",
+    "innerArr := do {",
     "    var (= r) := (r = 7);",
     "    r += 2;",
     "    [x, x] := [11, 22];",

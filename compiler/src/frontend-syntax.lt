@@ -197,7 +197,7 @@ pub skipItemSeparators := fn(source: String, position: Int, prefix: String): Int
 pub isReservedWord := fn(name: String): Bool {
     name == "pub" or name == "var" or name == "mut" or name == "fn" or name == "loop" or
     name == "break" or name == "continue" or name == "return" or name == "if" or
-    name == "else" or name == "then" or name == "finally" or name == "match" or
+    name == "else" or name == "then" or name == "finally" or name == "match" or name == "do" or
     name == "import" or name == "using" or name == "record" or name == "enum" or name == "type" or
     name == "alias" or name == "distinct" or
     name == "and" or name == "or" or name == "not" or name == "true" or name == "false"
@@ -206,6 +206,7 @@ pub isReservedWord := fn(name: String): Bool {
 /** Returns the documentation path for one reserved Lite feature. */
 featureDoc := fn(name: String): String {
     match {
+        name == "do" { "docs/blocks-and-results.md" }
         name == "loop" { "docs/loops.md" }
         name == "if" or name == "else" or name == "and" or name == "or" or name == "not" or
         name == "true" or name == "false" { "docs/conditionals.md" }

@@ -89,20 +89,20 @@ slice1SharedDup: List<String> = [
     "loop [1] as item { y := 1; y := 2; }",
     "f := fn(x: Int): Int { x := 2; x };",
     "f := fn(x: Int): Int { y := 1; var y := 2; x + y };",
-    "v := { x := 1; x := 2; x };",
-    "v := { y := { x := 1; x := 2; x }; y };",
+    "v := do { x := 1; x := 2; x };",
+    "v := do { y := do { x := 1; x := 2; x }; y };",
     "{ T := alias Int; T := alias String; }",
     "{ T := alias Int; T := 1; }",
     "{ T := 1; T := alias Int; }",
-    "v := { T := alias Int; T := 1; 0 };"
+    "v := do { T := alias Int; T := 1; 0 };"
 ];
 slice1SharedTopOnly: List<String> = [
     "{ pub x := 1; }",
     "{ import \"core/io\"; }",
     "{ io := import \"core/io\"; }",
-    "v := { pub x := 1; 0 };",
-    "v := { import \"core/io\"; 0 };",
-    "v := { io := import \"core/io\"; 0 };"
+    "v := do { pub x := 1; 0 };",
+    "v := do { import \"core/io\"; 0 };",
+    "v := do { io := import \"core/io\"; 0 };"
 ];
 assertRejectsBothWithAny("slice1-dup", slice1SharedDup, true, dupSubs);
 assertRejectsBothWithAny("slice1-top-only", slice1SharedTopOnly, true, topOnlySubs);
@@ -110,10 +110,10 @@ assertRejectsBothWithAny("slice1-top-only", slice1SharedTopOnly, true, topOnlySu
 slice1TsOnlyRej: List<String> = [
     "{ f := fn(): Int { 1 }; f := 2; 0 }",
     "{ f := fn(): Int { 1 }; f := fn(): Int { 2 }; 0 }",
-    "v := { f := fn(x: Int): Int { x := 2; x }; f(1) };",
+    "v := do { f := fn(x: Int): Int { x := 2; x }; f(1) };",
     "v := @blk { x := 1; x := 2; x };",
     "v := if true { 1 } else { 2 } then { x := 1; x := 2; x };",
-    "v := { 1 } finally { y := 1; y := 2; };",
+    "v := do { 1 } finally { y := 1; y := 2; };",
     "v := loop [1] as item { item := 2; item };"
 ];
 assertRejectsBothWithAny("slice1-ts-only-dup", slice1TsOnlyRej, false, dupSubs);
@@ -171,11 +171,11 @@ slice1TsCombined := [
     "  acc += out;",
     "}",
     "tagVal := @t { tmp := 7; tmp } finally { tmp := 1; acc += tmp; };",
-    "v := {",
+    "v := do {",
     "  helper := 3;",
     "  (p, p) := (4, 5);",
     "  (_, _) := (6, 7);",
-    "  shadowed := { helper := fn(k: Int): Int { k * 2 }; helper(p) };",
+    "  shadowed := do { helper := fn(k: Int): Int { k * 2 }; helper(p) };",
     "  helper + shadowed",
     "};",
     "io.outputLine(outerVal, v + acc, tagVal, helper(1));"
@@ -224,7 +224,7 @@ slice2aSharedPos := [
     "  acc += inc;",
     "  step += 1;",
     "}",
-    "pureVal := { ValT := alias Int; 5 };",
+    "pureVal := do { ValT := alias Int; 5 };",
     "vOuter: Item = pureVal;",
     "io.outputLine(acc, vOuter);"
 ].join("\n");
@@ -273,13 +273,13 @@ slice2aTsPos := [
     "read := fn(): Int { x };",
     "before := fn(): Int { y = 9; y };",
     "var saved: fn(): Int = fn(): Int { tmp2 };",
-    "blk := { saved2 := fn(): Int { tmp2 }; 5 };",
-    "blkFn := { saved3 := fn(): Int { tmp2 }; saved3 };",
-    "valBlk := { T := alias Int; xVal: T = 3; xVal + 1 };",
+    "blk := do { saved2 := fn(): Int { tmp2 }; 5 };",
+    "blkFn := do { saved3 := fn(): Int { tmp2 }; saved3 };",
+    "valBlk := do { T := alias Int; xVal: T = 3; xVal + 1 };",
     "fnWithAlias := fn(): Int { FT := alias Int; r: FT = 8; r };",
     "thenResult := @t if true { 2 } else { 0 } then { TT := alias Int; bonus: TT = 3; @t.value + bonus };",
     "var finAcc := 0;",
-    "finVal := { 1 } finally { FT := alias Int; fv: FT = 4; finAcc += fv; };",
+    "finVal := do { 1 } finally { FT := alias Int; fv: FT = 4; finAcc += fv; };",
     "base := 3 + 4;",
     "pair := (a = 2, b = 5);",
     "(left, right) := (10, 20);",
@@ -309,8 +309,8 @@ slice2aTsRej: List<(src: String, msg: String)> = [
     (src = "apply := fn(cb: fn(): Int): Int { cb() }; early := apply(fn(): Int { tmp2 }); tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
     (src = "var applyVar: fn(fn(): Int): Int = fn(cb: fn(): Int): Int { cb() }; early := applyVar(fn(): Int { tmp2 }); tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
     (src = "early := (fn(): Int { tmp2 })(); tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
-    (src = "x := { saved := fn(): Int { tmp2 }; saved() }; tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
-    (src = "early := ({ fn(): Int { tmp2 } })(); tmp2 := 1;", msg = "cannot call before tmp2 is initialized")
+    (src = "x := do { saved := fn(): Int { tmp2 }; saved() }; tmp2 := 1;", msg = "cannot call before tmp2 is initialized"),
+    (src = "early := (do { fn(): Int { tmp2 } })(); tmp2 := 1;", msg = "cannot call before tmp2 is initialized")
 ];
 loop slice2aTsRej as r {
     compilerTest.assertCompileErrorContains(root, tsComp, "slice2a-ts-rej", r.src, r.msg);
@@ -331,28 +331,28 @@ checkTsDceCase := fn(label: String, src: String, expectedOut: String, mustContai
 emptySubs: List<String> = [];
 checkTsDceCase(
     "slice2b dce1",
-    "io := import \"core/io\"; x := { y := 1; z := fn(): Int { io.outputLine(\"dead\"); 99 }; 5 }; io.outputLine(x);",
+    "io := import \"core/io\"; x := do { y := 1; z := fn(): Int { io.outputLine(\"dead\"); 99 }; 5 }; io.outputLine(x);",
     "5\n",
     emptySubs,
     ["lite_y", "lite_z", "\"dead\"", "() =>"]
 );
 checkTsDceCase(
     "slice2b dce2",
-    "io := import \"core/io\"; x := { a := 1; b := a; c := (a, b); (d, e) := c; var m := 10; m = 20; 99; \"quiet\"; 5 }; io.outputLine(x);",
+    "io := import \"core/io\"; x := do { a := 1; b := a; c := (a, b); (d, e) := c; var m := 10; m = 20; 99; \"quiet\"; 5 }; io.outputLine(x);",
     "5\n",
     emptySubs,
     ["lite_a", "lite_b", "lite_c", "lite_d", "lite_e", "lite_m", "lite$tuple", "\"quiet\"", "() =>"]
 );
 checkTsDceCase(
     "slice2b dce-tuple-partial",
-    "io := import \"core/io\"; x := { (used, unused) := (7, 8); used }; io.outputLine(x);",
+    "io := import \"core/io\"; x := do { (used, unused) := (7, 8); used }; io.outputLine(x);",
     "7\n",
     ["lite_used", "lite$tuple"],
     ["lite_unused"]
 );
 checkTsDceCase(
     "slice2b dce-nested",
-    "io := import \"core/io\"; { { y := 1; z := fn(): Int { 2 }; 99; } }; x := { { y := 1; } 5 }; io.outputLine(x);",
+    "io := import \"core/io\"; { { y := 1; z := fn(): Int { 2 }; 99; } }; x := do { { y := 1; } 5 }; io.outputLine(x);",
     "5\n",
     emptySubs,
     ["lite_y", "lite_z", "() =>"]
@@ -388,20 +388,20 @@ slice2bOkC: List<String> = [
     "p := (a = 1);",
     "[1, 2];",
     "{ f := fn(): Int { 1 }; 5 }",
-    "x := { y := 1; 5 };"
+    "x := do { y := 1; 5 };"
 ];
 loop slice2bOkC as okSrc {
     rC := compilerTest.compileStdin(root, cComp, okSrc, "");
     test.checkInt("slice2b ok-c status: " + okSrc + " -> " + rC.stderr, 0, rC.status);
 }
 
-compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff1", "io := import \"core/io\"; var out := 1; dead := { out = 9; 5 }; io.outputLine(out);", "9\n");
-compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff2", "io := import \"core/io\"; mut xs: List<Int> = [1]; dead := { mut xs.pushBack(2); 5 }; io.outputLine(xs);", "[1, 2]\n");
-compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff3", "io := import \"core/io\"; bump := fn(): Int { io.outputLine(\"ran\"); 1 }; x := { y := bump(); f := bump; z := f(); w := (fn(): Int { io.outputLine(\"iife\"); 2 })(); 5 }; io.outputLine(x);", "ran\nran\niife\n5\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff1", "io := import \"core/io\"; var out := 1; dead := do { out = 9; 5 }; io.outputLine(out);", "9\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff2", "io := import \"core/io\"; mut xs: List<Int> = [1]; dead := do { mut xs.pushBack(2); 5 }; io.outputLine(xs);", "[1, 2]\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff3", "io := import \"core/io\"; bump := fn(): Int { io.outputLine(\"ran\"); 1 }; x := do { y := bump(); f := bump; z := f(); w := (fn(): Int { io.outputLine(\"iife\"); 2 })(); 5 }; io.outputLine(x);", "ran\nran\niife\n5\n");
 
 slice2bPanics: List<String> = [
-    "x := { var z := 0; y := 1 / z; 5 };",
-    "x := { var big := 9223372036854775807; y := big + 1; 5 };"
+    "x := do { var z := 0; y := 1 / z; 5 };",
+    "x := do { var big := 9223372036854775807; y := big + 1; 5 };"
 ];
 loop slice2bPanics as pSrc {
     pRun := compilerTest.compileCheckRunTs(root, tsComp, pSrc, "");
@@ -410,11 +410,11 @@ loop slice2bPanics as pSrc {
 }
 
 slice2bBadRej: List<(src: String, msg: String)> = [
-    (src = "x := { y: Int = \"bad\"; 5 };", msg = "cannot initialize Int with String"),
-    (src = "x := { y := 1; y := 2; 5 };", msg = "duplicate declaration y in block"),
-    (src = "x := { q: Int = ?; y := q; 5 };", msg = "cannot read uninitialized local q"),
-    (src = "x := { z := fn(): Int { \"bad\" }; 5 };", msg = "cannot return String from function"),
-    (src = "x := { outerX := 1; z := fn(): Unit { outerX = 2; }; 5 };", msg = "cannot assign to immutable local outerX")
+    (src = "x := do { y: Int = \"bad\"; 5 };", msg = "cannot initialize Int with String"),
+    (src = "x := do { y := 1; y := 2; 5 };", msg = "duplicate declaration y in block"),
+    (src = "x := do { q: Int = ?; y := q; 5 };", msg = "cannot read uninitialized local q"),
+    (src = "x := do { z := fn(): Int { \"bad\" }; 5 };", msg = "cannot return String from function"),
+    (src = "x := do { outerX := 1; z := fn(): Unit { outerX = 2; }; 5 };", msg = "cannot assign to immutable local outerX")
 ];
 loop slice2bBadRej as r {
     compilerTest.assertCompileErrorContains(root, tsComp, "slice2b bad", r.src, r.msg);
@@ -423,24 +423,24 @@ loop slice2bBadRej as r {
 /* Slice 3: lexical captures, inner-block symbol wiring, trace safety, and escaping checks on TS */
 slice3Caps := [
     "io := import \"core/io\";",
-    "a := { x := 1; f := fn(): Int { x }; f() };",
+    "a := do { x := 1; f := fn(): Int { x }; f() };",
     "var gx := 1;",
-    "b := { f := fn(): Int { gx }; f() };",
+    "b := do { f := fn(): Int { gx }; f() };",
     "var gx2 := 2;",
-    "c := { reader := fn(): Int { return gx2; }; reader() };",
-    "d := { var x := 3; f := fn(): Int { x }; f() };",
+    "c := do { reader := fn(): Int { return gx2; }; reader() };",
+    "d := do { var x := 3; f := fn(): Int { x }; f() };",
     "var wx := 1;",
     "{ f := fn(): Unit { wx = 9; }; f(); }",
     "outerParam := fn(p: Int): Int { inner := fn(): Int { p }; inner() };",
     "outerCall := fn(): Int { aFn := fn(): Int { 4 }; bFn := fn(): Int { aFn() }; bFn() };",
     "mut xs: List<Int> = [5];",
-    "g := { f := fn(): Int { mut xs.pushBack(6); xs[0] + xs[1] }; f() };",
+    "g := do { f := fn(): Int { mut xs.pushBack(6); xs[0] + xs[1] }; f() };",
     "mut closures: List<fn(): Int> = [];",
     "loop [10, 20, 30] as item {",
     "  f := fn(): Int { item };",
     "  mut closures.pushBack(f);",
     "}",
-    "deadCap := { outerX := 1; z := fn(): Int { outerX }; 5 };",
+    "deadCap := do { outerX := 1; z := fn(): Int { outerX }; 5 };",
     "io.outputLine(a, b, c, d, wx, outerParam(7), outerCall(), g, closures[0](), closures[1](), closures[2](), deadCap);"
 ].join("\n");
 checkTsDceCase("slice3 captures", slice3Caps, "1 1 2 3 9 7 4 11 10 20 30 5\n", ["const lite_deadCap = 5n;"], ["outerX"]);
@@ -467,7 +467,7 @@ compilerTest.assertCompileRunTs(root, tsComp, "slice3 escape", slice3Escape, "41
 
 slice3Wiring := [
     "io := import \"core/io\";",
-    "valRes := {",
+    "valRes := do {",
     "  countdown := fn(n: Int): Int {",
     "    if n <= 0 { 0 } else { n + countdown(n - 1) }",
     "  };",
@@ -511,7 +511,7 @@ slice3Wiring := [
     "  getT()",
     "};",
     "var finAcc := 0;",
-    "finallyRes := {",
+    "finallyRes := do {",
     "  getF := fn(): Int { fVal };",
     "  fVal := 15;",
     "  getF()",
@@ -532,7 +532,7 @@ slice3Wiring := [
     "  base := 100;",
     "  ping(k)",
     "};",
-    "dupBindRes := {",
+    "dupBindRes := do {",
     "  getP := fn(): Int { p };",
     "  (p, p) := (4, 5);",
     "  getP()",
@@ -545,13 +545,13 @@ slice3Precedence := [
     "io := import \"core/io\";",
     "add := fn(x: Int): Int { x * 10 };",
     "s := 1;",
-    "levelResult := {",
+    "levelResult := do {",
     "  get1 := fn(): Int { s };",
-    "  r2 := {",
+    "  r2 := do {",
     "    get2 := fn(): Int { s };",
-    "    r3 := {",
+    "    r3 := do {",
     "      get3 := fn(): Int { s };",
-    "      r4 := {",
+    "      r4 := do {",
     "        get4 := fn(): Int { s };",
     "        s := 4;",
     "        get4()",
@@ -566,35 +566,35 @@ slice3Precedence := [
     "  get1() * 1000 + r2",
     "};",
     "outerShadow := 10;",
-    "eagerShadow := {",
+    "eagerShadow := do {",
     "  outerShadow := outerShadow + 5;",
     "  outerShadow",
     "};",
     "var outerMut := 1;",
-    "mixedOrder := {",
+    "mixedOrder := do {",
     "  outerMut = 2;",
     "  get := fn(): Int { outerMut };",
     "  outerMut := 4;",
     "  get()",
     "};",
-    "fnShadowRes := {",
+    "fnShadowRes := do {",
     "  callAdd := fn(): Int { add(3) };",
     "  add := fn(n: Int): Int { n + 1 };",
     "  callAdd()",
     "};",
-    "aliasDceRes := {",
+    "aliasDceRes := do {",
     "  Box := alias Int;",
     "  dead := 999;",
     "  used: Box = 21;",
     "  reader := fn(): Box { used };",
     "  reader()",
     "};",
-    "writeBeforeReadRes := {",
+    "writeBeforeReadRes := do {",
     "  var y: Int = ?;",
     "  before := fn(): Int { y = 9; y };",
     "  before()",
     "};",
-    "listPushRes := {",
+    "listPushRes := do {",
     "  mut ops: List<fn(): Int> = [];",
     "  mut ops.pushBack(fn(): Int { lateNum });",
     "  lateNum := 77;",
@@ -622,7 +622,7 @@ slice3BadRej: List<(src: String, msg: String)> = [
     (src = "make := fn(): fn(): Int { r := fn(): Int { y }; return r; y := 5; fn(): Int { 0 } }; _ := make();", msg = "cannot call before y is initialized"),
     (src = "v := @b { r := fn(): Int { y }; return @b r; y := 5; fn(): Int { 0 } };", msg = "cannot call before y is initialized"),
     (src = "v := loop true { var y: Int = ?; r := fn(): Int { y }; break r; y = 1; } then { fn(): Int { 0 } };", msg = "cannot call before y is initialized"),
-    (src = "f := { var y: Int = ?; fn(): Int { y } };", msg = "cannot read uninitialized local y")
+    (src = "f := do { var y: Int = ?; fn(): Int { y } };", msg = "cannot read uninitialized local y")
 ];
 loop slice3BadRej as r {
     compilerTest.assertCompileErrorContains(root, tsComp, "slice3 bad", r.src, r.msg);

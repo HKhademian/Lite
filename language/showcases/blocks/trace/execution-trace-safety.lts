@@ -9,7 +9,7 @@ rootSlot = 25;
 rootAns := readSlot();
 
 /* 2. Inside blocks, closures may perform write-before-read on reserved `var` storage, or be called after late decls initialize. */
-blockAns := {
+blockAns := do {
     var innerSlot: Int = ?;
     initAndRead := fn(): Int {
         innerSlot = 18;

@@ -2,7 +2,7 @@ io := import "core/io";
 
 w := io.inputInt();
 h := io.inputInt();
-area: Int = {
+area: Int = do {
     scaled := w * 2;
     product := scaled * h;
 };

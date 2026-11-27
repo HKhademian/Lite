@@ -4,7 +4,7 @@ io := import "core/io";
 
 outer := 10;
 
-summary := {
+summary := do {
     Count := alias Whole;
     Whole := alias Int;
 

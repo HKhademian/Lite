@@ -9,7 +9,7 @@ In any `{ ... }` block, statements (declarations and assignments ending in `;`) 
 ```lite
 io := import "core/io";
 
-hypotSq := {
+hypotSq := do {
     a := 3;
     b := 4;
     a * a + b * b
@@ -30,7 +30,7 @@ isEven := fn(n: Int): Bool { if n == 0 { true } else { isOdd(n - 1) } };
 isOdd := fn(n: Int): Bool { if n == 0 { false } else { isEven(n - 1) } };
 
 depth := 1;
-shadowRead := {
+shadowRead := do {
     depth := depth + 40;
     depth
 };

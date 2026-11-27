@@ -270,7 +270,7 @@
       "expectedStarterFailure": "compile-error",
       "hints": [
         "Outer `NumOrText` is `String`, so `Pair` inside the block sees `String` fields unless shadowed.",
-        "Add `NumOrText := alias Int;` inside `total := { ... }` (before or after `Pair`, since inner aliases wire forward!)."
+        "Add `NumOrText := alias Int;` inside `total := do { ... }` (before or after `Pair`, since inner aliases wire forward!)."
       ],
       "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
       "relatedLessons": ["learn.types.aliases.type-aliases-and-scoping"],

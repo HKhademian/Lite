@@ -3201,13 +3201,22 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             tagInfo := parseTagAt(source, position, prefix);
             afterTag := skipTrivia(source, tagInfo.next, prefix);
             if afterTag >= size or (source.at(afterTag) =!= "{" and source.at(afterTag) =!= "." and
-            not source.wordAt(afterTag, "if") and not source.wordAt(afterTag, "match") and
-            not source.wordAt(afterTag, "loop")) {
-                if source.wordAt(afterTag, "pub") or
-                (afterTag < size and source.at(afterTag).isNameStart() and source.startsWithAt(skipTrivia(source, source.skipName(afterTag), prefix), ":=")) {
-                    failAt(source, position, prefix, "unknown type layout attribute @" + tagInfo.tag);
+            not source.wordAt(afterTag, "do") and not source.wordAt(afterTag, "if") and
+            not source.wordAt(afterTag, "match") and not source.wordAt(afterTag, "loop")) {
+                var attrCheckPos := afterTag;
+                if source.wordAt(attrCheckPos, "pub") {
+                    attrCheckPos = skipTrivia(source, attrCheckPos + 3, prefix);
                 }
-                failAt(source, afterTag, prefix, "expected {, if, match, loop or . after block tag @" + tagInfo.tag);
+                if attrCheckPos < size and source.at(attrCheckPos).isNameStart() {
+                    attrEqPos := skipTrivia(source, source.skipName(attrCheckPos), prefix);
+                    if source.startsWithAt(attrEqPos, ":=") {
+                        attrRhsPos := skipTrivia(source, attrEqPos + 2, prefix);
+                        if source.wordAt(attrRhsPos, "record") or source.wordAt(attrRhsPos, "enum") {
+                            failAt(source, position, prefix, "unknown type layout attribute @" + tagInfo.tag);
+                        }
+                    }
+                }
+                failAt(source, afterTag, prefix, "expected {, do, if, match, loop or . after block tag @" + tagInfo.tag);
             }
             if isLtModule and blockCount == 0 {
                 failAt(source, position, prefix, "top-level runtime statement is not allowed in .lt module");
@@ -4051,6 +4060,28 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             position = skipTrivia(source, position, prefix);
             continue;
         }
+        if name == "do" {
+            if isLtModule and blockCount == 0 {
+                failAt(source, nameStart, prefix, "top-level runtime statement is not allowed in .lt module");
+            }
+            expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
+            currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
+            locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+            if currentLive and not currentStopped {
+                mut items.pushBack((kind = expressionStatementKind(expression.valueKind, expression.returned, ITEM_KIND_DISCARD, currentResult), name = expression.valueKind,
+                runtime = "", code = expression.code, intValue = 0, textValue = ""));
+                if codeHasRawTransfer(expression.code) {
+                    mut transferCodes.pushBack(expression.code);
+                    transferCount = transferCount + 1;
+                }
+            }
+            if expression.returned or expression.valueKind == VALUE_KIND_NEVER {
+                if not currentStopped { currentReturned = true; }
+                currentStopped = true;
+            }
+            position = expression.next;
+            continue;
+        }
         if name == "match" {
             if isLtModule and blockCount == 0 {
                 failAt(source, nameStart, prefix, "top-level runtime statement is not allowed in .lt module");
@@ -4314,30 +4345,24 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         position = afterREnd;
                     }
                 } else {
-                seqIsWritableLocal := {
-                    var foundW := false;
-                    if types.isMapKind(parsed.kind) or types.isSetKind(parsed.kind) {
-                        loop locals as locW {
-                            if locW.runtime == parsed.code and locW.writable {
-                                foundW = true;
-                                break;
-                            }
+                var seqIsWritableLocal := false;
+                if types.isMapKind(parsed.kind) or types.isSetKind(parsed.kind) {
+                    loop locals as locW {
+                        if locW.runtime == parsed.code and locW.writable {
+                            seqIsWritableLocal = true;
+                            break;
                         }
                     }
-                    foundW
-                };
-                seqIsImmutableLocal := {
-                    var foundImm := false;
-                    if isListKind(parsed.kind) or isArrayKind(parsed.kind) {
-                        loop locals as locI {
-                            if locI.runtime == parsed.code and not locI.writable {
-                                foundImm = true;
-                                break;
-                            }
+                }
+                var seqIsImmutableLocal := false;
+                if isListKind(parsed.kind) or isArrayKind(parsed.kind) {
+                    loop locals as locI {
+                        if locI.runtime == parsed.code and not locI.writable {
+                            seqIsImmutableLocal = true;
+                            break;
                         }
                     }
-                    foundImm
-                };
+                }
                 if source.wordAt(afterParsed, "as") {
                     if not isListKind(parsed.kind) and not isArrayKind(parsed.kind) and not types.isMapKind(parsed.kind) and not types.isSetKind(parsed.kind) and not types.isSliceKind(parsed.kind) {
                         failAt(source, position, prefix, "loop sequence must be a List, Array, Map, Set, or Slice, got " + displayKind(parsed.kind));

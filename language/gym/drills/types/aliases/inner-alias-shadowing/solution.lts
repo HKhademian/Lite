@@ -5,7 +5,7 @@ NumOrText := alias String;
 x := io.inputInt();
 y := io.inputInt();
 tag: NumOrText = "sum";
-total := {
+total := do {
     Pair := alias (a: NumOrText, b: NumOrText);
     NumOrText := alias Int;
     item: Pair = (a = x, b = y);

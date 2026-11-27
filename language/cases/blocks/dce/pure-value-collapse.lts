@@ -1,6 +1,6 @@
 io := import "core/io";
 
-x := {
+x := do {
     unused := 1;
     deadFn := fn(): Int { unused };
     5

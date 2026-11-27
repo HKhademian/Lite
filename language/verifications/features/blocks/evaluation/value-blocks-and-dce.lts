@@ -4,7 +4,7 @@ seed := io.inputInt("seed: ");
 OuterBox := alias Int;
 var outerVar: OuterBox = seed;
 
-valResult := {
+valResult := do {
     Box := alias Inner;
     Inner := alias Int;
     OuterBox := alias String;
@@ -29,7 +29,7 @@ runUnitBlock();
     tmp2 += 2;
 }
 
-prunedVal := {
+prunedVal := do {
     unused := 123;
     deadClosure := fn(): Int { unused };
     seed + 5
@@ -40,7 +40,7 @@ bump := fn(delta: Int): Int {
     effectAcc += delta;
     effectAcc
 };
-keptEffectVal := {
+keptEffectVal := do {
     unused2 := bump(4);
     seed + 1
 };

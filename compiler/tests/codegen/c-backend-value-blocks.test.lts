@@ -19,16 +19,16 @@ src :=
 "io := import \"core/io\";\n" +
 "\n" +
 "/* 1. Statement-bearing value blocks and loops inside value blocks */\n" +
-"x := { a := 2; b := a * 3; b + 1 };\n" +
+"x := do { a := 2; b := a * 3; b + 1 };\n" +
 "xs := [1, 4, 7, 9];\n" +
-"hasSeven := {\n" +
+"hasSeven := do {\n" +
 "    var found := false;\n" +
 "    loop xs as v {\n" +
 "        if v == 7 { found = true; break; }\n" +
 "    }\n" +
 "    found\n" +
 "};\n" +
-"io.outputLine(x, hasSeven, { k := 10; k * 2 });\n" +
+"io.outputLine(x, hasSeven, do { k := 10; k * 2 });\n" +
 "\n" +
 "/* 2. Early return inside value-if branch (compiler frontend-types pattern) */\n" +
 "checkedNeg := fn(isNeg: Bool, n: Int): (ok: Bool, value: Int) {\n" +

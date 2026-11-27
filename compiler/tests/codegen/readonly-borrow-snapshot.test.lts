@@ -134,7 +134,7 @@ src :=
 "    appendAll(snapA, mut localA);\n" +
 "    io.outputLine(\"sameCallAlias\", localA.length(), localA[0], localA[3], localA[5]);\n" +
 "\n" +
-"    clAfter := {\n" +
+"    clAfter := do {\n" +
 "        mut localB: List<Int> = [4, 5];\n" +
 "        cb := fn(): Unit {\n" +
 "            var i := 0;\n" +

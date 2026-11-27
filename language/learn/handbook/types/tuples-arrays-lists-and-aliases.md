@@ -17,7 +17,7 @@ Destructure any tuple positionally or by named field (using `alias = field` and 
 ```lite
 io := import "core/io";
 
-rect := { width := 640; height := 480; (=width, =height) };
+rect := do { width := 640; height := 480; (=width, =height) };
 (w = width, = height) := rect;
 io.outputLine(rect, w * height);
 ```
@@ -34,7 +34,7 @@ Config := record {
     port: Int = 8080;
 };
 
-cfg := { port := 9090; Config { = port } };
+cfg := do { port := 9090; Config { = port } };
 defaulted: Config = {};
 { endpoint = host, = port: Int } := cfg;
 io.outputLine(endpoint, port, defaulted.host, defaulted.port);
@@ -112,7 +112,7 @@ io := import "core/io";
 Point := alias (x: Int, y: Int);
 p: Point = (x = 3, y = 4);
 
-pairSum := {
+pairSum := do {
     pair: Pair = (10, 20);
     Pair := alias (:Int, :Int);
     pair.0 + pair.1

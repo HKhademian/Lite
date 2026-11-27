@@ -9,7 +9,7 @@ Config := record {
     env: String = "prod";
 };
 
-primary := {
+primary := do {
     port := 9090;
     Config { host = "api.lite", = port, tls = true }
 };

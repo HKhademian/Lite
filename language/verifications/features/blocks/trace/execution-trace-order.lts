@@ -6,7 +6,7 @@ var rootReserved: Int = ?;
 readRootReserved := fn(): Int { rootReserved + k };
 rootReserved = 20;
 
-innerTrace := {
+innerTrace := do {
     var innerY: Int = ?;
     writeAndRead := fn(): Int {
         innerY = k + 9;

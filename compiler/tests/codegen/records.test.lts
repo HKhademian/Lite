@@ -101,7 +101,7 @@ advancedRecordsSrc := "io := import \"core/io\";\n" +
 "fixed: [User; 2] = [User {}, { name = \"C\" }];\n" +
 "paired := (label = \"first\", item = u);\n" +
 "io.outputLine(users[1].name, users[1].age, fixed[1].name, paired.item.age);\n" +
-"innerResult := {\n" +
+"innerResult := do {\n" +
 "    LocalRec := record { x: Int = 7; y: Int; }\n" +
 "    lr := LocalRec { y = 3 };\n" +
 "    { a = x, b = y } := lr;\n" +
@@ -128,7 +128,7 @@ recShorthandSrc := "io := import \"core/io\";\n" +
 "{ a = label, = other: Int, = active } := u1;\n" +
 "var { = label: String, isAct = active } := u2;\n" +
 "label = label + \"!\";\n" +
-"inner := {\n" +
+"inner := do {\n" +
 "    var { = other } := u2;\n" +
 "    other + 1\n" +
 "};\n" +

@@ -88,22 +88,22 @@ assertRejectsTarget(tsComp, "partial-cond", partialRej);
 valBlkSrc := [
     "io := import \"core/io\";",
     "y := 100;",
-    "x := { y := 2; y * 3;;;; };",
+    "x := do { y := 2; y * 3;;;; };",
     "a := if true { y := 2; y * 3 } else { 0 };",
     "b := if false { 1 } else if true { var z: Int = 4; z = z + 5; z } else { 0 };",
-    "c: Float = { k := 2; 1 };",
+    "c: Float = do { k := 2; 1 };",
     "io.outputLine(y, x, a, b, c);",
-    "io.outputLine({ x := 3; });",
-    "io.outputLine({});"
+    "io.outputLine(do { x := 3; });",
+    "io.outputLine(do {});"
 ].join("\n");
 compilerTest.assertCompileRunTs(root, tsComp, "value-blocks", valBlkSrc, "100 6 6 9 1\nUnit\nUnit\n");
 valBlkRej: List<(bad: String, m1: String, m2: String)> = [
-    (bad = "y := { x := 3; };", m1 = "cannot declare a Unit local y", m2 = ""),
-    (bad = "y := {};", m1 = "cannot declare a Unit local y", m2 = ""),
-    (bad = "io := import \"core/io\"; io.outputLine({ 1 2 });", m1 = "expected ; or }", m2 = "")
+    (bad = "y := do { x := 3; };", m1 = "cannot declare a Unit local y", m2 = ""),
+    (bad = "y := do {};", m1 = "cannot declare a Unit local y", m2 = ""),
+    (bad = "io := import \"core/io\"; io.outputLine(do { 1 2 });", m1 = "expected ; or }", m2 = "")
 ];
 assertRejectsTarget(tsComp, "value-blocks", valBlkRej);
-cValBlkComp := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; x := { y := 2; y * 3 }; io.outputLine(x);", "");
+cValBlkComp := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; x := do { y := 2; y * 3 }; io.outputLine(x);", "");
 test.checkInt("value-blocks c compiles: " + cValBlkComp.stderr, 0, cValBlkComp.status);
 
 /* Never-valued io.exit supports default status, value flow, control joins, dead-code checks, and rejections */
@@ -443,8 +443,8 @@ taggedBlkRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "match { _ @bad {} }", m1 = "block tag cannot appear after _ in match arm", m2 = ""),
     (bad = "loop @bad {}", m1 = "unexpected block tag @bad in loop header", m2 = ""),
     (bad = "loop false @bad {}", m1 = "block tag cannot appear before { in loop", m2 = ""),
-    (bad = "@bad f := fn(): Int { 1 };", m1 = "expected {, if, match, loop or . after block tag @bad", m2 = ""),
-    (bad = "f := @bad fn(): Int { 1 };", m1 = "expected {, if, match, loop or . after block tag @bad", m2 = ""),
+    (bad = "@bad f := fn(): Int { 1 };", m1 = "expected {, do, if, match, loop or . after block tag @bad", m2 = ""),
+    (bad = "f := @bad fn(): Int { 1 };", m1 = "expected {, do, if, match, loop or . after block tag @bad", m2 = ""),
     (bad = "f := fn(): Int @bad { 1 };", m1 = "unexpected block tag in function header", m2 = "")
 ];
 assertRejectsTarget(tsComp, "tagged-blocks", taggedBlkRej);
@@ -543,7 +543,7 @@ taggedCondRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "x := if true { 1 } then { 2 };", m1 = "value if requires a final else", m2 = ""),
     (bad = "if true { 1 } then { 2 }", m1 = "value if requires a final else", m2 = ""),
     (bad = "x := @t if true { 1 } else { 2 } then @bad { 3 };", m1 = "block tag cannot appear after then", m2 = ""),
-    (bad = "@bad; x := 1;", m1 = "expected {, if, match, loop or . after block tag @bad", m2 = "")
+    (bad = "@bad; x := 1;", m1 = "expected {, do, if, match, loop or . after block tag @bad", m2 = "")
 ];
 assertRejectsTarget(tsComp, "tagged-cond", taggedCondRej);
 
@@ -670,7 +670,7 @@ test.checkText("finally-feature run stdout", "1\n2\nthen\nfinally\ncond\n1\nretu
 finComplexSrc := [
     "io := import \"core/io\";",
     "{ io.outputLine(\"blk\"); } finally { io.outputLine(\"blk-stmt-fin\"); }",
-    "blkVal := { n := 9; n + 1 } finally { io.outputLine(\"blk-fin\"); };",
+    "blkVal := do { n := 9; n + 1 } finally { io.outputLine(\"blk-fin\"); };",
     "tagVal := @b { return @b 20; } finally { io.outputLine(\"tagged-fin\"); };",
     "ifVal := @c if true { 30 } else { 40 } then { @c.value + 1 } finally { io.outputLine(\"if-fin\"); };",
     "if true { io.outputLine(\"partial-yes\"); } finally { io.outputLine(\"partial-fin\"); }",
@@ -741,7 +741,7 @@ boundPos := finDfRun.stderr.indexOf("BoundPanic", 0);
 test.check("finally-double-fault arithPos >= 0: " + finDfRun.stderr, arithPos >= 0);
 test.check("finally-double-fault boundPos > arithPos: " + finDfRun.stderr, boundPos > arithPos);
 
-finCancelSrc := "io := import \"core/io\";\nxs := [1, 2];\nx := { 42 } finally { io.outputLine(\"cleanup-fail\"); _bad := xs[5]; };\nio.outputLine(\"unreachable\", x);\n";
+finCancelSrc := "io := import \"core/io\";\nxs := [1, 2];\nx := do { 42 } finally { io.outputLine(\"cleanup-fail\"); _bad := xs[5]; };\nio.outputLine(\"unreachable\", x);\n";
 finCancelRun := compilerTest.compileCheckRunTs(root, tsComp, finCancelSrc, "");
 test.checkInt("finally-cancel-normal status", 1, finCancelRun.status);
 test.checkText("finally-cancel-normal stdout", "cleanup-fail\n", finCancelRun.stdout);
@@ -759,7 +759,7 @@ finRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "x := @t if true { 1 } else { 2 } finally { @t.value; };", m1 = "not available in finally", m2 = ""),
     (bad = "loop [1] { } finally { } then { }", m1 = "then must appear before finally", m2 = ""),
     (bad = "loop [1] { } finally { } finally { }", m1 = "duplicate finally block", m2 = ""),
-    (bad = "x := { 1 } finally { } finally { };", m1 = "duplicate finally block", m2 = "")
+    (bad = "x := do { 1 } finally { } finally { };", m1 = "duplicate finally block", m2 = "")
 ];
 assertRejectsTarget(tsComp, "finally", finRej);
 

@@ -7,7 +7,7 @@ Score := record {
 
 delta := io.inputInt();
 rawBonus := io.inputInt();
-entry := {
+entry := do {
     bonus := rawBonus;
     Score { base = 10 + delta, = bonus }
 };

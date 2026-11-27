@@ -9,7 +9,7 @@ origin: Point = (x = 3, y = 4);
 scores: ScoreList = [10, 20, 30];
 
 /* Inner blocks support their own `type` aliases, including forward references and shadowed names. */
-blockSum := {
+blockSum := do {
     Alias := alias RawPair;
     RawPair := alias (left: Int, right: Int);
     Point := alias String;

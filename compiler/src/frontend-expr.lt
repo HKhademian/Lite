@@ -817,7 +817,17 @@ parseTagPrefixExpr := fn(target: String, source: String, start: Int, prefix: Str
         }
         syntax.failAt(source, fieldStart, prefix, "block tag @" + tagInfo.tag + " does not expose ." + fieldName);
     }
+    var tagBlockBrace := -1;
     if afterTag < tagSourceSize and source.at(afterTag) == "{" {
+        tagBlockBrace = afterTag;
+    } else if afterTag < tagSourceSize and source.wordAt(afterTag, "do") {
+        afterDoKw := syntax.skipTrivia(source, afterTag + 2, prefix);
+        if afterDoKw >= tagSourceSize or source.at(afterDoKw) =!= "{" {
+            syntax.failAt(source, afterDoKw, prefix, "expected { after do");
+        }
+        tagBlockBrace = afterDoKw;
+    }
+    if tagBlockBrace >= 0 {
         isCTagBlk := target == ir.TARGET_C;
         hintExpected := normalizeExpectedValueKind(expected);
         blockId := ctx.nextCtxId(ctxs);
@@ -829,7 +839,7 @@ parseTagPrefixExpr := fn(target: String, source: String, start: Int, prefix: Str
         pass1Ctx := (id = blockId, tag = tagInfo.tag, kind = ir.CTX_KIND_BLOCK, phase = ir.CTX_PHASE_BODY,
         iifeDepth = tagDepth, valKind = pass1ValKind, valVar = blockValVar, label = blockLabel,
         iterLabel = taggedLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
-        pass1 := parseBinaryCtx(target, source, afterTag, prefix, locals, functions, params, currentName,
+        pass1 := parseBinaryCtx(target, source, tagBlockBrace, prefix, locals, functions, params, currentName,
         hintExpected, 0, ctx.appendCtx(ctxs, pass1Ctx), tagDepth, true, "tagged", aliases);
         var result := pass1;
         if not inferMode {
@@ -838,7 +848,7 @@ parseTagPrefixExpr := fn(target: String, source: String, start: Int, prefix: Str
             pass2Ctx := (id = blockId, tag = tagInfo.tag, kind = ir.CTX_KIND_BLOCK, phase = ir.CTX_PHASE_BODY,
             iifeDepth = tagDepth, valKind = inferredKind, valVar = blockValVar, label = blockLabel,
             iterLabel = taggedLexDepthStr, countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = "");
-            result = parseBinaryCtx(target, source, afterTag, prefix, locals, functions, params, currentName,
+            result = parseBinaryCtx(target, source, tagBlockBrace, prefix, locals, functions, params, currentName,
             pass2Expected, 0, ctx.appendCtx(ctxs, pass2Ctx), tagDepth, false, "tagged", aliases);
         }
         afterTaggedClose := syntax.skipTrivia(source, result.next, prefix);
@@ -873,7 +883,7 @@ parseTagPrefixExpr := fn(target: String, source: String, start: Int, prefix: Str
     if afterTag < tagSourceSize and source.wordAt(afterTag, "loop") {
         return parseLoopExpr(target, source, afterTag, tagInfo.tag, start, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
     }
-    syntax.failAt(source, afterTag, prefix, "expected {, if, match, loop or . after block tag @" + tagInfo.tag);
+    syntax.failAt(source, afterTag, prefix, "expected {, do, if, match, loop or . after block tag @" + tagInfo.tag);
     ctx.intParsed("", 0, true, start)
 };
 
@@ -2065,6 +2075,18 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
     if name == "loop" {
         return parseLoopExpr(target, source, nameStart, "", nameStart, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
     }
+    if name == "do" {
+        afterDo := syntax.skipTrivia(source, next, prefix);
+        if afterDo >= source.length() or source.at(afterDo) =!= "{" {
+            syntax.failAt(source, afterDo, prefix, "expected { after do");
+        }
+        blkLocMark := sym.localMark();
+        blkAliasMark := sym.aliasMark();
+        doRes := parseBlockExpr(target, source, afterDo, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, "", aliases);
+        sym.rewindLocalsTo(blkLocMark);
+        sym.rewindAliasesTo(blkAliasMark);
+        return doRes;
+    }
     if name == "fn" {
         return parseFnLiteralExpr(target, source, nameStart, next, prefix, locals, functions, params, expected, ctxs, iifeDepth, inferMode, aliases);
     }
@@ -3108,13 +3130,22 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             tagPeek := syntax.parseTagAt(source, cursor, prefix);
             afterPeek := syntax.skipTrivia(source, tagPeek.next, prefix);
             if afterPeek >= blockSourceSize or (source.at(afterPeek) =!= "{" and source.at(afterPeek) =!= "." and
-            not source.wordAt(afterPeek, "if") and not source.wordAt(afterPeek, "match") and
-            not source.wordAt(afterPeek, "loop")) {
-                if source.wordAt(afterPeek, "pub") or
-                (afterPeek < blockSourceSize and source.at(afterPeek).isNameStart() and source.startsWithAt(syntax.skipTrivia(source, source.skipName(afterPeek), prefix), ":=")) {
-                    syntax.failAt(source, cursor, prefix, "unknown type layout attribute @" + tagPeek.tag);
+            not source.wordAt(afterPeek, "do") and not source.wordAt(afterPeek, "if") and
+            not source.wordAt(afterPeek, "match") and not source.wordAt(afterPeek, "loop")) {
+                var attrCheckPos := afterPeek;
+                if source.wordAt(attrCheckPos, "pub") {
+                    attrCheckPos = syntax.skipTrivia(source, attrCheckPos + 3, prefix);
                 }
-                syntax.failAt(source, afterPeek, prefix, "expected {, if, match, loop or . after block tag @" + tagPeek.tag);
+                if attrCheckPos < blockSourceSize and source.at(attrCheckPos).isNameStart() {
+                    attrEqPos := syntax.skipTrivia(source, source.skipName(attrCheckPos), prefix);
+                    if source.startsWithAt(attrEqPos, ":=") {
+                        attrRhsPos := syntax.skipTrivia(source, attrEqPos + 2, prefix);
+                        if source.wordAt(attrRhsPos, "record") or source.wordAt(attrRhsPos, "enum") {
+                            syntax.failAt(source, cursor, prefix, "unknown type layout attribute @" + tagPeek.tag);
+                        }
+                    }
+                }
+                syntax.failAt(source, afterPeek, prefix, "expected {, do, if, match, loop or . after block tag @" + tagPeek.tag);
             }
         } else if chAtCursor.isNameStart() or (chAtCursor == "." and blockSourceSize > cursor + 1 and source.wordAt(syntax.skipTrivia(source, cursor + 1, prefix), "item")) {
             var isDotItemStmt := false;
@@ -4032,6 +4063,58 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     blockConstant = false;
                     stmtNext := syntax.consumeStatementEnd(source, loopBody.next, prefix);
                     cursor = if stmtNext >= 0 { stmtNext } else { loopBody.next };
+                }
+            } else if itemName == "do" {
+                doOpen := syntax.skipTrivia(source, afterItemName, prefix);
+                if doOpen >= blockSourceSize or source.at(doOpen) =!= "{" {
+                    syntax.failAt(source, doOpen, prefix, "expected { after do");
+                }
+                doBraceEnd := syntax.scanBraceEnd(source, doOpen, prefix);
+                fullDoEnd := if doBraceEnd >= 0 { syntax.scanTrailingFinallyEnd(source, doBraceEnd, prefix) } else { -1 };
+                afterDoBrace := if fullDoEnd >= 0 { syntax.skipItemSeparators(source, fullDoEnd, prefix) } else { -1 };
+                atTailDo := (not isStmtBody) and afterDoBrace >= 0 and afterDoBrace < blockSourceSize and source.at(afterDoBrace) == "}";
+                if not atTailDo {
+                    isStatement = true;
+                    stmtBlock := parseBinaryCtx(target, source, doOpen, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "stmt", blockAliases);
+                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, stmtBlock); }
+                    afterStmtBlock := syntax.skipTrivia(source, stmtBlock.next, prefix);
+                    if afterStmtBlock < blockSourceSize and source.wordAt(afterStmtBlock, "then") {
+                        syntax.failAt(source, afterStmtBlock, prefix, "then requires an if, match, or loop");
+                    }
+                    var stmtEndPos := stmtBlock.next;
+                    if afterStmtBlock < blockSourceSize and source.wordAt(afterStmtBlock, "finally") {
+                        stmtFin := parseFinallyClause(target, source, afterStmtBlock, prefix, blockLocals, functions, params, currentName, ctxs, bodyDepth, inferMode, blockAliases);
+                        if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, stmtFin); }
+                        if not blockExits {
+                            if target == ir.TARGET_C {
+                                fnIdxSF := ctx.findCtxByKindIndex(ctxs, "fn");
+                                fnRetSF := if fnIdxSF >= 0 { ctxs[fnIdxSF].valKind } else { "" };
+                                rewrittenSF := ctx.cRewriteFinallyExits(stmtBlock.code, stmtFin.code, fnRetSF, afterStmtBlock);
+                                mut statements.pushBack("{ { " + rewrittenSF + " } { " + stmtFin.code + " } }");
+                            } else {
+                                mut statements.pushBack("try { " + stmtBlock.code + " } finally { " + stmtFin.code + " }");
+                            }
+                            if stmtBlock.kind == ir.VALUE_KIND_NEVER or stmtFin.kind == ir.VALUE_KIND_NEVER { blockExits = true; }
+                            statementCount = statementCount + 1;
+                        }
+                        if target == ir.TARGET_TS and not inferMode {
+                            blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtBlock.code);
+                            blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtFin.code);
+                        }
+                        stmtEndPos = stmtFin.next;
+                    } else if not blockExits {
+                        if stmtBlock.code =!= "" {
+                            mut statements.pushBack("{ " + stmtBlock.code + " }");
+                        }
+                        if stmtBlock.kind == ir.VALUE_KIND_NEVER { blockExits = true; }
+                        statementCount = statementCount + 1;
+                        if target == ir.TARGET_TS and not inferMode {
+                            blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, stmtBlock.code);
+                        }
+                    }
+                    blockConstant = false;
+                    stmtNext := syntax.consumeStatementEnd(source, stmtEndPos, prefix);
+                    cursor = if stmtNext >= 0 { stmtNext } else { stmtEndPos };
                 }
             } else if afterItemName < source.length() and source.at(afterItemName) == "{" and
             source.startsWithAt(syntax.skipTrivia(source, syntax.scanBraceEnd(source, afterItemName, prefix), prefix), ":=") {
@@ -7010,17 +7093,14 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         _ := syntax.expectSymbol(source, afterSubj, "{", prefix);
     }
     matchId := ctx.nextCtxId(ctxs) + matchStart;
-    subjIsSimpleIdent := {
-        sLen := subj.code.length();
-        var okId := sLen > 0 and subj.code.at(0).isNameStart();
-        var si := 1;
-        loop okId and si < sLen {
-            ch := subj.code.at(si);
-            if not ch.isNameContinue() and ch =!= "$" and (target =!= ir.TARGET_C or ch =!= ".") { okId = false; }
-            si = si + 1;
-        }
-        okId
-    };
+    sCodeLen := subj.code.length();
+    var subjIsSimpleIdent := sCodeLen > 0 and subj.code.at(0).isNameStart();
+    var si := 1;
+    loop subjIsSimpleIdent and si < sCodeLen {
+        ch := subj.code.at(si);
+        if not ch.isNameContinue() and ch =!= "$" and (target =!= ir.TARGET_C or ch =!= ".") { subjIsSimpleIdent = false; }
+        si = si + 1;
+    }
     isCTarget := target == ir.TARGET_C;
     subjIsFreshOwned := isCTarget and types.cDropFnForKind(subj.kind) =!= "" and
     (ctx.isCFreshOwnedExpr(subj.code) or subj.code.startsWithAt(0, "/*@T:") or subj.code.startsWithAt(0, "/*@CBLK:"));
@@ -9213,7 +9293,7 @@ readOnlyArgNeedsSnapshot := fn(argCode: String, locals: List<Local>, mutArgRunti
     loc := locals[locIdx];
     if not loc.writable { return false; }
     if loc.depth <= 0 { return true; }
-    if loc.code == loc.runtime and not loc.runtime.startsWithAt(0, "(*") { return true; }
+    if loc.code == loc.runtime { return true; }
     if mutArgRuntimes.contains(loc.runtime) { return true; }
     selfIdx := sym.localIndex(locals, "$self");
     if selfIdx >= 0 and loc.depth < locals[selfIdx].depth { return true; }
@@ -14367,6 +14447,8 @@ pub parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: 
     } else if ch == "{" {
         if bodySink == "" and types.isRecordKind(expected) {
             left = parseRecordLiteral(target, source, start, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
+        } else if bodySink == "" {
+            syntax.failAt(source, start, prefix, "standalone block expressions must use do { ... }");
         } else {
             blkLocMark := sym.localMark();
             blkAliasMark := sym.aliasMark();
@@ -14538,7 +14620,7 @@ pub parseExpressionItem := fn(target: String, source: String, position: Int, pre
         ""
     };
     trimmedStart := syntax.skipTrivia(source, position, prefix);
-    stmtSink := if trimmedStart < source.length() and source.at(trimmedStart) == "{" { "exprOut" } else { "" };
+    stmtSink := if trimmedStart < source.length() and source.at(trimmedStart) == "{" and (not isTailClose or currentResult == ir.VALUE_KIND_UNIT) { "exprOut" } else { "" };
     stmtMin := if not isTailClose or currentResult == ir.VALUE_KIND_UNIT { -2 } else { 0 };
     parsed := parseBinaryCtx(target, source, position, prefix, locals, functions, params, currentName, expected, stmtMin, ctxs, 0, false, stmtSink, aliases);
     ended := syntax.consumeStatementEnd(source, parsed.next, prefix);

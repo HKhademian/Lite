@@ -42,7 +42,7 @@ cardHighlight := canvas.rgba(255, 255, 255, 36);
 amberAccent := canvas.rgba(240, 180, 90, 220);
 cyanAccent := canvas.rgba(110, 196, 216, 220);
 
-topLeftTile := {
+topLeftTile := do {
     fill := canvas.rgba(110, 196, 216, 150);
     Tile { x = 24, y = 24, = fill, accent = amberAccent }
 };

@@ -5,7 +5,7 @@ Explore how root scripts and inner blocks wire function references in parallel w
 ## Walkthrough
 
 1. `readLate := fn(): Int { lateRoot * 2 };` compiles cleanly even though `lateRoot := 15;` appears afterward!
-2. Inside `wired := { ... }`, `isEven` and `isOdd` call each other across declaration order (mutual recursion) and `stepSum` calls itself cleanly.
+2. Inside `wired := do { ... }`, `isEven` and `isOdd` call each other across declaration order (mutual recursion) and `stepSum` calls itself cleanly.
 3. In `precedence`, `d1()` sees the `depth := 9;` declared later in its own block, while `d2Fn` sees `depth := 2;`, demonstrating nearer-forward shadowing for deferred functions.
 4. In `shadowRead`, the eager RHS `depth := depth + 40;` reads outer `depth` (`1`) before binding inner `depth` (`41`).
 

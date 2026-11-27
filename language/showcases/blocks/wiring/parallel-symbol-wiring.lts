@@ -7,7 +7,7 @@ readLate := fn(): Int { lateRoot * 2 };
 lateRoot := 15;
 
 /* Inner blocks share the exact same compile-time wiring model: mutual & own-name recursion, forward reads. */
-wired := {
+wired := do {
     isEven := fn(n: Int): Bool {
         if n == 0 { true } else { isOdd(n - 1) }
     };
@@ -24,11 +24,11 @@ wired := {
 
 /* Nearer-forward shadowing in deferred fn bodies vs eager outer-shadow reads. */
 depth := 1;
-precedence := {
+precedence := do {
     d1 := fn(): Int { depth };
-    d2 := {
+    d2 := do {
         d2Fn := fn(): Int { depth };
-        d3 := {
+        d3 := do {
             d3Fn := fn(): Int { depth };
             depth := 3;
             d3Fn()
@@ -41,7 +41,7 @@ precedence := {
 };
 
 /* Eager initialization reads the outer binding on the RHS before introducing the inner shadow. */
-shadowRead := {
+shadowRead := do {
     depth := depth + 40;
     depth
 };

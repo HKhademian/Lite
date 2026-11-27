@@ -7,7 +7,7 @@ See [aliases and distinct type declarations](lite://doc/type-aliases).
 ## Walkthrough
 
 1. `Point := alias (x: Int, y: Int);` creates a transparent alias at file scope (interchangeable with `(x: Int, y: Int)`).
-2. Inside `blockSum := { ... }`, `Alias := alias RawPair;` references `RawPair` declared *later* in the same block!
+2. Inside `blockSum := do { ... }`, `Alias := alias RawPair;` references `RawPair` declared *later* in the same block!
 3. Re-declaring `Point := alias String;` inside `blockSum` shadows `Point` cleanly for that scope only; outer `Point` stays `(x: Int, y: Int)`.
 
 > [!NOTE]

@@ -5,8 +5,8 @@ io := import "core/io";
 base := 5;
 var acc := 0;
 
-/* An inner `{ ... }` block evaluates to its final expression while enclosing its own bindings. */
-computed := {
+/* A standalone `do { ... }` block evaluates to its final expression while enclosing its own bindings. */
+computed := do {
     doubled := base * 2;
     offset := 7;
     doubled + offset
@@ -19,7 +19,7 @@ computed := {
 }
 
 /* Unused pure declarations and uninvoked local functions inside blocks are eliminated safely. */
-simplified := {
+simplified := do {
     unusedValue := 1000;
     unusedClosure := fn(k: Int): Int { k + unusedValue };
     computed + acc
@@ -30,7 +30,7 @@ bump := fn(delta: Int): Int {
     acc += delta;
     acc
 };
-withEffect := {
+withEffect := do {
     ignoredResult := bump(3);
     simplified
 };

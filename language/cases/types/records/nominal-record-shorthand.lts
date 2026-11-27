@@ -6,7 +6,7 @@ Point := record {
     label: String = "origin";
 };
 
-p := {
+p := do {
     x := 12;
     y := 34;
     Point { = x, = y }
