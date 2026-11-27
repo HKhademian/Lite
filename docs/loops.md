@@ -1,6 +1,6 @@
 # Loops
 
-Status: **one keyword, three source modes, one optional item name, and metadata-only state selected; optional leading and/or on unparenthesized Boolean sources selected 2026-10-24; full protocol/inference contracts open**.
+Status: **complete `loop` surface implemented across TS and C11 (Phases 1–12): Boolean/unconditional/sequence traversal loops, writable `loop mut` in-place iteration (`.item`), `.index`/`.count`/`.value`/`.collected`, receiverless `then`, construct `finally`, and labeled `@tag` `break`/`continue`/`return`**. Full generic iterable trait refinement remains documented below.
 
 Normative page: loop forms, source modes, item naming, and the metadata surface. [Loop value](lite://doc/loop-value) owns `.value` type/initialization/commit rules; [loop completion](lite://doc/loop-completion) owns `then` and targeted exits; [loop type inference](lite://doc/loop-type-inference) owns body/result inference; [last item](lite://doc/loop-last-item) owns completion-time item state. See the [normative page map](lite://doc/normative-pages).
 

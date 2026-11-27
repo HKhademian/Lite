@@ -1,42 +1,20 @@
-# Generated compiler gaps and progress
+# Compiler status and remaining post-Phase-18 backlog
 
-Owner direction, 2026-11-11: the self-hosting gate is the smallest Lite source
-subset that can build and rebuild the compiler. Do not require full T00 feature
-parity before retiring the handwritten implementation. Continue adding needed
-features in the seed/compiler loop, comparing only the declared bootstrap subset
-at each increment. Keep each verified slice atomic and preserve reproducible
-builds.
+As of **Phase 18 (`a8114176`)**, the Lite compiler reaches a three-generation self-hosting fixed point on **both TS and native C11** (`bootstrap/bootstrap.manifest.json`) and ships Phases 1–18 across both targets (numeric ladder, ARC/VmArena/`SlotPool`/`Rc<T>`, `Slice<T>` & `splitAt` & bit-packed slices, `Option<T>` with niche & float-qNaN packing, `Simd<T, N>`/`SoA<R>`, `interface`/`impl`/assoc types/defaults/`dyn`, lexical `context(...)`/`$context.lt` + FFI default shims, overloading & `Index`/`Range`, prefix `mut`, `loop mut`, `.static()`, `do { ... }`, `if` pattern bindings, dependent record defaults, definite init + C11 init guards, runtime `A | B` unions & `T!`/`!`/`else(err)`, portable `comptime { ... }` + Stage-1 `.lt` evaluation, `{ ... }` structural records, unified `alias`, parameter defaults & `?:`, and callable variance). See the [C11 memory and codegen plan](lite://doc/c11-memory-and-codegen-plan) and [implementation status](lite://doc/implementation-status).
 
-The selected generated compiler now reaches a three-generation fixed point
-for the bounded kernel and passes its 94-case compiler corpus. The root-symbol
-contract is covered for repeated root definitions, nested bindings, deferred
-function references to later inferred scalar literals, parameter shadowing,
-and source-ordered eager reads. Top-level source imports are implemented and
-active handwritten T00 consumers have been retired. Keep the archived
-T00/selected-compiler inventory as parity evidence, not a retirement
-prerequisite. Public `run` remains
-compile-and-execute over a TS artifact. C output/native self-hosting remains a
-later target. See the
-[transition order](lite://doc/compiler/transition-plan#implementation-order).
+## Open post-Phase-18 items
 
-## Immediate migration priorities
+- **Transitive context overrides across third-party wrappers:** signatures omitting an ambient `context` currently preserve C/FFI default shims, while propagating nested `context(...)` overrides across third-party wrappers that hide the context remains deferred (`docs/c11-memory-and-codegen-plan.md#8-open-items-phases-711`).
+- **Flat panic capture (`({ ... })?`):** `LP-0009` flat panic capture alongside returned errors remains open (`docs/fallible-types-and-error-composition.md`), while ordinary `T ! E` / `T!` / `!` / `else(err)` shipped in Phase 15.
+- **Standalone CLI / C11 refinements:** optional `core/set` C11 parity if needed beyond `Map`/`List`/slice collections, fixed-point decimal numerics, and supplementary-character diagnostic column alignment (code-point vs UTF-16 offset edge case).
+- **Language-level design items:** implicit whole-package preloading (`docs/packages-and-preload.md`) and general record field-by-field/spread partial initialization (`docs/record-initialization.md`).
 
-The current path is:
+---
 
-1. One selected generated compiler is maintained in the active tree. Its
-   fixed point and 94-case compiler corpus are recorded. The archived T00/T12
-   inventory remains parity evidence.
-2. The Lite TS driver reads and parses imported units with separate
-   visited/processed graph records. Receiver-less and namespace imports expose
-   public functions, immutable scalar values, and public types with per-unit
-   runtime identities. Retained diagnostic spans remain open. Public
-   TS compile/check/run use the graph; C and compiler-source assembly still use
-   the host expander. Maintained compiler sources have not yet migrated to
-   namespace imports.
-3. T00 implementation and active interpreter/reference routes are retired.
-   Recorded parity rejections remain explicit backlog; they did not block retirement.
-4. Continue needed Lite compiler features in paired seed/source increments and
-   compare the declared subset. Resume public C/native work separately.
+## Historical November 2026 T00-retirement archive
+
+> [!NOTE]
+> The sections below preserve the original November 2026 T00-retirement ledgers, 94-case bootstrap baseline counts, and early parity slices for provenance. For current Phases 1–18 status, use the summary above and [the C11 plan](lite://doc/c11-memory-and-codegen-plan).
 
 ## Measured checkpoint
 

@@ -29,7 +29,7 @@ mut user := make_user(); /* explicit writable access to held data */
 user.age += 1;
 ```
 
-Use inferred var mut user := expression when both binding replacement and held-data mutation are needed. Its annotated form is var user: mut User = expression. These capabilities remain independent, and the held value's type stays fixed under assignment. See the full [declaration forms](lite://doc/mutability).
+Use inferred `var mut user := expression` when both binding replacement and held-data mutation are needed. Its annotated form is `var mut user: User = expression` (Phase 12). These capabilities remain independent, and the held value's type stays fixed under assignment. See the full [declaration forms](lite://doc/mutability).
 
 Operation parameters and receivers require only read access by default. Qualify an affected typed parameter as user: mut User when its operation needs write access, without an additional function-level marker. Teach these capabilities as needed, while retaining inference for the value types.
 

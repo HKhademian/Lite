@@ -82,7 +82,7 @@ See [generic notation](lite://doc/generic-notation) for current parameter forms 
 - [Blocks and results](lite://doc/blocks-and-results): final expressions, statement results, block boundaries, and grouped value continuation.
 - [Declarations and assignment](lite://doc/declarations-and-assignment): `:=`, unparenthesized Boolean initializers with optional leading and/or, explicit types, independent `var`/`mut` capabilities, and declared replacement contracts versus flow-sensitive read types.
 - [Mutability, access, and operations](lite://doc/mutability): the four declaration forms, held-data access, and operation receiver requirements.
-- [Mut qualifier placement](lite://doc/mut-qualifier-placement): selected name: mut T for typed forms, retained inferred prefixes, and the completed canonical-example migration.
+- [Mut qualifier placement](lite://doc/mut-qualifier-placement): prefix `mut name: T` / `var mut name: T` on variable definitions (Phase 12) and `name: mut T` on typed parameters and access contracts.
 - [Local shadowing and copies](lite://doc/local-shadowing-and-copies): scope and value-copy rules.
 - [Operators](lite://doc/operators): selected basic arithmetic precedence and binary left association, comparison/logical operations, optional leading logical separators and identity additive +, and selected power spelling with explicit unary-minus grouping.
 - [Power and negation](lite://doc/power-and-negation): reject -base `**` exponent, require the negative-base or outer-negation group, and retain open power typing/association/domain contracts.

@@ -1,40 +1,15 @@
-# Lite compiler prototype
+# Lite compiler (Phases 1–18, dual-target TS + C11)
 
-This directory contains the Lite-written compiler and its bootstrap hosts. Both
-the TypeScript (`ts`) and C11 (`c`) emitters are first-class, self-hosting
-targets backed by tracked generated bootstrap sources in
-[`bootstrap/`](lite://doc/compiler/bootstrap-readme). Public `./bin/lite run`
-compiles to a temporary artifact and executes it through `entry.ts`; compiled TS
-programs also run as `node compiler/entry.ts program.ts`, and `./bin/lite-compile-c`
-emits standalone C11 (`cc -std=c11 -Wall -Wextra -Werror`). Every new language
-feature, stdlib builtin, verification case, sample, and showcase MUST support
-both `ts` and `c` and pass both targets in `./bin/lite verify` and
-`./bin/lite test`. The handwritten T00 compiler and numbered generated compiler
-chain have been retired. See the
-[owner-approved transition](lite://doc/compiler/transition-plan).
-The accepted language remains
-the restricted bootstrap subset, not the entire language design.
+This directory contains the self-hosted Lite-written compiler (`compiler/src/`) and its TypeScript and native C11 bootstrap hosts. Both the TypeScript (`ts`) and standalone C11 (`c`, compiled with `-std=c11 -Wall -Wextra -Werror`) emitters are first-class, self-hosting targets backed by tracked generated bootstrap sources in [`bootstrap/`](lite://doc/compiler/bootstrap-readme) (`source=9f3dd522`, `ts=c040ebca`, `igniter=079c75ff`, `c=0acd8d04` at Phase 18).
 
-The [temporary I/O contract](lite://doc/tooling-and-learning#temporary-input-and-output-helpers-selected-2026-11-02)
-now supplies optional String prompts on inputAll/inputLine/inputInt/inputFloat
-and replaces the report builtin with output and outputLine. The former adds no
-newline; the latter always adds one, including with zero arguments. Generated TS
-supports scalar/Unit, flat named-tuple, fixed-array, and List display; the
-generated compiler also supports `Int8`/`Int16`/`Int32`/`Float32`/`Float`
-numeric widths (promotion, lossless widening, checked narrow arithmetic, and
-binary32 rounding), fixed arrays, scalar and
-indexed compound updates, `**`, `core/*` module imports, tuple `=name`
-shorthand, fixed-parameter named/`=name` call routing, `Never`-valued `io.exit`
-(with default `io.exit()`), unnamed `loop sequence { ... }` traversal,
-subjectless Boolean `match { ... }` (TS value and action forms; C action form),
-and empty/grouped/singleton tuple patterns (see [`gaps.md`](lite://doc/compiler/gaps) for remaining
-parity items). Process adapters stream output through an
-optional main callback, preserving earlier output across faults. Calling main()
-without that callback retains the return-text contract. The [I/O seed refresh](lite://doc/compiler/parity#temporary-io-migration)
-records that snapshot's compiler artifacts. The subsequent
-[helper-scan refresh](lite://doc/compiler/parity#single-pass-helper-discovery) collects target
-runtime requirements once per program and records about 30% less compiler time
-on paired output/self-source workloads, with exact emitted bytes preserved.
+Public `./bin/lite run` compiles to a temporary artifact and executes it through `entry.ts` (or a native binary when `--target c` is selected); `./bin/lite build` builds a native binary or standalone HTML5 app; `./bin/lite-compile-c` emits standalone C11; and `./bin/lite-compile-ts` emits TypeScript. Every language feature, stdlib builtin, verification case, sample, and showcase supports **both `ts` and `c`** and passes both targets in `./bin/lite verify` and `./bin/lite test`.
+
+The handwritten T00 compiler and numbered generated compiler chain are retired (see [transition plan](lite://doc/compiler/transition-plan)). Across **Phases 1–18**, the shipped compiler now supports the full core language and native runtime stack across both TS and C11:
+
+- **Tier-0 values & full numeric ladder:** Inline `[T; N]` (including bit-packed `Bool` and `Int1..4`/`UInt1..4`), `Int1`..`Int64`/`Int`, `UInt1`..`UInt64`, `Float8`/`Float16`/`Float32`/`Float64`/`Float`/`Double`, wrapping arithmetic (`+%`, `-%`, `*%`), bitwise operators, 16-byte immutable SSO/external/jumbo `String`s, compact 16 B `List<T>` and 24 B `Map<K, V>`/`Set<T>`, `TextBuilder`, and deterministic ownership/ARC drop cleanup.
+- **Borrowed slices & zero-overhead layout:** Non-escaping `Slice<T>` (over lists, byte-aligned & bit-packed arrays, and `String.bytes()`), disjoint `mut s.splitAt(mid)`, `.toList()`, `Option<T>` with niche packing (including float qNaN niches and `@no_niche`), `@packed`/`@align(N)`, `Simd<T, N>`/`SimdNative<T>`, `SoA<R>`, `Rc<T>`, `VmArena`, and `SlotPool`.
+- **Interfaces, contexts & overloading:** Nominal `interface`/`impl` blocks, associated types, default method bodies, bounded generics, object-safe `dyn`/`mut dyn` dispatch, lexical `context(...)` with package-isolated `$context.lt`, and static specificity-ranked function/method overloading (`Index`/`Range` slice hooks).
+- **Syntax, initialization, unions, fallibles & comptime:** Prefix `mut name: T`/`var mut name: T`, contextual `.static(...)`, `loop mut`, standalone `do { ... }` blocks, `if` pattern bindings, dependent record defaults, definite initialization with immutable `Bool` correlation and 1-byte C11 init/drop guards, normalized `A | B` unions, `T ! E`/`T!` fallibles with `!` and `else(err)`, portable `comptime { ... }` evaluation + Stage-1 `.lt` module evaluation, `{ ... }` structural inferred records, unified `:= alias`, parameter defaults with `?:` omission markers, and callable value variance.
 
 The archived [T00/selected-compiler support inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md) lists
 measured missing forms, behavior/diagnostic differences, every maintained example
@@ -75,18 +50,11 @@ targets. New features may be used in compiler source after their contracts and
 generated-igniter support have been accepted and checked. Flagged investigations
 remain opt-in experiments, separate from accepted support.
 
-These Lite sources are also the bootstrap source **S**. S must remain inside the
-bootstrap subset **L** defined in the
-[bootstrap plan](lite://doc/bootstrap-plan#compiler-source-subset-l). Namespace
-modules (`import "..."`, `pub`), tuple `=name` shorthand, named/`=name` call
-routing (including `self(...)`), scalar compound updates (`+=`, `-=`, `*=`, `/=`, `%=`, `:/=`, `:%=`), `**`,
-narrow fixed integer widths (`Int8`, `Int16`, `Int32`),
-unnamed `loop sequence { ... }` traversal, and subjectless Boolean `match { ... }`
-have passed the self-host and seed acceptance gates and are part of S. Do not
-add subject `match <expr> { ... }`, records, enums, unions, `Float`, `Float32`, arrays,
-closures, general user `mut` parameters, `finally`, or loop metadata to S until
-they pass those gates too: the selected generated compiler must parse, check and
-lower every construct used in S.
+> [!NOTE]
+> The entries below this point are preserved **historical November 2026 milestones** from the early T00-retirement and pre-Phase-1 TS/C parity campaign; see the introduction above and [implementation status](lite://doc/implementation-status) for current Phases 1–18 support.
+
+These historical Lite compiler notes also track earlier bootstrap subset gates:
+When editing compiler sources under `compiler/src/` directly, follow the [compiler development guidelines](lite://repo/.agents/rules/compiler-development.md) and always run `./bin/lite bootstrap verify` to confirm TS and C11 3-generation fixed-point parity.
 
 Compiler sources under `src/` and `lib/core/` use Lite namespace imports. Each
 manifest names one root; active build, CLI, self-host, release and verification
@@ -242,9 +210,7 @@ Equivalent forms:
 ```
 
 The component/package is `lite-compiler`. `./bin/lite-compile` routes to
-`./bin/lite-compile-ts` by default or to a selected target such as
-`./bin/lite-compile-c`; `./bin/lite compile` uses the same router. TS is the
-default. Public C requests fail explicitly until the post-migration C phase.
+`./bin/lite-compile-ts` by default or to `./bin/lite-compile-c` (`--target c`); `./bin/lite compile` uses the same router. Both TS and C11 are active self-hosting production targets across Phases 1–18.
 
 Generated TS/C also lower the existing right-associative, Float-default `**`
 semantics with explicit negative-base grouping and zero and negative exponents. C power

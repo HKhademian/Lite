@@ -1,6 +1,6 @@
 # Records
 
-Status: **record declaration keyword, typed fields, = initialization, named field-pattern operators, inferred named patterns, contextual construction, and distinct identity per record declaration selected, including inline types**. Full inference, standalone literal types, and memory semantics remain open.
+Status: **nominal records (`:= record { ... }`), declared defaults, dependent field defaults (Phase 13), inferred structural records (`{ ... }`, Phase 17), `=name` shorthand, destructuring patterns, and distinct identity per declaration implemented across both TS and C11**.
 
 ## Purpose
 

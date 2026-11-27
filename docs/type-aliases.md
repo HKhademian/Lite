@@ -129,7 +129,7 @@ remain open. See [the core type review](lite://repo/research/investigations/lang
 ## Example outcomes
 
 - `x5: Point5 = x1` is accepted with ordinary array value transfer.
-- With `x1` declared as `x1: mut Point1;`, writing `xalias[0] = 9` is
+- With `x1` declared as `mut x1: Point1;`, writing `xalias[0] = 9` is
   observable as `x1[0] == 9`. The same write is rejected without writable
   access to `x1`.
 - `Other := distinct [Int; 5]` declares a different type from `Point4`.

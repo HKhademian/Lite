@@ -1,6 +1,6 @@
 # C11 Memory, Raw Values, Numeric Ladder, and Codegen Architecture Plan
 
-Status: **Phases 0–11 complete (Phases 0–8 through `4e3bf354`, Phase 9 at `378ffbbf`/`f318b788`, Phase 10 at `56bbcfb5`/`08e63608`, Phase 11 complete as of 2026-11-27). Remaining deferred follow-ups and the syntax review queue describe post-Phase 11 work.**
+Status: **Phases 0–18 complete (Phases 0–8 through `4e3bf354`, Phase 9 at `378ffbbf`/`f318b788`, Phase 10 at `56bbcfb5`/`08e63608`, Phase 11 at `bf3c6f74`, Phase 12 at `6fbdf7a6`, Phase 13 at `491f6130`, Phase 14 at `1708e5d1`, Phase 15 at `199edb03`, Phase 16 at `b60fd7a5`, Phase 17 at `8614a1cf`, Phase 18 at `a8114176`).** Remaining deferred items are explicitly noted below.
 
 This document records the settled architecture for bringing Lite's C11 backend to predictable real-time performance (~1.00× hand-written C on math/crypto/frame loops, faster and smaller than idiomatic C/Rust/Go on string- and allocation-heavy workloads) with zero hidden allocations, zero `rc` leaks, and full value-semantic safety.
 

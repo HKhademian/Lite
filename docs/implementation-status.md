@@ -19,14 +19,19 @@ links the pages and manifest IDs used for the website's example badges.
 A badge refers to an example linked by the document. Backend or host
 coverage for other examples follows their own verification evidence.
 
-## Selected behavior awaiting support
+## Shipped compiler coverage (Phases 1–18, dual-target TS + C11)
 
-On the documentation baseline revision `6bb53592`, both compilers supplied
-zero on the unmatched path of a [partial initializer](lite://doc/conditionals#no-final-else-guarded-update).
-The selected rule leaves the binding uninitialized. Both rejected the
-[conditional payload guard](lite://doc/conditionals#pattern-binding-followed-by-guards),
-[unaliased import](lite://doc/modules-and-packages#import-expansion-and-re-exports),
-and [omitted compile-time parameter annotation](lite://doc/generic-notation#explicit-generic-names-and-inferred-parameter-declarations)
-used in the baseline probes. See the [preload design](lite://doc/packages-and-preload)
-and [standalone block draft](lite://doc/blocks-and-results#standalone-executable-blocks)
-for their status.
+Both TypeScript and native C11 targets share the self-hosted frontend and pass 3-generation bootstrap verification (`./bin/lite bootstrap verify`). Shipped language capabilities across Phases 1–18 include:
+
+- **Full numeric ladder & safety (Phases 5–6):** Exact signed/unsigned integers (`Int1`..`Int64`/`Int`, `UInt1`..`UInt64`), floating-point widths (`Float8` E4M3, `Float16`, `Float32`, `Float64`/`Float`/`Double`), bitwise operators (`&`, `|`, `^`, `<<`, `>>`), wrapping arithmetic (`+%`, `-%`, `*%`), overflow/division bounds panics, and explicit `core/*` stdlib modules.
+- **Borrowed slices & split borrows (Phases 7, 11, 18):** Non-escaping `Slice<T>` views over `List<T>`, byte-aligned and bit-packed `[T; N]` (`Bool`, `Int1..4`, `UInt1..4`), and `String.bytes()`; disjoint mutable `(left, right) := mut s.splitAt(mid)` splits; `.toList()`; and unified `Index` / `Range` dispatch.
+- **`Option<T>`, niche packing, layout, SIMD & SoA (Phases 8, 18):** Built-in `Option<T>` with automatic niche packing (including finite-checked float qNaN niches and `@no_niche`), `@packed` / `@align(N)`, `Simd<T, N>` / `SimdNative<T>`, and `SoA<R>` struct-of-arrays containers alongside `Rc<T>`, `VmArena`, and `SlotPool`.
+- **Nominal interfaces, dynamic dispatch & contexts (Phases 9, 18):** `interface` / `impl` blocks, associated types, default method bodies, bounded generics (`fn<T: Iface>`), object-safe `dyn Interface` / `mut dyn Interface` trait objects, and lexical `context(...)` dependencies with package-isolated `$context.lt`.
+- **Overloading & syntax alignment (Phases 11–13):** Static specificity-ranked function/method overloading, prefix `mut name: T` / `var mut name: T` variable definitions, contextual `.static(...)` calls, writable `loop mut`, standalone `do { ... }` expression blocks, `if` pattern bindings, and dependent record defaults.
+- **Definite initialization, unions & fallibles (Phases 14–15):** Path-sensitive definite initialization (`= ?`, partial `if` / `else { ? }`) with immutable `Bool` predicate correlation and 1-byte C11 init/drop guards; normalized runtime `A | B` unions with flow narrowing; and `T ! E` / `T!` fallible outcomes with `!` propagation and `else(err)` recovery backed by `core/error`.
+- **Compile-time evaluation, inferred records & callables (Phases 16–17):** Portable compiler-embedded `comptime { ... }` evaluator and Stage-1 `.lt` evaluation, `{ ... }` structural inferred records (`Record<$anon;...>`), unified `:= alias` for types/symbols/modules/functions, parameter defaults with `?:` omission markers, and callable value variance.
+
+## Remaining deferred items
+
+- Whole-program implicit preload rules ([preload design](lite://doc/packages-and-preload)) and automatic flat `({ ... })?` panic capture ([LP-0009](lite://doc/failure-capture-and-unwrapping)) remain open design work.
+- See [compiler gaps](lite://doc/compiler/gaps) and the [C11 memory and codegen plan](lite://doc/c11-memory-and-codegen-plan) for post-Phase-18 optimization and refinement items.

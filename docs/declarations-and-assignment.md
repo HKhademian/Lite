@@ -9,12 +9,12 @@ name := initializer;
 name: Type;
 name: Type = initializer;
 mut name := initializer;
-name: mut Type = initializer;
+mut name: Type = initializer;
 var name := initializer;
 var name: Type;
 var name: Type = initializer;
 var mut name := initializer;
-var name: mut Type = initializer;
+var mut name: Type = initializer;
 name = replacement;
 ```
 
@@ -61,7 +61,7 @@ A bare `x: X;` zero-initializes storage. Contextual `0` can select all-zero stor
 
 The modifiers name two independent capabilities. For `x := make_user()`, `x.age = 13` is rejected because the binding does not provide writable access. `mut x := make_user()` permits that update when the field and ownership rules permit it, but still rejects `x = another_user`. These rules concern access through the binding, not a promise of deep global immutability; see [mutability, access, and operations](lite://doc/mutability).
 
-For inferred declarations, the prefixes are `mut`, `var`, or `var mut`; `mut var` and repeated modifiers are rejected. For explicitly typed declarations, `var` before the name still marks local binding reassignment; access qualifiers go after the colon, as in user: mut User, var user: mut User, or target: var User. The old typed-prefix spelling mut user: User is superseded and rejected. Typed parameters likewise place qualifiers after the colon, with both fn(user: mut User) for held-data mutation and fn(target: var T) for caller-storage replacement; fn(var target: T) is retired. No additional function-level mutation marker is required; see [placement](lite://doc/mut-qualifier-placement) and [functions](lite://doc/functions).
+Both inferred and explicitly typed variable definitions place `var` and `mut` as prefixes (`mut`, `var`, or `var mut`; `mut var` and repeated modifiers are rejected): `mut user: User = ...` and `var mut user: User = ...`. Legacy `user: mut User` variable definitions are retired and rejected (Phase 12). Typed parameters and `context(...)` access contracts retain qualifiers after the colon, as in `fn(user: mut User)` for held-data mutation and `fn(target: var T)` for caller-storage replacement; `fn(var target: T)` is retired. No additional function-level mutation marker is required; see [placement](lite://doc/mut-qualifier-placement) and [functions](lite://doc/functions).
 
 ## Omitted, zero, and default initialization
 

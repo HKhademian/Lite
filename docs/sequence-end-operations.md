@@ -25,7 +25,7 @@ Push_start/push_end/pop_start/pop_end are coherent alternatives. Front/back has 
 
 ```text
 /* Selected names and builtin List<T> spelling; full API contracts remain open. */
-numbers: mut List<Int> = [2, 3];
+mut numbers: List<Int> = [2, 3];
 push_front(mut numbers, 1);
 push_back(mut numbers, 4);
 

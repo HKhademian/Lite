@@ -36,7 +36,7 @@ postponement, use distinct binding names in the same block or a nested `{ ... }`
 block for inner shadows; creating a mutable shallow record copy (`mut copy := original`)
 retains its separate value-copy rule without upgrading the source binding.
 
-The typed equivalents place mut after the colon, as in x: mut User = source. The selected copy behavior concerns copying an existing record into the new mutable declaration, rather than upgrading a read-only access to the original object in place.
+The typed equivalent places `mut` as a prefix: `mut x: User = source` (Phase 12). The selected copy behavior concerns copying an existing record into the new mutable declaration, rather than upgrading a read-only access to the original object in place.
 
 The later [deferred function-body direction](lite://doc/functions#deferred-body-lookup)
 permits references to lower declarations without executing the body or moving

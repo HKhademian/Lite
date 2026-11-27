@@ -1,6 +1,6 @@
 # Typed maps
 
-Status: **`Map<K, V>` and `core/map` operations implemented on TS and C11. The `Option<V>` result for `get` is selected, with implementation pending.**
+Status: **`Map<K, V>` and `core/map` operations implemented on TS and C11; `Option<V>` implemented in Phase 8 (`core/map.get` continues returning `(found: Bool, value: V)` for compatibility).**
 
 `Map<K, V>` stores typed key-value entries with O(1) lookup, explicit `mut` mutation grants, and value-copy semantics on assignment.
 
@@ -13,7 +13,7 @@ io := import "core/io";
 map := import "core/map";
 
 defaults: Map<String, Int> = ["alice" = 10, "bob" = 25];
-scores: mut Map<String, Int> = ["alice" = 10];
+mut scores: Map<String, Int> = ["alice" = 10];
 mut scores.set("bob", 25);
 scores["alice"] += 8;
 

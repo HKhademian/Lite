@@ -1,6 +1,6 @@
 # Blocks and results
 
-Status: **established direction; source-file body selected 2026-10-28**.
+Status: **established direction implemented across TS and C11: statement `{ ... }` blocks, standalone `do { ... }` expression blocks (Phase 13), lexical shadowing, parallel compile-time symbol wiring, execution trace safety, and dead-code elimination**.
 
 ## Purpose and template
 

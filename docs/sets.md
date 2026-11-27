@@ -13,7 +13,7 @@ io := import "core/io";
 set := import "core/set";
 
 fixedTags: Set<String> = ["lite", "typed", "lite"];
-tags: mut Set<String> = ["lite"];
+mut tags: Set<String> = ["lite"];
 set.add(mut tags, "typed");
 
 io.outputLine(tags, tags.size, tags.isEmpty, set.has(fixedTags, "lite"));

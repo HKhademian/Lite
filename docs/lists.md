@@ -19,7 +19,7 @@ A list owns a contiguous allocation with a current initialized length and possib
 numbers: List<Int> = [10, 20, 30];
 loop numbers as number { print(number) }
 
-editable: mut List<Int> = [10, 20, 30];
+mut editable: List<Int> = [10, 20, 30];
 editable[0] = 99;
 push_back(mut editable, 40);
 ```
@@ -28,7 +28,7 @@ The explicit expected List types above select growable construction; push_back i
 
 The explicit mut argument follows selected caller grants. Mut grants supported mutation without changing a collection family or inventing growth. A fixed List binding can permit container mutation without permitting binding replacement. Fixed arrays permit writable elements without supporting growth. Known-type heterogeneous nonempty construction uses normalized-union element inference when no expected element contract selects another compatible type. Uncontextual [] constructs an empty fixed array; its exact default element type is deferred. Unresolved nonempty element types and runtime-length literal provider inference remain open.
 
-A var binding with an explicit List contract permits compatible whole-binding replacement; adding mut also permits supported held-data operations. Typed forms retain the selected placement, such as values: mut `List<Int>`. An unannotated var numbers := [1, 2, 3] instead remains a fixed [Int; 3] binding with replacement permission.
+A `var` binding with an explicit `List` contract permits compatible whole-binding replacement; adding `mut` also permits supported held-data operations (`var mut values: List<Int>`, while typed parameters keep `values: mut List<Int>`). An unannotated `var numbers := [1, 2, 3]` instead remains a fixed `[Int; 3]` binding with replacement permission.
 
 The [end-operation review](lite://doc/sequence-end-operations) records the selected push_front/push_back/pop_front/pop_back names. These require structural capabilities beyond mut [T]; fixed arrays and slices can support element replacement without changing length. The user accepts direct indexing/pop with typed faults and requests shared else recovery. A separate Option-returning removal remains an alternative. Broader capture scope, permanent operation signatures and allocation failure policy remain open.
 
@@ -70,7 +70,7 @@ An empty valid list can own capacity for a million elements without constructing
 Candidate zero semantics are an empty valid list, without requiring a zero value for T because no T elements are created. Reserving capacity also need not construct a T. This differs from zero-initializing a nonempty fixed array, which needs a valid zero for every element.
 
 ```text
-samples: mut List<Float> = list_with_capacity(count);
+mut samples: List<Float> = list_with_capacity(count);
 ```
 
 This is a proposed allocation helper: initialized length is zero, while capacity is at least the requested amount on success. It does not select a recoverable-error versus panic allocation policy. The valid descriptor differs from samples: `List<Float>` = ?, which reserves an uninitialized descriptor and does not specify a runtime element count or automatically allocate its payload.

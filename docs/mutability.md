@@ -2,7 +2,7 @@
 
 Status: **independent `var`/`mut` declarations and explicit mutation parameters established; ownership and full method syntax open**.
 
-The selected [mut placement](lite://doc/mut-qualifier-placement) is name: mut T for annotated declarations and parameters. Inferred declarations retain mut name := expression, and var remains a binding modifier. The former typed-prefix spelling is superseded.
+The selected [mut placement](lite://doc/mut-qualifier-placement#planned-variable-definition-migration) (implemented in Phase 12) places `mut` as a variable-definition prefix (`mut name: T = ...`, `var mut name: T = ...`) alongside inferred `mut name := ...` / `var mut name := ...`, while parameter, `context(...)`, and compound-type access contracts retain type-side `name: mut T`.
 
 ## Purpose
 
@@ -44,9 +44,9 @@ var x := make_user();     /* reassignable binding; read-only access */
 var mut x := make_user(); /* reassignable binding; writable access */
 ```
 
-Implementation note, 2026-10-31: the igniter now implements inferred `mut name := expression` and `var mut name := expression`. Writable held data is currently limited to List values; fixed-array/record writable declarations remain unsupported. Explicitly typed forms use `name: mut List<T> = ...` or `var name: mut List<T> = ...`; `var mut name: Type = ...` is rejected so mut stays after the colon in typed declarations.
+Implementation note (Phase 12): variable definitions use prefix `mut` across both inferred and explicitly typed forms (`mut name := expression`, `mut name: Type = expression`, `var mut name := expression`, and `var mut name: Type = expression`). Legacy `name: mut Type` variable definitions are rejected; typed parameters and `context(...)` access contracts keep `name: mut Type`.
 
-These lines show four inferred alternatives for comparison. Sequential declarations may also shadow a name in one block. Explicitly typed forms place mut after the colon: x: mut User = make_user() or var x: mut User = make_user(). Inferred combined modifiers have the order var mut; mut var and repeated modifiers are rejected. A typed mut prefix before the name is not an alternate spelling.
+These lines show the four inferred forms for comparison, with typed counterparts `mut x: User = make_user()` and `var mut x: User = make_user()`. Combined prefixes use `var mut`; `mut var` and repeated modifiers are rejected.
 
 Updating a field or collection element requires `mut`, an accessible writable target, and an ownership/aliasing state permitting the operation. Assigning the whole binding through `x = replacement` requires `var` after initialization; the first write to `x: T = ?` is the exception. Neither modifier bypasses type safety, field privacy, or aliasing restrictions.
 

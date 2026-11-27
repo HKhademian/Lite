@@ -1,6 +1,6 @@
 # Numbers and ranges
 
-Status: **numeric usability and predictable cost are goals; arithmetic fault channel and temporary FVP profile selected; complete language-wide numeric contract open**.
+Status: **full exact-width integer and float ladder (`Int1`..`Int64`/`Int`, `UInt1`..`UInt64`, `Float8`/`Float16`/`Float32`/`Float64`/`Float`/`Double`), bitwise operators, wrapping arithmetic (`+%`, `-%`, `*%`), overflow/division bounds panics, and arithmetic fault contracts implemented across TS and C11 (Phases 2–6); fixed-point decimal remains open**.
 
 ## Purpose
 

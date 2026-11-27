@@ -112,7 +112,7 @@ Advanced mixed annotations and their exact grammar still need formalization. Rou
 ```text
 P := record { field: A | B; }
 Q := record { field: C | B; }
-parent: mut (P | Q) = choose_parent();
+mut parent: P | Q = choose_parent();
 ```
 
 The common field access reads A/B/C and accepts B. Its summary is A | var B | C: reads combine by union; accepted writes are those permitted by every possible target. Renaming slot to var does not change that calculation.

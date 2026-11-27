@@ -45,7 +45,7 @@ Mutable view alias rules need an explicit decision. Do not silently import Rust 
 A usable view needs live backing storage and valid element bounds. It cannot escape an expiring local owner, survive incompatible owner replacement, or continue referring to a deallocated/reallocated list allocation.
 
 ```text
-numbers: mut List<Int> = [10, 20, 30];
+mut numbers: List<Int> = [10, 20, 30];
 view := numbers[0..2];
 append(mut numbers, 40);
 print(view[0]);

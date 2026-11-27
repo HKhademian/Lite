@@ -34,7 +34,8 @@ io := import "core/io";
 nums := [-2, 3, 0, 5];
 posDoubled := loop nums { if .item > 0 { .item * 2 } }.collected;
 
-scores: mut Map<String, Int> = ["alice" = 10, "bob" = 20];
+scores: Map<String, Int>;
+mut scores = ["alice" = 10, "bob" = 20];
 scores["alice"] += 5;
 
 tags: Set<String> = ["lite", "typed", "lite"];
@@ -42,6 +43,36 @@ io.outputLine(posDoubled.length, scores.size, tags.size, "hello".length);
 ```
 
 Loops collect committed values with `.collected` (partial `if`/`match` tails skip non-matching items), `Map`/`Set` support bracket initializers and zero-initialization, and `List`, `[T; N]`, `Map`, `Set`, and `String` expose read-only `.length`/`.size`/`.isEmpty` properties.
+
+## Borrowed slices, Option, and data layout (Phases 7–8, 18)
+
+`Slice<T>` borrows a contiguous region of a `List<T>`, byte-aligned or bit-packed `[T; N]`, or nested slice without allocating or copying elements. `mut s.splitAt(mid)` splits a mutable slice into two disjoint mutable views, suspending access to `s` until both halves finish. `Option<T>` (`core/option`) packs `.Some(v)` and `.None` compactly — automatically exploiting niche values (including float qNaN niches unless disabled with `@no_niche`). Performance-sensitive records can also use `@packed` / `@align(N)`, `Simd<T, N>` / `SimdNative<T>` (`core/simd`), and column-oriented `SoA<R>` (`core/soa`).
+
+See [slices](lite://doc/slices), [optionals](lite://doc/memory-and-performance), and [SIMD/SoA architecture](lite://doc/c11-memory-and-codegen-plan).
+
+## Interfaces, dynamic dispatch, and lexical contexts (Phases 9–11, 18)
+
+Nominal `interface` declarations define method contracts and optional associated types (`Item: Type`), and concrete types opt in via explicit `impl Interface for Type { ... }` blocks (with optional default method bodies). Functions accept bounded generics (`fn<T: Printable>(x: T)`) or zero-allocation borrowed `dyn Interface` / `mut dyn Interface` trait objects, while `context(...)` passes ambient read/write dependencies lexically across calls (with package-private `$context.lt` defaults). Free functions and type operations also support specificity-ranked overloading.
+
+See [composition and interfaces](lite://doc/composition-and-interfaces), [tags and contexts](lite://doc/tags-and-contexts), and [the architecture plan](lite://doc/c11-memory-and-codegen-plan).
+
+## Loop mut, standalone `do`, and `if` pattern bindings (Phases 12–13)
+
+`loop mut items { ... }` updates elements in place via `.item`, while value-producing block expressions use explicit `do { ... }` (leaving bare `{ ... }` unambiguous for records):
+
+```text
+mut nums := [1, 2, 3];
+loop mut nums { .item *= 10; }
+scaled := do { nums[0] + nums[2] };
+```
+
+Conditional pattern binding (`if .Some(n) := opt and n > 0 { ... }`) tests and binds in one step, and path-sensitive definite initialization (`a: Int = ?` or `if` without `else`) verifies every path before use. See [blocks](lite://doc/blocks-and-results), [first initialization](lite://doc/first-initialization), and [loops](lite://doc/loops).
+
+## Unions, fallibles, `comptime`, and inferred records (Phases 15–17)
+
+Plain `A | B` unions normalize members automatically and narrow inside `match` and `if x: Int` branches. Functions returning `T ! E` or `T!` (`T ! Error`) propagate failures cleanly with postfix `!` and handle them inline with `else(err) { ... }`. Compile-time `comptime { ... }` blocks run ordinary Lite functions during compilation and embed identical owned values in both TS and C11, while structural `{ ... }` records, unified `:= alias`, parameter defaults (`n: Int = 10` / `?:Int`), and contravariant/covariant callable variance reduce boilerplate cleanly.
+
+See [unions](lite://doc/union-normalization), [fallible types](lite://doc/fallible-types-and-error-composition), [compile-time evaluation](lite://doc/compile-time-evaluation), [inferred records](lite://doc/records), and [callable variance](lite://doc/callable-value-variance).
 
 ## Follow a useful program
 
