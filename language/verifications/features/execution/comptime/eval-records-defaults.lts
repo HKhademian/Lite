@@ -1,0 +1,11 @@
+io := import "core/io";
+
+N := comptime { 3 * 2 };
+arr: [Int; N] = [5; N];
+rec := { a = 10, "k v" = 20 };
+addDef := fn(a = 1, b = a + 4): Int { a + b };
+addAlias := alias addDef;
+wideFn := fn(v: Int | String): Int { if v: Int { v } else { 0 } };
+narrowFn: fn(Int): (Int | String) = wideFn;
+r := narrowFn(9);
+io.outputLine(arr.length(), rec.a, rec."k v", addAlias(), if r: Int { r } else { 0 });

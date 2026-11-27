@@ -1,0 +1,8 @@
+io := import "core/io";
+
+u4: UInt4 = 9;
+i4: Int4 = -4;
+w: UInt4 = u4.wrappingAdd(10);
+b: UInt8 = cast<UInt8>(u4).shiftLeft(2).bitOr(1);
+h: Float16 = 2.5;
+io.outputLine(u4, i4, w, b, h.fma(2.0, 1.0));

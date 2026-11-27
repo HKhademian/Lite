@@ -1,0 +1,26 @@
+{
+  "id": "example.types.layout.option-simd-soa",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/types/layout/option-simd-soa.lts",
+    "hash": "sha256:0344a12d06368f9ed4325042e100f4ca578baa752a3f9a512735bc8a31023de8"
+  },
+  "features": [
+    "feature.types.layout.option-simd-soa"
+  ],
+  "description": "@packed records, Option<T>, Rc<T>, Simd<Float32, 4>, and SoA<R> columns.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "option-simd-soa",
+      "stdout": {
+        "text": "5 43 100 1 4 10\n",
+        "hash": "sha256:e7be4ad6f9124c01c351e0b26f18a2e8e9cd5ee1ab670389eb3b5fdb37235773"
+      },
+      "exitCode": 0
+    }
+  ]
+}

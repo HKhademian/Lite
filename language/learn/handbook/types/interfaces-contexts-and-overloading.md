@@ -79,6 +79,8 @@ io.outputLine(fmtVal(7), fmtVal("ok"), fmtVal(10, 20));
 
 See [Composition & Interfaces](lite://doc/composition-and-interfaces), [Tags & Contexts](lite://doc/tags-and-contexts), and [core/interface](lite://module/core/interface).
 
+Try [Interfaces & Dyn Dispatch](lite://play/interfaces-and-dyn), [Lexical Contexts & Overloads](lite://play/lexical-context-and-overloads), and the [verified Interfaces, Contexts & Overloads showcase](lite://play/example/showcase-interfaces-contexts-and-overloads).
+
 ## Next Chapter
 
 Continue to [Slices, SIMD, SoA & Layout](lite://handbook/slices-simd-and-layout).

@@ -1,0 +1,17 @@
+/* Example: Full numeric ladder (UInt4, Int4, UInt8, Float16), bitwise methods, wrapping/saturating arithmetic, and FMA. */
+
+io := import "core/io";
+
+u4: UInt4 = 10;
+i4: Int4 = -5;
+u8: UInt8 = 200;
+half: Float16 = 1.5;
+
+masked: UInt4 = u4.bitAnd(12);
+shifted: UInt8 = cast<UInt8>(u4).shiftLeft(4).bitOr(3);
+wrapped: UInt4 = UInt4.wrappingAdd(14, 5);
+sat: UInt8 = u8.saturatingAdd(100);
+wmul := UInt4.wideningMul(15, 15);
+fmaVal := half.fma(4.0, 2.5);
+
+io.outputLine(u4, i4, masked, shifted, wrapped, sat, wmul.lo, wmul.hi, shifted.countOnes(), fmaVal);

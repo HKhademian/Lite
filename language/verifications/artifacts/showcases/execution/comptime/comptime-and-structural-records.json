@@ -1,0 +1,26 @@
+{
+  "id": "showcase.execution.comptime.comptime-and-structural-records",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/execution/comptime/comptime-and-structural-records.lts",
+    "hash": "sha256:da388c43e33f23a18d56788a700bb7d1e01b914cfb699f1fe20be6b7c7bd451b"
+  },
+  "features": [
+    "feature.execution.comptime.eval-records-defaults"
+  ],
+  "description": "Portable comptime { ... }, inferred { ... } records, unified alias, parameter defaults, and variance.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "comptime-and-structural-records",
+      "stdout": {
+        "text": "10 10 alpha 10 200 5 12 18\n",
+        "hash": "sha256:d757286af3d58507d5bb44831e89df1a946027038ab294b0d5dc5228e9fa0c7e"
+      },
+      "exitCode": 0
+    }
+  ]
+}

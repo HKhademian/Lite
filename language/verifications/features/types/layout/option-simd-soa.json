@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.layout.option-simd-soa",
+  "kind": "feature",
+  "source": {
+    "file": "option-simd-soa.lts",
+    "hash": "sha256:3b97fbcb0dd012286950aac699b485cc507ca797702e7542643357be66762997"
+  },
+  "features": [
+    "feature.types.layout.option-simd-soa"
+  ],
+  "guideline": "Checks @packed records, Option<T>, SoA<R>, Simd<T, N>, and Rc<T>.",
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "9 3 8 50\n",
+        "hash": "sha256:00d77bb0f7aeb3df77483d667d90529686f22c39ef94915353422bcca985c4ec"
+      },
+      "exitCode": 0
+    }
+  ]
+}

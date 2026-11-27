@@ -1,0 +1,38 @@
+/* Example: Option<T>, @packed/@align layout attributes, Rc<T>, Simd<Float32, 4>, and SoA<R> columns. */
+
+io := import "core/io";
+opt := import "core/option";
+simd := import "core/simd";
+soa := import "core/soa";
+rc := import "core/rc";
+
+@packed
+Header := record {
+    kind: UInt4;
+    flags: UInt4;
+    count: UInt16;
+};
+
+Particle := record {
+    x: Float32;
+    vx: Float32;
+};
+
+h := Header { kind = 5, flags = 3, count = 42 };
+maybeTag: opt.Option<Int> = .Some(cast<Int>(h.count));
+tagOut := if .Some(n) := maybeTag { n + 1 } else { 0 };
+
+shared := Rc.create(100);
+sharedCopy := shared.share();
+
+mut swarm: SoA<Particle> = SoA.create();
+loop 0..4 as i {
+    mut swarm.pushBack(Particle { x = cast<Float32>(i), vx = cast<Float32>(2.0) });
+}
+dt := simd.Float32x4.splat(cast<Float32>(0.5));
+px := simd.Float32x4.load(swarm.x, 0);
+pvx := simd.Float32x4.load(swarm.vx, 0);
+nx := pvx.fma(dt, px);
+nx.store(mut swarm.x, 0);
+
+io.outputLine(h.kind, tagOut, sharedCopy.get(), swarm[0].x, swarm[3].x, nx.reduceAdd());

@@ -1,0 +1,15 @@
+io := import "core/io";
+errs := import "core/error";
+
+V := alias Int | String;
+half := fn(n: Int): Int! {
+    if n < 0 { return .err(errs.Error.new("E", "neg")); }
+    n / 2
+};
+callHalf := fn(n: Int): Int! {
+    h := half(n)!;
+    h + 1
+};
+v: V = 10;
+r := callHalf(-1) else(e) { -1 };
+io.outputLine(if v: Int { v * 2 } else { 0 }, callHalf(8) else(e) { -1 }, r);

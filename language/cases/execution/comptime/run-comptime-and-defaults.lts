@@ -1,0 +1,7 @@
+io := import "core/io";
+
+K := comptime { 4 + 5 };
+span := fn(s = 0, w = 3, e = s + w): Int { e };
+sp := alias span;
+obj := { =K, "n" = sp(), m = sp(s = 2, w = 8) };
+io.outputLine(obj.K, obj."n", obj.m);

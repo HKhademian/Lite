@@ -1,0 +1,23 @@
+{
+  "id": "case.types.unions.reject-unhandled-fallible",
+  "kind": "reject",
+  "source": "reject-unhandled-fallible.lts",
+  "features": [
+    "feature.types.unions.unions-and-fallibles"
+  ],
+  "cases": [
+    {
+      "name": "reject-unhandled-fallible",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-unhandled-fallible.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

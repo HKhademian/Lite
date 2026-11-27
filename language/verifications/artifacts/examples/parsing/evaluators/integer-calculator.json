@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../../../examples/parsing/evaluators/integer-calculator.lts",
-    "hash": "sha256:58ba106df4b110c4a06682fcc57cf9aa6ba177ca88e1afba41360968be7afa79"
+    "hash": "sha256:833f8e3d931f6864b1c847a58069143bffb0c9fdc4e806b4d2a497d9bf6b5e85"
   },
   "features": [
     "feature.numeric.integers.signed-arithmetic",

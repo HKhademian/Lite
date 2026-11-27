@@ -1,0 +1,47 @@
+/* Showcase: Unions A | B, definite initialization guards, fallibles T ! E / T!, ToError, postfix !, and else(err). */
+
+io := import "core/io";
+errs := import "core/error";
+
+ConfigErr := enum { Missing; OutOfBand(Int); };
+impl errs.ToError for ConfigErr {
+    toError := fn(self: ConfigErr): errs.Error {
+        match self {
+            .Missing { errs.Error.new("ConfigErr", "missing") }
+            .OutOfBand(n) { errs.Error.withCode("ConfigErr", "value " + n.toText(), 422) }
+        }
+    };
+};
+
+Token := alias Int | String;
+formatTok := fn(tok: Token): String {
+    match tok {
+        n: Int { "N=" + n.toText() }
+        s: String { "S=" + s }
+    }
+};
+
+pickLimit := fn(useDefault: Bool): Int {
+    lim: Int = ?;
+    if useDefault { lim = 50; }
+    if not useDefault { lim = 120; }
+    lim
+};
+
+parsePort := fn(raw: Int): Int ! ConfigErr {
+    if raw == 0 { return .err(.Missing); }
+    if raw < 1000 or raw > 9999 { return .err(.OutOfBand(raw)); }
+    raw
+};
+
+loadBanner := fn(rawPort: Int): String! {
+    port := parsePort(rawPort)!;
+    tok: Token = if port > 5000 { port } else { "std-" + port.toText() };
+    formatTok(tok)
+};
+
+okMsg := match loadBanner(8080) { .ok(s) { s } .err(e) { e.format() } };
+errMsg := match loadBanner(44) { .ok(s) { s } .err(e) { e.format() } };
+recovered := loadBanner(44) else(e) { "fallback:" + e.kind };
+
+io.outputLine(pickLimit(true), pickLimit(false), okMsg, errMsg, recovered);

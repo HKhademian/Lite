@@ -1,0 +1,15 @@
+io := import "core/io";
+
+mut xs: List<Int> = [1, 2, 3, 4];
+do {
+    mut s := mut xs[0..4];
+    (l, r) := mut s.splitAt(2);
+    loop mut l { .item += 10; }
+    loop mut r { .item += 20; }
+}
+mut bits: [Bool; 4] = [true, false, true, false];
+do {
+    mut bs := mut bits[0..4];
+    loop mut bs { .item = not .item; }
+}
+io.outputLine(xs, bits[0], bits[1]);

@@ -477,6 +477,16 @@ test('language/learn/catalog.json and language/gym/catalog.json satisfy their sc
   }
 });
 
+test('stripLiteTs strips generator function* headers and returns and as-const before closing braces', () => {
+  const src = 'function* lite$sliceIter<T>(s: { readonly data: T[]; readonly off: number }): IterableIterator<T> { yield s.data[s.off]!; }\nconst tag = { _r: 1, _e: { _t: 0 as const } };\nreturn [Array.from(lite$sliceIter({ data: [7n, 8n], off: 1 })), tag._e._t];';
+  const stripped = stripLiteTs(src);
+  assert(!stripped.includes('IterableIterator'));
+  assert(!stripped.includes(': { readonly'));
+  assert(!stripped.includes('as const'));
+  const res = (new Function(stripped) as () => [bigint[], number])();
+  assert.deepEqual(res, [[8n], 0]);
+});
+
 test('stripLiteTs, highlightLite, formatCodeView, and deriveLibraryTags support Unicode identifiers and keywords', () => {
   const emittedTs = [
     'type کتاب = { readonly عنوان: string; readonly صفحه: bigint; };',

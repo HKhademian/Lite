@@ -298,13 +298,13 @@ export function stripLiteTs(source: string): string {
       }
     }
 
-    // `function [name][<T>](...) : ReturnType {`
+    // `function[*][ name][<T>](...) : ReturnType {`
     if (
       source.startsWith('function', i) &&
       !isIdentContBefore(source, i) &&
-      (source[i + 8] === ' ' || source[i + 8] === '\t' || source[i + 8] === '\n' || source[i + 8] === '(' || source[i + 8] === '<')
+      (source[i + 8] === ' ' || source[i + 8] === '\t' || source[i + 8] === '\n' || source[i + 8] === '(' || source[i + 8] === '<' || source[i + 8] === '*')
     ) {
-      const fnHead = /^function(?:\s+[\p{XID_Start}_$][\p{XID_Continue}$]*)?/u.exec(source.slice(i));
+      const fnHead = /^function(?:\s*\*)?(?:\s+[\p{XID_Start}_$][\p{XID_Continue}$]*)?/u.exec(source.slice(i));
       if (fnHead !== null) {
         let afterName = i + fnHead[0]!.length;
         while (afterName < n && /\s/.test(source[afterName]!)) afterName += 1;
@@ -441,9 +441,9 @@ export function stripLiteTs(source: string): string {
       continue;
     }
 
-    // `expr as Type` before `;`, `,`, `)`, or `]`
+    // `expr as Type` before `;`, `,`, `)`, `]`, or `}`
     if (i > 0 && !isIdentContBefore(source, i) && /^as\s+[\p{XID_Start}_$({[]/u.test(source.slice(i))) {
-      i = skipTypeAnnotation(source, i + 2, new Set([';', ',', ')', ']']));
+      i = skipTypeAnnotation(source, i + 2, new Set([';', ',', ')', ']', '}']));
       continue;
     }
 

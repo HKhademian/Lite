@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../../../examples/blocks/wiring/unified-blocks-and-wiring.lts",
-    "hash": "sha256:ff01d992b207d49229f9181681a939343f1cdd834409ad49d4d532d25b11c391"
+    "hash": "sha256:0761d057081f2170da06b9edff3b39f4bd9b7265921f998d36055a48386db4a5"
   },
   "features": [
     "feature.blocks.evaluation.value-blocks-and-dce",

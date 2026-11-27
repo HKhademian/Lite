@@ -1,0 +1,23 @@
+{
+  "id": "case.types.interfaces.run-interface-dyn-and-defaults",
+  "kind": "feature",
+  "source": "run-interface-dyn-and-defaults.lts",
+  "features": [
+    "feature.types.interfaces.nominal-and-dyn"
+  ],
+  "cases": [
+    {
+      "name": "run-interface-dyn-and-defaults",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "<item-4>\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

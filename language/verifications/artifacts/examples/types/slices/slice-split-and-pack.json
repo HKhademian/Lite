@@ -1,0 +1,26 @@
+{
+  "id": "example.types.slices.slice-split-and-pack",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/types/slices/slice-split-and-pack.lts",
+    "hash": "sha256:4d70dbe77f33026f2216301443e524d3e91dab334af30f26bd666dd803adfe0f"
+  },
+  "features": [
+    "feature.types.slices.borrowed-and-split"
+  ],
+  "description": "Borrowed Slice<T> views, disjoint mutable splitAt, bit-packed Bool slices, and String.bytes().",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "slice-split-and-pack",
+      "stdout": {
+        "text": "412 [10, 21, 31, 140, 150, 60] false true 3 210\n",
+        "hash": "sha256:3a403d59577c954edc194d4a71be5d39ea622c9de0480bb658246f5cc69bbe1a"
+      },
+      "exitCode": 0
+    }
+  ]
+}

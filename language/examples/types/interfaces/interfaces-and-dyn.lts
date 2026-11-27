@@ -1,0 +1,47 @@
+/* Example: Nominal interfaces, associated types, default method bodies, bounded generics, and dyn/mut dyn dispatch. */
+
+io := import "core/io";
+
+Show := interface {
+    label: fn(self: Self): String;
+    banner := fn(self: Self): String { "[" + self.label() + "]" };
+};
+
+Tick := interface {
+    Item: Type;
+    step: fn(self: mut Self, delta: Self.Item): Unit;
+    current: fn(self: Self): Self.Item;
+};
+
+Gauge := record {
+    name: String;
+    value: Int = 0;
+};
+
+impl Show for Gauge {
+    label := fn(self: Gauge): String { self.name + "=" + self.value.toText() };
+};
+
+impl Tick for Gauge {
+    Item := Int;
+    step := fn(self: mut Gauge, delta: Int): Unit { self.value += delta; };
+    current := fn(self: Gauge): Int { self.value };
+};
+
+Tag := record { text: String; };
+impl Show for Tag {
+    label := fn(self: Tag): String { self.text };
+    banner := fn(self: Tag): String { "<" + self.text + ">" };
+};
+
+renderDyn := fn(s: dyn Show): String { s.banner() };
+readCurrent := fn<T: Type<Tick>>(target: T): T.Item {
+    cur: T.Item = target.current();
+    cur
+};
+
+mut g := Gauge { name = "rpm", value = 10 };
+mut g.step(25);
+after := readCurrent(g);
+t := Tag { text = "idle" };
+io.outputLine(after, renderDyn(g), renderDyn(t));

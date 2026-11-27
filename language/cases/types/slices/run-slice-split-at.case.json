@@ -1,0 +1,23 @@
+{
+  "id": "case.types.slices.run-slice-split-at",
+  "kind": "feature",
+  "source": "run-slice-split-at.lts",
+  "features": [
+    "feature.types.slices.borrowed-and-split"
+  ],
+  "cases": [
+    {
+      "name": "run-slice-split-at",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "[11, 21, 32, 42]\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

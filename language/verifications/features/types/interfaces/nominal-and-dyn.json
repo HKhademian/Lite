@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.interfaces.nominal-and-dyn",
+  "kind": "feature",
+  "source": {
+    "file": "nominal-and-dyn.lts",
+    "hash": "sha256:95ba231d80aace4037bb35d339a07e148b698f1dd77b86dabd4ee36162ab8036"
+  },
+  "features": [
+    "feature.types.interfaces.nominal-and-dyn"
+  ],
+  "guideline": "Checks nominal interface/impl blocks, associated types, default methods, and dyn dispatch.",
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "7 ok B:7\n",
+        "hash": "sha256:2b34fe9efe867b1fa04e20fadedc4ce772faa668c64348417b13ffd0cd245e66"
+      },
+      "exitCode": 0
+    }
+  ]
+}

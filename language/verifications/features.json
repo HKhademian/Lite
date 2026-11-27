@@ -546,6 +546,85 @@
         "docs/comparison-patterns.md",
         "docs/match-guards.md"
       ]
+    },
+    {
+      "id": "feature.numeric.widths.packed-bitwise",
+      "summary": "Sub-byte Int1..4/UInt1..4 and Float8/Float16 widths, wrapping/saturating math, bitwise methods, and FMA.",
+      "case": "features/numeric/widths/packed-bitwise.json",
+      "status": "verified",
+      "docs": [
+        "docs/numbers.md",
+        "docs/c11-memory-and-codegen-plan.md"
+      ]
+    },
+    {
+      "id": "feature.types.slices.borrowed-and-split",
+      "summary": "Borrowed Slice<T> views over lists and bit-packed arrays, disjoint mut splitAt(mid), and String.bytes().",
+      "case": "features/types/slices/borrowed-and-split.json",
+      "status": "verified",
+      "docs": [
+        "docs/slices.md"
+      ]
+    },
+    {
+      "id": "feature.types.layout.option-simd-soa",
+      "summary": "@packed/@align records, Option<T> niche packing, SoA<R> columns, Simd<T, N>, and Rc<T>.",
+      "case": "features/types/layout/option-simd-soa.json",
+      "status": "verified",
+      "docs": [
+        "docs/c11-memory-and-codegen-plan.md",
+        "docs/memory-and-performance.md"
+      ]
+    },
+    {
+      "id": "feature.types.interfaces.nominal-and-dyn",
+      "summary": "Nominal interface/impl blocks, associated types, default method bodies, and dyn Interface dispatch.",
+      "case": "features/types/interfaces/nominal-and-dyn.json",
+      "status": "verified",
+      "docs": [
+        "docs/composition-and-interfaces.md"
+      ]
+    },
+    {
+      "id": "feature.execution.contexts.lexical-and-overloads",
+      "summary": "Lexical context(...) parameters, scoped context overrides, and statically resolved overloading.",
+      "case": "features/execution/contexts/lexical-and-overloads.json",
+      "status": "verified",
+      "docs": [
+        "docs/tags-and-contexts.md",
+        "docs/c11-memory-and-codegen-plan.md"
+      ]
+    },
+    {
+      "id": "feature.control.loops.loop-mut-and-static",
+      "summary": "In-place loop mut traversal, contextual .static() calls, standalone do blocks, and dependent defaults.",
+      "case": "features/control/loops/loop-mut-and-static.json",
+      "status": "verified",
+      "docs": [
+        "docs/loops.md",
+        "docs/blocks-and-results.md"
+      ]
+    },
+    {
+      "id": "feature.types.unions.unions-and-fallibles",
+      "summary": "Normalized A | B unions, T ! E / T! fallibles, ToError conversion, postfix !, and else(err) recovery.",
+      "case": "features/types/unions/unions-and-fallibles.json",
+      "status": "verified",
+      "docs": [
+        "docs/union-normalization.md",
+        "docs/fallible-types-and-error-composition.md"
+      ]
+    },
+    {
+      "id": "feature.execution.comptime.eval-records-defaults",
+      "summary": "Portable comptime { ... }, inferred { ... } records, unified alias, parameter defaults, and callable variance.",
+      "case": "features/execution/comptime/eval-records-defaults.json",
+      "status": "verified",
+      "docs": [
+        "docs/compile-time-evaluation.md",
+        "docs/callable-default-contracts.md",
+        "docs/callable-value-variance.md"
+      ]
     }
   ]
 }

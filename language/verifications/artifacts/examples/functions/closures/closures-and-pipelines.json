@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../../../examples/functions/closures/closures-and-pipelines.lts",
-    "hash": "sha256:63b8bd74f6d76600986283b23d6e0b6632a2bd5cc6ec12d30132c33a379e3c43"
+    "hash": "sha256:03f53ebb2df913cd0cf31393d0297f78a4ccece358e80e3407df279ad9daedb1"
   },
   "features": [
     "feature.functions.closures.lexical-captures",

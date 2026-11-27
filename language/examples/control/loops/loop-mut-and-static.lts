@@ -1,0 +1,24 @@
+/* Example: In-place loop mut, contextual .static() calls, do { ... } blocks, if pattern bindings, and dependent defaults. */
+
+io := import "core/io";
+opt := import "core/option";
+rnd := import "math/random";
+
+Span := record {
+    start: Int = 2;
+    width: Int = 8;
+    end: Int = start + width;
+};
+
+mut rng: rnd.Rng = .create(42);
+mut nums: List<Int> = [1, 2, 3, 4];
+loop mut nums {
+    .item = .item * 10 + mut rng.rangeInt(0, 5);
+}
+
+chosen := do {
+    candidate: opt.Option<Span> = .Some(Span { start = 5 });
+    if .Some(s) := candidate and s.end > 10 { s.end } else { 0 }
+};
+
+io.outputLine(nums[0] >= 10, nums.length(), chosen);

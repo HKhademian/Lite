@@ -1,0 +1,26 @@
+{
+  "id": "example.control.loops.loop-mut-and-static",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/control/loops/loop-mut-and-static.lts",
+    "hash": "sha256:cbfede08d58d74f219cd4869aa1ffdd523fd4ebcdb54449323e0e5f5af8630fa"
+  },
+  "features": [
+    "feature.control.loops.loop-mut-and-static"
+  ],
+  "description": "loop mut element updates, contextual .static() calls, do blocks, and dependent defaults.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "loop-mut-and-static",
+      "stdout": {
+        "text": "true 4 13\n",
+        "hash": "sha256:742e2e91ebb9d8fa8cc56777d6dcccd0fabc4f231cf4618dfdfa91c348495282"
+      },
+      "exitCode": 0
+    }
+  ]
+}

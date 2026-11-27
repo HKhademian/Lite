@@ -1,0 +1,8 @@
+io := import "core/io";
+
+context ns := "a";
+f := fn(x: Int): String { x.toText() };
+f := fn(s: String): String { s };
+runCtx := fn(v: Int) context(ns: String): String { ns + ":" + f(v) };
+
+io.outputLine(runCtx(5), context (ns = "b") { runCtx(6) }, f("hi"));

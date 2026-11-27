@@ -1,0 +1,30 @@
+/* Showcase: Portable comptime { ... }, structural { ... } records, unified alias, defaults, and callable variance. */
+
+io := import "core/io";
+
+stepScore := fn(n: Int): Int { n * n + 1 };
+LIMIT := comptime { stepScore(3) };
+zeros: [Int; LIMIT] = [0; LIMIT];
+
+name := "alpha";
+meta := {
+    =name,
+    "slot count" = LIMIT,
+    nested = { ok = true, code = 200 },
+};
+
+buildWindow := fn(start = 0, width = 5, end = start + width): (start: Int, end: Int, width: Int) {
+    (start = start, end = end, width = width)
+};
+winAlias := alias buildWindow;
+w1 := winAlias();
+w2 := winAlias(width = 8, start = 4);
+
+evalFlexible := fn(x: Int | String, scale: Int = 2): Int {
+    base := match x { n: Int { n } s: String { s.length() } };
+    base * scale
+};
+intAdapter: fn(Int, ?:Int): (Int | String) = evalFlexible;
+
+outAdapted := intAdapter(9);
+io.outputLine(LIMIT, zeros.length(), meta.name, meta."slot count", meta.nested.code, w1.end, w2.end, if outAdapted: Int { outAdapted.toText() } else { outAdapted });

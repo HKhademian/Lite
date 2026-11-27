@@ -1,0 +1,22 @@
+{
+  "id": "feature.execution.comptime.eval-records-defaults",
+  "kind": "feature",
+  "source": {
+    "file": "eval-records-defaults.lts",
+    "hash": "sha256:511a577694fd2c2f801e8f09a1ff6cefb767a9a64b2f3bbaa70a1d1367b58d9a"
+  },
+  "features": [
+    "feature.execution.comptime.eval-records-defaults"
+  ],
+  "guideline": "Checks comptime { ... }, inferred { ... } records, unified alias, parameter defaults, and callable variance.",
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "6 10 20 6 9\n",
+        "hash": "sha256:de7b5d8fc2eedd0d9d8d8f09dec69f57d066f14033fd85806836c3565fcca1d6"
+      },
+      "exitCode": 0
+    }
+  ]
+}

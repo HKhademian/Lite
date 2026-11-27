@@ -1,0 +1,27 @@
+{
+  "id": "showcase.types.interfaces.interfaces-contexts-and-overloads",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/types/interfaces/interfaces-contexts-and-overloads.lts",
+    "hash": "sha256:0b6e200dfd09ec15dc11b94a9bc94b4773204a958acb04e3642000091a4eb217"
+  },
+  "features": [
+    "feature.types.interfaces.nominal-and-dyn",
+    "feature.execution.contexts.lexical-and-overloads"
+  ],
+  "description": "Interfaces with associated types & defaults, dyn dispatch, lexical contexts, and overloading.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "interfaces-contexts-and-overloads",
+      "stdout": {
+        "text": "24 prod #1 {temp:24} stage #2 [ready] prod #3 [ready]\n",
+        "hash": "sha256:855db9bb2a9cd6335f0c9b1c271ee66f344c3c616ab2af109d45c664f0f0bf10"
+      },
+      "exitCode": 0
+    }
+  ]
+}

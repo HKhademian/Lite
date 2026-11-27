@@ -1,0 +1,26 @@
+{
+  "id": "example.execution.comptime.comptime-and-records",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/execution/comptime/comptime-and-records.lts",
+    "hash": "sha256:c048ab566e73bb64b6648ef8255e92324cbe5c65fff48e5c349f86219a07dbf4"
+  },
+  "features": [
+    "feature.execution.comptime.eval-records-defaults"
+  ],
+  "description": "comptime { ... }, inferred { ... } records, unified alias, parameter defaults, and variance.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "comptime-and-records",
+      "stdout": {
+        "text": "8 8 status 4 30 4 16 42\n",
+        "hash": "sha256:3816cffc88b4236db5f983b4c25e45a4ed6257e8f9336a4384b0f8ef9245c00e"
+      },
+      "exitCode": 0
+    }
+  ]
+}

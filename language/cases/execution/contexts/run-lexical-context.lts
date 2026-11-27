@@ -1,0 +1,11 @@
+io := import "core/io";
+
+context label := "root";
+context mut hits: Int = 0;
+logHit := fn(msg: String) context(label: String, hits: mut Int): String {
+    hits += 1;
+    label + ":" + hits.toText() + ":" + msg
+};
+a := logHit("init");
+b := context (label = "sub") { logHit("work") };
+io.outputLine(a, b);

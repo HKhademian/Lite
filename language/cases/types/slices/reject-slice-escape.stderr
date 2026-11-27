@@ -1,0 +1,1 @@
+language/cases/types/slices/reject-slice-escape.lts:1:1: borrowed Slice<T> cannot escape via function return type

@@ -1,0 +1,23 @@
+{
+  "id": "case.types.slices.reject-slice-escape",
+  "kind": "reject",
+  "source": "reject-slice-escape.lts",
+  "features": [
+    "feature.types.slices.borrowed-and-split"
+  ],
+  "cases": [
+    {
+      "name": "reject-slice-escape",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-slice-escape.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

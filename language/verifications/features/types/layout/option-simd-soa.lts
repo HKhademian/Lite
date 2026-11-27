@@ -1,0 +1,15 @@
+io := import "core/io";
+opt := import "core/option";
+simd := import "core/simd";
+
+@packed
+Pkt := record { tag: UInt4; len: UInt4; };
+p := Pkt { tag = 3, len = 9 };
+ov: opt.Option<Int> = .Some(cast<Int>(p.len));
+
+mut swarm: SoA<Pkt> = SoA.create();
+mut swarm.pushBack(p);
+v := simd.Float32x4.splat(cast<Float32>(1.5)).add(simd.Float32x4.splat(cast<Float32>(0.5)));
+rcVal := Rc.create(50);
+
+io.outputLine(if .Some(n) := ov { n } else { 0 }, swarm[0].tag, v.reduceAdd(), rcVal.get());

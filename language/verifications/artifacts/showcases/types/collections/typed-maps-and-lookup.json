@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/types/collections/typed-maps-and-lookup.lts",
-    "hash": "sha256:1f0b1b082d708dd8bc6d467d506bb4506a156683bf36139996d24baf5e652db0"
+    "hash": "sha256:946d6a7936cb20d57f7ce084ff33910e03734ca780f9995c7acb20ddce1adbe7"
   },
   "features": [
     "feature.types.collections.typed-maps",

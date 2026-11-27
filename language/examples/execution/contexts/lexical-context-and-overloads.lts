@@ -1,0 +1,23 @@
+/* Example: Lexical context(...) dependencies, scoped context overrides, and statically resolved overloading. */
+
+io := import "core/io";
+
+context prefix := "[core]";
+context mut ticks: Int = 0;
+
+formatVal := fn(n: Int): String { "int:" + n.toText() };
+formatVal := fn(s: String): String { "str:" + s };
+formatVal := fn(a: Int, b: Int): String { "sum:" + (a + b).toText() };
+
+recordLog := fn(msg: String) context(prefix: String, ticks: mut Int): String {
+    ticks += 1;
+    prefix + "#" + ticks.toText() + " " + msg
+};
+
+first := recordLog(formatVal(7));
+scoped := context (prefix = "[auth]") { recordLog(formatVal("login")) };
+third := recordLog(formatVal(10, 20));
+
+io.outputLine(first);
+io.outputLine(scoped);
+io.outputLine(third);

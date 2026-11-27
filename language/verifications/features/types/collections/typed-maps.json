@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "typed-maps.lts",
-    "hash": "sha256:8f48206a5733ac059936dd3baba447e419ca1296f52edf99f1858afea9ee4cc1"
+    "hash": "sha256:cd99831f8c4f9e59e3418e6675afa19314fbcf9997e7c48a117b0573f347786f"
   },
   "features": [
     "feature.types.collections.typed-maps"

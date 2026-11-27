@@ -1,0 +1,26 @@
+{
+  "id": "example.execution.contexts.lexical-context-and-overloads",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/execution/contexts/lexical-context-and-overloads.lts",
+    "hash": "sha256:6ab21f153b61903d11556cc1999b84ac30f9d049ba2dfaa2be7f3e3aba1b905f"
+  },
+  "features": [
+    "feature.execution.contexts.lexical-and-overloads"
+  ],
+  "description": "Lexical context(...) parameters, scoped overrides, and function overloading.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "lexical-context-and-overloads",
+      "stdout": {
+        "text": "[core]#1 int:7\n[auth]#2 str:login\n[core]#3 sum:30\n",
+        "hash": "sha256:abb0bc63b1d35ce643b921586b514789e81c317248033e6f3d6b828bbcabbfe6"
+      },
+      "exitCode": 0
+    }
+  ]
+}

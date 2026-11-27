@@ -1,0 +1,22 @@
+{
+  "id": "feature.execution.contexts.lexical-and-overloads",
+  "kind": "feature",
+  "source": {
+    "file": "lexical-and-overloads.lts",
+    "hash": "sha256:b1caca3f4cfbe16844f2b4be90a8eec8a426cfa34d76d5a0fb9272d6d659096f"
+  },
+  "features": [
+    "feature.execution.contexts.lexical-and-overloads"
+  ],
+  "guideline": "Checks lexical context(...) parameters, scoped overrides, and function overloading.",
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "a:5 b:6 hi\n",
+        "hash": "sha256:2c09579c139f71754d4f8b355021808a2017c8b9b57e7c78264e80270e2c97a6"
+      },
+      "exitCode": 0
+    }
+  ]
+}

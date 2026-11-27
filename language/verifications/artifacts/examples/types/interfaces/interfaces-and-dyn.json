@@ -1,0 +1,26 @@
+{
+  "id": "example.types.interfaces.interfaces-and-dyn",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/types/interfaces/interfaces-and-dyn.lts",
+    "hash": "sha256:f594d93cdb4aa49193613ce2a2a890d2c1428680a866be5dc7a138589ed9c9cb"
+  },
+  "features": [
+    "feature.types.interfaces.nominal-and-dyn"
+  ],
+  "description": "Nominal interfaces, associated types, default method bodies, and dyn dispatch.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "interfaces-and-dyn",
+      "stdout": {
+        "text": "35 [rpm=35] <idle>\n",
+        "hash": "sha256:aeb894353aac740488bcc79b8cf45346a013ced005358b0271e88e252ffb026f"
+      },
+      "exitCode": 0
+    }
+  ]
+}

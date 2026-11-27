@@ -1,0 +1,10 @@
+io := import "core/io";
+rnd := import "math/random";
+
+Span := record { start: Int = 3; end: Int = start + 7; };
+mut r: rnd.Rng = .create(1);
+_ := mut r.rangeInt(0, 2);
+mut xs: List<Int> = [2, 4, 6];
+loop mut xs { .item += 1; }
+s := do { Span {} };
+io.outputLine(xs, s.end);

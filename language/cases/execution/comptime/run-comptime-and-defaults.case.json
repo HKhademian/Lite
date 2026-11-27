@@ -1,0 +1,23 @@
+{
+  "id": "case.execution.comptime.run-comptime-and-defaults",
+  "kind": "feature",
+  "source": "run-comptime-and-defaults.lts",
+  "features": [
+    "feature.execution.comptime.eval-records-defaults"
+  ],
+  "cases": [
+    {
+      "name": "run-comptime-and-defaults",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "9 3 10\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

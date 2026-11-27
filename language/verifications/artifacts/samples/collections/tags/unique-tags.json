@@ -3,7 +3,7 @@
   "kind": "sample",
   "source": {
     "file": "../../../../../samples/collections/tags/unique-tags.lts",
-    "hash": "sha256:a249f48c347ec700d207941184c136ad1ef09187c9125465e8016f07efeb9fc1"
+    "hash": "sha256:aa295e6baa4815b2e0ea2f74240d03437cf00d78459f54c5d30cbceab2c028de"
   },
   "features": [
     "feature.types.collections.typed-sets",

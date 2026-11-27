@@ -1,0 +1,40 @@
+/* Example: Normalized A | B unions, type-test narrowing, T ! E / T!, ToError conversion, postfix !, and else(err). */
+
+io := import "core/io";
+errs := import "core/error";
+
+PortErr := enum { Empty; OutOfRange(Int); };
+impl errs.ToError for PortErr {
+    toError := fn(self: PortErr): errs.Error {
+        match self {
+            .Empty { errs.Error.new("PortErr", "empty") }
+            .OutOfRange(n) { errs.Error.withCode("PortErr", "bad port " + n.toText(), 422) }
+        }
+    };
+};
+
+Val := alias Int | String | Bool;
+showVal := fn(v: Val): String {
+    match v {
+        n: Int { "I:" + n.toText() }
+        s: String { "S:" + s }
+        b: Bool { "B:" + b.toText() }
+    }
+};
+
+checkPort := fn(n: Int): Int ! PortErr {
+    if n == 0 { return .err(.Empty); }
+    if n < 1024 or n > 65535 { return .err(.OutOfRange(n)); }
+    n
+};
+
+doubledPort := fn(n: Int): Int! {
+    p := checkPort(n)!;
+    p * 2
+};
+
+rOk := doubledPort(8080) else(e) { 0 };
+rFallback := doubledPort(80) else(e) { 9000 };
+errMsg := match doubledPort(80) { .ok(v) { v.toText() } .err(e) { e.format() } };
+
+io.outputLine(showVal(7), showVal("lite"), rOk, rFallback, errMsg);

@@ -1,0 +1,27 @@
+{
+  "id": "showcase.types.unions.unions-and-fallible-pipeline",
+  "kind": "showcase",
+  "source": {
+    "file": "../../../../../showcases/types/unions/unions-and-fallible-pipeline.lts",
+    "hash": "sha256:b3fc53bfa00547d422ade6855ee0bc9df44c231221282b7ffd228c185d8fde10"
+  },
+  "features": [
+    "feature.types.unions.unions-and-fallibles",
+    "feature.control.loops.loop-mut-and-static"
+  ],
+  "description": "Normalized unions, definite init, fallible T ! E / T!, ToError, postfix !, and else(err).",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "unions-and-fallible-pipeline",
+      "stdout": {
+        "text": "50 120 N=8080 ConfigErr(422): value 44 fallback:ConfigErr\n",
+        "hash": "sha256:54793eca43aa83d7cf05dbcb27f4d51e8f05627b0c557babc0807397a83dd644"
+      },
+      "exitCode": 0
+    }
+  ]
+}

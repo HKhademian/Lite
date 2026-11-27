@@ -1,0 +1,30 @@
+/* Example: comptime { ... }, inferred { ... } records, unified alias, parameter defaults, and callable variance. */
+
+io := import "core/io";
+
+cube := fn(n: Int): Int { n * n * n };
+SIDE := comptime { cube(2) };
+comptimeGrid: [Int; SIDE] = [1; SIDE];
+
+label := "status";
+entry := {
+    =label,
+    "item count" = 4,
+    sum = comptime { 10 + 20 },
+};
+
+makeSpan := fn(start = 0, count = 4, end = start + count): (start: Int, end: Int, count: Int) {
+    (start = start, end = end, count = count)
+};
+mk := alias makeSpan;
+sDefault := mk();
+sCustom := mk(start = 10, count = 6);
+
+measureAny := fn(v: Int | String, bonus: Int = 5): Int {
+    (if v: Int { v } else { v.length() }) + bonus
+};
+useInt: fn(n: Int, bonus?: Int): (Int | String) = measureAny;
+adapted := useInt(37);
+adaptedStr := match adapted { n: Int { n.toText() } s: String { s } };
+
+io.outputLine(SIDE, comptimeGrid.length(), entry.label, entry."item count", entry.sum, sDefault.end, sCustom.end, adaptedStr);

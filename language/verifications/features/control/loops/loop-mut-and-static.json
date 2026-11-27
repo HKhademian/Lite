@@ -1,0 +1,22 @@
+{
+  "id": "feature.control.loops.loop-mut-and-static",
+  "kind": "feature",
+  "source": {
+    "file": "loop-mut-and-static.lts",
+    "hash": "sha256:61d8c2022b270d53ee82854111cf2f10ec045905c576b0167659b18387a3314b"
+  },
+  "features": [
+    "feature.control.loops.loop-mut-and-static"
+  ],
+  "guideline": "Checks loop mut in-place updates, contextual .static() calls, do blocks, and dependent defaults.",
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "[3, 5, 7] 10\n",
+        "hash": "sha256:781089ddd0c091fd1fa7ef9563ee2e1f0315397169d8d367e66a7839019e3633"
+      },
+      "exitCode": 0
+    }
+  ]
+}

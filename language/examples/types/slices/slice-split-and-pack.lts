@@ -1,0 +1,36 @@
+/* Example: Borrowed Slice<T>, disjoint mutable splitAt(mid), bit-packed slices, and String.bytes(). */
+
+io := import "core/io";
+
+sumInts := fn(s: Slice<Int>): Int {
+    var acc := 0;
+    loop s as v { acc += v; }
+    acc
+};
+
+addOffset := fn(s: mut Slice<Int>, delta: Int): Unit {
+    loop mut s { .item += delta; }
+};
+
+mut nums: List<Int> = [10, 20, 30, 40, 50, 60];
+do {
+    mut midView := mut nums[1..5];
+    (left, right) := mut midView.splitAt(2);
+    addOffset(mut left, 1);
+    addOffset(mut right, 100);
+}
+
+mut flags: [Bool; 6] = [true, false, true, false, false, true];
+do {
+    mut flagSlice := mut flags[0..6];
+    (fa, fb) := mut flagSlice.splitAt(3);
+    loop mut fa { .item = not .item; }
+    loop mut fb { .item = true; }
+}
+
+raw := "Hi!";
+mut bs: List<Int> = [];
+loop raw.bytes() as b { mut bs.pushBack(cast<Int>(b)); }
+byteSum := sumInts(bs[0..bs.length()]);
+
+io.outputLine(sumInts(nums[0..nums.length()]), nums, flags[0], flags[4], raw.bytes().length(), byteSum);

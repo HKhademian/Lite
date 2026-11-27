@@ -1,0 +1,63 @@
+/* Showcase: Zero-copy borrowed Slice<T>, splitAt, bit-packed slices, @packed, Option niches, Simd, SoA, and Rc. */
+
+io := import "core/io";
+opt := import "core/option";
+simd := import "core/simd";
+soa := import "core/soa";
+rc := import "core/rc";
+
+@packed
+FrameHeader := record {
+    version: UInt4;
+    flags: UInt4;
+    payloadLen: UInt16;
+};
+
+Particle := record {
+    x: Float32;
+    y: Float32;
+    vx: Float32;
+    vy: Float32;
+};
+
+applyBias := fn(s: mut Slice<Int>, delta: Int): Unit {
+    loop mut s { .item += delta; }
+};
+
+stepSimd := fn(x: mut Slice<Float32>, y: mut Slice<Float32>, vx: Slice<Float32>, vy: Slice<Float32>, dt: Float32): Unit {
+    dtv := simd.Float32x4.splat(dt);
+    px := simd.Float32x4.load(x, 0);
+    py := simd.Float32x4.load(y, 0);
+    pvx := simd.Float32x4.load(vx, 0);
+    pvy := simd.Float32x4.load(vy, 0);
+    pvx.fma(dtv, px).store(mut x, 0);
+    pvy.fma(dtv, py).store(mut y, 0);
+};
+
+hdr := FrameHeader { version = 2, flags = 5, payloadLen = 128 };
+optLen: opt.Option<Int> = .Some(cast<Int>(hdr.payloadLen));
+parsedLen := if .Some(v) := optLen { v } else { 0 };
+
+mut vals: List<Int> = [10, 20, 30, 40];
+do {
+    mut view := mut vals[0..4];
+    (left, right) := mut view.splitAt(2);
+    applyBias(mut left, 1);
+    applyBias(mut right, 100);
+}
+
+mut swarm: SoA<Particle> = SoA.withCapacity(4);
+loop 0..4 as i {
+    mut swarm.pushBack(Particle {
+        x = cast<Float32>(i),
+        y = cast<Float32>(i * 2),
+        vx = cast<Float32>(2.0),
+        vy = cast<Float32>(-1.0),
+    });
+}
+stepSimd(mut swarm.x, mut swarm.y, swarm.vx, swarm.vy, cast<Float32>(0.5));
+
+shared := Rc.create(77);
+other := shared.share();
+
+io.outputLine(hdr.version, parsedLen, vals, swarm[2].x, swarm[2].y, shared.get() + other.get());

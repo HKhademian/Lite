@@ -1,0 +1,23 @@
+{
+  "id": "case.types.unions.run-unions-and-fallibles",
+  "kind": "feature",
+  "source": "run-unions-and-fallibles.lts",
+  "features": [
+    "feature.types.unions.unions-and-fallibles"
+  ],
+  "cases": [
+    {
+      "name": "run-unions-and-fallibles",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "12 -1\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+language/cases/bindings/mutability/reject-postfix-mut-variable.lts:1:5: place mut before the variable name (e.g. mut name: Type)

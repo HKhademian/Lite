@@ -82,6 +82,8 @@ io.outputLine(
 
 See [Union Normalization](lite://doc/union-normalization), [Union Membership](lite://doc/union-membership), and [Fallible Types & Error Composition](lite://doc/fallible-types-and-error-composition).
 
+Try [Unions & Fallibles](lite://play/unions-and-fallibles) and the [verified Unions & Fallible Pipeline showcase](lite://play/example/showcase-unions-and-fallible-pipeline).
+
 ## Next Chapter
 
 Continue to [Interfaces, Contexts & Overloading](lite://handbook/interfaces-contexts-and-overloading).

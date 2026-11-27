@@ -1,0 +1,26 @@
+{
+  "id": "example.foundations.numeric.packed-widths-and-bitwise",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/foundations/numeric/packed-widths-and-bitwise.lts",
+    "hash": "sha256:7dd59a720dec4cedbb28f156d07a9dd37465d48f12aec16dcf7b95b3d3eb855f"
+  },
+  "features": [
+    "feature.numeric.widths.packed-bitwise"
+  ],
+  "description": "Sub-byte integer widths, Float16, bitwise methods, wrapping/saturating math, and FMA.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "packed-widths-and-bitwise",
+      "stdout": {
+        "text": "10 -5 8 163 3 255 1 14 4 8.5\n",
+        "hash": "sha256:24b6a912c70b86a952f203d3a0a226cece1e71809e7ad33430090ec4a5dcb2f7"
+      },
+      "exitCode": 0
+    }
+  ]
+}

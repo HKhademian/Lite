@@ -1,0 +1,8 @@
+io := import "core/io";
+errs := import "core/error";
+
+checked := fn(x: Int): Int! {
+    if x < 0 { return .err(errs.Error.new("Range", "neg")); }
+    x * 3
+};
+io.outputLine(checked(4) else(e) { -1 }, checked(-2) else(e) { -1 });

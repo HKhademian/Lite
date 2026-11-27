@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/blocks/wiring/parallel-symbol-wiring.lts",
-    "hash": "sha256:e97419ec1a5929e768d3135eefbc6ac91278fd9e52c89ecd7a8727d5adfe6d76"
+    "hash": "sha256:12b9a1ccd1d22801a84d57404f64cfce012de615fd6d5178d746688b3295ee95"
   },
   "features": [
     "feature.blocks.wiring.parallel-symbol-wiring",

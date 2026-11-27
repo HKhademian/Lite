@@ -59,3 +59,5 @@ io.outputLine(if res: Int { res.toText() } else { res });
 ```
 
 See [Compile-Time Evaluation](lite://doc/compile-time-evaluation), [Type Aliases](lite://doc/type-aliases), [Callable Default Contracts](lite://doc/callable-default-contracts), and [Callable Value Variance](lite://doc/callable-value-variance).
+
+Try [Comptime & Structural Records](lite://play/comptime-and-records) and the [verified Comptime & Structural Records showcase](lite://play/example/showcase-comptime-and-structural-records).

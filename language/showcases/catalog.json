@@ -657,6 +657,62 @@
         }
       ],
       "order": 6
+    },
+    {
+      "id": "systems",
+      "title": "Modern Systems: Slices, Interfaces, Fallibles, and Comptime",
+      "summary": "Borrowed Slice<T>/splitAt, @packed Option<T>, Simd/SoA, nominal interfaces & dyn, lexical contexts, overloading, unions, fallible T!, comptime, and structural records.",
+      "topics": [
+        {
+          "id": "showcase.types.slices.slices-simd-and-soa",
+          "title": "Slices, splitAt, Option Niches, SIMD, and SoA",
+          "file": "language/showcases/types/slices/slices-simd-and-soa.lts",
+          "helperFiles": [],
+          "manifest": "language/verifications/artifacts/showcases/types/slices/slices-simd-and-soa.json",
+          "summary": "Zero-copy Slice<T>, disjoint splitAt, @packed Option<T>, Float32x4 SIMD over SoA<Particle> columns, and Rc<T>.",
+          "teaches": ["Slice<T>", "splitAt", "@packed", "Option<T>", "Simd<T, N>", "SoA<R>", "Rc<T>"],
+          "features": ["feature.types.slices.borrowed-and-split", "feature.types.layout.option-simd-soa"],
+          "docs": ["docs/slices.md", "docs/c11-memory-and-codegen-plan.md"],
+          "order": 1
+        },
+        {
+          "id": "showcase.types.interfaces.interfaces-contexts-and-overloads",
+          "title": "Interfaces, Associated Types, Lexical Contexts, and Overloads",
+          "file": "language/showcases/types/interfaces/interfaces-contexts-and-overloads.lts",
+          "helperFiles": [],
+          "manifest": "language/verifications/artifacts/showcases/types/interfaces/interfaces-contexts-and-overloads.json",
+          "summary": "Nominal interface/impl with associated types & default methods, dyn dispatch, lexical context(...) overrides, and overloading.",
+          "teaches": ["interface", "impl", "assoc types", "dyn", "context(...)", "overloading"],
+          "features": ["feature.types.interfaces.nominal-and-dyn", "feature.execution.contexts.lexical-and-overloads"],
+          "docs": ["docs/composition-and-interfaces.md", "docs/tags-and-contexts.md"],
+          "order": 2
+        },
+        {
+          "id": "showcase.types.unions.unions-and-fallible-pipeline",
+          "title": "Plain Unions, Definite Init, and Fallible T! Pipelines",
+          "file": "language/showcases/types/unions/unions-and-fallible-pipeline.lts",
+          "helperFiles": [],
+          "manifest": "language/verifications/artifacts/showcases/types/unions/unions-and-fallible-pipeline.json",
+          "summary": "Normalized A | B unions, Bool-correlated = ? initialization, T ! E / T!, ToError, postfix !, and else(err) recovery.",
+          "teaches": ["A | B", "= ?", "T ! E", "T!", "ToError", "!", "else(err)"],
+          "features": ["feature.types.unions.unions-and-fallibles", "feature.control.loops.loop-mut-and-static"],
+          "docs": ["docs/union-normalization.md", "docs/fallible-types-and-error-composition.md"],
+          "order": 3
+        },
+        {
+          "id": "showcase.execution.comptime.comptime-and-structural-records",
+          "title": "Comptime Evaluation, Structural Records, Defaults, and Variance",
+          "file": "language/showcases/execution/comptime/comptime-and-structural-records.lts",
+          "helperFiles": [],
+          "manifest": "language/verifications/artifacts/showcases/execution/comptime/comptime-and-structural-records.json",
+          "summary": "Portable comptime { ... }, inferred { ... } records, unified alias, earlier-param defaults, ?: omission, and callable variance.",
+          "teaches": ["comptime", "{ ... }", "alias", "defaults", "?:", "variance"],
+          "features": ["feature.execution.comptime.eval-records-defaults"],
+          "docs": ["docs/compile-time-evaluation.md", "docs/callable-default-contracts.md", "docs/callable-value-variance.md"],
+          "order": 4
+        }
+      ],
+      "order": 7
     }
   ]
 }

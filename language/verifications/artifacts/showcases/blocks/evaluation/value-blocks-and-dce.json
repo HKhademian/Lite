@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/blocks/evaluation/value-blocks-and-dce.lts",
-    "hash": "sha256:551a82f7c29f6af3a70920b843a2fc559c6d35a21168a606d56a3998fc589e13"
+    "hash": "sha256:368ef0b0966a95b744ec515b785bac9ff1690ef1d1d130da477e1113725564ef"
   },
   "features": [
     "feature.blocks.evaluation.value-blocks-and-dce",

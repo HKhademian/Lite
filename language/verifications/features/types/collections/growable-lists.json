@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "growable-lists.lts",
-    "hash": "sha256:aeaf6e7909b2b91e71b18ff103e8e1ed6baa17e30006e03b4eb2edc055bdedcc"
+    "hash": "sha256:fb9015f707bd75fd9dc0bf65fb392d6c5032efe6d36d9bd1e91a090029934c87"
   },
   "features": [
     "feature.types.collections.growable-lists"

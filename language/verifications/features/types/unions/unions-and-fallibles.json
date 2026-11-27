@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.unions.unions-and-fallibles",
+  "kind": "feature",
+  "source": {
+    "file": "unions-and-fallibles.lts",
+    "hash": "sha256:48ea6d4b98b43381ca645ef0fe275c3b5b353649edc12f3985a6e42645107de5"
+  },
+  "features": [
+    "feature.types.unions.unions-and-fallibles"
+  ],
+  "guideline": "Checks normalized A | B unions, T! fallibles, postfix ! propagation, and else(err) recovery.",
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "20 5 -1\n",
+        "hash": "sha256:a102b134b4307a5af5457a7b06e4714a8bfc779714306b582c72281a6dfb4410"
+      },
+      "exitCode": 0
+    }
+  ]
+}

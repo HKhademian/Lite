@@ -1,0 +1,22 @@
+{
+  "id": "feature.numeric.widths.packed-bitwise",
+  "kind": "feature",
+  "source": {
+    "file": "packed-bitwise.lts",
+    "hash": "sha256:483dfc088d2814103a53cb963bfc46c65c0567c8e688d18ddf9e723682c01eb9"
+  },
+  "features": [
+    "feature.numeric.widths.packed-bitwise"
+  ],
+  "guideline": "Checks sub-byte Int4/UInt4, Float16, wrappingAdd, bitwise methods, and FMA across TS and C11.",
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "9 -4 3 37 6\n",
+        "hash": "sha256:0b273073aa654d2e3dba39a62212a003c0ba92b70e50f24797a1f03abc6cf7ff"
+      },
+      "exitCode": 0
+    }
+  ]
+}

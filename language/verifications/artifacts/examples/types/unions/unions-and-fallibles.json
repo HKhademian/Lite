@@ -1,0 +1,26 @@
+{
+  "id": "example.types.unions.unions-and-fallibles",
+  "kind": "example",
+  "source": {
+    "file": "../../../../../examples/types/unions/unions-and-fallibles.lts",
+    "hash": "sha256:0e38733257248ef0140752f583219b26cc2f73905fe4aa1db155063e6ca7e904"
+  },
+  "features": [
+    "feature.types.unions.unions-and-fallibles"
+  ],
+  "description": "Normalized A | B unions, T ! E / T! fallibles, ToError, postfix !, and else(err) recovery.",
+  "targets": [
+    "ts",
+    "c"
+  ],
+  "cases": [
+    {
+      "name": "unions-and-fallibles",
+      "stdout": {
+        "text": "I:7 S:lite 16160 9000 PortErr(422): bad port 80\n",
+        "hash": "sha256:17514efe27866921b8feb6c47ecd9c95cd35cf13c94e4ed4ed6d94476ca51ecd"
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+language/cases/types/unions/reject-unhandled-fallible.lts:2:30: postfix ! requires enclosing function to return a fallible type ! E, got Int

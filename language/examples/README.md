@@ -12,7 +12,7 @@ Run from the repository root with Node 26.13.0:
 node compiler/entry.ts /tmp/lite-example.ts
 ```
 
-`run` compiles to a temporary artifact and executes it. All twenty-nine examples compile and run through the generated TS compiler; broader parity items live in [compiler gaps](lite://doc/compiler/gaps) and the [archived inventory](lite://repo/compiler/reports/current-t00-t11-inventory.md). Unsupported source fails without a T00 fallback. C output is deferred.
+`run` compiles to a temporary artifact and executes it on either TypeScript (`--target ts`, default) or standalone native C11 (`--target c`). All curated examples support both TS and C11 cleanly; see [compiler gaps](lite://doc/compiler/gaps) for remaining open items.
 
 The interactive examples display explicit prompts. Integer prompts leave the
 cursor on the same line; the scanner prints a heading before reading its line.
@@ -135,6 +135,14 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
 - [034 — Typed sets](lite://play/example/typed-sets): demonstrates `Set<T>` deduplication,
   `core/set` operations (`add`, `has`, `remove`, `size`, `values`), independent value
   snapshots, and insertion-order element iteration.
+- [035 — Packed widths & bitwise](lite://play/example/packed-widths-and-bitwise): demonstrates `Int4`/`UInt4`, `UInt8`, and `Float16` widths, `.wrappingAdd`/`.saturatingAdd`/bitwise methods, `wideningMul`, and `.fma`.
+- [036 — Slices, splitAt & bit-packed storage](lite://play/example/slice-split-and-pack): demonstrates zero-copy `Slice<Int>`, disjoint `mut s.splitAt(mid)`, bit-packed `[Bool; N]` slices with `loop mut`, and `String.bytes()`.
+- [037 — Option, @packed layout, SIMD & SoA](lite://play/example/option-simd-soa): demonstrates `@packed` records, `Option<T>` (`if .Some(...) := ...`), `Rc<T>`, `Float32x4` SIMD, and `SoA<Particle>` columns.
+- [038 — Interfaces, associated types & dyn](lite://play/example/interfaces-and-dyn): demonstrates `interface`/`impl`, associated types, default method bodies, bounded generics, and `dyn` dispatch.
+- [039 — Lexical contexts & overloads](lite://play/example/lexical-context-and-overloads): demonstrates `context(...)` defaults and scoped overrides alongside statically resolved overloading.
+- [040 — Loop mut, .static(), do & dependent defaults](lite://play/example/loop-mut-and-static): demonstrates `loop mut`, contextual `.static()` calls, standalone `do { ... }` blocks, `if` pattern bindings, and dependent defaults.
+- [041 — Unions & fallible pipelines](lite://play/example/unions-and-fallibles): demonstrates normalized `A | B` unions, `match` narrowing, `T ! E` / `T!`, `ToError`, postfix `!`, and `else(err)` recovery.
+- [042 — Comptime, structural records, defaults & variance](lite://play/example/comptime-and-records): demonstrates `comptime { ... }`, structural `{ ... }` records, unified `alias`, earlier-parameter defaults, and callable variance.
 
 For project showcases, graphics, audio, and mini-game demos, see [samples](lite://repo/samples/README.md).
 For the progressive chapter-by-chapter learning curriculum, see the [ability and feature showcase](lite://repo/language/showcases/README.md).

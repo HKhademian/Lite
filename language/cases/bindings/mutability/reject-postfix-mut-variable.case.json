@@ -1,0 +1,23 @@
+{
+  "id": "case.bindings.mutability.reject-postfix-mut-variable",
+  "kind": "reject",
+  "source": "reject-postfix-mut-variable.lts",
+  "features": [
+    "feature.bindings.mutability.var-replacement"
+  ],
+  "cases": [
+    {
+      "name": "reject-postfix-mut-variable",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": ""
+      },
+      "stderr": {
+        "file": "reject-postfix-mut-variable.stderr"
+      },
+      "exitCode": 2
+    }
+  ]
+}

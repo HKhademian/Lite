@@ -1,0 +1,22 @@
+{
+  "id": "feature.types.slices.borrowed-and-split",
+  "kind": "feature",
+  "source": {
+    "file": "borrowed-and-split.lts",
+    "hash": "sha256:a56c3a6d8cf5427862214579c75c46708c271d53440c8e856944bc99e1e19e6f"
+  },
+  "features": [
+    "feature.types.slices.borrowed-and-split"
+  ],
+  "guideline": "Checks borrowed Slice<T>, disjoint mut splitAt(mid), and bit-packed Bool slices.",
+  "cases": [
+    {
+      "name": "default",
+      "stdout": {
+        "text": "[11, 12, 23, 24] false true\n",
+        "hash": "sha256:2b84f89ee6893bbcdca78b04709561b4b7c773aed00cf3fc224a473f648a7cd6"
+      },
+      "exitCode": 0
+    }
+  ]
+}

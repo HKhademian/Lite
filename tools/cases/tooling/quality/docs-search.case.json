@@ -17,7 +17,7 @@
         "text": ""
       },
       "stdout": {
-        "text": "Start: docs/start-here.md\nTour: docs/tour.md\nReference: docs/README.md\nCompiler: compiler/README.md\nFixtures: igniter/tests/README.md\nStatus: compiler/transition-plan.md\nContribute: CONTRIBUTING.md\nSearch: lite docs QUERY | --json [QUERY] | --check\n"
+        "text": "Start: docs/start-here.md\nTour: docs/tour.md\nReference: docs/README.md\nCompiler: compiler/README.md\nFixtures: igniter/tests/README.md\nStatus: docs/implementation-status.md\nContribute: CONTRIBUTING.md\nSearch: lite docs QUERY | --json [QUERY] | --check\n"
       },
       "stderr": {
         "text": ""

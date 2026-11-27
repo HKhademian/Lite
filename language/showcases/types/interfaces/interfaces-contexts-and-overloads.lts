@@ -1,0 +1,49 @@
+/* Showcase: Interfaces with associated types & defaults, dyn/mut dyn dispatch, lexical contexts, and overloading. */
+
+io := import "core/io";
+
+Metric := interface {
+    Sample: Type;
+    readSample: fn(self: Self): Self.Sample;
+};
+
+Printable := interface {
+    tag: fn(self: Self): String;
+    render := fn(self: Self): String { "{" + self.tag() + "}" };
+};
+
+Sensor := record { id: String; level: Int; };
+impl Metric for Sensor {
+    Sample := Int;
+    readSample := fn(self: Sensor): Int { self.level };
+};
+impl Printable for Sensor {
+    tag := fn(self: Sensor): String { self.id + ":" + self.level.toText() };
+};
+
+Badge := record { title: String; };
+impl Printable for Badge {
+    tag := fn(self: Badge): String { self.title };
+    render := fn(self: Badge): String { "[" + self.tag() + "]" };
+};
+
+context envTag := "prod";
+context mut seqNo: Int = 0;
+
+fmt := fn(v: Int): String { "#" + v.toText() };
+fmt := fn(v: String): String { v };
+
+emitLine := fn(p: dyn Printable) context(envTag: String, seqNo: mut Int): String {
+    seqNo += 1;
+    envTag + " " + fmt(seqNo) + " " + p.render()
+};
+
+readMetric := fn<T: Type<Metric>>(m: T): T.Sample { m.readSample() };
+
+s := Sensor { id = "temp", level = 24 };
+b := Badge { title = "ready" };
+line1 := emitLine(s);
+line2 := context (envTag = "stage") { emitLine(b) };
+line3 := emitLine(b);
+
+io.outputLine(readMetric(s), line1, line2, line3);

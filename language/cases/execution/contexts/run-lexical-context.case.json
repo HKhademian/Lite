@@ -1,0 +1,23 @@
+{
+  "id": "case.execution.contexts.run-lexical-context",
+  "kind": "feature",
+  "source": "run-lexical-context.lts",
+  "features": [
+    "feature.execution.contexts.lexical-and-overloads"
+  ],
+  "cases": [
+    {
+      "name": "run-lexical-context",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "root:1:init sub:2:work\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+io := import "core/io";
+
+Show := interface {
+    name: fn(self: Self): String;
+    tag := fn(self: Self): String { "<" + self.name() + ">" };
+};
+Item := record { id: Int; };
+impl Show for Item {
+    name := fn(self: Item): String { "item-" + self.id.toText() };
+};
+render := fn(s: dyn Show): String { s.tag() };
+io.outputLine(render(Item { id = 4 }));

@@ -1,0 +1,19 @@
+io := import "core/io";
+
+Label := interface {
+    Item: Type;
+    tag: fn(self: Self): Self.Item;
+    wrap := fn(self: Self): String { "ok" };
+};
+Box := record { v: Int; };
+impl Label for Box {
+    Item := Int;
+    tag := fn(self: Box): Int { self.v };
+};
+
+Render := interface { text: fn(self: Self): String; };
+impl Render for Box { text := fn(self: Box): String { "B:" + self.v.toText() }; };
+
+showDyn := fn(r: dyn Render): String { r.text() };
+b := Box { v = 7 };
+io.outputLine(b.tag(), b.wrap(), showDyn(b));

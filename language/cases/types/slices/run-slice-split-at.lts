@@ -1,0 +1,10 @@
+io := import "core/io";
+
+mut xs: List<Int> = [10, 20, 30, 40];
+do {
+    mut view := mut xs[0..4];
+    (l, r) := mut view.splitAt(2);
+    loop mut l { .item += 1; }
+    loop mut r { .item += 2; }
+}
+io.outputLine(xs);

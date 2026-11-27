@@ -65,6 +65,8 @@ For manual lifetime and shared-ownership building blocks alongside value types, 
 
 See [Borrowed Slices](lite://doc/slices), [C11 Memory & Codegen Plan](lite://doc/c11-memory-and-codegen-plan), [core/simd](lite://module/core/simd), and [core/soa](lite://module/core/soa).
 
+Try the interactive [Slices & Split-Borrow example](lite://play/slice-split-and-pack), [Option, SIMD & SoA example](lite://play/option-simd-soa), and [verified Slices/SIMD/SoA showcase](lite://play/example/showcase-slices-simd-and-soa).
+
 ## Next Chapter
 
 Continue to [Comptime, Defaults & Variance](lite://handbook/comptime-defaults-and-variance).

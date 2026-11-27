@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/functions/callables/first-class-functions.lts",
-    "hash": "sha256:c35684d9ee62eabf040f488b587b290660abd99af19c09bdaa3476a7d780726f"
+    "hash": "sha256:2577ee05f2b79648531ba64a03687b9cfae0f7a49d2b1f4848beaf278420aa58"
   },
   "features": [
     "feature.functions.callables.function-values",
