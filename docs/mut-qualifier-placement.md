@@ -1,59 +1,19 @@
 # Where mut belongs in typed declarations
 
-Status: **name: mut T selected for annotated declarations and parameters, 2026-10-19**. Inferred declarations retain mut name := expression and var mut name := expression; var stays before the name in typed declarations. The earlier typed name-prefix form is superseded. Access permissions, argument passing, and caller-replacement semantics are unchanged by this migration.
+Status: **`mut name: T` selected for variable definitions and `name: mut T` for access contracts, 2026-11-27.** The [compiler migration](#planned-variable-definition-migration) is pending. The pre-migration compiler uses `name: mut T` for annotated writable variable definitions.
 
-Subsequent naming decision: [type-side var](lite://doc/var-access-qualifier) replaces the slot keyword for caller-storage access. This does not change selected mut placement. Historical references to slot below explain the earlier placement discussion; canonical replacement signatures now use fn(target: var T), with local-only var declarations inside the body.
+## Variable definitions
 
-## The two forms
-
-```text
-fn(mut target: T) /* superseded: rejected in current LiteScript */
-fn(target: mut T) /* selected */
-```
-
-Both are syntactically feasible. Placement alone does not decide borrowing, copying, caller replacement, or performance. The meaningful choice is whether mut is only a modifier of a named binding/parameter, or is also an access qualifier usable inside type expressions.
-
-## Earlier prefix on the name
-
-The earlier form fn(mut target: T) matched the inferred declaration prefix:
-
-```text
-mut user := make_user();
-mut user: User = make_user(); /* superseded typed form */
-```
-
-It kept the access requirement visible before the name and used the same placement with or without a written type. This was a valid reason to consider it, but the typed version is no longer canonical. Inferred mut user := expression remains selected.
-
-If writable access is only a contract on each named parameter, this is a coherent choice. First-class qualified types, anonymous callable parameter types, nested access contracts, and qualified aliases would then need their own consistent representation; the prefix does not inherently prohibit them.
-
-## Qualifier after the colon
-
-The selected fn(target: mut T) groups the name separately from the required access-qualified type. It aligns with the type-position var marker and gives the type grammar a natural place for future composite access contracts.
-
-The four explicit declaration alternatives are:
+Put `mut` before the variable name, whether the type is written or inferred. `var` permits replacement of the binding, and `mut` grants writable access to its value. Spell the combined prefix `var mut`.
 
 ```text
 user: User = make_user();         /* fixed binding, read-only access */
-user: mut User = make_user();     /* fixed binding, writable data access */
+mut user: User = make_user();     /* fixed binding, writable data access */
 var user: User = make_user();     /* reassignable binding, read-only access */
-var user: mut User = make_user(); /* reassignable binding, writable data access */
+var mut user: User = make_user(); /* reassignable binding, writable data access */
 ```
 
-These are separate alternatives, not duplicate declarations in one scope. The selected rule places var with binding reassignment and mut with the held-data access requirement.
-
-An operation retains the same mutation contract, expressed as:
-
-```text
-rename := fn(user: mut User, name: String): Unit {
-    user.name = name
-}
-```
-
-This supersedes fn(mut user: User). The old typed-prefix form is rejected, not retained as an interchangeable spelling.
-
-## Inference retains its existing forms
-
-There is no type operand after a colon in an inferred declaration. Retain the existing concise forms:
+The inferred alternatives use the same prefixes and `:=`.
 
 ```text
 user := make_user();
@@ -62,9 +22,17 @@ var user := make_user();
 var mut user := make_user();
 ```
 
-Inferred mut user requests the writable-access-qualified version of the inferred value contract. A typed declaration writes that requirement after the colon. This is a deliberate relationship between inferred and annotated forms, comparable to the existing distinction between name := expression and name: T = expression.
+## Access contracts
 
-The accepted tradeoff is differing modifier placement between inferred and annotated declarations. Do not reintroduce typed name prefixes merely to remove that difference.
+A parameter declares writable access with `name: mut T`. The caller uses an explicit grant such as `rename(mut user, "Ali")`.
+
+```text
+rename := fn(user: mut User, name: String): Unit {
+    user.name = name
+}
+```
+
+Caller-storage replacement continues to use `fn(target: var T)`. See [type-side var](lite://doc/var-access-qualifier).
 
 ## Type composition benefits and obligations
 
@@ -76,7 +44,7 @@ WritableUser := alias mut User;
 
 Alias naming cannot manufacture writable access; a source must supply the required authority. This would not declare a new nominal record type or make User globally mutable. Full access-qualified alias legality is still open.
 
-Use a grouped operand when qualifying a whole union, as in parent: mut (P | Q): the existing writable access applies to whichever parent alternative is active. This migration preserves the former prefix declaration's full-value access. Per-alternative A | mut B, further nesting, normalization, and flow rules still need separate contracts; they are not selected merely by moving mut after the colon.
+In a type contract, use a grouped operand to qualify a whole union, as in `fn(parent: mut (P | Q))`. In a variable definition, the prefix grants access to the whole value, as in `mut parent: P | Q = make_parent();`. Per-alternative `A | mut B`, further nesting, normalization, and flow rules still need separate contracts.
 
 Crucially, A | mut B is not the replacement contract A | var B. Payload mutation and accepted replacements remain distinct. Neither form bypasses the source's permissions, visibility, ownership, or lifetime requirements.
 
@@ -92,17 +60,9 @@ Swift places inout before the parameter type. This shows that a type-side modifi
 
 These examples compare syntax and semantics separately. None selects public pointers, a general reference system, or their respective ownership models for LiteScript.
 
-## Selected rule and migration boundary
-
-Use name: mut T for annotated parameters and declarations, while keeping var on the binding and the existing inferred declaration prefixes. This revises the earlier placement rule because of the direction toward explicit var/access contracts.
-
-Canonical typed examples, declaration templates, function/receiver parameter rules, and the grammar have been migrated together. Historical and foreign-language examples are labeled separately. Do not retain both typed forms or change runtime semantics to ease the syntax migration. Keep inference, read-only defaults, var/mut independence, and caller-replacement contracts intact.
-
-Additional qualified aliases, per-alternative union capabilities, and complete callable-type grammar still need separate contracts. This selection does not adopt ref, public pointers, or a borrowing model.
-
 ## Planned variable-definition migration
 
-The revised placement rule puts `mut` next to the name when defining a variable and next to the type when declaring an access contract. The rules above describe the current compiler and the syntax that this migration replaces.
+The migration changes the spelling of annotated writable variable definitions. The examples below show the selected forms that the migration will enable.
 
 ```text
 mut r := random.Rng.create(42);
