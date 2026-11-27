@@ -1,6 +1,6 @@
 # Record creation: zero initialization and declared defaults
 
-Status: **updated 2026-11-18: an omitted field uses its declared default, or zero of its type when no default is declared; omitted typed initializers select zero initialization; an explicit zero-value expression is under design; = {} selects declared-default record construction; executable empty bodies still produce Unit**. Detailed field-default syntax, defaultability, and unnamed-type forms still need formalization. Named record declarations, contextual nested construction, and headless named-record patterns retain their selected contracts. This is design documentation, not implemented compiler behavior.
+Status: **updated 2026-11-27 (Phase 13): declared defaults, written-order supplied field evaluation followed by declaration-order omitted/dependent defaults (`end: Int = start + 10`), forward/self field rejection in defaults, zero initialization (`= 0`), and `= {}` / `User {}` implemented on TS and C11**. Detailed spread/cycle scheduling and anonymous records remain open design items.
 
 The user's later [union-construction review](lite://doc/union-initialization-policy#selected-rejection-and-explicit-member-choice) proposes A{0} as a compact expression that names a member and zeroes the entire A, bypassing defaults. The sole-zero marker remains proposed grammar; it is not a selected positional-field literal. Existing A{} and contextual = {} keep their declared-default meaning where record construction is valid.
 

@@ -706,6 +706,118 @@ pub collectExplicitCallLabels := fn(source: String, openParen: Int, prefix: Stri
     labels
 };
 
+/** Finds the position of a top-level `:=` inside `[start, limit)` (at depth 0), or -1 if none. */
+pub scanIfCondBindOp := fn(source: String, start: Int, limit: Int, prefix: String): Int {
+    var cursor := start;
+    var depth := 0;
+    loop cursor < limit {
+        ch := source.at(cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if ch == "/" and source.startsWithAt(cursor, "/*") {
+            cursor = skipComment(source, cursor, prefix);
+        } else if ch == "(" or ch == "[" or ch == "{" {
+            depth = depth + 1;
+            cursor = cursor + 1;
+        } else if ch == ")" or ch == "]" or ch == "}" {
+            if depth > 0 { depth = depth - 1; }
+            cursor = cursor + 1;
+        } else if depth == 0 and source.startsWithAt(cursor, ":=") {
+            return cursor;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    -1
+};
+
+/** Finds the position of a top-level `and` keyword inside `[start, limit)` (at depth 0), or -1 if none. */
+pub scanIfCondAndSplit := fn(source: String, start: Int, limit: Int, prefix: String): Int {
+    var cursor := start;
+    var depth := 0;
+    loop cursor < limit {
+        ch := source.at(cursor);
+        if ch == "\"" {
+            cursor = skipAliasString(source, cursor);
+        } else if ch == "/" and source.startsWithAt(cursor, "/*") {
+            cursor = skipComment(source, cursor, prefix);
+        } else if ch == "(" or ch == "[" or ch == "{" {
+            depth = depth + 1;
+            cursor = cursor + 1;
+        } else if ch == ")" or ch == "]" or ch == "}" {
+            if depth > 0 { depth = depth - 1; }
+            cursor = cursor + 1;
+        } else if depth == 0 and source.wordAt(cursor, "and") and (cursor == start or not source.at(cursor - 1).isNameContinue()) {
+            return cursor;
+        } else {
+            cursor = cursor + 1;
+        }
+    }
+    -1
+};
+
+/** Scans the opening `{` of an `if` / `else if` branch, skipping leading record pattern `{ ... } := ...` when present. */
+pub scanIfHeaderOpen := fn(source: String, condStart: Int, prefix: String): Int {
+    size := source.length();
+    var cursor := skipTrivia(source, condStart, prefix);
+    loop cursor < size {
+        ch := source.at(cursor);
+        if ch == "{" {
+            bEnd := scanBraceEnd(source, cursor, prefix);
+            afterB := if bEnd >= 0 { skipTrivia(source, bEnd, prefix) } else { -1 };
+            if afterB >= 0 and source.startsWithAt(afterB, ":=") {
+                nextOpen := scanConditionOpen(source, afterB + 2, prefix);
+                if nextOpen >= 0 and scanIfCondAndSplit(source, afterB + 2, nextOpen, prefix) >= 0 {
+                    andPos := scanIfCondAndSplit(source, afterB + 2, nextOpen, prefix);
+                    cursor = skipTrivia(source, andPos + 3, prefix);
+                    continue;
+                }
+                return nextOpen;
+            }
+            return cursor;
+        }
+        open := scanConditionOpen(source, cursor, prefix);
+        if open < 0 { return -1; }
+        andPos := scanIfCondAndSplit(source, cursor, open, prefix);
+        if andPos < 0 { return open; }
+        /* Check if a clause after `and` starts with a `{ ... } := ...` record pattern. */
+        afterAnd := skipTrivia(source, andPos + 3, prefix);
+        if afterAnd < size and source.at(afterAnd) == "{" {
+            cursor = afterAnd;
+            continue;
+        }
+        return open;
+    }
+    -1
+};
+
+/** True when an `if` / `else if` condition header beginning at `condStart` contains a top-level pattern `:=`. */
+pub ifCondHasPattern := fn(source: String, condStart: Int, prefix: String): Bool {
+    open := scanIfHeaderOpen(source, condStart, prefix);
+    if open < 0 { return false; }
+    scanIfCondBindOp(source, condStart, open, prefix) >= 0
+};
+
+/** True when any `if` or `else if` branch in the chain starting at `ifPos` uses pattern binding `:=`. */
+pub ifChainHasPattern := fn(source: String, ifPos: Int, prefix: String): Bool {
+    var cursor := skipOptionalScanTag(source, ifPos, prefix, "if");
+    if cursor < 0 or not source.wordAt(cursor, "if") { return false; }
+    cursor = skipTrivia(source, cursor + 2, prefix);
+    loop true {
+        open := scanIfHeaderOpen(source, cursor, prefix);
+        if open < 0 { return false; }
+        if scanIfCondBindOp(source, cursor, open, prefix) >= 0 { return true; }
+        end := scanBraceEnd(source, open, prefix);
+        if end < 0 { return false; }
+        after := skipTrivia(source, end, prefix);
+        if not source.wordAt(after, "else") { return false; }
+        afterElse := skipTrivia(source, after + 4, prefix);
+        if not source.wordAt(afterElse, "if") { return false; }
+        cursor = skipTrivia(source, afterElse + 2, prefix);
+    }
+    false
+};
+
 /** Returns the position of the `{` that opens the branch after the condition starting at `start`, or -1 when absent. */
 pub scanConditionOpen := fn(source: String, start: Int, prefix: String): Int {
     size := source.length();
@@ -1067,7 +1179,7 @@ pub scanRawIfChainEnd := fn(source: String, position: Int, prefix: String, allow
     if cursor < 0 or not source.wordAt(cursor, "if") { return -1; }
     cursor = skipTrivia(source, cursor + 2, prefix);
     loop true {
-        open := scanConditionOpen(source, cursor, prefix);
+        open := scanIfHeaderOpen(source, cursor, prefix);
         if open < 0 { return -1; }
         end := scanBraceEnd(source, open, prefix);
         if end < 0 { return -1; }
@@ -1095,7 +1207,7 @@ pub scanIfChainEnd := fn(source: String, position: Int, prefix: String, requireV
     cursor = skipTrivia(source, cursor + 2, prefix);
     var allBranchesValue := true;
     loop true {
-        open := scanConditionOpen(source, cursor, prefix);
+        open := scanIfHeaderOpen(source, cursor, prefix);
         if open < 0 { return -1; }
         end := scanBraceEnd(source, open, prefix);
         if end < 0 { return -1; }

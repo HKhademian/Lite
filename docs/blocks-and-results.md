@@ -26,26 +26,22 @@ Bodies always use braces. Optional single-statement bodies and earlier `do/end` 
 
 ## Standalone executable blocks
 
-Design draft **2026-11-26**. A standalone executable block expression uses
-`do { ... }`. Like Mini's always-entered `if true` block, it opens a scope
-unconditionally. In Lite, its ordinary block result is the value of the
-expression. Constructs such as `if`, `loop`, and `fn` keep their brace bodies.
+Confirmed **2026-11-27 (Phase 13)**: standalone executable block expressions require `do { ... }` (including tagged `@tag do { ... }` and trailing `finally`). Unprefixed `{ ... }` in expression position is rejected except for contextual nominal record literals (`u: User = { ... }`, `u: User = {}`). Statement-position `{ ... }` blocks, `@tag { ... }`, and construct bodies (`if`, `match`, `loop`, `fn`) retain their brace syntax.
 
 ```text
 saveUser(do { loadUser() });
+answer := do { 42 };
+empty := do {};
 ```
 
-In `do { x = 1 }`, assignment updates the existing `x` and the result is
-`Unit`. See [contextual record literals](lite://doc/record-initialization#contextual-record-literals)
-for record braces in expression position. Compiler support and recovery
-attachment remain pending.
+In `do { x = 1; }`, assignment updates the existing `x` and the result is `Unit`. See [contextual record literals](lite://doc/record-initialization#contextual-record-literals) for record braces in expression position.
 
 ## Item boundaries
 
 A complete block construct ends its item without requiring `;`. Write it without a trailing semicolon, at top level and inside other blocks. This includes declarations initialized directly by blocks, functions/lambdas, conditionals, matches, loops, or record constructions. The grammar still allows an optional trailing semicolon. The entire construct includes its attached else/then/finally clauses; punctuation must not split those clauses from their owner. See the [semicolon style and required exceptions](lite://doc/lexical-structure#semicolon-style-after-closing-braces).
 
 ```text
-answer := {
+answer := do {
     42
 }
 use(answer);
@@ -54,7 +50,7 @@ use(answer);
 Both items can also appear on the same line. Whitespace never determines the boundary.
 
 ```text
-answer := { 42 } use(answer);
+answer := do { 42 } use(answer);
 ```
 
 The closing body separates the declaration from use(answer), even on the same line. An optional semicolon would not change the block's value; omitting it is the documentation/formatter style, not a syntax ban.
@@ -64,9 +60,9 @@ Record construction also ends an outer initializer item: `x: User = {}` and `x :
 To continue a block's or record construction's value with an operator, call, member access, or indexing, parenthesize the construct:
 
 ```text
-answer := ({ calculate() }) + 1;
+answer := (do { calculate() }) + 1;
 result := (fn(x: Int): Int { x * 2 })(3);
-name := ({ make_user() }).name;
+name := (do { make_user() }).name;
 ```
 
 These outer items are ordinary expressions or declarations and use ordinary separators. A closing brace inside a call argument or other enclosing expression does not terminate that enclosing item. See [lexical structure](lite://doc/lexical-structure) for the complete separator direction.
@@ -88,18 +84,18 @@ Selected [LP-0009 r1](lite://doc/proposals/LP-0009-flat-failure-capture): `({ wo
 ## Examples
 
 ```text
-price := {
+price := do {
     discounted := calculate_discount(base);
     discounted + shipping
 }
 ```
 
 ```text
-{ 2 * x }
+do { 2 * x }
 ```
 
 ```text
-{ 2 * x;;;;;;;;;; }
+do { 2 * x;;;;;;;;;; }
 ```
 
 The last two blocks produce the same value. Semicolons inside a block may follow its final ordinary item without changing its result. They may also follow a completed block item, including a nested block, without changing its result. An empty block may contain extra separators. Semicolons are separators, not result-discard operators.

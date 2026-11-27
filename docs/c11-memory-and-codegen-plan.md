@@ -146,12 +146,22 @@ All three increments shipped on TS (`tsc --strict`) and C11 (`-std=c11 -Wall -We
 
 See [mut qualifier placement](lite://doc/mut-qualifier-placement) and [writable iteration](lite://doc/loops#writable-iteration).
 
+### Phase 13 — `do` blocks, `if` pattern binding, and dependent record defaults *(completed)*
+
+All three increments shipped on TS (`tsc --strict`) and C11 (`-std=c11 -Wall -Wextra -Werror` + ASan/UBSan):
+
+- **Standalone `do { ... }` blocks:** `do` is reserved; `do { ... }`, `@tag do { ... }`, trailing `finally`, and statement `do { ... }` execute ordinary lexical blocks, while unprefixed `{ ... }` in expression position is rejected (`"standalone block expressions must use do { ... }"`) so `{ ... }` can later represent inferred structural records in Phase 17. Statement `{ ... }`, `@tag { ... }`, construct bodies, and contextual nominal record literals (`u: User = { ... }`, `u: User = {}`) retain their existing semantics.
+- **Pattern binding in `if`:** `if <pat> := <source>` supports enum payload/tag-only/value-test patterns, tuples, records, nested patterns, `or` alternatives, mixed `if`/`else if`/`else` chains, `@tag if ... then ... finally`, loop-tail partial `if`, and left-to-right `and` chains mixing additional pattern matches with `Bool` guards. Each `<source>` evaluates once, bindings are scoped strictly to subsequent `and` clauses and the matched branch, outermost `if name: Type := expr` is rejected, and C11 drops fresh owned pattern sources on both fallthrough and early exits.
+- **Dependent record defaults:** Record field defaults resolve in declaration order with earlier fields read-only in scope (`end: Int = start + 10`) and reject self or forward field references. At construction sites, supplied initializers evaluate first in written order, then omitted defaults evaluate in declaration order (handling local, cross-module `.lt`, owned `List`/`String`, and C11 `/*@CBLK:` compound unwrapping across tuple/list/array/enum constructors).
+
+See [standalone executable blocks](lite://doc/blocks-and-results#standalone-executable-blocks), [pattern contexts](lite://doc/pattern-contexts), and [record initialization](lite://doc/record-initialization).
+
 ## 7. Syntax review implementation queue (Phases 12–17)
 
 The Lite syntax review, [mut qualifier placement cutover](lite://doc/mut-qualifier-placement#planned-variable-definition-migration) *(completed in Phase 12)*, and [writable iteration](lite://doc/loops#writable-iteration) *(completed in Phase 12)* decisions are scheduled into **Phases 12–17** in the table above (followed by **Phase 18** hardening). The review already confirmed contextual record literals in calls, assignments, and nested initializers on both TS and C11. Remaining locked design decisions across Phases 13–17:
 
 - **Phase 12 (`mut` cutover, contextual `.static()`, `loop mut` — *completed*):** Dropped legacy `name: mut T` whole-variable definitions, aligned `context` mut syntax, added contextual `.static(...)` calls, and shipped in-place `loop mut source [as r]` / `.item`.
-- **Phase 13 (`do` blocks, `if` patterns, dependent defaults):** Perform a clean two-step cutover adding `do { ... }` and retiring bare `{ ... }` expression blocks so `{ ... }` can later represent inferred records; add single-eval `if` pattern bindings and written-order / declaration-order dependent record defaults.
+- **Phase 13 (`do` blocks, `if` patterns, dependent defaults — *completed*):** Performed a clean two-step cutover adding `do { ... }` and retiring bare `{ ... }` expression blocks so `{ ... }` can later represent inferred records; added single-eval `if` pattern bindings and written-order / declaration-order dependent record defaults.
 - **Phase 14 (Definite initialization):** Correlate immutable `Bool` predicates (`flag`, `not flag`) across branches and exhaustive `if`/`match` joins, emitting a 1-byte C11 init/drop flag only for dynamically maybe-initialized owned locals.
 - **Phase 15 (Runtime unions & fallibles):** Ship runtime `A | B` unions together with basic `T ! E` / attached `T!` / `!` / `else(err)` (deferring `({ ... })?` flat panic capture), representing the general `Error` behind `T!` as a value-semantic `core/error.Error` record plus optional `ToError` conversion.
 - **Phase 16 (Compile-time evaluation):** Build one portable compiler-embedded evaluator shared by TS and native C11 builds with step/memory panic limits, supporting implicit pure Stage-1 `.lt` evaluation and unrestricted build-host access inside `comptime { ... }` with tracked file-read invalidation.

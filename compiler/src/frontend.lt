@@ -2343,6 +2343,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             intValue = 0, textValue = "", initState = future.initState));
         }
     }
+    loop exports as expMod {
+        if expMod.kind == ITEM_KIND_MODULE_ALIAS and contexts.moduleHasMutGlobals(expMod.runtime) {
+            contexts.markModuleMutGlobals(moduleKey);
+        }
+    }
+    loop futureValues as futMod {
+        if futMod.writable {
+            contexts.markModuleMutGlobals(moduleKey);
+        }
+    }
     }
     var maxFutureAt := -1;
     var blockCount := 0;
@@ -3666,7 +3676,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             continue;
         }
-        if position < size and source.at(position) == "{" and
+        if position < size and not isReservedWord(name) and source.at(position) == "{" and
         source.startsWithAt(skipTrivia(source, scanBraceEnd(source, position, prefix), prefix), ":=") {
             failAt(source, nameStart, prefix, "construction-shaped record pattern is not allowed; omit the type name");
         }
@@ -3901,7 +3911,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             rawIfEnd := scanRawIfChainEnd(source, nameStart, prefix, true);
             afterRawIf := if rawIfEnd >= 0 { skipTrivia(source, rawIfEnd, prefix) } else { -1 };
-            if afterRawIf >= 0 and (source.wordAt(afterRawIf, "then") or source.wordAt(afterRawIf, "finally")) {
+            if (afterRawIf >= 0 and (source.wordAt(afterRawIf, "then") or source.wordAt(afterRawIf, "finally"))) or syntax.ifChainHasPattern(source, nameStart, prefix) {
                 expression := parseExpressionItem(target, source, nameStart, prefix, locals, functions, functionParams, currentName,
                 currentResult, atValueTail(blocks, blockCount) and not currentStopped, stmtCtxs, aliases);
                 locals = checkStatementTrace(target, source, nameStart, prefix, expression.code, expression.returned, currentResult, currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);

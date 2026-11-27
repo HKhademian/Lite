@@ -23,12 +23,46 @@ pub AmbientContext := record {
 mut fnCtxByRuntime: Map<String, String>;
 mut ambientContexts: List<AmbientContext> = [];
 mut ambientByModule: Map<String, List<AmbientContext>>;
+mut modulesWithMutGlobals: List<String> = [];
 
 /** Resets all context registries before a fresh compilation graph. */
 pub resetAll := fn(): Unit {
     mut fnCtxByRuntime.clear();
     mut ambientContexts.clear();
     mut ambientByModule.clear();
+    mut modulesWithMutGlobals.clear();
+};
+
+/** Marks `moduleKey` (empty string maps to `"$root"`) as declaring or transitively importing a module-level `mut` binding. */
+pub markModuleMutGlobals := fn(moduleKey: String): Unit {
+    key := if moduleKey == "" { "$root" } else { moduleKey };
+    if not modulesWithMutGlobals.contains(key) {
+        mut modulesWithMutGlobals.pushBack(key);
+    }
+};
+
+/** True when `moduleKey` (empty string maps to `"$root"`) declares or transitively imports any module-level `mut` binding. */
+pub moduleHasMutGlobals := fn(moduleKey: String): Bool {
+    key := if moduleKey == "" { "$root" } else { moduleKey };
+    modulesWithMutGlobals.contains(key)
+};
+
+/** True when the target runtime symbol `calleeRuntime` belongs to a module with transitive module-level `mut` bindings (or an unrecognized helper). */
+pub runtimeHasMutGlobals := fn(calleeRuntime: String): Bool {
+    if calleeRuntime.startsWithAt(0, "lt_fn__") or calleeRuntime.startsWithAt(0, "liteFn_") {
+        return modulesWithMutGlobals.contains("$root");
+    }
+    if not calleeRuntime.startsWithAt(0, "lt_fn_") and not calleeRuntime.startsWithAt(0, "liteFn$") {
+        return true;
+    }
+    loop modulesWithMutGlobals as mk {
+        if mk =!= "$root" {
+            if calleeRuntime.startsWithAt(0, "lt_fn_" + mk + "__") or calleeRuntime.startsWithAt(0, "liteFn$" + mk + "$") {
+                return true;
+            }
+        }
+    }
+    false
 };
 
 /** Clears per-module ambient context defaults before parsing one module. */

@@ -1,6 +1,6 @@
 # Pattern contexts and mismatch behavior
 
-Status: **review dated 2026-10-18; shared capabilities selected, several placement and failure policies still proposals**.
+Status: **updated 2026-11-27 (Phase 13): `if` pattern bindings (`if <pat> := <source>`, `and` chains, tag-only `.Some`, value-test `.Some(== x)`, single source evaluation, branch-only scoping, and rejection of outermost `if name: Type := expr`) implemented on TS and C11; placement and recovery policies below remain design specification**.
 
 ## Purpose
 

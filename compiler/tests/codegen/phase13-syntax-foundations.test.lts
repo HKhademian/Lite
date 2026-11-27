@@ -1,0 +1,253 @@
+/* Phase 13 verification: standalone do { ... } blocks & bare expression block retirement, pattern binding in if, dependent record defaults, TS/C11 -Werror/ASan/UBSan parity, and complete rejection matrix. */
+
+test := import "core/test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+emptyEnv := fn(): List<String> {
+    m: List<String> = [];
+    m
+};
+
+emptyBytes := fn(): List<Int> {
+    xs: List<Int> = [];
+    xs
+};
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccProbe := compilerTest.probeCc();
+
+runBoth := fn(label: String, src: String, expectedOut: String): Unit {
+    tsCompRes := compilerTest.compileStdin(root, tsComp, src, "");
+    test.checkInt(label + " ts compile: " + tsCompRes.stderr, 0, tsCompRes.status);
+    tsChk := compilerTest.checkTsCode(root, tsCompRes.stdout);
+    test.check(label + " tsc --strict: " + tsChk.error, tsChk.ok);
+    tsRun := compilerTest.checkAndRunTs(root, tsCompRes.stdout);
+    test.checkInt(label + " ts run status: " + tsRun.stderr, 0, tsRun.status);
+    test.checkText(label + " ts stdout", expectedOut, tsRun.stdout);
+    if ccProbe.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, src, "", "");
+        test.checkInt(label + " c status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " c stderr", "", cRes.stderr);
+        test.checkText(label + " c stdout parity", tsRun.stdout, cRes.stdout);
+    }
+};
+
+rejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    tsErr := compilerTest.compileStdin(root, tsComp, src, "");
+    test.checkInt(label + " ts reject status", 2, tsErr.status);
+    test.check(label + " ts msg got: " + tsErr.stderr, tsErr.stderr.contains(expectedMsg));
+    cErr := compilerTest.compileStdin(root, cComp, src, "");
+    test.checkInt(label + " c reject status", 2, cErr.status);
+    test.check(label + " c msg got: " + cErr.stderr, cErr.stderr.contains(expectedMsg));
+};
+
+/* 1. Comprehensive dual-target Phase 13 feature suite (with ASan/UBSan + cross-module defaults) */
+p13Tmp := fs.makeTempDir("lite-p13-");
+test.check("makeTempDir p13", p13Tmp.ok);
+
+modP13Path := path.join(p13Tmp.path, "mod_p13.lt");
+_wModP13 := fs.writeText(modP13Path, [
+    "pub Span := record {",
+    "    start: Int = 2;",
+    "    end: Int = start + 10;",
+    "    width: Int = end - start;",
+    "};",
+    "pub TaggedSpan := record {",
+    "    name: String = \"seg\";",
+    "    copyName: String = name;",
+    "    span: Span = {};",
+    "};"
+].join("\n"));
+test.check("write mod_p13.lt", _wModP13.ok);
+
+mainP13Path := path.join(p13Tmp.path, "main_p13.lts");
+mainP13Src := [
+    "io := import \"core/io\";",
+    "m := import \"./mod_p13\";",
+    "",
+    "Option := enum<T: Type> { None; Some(T); };",
+    "PairBox := record {",
+    "    items: List<Int> = [4, 5];",
+    "    mirror: List<Int> = items;",
+    "    total: Int = items[0] + mirror[1];",
+    "};",
+    "OrderLog := record {",
+    "    first: Int = 10;",
+    "    second: Int = first + 5;",
+    "    third: Int = second * 2;",
+    "};",
+    "",
+    "/* Part A: do { ... } value/Unit/finally/tagged/contextual records/compound nesting */",
+    "doVal := do { a := 6; b := 7; a * b };",
+    "doFinVal := do { tmp := 19; tmp + 1 } finally { io.outputLine(\"do-fin\"); };",
+    "do { stmtOnly := 99; io.outputLine(\"do-stmt\", stmtOnly); }",
+    "tagDo := @b do { if true { return @b 33; } 0 };",
+    "ctxRecFromDo: m.Span = do { m.Span { start = 4 } };",
+    "ctxRecBare: m.Span = { start = 5 };",
+    "ctxRecEmpty: m.Span = {};",
+    "inContainers: List<m.Span> = [m.Span { start = 8 }, do { m.Span { start = 9 } }];",
+    "inTuple := (do { 11 }, m.Span { start = 1 });",
+    "inEnum: Option<m.Span> = .Some(m.Span { start = 7 });",
+    "io.outputLine(doVal, do {}, doFinVal, tagDo, ctxRecFromDo.end, ctxRecBare.end, ctxRecEmpty.end, inContainers[0].width, inContainers[1].end, inTuple.0, inTuple.1.end);",
+    "if .Some(sp) := inEnum { io.outputLine(\"enum-span:\", sp.start, sp.end); }",
+    "",
+    "/* Part B: pattern binding in if (and-chains, tag-only, value-test, nested, else-if, then/finally, early return, ASan owned payloads) */",
+    "var evalCalls := 0;",
+    "nextOpt := fn(n: Int): Option<Int> {",
+    "    evalCalls += 1;",
+    "    if n >= 0 { .Some(n * 2) } else { .None }",
+    "};",
+    "classify := fn(a: Option<Int>, b: Option<Int>, targetVal: Int): String {",
+    "    if .Some(== targetVal) := a {",
+    "        \"exact\"",
+    "    } else if .Some(x) := a and x > 0 and .Some(y) := b {",
+    "        \"pair:\" + (x + y).toText()",
+    "    } else if .Some := a {",
+    "        \"some-only\"",
+    "    } else {",
+    "        \"none\"",
+    "    }",
+    "};",
+    "io.outputLine(classify(.Some(7), .None, 7), classify(.Some(3), .Some(4), 9), classify(.Some(-2), .None, 9), classify(.None, .Some(5), 9));",
+    "",
+    "if .Some(n) := nextOpt(5) and n > 5 and .Some(k) := nextOpt(n) {",
+    "    io.outputLine(\"chain:\", n, k, evalCalls);",
+    "}",
+    "if .Some((a, b)) := Option<(Int, Int)>.Some((12, 13)) and b > a {",
+    "    io.outputLine(\"tup-pat:\", a + b);",
+    "}",
+    "if { x = start, y = end } := (m.Span { start = 3 }) and y == 13 {",
+    "    io.outputLine(\"rec-pat:\", x, y);",
+    "}",
+    "if .Some(.Some(deep)) := Option<Option<Int>>.Some(.Some(44)) {",
+    "    io.outputLine(\"nested-pat:\", deep);",
+    "}",
+    "Either := enum { Left(Int); Right(Int); };",
+    "var orBindOut := 0;",
+    "if .Left(orv) or .Right(orv) := Either.Right(8) { orBindOut = orv; }",
+    "orPatRes := if .None or .Some(== 9) := Option<Int>.Some(9) { \"matched\" } else { \"miss\" };",
+    "tagIfRes := @p if .Some(v) := nextOpt(6) { v + 1 } else { 0 } then { @p.value * 10 } finally { io.outputLine(\"if-fin\"); };",
+    "loopPatSum := @lp loop [Option<Int>.Some(2), .None, .Some(5)] as item { if .Some(v) := item { @lp.value + v } };",
+    "io.outputLine(orBindOut, orPatRes, tagIfRes, loopPatSum, evalCalls);",
+    "",
+    "makeOwnedOpt := fn(flag: Bool): Option<String> {",
+    "    if flag { .Some(\"heap-long-string-payload-for-asan-check\") } else { .None }",
+    "};",
+    "earlyOwned := fn(flag: Bool): String {",
+    "    if .Some(s) := makeOwnedOpt(flag) and s.length() > 5 {",
+    "        return s;",
+    "    }",
+    "    \"empty\"",
+    "};",
+    "if .Some(lst) := Option<List<Int>>.Some([10, 20, 30]) and lst.length() == 3 {",
+    "    io.outputLine(\"list-pat:\", lst[0] + lst[2]);",
+    "}",
+    "io.outputLine(earlyOwned(true), earlyOwned(false));",
+    "",
+    "/* Part C: Dependent record defaults & evaluation order */",
+    "var stepSeq := \"\";",
+    "step := fn(tag: String, v: Int): Int { stepSeq = stepSeq + tag + \":\"; v };",
+    "ord := OrderLog { second = step(\"second\", 50), first = step(\"first\", 4) };",
+    "pb := PairBox {};",
+    "ts1 := m.TaggedSpan {};",
+    "ts2 := m.TaggedSpan { name = \"alpha\" };",
+    "io.outputLine(ord.first, ord.second, ord.third, stepSeq, pb.total, ts1.copyName, ts1.span.end, ts2.copyName, ts2.span.width);"
+].join("\n");
+_wMainP13 := fs.writeText(mainP13Path, mainP13Src);
+test.check("write main_p13.lts", _wMainP13.ok);
+
+expectedP13 := [
+    "do-fin",
+    "do-stmt 99",
+    "42 Unit 20 33 14 15 12 10 19 11 11",
+    "enum-span: 7 17",
+    "exact pair:7 some-only none",
+    "chain: 10 20 2",
+    "tup-pat: 25",
+    "rec-pat: 3 13",
+    "nested-pat: 44",
+    "if-fin",
+    "8 matched 130 7 3",
+    "list-pat: 40",
+    "heap-long-string-payload-for-asan-check empty",
+    "4 50 100 second:first: 9 seg 12 alpha 10"
+].join("\n") + "\n";
+
+tsModComp := compilerTest.compileFile(tsComp, p13Tmp.path, [mainP13Path]);
+test.checkInt("p13 main ts compile: " + tsModComp.stderr, 0, tsModComp.status);
+tsModChk := compilerTest.checkTsCode(root, tsModComp.stdout);
+test.check("p13 main tsc --strict: " + tsModChk.error, tsModChk.ok);
+tsModRun := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("p13 main ts run: " + tsModRun.stderr, 0, tsModRun.status);
+test.checkText("p13 main ts stdout", expectedP13, tsModRun.stdout);
+
+if ccProbe.available {
+    cModComp := compilerTest.compileFile(cComp, p13Tmp.path, [mainP13Path]);
+    test.checkInt("p13 main c compile: " + cModComp.stderr, 0, cModComp.status);
+    cModRun := compilerTest.compileAndRunC(cModComp.stdout, ccProbe.cc, "");
+    test.checkInt("p13 main c status: " + cModRun.stderr, 0, cModRun.status);
+    test.checkText("p13 main c stderr", "", cModRun.stderr);
+    test.checkText("p13 main c parity", expectedP13, cModRun.stdout);
+}
+
+_rmTmp := fs.remove(p13Tmp.path);
+
+/* 2. Written-order supplied vs declaration-order omitted defaults check */
+orderSrc := [
+    "io := import \"core/io\";",
+    "var log := \"\";",
+    "tick := fn(name: String, val: Int): Int { log = log + name + \",\"; val };",
+    "Rec := record { a: Int = tick(\"defA\", 1); b: Int = tick(\"defB\", a + 10); c: Int = tick(\"defC\", b + 100); };",
+    "r1 := Rec {};",
+    "log = log + \"|\";",
+    "r2 := Rec { b = tick(\"supB\", 5), a = tick(\"supA\", 2) };",
+    "io.outputLine(r1.a, r1.b, r1.c, r2.a, r2.b, r2.c, log);"
+].join("\n");
+runBoth("dep defaults eval order", orderSrc, "1 11 111 2 5 105 defA,defB,defC,|supB,supA,defC,\n");
+
+/* 3. Standalone do { ... } statement at top level & nested expressions */
+doStmtSrc := [
+    "io := import \"core/io\";",
+    "var acc := 0;",
+    "do { x := 10; acc += x; } finally { acc += 1; }",
+    "if true { { acc += 2; } io.outputLine(do { acc + 3 }); }"
+].join("\n");
+runBoth("do statements and nested stmt blocks", doStmtSrc, "16\n");
+
+/* 4. Complete negative / rejection matrix (both TS & C11) */
+rejCases: List<(label: String, src: String, msg: String)> = [
+    (label = "bare expr block init", src = "x := { 1 };", msg = "standalone block expressions must use do { ... }"),
+    (label = "bare expr block empty", src = "x := {};", msg = "standalone block expressions must use do { ... }"),
+    (label = "bare expr block arg", src = "io := import \"core/io\"; io.outputLine({ 1 });", msg = "standalone block expressions must use do { ... }"),
+    (label = "bare expr block fn stmt does not yield", src = "f := fn(): Int { { 42 } };", msg = "function f must return Int"),
+    (label = "bare expr block do tail", src = "x := do { { 42 } };", msg = "standalone block expressions must use do { ... }"),
+    (label = "do without brace", src = "x := do 42;", msg = "expected { after do"),
+    (label = "stmt do without brace", src = "do 42;", msg = "expected { after do"),
+    (label = "tagged do with then", src = "x := @t do { 1 } then { 2 };", msg = "then requires an if, match, or loop"),
+    (label = "outermost typed if pattern", src = "if x: Int := 42 { }", msg = "typed binding pattern in if requires a destructuring pattern"),
+    (label = "pattern if binding leaks into else", src = "io := import \"core/io\"; Option := enum<T: Type> { None; Some(T); }; o := Option<Int>.None; if .Some(n) := o { } else { io.outputLine(n); }", msg = "unknown value n"),
+    (label = "pattern if binding leaks into else if", src = "Option := enum<T: Type> { None; Some(T); }; o := Option<Int>.None; if .Some(n) := o { } else if n > 0 { }", msg = "unknown value n"),
+    (label = "pattern if binding leaks after if", src = "io := import \"core/io\"; Option := enum<T: Type> { None; Some(T); }; o := Option<Int>.Some(1); if .Some(n) := o { } io.outputLine(n);", msg = "unknown value n"),
+    (label = "pattern if value missing else", src = "Option := enum<T: Type> { None; Some(T); }; o := Option<Int>.Some(1); x := (if .Some(n) := o { n }) + 1;", msg = "value if requires a final else"),
+    (label = "pattern if dup binding in and chain", src = "Option := enum<T: Type> { None; Some(T); }; o := Option<Int>.Some(1); if .Some(x) := o and .Some(x) := o { }", msg = "duplicate pattern binding x in if condition"),
+    (label = "pattern if non-bool guard", src = "Option := enum<T: Type> { None; Some(T); }; o := Option<Int>.Some(1); if .Some(x) := o and x { }", msg = "if condition must be Bool"),
+    (label = "record forward default ref", src = "R := record { a: Int = b + 1; b: Int = 2; };", msg = "record field default for a cannot reference field b before it is initialized"),
+    (label = "record self default ref", src = "x := 99; R := record { x: Int = x + 1; };", msg = "record field default for x cannot reference field x before it is initialized")
+];
+loop rejCases as rc {
+    rejectBoth(rc.label, rc.src, rc.msg);
+}
+
+test.done("phase13-syntax-foundations");

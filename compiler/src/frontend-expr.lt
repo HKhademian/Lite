@@ -407,6 +407,29 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
             if count == 0 {
                 return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ ._empty = 0 })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
             }
+            var hasCBlkTup := false;
+            mut tWrapStmts: List<String> = [];
+            mut tWrapVars: List<String> = [];
+            var tiChk := 0;
+            loop tiChk < count {
+                if codes[tiChk].startsWithAt(0, "/*@CBLK:") { hasCBlkTup = true; break; }
+                tiChk = tiChk + 1;
+            }
+            if hasCBlkTup {
+                var ti := 0;
+                loop ti < count {
+                    if codes[ti].startsWithAt(0, "/*@CBLK:") {
+                        tElVar := freshCOwnedTemp("lt_te_");
+                        mut tWrapStmts.pushBack(types.cValueType(kinds[ti]) + " " + tElVar + "; " + ctx.cUnwrapIntoVar(tElVar, kinds[ti], codes[ti]) + " (void)" + tElVar + ";");
+                        mut tWrapVars.pushBack(tElVar);
+                    } else {
+                        mut tWrapVars.pushBack(codes[ti]);
+                    }
+                    ti = ti + 1;
+                }
+            } else {
+                loop codes as tc { mut tWrapVars.pushBack(tc); }
+            }
             mut cCodeBuf: tb.TextBuilder;
             var ci := 0;
             loop ci < count {
@@ -414,10 +437,17 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
                 mut cCodeBuf.append(".");
                 mut cCodeBuf.append(types.cFieldName(types.tupleRuntimeProp(labels[ci], ci)));
                 mut cCodeBuf.append(" = ");
-                mut cCodeBuf.append(codes[ci]);
+                mut cCodeBuf.append(tWrapVars[ci]);
                 ci = ci + 1;
             }
-            return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ " + cCodeBuf.build() + " })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
+            tupLit := "/*@T:" + tupleKind + "@*/((" + tag + "){ " + cCodeBuf.build() + " })";
+            tupCode := if hasCBlkTup {
+                tRet := freshCOwnedTemp("lt_tr_");
+                "/*@CBLK:" + tRet + "@*/" + tag + " " + tRet + "; { " + tWrapStmts.join(" ") + " " + tRet + " = " + tupLit + "; }"
+            } else {
+                tupLit
+            };
+            return ctx.withMarkers((kind = tupleKind, code = tupCode, intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
         }
         mut codeBuf: tb.TextBuilder;
         mut codeBuf.append("{ ");
@@ -439,7 +469,8 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
     }
     inner := parseBinaryCtx(target, source, start + 1, prefix, locals, functions, params, currentName, groupedExpected, 0, ctxs, iifeDepth, inferMode, "", aliases);
     next := syntax.expectSymbol(source, syntax.skipTrivia(source, inner.next, prefix), ")", prefix);
-    ctx.withMarkers((kind = inner.kind, code = "(" + inner.code + ")", intValue = inner.intValue, textValue = inner.textValue, constant = inner.constant, next = next),
+    groupedCode := if target == ir.TARGET_C and inner.code.startsWithAt(0, "/*@CBLK:") { inner.code } else { "(" + inner.code + ")" };
+    ctx.withMarkers((kind = inner.kind, code = groupedCode, intValue = inner.intValue, textValue = inner.textValue, constant = inner.constant, next = next),
     if inferMode { ctx.collectParsedMarkers("", inner) } else { "" })
 };
 
@@ -668,27 +699,49 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
                 "[" + elementKind + ";" + repeatCount.toText() + "]"
             };
             elemValCode := elementCodes[0];
+            repHasCBlk := target == ir.TARGET_C and elemValCode.startsWithAt(0, "/*@CBLK:");
+            var repUnwrapStmt := "";
+            var repArgExpr := elemValCode;
+            if repHasCBlk {
+                repTmp := freshCOwnedTemp("lt_le_");
+                repUnwrapStmt = types.cValueType(elementKind) + " " + repTmp + "; " + ctx.cUnwrapIntoVar(repTmp, elementKind, elemValCode) + " (void)" + repTmp + "; ";
+                repArgExpr = repTmp;
+            }
             repCode := if target == ir.TARGET_C and types.isArrayKind(repResultKind) and types.cArrayTag(repResultKind) =!= "" {
                 aTag := types.cArrayTag(repResultKind);
                 if repeatCount == 0 {
                     if element.constant {
                         "((/*@T:" + repResultKind + "@*/" + aTag + "){ 0 })"
+                    } else if repHasCBlk {
+                        rVar := freshCOwnedTemp("lt_lr_");
+                        "/*@CBLK:" + rVar + "@*/" + aTag + " " + rVar + "; { " + repUnwrapStmt + rVar + " = ((/*@T:" + repResultKind + "@*/" + aTag + "){ 0 }); }"
                     } else {
                         "((void)(" + elemValCode + "), (/*@T:" + repResultKind + "@*/" + aTag + "){ 0 })"
                     }
                 } else {
-                    "/*@T:" + repResultKind + "@*/" + aTag + "_repeat(" + elemValCode + ")"
+                    baseRep := "/*@T:" + repResultKind + "@*/" + aTag + "_repeat(" + repArgExpr + ")";
+                    if repHasCBlk {
+                        rVar := freshCOwnedTemp("lt_lr_");
+                        "/*@CBLK:" + rVar + "@*/" + aTag + " " + rVar + "; { " + repUnwrapStmt + rVar + " = " + baseRep + "; }"
+                    } else { baseRep }
                 }
             } else if target == ir.TARGET_C and types.cListTag(elementKind) =!= "" {
                 cTag := types.cListTag(elementKind);
                 if repeatCount == 0 {
                     if element.constant {
                         "/*@T:" + repResultKind + "@*/lt_list_" + cTag + "_from(0, NULL)"
+                    } else if repHasCBlk {
+                        rVar := freshCOwnedTemp("lt_lr_");
+                        "/*@CBLK:" + rVar + "@*/lt_list_" + cTag + " " + rVar + "; { " + repUnwrapStmt + rVar + " = /*@T:" + repResultKind + "@*/lt_list_" + cTag + "_from(0, NULL); }"
                     } else {
                         "/*@T:" + repResultKind + "@*/((void)(" + elemValCode + "), lt_list_" + cTag + "_from(0, NULL))"
                     }
                 } else {
-                    "/*@T:" + repResultKind + "@*/lt_list_" + cTag + "_repeat(" + repeatCount.toText() + ", " + elemValCode + ")"
+                    baseRep := "/*@T:" + repResultKind + "@*/lt_list_" + cTag + "_repeat(" + repeatCount.toText() + ", " + repArgExpr + ")";
+                    if repHasCBlk {
+                        rVar := freshCOwnedTemp("lt_lr_");
+                        "/*@CBLK:" + rVar + "@*/lt_list_" + cTag + " " + rVar + "; { " + repUnwrapStmt + rVar + " = " + baseRep + "; }"
+                    } else { baseRep }
                 }
             } else {
                 tsElem := types.tsFunctionType(elementKind);
@@ -723,6 +776,33 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
         }
     }
     cursor = syntax.expectSymbol(source, cursor, "]", prefix);
+    var listHasCBlk := false;
+    mut listWrapStmts: List<String> = [];
+    mut listWrapExprs: List<String> = [];
+    if target == ir.TARGET_C and count > 0 {
+        var liChk := 0;
+        loop liChk < elementCodes.length() {
+            if elementCodes[liChk].startsWithAt(0, "/*@CBLK:") { listHasCBlk = true; break; }
+            liChk = liChk + 1;
+        }
+        if listHasCBlk {
+            var li := 0;
+            loop li < elementCodes.length() {
+                if elementCodes[li].startsWithAt(0, "/*@CBLK:") {
+                    lElVar := freshCOwnedTemp("lt_le_");
+                    mut listWrapStmts.pushBack(types.cValueType(elementKind) + " " + lElVar + "; " + ctx.cUnwrapIntoVar(lElVar, elementKind, elementCodes[li]) + " (void)" + lElVar + ";");
+                    mut listWrapExprs.pushBack(lElVar);
+                } else {
+                    mut listWrapExprs.pushBack(elementCodes[li]);
+                }
+                li = li + 1;
+            }
+        } else {
+            loop elementCodes as ec { mut listWrapExprs.pushBack(ec); }
+        }
+    } else {
+        loop elementCodes as ec { mut listWrapExprs.pushBack(ec); }
+    }
     if isSetTarget {
         if target == ir.TARGET_C {
             sTag := types.cSetTag(expected);
@@ -732,7 +812,11 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
             sCode := if count == 0 {
                 "/*@T:" + expected + "@*/" + sTag + "_from(0, NULL)"
             } else {
-                "/*@T:" + expected + "@*/" + sTag + "_from(" + count.toText() + ", (" + cArrType + "[]){" + elementCodes.join(", ") + "})"
+                baseS := "/*@T:" + expected + "@*/" + sTag + "_from(" + count.toText() + ", (" + cArrType + "[]){" + listWrapExprs.join(", ") + "})";
+                if listHasCBlk {
+                    rVar := freshCOwnedTemp("lt_lr_");
+                    "/*@CBLK:" + rVar + "@*/" + sTag + " " + rVar + "; { " + listWrapStmts.join(" ") + " " + rVar + " = " + baseS + "; }"
+                } else { baseS }
             };
             return ctx.withMarkers((kind = expected, code = sCode, intValue = 0, textValue = "", constant = false, next = cursor), listMarkers);
         }
@@ -754,21 +838,29 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
     listCode := if target == ir.TARGET_C and types.isArrayKind(resultKind) and types.cArrayTag(resultKind) =!= "" {
         aTag := types.cArrayTag(resultKind);
         elKind := types.arrayElementKind(resultKind);
-        if count == 0 {
+        baseA := if count == 0 {
             "((/*@T:" + resultKind + "@*/" + aTag + "){ 0 })"
         } else if numeric.isSubByteIntKind(elKind) {
-            "/*@T:" + resultKind + "@*/" + aTag + "_from((const " + types.cValueType(elKind) + "[]){ " + elementCodes.join(", ") + " })"
+            "/*@T:" + resultKind + "@*/" + aTag + "_from((const " + types.cValueType(elKind) + "[]){ " + listWrapExprs.join(", ") + " })"
         } else {
-            "((/*@T:" + resultKind + "@*/" + aTag + "){ { " + elementCodes.join(", ") + " } })"
-        }
+            "((/*@T:" + resultKind + "@*/" + aTag + "){ { " + listWrapExprs.join(", ") + " } })"
+        };
+        if listHasCBlk {
+            rVar := freshCOwnedTemp("lt_lr_");
+            "/*@CBLK:" + rVar + "@*/" + aTag + " " + rVar + "; { " + listWrapStmts.join(" ") + " " + rVar + " = " + baseA + "; }"
+        } else { baseA }
     } else if target == ir.TARGET_C and types.cListTag(elementKind) =!= "" {
         cTag := types.cListTag(elementKind);
-        if count == 0 {
+        baseL := if count == 0 {
             "lt_list_" + cTag + "_from(0, NULL)"
         } else {
             cArrType := "const " + types.cListElemType(cTag);
-            "lt_list_" + cTag + "_from(" + count.toText() + ", (" + cArrType + "[]){" + elementCodes.join(", ") + "})"
-        }
+            "lt_list_" + cTag + "_from(" + count.toText() + ", (" + cArrType + "[]){" + listWrapExprs.join(", ") + "})"
+        };
+        if listHasCBlk {
+            rVar := freshCOwnedTemp("lt_lr_");
+            "/*@CBLK:" + rVar + "@*/lt_list_" + cTag + " " + rVar + "; { " + listWrapStmts.join(" ") + " " + rVar + " = " + baseL + "; }"
+        } else { baseL }
     } else {
         "[" + elementCodes.join(", ") + "]"
     };
@@ -1648,6 +1740,21 @@ ensureRecordDefaults := fn(target: String, source: String, recordKind: String, p
     types.appendEncodedRecordDefaults(aliases, seedKey, parsedRec.encodedDefaults, aliasEntry.depth)
 };
 
+/** Replaces synthetic `__LT_RECFLD_<idx>__` references in a record field default with runtime temp names `rfVars`. */
+substituteRecFieldRefs := fn(code: String, rfVars: List<String>, compCount: Int): String {
+    if code.indexOf("__LT_RECFLD_", 0) < 0 { return code; }
+    var out := code;
+    var k := 0;
+    loop k < compCount {
+        needle := "__LT_RECFLD_" + k.toText() + "__";
+        if out.indexOf(needle, 0) >= 0 {
+            out = out.split(needle).join(rfVars[k]);
+        }
+        k = k + 1;
+    }
+    out
+};
+
 /** Parses `{ field = expr, ... }` or `{}` for an explicit or contextual nominal `recordKind`, resolving omitted fields from defaults then zero. */
 parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, recordKind: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     size := source.length();
@@ -1741,43 +1848,161 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
         return ctx.withMarkers((kind = recordKind, code = emptyRecCode, intValue = 0, textValue = "", constant = false, next = cursor), recMarkers);
     }
     encodedSupplied := types.encodeRecordPairs(suppliedKeys, suppliedCodes);
-    mut fieldExprs: List<String> = [];
+    mut compDefCodes: List<String> = [];
+    mut compSuppliedIdx: List<Int> = [];
+    mut suppliedCompIndices: List<Int> = [];
+    var needsScopedEval := false;
+    var supLoopIdx := 0;
+    var lastSupCompIdx := -1;
+    loop suppliedKeys as sKey {
+        var foundComp := -1;
+        var ci := 0;
+        loop ci < compCount {
+            if types.recordComponent(recordKind, ci).label == sKey {
+                foundComp = ci;
+                break;
+            }
+            ci = ci + 1;
+        }
+        mut suppliedCompIndices.pushBack(foundComp);
+        if foundComp < lastSupCompIdx { needsScopedEval = true; }
+        lastSupCompIdx = foundComp;
+        if target == ir.TARGET_C and suppliedCodes[supLoopIdx].indexOf("/*@CBLK:", 0) >= 0 {
+            needsScopedEval = true;
+        }
+        supLoopIdx = supLoopIdx + 1;
+    }
     var compIdx := 0;
     loop compIdx < compCount {
         comp := types.recordComponent(recordKind, compIdx);
-        var chosen := "";
-        var supIdx := 0;
-        var supFound := false;
+        var supFoundIdx := -1;
+        var si := 0;
         loop suppliedKeys as sKey {
-            if sKey == comp.label {
-                chosen = suppliedCodes[supIdx];
-                supFound = true;
-                break;
-            }
-            supIdx = supIdx + 1;
+            if sKey == comp.label { supFoundIdx = si; break; }
+            si = si + 1;
         }
-        if not supFound {
+        mut compSuppliedIdx.pushBack(supFoundIdx);
+        if supFoundIdx < 0 {
             defCode := types.findRecordDefaultCode(recAliases, recordKind, comp.label);
-            if defCode =!= "" {
-                chosen = defCode;
-            } else {
-                chosen = ctx.zeroParsed(target, comp.kind, cursor).code;
+            mut compDefCodes.pushBack(defCode);
+            if defCode.indexOf("__LT_RECFLD_", 0) >= 0 or (target == ir.TARGET_C and defCode.indexOf("/*@CBLK:", 0) >= 0) {
+                needsScopedEval = true;
             }
-        }
-        if cRecTag =!= "" {
-            mut fieldExprs.pushBack("." + types.cFieldName(comp.prop) + " = " + chosen);
         } else {
-            mut fieldExprs.pushBack(types.tupleObjectKey(comp.label, compIdx) + ": " + chosen);
+            mut compDefCodes.pushBack("");
+        }
+        compIdx = compIdx + 1;
+    }
+    if not needsScopedEval {
+        mut fieldExprs: List<String> = [];
+        compIdx = 0;
+        loop compIdx < compCount {
+            comp := types.recordComponent(recordKind, compIdx);
+            supIdx := compSuppliedIdx[compIdx];
+            chosen := if supIdx >= 0 {
+                suppliedCodes[supIdx]
+            } else if compDefCodes[compIdx] =!= "" {
+                compDefCodes[compIdx]
+            } else {
+                ctx.zeroParsed(target, comp.kind, cursor).code
+            };
+            if cRecTag =!= "" {
+                mut fieldExprs.pushBack("." + types.cFieldName(comp.prop) + " = " + chosen);
+            } else {
+                mut fieldExprs.pushBack(types.tupleObjectKey(comp.label, compIdx) + ": " + chosen);
+            }
+            compIdx = compIdx + 1;
+        }
+        _unused := encodedSupplied;
+        recCode := if cRecTag =!= "" {
+            "/*@T:" + recordKind + "@*/((" + cRecTag + "){ " + fieldExprs.join(", ") + " })"
+        } else {
+            "{ " + fieldExprs.join(", ") + " }"
+        };
+        return ctx.withMarkers((kind = recordKind, code = recCode, intValue = 0, textValue = "", constant = false, next = cursor), recMarkers);
+    }
+    recId := ctx.nextCtxId(ctxs) + braceStart;
+    mut rfVars: List<String> = [];
+    mut declBuf: tb.TextBuilder;
+    mut stmtBuf: tb.TextBuilder;
+    mut litFields: List<String> = [];
+    compIdx = 0;
+    loop compIdx < compCount {
+        comp := types.recordComponent(recordKind, compIdx);
+        rfVar := if target == ir.TARGET_C {
+            "lt_rf_" + recId.toText() + "_" + compIdx.toText()
+        } else {
+            "lite$rf" + recId.toText() + "_" + compIdx.toText()
+        };
+        mut rfVars.pushBack(rfVar);
+        if target == ir.TARGET_C {
+            mut declBuf.append(types.cValueType(comp.kind));
+            mut declBuf.append(" ");
+            mut declBuf.append(rfVar);
+            mut declBuf.append("; ");
+            mut litFields.pushBack("." + types.cFieldName(comp.prop) + " = " + rfVar);
+        } else {
+            tsTy := if types.needsTsTypeAnnotation(comp.kind) { ": " + types.tsFunctionType(comp.kind) } else { "" };
+            mut declBuf.append("let ");
+            mut declBuf.append(rfVar);
+            mut declBuf.append(tsTy);
+            mut declBuf.append("; ");
+            mut litFields.pushBack(types.tupleObjectKey(comp.label, compIdx) + ": " + rfVar);
+        }
+        compIdx = compIdx + 1;
+    }
+    /* 1. Evaluate all explicitly supplied fields in written order. */
+    var swIdx := 0;
+    loop swIdx < suppliedCompIndices.length() {
+        cTarget := suppliedCompIndices[swIdx];
+        cKind := types.recordComponent(recordKind, cTarget).kind;
+        rfTarget := rfVars[cTarget];
+        if target == ir.TARGET_C {
+            mut stmtBuf.append(ctx.cUnwrapIntoVar(rfTarget, cKind, suppliedCodes[swIdx]));
+            mut stmtBuf.append(" (void)");
+            mut stmtBuf.append(rfTarget);
+            mut stmtBuf.append("; ");
+        } else {
+            mut stmtBuf.append(rfTarget);
+            mut stmtBuf.append(" = ");
+            mut stmtBuf.append(suppliedCodes[swIdx]);
+            mut stmtBuf.append("; ");
+        }
+        swIdx = swIdx + 1;
+    }
+    /* 2. Evaluate all omitted fields in declaration order (dependent defaults first, else zero). */
+    compIdx = 0;
+    loop compIdx < compCount {
+        if compSuppliedIdx[compIdx] < 0 {
+            comp := types.recordComponent(recordKind, compIdx);
+            rfTarget := rfVars[compIdx];
+            omittedVal := if compDefCodes[compIdx] =!= "" {
+                substituteRecFieldRefs(compDefCodes[compIdx], rfVars, compCount)
+            } else {
+                ctx.zeroParsed(target, comp.kind, cursor).code
+            };
+            if target == ir.TARGET_C {
+                mut stmtBuf.append(ctx.cUnwrapIntoVar(rfTarget, comp.kind, omittedVal));
+                mut stmtBuf.append(" (void)");
+                mut stmtBuf.append(rfTarget);
+                mut stmtBuf.append("; ");
+            } else {
+                mut stmtBuf.append(rfTarget);
+                mut stmtBuf.append(" = ");
+                mut stmtBuf.append(omittedVal);
+                mut stmtBuf.append("; ");
+            }
         }
         compIdx = compIdx + 1;
     }
     _unused := encodedSupplied;
-    recCode := if cRecTag =!= "" {
-        "/*@T:" + recordKind + "@*/((" + cRecTag + "){ " + fieldExprs.join(", ") + " })"
+    scopedRecCode := if target == ir.TARGET_C {
+        ltRecVar := "lt_rec_" + recId.toText();
+        "/*@CBLK:" + ltRecVar + "@*/" + cRecTag + " " + ltRecVar + "; { " + declBuf.build() + stmtBuf.build() + ltRecVar + " = /*@T:" + recordKind + "@*/((" + cRecTag + "){ " + litFields.join(", ") + " }); }"
     } else {
-        "{ " + fieldExprs.join(", ") + " }"
+        "(((): " + types.tsFunctionType(recordKind) + " => { " + declBuf.build() + stmtBuf.build() + "return { " + litFields.join(", ") + " }; })())"
     };
-    ctx.withMarkers((kind = recordKind, code = recCode, intValue = 0, textValue = "", constant = false, next = cursor), recMarkers)
+    ctx.withMarkers((kind = recordKind, code = scopedRecCode, intValue = 0, textValue = "", constant = false, next = cursor), recMarkers)
 };
 
 /** Detects a leading `(...) :=`, `{...} :=`, `[...] :=` (or `var ...`) destructuring pattern, rejecting construction-shaped `Name {...} :=` headers. */
@@ -2136,6 +2361,13 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
     hasLocalShadow := index >= 0 and locals[index].depth >= -1;
     if hasLocalShadow {
         entry := locals[index];
+        if entry.textValue.startsWithAt(0, "$recfld_fwd:") {
+            restFwd := entry.textValue.slice(12, entry.textValue.length());
+            sepFwd := restFwd.indexOf(":", 0);
+            curFld := if sepFwd >= 0 { restFwd.slice(0, sepFwd) } else { "" };
+            refFld := if sepFwd >= 0 { restFwd.slice(sepFwd + 1, restFwd.length()) } else { name };
+            syntax.failAt(source, nameStart, prefix, "record field default for " + curFld + " cannot reference field " + refFld + " before it is initialized");
+        }
         if entry.initState =!= ir.INIT_STATE_INIT {
             syntax.failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
         }
@@ -2472,6 +2704,29 @@ emitPayloadEnumValue := fn(target: String, enumKind: String, caseIdx: Int, argCo
         tag := types.cStructTag(enumKind);
         if argCodes.length() == 0 {
             return "/*@T:" + enumKind + "@*/" + tag + "_mk_" + caseIdx.toText() + "()";
+        }
+        var hasCBlkArg := false;
+        loop argCodes as ac {
+            if ac.startsWithAt(0, "/*@CBLK:") { hasCBlkArg = true; break; }
+        }
+        if hasCBlkArg {
+            payloads := types.enumCasePayloads(enumKind, caseIdx);
+            mut eStmts: List<String> = [];
+            mut eVars: List<String> = [];
+            var pi := 0;
+            loop pi < argCodes.length() {
+                if argCodes[pi].startsWithAt(0, "/*@CBLK:") and pi < payloads.length() {
+                    epVar := freshCOwnedTemp("lt_ep_");
+                    pk := payloads[pi];
+                    mut eStmts.pushBack(types.cValueType(pk) + " " + epVar + "; " + ctx.cUnwrapIntoVar(epVar, pk, argCodes[pi]) + " (void)" + epVar + ";");
+                    mut eVars.pushBack(epVar);
+                } else {
+                    mut eVars.pushBack(argCodes[pi]);
+                }
+                pi = pi + 1;
+            }
+            eRet := freshCOwnedTemp("lt_er_");
+            return "/*@CBLK:" + eRet + "@*/" + tag + " " + eRet + "; { " + eStmts.join(" ") + " " + eRet + " = /*@T:" + enumKind + "@*/" + tag + "_mk_" + caseIdx.toText() + "(" + eVars.join(", ") + "); }";
         }
         return "/*@T:" + enumKind + "@*/" + tag + "_mk_" + caseIdx.toText() + "(" + argCodes.join(", ") + ")";
     }
@@ -3647,7 +3902,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 rawStmtIfEnd := syntax.scanRawIfChainEnd(source, itemStart, prefix, true);
                 afterRawStmtIf := if rawStmtIfEnd >= 0 { syntax.skipTrivia(source, rawStmtIfEnd, prefix) } else { -1 };
                 stmtIfHasThen := afterRawStmtIf >= 0 and (source.wordAt(afterRawStmtIf, "then") or source.wordAt(afterRawStmtIf, "finally"));
-                var useValueIf := stmtIfHasThen;
+                afterRawIfTailCheck := if rawStmtIfEnd >= 0 { syntax.skipItemSeparators(source, rawStmtIfEnd, prefix) } else { -1 };
+                isLoopTailPatternIf := isLoopBody and afterRawIfTailCheck >= 0 and afterRawIfTailCheck < blockSourceSize and source.at(afterRawIfTailCheck) == "}";
+                var useValueIf := stmtIfHasThen or (syntax.ifChainHasPattern(source, itemStart, prefix) and not isLoopTailPatternIf);
                 if (not isStmtBody) and not useValueIf {
                     valIfEnd := syntax.scanValueIfEnd(source, itemStart, prefix, false);
                     if valIfEnd >= 0 {
@@ -3668,11 +3925,57 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     var hasElseBranch := false;
                     var ifCursor := afterItemName;
                     var isFirstIf := true;
+                    var brIdxLoop := 0;
                     ifBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = ir.CTX_KIND_IF, phase = ir.CTX_PHASE_BODY,
                     iifeDepth = bodyDepth, valKind = ir.VALUE_KIND_UNIT, valVar = "", label = "", iterLabel = "",
                     countVar = "", itemVar = "", itemKind = "", indexVar = "", hasIndex = false, colVar = ""));
+                    var patChainFlagVar := "";
+                    var isPatLoopChain := syntax.ifChainHasPattern(source, itemStart, prefix);
+                    if isPatLoopChain {
+                        patFlagId := ctx.nextCtxId(ctxs) + itemStart;
+                        patChainFlagVar = if target == ir.TARGET_C { "lt_ifm_" + patFlagId.toText() } else { "lite$ifm" + patFlagId.toText() };
+                        mut ifPartsBuf.append(if target == ir.TARGET_C { "bool " + patChainFlagVar + " = false; (void)" + patChainFlagVar + "; " } else { "let " + patChainFlagVar + ": boolean = false; void " + patChainFlagVar + "; " });
+                    }
                     loop true {
                         syntax.rejectHeaderBlockTag(source, ifCursor, prefix, if isFirstIf { "if" } else { "else if" });
+                        if isPatLoopChain {
+                            fnCtxIdxLP := if target == ir.TARGET_C { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
+                            fnRetKLP := if fnCtxIdxLP >= 0 { ctxs[fnCtxIdxLP].valKind } else { "" };
+                            patBr := parseIfPatternBranch(target, source, ifCursor, itemStart, brIdxLoop, prefix, blockLocals, functions, params, currentName, ifBranchExpected, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
+                            if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, patBr.branch); blockMarkers = blockMarkers + patBr.markers; }
+                            if patBr.branch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
+                            wrappedBr := wrapPatternIfClauses(target, patBr.clauses, patChainFlagVar + " = true; " + patBr.branch.code, fnRetKLP, ifCursor);
+                            if brIdxLoop == 0 {
+                                mut ifPartsBuf.append(wrappedBr);
+                            } else {
+                                mut ifPartsBuf.append(" if (!" + patChainFlagVar + ") " + wrappedBr);
+                            }
+                            ifCursor = patBr.next;
+                            brIdxLoop = brIdxLoop + 1;
+                            isFirstIf = false;
+                            afterBranch := syntax.skipTrivia(source, ifCursor, prefix);
+                            if afterBranch < blockSourceSize and source.wordAt(afterBranch, "else") {
+                                afterElse := syntax.skipTrivia(source, afterBranch + 4, prefix);
+                                syntax.rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
+                                if afterElse < blockSourceSize and source.wordAt(afterElse, "if") {
+                                    ifCursor = syntax.skipTrivia(source, afterElse + 2, prefix);
+                                } else {
+                                    hasElseBranch = true;
+                                    elseOpen := syntax.expectSymbol(source, afterElse, "{", prefix);
+                                    elseBranch := parseBinaryCtx(target, source, elseOpen - 1, prefix, blockLocals, functions, params, currentName, ifBranchExpected, 0, ifBarrierCtxs, bodyDepth, inferMode, ifBranchSink, blockAliases);
+                                    if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, elseBranch); }
+                                    if elseBranch.kind =!= ir.VALUE_KIND_NEVER { allBranchesExit = false; }
+                                    mut ifPartsBuf.append(" if (!" + patChainFlagVar + ") { ");
+                                    mut ifPartsBuf.append(elseBranch.code);
+                                    mut ifPartsBuf.append(" }");
+                                    ifCursor = elseBranch.next;
+                                    break;
+                                }
+                            } else {
+                                break;
+                            }
+                            continue;
+                        }
                         condParsed := parseBinaryCtx(target, source, ifCursor, prefix, blockLocals, functions, params, currentName, "", 0, ifBarrierCtxs, bodyDepth, inferMode, "", blockAliases);
                         if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, condParsed); }
                         if condParsed.kind =!= ir.VALUE_KIND_BOOL {
@@ -4878,6 +5181,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             else if isFnBody and types.isListKind(expected) { itemExpected = "Tail" + expected; }
             itemSink := if (not isStmtBody) and allowOutput and itemAtClose { "exprOut" } else { "" };
             itemMinimum := if isStmtBody or (not itemAtClose) or minimum == -2 or
+            (isFnBody and expected == ir.VALUE_KIND_UNIT) or
             (isLoopBody and (expected == "" or expected == ir.VALUE_KIND_UNIT)) { -2 } else { 0 };
             expr := parseBinaryCtx(target, source, cursor, prefix, blockLocals, functions, params, currentName, itemExpected, itemMinimum, ctxs, bodyDepth, inferMode, itemSink, blockAliases);
             if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, expr); }
@@ -7560,6 +7864,215 @@ pub parseSubjectMatchStmt := fn(target: String, source: String, matchStart: Int,
     ctx.withMarkers((kind = res.kind, code = stmtCode, intValue = 0, textValue = "", constant = false, next = res.next), res.markers)
 };
 
+/** Parsed single `and`-separated clause inside an `if` condition header containing pattern bindings. */
+IfPatternClause := record {
+    isPat: Bool;
+    condCode: String;
+    srcDecl: String;
+    srcDrop: String;
+    patDecls: String;
+    patAssigns: String;
+    patVoids: String;
+    isCOr: Bool;
+};
+
+/** Wraps `innerBodyStmt` in the short-circuiting clause chain (`clauses`) with C11 source drop cleanup on normal and early exits. */
+wrapPatternIfClauses := fn(target: String, clauses: List<IfPatternClause>, innerBodyStmt: String, fnRetKind: String, exitPos: Int): String {
+    var wrapped := innerBodyStmt;
+    var ci := clauses.length() - 1;
+    loop ci >= 0 {
+        cl := clauses[ci];
+        if not cl.isPat {
+            condExpr := if target == ir.TARGET_C { cl.condCode } else { "Boolean(" + cl.condCode + ")" };
+            wrapped = "if (" + condExpr + ") { " + wrapped + " }";
+        } else {
+            safeInner := if target == ir.TARGET_C and cl.srcDrop =!= "" {
+                ctx.cRewriteExitDrops(wrapped, cl.srcDrop, cl.srcDrop, fnRetKind, exitPos + ci)
+            } else {
+                wrapped
+            };
+            if cl.isCOr {
+                corCode := cl.condCode.slice(9, cl.condCode.length());
+                wrapped = "{ " + cl.srcDecl + cl.patDecls + corCode + "if (lt_or) { " + cl.patAssigns + cl.patVoids + safeInner + " } " + cl.srcDrop + "}";
+            } else if cl.condCode == "true" {
+                wrapped = "{ " + cl.srcDecl + cl.patDecls + cl.patAssigns + cl.patVoids + safeInner + " " + cl.srcDrop + "}";
+            } else if cl.condCode == "false" {
+                wrapped = "{ " + cl.srcDecl + "(void)0; " + cl.srcDrop + "}";
+            } else {
+                pExpr := if target == ir.TARGET_C { cl.condCode } else { "Boolean(" + cl.condCode + ")" };
+                wrapped = "{ " + cl.srcDecl + cl.patDecls + "if (" + pExpr + ") { " + cl.patAssigns + cl.patVoids + safeInner + " } " + cl.srcDrop + "}";
+            }
+        }
+        ci = ci - 1;
+    }
+    wrapped
+};
+
+/** Result of parsing one `if` / `else if` header + branch with pattern `:=` clauses and `and` guards. */
+IfPatternBranchRes := record {
+    clauses: List<IfPatternClause>;
+    branch: Parsed;
+    markers: String;
+    next: Int;
+};
+
+/** Parses one `if` / `else if` header with `:=` pattern clauses + `and` guards and its branch body in a branch-scoped local table. */
+parseIfPatternBranch := fn(target: String, source: String, condStart: Int, condId: Int, brIdx: Int, prefix: String, baseLocals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, passExpected: String, ctxs: List<ConstructCtx>, condDepth: Int, inferMode: Bool, bodySink: String, aliases: List<AliasDecl>): IfPatternBranchRes {
+    isCTarget := target == ir.TARGET_C;
+    openBrace := syntax.scanIfHeaderOpen(source, condStart, prefix);
+    if openBrace < 0 or openBrace == condStart {
+        syntax.failAt(source, condStart, prefix, "expected { after if condition");
+    }
+    mut clauses: List<IfPatternClause> = [];
+    var markers := "";
+    mut branchLocals: List<Local> = baseLocals;
+    mut seenPatNames: List<String> = [];
+    armDepth := ir.maxLocalLexDepth(baseLocals) + 1;
+    brLocMark := sym.localMark();
+    var clCursor := syntax.skipTrivia(source, condStart, prefix);
+    var clIdx := 0;
+    loop clCursor < openBrace {
+        andPos := syntax.scanIfCondAndSplit(source, clCursor, openBrace, prefix);
+        clEnd := if andPos >= 0 { andPos } else { openBrace };
+        clSource := source.slice(0, clEnd);
+        bindPos := syntax.scanIfCondBindOp(source, clCursor, clEnd, prefix);
+        if bindPos >= 0 {
+            patStart := syntax.skipTrivia(source, clCursor, prefix);
+            if patStart >= bindPos {
+                syntax.failAt(source, clCursor, prefix, "expected pattern before := in if condition");
+            }
+            if source.at(patStart).isNameStart() {
+                pEnd0 := source.skipName(patStart);
+                pAfter0 := syntax.skipTrivia(source, pEnd0, prefix);
+                if pAfter0 < bindPos and source.at(pAfter0) == ":" {
+                    syntax.failAt(source, patStart, prefix, "typed binding pattern in if requires a destructuring pattern; use a declaration instead");
+                }
+            }
+            rhsStart := syntax.skipTrivia(clSource, bindPos + 2, prefix);
+            rhs := parseBinaryCtx(target, clSource, rhsStart, prefix, branchLocals, functions, params, currentName, "", 0, ctxs, condDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, rhs); }
+            afterRhs := syntax.skipTrivia(source, rhs.next, prefix);
+            if afterRhs < clEnd {
+                syntax.failAt(source, afterRhs, prefix, "unexpected token in if condition");
+            }
+            if rhs.kind == ir.VALUE_KIND_UNIT or rhs.kind == ir.VALUE_KIND_NEVER {
+                syntax.failAt(source, rhsStart, prefix, "if pattern source cannot be " + types.displayKind(rhs.kind));
+            }
+            srcVar := if isCTarget {
+                "lt_ifp_" + condId.toText() + "_" + brIdx.toText() + "_" + clIdx.toText()
+            } else {
+                "lite$ifp" + condId.toText() + "_" + brIdx.toText() + "_" + clIdx.toText()
+            };
+            srcDecl := if isCTarget {
+                types.cValueType(rhs.kind) + " " + srcVar + "; " + ctx.cUnwrapIntoVar(srcVar, rhs.kind, rhs.code) + " (void)" + srcVar + "; "
+            } else {
+                "const " + srcVar + (if types.needsTsTypeAnnotation(rhs.kind) { ": " + types.tsFunctionType(rhs.kind) } else { "" }) + " = " + rhs.code + "; void " + srcVar + "; "
+            };
+            srcIsFreshOwned := isCTarget and types.cDropFnForKind(rhs.kind) =!= "" and
+            (ctx.isCFreshOwnedExpr(rhs.code) or rhs.code.startsWithAt(0, "/*@T:") or rhs.code.startsWithAt(0, "/*@CBLK:"));
+            srcDrop := if srcIsFreshOwned { types.cDropFnForKind(rhs.kind) + "(&" + srcVar + "); " } else { "" };
+            rhsNonConst := (kind = rhs.kind, code = srcVar, intValue = 0, textValue = "", constant = false, next = 0);
+            pat := parseMatchPattern(target, source.slice(0, bindPos), patStart, prefix, rhs.kind, srcVar, rhsNonConst, branchLocals, functions, params, currentName, ctxs, condDepth, inferMode, aliases, armDepth);
+            if inferMode { markers = markers + pat.markers; }
+            afterPat := syntax.skipTrivia(source, pat.next, prefix);
+            if afterPat =!= bindPos {
+                syntax.failAt(source, afterPat, prefix, "expected := after pattern in if condition");
+            }
+            mut declStmtsBuf: tb.TextBuilder;
+            mut assignStmtsBuf: tb.TextBuilder;
+            mut voidStmtsBuf: tb.TextBuilder;
+            bSize := pat.bindings.length();
+            var bPos := 0;
+            loop bPos < bSize {
+                nl := pat.bindings.indexOf("\n", bPos);
+                lineEnd := if nl < 0 { bSize } else { nl };
+                t1 := pat.bindings.indexOf("\t", bPos);
+                t2 := if t1 >= 0 { pat.bindings.indexOf("\t", t1 + 1) } else { -1 };
+                if t1 > bPos and t2 > t1 and t2 < lineEnd {
+                    bName := pat.bindings.slice(bPos, t1);
+                    bKind := pat.bindings.slice(t1 + 1, t2);
+                    bExpr := pat.bindings.slice(t2 + 1, lineEnd);
+                    if seenPatNames.contains(bName) {
+                        syntax.failAt(source, patStart, prefix, "duplicate pattern binding " + bName + " in if condition");
+                    }
+                    mut seenPatNames.pushBack(bName);
+                    bRt := ir.localRuntimeName(target, branchLocals, bName, "", armDepth);
+                    if isCTarget {
+                        bCType := types.cValueType(bKind);
+                        mut declStmtsBuf.append(bCType);
+                        mut declStmtsBuf.append(" ");
+                        mut declStmtsBuf.append(bRt);
+                        if bExpr == "" {
+                            mut declStmtsBuf.append(" = ");
+                            mut declStmtsBuf.append(ctx.zeroParsed(ir.TARGET_C, bKind, 0).code);
+                            mut declStmtsBuf.append("; ");
+                        } else {
+                            mut declStmtsBuf.append("; ");
+                            mut assignStmtsBuf.append(bRt);
+                            mut assignStmtsBuf.append(" = ");
+                            mut assignStmtsBuf.append(bExpr);
+                            mut assignStmtsBuf.append("; ");
+                        }
+                        mut voidStmtsBuf.append("(void)");
+                        mut voidStmtsBuf.append(bRt);
+                        mut voidStmtsBuf.append("; ");
+                    } else {
+                        bTsType := types.tsFunctionType(bKind);
+                        mut declStmtsBuf.append("let ");
+                        mut declStmtsBuf.append(bRt);
+                        mut declStmtsBuf.append("!: ");
+                        mut declStmtsBuf.append(bTsType);
+                        mut declStmtsBuf.append("; ");
+                        if bExpr =!= "" {
+                            mut assignStmtsBuf.append(bRt);
+                            mut assignStmtsBuf.append(" = ");
+                            mut assignStmtsBuf.append(bExpr);
+                            mut assignStmtsBuf.append("; ");
+                        }
+                        mut voidStmtsBuf.append("void ");
+                        mut voidStmtsBuf.append(bRt);
+                        mut voidStmtsBuf.append("; ");
+                    }
+                    mut branchLocals.pushBack((name = bName, runtime = bRt, kind = bKind, mutable = false, writable = false,
+                    depth = armDepth, constant = false, code = bRt, intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+                }
+                bPos = lineEnd + 1;
+            }
+            patCond0 := if pat.cond == "" { "true" } else { pat.cond };
+            isCOrPat := isCTarget and patCond0.startsWithAt(0, "/*@COR@*/");
+            mut clauses.pushBack(IfPatternClause { isPat = true, condCode = patCond0, srcDecl = srcDecl, srcDrop = srcDrop,
+            patDecls = declStmtsBuf.build(), patAssigns = assignStmtsBuf.build(), patVoids = voidStmtsBuf.build(), isCOr = isCOrPat });
+        } else {
+            gStart := syntax.skipTrivia(clSource, clCursor, prefix);
+            if gStart >= clEnd {
+                syntax.failAt(source, clCursor, prefix, "expected Bool condition in if");
+            }
+            guard := parseBinaryCtx(target, clSource, gStart, prefix, branchLocals, functions, params, currentName, "", 0, ctxs, condDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, guard); }
+            if guard.kind =!= ir.VALUE_KIND_BOOL {
+                syntax.failAt(source, gStart, prefix, "if condition must be Bool");
+            }
+            afterG := syntax.skipTrivia(source, guard.next, prefix);
+            if afterG < clEnd {
+                syntax.failAt(source, afterG, prefix, "unexpected token in if condition");
+            }
+            gCode := if guard.constant { ir.targetBoolLiteralCode(target, guard.intValue =!= 0) } else { guard.code };
+            mut clauses.pushBack(IfPatternClause { isPat = false, condCode = gCode, srcDecl = "", srcDrop = "", patDecls = "", patAssigns = "", patVoids = "", isCOr = false });
+        }
+        if andPos < 0 { break; }
+        clCursor = syntax.skipTrivia(source, andPos + 3, prefix);
+        if clCursor >= openBrace {
+            syntax.failAt(source, andPos, prefix, "expected condition after and");
+        }
+        clIdx = clIdx + 1;
+    }
+    syntax.rejectMisplacedTag(source, openBrace, prefix, "block tag cannot appear before { in if");
+    branch := parseBinaryCtx(target, source, openBrace, prefix, branchLocals, functions, params, currentName, passExpected, 0, ctxs, condDepth, inferMode, bodySink, aliases);
+    sym.rewindLocalsTo(brLocMark);
+    if inferMode { markers = ctx.collectParsedMarkers(markers, branch); }
+    IfPatternBranchRes { = clauses, = branch, = markers, next = branch.next }
+};
+
 /** Parses `[@tag] if ... [else ...]` and `[@tag] match [subject] { ... }` value expressions with optional `then` and `finally`. */
 parseCondExpr := fn(target: String, source: String, condParseKind: String, condParseStart: Int, condParseTag: String, condParseTagAt: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, minimum: Int, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     isSubjectMatch := if condParseKind == ir.CTX_KIND_MATCH {
@@ -7579,7 +8092,8 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
     afterOptThen := if hasActualThen { syntax.scanTrailingThenEnd(source, rawCondEnd, prefix, false) } else { rawCondEnd };
     afterOptThenTrivia := if afterOptThen >= 0 { syntax.skipTrivia(source, afterOptThen, prefix) } else { -1 };
     hasActualFinally := afterOptThenTrivia >= 0 and source.wordAt(afterOptThenTrivia, "finally");
-    useIifeCond := condParseTag =!= "" or hasActualThen or hasActualFinally;
+    hasPatternIf := condParseKind == ir.CTX_KIND_IF and syntax.ifChainHasPattern(source, condParseStart, prefix);
+    useIifeCond := condParseTag =!= "" or hasActualThen or hasActualFinally or hasPatternIf;
     if not useIifeCond {
         isComptimeExpr := sym.localIndex(locals, "$comptimeActive") >= 0;
         condBarrierCtxs := ctx.appendCtx(ctxs, (id = 0, tag = "", kind = condParseKind, phase = ir.CTX_PHASE_BODY,
@@ -7917,9 +8431,91 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         var passHasElse := false;
         var passPartialNoElseAt := -1;
         var passSubjectStmt := "";
+        var passPatStmt := "";
         var cursor := 0;
         isComptimeIife := sym.localIndex(locals, "$comptimeActive") >= 0;
-        if condParseKind == ir.CTX_KIND_IF {
+        if condParseKind == ir.CTX_KIND_IF and hasPatternIf {
+            fnCtxIdxPat := if isCCond { ctx.findCtxByKindIndex(ctxs, "fn") } else { -1 };
+            fnRetKPat := if fnCtxIdxPat >= 0 { ctxs[fnCtxIdxPat].valKind } else { "" };
+            patFlagVar := if isCCond { "lt_ifm_" + condId.toText() } else { "lite$ifm" + condId.toText() };
+            mut patChainBuf: tb.TextBuilder;
+            if not isPass1 {
+                mut patChainBuf.append(if isCCond { "bool " + patFlagVar + " = false; (void)" + patFlagVar + "; " } else { "let " + patFlagVar + ": boolean = false; void " + patFlagVar + "; " });
+            }
+            cursor = syntax.skipTrivia(source, condParseStart + 2, prefix);
+            syntax.rejectHeaderBlockTag(source, cursor, prefix, "if");
+            brRes0 := parseIfPatternBranch(target, source, cursor, condId, 0, prefix, locals, functions, params, currentName, passBranchExpected, condPassCtxs, condDepth, passInfer, "branch", aliases);
+            if passInfer { passMarkers = passMarkers + brRes0.markers; }
+            cursor = brRes0.next;
+            mut passBranchCodes.pushBack(brRes0.branch.code);
+            mut passBranchKinds.pushBack(brRes0.branch.kind);
+            passResultKind = brRes0.branch.kind;
+            passBranchCount = 1;
+            if not isPass1 {
+                stmtPart0 := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, brRes0.branch.kind, brRes0.branch.code);
+                mut patChainBuf.append(wrapPatternIfClauses(target, brRes0.clauses, patFlagVar + " = true; " + stmtPart0, fnRetKPat, condParseStart));
+            }
+            var patBrIdx := 1;
+            loop true {
+                afterBranch := syntax.skipTrivia(source, cursor, prefix);
+                if not source.wordAt(afterBranch, "else") {
+                    if hasActualThen or minimum >= 0 {
+                        syntax.failAt(source, afterBranch, prefix, "value if requires a final else");
+                    }
+                    if not passHasElse {
+                        passPartialNoElseAt = afterBranch;
+                    }
+                    break;
+                }
+                afterElse := syntax.skipTrivia(source, afterBranch + 4, prefix);
+                syntax.rejectMisplacedTag(source, afterElse, prefix, "block tag cannot appear after else");
+                if source.wordAt(afterElse, "if") {
+                    elseCondStart := syntax.skipTrivia(source, afterElse + 2, prefix);
+                    syntax.rejectHeaderBlockTag(source, elseCondStart, prefix, "else if");
+                    brResI := parseIfPatternBranch(target, source, elseCondStart, condId, patBrIdx, prefix, locals, functions, params, currentName, passBranchExpected, condPassCtxs, condDepth, passInfer, "branch", aliases);
+                    if passInfer { passMarkers = passMarkers + brResI.markers; }
+                    joinedKind := types.joinBranchKind(passResultKind, brResI.branch.kind);
+                    if joinedKind == "" {
+                        syntax.failAt(source, elseCondStart, prefix, "value if branches must have the same kind, got " +
+                        types.displayKind(passResultKind) + " and " + types.displayKind(brResI.branch.kind));
+                    }
+                    passResultKind = joinedKind;
+                    cursor = brResI.next;
+                    mut passBranchCodes.pushBack(brResI.branch.code);
+                    mut passBranchKinds.pushBack(brResI.branch.kind);
+                    passBranchCount = passBranchCount + 1;
+                    if not isPass1 {
+                        stmtPartI := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, brResI.branch.kind, brResI.branch.code);
+                        mut patChainBuf.append(" if (!" + patFlagVar + ") " + wrapPatternIfClauses(target, brResI.clauses, patFlagVar + " = true; " + stmtPartI, fnRetKPat, elseCondStart));
+                    }
+                    patBrIdx = patBrIdx + 1;
+                } else {
+                    open := syntax.expectSymbol(source, afterElse, "{", prefix);
+                    passHasElse = true;
+                    elseBranchStart := syntax.skipTrivia(source, open, prefix);
+                    branch := parseBinaryCtx(target, source, open - 1, prefix, locals, functions, params, currentName, passBranchExpected, 0, condPassCtxs, condDepth, passInfer, "branch", aliases);
+                    if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, branch); }
+                    joinedKind := types.joinBranchKind(passResultKind, branch.kind);
+                    if joinedKind == "" {
+                        syntax.failAt(source, elseBranchStart, prefix, "value if branches must have the same kind, got " +
+                        types.displayKind(passResultKind) + " and " + types.displayKind(branch.kind));
+                    }
+                    passResultKind = joinedKind;
+                    cursor = branch.next;
+                    mut passBranchCodes.pushBack(branch.code);
+                    mut passBranchKinds.pushBack(branch.kind);
+                    passBranchCount = passBranchCount + 1;
+                    if not isPass1 {
+                        elsePart := ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, branch.kind, branch.code);
+                        mut patChainBuf.append(" if (!" + patFlagVar + ") { " + elsePart + " }");
+                    }
+                    break;
+                }
+            }
+            if not isPass1 {
+                passPatStmt = patChainBuf.build();
+            }
+        } else if condParseKind == ir.CTX_KIND_IF {
             cursor = syntax.skipTrivia(source, condParseStart + 2, prefix);
             syntax.rejectHeaderBlockTag(source, cursor, prefix, "if");
             condStart0 := cursor;
@@ -8190,6 +8786,8 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             var rawIfStmt := "";
             if isSubjectMatch {
                 rawIfStmt = passSubjectStmt;
+            } else if condParseKind == ir.CTX_KIND_IF and hasPatternIf {
+                rawIfStmt = passPatStmt;
             } else if condParseKind == ir.CTX_KIND_MATCH and passBranchCount == 1 and passHasElse {
                 rawIfStmt = ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[0], passBranchCodes[0]);
             } else {
@@ -9277,8 +9875,20 @@ emitZeroCopySliceExpr := fn(target: String, errPos: Int, recvKind: String, recvC
     "lite$sliceFrom(" + recvCode + ", " + startCode + ", " + endArg + ", " + hasEndArg + ", " + indexStart.toText() + ")"
 };
 
+/** True when calling `calleeRuntime` could directly or transitively mutate a module-level `mut` binding. */
+calleeCanMutateGlobals := fn(isModuleFn: Bool, calleeRuntime: String, calleeCtxKind: String): Bool {
+    if not isModuleFn { return true; }
+    if calleeCtxKind =!= "" { return true; }
+    if calleeRuntime.startsWithAt(0, "$gen:") {
+        tIdx := generics.findTemplate(calleeRuntime.slice(5, calleeRuntime.length()));
+        if tIdx < 0 { return true; }
+        return contexts.moduleHasMutGlobals(generics.getTemplate(tIdx).moduleKey);
+    }
+    contexts.runtimeHasMutGlobals(calleeRuntime)
+};
+
 /** True when passing `argCode` to a read-only parameter requires a snapshot (C11 CoW RC bump or TS clone) to guard against aliasing or mutation during the call. */
-readOnlyArgNeedsSnapshot := fn(argCode: String, locals: List<Local>, mutArgRuntimes: List<String>, hasClosureHazard: Bool): Bool {
+readOnlyArgNeedsSnapshot := fn(argCode: String, locals: List<Local>, mutArgRuntimes: List<String>, hasClosureHazard: Bool, calleeMutGlobalHazard: Bool): Bool {
     var locIdx := findLocalIndexByRuntime(locals, argCode);
     if locIdx < 0 {
         rootIdent := extractFieldChainRootIdent(argCode);
@@ -9293,7 +9903,7 @@ readOnlyArgNeedsSnapshot := fn(argCode: String, locals: List<Local>, mutArgRunti
     loc := locals[locIdx];
     if not loc.writable { return false; }
     if loc.depth <= 0 { return true; }
-    if loc.code == loc.runtime { return true; }
+    if loc.code == loc.runtime and calleeMutGlobalHazard { return true; }
     if mutArgRuntimes.contains(loc.runtime) { return true; }
     selfIdx := sym.localIndex(locals, "$self");
     if selfIdx >= 0 and loc.depth < locals[selfIdx].depth { return true; }
@@ -10971,13 +11581,16 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     var callHasFnArg := not isModuleFn;
     var ckIdx := 0;
     loop ckIdx < entryCount {
-        if types.containsFnKind(entryKinds[ckIdx]) {
+        ek := entryKinds[ckIdx];
+        ekBase := if ek.startsWithAt(0, "mut ") { ek.slice(4, ek.length()) } else { ek };
+        if types.containsFnKind(ek) or types.isDynKind(ekBase) {
             callHasFnArg = true;
             break;
         }
         ckIdx += 1;
     }
     callClosureHazard := callHasFnArg or localsHasLocalClosure(locals);
+    calleeMutGlobalHazard := calleeCanMutateGlobals(isModuleFn, effRuntime, effCtxKind);
     recvExpectedKind := if hasRecv {
         if isGenericCall { substRecvKind }
         else if callFirst > 0 { types.paramKindOf(callParams[callFirst - 1]) }
@@ -11019,7 +11632,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             } else if argExpected.startsWithAt(0, "mut ") {
                 entryCodes[pIdx]
             } else {
-                needsSnap := readOnlyArgNeedsSnapshot(entryCodes[pIdx], locals, mutArgRuntimes, callClosureHazard);
+                needsSnap := readOnlyArgNeedsSnapshot(entryCodes[pIdx], locals, mutArgRuntimes, callClosureHazard, calleeMutGlobalHazard);
                 ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[pIdx], entryCodes[pIdx], needsSnap)
             };
             if target == ir.TARGET_C {
@@ -11088,7 +11701,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             } else if argExpected.startsWithAt(0, "mut ") {
                 entryCodes[k]
             } else {
-                needsSnap := readOnlyArgNeedsSnapshot(entryCodes[k], locals, mutArgRuntimes, callClosureHazard);
+                needsSnap := readOnlyArgNeedsSnapshot(entryCodes[k], locals, mutArgRuntimes, callClosureHazard, calleeMutGlobalHazard);
                 ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[k], entryCodes[k], needsSnap)
             };
             if target == ir.TARGET_C {
@@ -11159,7 +11772,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                     } else if argExpected.startsWithAt(0, "mut ") {
                         entryCodes[kIdx]
                     } else {
-                        needsSnap := readOnlyArgNeedsSnapshot(entryCodes[kIdx], locals, mutArgRuntimes, callClosureHazard);
+                        needsSnap := readOnlyArgNeedsSnapshot(entryCodes[kIdx], locals, mutArgRuntimes, callClosureHazard, calleeMutGlobalHazard);
                         ctx.readOnlyArgWithSnapshot(target, argExpected, entryKinds[kIdx], entryCodes[kIdx], needsSnap)
                     };
                     mut evalStmts.pushBack("const " + temp + " = " + argRhs + ";");
@@ -13044,14 +13657,16 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
         var rpIdx := 1;
         loop rpIdx < info.count {
             rpKind := types.paramKindOf(params[info.first + rpIdx]);
-            if rpKind.startsWithAt(0, "mut ") or types.containsFnKind(rpKind) {
+            rpBase := if rpKind.startsWithAt(0, "mut ") { rpKind.slice(4, rpKind.length()) } else { rpKind };
+            if rpKind.startsWithAt(0, "mut ") or types.containsFnKind(rpKind) or types.isDynKind(rpBase) {
                 recvParamHazard = true;
                 break;
             }
             rpIdx += 1;
         }
         emptyMutRts: List<String> = [];
-        recvNeedsSnap := readOnlyArgNeedsSnapshot(receiver.code, locals, emptyMutRts, recvParamHazard);
+        recvMutGlobalHazard := calleeCanMutateGlobals(true, info.runtime, contexts.fnContextFor(info.runtime));
+        recvNeedsSnap := readOnlyArgNeedsSnapshot(receiver.code, locals, emptyMutRts, recvParamHazard, recvMutGlobalHazard);
         recvCode = ctx.readOnlyArgWithSnapshot(target, concreteRecvExpected, receiver.kind, receiver.code, recvNeedsSnap);
     }
     calleeDisp := types.displayKind(receiver.kind) + "." + opLabel;
@@ -13648,15 +14263,16 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 next := syntax.expectSymbol(source, close, "]", prefix);
                 emptyHookMutRts: List<String> = [];
                 hookClosureHazard := localsHasLocalClosure(locals);
+                hookMutGlobalHazard := calleeCanMutateGlobals(true, getHook.runtime, contexts.fnContextFor(getHook.runtime));
                 recvCode := if getHook.runtime.startsWithAt(0, "lite$") {
                     left.code
                 } else {
-                    ctx.readOnlyArgWithSnapshot(target, left.kind, left.kind, left.code, readOnlyArgNeedsSnapshot(left.code, locals, emptyHookMutRts, hookClosureHazard))
+                    ctx.readOnlyArgWithSnapshot(target, left.kind, left.kind, left.code, readOnlyArgNeedsSnapshot(left.code, locals, emptyHookMutRts, hookClosureHazard, hookMutGlobalHazard))
                 };
                 kCode := if getHook.runtime.startsWithAt(0, "lite$") {
                     ctx.assignValueCode(target, getHook.keyKind, key.kind, key.code)
                 } else {
-                    ctx.readOnlyArgWithSnapshot(target, getHook.keyKind, key.kind, key.code, readOnlyArgNeedsSnapshot(key.code, locals, emptyHookMutRts, hookClosureHazard))
+                    ctx.readOnlyArgWithSnapshot(target, getHook.keyKind, key.kind, key.code, readOnlyArgNeedsSnapshot(key.code, locals, emptyHookMutRts, hookClosureHazard, hookMutGlobalHazard))
                 };
                 var hkCode := emitHookIndexReadCode(target, indexStart, left.kind, recvCode, getHook.runtime, kCode);
                 if target == ir.TARGET_C and not getHook.runtime.startsWithAt(0, "lite$") {
@@ -13712,7 +14328,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     };
                     emptyRangeMutRts: List<String> = [];
                     rngClosureHazard := localsHasLocalClosure(locals);
-                    recvCode := ctx.readOnlyArgWithSnapshot(target, left.kind, left.kind, left.code, readOnlyArgNeedsSnapshot(left.code, locals, emptyRangeMutRts, rngClosureHazard));
+                    rngMutGlobalHazard := calleeCanMutateGlobals(true, rangeIdx.runtime, contexts.fnContextFor(rangeIdx.runtime));
+                    recvCode := ctx.readOnlyArgWithSnapshot(target, left.kind, left.kind, left.code, readOnlyArgNeedsSnapshot(left.code, locals, emptyRangeMutRts, rngClosureHazard, rngMutGlobalHazard));
                     var rngCode := emitHookIndexReadCode(target, bounds.indexStart, left.kind, recvCode, rangeIdx.runtime, rangeExpr);
                     if target == ir.TARGET_C {
                         mut rngDrops: List<String> = [];
@@ -14457,7 +15074,19 @@ pub parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: 
             sym.rewindAliasesTo(blkAliasMark);
         }
     } else if ch.isNameStart() {
-        left = parseNamedPrimaryExpr(target, source, start, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, aliases);
+        if bodySink == "exprOut" and source.wordAt(start, "do") and source.slice(start, source.skipName(start)) == "do" {
+            afterDoExpr := syntax.skipTrivia(source, start + 2, prefix);
+            if afterDoExpr >= source.length() or source.at(afterDoExpr) =!= "{" {
+                syntax.failAt(source, afterDoExpr, prefix, "expected { after do");
+            }
+            blkLocMark := sym.localMark();
+            blkAliasMark := sym.aliasMark();
+            left = parseBlockExpr(target, source, afterDoExpr, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, bodySink, aliases);
+            sym.rewindLocalsTo(blkLocMark);
+            sym.rewindAliasesTo(blkAliasMark);
+        } else {
+            left = parseNamedPrimaryExpr(target, source, start, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, aliases);
+        }
     } else if ch == "." {
         left = resolveLeadingDotExpr(target, source, start, prefix, expected, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     } else {
@@ -14512,6 +15141,7 @@ pub parsePartialAssignIf := fn(target: String, source: String, position: Int, pr
         inner = syntax.skipTrivia(source, inner + 1, prefix);
     }
     if not source.wordAt(inner, "if") { return []; }
+    if syntax.ifChainHasPattern(source, inner, prefix) { return []; }
     mut result: List<Item> = [];
     var cursor := syntax.skipTrivia(source, inner + 2, prefix);
     var isFirst := true;
@@ -14620,7 +15250,7 @@ pub parseExpressionItem := fn(target: String, source: String, position: Int, pre
         ""
     };
     trimmedStart := syntax.skipTrivia(source, position, prefix);
-    stmtSink := if trimmedStart < source.length() and source.at(trimmedStart) == "{" and (not isTailClose or currentResult == ir.VALUE_KIND_UNIT) { "exprOut" } else { "" };
+    stmtSink := if trimmedStart < source.length() and (source.at(trimmedStart) == "{" or source.wordAt(trimmedStart, "do")) and (not isTailClose or currentResult == ir.VALUE_KIND_UNIT) { "exprOut" } else { "" };
     stmtMin := if not isTailClose or currentResult == ir.VALUE_KIND_UNIT { -2 } else { 0 };
     parsed := parseBinaryCtx(target, source, position, prefix, locals, functions, params, currentName, expected, stmtMin, ctxs, 0, false, stmtSink, aliases);
     ended := syntax.consumeStatementEnd(source, parsed.next, prefix);
@@ -14632,6 +15262,46 @@ pub parseExpressionItem := fn(target: String, source: String, position: Int, pre
         " returning " + types.displayKind(currentResult));
     }
     (next = next, returned = returned, code = if returned { if parsed.kind == ir.VALUE_KIND_UNIT { ir.targetUnitEvaluationCode(target, parsed.code) } else { ctx.assignValueCode(target, currentResult, parsed.kind, parsed.code) } } else { parsed.code }, valueKind = parsed.kind)
+};
+
+/** Pre-scans field names declared inside a `record { ... }` body before parsing field defaults. */
+scanRecordDeclFieldNames := fn(source: String, bracePos: Int, prefix: String): List<String> {
+    size := source.length();
+    mut out: List<String> = [];
+    var cursor := bracePos + 1;
+    loop true {
+        cursor = syntax.skipItemSeparators(source, cursor, prefix);
+        if cursor >= size or source.at(cursor) == "}" { break; }
+        if not source.at(cursor).isNameStart() { break; }
+        fEnd := source.skipName(cursor);
+        mut out.pushBack(source.slice(cursor, fEnd));
+        cursor = syntax.skipTrivia(source, fEnd, prefix);
+        var depth := 0;
+        loop cursor < size {
+            ch := source.at(cursor);
+            if ch == "\"" {
+                cursor = syntax.skipAliasString(source, cursor);
+            } else if ch == "/" and source.startsWithAt(cursor, "/*") {
+                cursor = syntax.skipComment(source, cursor, prefix);
+            } else if ch == "(" or ch == "[" or ch == "{" {
+                depth = depth + 1;
+                cursor = cursor + 1;
+            } else if ch == ")" or ch == "]" {
+                if depth > 0 { depth = depth - 1; }
+                cursor = cursor + 1;
+            } else if ch == "}" {
+                if depth == 0 { break; }
+                depth = depth - 1;
+                cursor = cursor + 1;
+            } else if ch == ";" and depth == 0 {
+                cursor = cursor + 1;
+                break;
+            } else {
+                cursor = cursor + 1;
+            }
+        }
+    }
+    out
 };
 
 /** Parses `Name := record[<T: Type>] { field: Type [= default]; ... }`, validating field names, types, defaults, and returning the canonical kind, encoded defaults, and generic parameter CSV. */
@@ -14651,6 +15321,10 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
     } else {
         ""
     };
+    allFieldNames := scanRecordDeclFieldNames(source, bracePos, prefix);
+    mut defLocals: List<Local> = locals;
+    fldDepth := ir.maxLocalLexDepth(locals) + 1;
+    var fieldIdx := 0;
     mut seenRec: List<String> = [aliasDepth.toText() + ":" + recName];
     mut fieldNames: List<String> = [];
     mut defaultKeys: List<String> = [];
@@ -14696,7 +15370,16 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
                 syntax.failAt(source, afterType, prefix, "default initializer on generic-typed field " + fName + " is not supported yet");
             }
             defStart := syntax.skipTrivia(source, afterType + 1, prefix);
-            defParsed := parseBinaryCtx(target, source, defStart, prefix, locals, functions, params, currentName, fieldType.kind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            mut curDefLocals: List<Local> = defLocals;
+            var laterIdx := fieldIdx;
+            loop laterIdx < allFieldNames.length() {
+                laterName := allFieldNames[laterIdx];
+                mut curDefLocals.pushBack((name = laterName, runtime = "", kind = ir.VALUE_KIND_INT,
+                mutable = false, writable = false, depth = fldDepth, constant = false, code = "",
+                intValue = 0, textValue = "$recfld_fwd:" + fName + ":" + laterName, initState = ir.INIT_STATE_INIT));
+                laterIdx = laterIdx + 1;
+            }
+            defParsed := parseBinaryCtx(target, source, defStart, prefix, curDefLocals, functions, params, currentName, fieldType.kind, 0, ctxs, iifeDepth, inferMode, "", aliases);
             if inferMode { markers = ctx.collectParsedMarkers(markers, defParsed); }
             if not types.isCompatibleKind(fieldType.kind, defParsed.kind) {
                 syntax.failAt(source, defStart, prefix, "cannot initialize " + types.displayKind(fieldType.kind) + " field " + fName + " with " + types.displayKind(defParsed.kind));
@@ -14710,6 +15393,11 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
             lastTokenPos = defParsed.next;
             nextCursor = syntax.skipTrivia(source, defParsed.next, prefix);
         }
+        recFldToken := "__LT_RECFLD_" + fieldIdx.toText() + "__";
+        mut defLocals.pushBack((name = fName, runtime = recFldToken, kind = fieldType.kind,
+        mutable = false, writable = false, depth = fldDepth, constant = false, code = recFldToken,
+        intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+        fieldIdx = fieldIdx + 1;
         if nextCursor < size and source.at(nextCursor) == ";" {
             cursor = nextCursor + 1;
         } else if nextCursor < size and source.at(nextCursor) == "}" {
