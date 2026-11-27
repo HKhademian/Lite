@@ -29,7 +29,7 @@ functionalSrc :=
 "sparse := import \"ds/sparse\";\n" +
 "\n" +
 "/* 1. ds/ring */\n" +
-"ri: mut ring.IntRing = ring.IntRing.create(3);\n" +
+"mut ri: ring.IntRing = ring.IntRing.create(3);\n" +
 "o1 := mut ri.push(10);\n" +
 "o2 := mut ri.push(20);\n" +
 "o3 := mut ri.push(30);\n" +
@@ -39,7 +39,7 @@ functionalSrc :=
 "p1 := mut ri.pop();\n" +
 "io.outputLine(\"ringPop\", p1.isSome(), p1.unwrapOr(-1), ri.length());\n" +
 "\n" +
-"rf: mut ring.FloatRing = ring.Ring<Float>.create(4);\n" +
+"mut rf: ring.FloatRing = ring.Ring<Float>.create(4);\n" +
 "_f1 := mut rf.push(10.0);\n" +
 "_f2 := mut rf.push(20.0);\n" +
 "_f3 := mut rf.push(30.0);\n" +
@@ -47,7 +47,7 @@ functionalSrc :=
 "io.outputLine(\"ringFloat\", rf.avg(), mm.min, mm.max, rf.length());\n" +
 "\n" +
 "/* 2. ds/deque */\n" +
-"dq: mut deque.IntDeque = deque.IntDeque.create(4);\n" +
+"mut dq: deque.IntDeque = deque.IntDeque.create(4);\n" +
 "_d1 := mut dq.pushBack(2);\n" +
 "_d2 := mut dq.pushFront(1);\n" +
 "_d3 := mut dq.pushBack(3);\n" +
@@ -57,7 +57,7 @@ functionalSrc :=
 "db := mut dq.popBack();\n" +
 "io.outputLine(\"dequeInt\", dFull, df.unwrapOr(-1), db.unwrapOr(-1), dq.peekFront().unwrapOr(-1), dq.peekBack().unwrapOr(-1), dq.length());\n" +
 "\n" +
-"td: mut deque.TextDeque = deque.Deque<String>.create(3);\n" +
+"mut td: deque.TextDeque = deque.Deque<String>.create(3);\n" +
 "_t1 := mut td.pushBack(\"b\");\n" +
 "_t2 := mut td.pushFront(\"a\");\n" +
 "_t3 := mut td.pushBack(\"c\");\n" +
@@ -87,7 +87,7 @@ functionalSrc :=
 "xp3 := mut mx.pop();\n" +
 "io.outputLine(\"maxHeap\", xp1.unwrapOr(-1), xp2.unwrapOr(-1), xp3.unwrapOr(-1));\n" +
 "\n" +
-"pq: mut heap.IntPriorityQueue = heap.IntPriorityQueue.create(8);\n" +
+"mut pq: heap.IntPriorityQueue = heap.IntPriorityQueue.create(8);\n" +
 "_q1 := mut pq.push(30, 103);\n" +
 "_q2 := mut pq.push(10, 101);\n" +
 "_q3 := mut pq.push(20, 102);\n" +

@@ -58,7 +58,7 @@ makeReleaseCheckout := fn(versionsText: String, igniterVersion: String): String 
 };
 
 splitLines := fn(source: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     n := source.length();
     var pos := 0;
     loop pos <= n {
@@ -195,7 +195,7 @@ _rm4c := fs.remove(dir4c);
 wfRes := fs.readText(path.join(root, ".github/workflows/release.yml"));
 test.check("read release.yml: " + wfRes.error, wfRes.ok);
 wfLines := splitLines(wfRes.text);
-rawTriggers: mut List<String> = [];
+mut rawTriggers: List<String> = [];
 loop wfLines as rawLine {
     line := rawLine.trimEnd();
     if line.startsWithAt(0, "      - '") and line.endsWith("-v*'") {
@@ -212,7 +212,7 @@ allNames: List<String> = [
 "formatter", "runtime", "stdlib", "builtins", "checker", "tester",
 "verifier", "benchmark", "release", "docs", "vscode", "linker", "doctor"
 ];
-rawExpectedPrefixes: mut List<String> = [];
+mut rawExpectedPrefixes: List<String> = [];
 loop allNames as name {
     mut rawExpectedPrefixes.pushBack(rel.componentTagPrefix(name));
 }

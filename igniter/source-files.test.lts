@@ -21,8 +21,8 @@ inList := fn(items: List<String>, needle: String): Bool {
 };
 
 splitNulBytes := fn(bytes: List<Int>): List<String> {
-    out: mut List<String> = [];
-    var cur: mut List<Int> = [];
+    mut out: List<String> = [];
+    var mut cur: List<Int> = [];
     loop bytes as b {
         if b == 0 {
             if cur.length() > 0 {
@@ -44,8 +44,8 @@ splitNulBytes := fn(bytes: List<Int>): List<String> {
 };
 
 collectArchiveFiles := fn(rootDir: String): List<String> {
-    out: mut List<String> = [];
-    stack: mut List<String> = [""];
+    mut out: List<String> = [];
+    mut stack: List<String> = [""];
     skipAny: List<String> = [".git", ".cache", "node_modules"];
     skipTop: List<String> = ["dist", "tmp", ".agent"];
     loop stack.length() > 0 {
@@ -99,7 +99,7 @@ dataExts: List<String> = [
 sourceExts: List<String> = [".lt", ".lts", ".lite", ".ts", ".json"];
 allowedTsConfigs: List<String> = ["igniter/tsconfig.json", "compiler/bootstrap/tsconfig.json"];
 
-violations: mut List<String> = [];
+mut violations: List<String> = [];
 rootPrefix := root + "/";
 
 loop files as name {

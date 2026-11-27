@@ -38,8 +38,8 @@ runnerPath := path.join(workDir, "runner.ts");
 wr := cases.writeTsRunner(runnerPath);
 test.check("write runner: " + wr.error, wr.ok);
 
-compCmds: mut List<String> = [];
-compArgs: mut List<String> = [];
+mut compCmds: List<String> = [];
+mut compArgs: List<String> = [];
 loop libNames as name {
     mut compCmds.pushBack(proc.execPath());
     argJson := "[" + json.quoteString(sel.path) + "," + json.quoteString("lib/tests/" + name + ".lts") + "]";
@@ -52,9 +52,9 @@ compOffsets := json.arrayOffsets(compRaw, 0);
 count := libNames.length();
 test.checkInt("compile pool result count", count, compOffsets.length());
 
-tsFiles: mut List<String> = [];
-runCmds: mut List<String> = [];
-runArgs: mut List<String> = [];
+mut tsFiles: List<String> = [];
+mut runCmds: List<String> = [];
+mut runArgs: List<String> = [];
 var ci := 0;
 loop ci < count {
     name := libNames[ci];

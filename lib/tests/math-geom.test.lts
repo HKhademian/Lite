@@ -82,7 +82,7 @@ functionalSrc :=
 "iv2 := vec.vec2(1, -2);\n" +
 "ivSum := iv1.add(iv2);\n" +
 "ivNeg := iv2.neg();\n" +
-"v32: mut vec.Vec<Int32, 3> = vec.Vec<Int32, 3>.splat(i32b);\n" +
+"mut v32: vec.Vec<Int32, 3> = vec.Vec<Int32, 3>.splat(i32b);\n" +
 "mut v32.setX(2);\n" +
 "mut v32.setY(3);\n" +
 "mut v32.set(2, 6);\n" +

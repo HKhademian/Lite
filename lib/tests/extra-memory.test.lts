@@ -54,7 +54,7 @@ functionalSrc :=
 "mut a2.destroy();\n" +
 "\n" +
 "/* Generic TypedArena<T> (IntArena & FloatArena) */\n" +
-"ia: mut arena.IntArena = arena.IntArena.create(16);\n" +
+"mut ia: arena.IntArena = arena.IntArena.create(16);\n" +
 "i0 := mut ia.alloc(42);\n" +
 "ispan := mut ia.allocSpan(4, 7);\n" +
 "_iset := mut ia.set(ispan.offset + 2, 99);\n" +
@@ -65,7 +65,7 @@ functionalSrc :=
 "mut ia.reset();\n" +
 "mut ia.destroy();\n" +
 "\n" +
-"fa: mut arena.FloatArena = arena.TypedArena<Float>.create(8);\n" +
+"mut fa: arena.FloatArena = arena.TypedArena<Float>.create(8);\n" +
 "f0 := mut fa.alloc(1.5);\n" +
 "fspan := mut fa.allocSpan(3, 2.5);\n" +
 "io.outputLine(\"floatArena\", f0, fa.get(f0), fa.get(fspan.offset + 1), fa.used());\n" +
@@ -83,7 +83,7 @@ functionalSrc :=
 "mut sp.clear();\n" +
 "io.outputLine(\"slotClear\", sp.count(), sp.isAlive(h2), sp.isAlive(h3));\n" +
 "\n" +
-"ip: mut pool.IntPool = pool.IntPool.create(4);\n" +
+"mut ip: pool.IntPool = pool.IntPool.create(4);\n" +
 "ih := mut ip.acquire(101);\n" +
 "_is := mut ip.set(ih, 202);\n" +
 "ig1 := ip.get(ih);\n" +
@@ -91,7 +91,7 @@ functionalSrc :=
 "ig2 := ip.get(ih);\n" +
 "io.outputLine(\"intPool\", ig1.isSome(), ig1.unwrapOr(-1), ig2.isSome(), ip.count());\n" +
 "\n" +
-"tp: mut pool.TextPool = pool.Pool<String>.create(4);\n" +
+"mut tp: pool.TextPool = pool.Pool<String>.create(4);\n" +
 "th := mut tp.acquire(\"alpha\");\n" +
 "_ts := mut tp.set(th, \"beta\");\n" +
 "tg1 := tp.get(th);\n" +
@@ -114,7 +114,7 @@ functionalSrc :=
 "io.outputLine(\"internClear\", t1.count(), t1.has(\"alpha\"), t1.hasId(idA), t2.has(\"alpha\"));\n" +
 "\n" +
 "/* 4. ds/lru: generic O(1) bounded LRU<K, V> (LruText, LruInt, IntLru) */\n" +
-"c: mut lru.LruText = lru.LruText.create(3);\n" +
+"mut c: lru.LruText = lru.LruText.create(3);\n" +
 "_p1 := mut c.put(\"a\", \"1\");\n" +
 "_p2 := mut c.put(\"b\", \"2\");\n" +
 "_p3 := mut c.put(\"c\", \"3\");\n" +
@@ -127,7 +127,7 @@ functionalSrc :=
 "ev2 := mut c.evictOldest();\n" +
 "io.outputLine(\"lruTextRm\", rmOk, ev2.evicted, ev2.key, c.count());\n" +
 "\n" +
-"ci: mut lru.LruInt = lru.Lru<String, Int>.create(2);\n" +
+"mut ci: lru.LruInt = lru.Lru<String, Int>.create(2);\n" +
 "_pi1 := mut ci.put(\"x\", 10);\n" +
 "_pi2 := mut ci.put(\"y\", 20);\n" +
 "_gi := mut ci.get(\"x\");\n" +
@@ -135,7 +135,7 @@ functionalSrc :=
 "giMiss := mut ci.get(\"y\");\n" +
 "io.outputLine(\"lruInt\", evi.evicted, evi.key, evi.value, giMiss.isSome(), ci.count());\n" +
 "\n" +
-"ck: mut lru.IntLru = lru.IntLru.create(2);\n" +
+"mut ck: lru.IntLru = lru.IntLru.create(2);\n" +
 "_pk1 := mut ck.put(100, 1);\n" +
 "_pk2 := mut ck.put(200, 2);\n" +
 "_gk := mut ck.get(100);\n" +

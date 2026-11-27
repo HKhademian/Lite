@@ -1,4 +1,4 @@
-/* List-backed O(n) nominal text builder utility. Zero-initialize with `b: mut tb.TextBuilder;`. */
+/* List-backed O(n) nominal text builder utility. Zero-initialize with `mut b: tb.TextBuilder;`. */
 
 /** Buffered string builder backed by a list of chunks and a single final concatenation. */
 pub TextBuilder := record {
