@@ -7,6 +7,7 @@ numeric := import "./numeric-literals";
 tsLiteral := import "./ts-literals";
 ir := import "./frontend-ir";
 interfaces := import "./interfaces";
+contexts := import "./contexts";
 sym := import "./symbol-table";
 syntax := import "./frontend-syntax";
 tb := import "util/text-builder";
@@ -173,7 +174,23 @@ pub skipKindToken := fn(kind: String, start: Int): Int {
     cursor
 };
 
-/** Returns the index of the closing `)` matching the parameter tuple in `fn(...)`, or -1 when `kind` is not canonical. */
+/** True when `kind` is a canonical context projection `Ctx<...>`. */
+pub isCtxKind := fn(kind: String): Bool {
+    contexts.isCtxKind(kind)
+};
+
+/** Maps a canonical `Ctx<...>` kind to its C11 projection struct typedef `lt_ctx_<hash>`. */
+pub cCtxTag := fn(kind: String): String {
+    if not isCtxKind(kind) { return ""; }
+    "lt_ctx_" + cStructHash(kind)
+};
+
+/** Builds canonical `@ctx(...)` suffix from `Ctx<...>` for embedding in `fn` kinds. */
+fnAtCtxSuffix := fn(ctxKind: String): String {
+    if isCtxKind(ctxKind) { "@ctx(" + ctxKind.slice(4, ctxKind.length() - 1) + ")" } else { "" }
+};
+
+/** Returns the index of the closing `)` matching the parameter tuple in `fn(...)` or `fn(...)@ctx(...):Ret`, or -1 when `kind` is not canonical. */
 fnCloseParenIndex := fn(kind: String): Int {
     if not kind.startsWithAt(0, "fn(") { return -1; }
     size := kind.length();
@@ -186,6 +203,22 @@ fnCloseParenIndex := fn(kind: String): Int {
             depth = depth - 1;
             if depth == 0 {
                 if cursor + 1 < size and kind.at(cursor + 1) == ":" { return cursor; }
+                if kind.startsWithAt(cursor + 1, "@ctx(") {
+                    var cCur := cursor + 5;
+                    var cDepth := 0;
+                    loop cCur < size {
+                        cCh := kind.at(cCur);
+                        if cCh == "(" or cCh == "[" or cCh == "<" { cDepth = cDepth + 1; }
+                        else if cCh == ")" or cCh == "]" or cCh == ">" {
+                            cDepth = cDepth - 1;
+                            if cDepth == 0 {
+                                if cCur + 1 < size and kind.at(cCur + 1) == ":" { return cursor; }
+                                return -1;
+                            }
+                        }
+                        cCur = cCur + 1;
+                    }
+                }
                 return -1;
             }
         }
@@ -194,16 +227,51 @@ fnCloseParenIndex := fn(kind: String): Int {
     -1
 };
 
-/** True when `kind` is a canonical callable kind `fn(...):ResultKind`. */
+/** Returns the `:` index before the return kind in canonical `fn(...)[:Ret]` or `fn(...)@ctx(...):Ret`, or -1. */
+fnColonIndex := fn(kind: String): Int {
+    close := fnCloseParenIndex(kind);
+    if close < 2 { return -1; }
+    if close + 1 < kind.length() and kind.at(close + 1) == ":" { return close + 1; }
+    if kind.startsWithAt(close + 1, "@ctx(") {
+        size := kind.length();
+        var cur := close + 5;
+        var depth := 0;
+        loop cur < size {
+            ch := kind.at(cur);
+            if ch == "(" or ch == "[" or ch == "<" { depth = depth + 1; }
+            else if ch == ")" or ch == "]" or ch == ">" {
+                depth = depth - 1;
+                if depth == 0 {
+                    if cur + 1 < size and kind.at(cur + 1) == ":" { return cur + 1; }
+                    return -1;
+                }
+            }
+            cur = cur + 1;
+        }
+    }
+    -1
+};
+
+/** Returns canonical `Ctx<...>` requirement of a callable kind, or `""` when none. */
+pub fnContextKind := fn(kind: String): String {
+    close := fnCloseParenIndex(kind);
+    colon := fnColonIndex(kind);
+    if close >= 2 and colon > close + 6 and kind.startsWithAt(close + 1, "@ctx(") {
+        return "Ctx<" + kind.slice(close + 6, colon - 1) + ">";
+    }
+    ""
+};
+
+/** True when `kind` is a canonical callable kind `fn(...)[@ctx(...)]:ResultKind`. */
 pub isFnKind := fn(kind: String): Bool {
     fnCloseParenIndex(kind) >= 2
 };
 
-/** Returns the canonical return kind from `fn(...):ResultKind`. */
+/** Returns the canonical return kind from `fn(...)[@ctx(...)]:ResultKind`. */
 pub fnResultKind := fn(kind: String): String {
-    close := fnCloseParenIndex(kind);
-    if close < 2 { return ""; }
-    kind.slice(close + 2, kind.length())
+    colon := fnColonIndex(kind);
+    if colon < 0 { return ""; }
+    kind.slice(colon + 1, kind.length())
 };
 
 /** Parses `label:Kind` components inside a parameter list `fn(...)`; returns parameter count. */
@@ -283,8 +351,18 @@ pub fnStripLabels := fn(kind: String): String {
         mut out.append(if isFnKind(comp.kind) { self(comp.kind) } else { comp.kind });
         idx = idx + 1;
     }
+    mut out.append(")");
+    ctxK := fnContextKind(kind);
+    if ctxK =!= "" {
+        strippedSlots: mut List<contexts.CtxSlot> = [];
+        loop contexts.parseCtxKindSlots(ctxK) as cs {
+            sk := if isFnKind(cs.kind) { self(cs.kind) } else { cs.kind };
+            mut strippedSlots.pushBack(contexts.CtxSlot { name = cs.name, isMut = cs.isMut, kind = sk });
+        }
+        mut out.append(fnAtCtxSuffix(contexts.buildCanonicalCtxKind(strippedSlots)));
+    }
     res := fnResultKind(kind);
-    mut out.append("):");
+    mut out.append(":");
     mut out.append(if isFnKind(res) { self(res) } else { res });
     out.build()
 };
@@ -916,7 +994,15 @@ pub containsSliceKind := fn(kind: String): Bool {
             if self(fnParamComponent(kind, pi).kind) { return true; }
             pi = pi + 1;
         }
+        fnCtx := fnContextKind(kind);
+        if fnCtx =!= "" and self(fnCtx) { return true; }
         return self(fnResultKind(kind));
+    }
+    if isCtxKind(kind) {
+        loop contexts.parseCtxKindSlots(kind) as cs {
+            if self(cs.kind) { return true; }
+        }
+        return false;
     }
     false
 };
@@ -1045,7 +1131,15 @@ pub containsDynKind := fn(kind: String): Bool {
             if self(fnParamComponent(kind, pi).kind) { return true; }
             pi = pi + 1;
         }
+        fnCtx := fnContextKind(kind);
+        if fnCtx =!= "" and self(fnCtx) { return true; }
         return self(fnResultKind(kind));
+    }
+    if isCtxKind(kind) {
+        loop contexts.parseCtxKindSlots(kind) as cs {
+            if self(cs.kind) { return true; }
+        }
+        return false;
     }
     false
 };
@@ -1841,9 +1935,18 @@ cIsSupportedElem := fn(kind: String): Bool {
             if not self(fnParamComponent(kind, pi).kind) { paramsOk = false; break; }
             pi = pi + 1;
         }
+        fnCtx := fnContextKind(kind);
+        if paramsOk and fnCtx =!= "" {
+            paramsOk = self(fnCtx);
+        }
         if paramsOk {
             rKind := fnResultKind(kind);
             ok = rKind == ir.VALUE_KIND_UNIT or rKind == ir.VALUE_KIND_NEVER or self(rKind);
+        }
+    } else if isCtxKind(kind) {
+        ok = true;
+        loop contexts.parseCtxKindSlots(kind) as cs {
+            if not self(cs.kind) { ok = false; break; }
         }
     }
     (mut cSupportedCache).set(kind, ok);
@@ -1868,7 +1971,10 @@ pub cFnTag := fn(kind: String): String {
         mut sigBuf.append(fnParamComponent(kind, i).kind);
         i = i + 1;
     }
-    mut sigBuf.append("):");
+    mut sigBuf.append(")");
+    fnCtx := fnContextKind(kind);
+    if fnCtx =!= "" { mut sigBuf.append(fnAtCtxSuffix(fnCtx)); }
+    mut sigBuf.append(":");
     mut sigBuf.append(fnResultKind(kind));
     sig := sigBuf.build();
     tag := "lt_fnv_" + cStructHash(sig);
@@ -2203,6 +2309,7 @@ pub cValueType := fn(kind: String): String {
     else if cSimdTag(kind) =!= "" { cSimdTag(kind) }
     else if cSoaTag(kind) =!= "" { cSoaTag(kind) }
     else if cStructTag(kind) =!= "" { cStructTag(kind) }
+    else if cCtxTag(kind) =!= "" { cCtxTag(kind) }
     else if cFnTag(kind) =!= "" { cFnTag(kind) }
     else { "lt_str" };
     mut cValueTypeCache.set(kind, res);
@@ -2326,7 +2433,26 @@ pub needsTsTypeAnnotation := fn(kind: String): Bool {
 /** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
 exactShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
     if expectedKind == actualKind { return true; }
+    if isCtxKind(expectedKind) and isCtxKind(actualKind) {
+        eSlots := contexts.parseCtxKindSlots(expectedKind);
+        aSlots := contexts.parseCtxKindSlots(actualKind);
+        if eSlots.length() =!= aSlots.length() { return false; }
+        var si := 0;
+        loop si < eSlots.length() {
+            es := eSlots[si];
+            asSlot := aSlots[si];
+            if es.name =!= asSlot.name or es.isMut =!= asSlot.isMut or not self(es.kind, asSlot.kind) {
+                return false;
+            }
+            si = si + 1;
+        }
+        return true;
+    }
     if isFnKind(expectedKind) and isFnKind(actualKind) {
+        eCtx := fnContextKind(expectedKind);
+        aCtx := fnContextKind(actualKind);
+        if (eCtx == "" and aCtx =!= "") or (eCtx =!= "" and aCtx == "") { return false; }
+        if eCtx =!= "" and not self(eCtx, aCtx) { return false; }
         count := fnParamCount(expectedKind);
         if count =!= fnParamCount(actualKind) { return false; }
         var idx := 0;
@@ -2385,7 +2511,11 @@ pub containsFnKind := fn(kind: String): Bool {
     else if isSliceKind(kind) { res = self(sliceElementKind(kind)); }
     else if isSoaKind(kind) { res = self(soaRecordKind(kind)); }
     else if isArrayKind(kind) { res = self(arrayElementKind(kind)); }
-    else if isTupleKind(kind) {
+    else if isCtxKind(kind) {
+        loop contexts.parseCtxKindSlots(kind) as cs {
+            if self(cs.kind) { res = true; break; }
+        }
+    } else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         var idx := 0;
         loop idx < count {
@@ -2650,7 +2780,15 @@ pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
             if self(genericParams, fnParamComponent(kind, i).kind) { return true; }
             i = i + 1;
         }
+        fnCtx := fnContextKind(kind);
+        if fnCtx =!= "" and self(genericParams, fnCtx) { return true; }
         return self(genericParams, fnResultKind(kind));
+    }
+    if isCtxKind(kind) {
+        loop contexts.parseCtxKindSlots(kind) as cs {
+            if self(genericParams, cs.kind) { return true; }
+        }
+        return false;
     }
     args := nominalTypeArgs(kind);
     loop args as a {
@@ -2776,7 +2914,16 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
             mut parts.pushBack(comp.label + ":" + self(genericParams, comp.kind, bindings));
             i = i + 1;
         }
-        return "fn(" + parts.join(",") + "):" + self(genericParams, fnResultKind(pattern), bindings);
+        rawCtx := fnContextKind(pattern);
+        substCtx := if rawCtx =!= "" { self(genericParams, rawCtx, bindings) } else { "" };
+        return "fn(" + parts.join(",") + ")" + fnAtCtxSuffix(substCtx) + ":" + self(genericParams, fnResultKind(pattern), bindings);
+    }
+    if isCtxKind(pattern) {
+        sSlots: mut List<contexts.CtxSlot> = [];
+        loop contexts.parseCtxKindSlots(pattern) as cs {
+            mut sSlots.pushBack(contexts.CtxSlot { name = cs.name, isMut = cs.isMut, kind = self(genericParams, cs.kind, bindings) });
+        }
+        return contexts.buildCanonicalCtxKind(sSlots);
     }
     if isRecordKind(pattern) {
         if not kindHasAnyGenericParam(genericParams, pattern) { return pattern; }
@@ -3016,6 +3163,14 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
             err := self(fnParamComponent(kind, i).kind, allowGenericParams);
             if err =!= "" { return err; }
             i = i + 1;
+        }
+        fnCtx := fnContextKind(kind);
+        if fnCtx =!= "" {
+            loop contexts.parseCtxKindSlots(fnCtx) as cs {
+                if cs.kind == ir.VALUE_KIND_UNIT { return "context slot " + cs.name + " cannot have type Unit"; }
+                cErr := self(cs.kind, allowGenericParams);
+                if cErr =!= "" { return cErr; }
+            }
         }
         rk := fnResultKind(kind);
         if containsDynKind(rk) { return "borrowed dyn Interface cannot escape via function return type"; }
@@ -3705,6 +3860,27 @@ pub tsFunctionType := fn(kind: String): String {
             mut resultBuf.append(" }");
             out = resultBuf.build();
         }
+    } else if isCtxKind(kind) {
+        ctxFieldsBuf: mut tb.TextBuilder;
+        mut ctxFieldsBuf.append("{ ");
+        var ci := 0;
+        loop contexts.parseCtxKindSlots(kind) as cs {
+            if ci > 0 { mut ctxFieldsBuf.append("; "); }
+            mut ctxFieldsBuf.append("readonly ");
+            mut ctxFieldsBuf.append(cs.name);
+            mut ctxFieldsBuf.append(": ");
+            fieldT := self(cs.kind);
+            if cs.isMut and not isDynKind(cs.kind) and not isSliceKind(cs.kind) {
+                mut ctxFieldsBuf.append("{ v: ");
+                mut ctxFieldsBuf.append(fieldT);
+                mut ctxFieldsBuf.append(" }");
+            } else {
+                mut ctxFieldsBuf.append(fieldT);
+            }
+            ci = ci + 1;
+        }
+        mut ctxFieldsBuf.append(" }");
+        out = ctxFieldsBuf.build();
     } else if isFnKind(kind) {
         count := fnParamCount(kind);
         paramsBuf: mut tb.TextBuilder;
@@ -3717,6 +3893,12 @@ pub tsFunctionType := fn(kind: String): String {
             mut paramsBuf.append(": ");
             mut paramsBuf.append(self(comp.kind));
             index = index + 1;
+        }
+        fnCtx := fnContextKind(kind);
+        if fnCtx =!= "" {
+            if count > 0 { mut paramsBuf.append(", "); }
+            mut paramsBuf.append("lite$ctx: ");
+            mut paramsBuf.append(self(fnCtx));
         }
         out = "((" + paramsBuf.build() + ") => " + self(fnResultKind(kind)) + ")";
     } else {
@@ -3932,6 +4114,13 @@ pub displayKind := fn(kind: String): String {
     if isSimdNativeKind(kind) { return "SimdNative<" + self(simdNativeElementKind(kind)) + ">"; }
     if isSoaKind(kind) { return "SoA<" + self(soaRecordKind(kind)) + ">"; }
     if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + arrayExtentText(kind) + "]"; }
+    if isCtxKind(kind) {
+        cParts: mut List<String> = [];
+        loop contexts.parseCtxKindSlots(kind) as cs {
+            mut cParts.pushBack((if cs.isMut { "mut " } else { "" }) + cs.name + ": " + self(cs.kind));
+        }
+        return "context(" + cParts.join(", ") + ")";
+    }
     if isFnKind(kind) {
         count := fnParamCount(kind);
         resultBuf: mut tb.TextBuilder;
@@ -3949,7 +4138,9 @@ pub displayKind := fn(kind: String): String {
             }
             index = index + 1;
         }
-        return resultBuf.build() + "): " + self(fnResultKind(kind));
+        fnCtx := fnContextKind(kind);
+        ctxDisp := if fnCtx =!= "" { " " + self(fnCtx) } else { "" };
+        return resultBuf.build() + ")" + ctxDisp + ": " + self(fnResultKind(kind));
     }
     if not isTupleKind(kind) { return kind; }
     count := tupleComponentCount(kind);
@@ -4414,6 +4605,69 @@ parseArrayExtentWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool
     (extText = extText, next = afterExtent + 1)
 };
 
+/** Parses `context([mut] name: [mut] Type, ...)` using caller's type-atom parser callback, returning canonical `Ctx<...>`. */
+parseContextClauseWith := fn(
+    parseAtom: fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int),
+    errSource: String, errPos: Int, useLocalErr: Bool, source: String, kwPos: Int, prefix: String,
+    aliases: List<AliasDecl>, genericType: String, seen: List<String>
+): (ctxKind: String, next: Int) {
+    size := source.length();
+    var cursor := syntax.skipTrivia(source, kwPos + 7, prefix);
+    cursor = syntax.expectSymbol(source, cursor, "(", prefix);
+    cursor = syntax.skipTrivia(source, cursor, prefix);
+    if cursor < size and source.at(cursor) == ")" {
+        syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "context requirement list cannot be empty");
+    }
+    slots: mut List<contexts.CtxSlot> = [];
+    slotNames: mut List<String> = [];
+    loop cursor < size and source.at(cursor) =!= ")" {
+        var isMut := false;
+        if source.wordAt(cursor, "mut") {
+            isMut = true;
+            cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+        }
+        if cursor >= size or not source.at(cursor).isNameStart() {
+            syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected context slot name");
+        }
+        nameStart := cursor;
+        nameEnd := source.skipName(nameStart);
+        slotName := source.slice(nameStart, nameEnd);
+        if syntax.isReservedWord(slotName) {
+            syntax.unsupportedFeature(errSource, if useLocalErr { nameStart } else { errPos }, slotName, prefix);
+        }
+        if slotNames.contains(slotName) {
+            syntax.failAt(errSource, if useLocalErr { nameStart } else { errPos }, prefix, "duplicate context slot " + slotName);
+        }
+        mut slotNames.pushBack(slotName);
+        cursor = syntax.skipTrivia(source, nameEnd, prefix);
+        cursor = syntax.expectSymbol(source, cursor, ":", prefix);
+        cursor = syntax.skipTrivia(source, cursor, prefix);
+        if source.wordAt(cursor, "mut") {
+            if isMut {
+                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "duplicate mut qualifier on context slot " + slotName);
+            }
+            isMut = true;
+            cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+        }
+        typed := parseAtom(errSource, errPos, useLocalErr, source, cursor, prefix, aliases, "context", genericType, seen);
+        if typed.kind == ir.VALUE_KIND_UNIT {
+            syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "context slot " + slotName + " cannot have type Unit");
+        }
+        mut slots.pushBack(contexts.CtxSlot { name = slotName, isMut = isMut, kind = typed.kind });
+        cursor = syntax.skipTrivia(source, typed.next, prefix);
+        if cursor < size and source.at(cursor) == "," {
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            if cursor < size and source.at(cursor) == ")" {
+                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected context slot name");
+            }
+        } else {
+            break;
+        }
+    }
+    cursor = syntax.expectSymbol(source, cursor, ")", prefix);
+    (ctxKind = contexts.buildCanonicalCtxKind(slots), next = cursor)
+};
+
 /** Internal helper parsing one atomic source or alias type (excluding top-level `|` type unions). */
 parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
     size := source.length();
@@ -4731,7 +4985,13 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                     syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected , or ) in function type");
                 }
             }
-            afterClose := syntax.skipTrivia(source, cursor, prefix);
+            var afterClose := syntax.skipTrivia(source, cursor, prefix);
+            var fnCtxKind := "";
+            if afterClose < size and source.wordAt(afterClose, "context") {
+                ctxRes := parseContextClauseWith(self, errSource, errPos, useLocalErr, source, afterClose, prefix, aliases, genericType, seen);
+                fnCtxKind = ctxRes.ctxKind;
+                afterClose = syntax.skipTrivia(source, ctxRes.next, prefix);
+            }
             if afterClose >= size or source.at(afterClose) =!= ":" {
                 syntax.failAt(errSource, if useLocalErr { afterClose } else { errPos }, prefix, "expected : after function parameter types");
             }
@@ -4739,7 +4999,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             if containsDynKind(retType.kind) {
                 syntax.failAt(errSource, if useLocalErr { afterClose + 1 } else { errPos }, prefix, "borrowed dyn Interface cannot escape via function return type");
             }
-            return (kind = encodedBuf.build() + "):" + retType.kind, next = retType.next);
+            return (kind = encodedBuf.build() + ")" + fnAtCtxSuffix(fnCtxKind) + ":" + retType.kind, next = retType.next);
         }
     }
     if source.wordAt(start, "dyn") and findAlias(aliases, "dyn") < 0 and not isGenericParamName(genericType, "dyn") {
@@ -5377,6 +5637,12 @@ pub parseFunctionType := fn(source: String, position: Int, prefix: String, alias
     parseTypeAt(source, position, prefix, aliases, "function", genericType)
 };
 
+/** Parses `context([mut] name: [mut] Type, ...)` into canonical name-sorted `Ctx<...>` and next offset. */
+pub parseContextClause := fn(source: String, kwPos: Int, prefix: String, aliases: List<AliasDecl>, genericType: String): (ctxKind: String, next: Int) {
+    emptySeen: List<String> = [];
+    parseContextClauseWith(parseTypeAtomWithSeen, source, kwPos, true, source, kwPos, prefix, aliases, genericType, emptySeen)
+};
+
 /** Parses a function signature. The optional `T` binder is only enabled for the registered core list declarations. */
 pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, listIntrinsic: Bool): (next: Int, result: String, params: String, count: Int, genericType: String) {
     size := source.length();
@@ -5468,9 +5734,16 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
     }
     cursor = syntax.expectSymbol(source, cursor, ")", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
+    var fnCtxKind := "";
+    if cursor < size and source.wordAt(cursor, "context") {
+        emptyCtxSeen: List<String> = [];
+        ctxRes := parseContextClauseWith(parseTypeAtomWithSeen, source, cursor, true, source, cursor, prefix, aliases, genericType, emptyCtxSeen);
+        fnCtxKind = ctxRes.ctxKind;
+        cursor = syntax.skipTrivia(source, ctxRes.next, prefix);
+    }
     cursor = syntax.expectSymbol(source, cursor, ":", prefix);
     resultType := parseFunctionType(source, cursor, prefix, aliases, genericType);
-    (next = resultType.next, result = resultType.kind, params = encoded, count = count, genericType = genericType)
+    (next = resultType.next, result = resultType.kind, params = contexts.appendCtxToParams(encoded, fnCtxKind), count = count, genericType = genericType)
 };
 
 /** Parses one local type annotation: an optional `mut` list grant, then a scalar, a transparent alias or a flat named tuple; Unit has no local zero value. */
@@ -5572,6 +5845,13 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
     encoded := encodedBuf.build();
     cursor = syntax.expectSymbol(source, cursor, ")", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
+    var fnCtxKind := "";
+    if cursor < size and source.wordAt(cursor, "context") {
+        emptyCtxSeen: List<String> = [];
+        ctxRes := parseContextClauseWith(parseTypeAtomWithSeen, source, cursor, true, source, cursor, prefix, scopedAliases, genericType, emptyCtxSeen);
+        fnCtxKind = ctxRes.ctxKind;
+        cursor = syntax.skipTrivia(source, ctxRes.next, prefix);
+    }
     cursor = syntax.expectSymbol(source, cursor, ":", prefix);
     resultType := parseFunctionType(source, cursor, prefix, scopedAliases, genericType);
     if opName == "$getIndex" {
@@ -5627,7 +5907,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
             syntax.failAt(source, position, prefix, opName + " on " + typeName + " must return a Slice value");
         }
     }
-    (next = resultType.next, result = resultType.kind, params = encoded, count = count, genericType = genericType, hasSelfRecv = hasSelfRecv)
+    (next = resultType.next, result = resultType.kind, params = contexts.appendCtxToParams(encoded, fnCtxKind), count = count, genericType = genericType, hasSelfRecv = hasSelfRecv)
 };
 
 /** Returns the source name from one encoded `name=kind` function parameter entry. */
@@ -5644,8 +5924,8 @@ pub paramKindOf := fn(entry: String): String {
     entry.slice(separator + 1, entry.length())
 };
 
-/** Builds a canonical `fn(label:Kind,...):ResultKind` string from encoded parameter entries and a return kind. */
-pub fnCanonicalKind := fn(params: List<String>, first: Int, count: Int, resultKind: String): String {
+/** Builds a canonical `fn(label:Kind,...)[@ctx(...)]:ResultKind` string from encoded parameter entries, context kind, and return kind. */
+pub fnCanonicalKindWithCtx := fn(params: List<String>, first: Int, count: Int, resultKind: String, ctxKind: String): String {
     out: mut tb.TextBuilder;
     mut out.append("fn(");
     var idx := 0;
@@ -5657,9 +5937,16 @@ pub fnCanonicalKind := fn(params: List<String>, first: Int, count: Int, resultKi
         mut out.append(paramKindOf(entry));
         idx = idx + 1;
     }
-    mut out.append("):");
+    mut out.append(")");
+    if ctxKind =!= "" { mut out.append(fnAtCtxSuffix(ctxKind)); }
+    mut out.append(":");
     mut out.append(resultKind);
     out.build()
+};
+
+/** Builds a canonical `fn(label:Kind,...):ResultKind` string from encoded parameter entries and a return kind. */
+pub fnCanonicalKind := fn(params: List<String>, first: Int, count: Int, resultKind: String): String {
+    fnCanonicalKindWithCtx(params, first, count, resultKind, "")
 };
 
 /** Reads one single raw alias target atom from `position`, capturing tuples, arrays, fns, or `Name<...>`. */
@@ -5741,7 +6028,27 @@ collectSingleTypeTarget := fn(source: String, position: Int, prefix: String): (t
             if afterParen < 0 {
                 return (text = source.slice(start, size), next = size);
             }
-            afterClose := syntax.skipTrivia(source, afterParen, prefix);
+            var afterClose := syntax.skipTrivia(source, afterParen, prefix);
+            if afterClose < size and source.wordAt(afterClose, "context") {
+                afterCtxKw := syntax.skipTrivia(source, afterClose + 7, prefix);
+                if afterCtxKw < size and source.at(afterCtxKw) == "(" {
+                    var cCur := afterCtxKw;
+                    var cDep := 0;
+                    var cDone := -1;
+                    loop cCur < size {
+                        cCh := source.at(cCur);
+                        if cCh == "\"" { cCur = syntax.skipAliasString(source, cCur); }
+                        else if cCh == "/" and source.startsWithAt(cCur, "/*") { cCur = syntax.skipComment(source, cCur, prefix); }
+                        else if cCh == "(" { cDep = cDep + 1; cCur = cCur + 1; }
+                        else if cCh == ")" {
+                            cDep = cDep - 1;
+                            cCur = cCur + 1;
+                            if cDep == 0 { cDone = cCur; break; }
+                        } else { cCur = cCur + 1; }
+                    }
+                    if cDone > 0 { afterClose = syntax.skipTrivia(source, cDone, prefix); }
+                }
+            }
             if afterClose < size and source.at(afterClose) == ":" {
                 retTarget := collectTypeTarget(source, afterClose + 1, prefix);
                 return (text = source.slice(start, retTarget.next), next = retTarget.next);
@@ -6450,13 +6757,68 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if pCursor >= size or source.at(pCursor) =!= ")" {
             return (ok = false, kind = "", next = pCursor);
         }
-        afterClose := syntax.skipTrivia(source, pCursor + 1, prefix);
+        var afterClose := syntax.skipTrivia(source, pCursor + 1, prefix);
+        var fnCtxKind := "";
+        if afterClose < size and source.wordAt(afterClose, "context") {
+            var cCursor := syntax.skipTrivia(source, afterClose + 7, prefix);
+            if cCursor >= size or source.at(cCursor) =!= "(" {
+                return (ok = false, kind = "", next = cCursor);
+            }
+            cCursor = syntax.skipTrivia(source, cCursor + 1, prefix);
+            if cCursor < size and source.at(cCursor) == ")" {
+                return (ok = false, kind = "", next = cCursor);
+            }
+            ctxSlots: mut List<contexts.CtxSlot> = [];
+            ctxNames: mut List<String> = [];
+            loop cCursor < size and source.at(cCursor) =!= ")" {
+                var cIsMut := false;
+                if source.wordAt(cCursor, "mut") {
+                    cIsMut = true;
+                    cCursor = syntax.skipTrivia(source, cCursor + 3, prefix);
+                }
+                if cCursor >= size or not source.at(cCursor).isNameStart() {
+                    return (ok = false, kind = "", next = cCursor);
+                }
+                cNameEnd := source.skipName(cCursor);
+                cName := source.slice(cCursor, cNameEnd);
+                if syntax.isReservedWord(cName) or ctxNames.contains(cName) {
+                    return (ok = false, kind = "", next = cCursor);
+                }
+                mut ctxNames.pushBack(cName);
+                cCursor = syntax.skipTrivia(source, cNameEnd, prefix);
+                if cCursor >= size or source.at(cCursor) =!= ":" {
+                    return (ok = false, kind = "", next = cCursor);
+                }
+                cCursor = syntax.skipTrivia(source, cCursor + 1, prefix);
+                if source.wordAt(cCursor, "mut") {
+                    if cIsMut { return (ok = false, kind = "", next = cCursor); }
+                    cIsMut = true;
+                    cCursor = syntax.skipTrivia(source, cCursor + 3, prefix);
+                }
+                cType := self(source, cCursor, prefix, aliases, genericType, seen, depthLeft - 1, false);
+                if not cType.ok or cType.kind == ir.VALUE_KIND_UNIT {
+                    return (ok = false, kind = "", next = cCursor);
+                }
+                mut ctxSlots.pushBack(contexts.CtxSlot { name = cName, isMut = cIsMut, kind = cType.kind });
+                cCursor = syntax.skipTrivia(source, cType.next, prefix);
+                if cCursor < size and source.at(cCursor) == "," {
+                    cCursor = syntax.skipTrivia(source, cCursor + 1, prefix);
+                } else {
+                    break;
+                }
+            }
+            if cCursor >= size or source.at(cCursor) =!= ")" {
+                return (ok = false, kind = "", next = cCursor);
+            }
+            fnCtxKind = contexts.buildCanonicalCtxKind(ctxSlots);
+            afterClose = syntax.skipTrivia(source, cCursor + 1, prefix);
+        }
         if afterClose >= size or source.at(afterClose) =!= ":" {
             return (ok = false, kind = "", next = afterClose);
         }
         retType := self(source, afterClose + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
         if not retType.ok { return (ok = false, kind = "", next = afterClose + 1); }
-        return (ok = true, kind = "fn(" + paramParts.join(",") + "):" + retType.kind, next = retType.next);
+        return (ok = true, kind = "fn(" + paramParts.join(",") + ")" + fnAtCtxSuffix(fnCtxKind) + ":" + retType.kind, next = retType.next);
     }
     if not ch.isNameStart() { return (ok = false, kind = "", next = start); }
     if source.wordAt(start, "dyn") and findAlias(aliases, "dyn") < 0 and not isGenericParamName(genericType, "dyn") {
@@ -7063,7 +7425,44 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
         }
     }
     if cursor >= size or source.at(cursor) =!= ")" { return false; }
-    afterParen := syntax.skipTrivia(source, cursor + 1, prefix);
+    var afterParen := syntax.skipTrivia(source, cursor + 1, prefix);
+    if afterParen < size and source.wordAt(afterParen, "context") {
+        var cCur := syntax.skipTrivia(source, afterParen + 7, prefix);
+        if cCur >= size or source.at(cCur) =!= "(" { return false; }
+        cCur = syntax.skipTrivia(source, cCur + 1, prefix);
+        if cCur < size and source.at(cCur) == ")" { return false; }
+        cNames: mut List<String> = [];
+        loop cCur < size and source.at(cCur) =!= ")" {
+            var cMut := false;
+            if source.wordAt(cCur, "mut") {
+                cMut = true;
+                cCur = syntax.skipTrivia(source, cCur + 3, prefix);
+            }
+            if cCur >= size or not source.at(cCur).isNameStart() { return false; }
+            cnEnd := source.skipName(cCur);
+            cn := source.slice(cCur, cnEnd);
+            if syntax.isReservedWord(cn) or cNames.contains(cn) { return false; }
+            mut cNames.pushBack(cn);
+            cCur = syntax.skipTrivia(source, cnEnd, prefix);
+            if cCur >= size or source.at(cCur) =!= ":" { return false; }
+            cCur = syntax.skipTrivia(source, cCur + 1, prefix);
+            if source.wordAt(cCur, "mut") {
+                if cMut { return false; }
+                cCur = syntax.skipTrivia(source, cCur + 3, prefix);
+            }
+            cType := canResolveTypeAt(source, cCur, prefix, aliases, genericType, emptySeen, 32);
+            if not cType.ok or cType.kind == ir.VALUE_KIND_UNIT { return false; }
+            cCur = syntax.skipTrivia(source, cType.next, prefix);
+            if cCur < size and source.at(cCur) == "," {
+                cCur = syntax.skipTrivia(source, cCur + 1, prefix);
+                if cCur < size and source.at(cCur) == ")" { return false; }
+            } else {
+                break;
+            }
+        }
+        if cCur >= size or source.at(cCur) =!= ")" { return false; }
+        afterParen = syntax.skipTrivia(source, cCur + 1, prefix);
+    }
     if afterParen >= size or source.at(afterParen) =!= ":" { return false; }
     retType := canResolveTypeAt(source, afterParen + 1, prefix, aliases, genericType, emptySeen, 32);
     if not retType.ok { return false; }

@@ -1482,10 +1482,15 @@ pub cReplaceExactToken := fn(code: String, needle: String, replacement: String):
                 else { cursor += 1; }
             }
         } else if ch == firstCh and code.startsWithAt(cursor, needle) {
-            if cursor > flushed { mut out.append(code.slice(flushed, cursor)); }
-            mut out.append(replacement);
-            cursor = cursor + nLen;
-            flushed = cursor;
+            endBoundOk := cursor + nLen >= size or not needle.at(nLen - 1).isNameContinue() or not code.at(cursor + nLen).isNameContinue();
+            if endBoundOk {
+                if cursor > flushed { mut out.append(code.slice(flushed, cursor)); }
+                mut out.append(replacement);
+                cursor = cursor + nLen;
+                flushed = cursor;
+            } else {
+                cursor = cursor + 1;
+            }
         } else {
             cursor = cursor + 1;
         }

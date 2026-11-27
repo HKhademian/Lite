@@ -63,15 +63,20 @@ tsParameterList := fn(encoded: String): String {
             rawParameterKind.slice(4, rawParameterKind.length())
         } else { rawParameterKind };
         if result.count() > 0 { mut result.append(", "); }
-        mut result.append("lite_");
-        mut result.append(parameterName);
-        if isMutParam and frontend.isRecordOrDistinctRecord(parameterKind) {
-            mut result.append(": { v: ");
+        if parameterName == "$ctx" {
+            mut result.append("lite$ctx: ");
             mut result.append(tsFunctionType(parameterKind));
-            mut result.append(" }");
         } else {
-            mut result.append(": ");
-            mut result.append(tsFunctionType(parameterKind));
+            mut result.append("lite_");
+            mut result.append(parameterName);
+            if isMutParam and frontend.isRecordOrDistinctRecord(parameterKind) {
+                mut result.append(": { v: ");
+                mut result.append(tsFunctionType(parameterKind));
+                mut result.append(" }");
+            } else {
+                mut result.append(": ");
+                mut result.append(tsFunctionType(parameterKind));
+            }
         }
         if separator < 0 { break; }
         start = separator + 1;
@@ -89,7 +94,12 @@ reportParameterReads := fn(encoded: String, indent: String): Unit {
         if separator >= 0 { end = separator; }
         entry := encoded.slice(start, end);
         equals := entry.indexOf("=", 0);
-        outLine(indent + "void lite_" + entry.slice(0, equals) + ";");
+        pName := entry.slice(0, equals);
+        if pName == "$ctx" {
+            outLine(indent + "void lite$ctx;");
+        } else {
+            outLine(indent + "void lite_" + pName + ";");
+        }
         if separator < 0 { break; }
         start = separator + 1;
     }
@@ -4122,7 +4132,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         if tsSourceMapMode =!= optCfg.SourceMapMode.None and pendingLocLine > 0 and
         item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE_OP and
-        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_PUBLIC_IMPL and
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_PUBLIC_IMPL and item.kind =!= frontend.ITEM_KIND_PUBLIC_CONTEXT and
         item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_END_IF and
         item.kind =!= frontend.ITEM_KIND_ELSE and item.kind =!= frontend.ITEM_KIND_ELSE_IF and
         item.kind =!= frontend.ITEM_KIND_END_LOOP and item.kind =!= frontend.ITEM_KIND_END_SCOPE and
@@ -4328,7 +4338,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             count = 0;
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP {
             mainStopped = true;
-        } else if item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_PUBLIC_IMPL or item.kind == frontend.ITEM_KIND_NOOP {
+        } else if item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_PUBLIC_IMPL or item.kind == frontend.ITEM_KIND_PUBLIC_CONTEXT or item.kind == frontend.ITEM_KIND_NOOP {
         } else {
             if count > 0 { mut lineBuf.append(" + \" \" + "); }
             mut lineBuf.append(reportArgumentCode(item));

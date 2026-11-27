@@ -1369,6 +1369,8 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                     not source.startsWithAt(operator, ":") and not syntax.isSingleEquals(source, operator) and
                     (source.at(operator) == "<" or source.at(operator).isNameStart()) {
                         mut decls.pushBack((kind = ir.DECL_KIND_PUB_TYPE_OP, name = "$pubimpl@" + declStart.toText(), runtime = "", code = "", intValue = 0, textValue = ""));
+                    } else if source.slice(declStart, declEnd) == "context" and operator < size and source.at(operator) =!= "(" {
+                        mut decls.pushBack((kind = ir.DECL_KIND_PUB_CONTEXT, name = "$pubctx@" + declStart.toText(), runtime = "", code = "", intValue = 0, textValue = ""));
                     }
                 }
                 position = afterName;
@@ -1441,6 +1443,14 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                 continue;
             }
             aliasPosition := syntax.skipTrivia(source, afterName, prefix);
+            if name == "context" and aliasPosition < size and source.at(aliasPosition) =!= "(" and not source.startsWithAt(aliasPosition, ":=") and not source.startsWithAt(aliasPosition, ":") and not syntax.isSingleEquals(source, aliasPosition) {
+                var cScan := aliasPosition;
+                if source.wordAt(cScan, "mut") { cScan = syntax.skipTrivia(source, cScan + 3, prefix); }
+                if cScan < size and source.at(cScan).isNameStart() {
+                    position = source.skipName(cScan);
+                    continue;
+                }
+            }
             if name == "impl" and not source.startsWithAt(aliasPosition, ":=") and not source.startsWithAt(aliasPosition, ":") and not syntax.isSingleEquals(source, aliasPosition) and aliasPosition < size and (source.at(aliasPosition) == "<" or source.at(aliasPosition).isNameStart()) {
                 var implCur := aliasPosition;
                 var implDepth := 0;

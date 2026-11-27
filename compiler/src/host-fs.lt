@@ -340,6 +340,43 @@ path: String, display: String, identity: String, text: String
     (path = canonPath, =display, =identity, text = readRes.text)
 }
 
+/** Walks up from `modulePath` to locate the owning package's optional `$context.lt` ambient context file. */
+pub findPackageContext := fn(modulePath: String, rootDir: String, projectRoot: String): (found: Bool, path: String, display: String, identity: String, text: String) {
+    empty := (found = false, path = "", display = "", identity = "", text = "");
+    if modulePath == "" or path.baseName(modulePath) == "$context.lt" { return empty; }
+    var dir := path.parentDir(modulePath);
+    normRootDir := if rootDir =!= "" { path.normalize(rootDir) } else { "" };
+    normProjRoot := if projectRoot =!= "" { path.normalize(projectRoot) } else { "" };
+    loop true {
+        normDir := path.normalize(dir);
+        if normDir == "" or normDir == "/" or normDir == "/tmp" or normDir == "/private/tmp" or normDir == "/var" or normDir == "/var/folders" {
+            return empty;
+        }
+        if normProjRoot =!= "" and normDir == normProjRoot {
+            return empty;
+        }
+        cand := path.join(normDir, "$context.lt");
+        if fs.kind(cand) == fs.FILE_KIND_FILE {
+            rp := fs.realPath(cand);
+            canonPath := if rp.ok { rp.path } else { cand };
+            if canonPath == modulePath { return empty; }
+            readRes := fs.readText(canonPath);
+            if readRes.ok {
+                display := displaySourcePath(canonPath, projectRoot);
+                identity := sourceModuleIdentity(projectRoot, readRes.text);
+                return (found = true, path = canonPath, =display, =identity, text = readRes.text);
+            }
+        }
+        if normRootDir =!= "" and normDir == normRootDir {
+            return empty;
+        }
+        parent := path.parentDir(normDir);
+        if parent == normDir { break; }
+        dir = parent;
+    }
+    empty
+}
+
 /** Reads one shipped built-in core owner module if present and identity-verified, without failing when absent. */
 pub tryReadCoreOwner := fn(projectRoot: String, relPath: String): (
 ok: Bool, path: String, display: String, identity: String, text: String

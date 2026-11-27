@@ -1,6 +1,6 @@
 # Deferred callable and environment contexts
 
-Status: **pinned for later; postponed at the user's request on 2026-10-21** (updated 2026-11-26: Phase 10 lexical `context` direction and open items are recorded in [Phase 10 — Lexical contexts](lite://doc/c11-memory-and-codegen-plan#phase-10--lexical-contexts)).
+Status: **pinned for later; postponed at the user's request on 2026-10-21** (updated 2026-11-27: Phase 10 lexical `context` shipped — see [Phase 10 — Lexical contexts](lite://doc/c11-memory-and-codegen-plan#phase-10--lexical-contexts-completed); escaping `mut`/borrowed capture lifetimes and open items remain tracked there).
 
 ## Scope
 

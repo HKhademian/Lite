@@ -10,6 +10,7 @@ builtinsAbi := import "./builtins-abi";
 syntax := import "./frontend-syntax";
 types := import "./frontend-types";
 interfaces := import "./interfaces";
+contexts := import "./contexts";
 generics := import "./generics";
 trace := import "./trace-safety";
 reach := import "./reachability";
@@ -156,6 +157,7 @@ pub ITEM_KIND_MONO_OWNER := ir.ITEM_KIND_MONO_OWNER;
 pub ITEM_KIND_PUBLIC_VALUE := ir.ITEM_KIND_PUBLIC_VALUE;
 pub ITEM_KIND_PUBLIC_TYPE := ir.ITEM_KIND_PUBLIC_TYPE;
 pub ITEM_KIND_PUBLIC_IMPL := ir.ITEM_KIND_PUBLIC_IMPL;
+pub ITEM_KIND_PUBLIC_CONTEXT := ir.ITEM_KIND_PUBLIC_CONTEXT;
 pub ITEM_KIND_PURE_GLOBAL := ir.ITEM_KIND_PURE_GLOBAL;
 pub ITEM_KIND_FUNCTION_START := ir.ITEM_KIND_FUNCTION_START;
 pub ITEM_KIND_FUNCTION_END := ir.ITEM_KIND_FUNCTION_END;
@@ -349,6 +351,9 @@ pub dynInterfaceKind := fn(kind: String): String { types.dynInterfaceKind(kind) 
 pub containsDynKind := fn(kind: String): Bool { types.containsDynKind(kind) };
 /** Returns C11 16 B dyn fat-pointer struct typedef `lt_dyn_<hash>`. */
 pub cDynTag := fn(kind: String): String { types.cDynTag(kind) };
+pub isCtxKind := fn(kind: String): Bool { types.isCtxKind(kind) };
+pub cCtxTag := fn(kind: String): String { types.cCtxTag(kind) };
+pub fnContextKind := fn(kind: String): String { types.fnContextKind(kind) };
 /** Returns C11 vtable struct typedef `lt_vt_<hash>`. */
 pub cVtableTag := fn(kind: String): String { types.cVtableTag(kind) };
 /** Error message when storing borrowed types (`Slice<T>`, `dyn Iface`) in escaping positions, or `""`. */
@@ -1317,6 +1322,9 @@ aliasesWithImplParams := fn(aliases: List<AliasDecl>, implParams: String, depth:
 /** Verifies two pipe-encoded parameter lists and result types match between impl method and instantiated interface method. */
 verifyImplMethodSignature := fn(source: String, errPos: Int, prefix: String, ifaceName: String, targetKind: String,
 reqMethod: interfaces.InterfaceMethod, actualParams: String, actualParamCount: Int, actualResult: String): Unit {
+    if contexts.extractCtxKindFromParams(actualParams) =!= "" {
+        failAt(source, errPos, prefix, "impl method " + ifaceName + "." + reqMethod.name + " cannot declare context requirements omitted by interface " + ifaceName);
+    }
     expectedTotal := reqMethod.paramCount + 1;
     if actualParamCount =!= expectedTotal {
         failAt(source, errPos, prefix, "impl method " + ifaceName + "." + reqMethod.name + " expects " + expectedTotal.toText() + " parameter(s), got " + actualParamCount.toText());
@@ -1678,19 +1686,41 @@ live: Bool, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {
 /** Advances past one `{ ... }` function body while respecting strings and comments. */
 skipBraceBlock := fn(source: String, afterOpen: Int, prefix: String): Int { syntax.skipBraceBlock(source, afterOpen, prefix) };
 
-/** Splits up to `count` pipe-delimited substrings out of `encoded`. */
+/** Splits up to `count` pipe-delimited substrings out of `encoded`, ignoring any trailing `$ctx=` entry. */
 splitPipeEntries := fn(encoded: String, count: Int): List<String> {
-    out: mut List<String> = [];
-    var startPos := 0;
-    var index := 0;
-    loop index < count {
-        sep := encoded.indexOf("|", startPos);
-        endPos := if sep >= 0 { sep } else { encoded.length() };
-        mut out.pushBack(encoded.slice(startPos, endPos));
-        startPos = endPos + 1;
-        index = index + 1;
+    generics.splitPipeEntries(encoded, count)
+};
+
+/** Binds declared `Ctx<...>` slots of a function, method, or monomorphization at lexical depth 1. */
+bindFunctionContextSlots := fn(target: String, source: String, errPos: Int, prefix: String, ctxKind: String,
+ctxParamName: String, fnParamSeedBag: String, locals: mut List<Local>, blockDecls: mut List<BlockDecl>): Unit {
+    if ctxKind == "" { return; }
+    loop contexts.parseCtxKindSlots(ctxKind) as cs {
+        if tokenInPipeBag(fnParamSeedBag, cs.name) {
+            failAt(source, errPos, prefix, "context slot " + cs.name + " conflicts with parameter of the same name");
+        }
+        isSlice := types.isSliceKind(cs.kind);
+        isDyn := types.isDynKind(cs.kind);
+        isBorrowView := isSlice or isDyn;
+        fieldName := if target == TARGET_C { "slot_" + ir.safeTargetIdent(TARGET_C, cs.name) } else { cs.name };
+        fieldAccess := ctxParamName + (if target == TARGET_C { "->" } else { "." }) + fieldName;
+        slotRuntime := if target == TARGET_C {
+            if isBorrowView { fieldAccess }
+            else if cs.isMut or types.cParamIsConstPtr(cs.kind) { "(*(" + fieldAccess + "))" }
+            else { fieldAccess }
+        } else {
+            if isBorrowView or not cs.isMut { fieldAccess }
+            else { fieldAccess + ".v" }
+        };
+        provText := if isBorrowView { "ctx_param:borrow" } else if cs.isMut { "ctx_param:mut" } else { "ctx_param:ro" };
+        mut locals.pushBack((name = "$ctxslot:" + cs.name, runtime = slotRuntime, kind = cs.kind,
+        mutable = cs.isMut and not isBorrowView, writable = cs.isMut, depth = 1, constant = false,
+        code = "", intValue = 1, textValue = provText, initState = INIT_STATE_INIT));
+        mut blockDecls.pushBack((name = cs.name, depth = 1));
+        mut locals.pushBack((name = cs.name, runtime = slotRuntime, kind = cs.kind,
+        mutable = cs.isMut and not isBorrowView, writable = cs.isMut, depth = 1, constant = false,
+        code = slotRuntime, intValue = 0, textValue = provText, initState = INIT_STATE_INIT));
     }
-    out
 };
 
 /** Checks trace initialization safety, escaping callable safety (when `checkEscape`), and propagates outer callable updates. */
@@ -1823,9 +1853,13 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     var items: mut Items = [];
     isLtModule := prefix.endsWith(".lt");
     if monoInstIdx < 0 {
+        contexts.clearAmbient();
         types.setActiveImplModuleKey(moduleKey);
         position = skipTrivia(source, 0, prefix);
-        if position == size { return items; }
+        if position == size {
+            contexts.saveModuleAmbient(moduleKey);
+            return items;
+        }
     }
     neededFnSet: mut Set<String>;
     if monoInstIdx < 0 and neededFns =!= "*" {
@@ -1887,6 +1921,17 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         } else if exported.kind == ITEM_KIND_PUBLIC_IMPL {
             decImp := interfaces.decodeImplMeta(exported.textValue);
             if decImp.ok { interfaces.registerImpl(decImp.def); }
+        } else if exported.kind == ITEM_KIND_PUBLIC_CONTEXT {
+            cMeta := contexts.decodeAmbientTextMeta(exported.textValue);
+            contexts.registerAmbient(contexts.AmbientContext {
+                name = exported.name,
+                slotKind = exported.code,
+                backingKind = cMeta.backingKind,
+                runtime = exported.runtime,
+                isMut = exported.intValue =!= 0,
+                implKey = cMeta.implKey,
+                isLocalModule = false
+            });
         }
     }
     decls := collectModuleDecls(target, source, prefix, moduleKey);
@@ -1941,6 +1986,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
             }
+            contexts.registerFnContext(exported.runtime, contexts.extractCtxKindFromParams(exported.textValue));
             first := parameterTotal;
             loop splitPipeEntries(exported.textValue, exported.intValue) as expParam {
                 mut functionParams.pushBack(expParam);
@@ -1953,6 +1999,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
         } else if exported.kind == ITEM_KIND_PUBLIC_TYPE_OP {
             if findFunction(functions, exported.name) < 0 {
+                contexts.registerFnContext(exported.runtime, contexts.extractCtxKindFromParams(exported.textValue));
                 first := parameterTotal;
                 loop splitPipeEntries(exported.textValue, exported.intValue) as expParam {
                     mut functionParams.pushBack(expParam);
@@ -2041,6 +2088,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         if afterHdr < size and source.at(afterHdr) == ";" {
                             hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, fnName, header.params, header.result);
                             if publishedFunctions.has(fnName) and hostRuntime =!= "" {
+                                contexts.registerFnContext(hostRuntime, contexts.extractCtxKindFromParams(header.params));
                                 mut functions.pushBack((name = fnName, runtime = hostRuntime, result = header.result,
                                 first = parameterTotal, count = header.count, declAt = fnAt));
                                 loop splitPipeEntries(header.params, header.count) as hp {
@@ -2064,6 +2112,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                                     selfTarget = "", isPub = publishedFunctions.has(fnName)
                                 ));
                             }
+                            contexts.registerFnContext(fnRuntime, contexts.extractCtxKindFromParams(header.params));
                             (mut functions).pushBack((name = fnName, runtime = fnRuntime, result = header.result,
                             first = parameterTotal, count = header.count, declAt = fnAt));
                             loop splitPipeEntries(header.params, header.count) as hp {
@@ -2101,6 +2150,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             if afterHdr < size and source.at(afterHdr) == ";" {
                                 hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, qualName, header.params, header.result);
                                 if publishedTypeOps.has(qualName) and hostRuntime =!= "" {
+                                    contexts.registerFnContext(hostRuntime, contexts.extractCtxKindFromParams(header.params));
                                     mut functions.pushBack((name = typeOpKey, runtime = hostRuntime, result = header.result,
                                     first = parameterTotal, count = header.count, declAt = opAt));
                                     loop splitPipeEntries(header.params, header.count) as hp {
@@ -2124,6 +2174,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                                         selfTarget = owner.selfTarget, isPub = publishedTypeOps.has(qualName)
                                     ));
                                 }
+                                contexts.registerFnContext(fnRuntime, contexts.extractCtxKindFromParams(header.params));
                                 (mut functions).pushBack((name = typeOpKey, runtime = fnRuntime, result = header.result,
                                 first = parameterTotal, count = header.count, declAt = opAt));
                                 loop splitPipeEntries(header.params, header.count) as hp {
@@ -2170,6 +2221,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     } else {
                         mRuntime = moduleFunctionRuntime(target, moduleKey, "impl$" + mDeclAt.toText() + "$" + mName);
                     }
+                    contexts.registerFnContext(mRuntime, contexts.extractCtxKindFromParams(mParams));
                     if findFunction(functions, mFnKey) < 0 {
                         (mut functions).pushBack((name = mFnKey, runtime = mRuntime, result = mResult,
                         first = parameterTotal, count = mCount, declAt = mDeclAt));
@@ -2252,6 +2304,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         moduleKey = tpl.moduleKey;
         moduleIdentity = tpl.moduleIdentity;
         types.setActiveImplModuleKey(moduleKey);
+        contexts.restoreModuleAmbient(tpl.moduleKey);
         size = tpl.bodyEnd;
         position = skipTrivia(source, tpl.bodyStart, prefix);
         if envIdx >= 0 {
@@ -2298,6 +2351,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             mut functionParams.pushBack(sp);
             parameterTotal = parameterTotal + 1;
         }
+        monoCtxKind := contexts.extractCtxKindFromParams(inst.substParams);
+        contexts.registerFnContext(inst.runtime, monoCtxKind);
         (mut functions).pushBack((name = monoSelfName, runtime = inst.runtime, result = inst.substResult,
         first = monoFirst, count = tpl.paramCount, declAt = tpl.declAt));
         mut items.pushBack((kind = ITEM_KIND_FUNCTION_START, name = tpl.qualName, runtime = inst.runtime,
@@ -2341,6 +2396,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             mutable = false, writable = isMutParam, depth = 1, constant = false, code = runtime,
             intValue = 0, textValue = if isBorrowView { "borrow_param:" } else { "" }, initState = INIT_STATE_INIT));
         }
+        bindFunctionContextSlots(target, source, tpl.declAt, prefix, monoCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
         currentName = monoSelfName;
         currentFnRuntime = inst.runtime;
         currentResult = inst.substResult;
@@ -3121,6 +3177,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 continue;
             }
             fnOpenBrace := mBodyStart - 1;
+            mCtxKind := contexts.fnContextFor(fInfo.runtime);
             if currentLive and not currentStopped {
                 paramParts: mut List<String> = [];
                 var pi := 0;
@@ -3128,8 +3185,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     mut paramParts.pushBack(functionParams[fInfo.first + pi]);
                     pi = pi + 1;
                 }
+                fullImplParams := contexts.appendCtxToParams(paramParts.join("|"), mCtxKind);
                 mut items.pushBack((kind = ITEM_KIND_FUNCTION_START, name = mFnKey, runtime = fInfo.runtime,
-                code = fInfo.result, intValue = fInfo.count, textValue = paramParts.join("|")));
+                code = fInfo.result, intValue = fInfo.count, textValue = fullImplParams));
             }
             fnTryId := nextStmtCtxId;
             nextStmtCtxId = nextStmtCtxId + 1;
@@ -3174,6 +3232,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 intValue = 0, textValue = if isBorrowView { "borrow_param:" } else { "" }, initState = INIT_STATE_INIT));
                 pi = pi + 1;
             }
+            bindFunctionContextSlots(target, source, fInfo.declAt, prefix, mCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
             currentName = mFnKey;
             currentFnRuntime = fInfo.runtime;
             currentResult = fInfo.result;
@@ -3214,6 +3273,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             failAt(source, nameStart, prefix, "import requires a module alias");
         }
         var isPubImpl := false;
+        var isPubContext := false;
         if name == "pub" {
             if blockCount =!= 0 {
                 failAt(source, nameStart, prefix, "pub is only allowed on top-level declarations");
@@ -3231,6 +3291,13 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 position = skipTrivia(source, declarationEnd, prefix);
                 nameStart = declarationStart;
                 name = "impl";
+            } else if source.slice(declarationStart, declarationEnd) == "context" and declarationOperator < size and
+            not source.startsWithAt(declarationOperator, ":=") and not source.startsWithAt(declarationOperator, ":") and
+            not isSingleEquals(source, declarationOperator) and source.at(declarationOperator) =!= "(" {
+                isPubContext = true;
+                position = skipTrivia(source, declarationEnd, prefix);
+                nameStart = declarationStart;
+                name = "context";
             } else {
                 if declarationOperator < size and source.at(declarationOperator) == "." {
                     pubOpStart := skipTrivia(source, declarationOperator + 1, prefix);
@@ -3294,6 +3361,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         } else {
                             mRuntime = moduleFunctionRuntime(target, moduleKey, "impl$" + mDeclAt.toText() + "$" + mName);
                         }
+                        contexts.registerFnContext(mRuntime, contexts.extractCtxKindFromParams(mParams));
                         if findFunction(functions, mFnKey) < 0 {
                             (mut functions).pushBack((name = mFnKey, runtime = mRuntime, result = mResult,
                             first = parameterTotal, count = mCount, declAt = mDeclAt));
@@ -3325,6 +3393,182 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             implMethodBodyStarts = impParsed.methodBodyStarts;
             implMethodBodyEnds = impParsed.methodBodyEnds;
             position = impParsed.bodyFirstPos;
+            continue;
+        }
+        if name == "context" and not isPubContext and position < size and source.at(position) == "(" and
+        localIndex(locals, "context") < 0 and findFunction(functions, "context") < 0 {
+            if isLtModule and blockCount == 0 {
+                failAt(source, nameStart, prefix, "top-level runtime block is not allowed in .lt module");
+            }
+            ovPlan := expr.parseContextOverrideHeader(target, source, nameStart, prefix, locals, functions, functionParams, currentName, stmtCtxs, 0, false, aliases);
+            if currentLive and not currentStopped { mut items.pushBack((kind = ITEM_KIND_SCOPE, name = "", runtime = "", code = "", intValue = 0, textValue = "")); }
+            (mut savedStates).pushBack((returned = currentReturned, stopped = currentStopped,
+            branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
+            preLocalsLen = localsCount(locals), liveBranchCount = liveBranchCount));
+            liveBranchCount = 0;
+            currentLive = currentLive and not currentStopped;
+            currentReturned = false;
+            currentStopped = false;
+            branchesReturned = true;
+            branchesStopped = true;
+            hasElse = false;
+            loopForever = false;
+            mut blocks.pushBack(BLOCK_KIND_SCOPE);
+            blockCount = blockCount + 1;
+            depth = depth + 1;
+            var tIdx := 0;
+            loop tIdx < ovPlan.tempNames.length() {
+                tKind := ovPlan.tempKinds[tIdx];
+                tRt := ovPlan.tempRuntimes[tIdx];
+                tMut := ovPlan.tempMuts[tIdx];
+                tCode := ovPlan.tempCodes[tIdx];
+                mut locals.pushBack((name = ovPlan.tempNames[tIdx], runtime = tRt, kind = tKind,
+                mutable = tMut, writable = tMut, depth = depth, constant = false, code = tCode,
+                intValue = ovPlan.tempInts[tIdx], textValue = ovPlan.tempTexts[tIdx], initState = INIT_STATE_INIT));
+                if currentLive and not currentStopped {
+                    itemCode := copiedValueCode(target, tKind, tCode);
+                    mut items.pushBack((kind = (if tMut { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL }) + storageKind(tKind),
+                    name = ovPlan.tempNames[tIdx], runtime = tRt, code = itemCode, intValue = ovPlan.tempInts[tIdx], textValue = ovPlan.tempTexts[tIdx]));
+                }
+                tIdx = tIdx + 1;
+            }
+            var sIdx := 0;
+            loop sIdx < ovPlan.slotNames.length() {
+                sName := ovPlan.slotNames[sIdx];
+                sMut := ovPlan.mutFlags[sIdx];
+                sKind := ovPlan.kinds[sIdx];
+                sRt := ovPlan.runtimes[sIdx];
+                sProv := ovPlan.provTexts[sIdx];
+                bMark := ovPlan.borrowMarks[sIdx];
+                if bMark =!= "" {
+                    mut locals.pushBack((name = "$ctxborrow:" + sName, runtime = "", kind = "CtxBorrow",
+                    mutable = false, writable = false, depth = depth, constant = false, code = "",
+                    intValue = 0, textValue = bMark, initState = INIT_STATE_INIT));
+                }
+                isBorrow := types.isSliceKind(sKind) or types.isDynKind(sKind);
+                outerBareIdx := localIndex(locals, sName);
+                mut locals.pushBack((name = "$ctxslot:" + sName, runtime = sRt, kind = sKind,
+                mutable = sMut and not isBorrow, writable = sMut, depth = depth, constant = false, code = "",
+                intValue = 0, textValue = sProv, initState = INIT_STATE_INIT));
+                if outerBareIdx >= 0 and locals[outerBareIdx].textValue.startsWithAt(0, "ctx_param:") {
+                    shadowProv := if isBorrow { "ctx_param:borrow" } else if sMut { "ctx_param:mut" } else { "ctx_param:ro" };
+                    mut locals.pushBack((name = sName, runtime = sRt, kind = sKind,
+                    mutable = sMut and not isBorrow, writable = sMut, depth = depth, constant = false, code = sRt,
+                    intValue = 0, textValue = shadowProv, initState = INIT_STATE_INIT));
+                }
+                sIdx = sIdx + 1;
+            }
+            position = skipTrivia(source, ovPlan.afterOpenBrace, prefix);
+            continue;
+        }
+        if name == "context" and (isPubContext or (position < size and not source.startsWithAt(position, ":=") and not source.startsWithAt(position, ":") and not isSingleEquals(source, position) and not source.startsWithAt(position, ".") and not source.startsWithAt(position, "(") and not source.startsWithAt(position, "[") and (source.wordAt(position, "mut") or source.at(position).isNameStart()))) {
+            if blockCount =!= 0 or depth =!= 0 {
+                failAt(source, nameStart, prefix, "ambient context declaration is only allowed at top level");
+            }
+            var ambMut := false;
+            if source.wordAt(position, "mut") {
+                ambMut = true;
+                position = skipTrivia(source, position + 3, prefix);
+            }
+            if position >= size or not source.at(position).isNameStart() {
+                failAt(source, position, prefix, "expected context slot name");
+            }
+            cNameStart := position;
+            cNameEnd := source.skipName(cNameStart);
+            cSlotName := source.slice(cNameStart, cNameEnd);
+            if isReservedWord(cSlotName) { unsupportedFeature(source, cNameStart, cSlotName, prefix); }
+            if contexts.hasLocalAmbient(cSlotName) {
+                failAt(source, cNameStart, prefix, "duplicate ambient context " + cSlotName);
+            }
+            position = skipTrivia(source, cNameEnd, prefix);
+            var explicitSlotKind := "";
+            if position < size and source.at(position) == ":" and not source.startsWithAt(position, ":=") {
+                typePos := skipTrivia(source, position + 1, prefix);
+                var annStart := typePos;
+                if source.wordAt(annStart, "mut") {
+                    if ambMut { failAt(source, annStart, prefix, "duplicate mut qualifier on ambient context " + cSlotName); }
+                    ambMut = true;
+                    annStart = skipTrivia(source, annStart + 3, prefix);
+                }
+                parsedSlotT := types.parseTypeAt(source, annStart, prefix, aliases, "context", "");
+                if parsedSlotT.kind == VALUE_KIND_UNIT {
+                    failAt(source, annStart, prefix, "ambient context " + cSlotName + " cannot have type Unit");
+                }
+                if types.containsSliceKind(parsedSlotT.kind) {
+                    failAt(source, annStart, prefix, "borrowed Slice<T> cannot be stored in ambient context");
+                }
+                explicitSlotKind = parsedSlotT.kind;
+                position = skipTrivia(source, parsedSlotT.next, prefix);
+            }
+            var opWidth := 0;
+            if explicitSlotKind =!= "" {
+                if isSingleEquals(source, position) { opWidth = 1; }
+                else if source.startsWithAt(position, ":=") { opWidth = 2; }
+                else { failAt(source, position, prefix, "expected = or := in typed ambient context declaration " + cSlotName); }
+            } else {
+                if not source.startsWithAt(position, ":=") {
+                    failAt(source, position, prefix, "expected := in ambient context declaration " + cSlotName);
+                }
+                opWidth = 2;
+            }
+            rhsStart := skipTrivia(source, position + opWidth, prefix);
+            initParsed := parseInitializerExpression(target, source, rhsStart, prefix, locals, functions, functionParams, currentName, explicitSlotKind, stmtCtxs, aliases);
+            if types.containsSliceKind(initParsed.kind) {
+                failAt(source, rhsStart, prefix, "borrowed Slice<T> cannot be stored in ambient context");
+            }
+            var slotKind := if explicitSlotKind =!= "" { explicitSlotKind } else { initParsed.kind };
+            var backingKind := initParsed.kind;
+            var ambImplKey := "";
+            var initCode := initParsed.code;
+            if explicitSlotKind =!= "" {
+                if types.isDynKind(explicitSlotKind) {
+                    if types.isDynKind(initParsed.kind) {
+                        failAt(source, rhsStart, prefix, "ambient dyn context requires a concrete implementing value");
+                    }
+                    imp := types.findImplForConcrete(initParsed.kind, types.dynInterfaceKind(explicitSlotKind));
+                    if not imp.found {
+                        failAt(source, rhsStart, prefix, "type " + displayKind(initParsed.kind) + " does not implement " + displayKind(explicitSlotKind));
+                    }
+                    ambImplKey = types.dynInterfaceKind(explicitSlotKind);
+                    backingKind = initParsed.kind;
+                } else {
+                    if not isCompatibleKind(explicitSlotKind, initParsed.kind) {
+                        failAt(source, rhsStart, prefix, "cannot initialize ambient context " + cSlotName + " of type " + displayKind(explicitSlotKind) + " with " + displayKind(initParsed.kind));
+                    }
+                    backingKind = explicitSlotKind;
+                    initCode = assignValueCode(target, explicitSlotKind, initParsed.kind, initParsed.code);
+                }
+            } else {
+                if types.isDynKind(initParsed.kind) {
+                    failAt(source, rhsStart, prefix, "ambient context cannot infer borrowed dyn Interface without explicit annotation");
+                }
+                slotKind = initParsed.kind;
+                backingKind = initParsed.kind;
+            }
+            stmtNext := consumeStatementEnd(source, initParsed.next, prefix);
+            if stmtNext < 0 { failAt(source, skipTrivia(source, initParsed.next, prefix), prefix, "expected ; after ambient context " + cSlotName); }
+            position = stmtNext;
+            ambRuntime := ir.moduleValueRuntime(target, moduleKey, (if ambMut { "ctxm_" } else { "ctxv_" }) + cSlotName);
+            contexts.registerAmbient(contexts.AmbientContext {
+                name = cSlotName,
+                slotKind = slotKind,
+                backingKind = backingKind,
+                runtime = ambRuntime,
+                isMut = ambMut,
+                implKey = ambImplKey,
+                isLocalModule = true
+            });
+            if isPubContext {
+                mut items.pushBack((kind = ITEM_KIND_PUBLIC_CONTEXT, name = cSlotName, runtime = ambRuntime,
+                code = slotKind, intValue = if ambMut { 1 } else { 0 },
+                textValue = contexts.encodeAmbientTextMeta(backingKind, ambImplKey)));
+            }
+            if currentLive and not currentStopped {
+                itemCode := copiedValueCode(target, backingKind, initCode);
+                mut items.pushBack((kind = (if ambMut { ITEM_PREFIX_VAR } else { ITEM_PREFIX_LOCAL }) + storageKind(backingKind),
+                name = "$ctxamb:" + cSlotName, runtime = ambRuntime, code = itemCode, intValue = initParsed.intValue,
+                textValue = itemTextPayload((kind = backingKind, code = itemCode, intValue = initParsed.intValue, textValue = initParsed.textValue, constant = initParsed.constant, next = position))));
+            }
             continue;
         }
         if position < size and source.at(position) == "{" and
@@ -4654,6 +4898,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                                 parameterTotal = parameterTotal + 1;
                             }
                         }
+                        contexts.registerFnContext(hostRuntime, contexts.extractCtxKindFromParams(header.params));
                         if currentLive {
                             mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE_OP, name = typeOpKey, runtime = hostRuntime, code = header.result,
                             intValue = header.count, textValue = header.params));
@@ -4686,6 +4931,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                                 parameterTotal = parameterTotal + 1;
                             }
                         }
+                        contexts.registerFnContext(genRuntime, contexts.extractCtxKindFromParams(header.params));
                         if isPubOp {
                             mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE_OP, name = typeOpKey, runtime = genRuntime, code = header.result,
                             intValue = header.count, textValue = header.params));
@@ -4791,6 +5037,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             parameterTotal = parameterTotal + 1;
                         }
                     }
+                    opCtxKind := contexts.extractCtxKindFromParams(header.params);
+                    contexts.registerFnContext(functionRuntime, opCtxKind);
+                    bindFunctionContextSlots(target, source, nameStart, prefix, opCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
                     currentName = typeOpKey;
                     currentFnRuntime = functionRuntime;
                     currentResult = header.result;
@@ -4885,6 +5134,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             parameterTotal = parameterTotal + 1;
                         }
                     }
+                    contexts.registerFnContext(hostRuntime, contexts.extractCtxKindFromParams(header.params));
                     if currentLive {
                         mut items.pushBack((kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = hostRuntime, code = header.result,
                         intValue = header.count, textValue = header.params));
@@ -4918,6 +5168,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             parameterTotal = parameterTotal + 1;
                         }
                     }
+                    contexts.registerFnContext(genRuntime, contexts.extractCtxKindFromParams(header.params));
                     if isPubFn {
                         mut items.pushBack((kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = genRuntime, code = header.result,
                         intValue = header.count, textValue = header.params));
@@ -5019,6 +5270,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         parameterTotal = parameterTotal + 1;
                     }
                 }
+                fnCtxKind := contexts.extractCtxKindFromParams(header.params);
+                contexts.registerFnContext(functionRuntime, fnCtxKind);
+                bindFunctionContextSlots(target, source, nameStart, prefix, fnCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
                 currentName = name;
                 currentFnRuntime = functionRuntime;
                 currentResult = header.result;
@@ -5510,6 +5764,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         }
         rootAssignedList: mut List<String> = [];
         loop rootAssignedNames as ra { mut rootAssignedList.pushBack(ra); }
+        contexts.saveModuleAmbient(moduleKey);
         generics.saveModuleEnv(moduleKey, locals, functions, functionParams, aliases, futureValues, rootAssignedList);
     }
     items
@@ -5572,6 +5827,7 @@ pub parseProgramWithExports := fn(target: String, source: String, prefix: String
 pub parseProgram := fn(target: String, source: String, prefix: String): Items {
     generics.resetAll();
     interfaces.resetAll();
+    contexts.resetAll();
     base := parseProgramWithModule(target, source, prefix, [], "", "");
     monoItems := drainGenericInstances(target);
     if monoItems.length() == 0 { return base; }

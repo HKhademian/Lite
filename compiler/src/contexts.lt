@@ -1,0 +1,267 @@
+/** Phase 10 lexical context slot codecs, canonical `Ctx<...>` helpers, and ambient `$context.lt` / callable context registries. */
+
+tb := import "util/text-builder";
+
+/** One resolved context slot requirement inside canonical `Ctx<slot:Kind,...>`. */
+pub CtxSlot := record {
+    name: String;
+    isMut: Bool;
+    kind: String;
+};
+
+/** One ambient context default declared at module top level or imported from a package's `$context.lt`. */
+pub AmbientContext := record {
+    name: String;
+    slotKind: String;
+    backingKind: String;
+    runtime: String;
+    isMut: Bool;
+    implKey: String;
+    isLocalModule: Bool;
+};
+
+fnCtxByRuntime: mut Map<String, String>;
+ambientContexts: mut List<AmbientContext> = [];
+ambientByModule: mut Map<String, List<AmbientContext>>;
+
+/** Resets all context registries before a fresh compilation graph. */
+pub resetAll := fn(): Unit {
+    mut fnCtxByRuntime.clear();
+    mut ambientContexts.clear();
+    mut ambientByModule.clear();
+};
+
+/** Clears per-module ambient context defaults before parsing one module. */
+pub clearAmbient := fn(): Unit {
+    mut ambientContexts.clear();
+};
+
+/** Saves the resolved ambient contexts of `moduleKey` for generic monomorphizations. */
+pub saveModuleAmbient := fn(moduleKey: String): Unit {
+    copy: mut List<AmbientContext> = [];
+    loop ambientContexts as e { mut copy.pushBack(e); }
+    mut ambientByModule.set(moduleKey, copy);
+};
+
+/** Restores saved ambient contexts for `moduleKey` before compiling a monomorphized instance. */
+pub restoreModuleAmbient := fn(moduleKey: String): Unit {
+    mut ambientContexts.clear();
+    saved := ambientByModule.get(moduleKey);
+    if saved.found {
+        loop saved.value as e { mut ambientContexts.pushBack(e); }
+    }
+};
+
+/** Registers canonical `ctxKind` (`""` if none) for a compiled function runtime symbol. */
+pub registerFnContext := fn(runtime: String, ctxKind: String): Unit {
+    if runtime == "" { return; }
+    if ctxKind == "" {
+        removed := mut fnCtxByRuntime.remove(runtime);
+    } else {
+        mut fnCtxByRuntime.set(runtime, ctxKind);
+    };
+};
+
+/** Returns canonical `Ctx<...>` requirement for `runtime`, or `""` if none. */
+pub fnContextFor := fn(runtime: String): String {
+    fnCtxByRuntime.getOr(runtime, "")
+};
+
+/** Registers one ambient context default in the active module scope. */
+pub registerAmbient := fn(entry: AmbientContext): Unit {
+    var i := 0;
+    n := ambientContexts.length();
+    loop i < n {
+        cur := ambientContexts[i];
+        if cur.name == entry.name and cur.isLocalModule == entry.isLocalModule {
+            ambientContexts[i] = entry;
+            return;
+        }
+        i = i + 1;
+    }
+    mut ambientContexts.pushBack(entry);
+};
+
+/** Finds an ambient context default by slot name, preferring current-module declarations over package `$context.lt`. */
+pub findAmbient := fn(name: String): (found: Bool, entry: AmbientContext) {
+    empty := AmbientContext {
+        name = "", slotKind = "", backingKind = "", runtime = "",
+        isMut = false, implKey = "", isLocalModule = false
+    };
+    var i := ambientContexts.length() - 1;
+    loop i >= 0 {
+        e := ambientContexts[i];
+        if e.isLocalModule and e.name == name {
+            return (found = true, entry = e);
+        }
+        i = i - 1;
+    }
+    var j := ambientContexts.length() - 1;
+    loop j >= 0 {
+        e := ambientContexts[j];
+        if not e.isLocalModule and e.name == name {
+            return (found = true, entry = e);
+        }
+        j = j - 1;
+    }
+    (found = false, entry = empty)
+};
+
+/** True when an ambient context named `name` was declared directly in the current module. */
+pub hasLocalAmbient := fn(name: String): Bool {
+    loop ambientContexts as e {
+        if e.isLocalModule and e.name == name { return true; }
+    }
+    false
+};
+
+/** Compares two context slot names lexicographically by Unicode code point. */
+compareSlotNames := fn(left: String, right: String): Int {
+    lCps := left.toCodePoints();
+    rCps := right.toCodePoints();
+    lLen := lCps.length();
+    rLen := rCps.length();
+    limit := if lLen < rLen { lLen } else { rLen };
+    var i := 0;
+    loop i < limit {
+        if lCps[i] < rCps[i] { return -1; }
+        if lCps[i] > rCps[i] { return 1; }
+        i = i + 1;
+    }
+    if lLen < rLen { -1 } else if lLen > rLen { 1 } else { 0 }
+};
+
+/** True when `kind` is a canonical internal context projection `Ctx<...>`. */
+pub isCtxKind := fn(kind: String): Bool {
+    kind.startsWithAt(0, "Ctx<") and kind.endsWith(">") and kind.length() > 5
+};
+
+/** Parses all `(name, isMut, kind)` slots from a canonical `Ctx<...>` kind. */
+pub parseCtxKindSlots := fn(ctxKind: String): List<CtxSlot> {
+    out: mut List<CtxSlot> = [];
+    if not isCtxKind(ctxKind) { return out; }
+    size := ctxKind.length() - 1;
+    var cursor := 4;
+    var depth := 0;
+    var entryStart := cursor;
+    loop cursor <= size {
+        atEnd := cursor == size;
+        ch := if atEnd { "" } else { ctxKind.at(cursor) };
+        if not atEnd {
+            if ch == "<" or ch == "(" or ch == "[" { depth = depth + 1; }
+            else if ch == ">" or ch == ")" or ch == "]" {
+                if depth > 0 { depth = depth - 1; }
+            }
+        }
+        if atEnd or (ch == "," and depth == 0) {
+            rawEntry := ctxKind.slice(entryStart, cursor);
+            colon := rawEntry.indexOf(":", 0);
+            if colon > 0 {
+                sName := rawEntry.slice(0, colon);
+                rawVal := rawEntry.slice(colon + 1, rawEntry.length());
+                isMut := rawVal.startsWithAt(0, "mut ");
+                sKind := if isMut { rawVal.slice(4, rawVal.length()) } else { rawVal };
+                mut out.pushBack(CtxSlot { name = sName, isMut = isMut, kind = sKind });
+            }
+            entryStart = cursor + 1;
+        }
+        cursor = cursor + 1;
+    }
+    out
+};
+
+/** Builds canonical name-sorted `Ctx<...>` kind from `slots`, or `""` when empty. */
+pub buildCanonicalCtxKind := fn(slots: List<CtxSlot>): String {
+    n := slots.length();
+    if n == 0 { return ""; }
+    sorted: mut List<CtxSlot> = [];
+    loop slots as s { mut sorted.pushBack(s); }
+    var i := 1;
+    loop i < n {
+        cur := sorted[i];
+        var j := i - 1;
+        loop j >= 0 and compareSlotNames(cur.name, sorted[j].name) < 0 {
+            sorted[j + 1] = sorted[j];
+            j = j - 1;
+        }
+        sorted[j + 1] = cur;
+        i = i + 1;
+    }
+    out: mut tb.TextBuilder;
+    mut out.append("Ctx<");
+    var k := 0;
+    loop k < n {
+        if k > 0 { mut out.append(","); }
+        slot := sorted[k];
+        mut out.append(slot.name);
+        mut out.append(":");
+        if slot.isMut { mut out.append("mut "); }
+        mut out.append(slot.kind);
+        k = k + 1;
+    }
+    mut out.append(">");
+    out.build()
+};
+
+/** Extracts canonical `$ctx=Ctx<...>` from pipe-encoded function params, or `""` when absent. */
+pub extractCtxKindFromParams := fn(encodedParams: String): String {
+    if encodedParams == "" { return ""; }
+    if encodedParams.startsWithAt(0, "$ctx=") {
+        return encodedParams.slice(5, encodedParams.length());
+    }
+    pos := encodedParams.indexOf("|$ctx=", 0);
+    if pos >= 0 {
+        return encodedParams.slice(pos + 6, encodedParams.length());
+    }
+    ""
+};
+
+/** Strips any trailing `$ctx=Ctx<...>` entry from pipe-encoded function params. */
+pub stripCtxFromParams := fn(encodedParams: String): String {
+    if encodedParams == "" { return ""; }
+    if encodedParams.startsWithAt(0, "$ctx=") { return ""; }
+    pos := encodedParams.indexOf("|$ctx=", 0);
+    if pos >= 0 {
+        return encodedParams.slice(0, pos);
+    }
+    encodedParams
+};
+
+/** Appends synthetic final `$ctx=<ctxKind>` entry to pipe-encoded function params when `ctxKind` is non-empty. */
+pub appendCtxToParams := fn(encodedParams: String, ctxKind: String): String {
+    if ctxKind == "" { return encodedParams; }
+    if encodedParams == "" { return "$ctx=" + ctxKind; }
+    encodedParams + "|$ctx=" + ctxKind
+};
+
+/** Length-prefixed encoding of `backingKind` and `implKey` for `ITEM_KIND_PUBLIC_CONTEXT.textValue`. */
+pub encodeAmbientTextMeta := fn(backingKind: String, implKey: String): String {
+    backingKind.length().toText() + ":" + backingKind + implKey.length().toText() + ":" + implKey
+};
+
+/** Decodes `(backingKind, implKey)` from `ITEM_KIND_PUBLIC_CONTEXT.textValue`. */
+pub decodeAmbientTextMeta := fn(raw: String): (backingKind: String, implKey: String) {
+    c1 := raw.indexOf(":", 0);
+    if c1 <= 0 { return (backingKind = raw, implKey = ""); }
+    var len1 := 0;
+    var i1 := 0;
+    loop i1 < c1 {
+        len1 = len1 * 10 + (raw.at(i1).toCodePoints()[0] - 48);
+        i1 = i1 + 1;
+    }
+    s1 := c1 + 1;
+    e1 := s1 + len1;
+    backing := if e1 <= raw.length() { raw.slice(s1, e1) } else { "" };
+    c2 := raw.indexOf(":", e1);
+    if c2 <= e1 { return (backingKind = backing, implKey = ""); }
+    var len2 := 0;
+    var i2 := e1;
+    loop i2 < c2 {
+        len2 = len2 * 10 + (raw.at(i2).toCodePoints()[0] - 48);
+        i2 = i2 + 1;
+    }
+    s2 := c2 + 1;
+    e2 := s2 + len2;
+    implK := if e2 <= raw.length() { raw.slice(s2, e2) } else { "" };
+    (backingKind = backing, implKey = implK)
+};

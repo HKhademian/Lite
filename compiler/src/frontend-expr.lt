@@ -13,6 +13,7 @@ builtinsAbi := import "./builtins-abi";
 syntax := import "./frontend-syntax";
 types := import "./frontend-types";
 interfaces := import "./interfaces";
+contexts := import "./contexts";
 generics := import "./generics";
 trace := import "./trace-safety";
 reach := import "./reachability";
@@ -838,6 +839,298 @@ parseTagPrefixExpr := fn(target: String, source: String, start: Int, prefix: Str
     ctx.intParsed("", 0, true, start)
 };
 
+/** Parsed entry of one `context (...) { ... }` lexical override block. */
+pub ContextOverridePlan := record {
+    afterOpenBrace: Int;
+    slotNames: List<String>;
+    mutFlags: List<Bool>;
+    kinds: List<String>;
+    runtimes: List<String>;
+    provTexts: List<String>;
+    borrowMarks: List<String>;
+    borrowDeclsMut: List<Bool>;
+    tempNames: List<String>;
+    tempRuntimes: List<String>;
+    tempKinds: List<String>;
+    tempMuts: List<Bool>;
+    tempCodes: List<String>;
+    tempInts: List<Int>;
+    tempTexts: List<String>;
+};
+
+/** Parses and validates `context (...) {` override entries against `locals`, enforcing mutability, borrow exclusivity, and alias uniqueness. */
+pub parseContextOverrideHeader := fn(target: String, source: String, kwPos: Int, prefix: String,
+locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
+ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): ContextOverridePlan {
+    size := source.length();
+    var cursor := syntax.skipTrivia(source, kwPos + 7, prefix);
+    cursor = syntax.expectSymbol(source, cursor, "(", prefix);
+    cursor = syntax.skipTrivia(source, cursor, prefix);
+    if cursor < size and source.at(cursor) == ")" {
+        syntax.failAt(source, cursor, prefix, "context override list cannot be empty");
+    }
+    slotNames: mut List<String> = [];
+    mutFlags: mut List<Bool> = [];
+    kinds: mut List<String> = [];
+    runtimes: mut List<String> = [];
+    provTexts: mut List<String> = [];
+    borrowMarks: mut List<String> = [];
+    borrowDeclsMut: mut List<Bool> = [];
+    tempNames: mut List<String> = [];
+    tempRuntimes: mut List<String> = [];
+    tempKinds: mut List<String> = [];
+    tempMuts: mut List<Bool> = [];
+    tempCodes: mut List<String> = [];
+    tempInts: mut List<Int> = [];
+    tempTexts: mut List<String> = [];
+    mutBoundRts: mut List<String> = [];
+    roBoundRts: mut List<String> = [];
+    var slotIdx := 0;
+    loop cursor < size and source.at(cursor) =!= ")" {
+        var lhsMut := false;
+        if source.wordAt(cursor, "mut") {
+            lhsMut = true;
+            cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+        }
+        var slotName := "";
+        var slotPos := cursor;
+        var rhsStart := cursor;
+        var isShorthand := false;
+        if cursor < size and syntax.isSingleEquals(source, cursor) {
+            idStart := syntax.skipTrivia(source, cursor + 1, prefix);
+            if idStart >= size or not source.at(idStart).isNameStart() {
+                syntax.failAt(source, idStart, prefix, "expected identifier after = in context override");
+            }
+            idEnd := source.skipName(idStart);
+            cand := source.slice(idStart, idEnd);
+            if syntax.isReservedWord(cand) { syntax.unsupportedFeature(source, idStart, cand, prefix); }
+            slotName = cand;
+            slotPos = idStart;
+            rhsStart = idStart;
+            isShorthand = true;
+        } else {
+            if cursor >= size or not source.at(cursor).isNameStart() {
+                syntax.failAt(source, cursor, prefix, "expected context slot name");
+            }
+            nEnd := source.skipName(cursor);
+            slotName = source.slice(cursor, nEnd);
+            if syntax.isReservedWord(slotName) { syntax.unsupportedFeature(source, cursor, slotName, prefix); }
+            afterN := syntax.skipTrivia(source, nEnd, prefix);
+            if not syntax.isSingleEquals(source, afterN) {
+                syntax.failAt(source, afterN, prefix, "expected = after context slot " + slotName);
+            }
+            rhsStart = syntax.skipTrivia(source, afterN + 1, prefix);
+        }
+        if slotNames.contains(slotName) {
+            syntax.failAt(source, slotPos, prefix, "duplicate context slot " + slotName);
+        }
+        rhsMut := if not isShorthand and rhsStart < size and source.wordAt(rhsStart, "mut") { true } else { false };
+        valStart := if rhsMut { syntax.skipTrivia(source, rhsStart + 3, prefix) } else { rhsStart };
+        isSlotMut := lhsMut or rhsMut;
+        mut slotNames.pushBack(slotName);
+        mut mutFlags.pushBack(isSlotMut);
+        var bareIdent := "";
+        var bareAfter := valStart;
+        if valStart < size and source.at(valStart).isNameStart() {
+            bEnd := source.skipName(valStart);
+            bCand := source.slice(valStart, bEnd);
+            bAfter := syntax.skipTrivia(source, bEnd, prefix);
+            if not syntax.isReservedWord(bCand) and bAfter < size and (source.at(bAfter) == "," or source.at(bAfter) == ")") {
+                bareIdent = bCand;
+                bareAfter = bAfter;
+            }
+        }
+        locIdx := if bareIdent =!= "" { sym.localIndex(locals, bareIdent) } else { -1 };
+        if locIdx >= 0 and locals[locIdx].depth >= -1 {
+            loc := locals[locIdx];
+            if loc.initState =!= ir.INIT_STATE_INIT {
+                syntax.failAt(source, valStart, prefix, "cannot read uninitialized local " + bareIdent);
+            }
+            if loc.textValue == "ctx_closure_forbidden" {
+                syntax.failAt(source, valStart, prefix, "cannot capture borrowed or mut context '" + bareIdent + "' in a closure; declare context(...) on the closure instead");
+            }
+            if loc.textValue == "closure_forbidden" {
+                msg := if types.containsDynKind(loc.kind) { "borrowed dyn Interface cannot be captured by closure" } else { "borrowed Slice<T> cannot be captured by closure" };
+                syntax.failAt(source, valStart, prefix, msg);
+            }
+            if isSlotMut {
+                if not loc.mutable and not loc.writable {
+                    syntax.failAt(source, valStart, prefix, "cannot bind immutable binding " + bareIdent + " as mut context");
+                }
+                sliceBorrows.checkCanMutateBinding(locals, loc.runtime, bareIdent, source, valStart, prefix);
+                if mutBoundRts.contains(loc.runtime) or roBoundRts.contains(loc.runtime) {
+                    syntax.failAt(source, valStart, prefix, "cannot bind " + bareIdent + " multiple times in context override");
+                }
+                mut mutBoundRts.pushBack(loc.runtime);
+                bProv := "borrow_mut:" + loc.runtime + "#" + loc.depth.toText() + "#" + bareIdent;
+                mut borrowMarks.pushBack(bProv);
+                mut borrowDeclsMut.pushBack(true);
+                mut kinds.pushBack(loc.kind);
+                mut runtimes.pushBack(loc.runtime);
+                mut provTexts.pushBack(if loc.textValue.startsWithAt(0, "borrow_") { loc.textValue } else { bProv });
+            } else {
+                sliceBorrows.checkCanReadBinding(locals, loc.runtime, bareIdent, source, valStart, prefix);
+                if mutBoundRts.contains(loc.runtime) {
+                    syntax.failAt(source, valStart, prefix, "cannot bind " + bareIdent + " both immutably and as mut context");
+                }
+                mut roBoundRts.pushBack(loc.runtime);
+                bProv := "borrow_ro:" + loc.runtime + "#" + loc.depth.toText() + "#" + bareIdent;
+                mut borrowMarks.pushBack(bProv);
+                mut borrowDeclsMut.pushBack(false);
+                mut kinds.pushBack(loc.kind);
+                mut runtimes.pushBack(loc.runtime);
+                mut provTexts.pushBack(if loc.textValue.startsWithAt(0, "borrow_") { loc.textValue } else { bProv });
+            }
+            cursor = bareAfter;
+        } else {
+            if rhsMut {
+                syntax.failAt(source, rhsStart, prefix, "expected a binding name after mut");
+            }
+            rhsParsed := parseBinaryCtx(target, source, rhsStart, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if rhsParsed.kind == ir.VALUE_KIND_UNIT {
+                syntax.failAt(source, rhsStart, prefix, "context slot " + slotName + " cannot have type Unit");
+            }
+            tmpName := "$ctxtmp_" + slotName + "_" + slotIdx.toText();
+            tmpRt := ir.freshScopeTemp(locals, "lt_ctxo" + slotIdx.toText());
+            mut tempNames.pushBack(tmpName);
+            mut tempRuntimes.pushBack(tmpRt);
+            mut tempKinds.pushBack(rhsParsed.kind);
+            mut tempMuts.pushBack(isSlotMut);
+            mut tempCodes.pushBack(rhsParsed.code);
+            mut tempInts.pushBack(rhsParsed.intValue);
+            mut tempTexts.pushBack(rhsParsed.textValue);
+            mut kinds.pushBack(rhsParsed.kind);
+            mut runtimes.pushBack(tmpRt);
+            mut provTexts.pushBack(rhsParsed.textValue);
+            mut borrowMarks.pushBack("");
+            mut borrowDeclsMut.pushBack(false);
+            cursor = syntax.skipTrivia(source, rhsParsed.next, prefix);
+        }
+        slotIdx = slotIdx + 1;
+        if cursor < size and source.at(cursor) == "," {
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            if cursor < size and source.at(cursor) == ")" {
+                syntax.failAt(source, cursor, prefix, "expected context slot name");
+            }
+        } else {
+            break;
+        }
+    }
+    cursor = syntax.expectSymbol(source, cursor, ")", prefix);
+    openBrace := syntax.skipTrivia(source, cursor, prefix);
+    if openBrace >= size or source.at(openBrace) =!= "{" {
+        syntax.failAt(source, openBrace, prefix, "expected { after context(...)");
+    }
+    ContextOverridePlan {
+        afterOpenBrace = openBrace + 1,
+        slotNames = slotNames,
+        mutFlags = mutFlags,
+        kinds = kinds,
+        runtimes = runtimes,
+        provTexts = provTexts,
+        borrowMarks = borrowMarks,
+        borrowDeclsMut = borrowDeclsMut,
+        tempNames = tempNames,
+        tempRuntimes = tempRuntimes,
+        tempKinds = tempKinds,
+        tempMuts = tempMuts,
+        tempCodes = tempCodes,
+        tempInts = tempInts,
+        tempTexts = tempTexts
+    }
+};
+
+/** Parses expression-position `context (...) { ... }` block with lexical overrides and deterministic cleanup. */
+parseContextOverrideExpr := fn(target: String, source: String, kwPos: Int, prefix: String,
+locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
+expected: String, minimum: Int, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool,
+bodySink: String, aliases: List<AliasDecl>): Parsed {
+    ovPlan := parseContextOverrideHeader(target, source, kwPos, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+    innerDepth := ir.maxLocalLexDepth(locals) + 1;
+    innerLocals: mut List<Local> = locals;
+    preDecls: mut List<String> = [];
+    postDrops: mut List<String> = [];
+    var ti := 0;
+    loop ti < ovPlan.tempNames.length() {
+        tName := ovPlan.tempNames[ti];
+        tRt := ovPlan.tempRuntimes[ti];
+        tKind := ovPlan.tempKinds[ti];
+        tMut := ovPlan.tempMuts[ti];
+        tCode := ovPlan.tempCodes[ti];
+        mut innerLocals.pushBack((name = tName, runtime = tRt, kind = tKind,
+        mutable = tMut, writable = tMut, depth = innerDepth, constant = false, code = tCode,
+        intValue = ovPlan.tempInts[ti], textValue = ovPlan.tempTexts[ti], initState = ir.INIT_STATE_INIT));
+        if not inferMode {
+            copied := ctx.copiedValueCode(target, tKind, tCode);
+            if target == ir.TARGET_C {
+                cT := types.cValueType(tKind);
+                mut preDecls.pushBack("/*@T:" + tKind + "@*/" + cT + " " + tRt + " = " + copied + "; (void)" + tRt + ";");
+                dFn := types.cDropFnForKind(tKind);
+                if dFn =!= "" { mut postDrops.pushBack(dFn + "(&" + tRt + ");"); }
+            } else {
+                mut preDecls.pushBack((if tMut { "let " } else { "const " }) + tRt + ": " + types.tsFunctionType(tKind) + " = " + copied + ";");
+            }
+        }
+        ti = ti + 1;
+    }
+    var si := 0;
+    loop si < ovPlan.slotNames.length() {
+        sName := ovPlan.slotNames[si];
+        sMut := ovPlan.mutFlags[si];
+        sKind := ovPlan.kinds[si];
+        sRt := ovPlan.runtimes[si];
+        sProv := ovPlan.provTexts[si];
+        bMark := ovPlan.borrowMarks[si];
+        if bMark =!= "" {
+            mut innerLocals.pushBack((name = "$ctxborrow:" + sName, runtime = "", kind = "CtxBorrow",
+            mutable = false, writable = false, depth = innerDepth, constant = false, code = "",
+            intValue = 0, textValue = bMark, initState = ir.INIT_STATE_INIT));
+        }
+        isBorrow := types.isSliceKind(sKind) or types.isDynKind(sKind);
+        outerBareIdx := sym.localIndex(locals, sName);
+        mut innerLocals.pushBack((name = "$ctxslot:" + sName, runtime = sRt, kind = sKind,
+        mutable = sMut and not isBorrow, writable = sMut, depth = innerDepth, constant = false, code = "",
+        intValue = 0, textValue = sProv, initState = ir.INIT_STATE_INIT));
+        if outerBareIdx >= 0 and locals[outerBareIdx].textValue.startsWithAt(0, "ctx_param:") {
+            shadowProv := if isBorrow { "ctx_param:borrow" } else if sMut { "ctx_param:mut" } else { "ctx_param:ro" };
+            mut innerLocals.pushBack((name = sName, runtime = sRt, kind = sKind,
+            mutable = sMut and not isBorrow, writable = sMut, depth = innerDepth, constant = false, code = sRt,
+            intValue = 0, textValue = shadowProv, initState = ir.INIT_STATE_INIT));
+        }
+        si = si + 1;
+    }
+    hasTemps := preDecls.length() > 0;
+    bodyDepth := if hasTemps and target == ir.TARGET_TS { iifeDepth + 1 } else { iifeDepth };
+    blkRes := parseBlockExpr(target, source, ovPlan.afterOpenBrace - 1, prefix, innerLocals, functions, params, currentName, expected, minimum, ctxs, bodyDepth, inferMode, bodySink, aliases);
+    if inferMode or not hasTemps {
+        return blkRes;
+    }
+    if target == ir.TARGET_C {
+        fnCtxIdxOv := ctx.findCtxByKindIndex(ctxs, "fn");
+        fnRetKOv := if fnCtxIdxOv >= 0 { ctxs[fnCtxIdxOv].valKind } else { "" };
+        dropsStr := postDrops.join(" ");
+        if blkRes.kind == ir.VALUE_KIND_UNIT or blkRes.kind == ir.VALUE_KIND_NEVER {
+            rawTail := ctx.cUnwrapIntoVar("", blkRes.kind, blkRes.code);
+            rewrittenTail := if dropsStr =!= "" { ctx.cRewriteExitDrops(rawTail, dropsStr, dropsStr, fnRetKOv, ovPlan.afterOpenBrace) } else { rawTail };
+            wrappedCode := "/*@CBLK:0@*/{ " + preDecls.join(" ") + " " + rewrittenTail + (if dropsStr =!= "" { " " + dropsStr } else { "" }) + " }";
+            return (kind = blkRes.kind, code = wrappedCode, intValue = blkRes.intValue, textValue = blkRes.textValue, constant = false, next = blkRes.next);
+        }
+        ovVar := freshCOwnedTemp("lt_ov_");
+        rawAssign := ctx.cUnwrapIntoVar(ovVar, blkRes.kind, ctx.copiedValueCode(target, blkRes.kind, blkRes.code));
+        rewrittenAssign := if dropsStr =!= "" { ctx.cRewriteExitDrops(rawAssign, dropsStr, dropsStr, fnRetKOv, ovPlan.afterOpenBrace) } else { rawAssign };
+        wrappedCode := "/*@CBLK:" + ovVar + "@*/" + types.cValueType(blkRes.kind) + " " + ovVar + "; { " + preDecls.join(" ") + " " + rewrittenAssign + (if dropsStr =!= "" { " " + dropsStr } else { "" }) + " }";
+        return (kind = blkRes.kind, code = wrappedCode, intValue = blkRes.intValue, textValue = blkRes.textValue, constant = false, next = blkRes.next);
+    }
+    retStmt := if blkRes.kind == ir.VALUE_KIND_NEVER {
+        "(" + blkRes.code + ");"
+    } else if blkRes.kind == ir.VALUE_KIND_UNIT {
+        "void (" + blkRes.code + "); return undefined;"
+    } else {
+        "return " + blkRes.code + ";"
+    };
+    (kind = blkRes.kind, code = "(() => { " + preDecls.join(" ") + " " + retStmt + " })()", intValue = blkRes.intValue, textValue = blkRes.textValue, constant = false, next = blkRes.next)
+};
+
 /** Parses a `fn(...) { ... }` anonymous/closure function literal expression starting after `fn`. */
 parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     isCFnLit := target == ir.TARGET_C;
@@ -892,6 +1185,12 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     encodedKind := encodedKindBuf.build();
     cursor = syntax.expectSymbol(source, cursor, ")", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
+    var fnCtxKind := "";
+    if cursor < size and source.wordAt(cursor, "context") {
+        ctxClause := types.parseContextClause(source, cursor, prefix, aliases, "");
+        fnCtxKind = ctxClause.ctxKind;
+        cursor = syntax.skipTrivia(source, ctxClause.next, prefix);
+    }
     var retKind := "";
     if cursor < size and source.at(cursor) == ":" {
         typedRet := types.parseFunctionType(source, cursor + 1, prefix, aliases, "");
@@ -911,7 +1210,8 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     if retKind =!= "$InferRet" and types.containsDynKind(retKind) {
         syntax.failAt(source, cursor, prefix, "borrowed dyn Interface cannot escape via function return type");
     }
-    var fnKind := encodedKind + "):" + retKind;
+    fnAtCtx := if contexts.isCtxKind(fnCtxKind) { "@ctx(" + fnCtxKind.slice(4, fnCtxKind.length() - 1) + ")" } else { "" };
+    var fnKind := encodedKind + ")" + fnAtCtx + ":" + retKind;
     fnLexDepth := ir.maxLocalLexDepth(locals) + 1;
     fnLocals: mut List<Local> = [];
     selfRuntime := if isCFnLit { "lt_self_" + nameStart.toText() } else { ir.freshScopeTemp(locals, "lite$self") };
@@ -919,12 +1219,19 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
     intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
     loop locals as outerEntry {
-        if outerEntry.name =!= "$self" and outerEntry.depth >= -1 {
+        if outerEntry.name =!= "$self" and not outerEntry.name.startsWithAt(0, "$ctxborrow:") and outerEntry.depth >= -1 {
             capturedInit := if outerEntry.initState == ir.INIT_STATE_UNINIT_ASSIGNED { ir.INIT_STATE_INIT }
             else if outerEntry.initState == ir.INIT_STATE_UNINIT and not outerEntry.mutable { ir.INIT_STATE_MAYBE }
             else { outerEntry.initState };
             capturedConst := if outerEntry.mutable or outerEntry.writable { false } else { outerEntry.constant };
-            capturedText := if types.containsSliceKind(outerEntry.kind) or types.containsDynKind(outerEntry.kind) { "closure_forbidden" } else { outerEntry.textValue };
+            isCtxEntry := outerEntry.name.startsWithAt(0, "$ctxslot:") or outerEntry.textValue.startsWithAt(0, "ctx_param:");
+            isForbidden := types.containsSliceKind(outerEntry.kind) or types.containsDynKind(outerEntry.kind) or
+            (isCtxEntry and (outerEntry.mutable or outerEntry.writable or outerEntry.textValue == "closure_forbidden" or outerEntry.textValue == "ctx_closure_forbidden"));
+            capturedText := if isForbidden {
+                if isCtxEntry and not types.containsSliceKind(outerEntry.kind) and not types.containsDynKind(outerEntry.kind) { "ctx_closure_forbidden" }
+                else if isCtxEntry { "ctx_closure_forbidden" }
+                else { "closure_forbidden" }
+            } else { outerEntry.textValue };
             mut fnLocals.pushBack((name = outerEntry.name, runtime = outerEntry.runtime, kind = outerEntry.kind,
             mutable = outerEntry.mutable, writable = outerEntry.writable, depth = outerEntry.depth, constant = capturedConst,
             code = outerEntry.code, intValue = outerEntry.intValue, textValue = capturedText, initState = capturedInit));
@@ -969,6 +1276,47 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         mut paramVoidBuf.append("; ");
         pBindIdx = pBindIdx + 1;
     }
+    clIdSuffix := nameStart.toText() + "_" + paramIdx.toText();
+    clCtxName := if isCFnLit { "lite_ctx_" + clIdSuffix } else { "lite$ctx_" + clIdSuffix };
+    if fnCtxKind =!= "" {
+        if paramIdx > 0 { mut tsParamsBuf.append(", "); }
+        mut tsParamsBuf.append(clCtxName);
+        mut tsParamsBuf.append(": ");
+        mut tsParamsBuf.append(types.tsFunctionType(fnCtxKind));
+        mut cParamsBuf.append(", const ");
+        mut cParamsBuf.append(types.cCtxTag(fnCtxKind));
+        mut cParamsBuf.append(" *");
+        mut cParamsBuf.append(clCtxName);
+        mut paramVoidBuf.append(if isCFnLit { "(void)" } else { "void " });
+        mut paramVoidBuf.append(clCtxName);
+        mut paramVoidBuf.append("; ");
+        loop contexts.parseCtxKindSlots(fnCtxKind) as cs {
+            if paramNames.contains(cs.name) {
+                syntax.failAt(source, cursor, prefix, "context slot " + cs.name + " conflicts with parameter of the same name");
+            }
+            isSlice := types.isSliceKind(cs.kind);
+            isDyn := types.isDynKind(cs.kind);
+            isBorrowView := isSlice or isDyn;
+            fieldName := if isCFnLit { "slot_" + ir.safeTargetIdent(ir.TARGET_C, cs.name) } else { cs.name };
+            fieldAccess := clCtxName + (if isCFnLit { "->" } else { "." }) + fieldName;
+            slotRuntime := if isCFnLit {
+                if isBorrowView { fieldAccess }
+                else if cs.isMut or types.cParamIsConstPtr(cs.kind) { "(*(" + fieldAccess + "))" }
+                else { fieldAccess }
+            } else {
+                if isBorrowView or not cs.isMut { fieldAccess }
+                else { fieldAccess + ".v" }
+            };
+            mut paramRuntimes.pushBack(slotRuntime);
+            provText := if isBorrowView { "ctx_param:borrow" } else if cs.isMut { "ctx_param:mut" } else { "ctx_param:ro" };
+            mut fnLocals.pushBack((name = "$ctxslot:" + cs.name, runtime = slotRuntime, kind = cs.kind,
+            mutable = cs.isMut and not isBorrowView, writable = cs.isMut, depth = fnLexDepth, constant = false,
+            code = "", intValue = 1, textValue = provText, initState = ir.INIT_STATE_INIT));
+            mut fnLocals.pushBack((name = cs.name, runtime = slotRuntime, kind = cs.kind,
+            mutable = cs.isMut and not isBorrowView, writable = cs.isMut, depth = fnLexDepth, constant = false,
+            code = slotRuntime, intValue = 0, textValue = provText, initState = ir.INIT_STATE_INIT));
+        }
+    }
     tsParamsCode := tsParamsBuf.build();
     cParamsCode := cParamsBuf.build();
     paramVoidStmts := paramVoidBuf.build();
@@ -993,7 +1341,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         if types.containsDynKind(retKind) {
             syntax.failAt(source, cursor, prefix, "borrowed dyn Interface cannot escape via function return type");
         }
-        fnKind = encodedKind + "):" + retKind;
+        fnKind = encodedKind + ")" + fnAtCtx + ":" + retKind;
         fnLocals[0] = (name = "$self", runtime = selfRuntime, kind = fnKind,
         mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
         intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT);
@@ -1032,11 +1380,12 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             le := locals[ri];
             isCell := le.runtime.startsWithAt(0, "(*lt_cell_");
             isDerefParam := le.runtime.startsWithAt(0, "(*lite_") and not isCell;
+            isCtxField := le.runtime.indexOf("->", 0) >= 0;
             scanTok := if isCell or isDerefParam { le.runtime.slice(2, le.runtime.length() - 1) } else { le.runtime };
-            if (le.depth > 0 or isCell or isDerefParam) and le.name =!= "$self" and scanTok =!= "" and
+            if (le.depth > 0 or isCell or isDerefParam or isCtxField) and le.name =!= "$self" and not le.name.startsWithAt(0, "$ctxslot:") and scanTok =!= "" and
             not paramRuntimes.contains(le.runtime) and
             not capRuntimes.contains(le.runtime) and
-            reach.codeUsesTextCall(fnBody.code, scanTok) {
+            (if isCtxField { fnBody.code.indexOf(le.runtime, 0) >= 0 } else { reach.codeUsesTextCall(fnBody.code, scanTok) }) {
                 mut capRuntimes.pushBack(le.runtime);
                 mut capKinds.pushBack(le.kind);
                 mut capMutables.pushBack(le.mutable or le.writable);
@@ -1128,7 +1477,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
                 mut envUnpackBuf.append(cellPtr);
                 mut envUnpackBuf.append("; ");
             } else {
-                isDerefParam := cRt.startsWithAt(0, "(*lite_");
+                isDerefParam := (cRt.startsWithAt(0, "(*lite_") and not isCell) or cRt.indexOf("->", 0) >= 0;
                 unpackTok := if isDerefParam { "lt_cap_" + ci.toText() } else { cRt };
                 if isDerefParam {
                     bodyRewritten = ctx.cReplaceExactToken(bodyRewritten, cRt, unpackTok);
@@ -1681,6 +2030,13 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
     if name == "fn" {
         return parseFnLiteralExpr(target, source, nameStart, next, prefix, locals, functions, params, expected, ctxs, iifeDepth, inferMode, aliases);
     }
+    if name == "context" {
+        afterCtxKw := syntax.skipTrivia(source, next, prefix);
+        if afterCtxKw < source.length() and source.at(afterCtxKw) == "(" and
+        sym.localIndex(locals, "context") < 0 and sym.findFunction(functions, "context") < 0 {
+            return parseContextOverrideExpr(target, source, nameStart, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, "", aliases);
+        }
+    }
     if name == "mut" {
         mutLease := tryParseGroupedMutLease(source, nameStart, prefix, false);
         if not mutLease.matched {
@@ -1717,6 +2073,9 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         entry := locals[index];
         if entry.initState =!= ir.INIT_STATE_INIT {
             syntax.failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
+        }
+        if entry.textValue == "ctx_closure_forbidden" {
+            syntax.failAt(source, nameStart, prefix, "cannot capture borrowed or mut context '" + name + "' in a closure; declare context(...) on the closure instead");
         }
         if entry.textValue == "closure_forbidden" {
             msg := if types.containsDynKind(entry.kind) { "borrowed dyn Interface cannot be captured by closure" } else { "borrowed Slice<T> cannot be captured by closure" };
@@ -1760,6 +2119,9 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         entry := locals[index];
         if entry.initState =!= ir.INIT_STATE_INIT {
             syntax.failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
+        }
+        if entry.textValue == "ctx_closure_forbidden" {
+            syntax.failAt(source, nameStart, prefix, "cannot capture borrowed or mut context '" + name + "' in a closure; declare context(...) on the closure instead");
         }
         if entry.textValue == "closure_forbidden" {
             msg := if types.containsDynKind(entry.kind) { "borrowed dyn Interface cannot be captured by closure" } else { "borrowed Slice<T> cannot be captured by closure" };
@@ -8813,8 +9175,157 @@ parseDynMethodDotCall := fn(target: String, source: String, labelStart: Int, ope
     ctx.withMarkers((kind = m.result, code = cEmitted, intValue = 0, textValue = "", constant = false, next = cursor), callMarkers)
 };
 
+/** Extracts a canonical root variable runtime from a context slot runtime expression for exclusivity checks. */
+ctxSlotCanonRoot := fn(rt: String): String {
+    if rt.startsWithAt(0, "(*(") and rt.endsWith("))") { return rt.slice(3, rt.length() - 2); }
+    if rt.startsWithAt(0, "(*") and rt.endsWith(")") { return rt.slice(2, rt.length() - 1); }
+    if rt.endsWith(".v") { return rt.slice(0, rt.length() - 2); }
+    rt
+};
+
+/** Resolves all slots in `ctxKind` from lexical overrides, enclosing params, or ambient defaults, validates exclusivity & types, and lowers the projection arg. */
+buildContextProjectionArg := fn(target: String, source: String, errPos: Int, prefix: String, calleeDisplay: String,
+ctxKind: String, locals: List<Local>, functions: List<FunctionInfo>,
+mutArgRoots: List<String>, mutArgNames: List<String>, mutArgProvs: List<String>,
+entryCount: Int, entryPositions: List<Int>, entryKinds: List<String>, entryCodes: List<String>, entryProvs: List<String>,
+postDrops: mut List<String>): String {
+    if ctxKind == "" { return ""; }
+    slots := contexts.parseCtxKindSlots(ctxKind);
+    if slots.length() == 0 { return ""; }
+    hasCanonRoot := fn(xs: List<String>, raw: String, canon: String): Bool {
+        loop xs as x {
+            if x == raw or x == canon or ctxSlotCanonRoot(x) == canon { return true; }
+        }
+        false
+    };
+    ctxMutRts: mut List<String> = [];
+    ctxMutNames: mut List<String> = [];
+    ctxMutProvs: mut List<String> = [];
+    slotInits: mut List<String> = [];
+    loop slots as cs {
+        var foundProv := false;
+        var isAmbient := false;
+        var provKind := "";
+        var backingKind := "";
+        var provRt := "";
+        var provWritable := false;
+        var provText := "";
+        var provImplKey := "";
+        slotIdx := sym.localIndex(locals, "$ctxslot:" + cs.name);
+        if slotIdx >= 0 and locals[slotIdx].depth >= -1 {
+            sLoc := locals[slotIdx];
+            if sLoc.textValue == "ctx_closure_forbidden" or sLoc.textValue == "closure_forbidden" {
+                syntax.failAt(source, errPos, prefix, "cannot capture borrowed or mut context '" + cs.name + "' in a closure; declare context(...) on the closure instead");
+            }
+            foundProv = true;
+            provKind = sLoc.kind;
+            backingKind = sLoc.kind;
+            provRt = sLoc.runtime;
+            provWritable = sLoc.writable;
+            provText = sLoc.textValue;
+        } else {
+            amb := contexts.findAmbient(cs.name);
+            if amb.found {
+                foundProv = true;
+                isAmbient = true;
+                provKind = amb.entry.slotKind;
+                backingKind = amb.entry.backingKind;
+                provRt = amb.entry.runtime;
+                provWritable = amb.entry.isMut;
+                provImplKey = amb.entry.implKey;
+            }
+        }
+        if not foundProv {
+            syntax.failAt(source, errPos, prefix, "missing context " + cs.name + ": " + types.displayKind(cs.kind) + " in call to " + calleeDisplay);
+        }
+        if cs.isMut and not provWritable {
+            syntax.failAt(source, errPos, prefix, "context " + cs.name + " requires mut access in call to " + calleeDisplay);
+        }
+        canonRt := ctxSlotCanonRoot(provRt);
+        if not isAmbient {
+            if cs.isMut {
+                aliasHit := checkMutArgAliasSymmetric(cs.name, canonRt, provText, mutArgRoots, mutArgNames, mutArgProvs);
+                ctxAliasHit := checkMutArgAliasSymmetric(cs.name, canonRt, provText, ctxMutRts, ctxMutNames, ctxMutProvs);
+                if aliasHit =!= "" or ctxAliasHit =!= "" or hasCanonRoot(mutArgRoots, provRt, canonRt) or hasCanonRoot(ctxMutRts, provRt, canonRt) {
+                    syntax.failAt(source, errPos, prefix, "cannot pass " + cs.name + " multiple times as mut in the same call");
+                }
+                var ei := 0;
+                loop ei < entryCount {
+                    if not entryKinds[ei].startsWithAt(0, "mut ") {
+                        roCanon := extractAddressableLocal(locals, entryCodes[ei]);
+                        roRt := if roCanon >= 0 { locals[roCanon].runtime } else { "" };
+                        if (roRt =!= "" and (roRt == provRt or ctxSlotCanonRoot(roRt) == canonRt)) or
+                        findMutAliasConflictName(entryCodes[ei], entryKinds[ei], [canonRt, provRt], [cs.name]) =!= "" or
+                        checkMutArgAliasSymmetric(if roCanon >= 0 { locals[roCanon].name } else { "" }, roRt, entryProvs[ei], [canonRt, provRt], [cs.name], [provText]) =!= "" {
+                            syntax.failAt(source, entryPositions[ei], prefix, "cannot pass " + cs.name + " as both read-only and mut in the same call");
+                        }
+                    }
+                    ei = ei + 1;
+                }
+                mut ctxMutRts.pushBack(canonRt);
+                mut ctxMutNames.pushBack(cs.name);
+                mut ctxMutProvs.pushBack(provText);
+            } else {
+                aliasHit := checkMutArgAliasSymmetric(cs.name, canonRt, provText, mutArgRoots, mutArgNames, mutArgProvs);
+                ctxAliasHit := checkMutArgAliasSymmetric(cs.name, canonRt, provText, ctxMutRts, ctxMutNames, ctxMutProvs);
+                if aliasHit =!= "" or ctxAliasHit =!= "" or hasCanonRoot(mutArgRoots, provRt, canonRt) or hasCanonRoot(ctxMutRts, provRt, canonRt) {
+                    syntax.failAt(source, errPos, prefix, "cannot pass " + cs.name + " as both read-only and mut in the same call");
+                }
+            }
+        }
+        var fieldValCode := "";
+        isAmbDynBacking := isAmbient and types.isDynKind(cs.kind) and provImplKey =!= "" and types.isDynKind(provKind) and types.isCompatibleKind(cs.kind, provKind);
+        isConcreteDyn := types.isDynKind(cs.kind) and not types.isDynKind(provKind) and types.findImplForConcrete(provKind, types.dynInterfaceKind(cs.kind)).found;
+        if isAmbDynBacking or isConcreteDyn {
+            srcConcreteKind := if isAmbDynBacking { backingKind } else { provKind };
+            srcProv := if cs.isMut { "mut_dyn:" } else { provText };
+            coercedDyn := coerceToDynIfNeeded(target, source, errPos, prefix, cs.kind, cs.isMut, srcConcreteKind, provRt, srcProv, true, locals, functions, mut postDrops);
+            fieldValCode = coercedDyn.code;
+        } else if types.isCompatibleKind(cs.kind, provKind) {
+            if target == ir.TARGET_C {
+                if types.isSliceKind(cs.kind) or types.isDynKind(cs.kind) {
+                    fieldValCode = provRt;
+                } else if cs.isMut or types.cParamIsConstPtr(cs.kind) {
+                    ptrExpr := if provRt.startsWithAt(0, "(*(") and provRt.endsWith("))") {
+                        provRt.slice(3, provRt.length() - 2)
+                    } else if provRt.startsWithAt(0, "(*") and provRt.endsWith(")") {
+                        provRt.slice(2, provRt.length() - 1)
+                    } else {
+                        "&(" + provRt + ")"
+                    };
+                    fieldValCode = ptrExpr;
+                } else {
+                    fieldValCode = ctx.assignValueCode(target, cs.kind, provKind, provRt);
+                }
+            } else {
+                if cs.isMut and not types.isDynKind(cs.kind) and not types.isSliceKind(cs.kind) {
+                    if provRt.endsWith(".v") {
+                        fieldValCode = provRt.slice(0, provRt.length() - 2);
+                    } else {
+                        tsT := types.tsFunctionType(cs.kind);
+                        fieldValCode = "{ get v(): " + tsT + " { return " + provRt + "; }, set v(lite$nv: " + tsT + ") { " + provRt + " = lite$nv; } }";
+                    }
+                } else {
+                    fieldValCode = ctx.assignValueCode(target, cs.kind, provKind, provRt);
+                }
+            }
+        } else {
+            syntax.failAt(source, errPos, prefix, "context " + cs.name + " type mismatch in call to " + calleeDisplay + ": expected " + types.displayKind(cs.kind) + ", got " + types.displayKind(provKind));
+        }
+        if target == ir.TARGET_C {
+            mut slotInits.pushBack(".slot_" + ir.safeTargetIdent(ir.TARGET_C, cs.name) + " = " + fieldValCode);
+        } else {
+            mut slotInits.pushBack(cs.name + ": " + fieldValCode);
+        }
+    }
+    if target == ir.TARGET_C {
+        return "/*@T:" + ctxKind + "@*/(&(const " + types.cCtxTag(ctxKind) + "){ " + slotInits.join(", ") + " })";
+    }
+    "{ " + slotInits.join(", ") + " }"
+};
+
 /** Parses user, type-operation, and indirect function calls with positional, named, and `=name` shorthand arguments, plus optional prepended receiver, generic unification/monomorphization, and TS `mut Record` live accessor boxes. */
-parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, hasRecv: Bool, recvCode: String, recvWritebackLocal: String, recvWritebackBox: String, recvWritebackStmt: String, recvWritebackKind: String, recvRootRuntime: String, initGenBindings: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, callCtxKind: String, hasRecv: Bool, recvCode: String, recvWritebackLocal: String, recvWritebackBox: String, recvWritebackStmt: String, recvWritebackKind: String, recvRootRuntime: String, initGenBindings: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     size := source.length();
     isGenericCall := isModuleFn and callRuntime.startsWithAt(0, "$gen:");
     genTplKey := if isGenericCall { callRuntime.slice(5, callRuntime.length()) } else { "" };
@@ -9258,11 +9769,32 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     }
     var effRuntime := callRuntime;
     var effResult := callResult;
+    var effCtxKind := callCtxKind;
     substSlotKinds: mut List<String> = [];
     var substRecvKind := "";
     if isGenericCall {
         if callExpectedRet =!= "" and generics.kindHasUnboundGeneric(genParams, callResult, genBindings) {
             _retUnify := generics.unifyKindMut(genParams, callResult, callExpectedRet, mut genBindings);
+        }
+        if effCtxKind =!= "" {
+            loop contexts.parseCtxKindSlots(effCtxKind) as cs {
+                if generics.kindHasUnboundGeneric(genParams, cs.kind, genBindings) {
+                    sLocIdx := sym.localIndex(locals, "$ctxslot:" + cs.name);
+                    var provSlotKind := "";
+                    if sLocIdx >= 0 and locals[sLocIdx].depth >= -1 {
+                        provSlotKind = locals[sLocIdx].kind;
+                    } else {
+                        amb := contexts.findAmbient(cs.name);
+                        if amb.found { provSlotKind = amb.entry.slotKind; }
+                    }
+                    if provSlotKind =!= "" {
+                        cuErr := generics.unifyKindMut(genParams, cs.kind, provSlotKind, mut genBindings);
+                        if cuErr =!= "" {
+                            syntax.failAt(source, errPos, prefix, "context " + cs.name + " of " + calleeDisplay + ": " + cuErr);
+                        }
+                    }
+                }
+            }
         }
         loop generics.splitGenericParams(genParams) as gp {
             if not genBindings.has(gp) {
@@ -9283,6 +9815,13 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         retValErr := generics.validateSubstitutedKind(effResult);
         if retValErr =!= "" {
             syntax.failAt(source, errPos, prefix, retValErr);
+        }
+        if effCtxKind =!= "" {
+            effCtxKind = generics.substKind(genParams, effCtxKind, genBindings);
+            loop contexts.parseCtxKindSlots(effCtxKind) as scs {
+                scErr := generics.validateSubstitutedKind(scs.kind);
+                if scErr =!= "" { syntax.failAt(source, errPos, prefix, scErr); }
+            }
         }
         allSubstParts: mut List<String> = [];
         rawTplEntries := generics.splitPipeEntries(genTplParamsRaw, genTplParamCount);
@@ -9312,8 +9851,9 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         }
         if not inferMode {
             bindingsEnc := generics.encodeBindings(genParams, genBindings);
-            substParamsPipe := allSubstParts.join("|");
+            substParamsPipe := contexts.appendCtxToParams(allSubstParts.join("|"), effCtxKind);
             effRuntime = generics.requestInstance(target, genTplKey, bindingsEnc, substParamsPipe, effResult);
+            contexts.registerFnContext(effRuntime, effCtxKind);
         }
     }
     var isIdentityOrder := entryCount == callCount;
@@ -9370,6 +9910,15 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     isUserCModuleFn := target == ir.TARGET_C and isModuleFn and not effRuntime.startsWithAt(0, "lite$");
     preBlkStmts: mut List<String> = [];
     postCallDrops: mut List<String> = [];
+    ctxProjArg := if effCtxKind =!= "" and not inferMode {
+        buildContextProjectionArg(target, source, errPos, prefix, calleeDisplay, effCtxKind, locals, functions,
+        mutArgRoots, mutArgNames, mutArgProvs, entryCount, entryPositions, entryKinds, entryCodes, entryProvs, mut postCallDrops)
+    } else if effCtxKind =!= "" and inferMode {
+        dummyInferDrops: mut List<String> = [];
+        _chkCtx := buildContextProjectionArg(target, source, errPos, prefix, calleeDisplay, effCtxKind, locals, functions,
+        mutArgRoots, mutArgNames, mutArgProvs, entryCount, entryPositions, entryKinds, entryCodes, entryProvs, mut dummyInferDrops);
+        _chkCtx
+    } else { "" };
     var emittedCode := "";
     var emittedResultKind := effResult;
     if isIdentityOrder {
@@ -9405,11 +9954,14 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             }
             pIdx = pIdx + 1;
         }
+        if ctxProjArg =!= "" {
+            mut finalArgs.pushBack(ctxProjArg);
+        }
         targetCallee := if isModuleFn { effRuntime } else { "(" + effRuntime + ")" };
         rawCallExpr := if target == ir.TARGET_C and not isModuleFn {
-            callFnKind := types.fnCanonicalKind(callParams, callFirst, callCount, effResult);
+            callFnKind := types.fnCanonicalKindWithCtx(callParams, callFirst, callCount, effResult, effCtxKind);
             callFnTag := types.cFnTag(callFnKind);
-            cCallArgs := if callCount > 0 { effRuntime + ", " + finalArgs.join(", ") } else { effRuntime };
+            cCallArgs := if finalArgs.length() > 0 { effRuntime + ", " + finalArgs.join(", ") } else { effRuntime };
             "/*@T:" + callFnKind + "@*/" + callFnTag + "_call(" + cCallArgs + ")"
         } else {
             targetCallee + "(" + finalArgs.join(", ") + ")"
@@ -9471,10 +10023,13 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             }
             sIdx = sIdx + 1;
         }
+            if ctxProjArg =!= "" {
+                mut reorderedArgs.pushBack(ctxProjArg);
+            }
         callExpr := if not isModuleFn {
-            callFnKind := types.fnCanonicalKind(callParams, callFirst, callCount, effResult);
+            callFnKind := types.fnCanonicalKindWithCtx(callParams, callFirst, callCount, effResult, effCtxKind);
             callFnTag := types.cFnTag(callFnKind);
-            cCallArgs := if callCount > 0 { effRuntime + ", " + reorderedArgs.join(", ") } else { effRuntime };
+            cCallArgs := if reorderedArgs.length() > 0 { effRuntime + ", " + reorderedArgs.join(", ") } else { effRuntime };
             "/*@T:" + callFnKind + "@*/" + callFnTag + "_call(" + cCallArgs + ")"
         } else {
             effRuntime + "(" + reorderedArgs.join(", ") + ")"
@@ -9549,6 +10104,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                 mut slotTemps.pushBack("lite$arg" + slotEntry[sIdx].toText());
                 sIdx = sIdx + 1;
             }
+            if ctxProjArg =!= "" { mut slotTemps.pushBack(ctxProjArg); }
             targetCallee := if isModuleFn { effRuntime } else { "lite$fn" };
             callExpr := targetCallee + "(" + slotTemps.join(", ") + ")";
             retStmt := if effResult == ir.VALUE_KIND_UNIT { "void (" + callExpr + "); return undefined;" } else { "return " + callExpr + ";" };
@@ -9613,8 +10169,8 @@ prepCCallArg := fn(isUserMod: Bool, effRuntime: String, expectedKind: String, ra
 };
 
 /** Parses user and indirect function calls with positional, named, and `=name` shorthand arguments. */
-parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
-    parseUserOrIndirectCallWithRecv(target, source, openParen, errPos, isModuleFn, calleeDisplay, callRuntime, callParams, callFirst, callCount, callResult, false, "", "", "", "", "", "", "", callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
+parseUserOrIndirectCall := fn(target: String, source: String, openParen: Int, errPos: Int, isModuleFn: Bool, calleeDisplay: String, callRuntime: String, callParams: List<String>, callFirst: Int, callCount: Int, callResult: String, callCtxKind: String, callExpectedRet: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
+    parseUserOrIndirectCallWithRecv(target, source, openParen, errPos, isModuleFn, calleeDisplay, callRuntime, callParams, callFirst, callCount, callResult, callCtxKind, false, "", "", "", "", "", "", "", callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases)
 };
 
 /** Emits target code for `Rc<T>` hard-builtin operations shared between method and static call forms. */
@@ -11414,7 +11970,7 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
         recvCode = ctx.readOnlyArgWithSnapshot(target, concreteRecvExpected, receiver.kind, receiver.code, recvNeedsSnap);
     }
     calleeDisp := types.displayKind(receiver.kind) + "." + opLabel;
-    callRes := parseUserOrIndirectCallWithRecv(target, source, openParen, labelStart, true, calleeDisp, info.runtime, params, info.first + 1, info.count - 1, info.result, true, recvCode, recvWritebackLocal, recvWritebackBox, recvWritebackStmt, recvWritebackKind, recvRootRt, initGenBindings, callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+    callRes := parseUserOrIndirectCallWithRecv(target, source, openParen, labelStart, true, calleeDisp, info.runtime, params, info.first + 1, info.count - 1, info.result, contexts.fnContextFor(info.runtime), true, recvCode, recvWritebackLocal, recvWritebackBox, recvWritebackStmt, recvWritebackKind, recvRootRt, initGenBindings, callExpectedRet, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     if inferMode {
         return ctx.withMarkers(callRes, ctx.collectParsedMarkers(ctx.collectParsedMarkers("", receiver), callRes));
     }
@@ -12185,7 +12741,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     }
                     explicitBindingsEnc := generics.encodePartialBindings(tpl.genericParams, expMap);
                     left = parseUserOrIndirectCallWithRecv(target, source, callOpenParen, errPos, true, calleeDisplay, info.runtime,
-                    params, info.first, info.count, info.result, false, "", "", "", "", "", "", explicitBindingsEnc, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                    params, info.first, info.count, info.result, contexts.fnContextFor(info.runtime), false, "", "", "", "", "", "", explicitBindingsEnc, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else if postPosition >= source.length() or source.at(postPosition) =!= "(" {
                     if info.runtime.startsWithAt(0, "$gen:") {
                         syntax.failAt(source, errPos, prefix, "cannot use generic function " + calleeDisplay + " as a value without calling it");
@@ -12193,7 +12749,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     if info.runtime.startsWithAt(0, "lite$") {
                         syntax.failAt(source, errPos, prefix, "function " + calleeDisplay + " must be called");
                     }
-                    fnValKind := types.fnCanonicalKind(params, info.first, info.count, info.result);
+                    fnCtx := contexts.fnContextFor(info.runtime);
+                    fnValKind := types.fnCanonicalKindWithCtx(params, info.first, info.count, info.result, fnCtx);
                     if target == ir.TARGET_C {
                         wTag := types.cFnTag(fnValKind);
                         wName := "lt_wrap_" + info.runtime;
@@ -12217,6 +12774,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             }
                             mut wArgsBuf.append(aName);
                             wi = wi + 1;
+                        }
+                        if fnCtx =!= "" {
+                            mut wParamsBuf.append(", const ");
+                            mut wParamsBuf.append(types.cCtxTag(fnCtx));
+                            mut wParamsBuf.append(" *lite_ctx");
+                            if info.count > 0 { mut wArgsBuf.append(", "); }
+                            mut wArgsBuf.append("lite_ctx");
                         }
                         wParams := wParamsBuf.build();
                         wArgs := wArgsBuf.build();
@@ -12317,12 +12881,13 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 callResult = types.fnResultKind(left.kind);
             }
             if handleUserCall {
+                effCallCtxKind := if isModuleFn { contexts.fnContextFor(callRuntime) } else { types.fnContextKind(left.kind) };
                 if preGenBindings =!= "" {
                     left = parseUserOrIndirectCallWithRecv(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
-                    callParams, callFirst, callCount, callResult, false, "", "", "", "", "", "", preGenBindings, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                    callParams, callFirst, callCount, callResult, effCallCtxKind, false, "", "", "", "", "", "", preGenBindings, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else {
                     left = parseUserOrIndirectCall(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
-                    callParams, callFirst, callCount, callResult, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                    callParams, callFirst, callCount, callResult, effCallCtxKind, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 }
             }
         } else if postPosition < source.length() and source.at(postPosition) == "(" {

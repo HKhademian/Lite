@@ -9,7 +9,7 @@ Local := alias (name: String, runtime: String, kind: String, mutable: Bool, writ
 /** Returns `true` when `locals[idx]` is currently in scope and is the latest entry for its `runtime`. */
 isLatestActiveSliceLocal := fn(locals: List<Local>, idx: Int): Bool {
     loc := locals[idx];
-    if loc.depth < 0 or (not types.isSliceKind(loc.kind) and not types.isDynKind(loc.kind)) { return false; }
+    if loc.depth < 0 or (not types.isSliceKind(loc.kind) and not types.isDynKind(loc.kind) and not loc.name.startsWithAt(0, "$ctxborrow:")) { return false; }
     var j := locals.length() - 1;
     loop j > idx {
         if locals[j].runtime == loc.runtime { return false; }
@@ -260,7 +260,7 @@ pub checkCanReadBinding := fn(locals: List<Local>, targetRuntime: String, target
     loop i < n {
         if isLatestActiveSliceLocal(locals, i) {
             b := locals[i];
-            bLabel := (if types.isDynKind(b.kind) { "dyn " } else { "slice " }) + b.name;
+            bLabel := if b.name.startsWithAt(0, "$ctxborrow:") { "context " + b.name.slice(11, b.name.length()) } else if types.isDynKind(b.kind) { "dyn " + b.name } else { "slice " + b.name };
             bKind := provenanceKind(b.textValue);
             payload := stripProvenanceKind(b.textValue);
             if bKind == "borrow_mut" {
@@ -291,7 +291,7 @@ pub checkCanMutateBinding := fn(locals: List<Local>, targetRuntime: String, targ
     loop i < n {
         if isLatestActiveSliceLocal(locals, i) {
             b := locals[i];
-            bLabel := (if types.isDynKind(b.kind) { "dyn " } else { "slice " }) + b.name;
+            bLabel := if b.name.startsWithAt(0, "$ctxborrow:") { "context " + b.name.slice(11, b.name.length()) } else if types.isDynKind(b.kind) { "dyn " + b.name } else { "slice " + b.name };
             bKind := provenanceKind(b.textValue);
             payload := stripProvenanceKind(b.textValue);
             if bKind == "borrow_split" {

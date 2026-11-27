@@ -1,0 +1,341 @@
+/* Phase 10 verification: lexical contexts ($context.lt package defaults, context(...) requirements & order normalization, statement & expression context (...) { ... } overrides, mut & dyn exclusivity/borrowing, static generic inference, indirect calls & closures, TS/C11 -Werror/ASan/UBSan parity, ABI projection check, contextual keyword preservation, and complete rejection matrix). */
+
+test := import "core/test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+emptyEnv := fn(): List<String> {
+    m: List<String> = [];
+    m
+};
+
+emptyBytes := fn(): List<Int> {
+    xs: List<Int> = [];
+    xs
+};
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccProbe := compilerTest.probeCc();
+
+/* 1. Multi-package $context.lt isolation + full feature matrix */
+pkgTmp := fs.makeTempDir("lite-p10-pkgs-");
+test.check("makeTempDir pkgs", pkgTmp.ok);
+
+depADir := path.join(pkgTmp.path, "dep_a");
+depBDir := path.join(pkgTmp.path, "dep_b");
+_mkA := fs.makeDir(depADir);
+_mkB := fs.makeDir(depBDir);
+
+_wCtxRoot := fs.writeText(path.join(pkgTmp.path, "$context.lt"), [
+    "iface := import \"core/interface\";",
+    "",
+    "pub MemLog := record { entries: List<String>; };",
+    "pub impl iface.Logger for MemLog {",
+    "    log := fn(self: mut Self, level: String, msg: String): Unit {",
+    "        mut self.entries.pushBack(level + \":\" + msg);",
+    "    };",
+    "};",
+    "",
+    "pub context appTag := \"root\";",
+    "pub context mut rootCount: Int = 10;",
+    "pub context mut dynLog: dyn iface.Logger = MemLog { entries = [] };"
+].join("\n"));
+
+_wCtxA := fs.writeText(path.join(depADir, "$context.lt"), [
+    "pub context pkgTag := \"depA\";"
+].join("\n"));
+_wModA := fs.writeText(path.join(depADir, "mod.lt"), [
+    "pub readPkgTag := fn() context(pkgTag: String): String { pkgTag };",
+    "pub fromDepA := fn(): String { readPkgTag() };"
+].join("\n"));
+
+_wCtxB := fs.writeText(path.join(depBDir, "$context.lt"), [
+    "pub context pkgTag := \"depB\";"
+].join("\n"));
+_wModB := fs.writeText(path.join(depBDir, "mod.lt"), [
+    "pub readPkgTag := fn() context(pkgTag: String): String { pkgTag };",
+    "pub fromDepB := fn(): String { readPkgTag() };"
+].join("\n"));
+
+mainPkgSrc := [
+    "io := import \"core/io\";",
+    "iface := import \"core/interface\";",
+    "ctx := import \"./$context\";",
+    "depA := import \"./dep_a/mod\";",
+    "depB := import \"./dep_b/mod\";",
+    "",
+    "plainHelper := fn(x: Int): Int { x + 1 };",
+    "",
+    "readTag := fn() context(appTag: String): String { appTag };",
+    "",
+    "bumpAndRead := fn(delta: Int) context(mut rootCount: Int, appTag: String): String {",
+    "    rootCount = rootCount + delta;",
+    "    appTag + \":\" + rootCount.toText()",
+    "};",
+    "",
+    "forwarder := fn(delta: Int) context(rootCount: mut Int, appTag: String): String {",
+    "    bumpAndRead(delta);",
+    "    appTag + \":\" + rootCount.toText()",
+    "};",
+    "",
+    "pairAB := fn(x: Int) context(a: Int, b: Bool): Int {",
+    "    if b { x + a } else { x - a }",
+    "};",
+    "pairBA := fn(x: Int) context(b: Bool, a: Int): Int {",
+    "    if b { x + a * 2 } else { x - a * 2 }",
+    "};",
+    "",
+    "emitDyn := fn(msg: String) context(mut dynLog: dyn iface.Logger): Unit {",
+    "    mut dynLog.log(\"INFO\", msg);",
+    "};",
+    "",
+    "makeTagClosure := fn() context(appTag: String): fn(): String {",
+    "    fn(): String { appTag + \":ok\" }",
+    "};",
+    "",
+    "/* Module-level non-pub context declaration */",
+    "context localOffset := 100;",
+    "withOffset := fn(v: Int) context(localOffset: Int): Int { v + localOffset };",
+    "",
+    "/* Contextual keyword: `context` still valid as param, local, record field */",
+    "CtxHolder := record { context: Int; };",
+    "keepKeywordCompat := fn(context: Int): Int {",
+    "    h := CtxHolder { context = context + 2 };",
+    "    h.context",
+    "};",
+    "",
+    "main := fn(): Unit {",
+    "    /* 1. Package $context.lt isolation & ambient defaults */",
+    "    io.outputLine(\"pkgs:\" + depA.fromDepA() + \",\" + depB.fromDepB());",
+    "    context (pkgTag = \"ovrPkg\") {",
+    "        io.outputLine(\"pkgs-ovr:\" + depA.readPkgTag() + \",\" + depB.readPkgTag());",
+    "    }",
+    "    io.outputLine(\"amb:\" + bumpAndRead(5));",
+    "    io.outputLine(\"fwd:\" + forwarder(3));",
+    "",
+    "    /* 2. Statement and expression lexical overrides + non-shadowing + restoration */",
+    "    var localCnt := 50;",
+    "    localTag := \"lex\";",
+    "    val1 := context (mut rootCount = localCnt, appTag = localTag) {",
+    "        bumpAndRead(4)",
+    "    };",
+    "    /* Check simpler override without unused slot, plus non-shadowing */",
+    "    appTag := 42;",
+    "    val2 := context (appTag = \"inner\", mut rootCount = localCnt) {",
+    "        bumpAndRead(7) + \"|local=\" + appTag.toText()",
+    "    };",
+    "    io.outputLine(\"expr:\" + val1 + \";\" + val2 + \";cnt=\" + localCnt.toText() + \";ambAfter=\" + readTag());",
+    "",
+    "    /* 3. Shorthand =ident, mut =ident, and fresh mutable rvalue slot */",
+    "    var rootCount := 200;",
+    "    localOffset := 5;",
+    "    context (mut =rootCount, =localOffset) {",
+    "        io.outputLine(\"sh:\" + bumpAndRead(2) + \",\" + withOffset(3).toText());",
+    "    }",
+    "    freshOut := context (mut rootCount = 7) {",
+    "        bumpAndRead(3)",
+    "    };",
+    "    io.outputLine(\"restored:\" + rootCount.toText() + \";fresh=\" + freshOut + \";mod=\" + withOffset(4).toText());",
+    "",
+    "    /* 4. Order-normalized fn values + closure capturing immutable context slot + closure with context(...) */",
+    "    var fp: fn(Int) context(a: Int, b: Bool): Int = pairAB;",
+    "    r1 := context (b = true, a = 6) { fp(10) };",
+    "    fp = pairBA;",
+    "    r2 := context (a = 6, b = true) { fp(10) };",
+    "    clImm := context (appTag = \"captured\") { makeTagClosure() };",
+    "    clCtx := fn(n: Int) context(localOffset: Int): Int { withOffset(n) };",
+    "    r3 := context (localOffset = 9) { clCtx(11) };",
+    "    io.outputLine(\"fn:\" + r1.toText() + \",\" + r2.toText() + \",\" + clImm() + \",\" + r3.toText());",
+    "",
+    "    /* 5. dyn context + mutable override */",
+    "    var mut ml := ctx.MemLog { entries = [] };",
+    "    context (mut dynLog = ml) {",
+    "        emitDyn(\"first\");",
+    "        emitDyn(\"second\");",
+    "    }",
+    "    io.outputLine(\"dyn:\" + ml.entries.length().toText() + \":\" + ml.entries.join(\",\"));",
+    "    io.outputLine(\"plain:\" + plainHelper(4).toText() + \",\" + keepKeywordCompat(8).toText());",
+    "};",
+    "main();"
+].join("\n");
+
+mainPkgPath := path.join(pkgTmp.path, "main.lts");
+_wPkgMain := fs.writeText(mainPkgPath, mainPkgSrc);
+
+tsPkgCompile := compilerTest.compileFile(tsComp, pkgTmp.path, [mainPkgPath]);
+test.checkInt("phase10 full TS compile: " + tsPkgCompile.stderr, 0, tsPkgCompile.status);
+tsPkgRun := compilerTest.checkAndRunTs(root, tsPkgCompile.stdout);
+expectedPkgOutStr := [
+    "pkgs:depA,depB",
+    "pkgs-ovr:ovrPkg,ovrPkg",
+    "amb:root:15",
+    "fwd:root:18",
+    "expr:lex:54;inner:61|local=42;cnt=61;ambAfter=root",
+    "sh:root:202,8",
+    "restored:202;fresh=root:10;mod=104",
+    "fn:16,22,captured:ok,20",
+    "dyn:2:INFO:first,INFO:second",
+    "plain:5,10"
+].join("\n") + "\n";
+test.checkText("phase10 full TS stdout", expectedPkgOutStr, tsPkgRun.stdout);
+
+if ccProbe.available {
+    cPkgCompile := compilerTest.compileFile(cComp, pkgTmp.path, [mainPkgPath]);
+    test.checkInt("phase10 full C compile: " + cPkgCompile.stderr, 0, cPkgCompile.status);
+    cCode := cPkgCompile.stdout;
+    test.check("C emits lt_ctx_ projection struct", cCode.contains("lt_ctx_"));
+    test.check("C plainHelper has (int64_t lite_x) without lt_ctx_", cCode.contains("lt_fn__plainHelper(int64_t lite_x)"));
+    test.check("C fn with context takes single const lt_ctx_ pointer", cCode.contains(" *lite_ctx)"));
+    cPkgRun := compilerTest.compileAndRunC(cCode, ccProbe.cc, "");
+    test.checkInt("phase10 full C11 -Werror exit 0: " + cPkgRun.stderr, 0, cPkgRun.status);
+    test.checkText("phase10 full C11 stdout == TS stdout", tsPkgRun.stdout, cPkgRun.stdout);
+
+    /* Sanitized ASan/UBSan run */
+    sanTmp := fs.makeTempDir("lite-p10-san-");
+    test.check("makeTempDir san", sanTmp.ok);
+    sanCPath := path.join(sanTmp.path, "p10.c");
+    sanExe := path.join(sanTmp.path, "p10");
+    _ws := fs.writeText(sanCPath, cCode);
+    sanCcOut := path.join(sanTmp.path, "cc.out");
+    sanCcErr := path.join(sanTmp.path, "cc.err");
+    sanCc := proc.runBytes(ccProbe.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined", "-fno-omit-frame-pointer", sanCPath, "-o", sanExe, "-lm"], sanTmp.path, emptyEnv(), 30000, emptyBytes(), sanCcOut, sanCcErr);
+    test.check("phase10 san cc: " + fs.readText(sanCcErr).text, sanCc.status == 0);
+    sanOut := path.join(sanTmp.path, "run.out");
+    sanErr := path.join(sanTmp.path, "run.err");
+    sanRun := proc.runBytes(sanExe, emptyEnv(), sanTmp.path, emptyEnv(), 15000, emptyBytes(), sanOut, sanErr);
+    test.checkInt("phase10 ASan/UBSan exit 0: " + fs.readText(sanErr).text, 0, sanRun.status);
+    test.checkText("phase10 ASan/UBSan stdout == TS stdout", tsPkgRun.stdout, fs.readText(sanOut).text);
+    _rmSan := fs.remove(sanTmp.path);
+}
+badPkgCallPath := path.join(pkgTmp.path, "bad-pkg-call.lts");
+_wBadPkg := fs.writeText(badPkgCallPath, [
+    "depA := import \"./dep_a/mod\";",
+    "main := fn(): String { depA.readPkgTag() };"
+].join("\n"));
+badPkgRes := compilerTest.compileFile(tsComp, pkgTmp.path, [badPkgCallPath]);
+test.check("reject outside-package call missing dep_a context default: " + badPkgRes.stderr,
+    badPkgRes.status =!= 0 and badPkgRes.stderr.contains("missing context pkgTag"));
+_rmPkgs := fs.remove(pkgTmp.path);
+
+/* 2. Static generic context inference with zero vtable overhead */
+staticCtxSrc := [
+    "io := import \"core/io\";",
+    "iface := import \"core/interface\";",
+    "BufLog := record { lines: List<String>; };",
+    "impl iface.Logger for BufLog {",
+    "    log := fn(self: mut Self, level: String, msg: String): Unit {",
+    "        mut self.lines.pushBack(level + \":\" + msg);",
+    "    };",
+    "};",
+    "writeBoth := fn<L: Type<iface.Logger>>(tag: String) context(mut log: L): Unit {",
+    "    mut log.log(\"DBG\", tag);",
+    "    mut log.log(\"DBG\", tag);",
+    "};",
+    "main := fn(): Unit {",
+    "    var mut b := BufLog { lines = [] };",
+    "    context (mut log = b) { writeBoth(\"hi\"); }",
+    "    io.outputLine(b.lines.length().toText() + \":\" + b.lines.join(\",\"));",
+    "};",
+    "main();"
+].join("\n");
+staticTs := compilerTest.compileCheckRunTs(root, tsComp, staticCtxSrc, "phase10-static-ts.lts");
+test.checkText("static generic context TS stdout", "2:DBG:hi,DBG:hi\n", staticTs.stdout);
+if ccProbe.available {
+    staticCEmit := compilerTest.compileStdin(root, cComp, staticCtxSrc, "phase10-static-c.lts");
+    test.checkInt("static generic context C emit: " + staticCEmit.stderr, 0, staticCEmit.status);
+    test.check("static generic context zero vtable (no lt_vt_)", not staticCEmit.stdout.contains("lt_vt_"));
+    test.check("static generic context zero dyn (no lt_dyn_)", not staticCEmit.stdout.contains("lt_dyn_"));
+    staticCRun := compilerTest.compileAndRunC(staticCEmit.stdout, ccProbe.cc, "");
+    test.checkInt("static generic context C run: " + staticCRun.stderr, 0, staticCRun.status);
+    test.checkText("static generic context C stdout", "2:DBG:hi,DBG:hi\n", staticCRun.stdout);
+}
+
+/* 3. Compile-time rejection matrix */
+compilerTest.assertCompileErrorContains(root, tsComp, "reject missing context provider at call site",
+    "need := fn() context(x: Int): Int { x };\nf := fn(): Int { need() };",
+    "missing context x");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject read-only context passed where mut required",
+    "context x := 1;\nneed := fn() context(mut x: Int): Int { x };\nf := fn(): Int { need() };",
+    "requires mut access");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject immutable binding bound as mut in context override",
+    "need := fn() context(mut x: Int): Int { x };\nf := fn(): Int { v := 1; context (mut x = v) { need() } };",
+    "cannot bind immutable binding");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject context slot type mismatch",
+    "need := fn() context(x: Int): Int { x };\nf := fn(): Int { context (x = \"bad\") { need() } };",
+    "type mismatch");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject same binding as both explicit mut arg and active mut context",
+    "Box := record { v: Int; };\nbump := fn(a: mut Box) context(mut log: Box): Unit { a.v = a.v + 1; log.v = log.v + 1; };\nf := fn() context(mut log: Box): Unit { bump(mut log); };",
+    "multiple times as mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject same binding as both explicit read-only arg and active mut context",
+    "Box := record { v: Int; };\nbump := fn(a: Box) context(mut log: Box): Int { log.v = log.v + a.v; log.v };\nf := fn() context(mut log: Box): Int { bump(log) };",
+    "both read-only and mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject same binding bound twice in context header",
+    "need := fn() context(mut a: Int, mut b: Int): Int { a + b };\nf := fn(): Int { var v := 1; context (mut a = v, mut b = v) { need() } };",
+    "cannot bind v multiple times in context override");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject empty context() clause",
+    "bad := fn() context(): Int { 1 };",
+    "context requirement list cannot be empty");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject empty context () override block",
+    "f := fn(): Int { context () { 1 } };",
+    "context override list cannot be empty");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate context slot name",
+    "bad := fn() context(x: Int, x: Bool): Int { x };",
+    "duplicate context slot x");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject context slot shadowing fn parameter",
+    "bad := fn(x: Int) context(x: Bool): Int { x };",
+    "conflicts with parameter of the same name");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate mut qualifier on context slot",
+    "bad := fn() context(mut x: mut Int): Int { x };",
+    "duplicate mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate mut qualifier on ambient context",
+    "context mut x: mut Int := 1;",
+    "duplicate mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject closure capturing outer mut context slot without context()",
+    "bad := fn() context(mut x: Int): Int { g := fn(): Int { x }; g() };",
+    "cannot capture borrowed or mut context 'x'");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject ambient context Slice<T>",
+    "xs: List<Int> = [1, 2];\ncontext bad := xs[0..2];",
+    "borrowed Slice<T> cannot be stored in ambient context");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject ambient context inferred dyn Interface",
+    "Show := interface { show: fn(self: Self): String; };\nR := record { x: Int; };\nimpl Show for R { show := fn(self: Self): String { \"x\" }; };\nr := R { x = 1 };\nd: dyn Show = r;\ncontext s := d;",
+    "ambient context cannot infer borrowed dyn Interface without explicit annotation");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mutating local while borrowed by active mut context",
+    "need := fn() context(mut x: Int): Int { x };\nf := fn(): Int {\n    var v := 1;\n    context (mut x = v) {\n        v = 2;\n        need()\n    }\n};",
+    "while borrowed by context x");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject reading local while mutably borrowed by active mut context",
+    "need := fn() context(mut x: Int): Int { x };\nf := fn(): Int {\n    var v := 1;\n    context (mut x = v) {\n        v + need()\n    }\n};",
+    "while mutably borrowed by context x");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject impl method adding extra context()",
+    "I := interface { ping: fn(self: Self): Int; };\nR := record { x: Int; };\nimpl I for R { ping := fn(self: Self) context(tag: String): Int { self.x }; };",
+    "cannot declare context requirements omitted by interface");
+
+test.done("phase10-lexical-contexts");

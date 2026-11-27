@@ -3,6 +3,7 @@ collections := import "util/collections";
 tb := import "util/text-builder";
 frontend := import "./frontend";
 interfaces := import "./interfaces";
+contexts := import "./contexts";
 generics := import "./generics";
 hostFs := import "./host-fs";
 /* Initial source graph traversal for the generated TypeScript compiler. */
@@ -432,7 +433,7 @@ scanTopLevelTokens := fn(items: frontend.Items, seed: mut frontend.TokenBuckets)
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if not isPureDecl and item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE_OP and
-        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_PUBLIC_IMPL and item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_SOURCE_LOC and item.kind =!= frontend.ITEM_KIND_COMMENT {
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_PUBLIC_IMPL and item.kind =!= frontend.ITEM_KIND_PUBLIC_CONTEXT and item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_SOURCE_LOC and item.kind =!= frontend.ITEM_KIND_COMMENT {
             scanItemTokens(item, mut seed);
         }
     }
@@ -687,7 +688,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
     isRoot := not hasVisited;
-    if isRoot { generics.resetAll(); interfaces.resetAll(); }
+    if isRoot { generics.resetAll(); interfaces.resetAll(); contexts.resetAll(); }
     normPath := normalizeSlashes(path);
     rootDir := if isRoot { dirnameOfPath(normPath) } else { rootDirForGraph(initialGraph) };
     logical := logicalModuleName(rootDir, path, display);
@@ -705,6 +706,26 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
                 identity = loadedOwner.identity, source = loadedOwner.text, initialGraph = graph,
                 =projectRoot, =cwd, =builtinSpecs);
             }
+        }
+    }
+
+    pkgCtxMod := if not frontend.isHostModuleIdentity(identity) {
+        hostFs.findPackageContext(path, rootDir, projectRoot)
+    } else {
+        (found = false, path = "", display = "", identity = "", text = "")
+    };
+    if pkgCtxMod.found and pkgCtxMod.path =!= path {
+        if not importEdgeRecorded(graph, path, "$context", pkgCtxMod.path) {
+            mut graph.pushBack((kind = frontend.ITEM_KIND_IMPORT_EDGE, name = path, runtime = pkgCtxMod.path,
+            code = "$context", intValue = 0, textValue = ""));
+        }
+        if not moduleLoadRecorded(graph, pkgCtxMod.path) {
+            mut graph.pushBack((kind = frontend.ITEM_KIND_MODULE_LOADED, name = pkgCtxMod.path, runtime = "",
+            code = "", intValue = 0, textValue = ""));
+        }
+        if not moduleVisited(graph, pkgCtxMod.path) {
+            graph = self(=target, path = pkgCtxMod.path, display = pkgCtxMod.display, identity = pkgCtxMod.identity,
+            source = pkgCtxMod.text, initialGraph = graph, =projectRoot, =cwd, =builtinSpecs);
         }
     }
 
@@ -757,6 +778,10 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
             if childLevel > maxChildLevel { maxChildLevel = childLevel; }
         }
     }
+    if pkgCtxMod.found and pkgCtxMod.path =!= path and moduleProcessed(graph, pkgCtxMod.path) {
+        ctxChildLevel := moduleLevelForPath(graph, pkgCtxMod.path);
+        if ctxChildLevel > maxChildLevel { maxChildLevel = ctxChildLevel; }
+    }
     if isRoot {
         loop graph as pItem {
             if pItem.kind == frontend.ITEM_KIND_MODULE_PROCESSED and pItem.intValue > maxChildLevel {
@@ -776,6 +801,18 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         clauseIndex = clauseIndex + 1;
     }
     importedExports = appendTransitiveTypeOps(graph, importedExports, path);
+    if pkgCtxMod.found and pkgCtxMod.path =!= path and moduleProcessed(graph, pkgCtxMod.path) {
+        var inCtxMod := false;
+        loop graph as gItem {
+            if gItem.kind == frontend.ITEM_KIND_MODULE_START {
+                inCtxMod = gItem.name == pkgCtxMod.path;
+            } else if gItem.kind == frontend.ITEM_KIND_MODULE_END and inCtxMod {
+                break;
+            } else if inCtxMod and gItem.kind == frontend.ITEM_KIND_PUBLIC_CONTEXT {
+                mut importedExports.pushBack(gItem);
+            }
+        }
+    }
 
     isCoreMod := not isRoot and frontend.isHostModuleIdentity(identity);
     localItems := if isCoreMod {

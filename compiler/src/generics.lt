@@ -4,6 +4,7 @@ textLib := import "core/text";
 numeric := import "./numeric-literals";
 ir := import "./frontend-ir";
 types := import "./frontend-types";
+contexts := import "./contexts";
 
 /** Local alias for `ir.Item`. */
 Item := alias ir.Item;
@@ -187,16 +188,18 @@ pub getEnvFuture := fn(poolIdx: Int): FutureValue { envFuturesPool[poolIdx] };
 /** Returns pooled root-assigned name at `poolIdx`. */
 pub getEnvAssigned := fn(poolIdx: Int): String { envAssignedPool[poolIdx] };
 
-/** Splits a `|`-delimited parameter encoding into `count` entries. */
+/** Splits a `|`-delimited parameter encoding into up to `count` entries (ignoring any trailing `$ctx=` entry). */
 pub splitPipeEntries := fn(encoded: String, count: Int): List<String> {
     out: mut List<String> = [];
     if count <= 0 { return out; }
-    size := encoded.length();
+    bare := contexts.stripCtxFromParams(encoded);
+    if bare == "" { return out; }
+    size := bare.length();
     var start := 0;
-    loop start <= size {
-        bar := encoded.indexOf("|", start);
+    loop start <= size and out.length() < count {
+        bar := bare.indexOf("|", start);
         end := if bar < 0 { size } else { bar };
-        mut out.pushBack(encoded.slice(start, end));
+        mut out.pushBack(bare.slice(start, end));
         if bar < 0 { break; }
         start = bar + 1;
     }
@@ -260,6 +263,9 @@ mangleOneKind := fn(kind: String): String {
     }
     if types.isDynKind(kind) {
         return "Y_" + hashHex32(types.dynInterfaceKind(kind)) + "_E";
+    }
+    if contexts.isCtxKind(kind) {
+        return "X_" + hashHex32(kind) + "_E";
     }
     if types.isInterfaceKind(kind) {
         return "I_" + hashHex32(kind) + "_E";
@@ -429,6 +435,12 @@ pub kindHasUnboundGeneric := fn(genericParams: String, kind: String, bindings: M
     if types.isDynKind(kind) {
         return self(genericParams, types.dynInterfaceKind(kind), bindings);
     }
+    if contexts.isCtxKind(kind) {
+        loop contexts.parseCtxKindSlots(kind) as cs {
+            if self(genericParams, cs.kind, bindings) { return true; }
+        }
+        return false;
+    }
     if types.isInterfaceKind(kind) {
         loop types.ifaceArgsOf(kind) as ia {
             if self(genericParams, ia, bindings) { return true; }
@@ -461,6 +473,8 @@ pub kindHasUnboundGeneric := fn(genericParams: String, kind: String, bindings: M
             if self(genericParams, types.fnParamComponent(kind, i).kind, bindings) { return true; }
             i = i + 1;
         }
+        fnCtx := types.fnContextKind(kind);
+        if fnCtx =!= "" and self(genericParams, fnCtx, bindings) { return true; }
         return self(genericParams, types.fnResultKind(kind), bindings);
     }
     nomArgs := types.nominalTypeArgs(kind);
@@ -614,6 +628,28 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
         }
         return self(genericParams, types.dynInterfaceKind(pattern), types.dynInterfaceKind(actual), mut bindings);
     }
+    if contexts.isCtxKind(pattern) {
+        if not contexts.isCtxKind(actual) {
+            return "expected context projection, got " + types.displayKind(actual);
+        }
+        pSlots := contexts.parseCtxKindSlots(pattern);
+        aSlots := contexts.parseCtxKindSlots(actual);
+        if pSlots.length() =!= aSlots.length() {
+            return "context requirement slot count mismatch";
+        }
+        var si := 0;
+        loop si < pSlots.length() {
+            ps := pSlots[si];
+            asSlot := aSlots[si];
+            if ps.name =!= asSlot.name or ps.isMut =!= asSlot.isMut {
+                return "context slot " + ps.name + " mutability or name mismatch";
+            }
+            sErr := self(genericParams, ps.kind, asSlot.kind, mut bindings);
+            if sErr =!= "" { return sErr; }
+            si = si + 1;
+        }
+        return "";
+    }
     if types.isInterfaceKind(pattern) {
         if not types.isInterfaceKind(actual) {
             return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
@@ -687,7 +723,10 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
         return "";
     }
     if types.isFnKind(pattern) {
-        if not types.isFnKind(actual) or types.fnParamCount(pattern) =!= types.fnParamCount(actual) {
+        pCtx := types.fnContextKind(pattern);
+        aCtx := types.fnContextKind(actual);
+        if not types.isFnKind(actual) or types.fnParamCount(pattern) =!= types.fnParamCount(actual) or
+        (pCtx == "" and aCtx =!= "") or (pCtx =!= "" and aCtx == "") {
             return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
         }
         n := types.fnParamCount(pattern);
@@ -696,6 +735,10 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
             pErr := self(genericParams, types.fnParamComponent(pattern, i).kind, types.fnParamComponent(actual, i).kind, mut bindings);
             if pErr =!= "" { return pErr; }
             i = i + 1;
+        }
+        if pCtx =!= "" {
+            cErr := self(genericParams, pCtx, aCtx, mut bindings);
+            if cErr =!= "" { return cErr; }
         }
         return self(genericParams, types.fnResultKind(pattern), types.fnResultKind(actual), mut bindings);
     }
