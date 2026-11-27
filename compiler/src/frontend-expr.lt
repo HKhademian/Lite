@@ -21,6 +21,7 @@ reach := import "./reachability";
 infer := import "./frontend-inference";
 ctx := import "./frontend-context";
 sliceBorrows := import "./slice-borrows";
+comptimeEval := import "./comptime-eval";
 textLib := import "core/text";
 tb := import "util/text-builder";
 
@@ -2393,6 +2394,40 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         sym.rewindAliasesTo(blkAliasMark);
         return doRes;
     }
+    if name == "comptime" {
+        afterCt := syntax.skipTrivia(source, next, prefix);
+        if afterCt >= source.length() or source.at(afterCt) =!= "{" {
+            syntax.failAt(source, afterCt, prefix, "expected { after comptime");
+        }
+        ctDepth := ir.maxLocalLexDepth(locals);
+        ctLocMark := sym.localMark();
+        ctAliasMark := sym.aliasMark();
+        mut ctLocs: List<Local> = locals;
+        mut ctLocs.pushBack((name = "$inComptimeBlock", runtime = "", kind = ir.VALUE_KIND_BOOL, mutable = false, writable = false, depth = 0, constant = true, code = "", intValue = ctDepth, textValue = "", initState = ir.INIT_STATE_INIT));
+        typedRes := parseBlockExpr(target, source, afterCt, prefix, ctLocs, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, "", aliases);
+        sym.rewindLocalsTo(ctLocMark);
+        sym.rewindAliasesTo(ctAliasMark);
+        if inferMode { return typedRes; }
+        if not comptimeEval.isMaterializableKind(typedRes.kind) {
+            syntax.failAt(source, nameStart, prefix, "comptime block result type " + types.displayKind(typedRes.kind) + " cannot be materialized at compile time");
+        }
+        mut visBindings: List<(name: String, runtime: String, kind: String, constant: Bool, intValue: Int, textValue: String)> = [];
+        loop locals as vb {
+            if vb.initState == ir.INIT_STATE_INIT and vb.name =!= "$inComptimeBlock" and vb.name =!= "$self_fn_rt" and
+            vb.kind =!= ir.VALUE_KIND_MODULE and vb.kind =!= ir.VALUE_KIND_MODULE_FUNCTION and
+            (vb.constant or comptimeEval.lookupLocalCtVal(vb.runtime) >= 0) {
+                mut visBindings.pushBack((name = vb.name, runtime = vb.runtime, kind = vb.kind, constant = vb.constant, intValue = vb.intValue, textValue = vb.textValue));
+            }
+        }
+        ev := comptimeEval.evalBlock(source, afterCt, prefix, comptimeEval.getActiveModule(), typedRes.kind, aliases, visBindings);
+        if not ev.ok or ev.flow =!= "" {
+            errMsg := if ev.error =!= "" { ev.error } else { "compile-time evaluation failed" };
+            syntax.failAt(source, nameStart, prefix, errMsg);
+        }
+        mat := comptimeEval.materializeValue(target, typedRes.kind, ev.valId);
+        comptimeEval.registerMaterializedCode(mat.code, ev.valId);
+        return (kind = typedRes.kind, code = mat.code, intValue = mat.intValue, textValue = mat.textValue, constant = mat.constant, next = typedRes.next);
+    }
     if name == "fn" {
         return parseFnLiteralExpr(target, source, nameStart, next, prefix, locals, functions, params, expected, ctxs, iifeDepth, inferMode, aliases);
     }
@@ -2497,6 +2532,14 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
     }
     if index >= 0 {
         entry := locals[index];
+        ctSentinelIdx := sym.localIndex(locals, "$inComptimeBlock");
+        if ctSentinelIdx >= 0 and entry.depth <= locals[ctSentinelIdx].intValue and
+        entry.kind =!= ir.VALUE_KIND_MODULE and entry.kind =!= ir.VALUE_KIND_MODULE_FUNCTION and
+        entry.name =!= "$inComptimeBlock" and entry.name =!= "$self_fn_rt" {
+            if not entry.constant and comptimeEval.lookupLocalCtVal(entry.runtime) < 0 {
+                syntax.failAt(source, nameStart, prefix, "comptime block cannot reference runtime value " + name);
+            }
+        }
         if entry.initState =!= ir.INIT_STATE_INIT {
             syntax.failAt(source, nameStart, prefix, "cannot read uninitialized local " + name);
         }
@@ -3606,7 +3649,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     emptyItemsHere: List<Item> = [];
     nextAliasDepth := types.maxAliasDepth(aliases) + 1;
     blkFlags := syntax.scanBlockFastFlags(source, start, prefix);
-    var blockAliases := if blkFlags.hasAliasKw {
+    var mut blockAliases := if blkFlags.hasAliasKw {
         types.collectBlockTypeAliases(source, start, prefix, nextAliasDepth, aliases)
     } else {
         aliases
@@ -5420,7 +5463,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 isStatement = true;
                 if syntax.isReservedWord(itemName) { syntax.unsupportedFeature(source, itemStart, itemName, prefix); }
                 ctx.rejectDuplicateInBlockNames(source, itemStart, prefix, declaredInBlock, itemName);
-                rawInfParsed := parseBlockInitExpr(target, source, syntax.skipTrivia(source, afterItemName + 2, prefix), prefix, blockLocals, functions, params, currentName, "", ctxs, bodyDepth, inferMode, blockAliases);
+                valRhsStart := syntax.skipTrivia(source, afterItemName + 2, prefix);
+                rawInfParsed := parseBlockInitExpr(target, source, valRhsStart, prefix, blockLocals, functions, params, currentName, "", ctxs, bodyDepth, inferMode, blockAliases);
                 declInitState := ctx.extractPartialInitState(rawInfParsed.textValue);
                 declParsed := (kind = rawInfParsed.kind, code = rawInfParsed.code, intValue = rawInfParsed.intValue, textValue = ctx.stripPartialInitTag(rawInfParsed.textValue), constant = rawInfParsed.constant, next = rawInfParsed.next);
                 if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, declParsed); }
@@ -5437,6 +5481,28 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                 }
                 runtime := trace.claimOrMakeLocalRuntime(target, blockLocals, itemName, "", blockLexDepth);
+                if not inferMode and declInitState == ir.INIT_STATE_INIT and sym.localIndex(blockLocals, "$inComptimeBlock") < 0 {
+                    var blkCtId := comptimeEval.registerScalarOrMatLocal(runtime, declParsed.kind, declParsed.constant, declParsed.intValue, declParsed.textValue, declParsed.code);
+                    if blkCtId < 0 and not declParsed.constant and declParsed.kind =!= ir.VALUE_KIND_NEVER {
+                        mut blkVis: List<(name: String, runtime: String, kind: String, constant: Bool, intValue: Int, textValue: String)> = [];
+                        loop blockLocals as bvb {
+                            if bvb.initState == ir.INIT_STATE_INIT and (bvb.constant or comptimeEval.lookupLocalCtVal(bvb.runtime) >= 0) {
+                                mut blkVis.pushBack((name = bvb.name, runtime = bvb.runtime, kind = bvb.kind, constant = bvb.constant, intValue = bvb.intValue, textValue = bvb.textValue));
+                            }
+                        }
+                        specCt := comptimeEval.tryEvalPureSpeculative(source, valRhsStart, declParsed.next, prefix, comptimeEval.getActiveModule(), declParsed.kind, blockAliases, blkVis);
+                        if specCt.ok {
+                            comptimeEval.registerLocalCtVal(runtime, specCt.valId);
+                            blkCtId = specCt.valId;
+                        }
+                    }
+                    if blkCtId >= 0 {
+                        ctTok := comptimeEval.comptimeValToken(declParsed.kind, blkCtId);
+                        if ctTok =!= "" {
+                            mut blockAliases.pushBack((name = "$ctv:" + itemName, target = ctTok, at = -1, end = 0, depth = nextAliasDepth));
+                        }
+                    }
+                }
                 valFnDeps := if target == ir.TARGET_TS and not inferMode and declInitState == ir.INIT_STATE_INIT and types.containsFnKind(declParsed.kind) { trace.computeCallableRhsDeps(declParsed.code) } else { "" };
                 mut declaredInBlock.pushBack(itemName);
                 mut blockLocals.pushBack((name = itemName, runtime = runtime, kind = declParsed.kind,
@@ -5520,6 +5586,15 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     blockLocals = trace.mergeOuterCallableUpdatesFromCode(blockLocals, declParsed.code);
                 }
                 runtime := trace.claimOrMakeLocalRuntime(target, blockLocals, annName, "", blockLexDepth);
+                if not inferMode and declInitState == ir.INIT_STATE_INIT and not effWritable and sym.localIndex(blockLocals, "$inComptimeBlock") < 0 {
+                    annCtId := comptimeEval.registerScalarOrMatLocal(runtime, typed.kind, declParsed.constant, declParsed.intValue, declParsed.textValue, declParsed.code);
+                    if annCtId >= 0 {
+                        ctTok := comptimeEval.comptimeValToken(typed.kind, annCtId);
+                        if ctTok =!= "" {
+                            mut blockAliases.pushBack((name = "$ctv:" + annName, target = ctTok, at = -1, end = 0, depth = nextAliasDepth));
+                        }
+                    }
+                }
                 declCode := if declInitState == ir.INIT_STATE_INIT or declIsReserved { ctx.assignValueCode(target, typed.kind, declParsed.kind, declParsed.code) } else { declParsed.code };
                 annFnDeps := if target == ir.TARGET_TS and not inferMode and declInitState == ir.INIT_STATE_INIT and types.containsFnKind(typed.kind) { trace.computeCallableRhsDeps(declParsed.code) } else { "" };
                 mut declaredInBlock.pushBack(annName);

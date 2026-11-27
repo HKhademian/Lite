@@ -1,8 +1,12 @@
 # Compile-time evaluation
 
-Status: **general compile-time evaluation and known-input direction selected
-2026-11-14; syntax and full execution contract under development**. This is
-language design, not a claim of compiler or host support.
+Status: **Phase 16 implemented (portable compiler-embedded evaluator across TS and C11; network builtins remain future work)**.
+
+See [phase16-comptime-eval.test.lts](lite://repo/compiler/tests/codegen/phase16-comptime-eval.test.lts) and [modules and packages](lite://doc/modules-and-packages#compile-time-known-initial-definitions) for the verified implementation contract:
+
+- **Stage-1 `.lt` pure module initializers:** Bare top-level `.lt` initializers (`:=`, `: T =`, `var`, `mut`, `var mut`) are statically checked for direct/transitive effects and mutable-global reads before evaluation, then evaluated and materialized identically into TS and C11 owned literals/constructors.
+- **Explicit `comptime { ... }` blocks:** Reserve `comptime` as a keyword, permit build-host `core/io`, `core/file`, `core/process`, `core/time`, `core/crypto`, and `core/diag` operations during compilation (rerouting stdout when compiling artifacts to stdout), record accessed paths into `--trace-json` (`"comptime":true` with SHA-256 hashing), reject escaping runtime locals/controls/unmaterializable handles (`Reader`, `Writer`, `Slice`, `Rc`, `dyn`, `SoA`, `fn`), and enforce step (`100,000`), cell allocation (`65,536`), and recursion depth (`128`) limits.
+- **Dual-stage functions & speculative propagation:** Ordinary functions execute identically at compile time or runtime, and pure `.lts` / local immutable bindings propagate known scalar/compound values into `[T; N]` extents and `fn<N>()` value arguments.
 
 ## General direction
 

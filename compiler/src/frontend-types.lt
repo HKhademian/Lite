@@ -4874,6 +4874,17 @@ pub parseComptimeValueArg := fn(source: String, position: Int, prefix: String, a
         secondEnd := source.skipName(secondStart);
         second := source.slice(secondStart, secondEnd);
         afterSecond := syntax.skipTrivia(source, secondEnd, prefix);
+        if afterSecond >= size or source.at(afterSecond) =!= "." {
+            ctDotAlias := findAlias(aliases, "$ctv:" + first + "." + second);
+            if ctDotAlias >= 0 and (aliases[ctDotAlias].target).startsWithAt(0, "$Val:") {
+                tok := (aliases[ctDotAlias].target).slice(5, (aliases[ctDotAlias].target).length());
+                actualKind := comptimeValueTokenKind(tok);
+                if actualKind =!= expectedKind {
+                    return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got " + displayKind(actualKind));
+                }
+                return (ok = true, token = tok, next = secondEnd, errPos = -1, errMsg = "");
+            }
+        }
         var typeName := first;
         var caseName := second;
         var finalEnd := secondEnd;
@@ -4908,8 +4919,9 @@ pub parseComptimeValueArg := fn(source: String, position: Int, prefix: String, a
         return (ok = true, token = first, next = firstEnd, errPos = -1, errMsg = "");
     }
     aliasIdx := findAlias(aliases, first);
-    if aliasIdx >= 0 and (aliases[aliasIdx].target).startsWithAt(0, "$Val:") {
-        tok := (aliases[aliasIdx].target).slice(5, (aliases[aliasIdx].target).length());
+    ctAliasIdx := if aliasIdx >= 0 { aliasIdx } else { findAlias(aliases, "$ctv:" + first) };
+    if ctAliasIdx >= 0 and (aliases[ctAliasIdx].target).startsWithAt(0, "$Val:") {
+        tok := (aliases[ctAliasIdx].target).slice(5, (aliases[ctAliasIdx].target).length());
         actualKind := comptimeValueTokenKind(tok);
         if actualKind =!= expectedKind {
             return (ok = false, token = "", next = start, errPos = start, errMsg = "expected comptime " + displayKind(expectedKind) + " value, got " + displayKind(actualKind));
@@ -4927,6 +4939,31 @@ parseArrayExtentWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool
     if extentStart < size and source.at(extentStart).isNameStart() {
         extentEnd = source.skipName(extentStart);
         extName := source.slice(extentStart, extentEnd);
+        afterExtDot := syntax.skipTrivia(source, extentEnd, prefix);
+        if afterExtDot < size and source.at(afterExtDot) == "." {
+            subStart := syntax.skipTrivia(source, afterExtDot + 1, prefix);
+            if subStart < size and source.at(subStart).isNameStart() {
+                subEnd := source.skipName(subStart);
+                subName := source.slice(subStart, subEnd);
+                ctDotIdx := findAlias(aliases, "$ctv:" + extName + "." + subName);
+                if ctDotIdx >= 0 and (aliases[ctDotIdx].target).startsWithAt(0, "$Val:") {
+                    tok := (aliases[ctDotIdx].target).slice(5, (aliases[ctDotIdx].target).length());
+                    if not isComptimeIntToken(tok) {
+                        syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(comptimeValueTokenKind(tok)));
+                    }
+                    nVal := comptimeIntValue(tok);
+                    if nVal <= 0 {
+                        syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be a positive integer, got " + nVal.toText());
+                    }
+                    extText = nVal.toText();
+                    extentEnd = subEnd;
+                } else {
+                    syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer or Int comptime parameter extent in array type");
+                }
+            } else {
+                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer or Int comptime parameter extent in array type");
+            }
+        } else {
         vpKind := valueParamKind(genericType, extName);
         if vpKind == ir.VALUE_KIND_INT {
             extText = extName;
@@ -4936,8 +4973,9 @@ parseArrayExtentWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool
             syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent cannot be Type parameter " + extName);
         } else {
             aliasIdx := findAlias(aliases, extName);
-            if aliasIdx >= 0 and (aliases[aliasIdx].target).startsWithAt(0, "$Val:") {
-                tok := (aliases[aliasIdx].target).slice(5, (aliases[aliasIdx].target).length());
+            ctAliasIdx := if aliasIdx >= 0 { aliasIdx } else { findAlias(aliases, "$ctv:" + extName) };
+            if ctAliasIdx >= 0 and (aliases[ctAliasIdx].target).startsWithAt(0, "$Val:") {
+                tok := (aliases[ctAliasIdx].target).slice(5, (aliases[ctAliasIdx].target).length());
                 if not isComptimeIntToken(tok) {
                     syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(comptimeValueTokenKind(tok)));
                 }
@@ -4949,6 +4987,7 @@ parseArrayExtentWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool
             } else {
                 syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer or Int comptime parameter extent in array type");
             }
+        }
         }
     } else {
         loop extentEnd < size and source.at(extentEnd).isDigit() {

@@ -57,6 +57,7 @@ frontendModules: List<String> = [
     "compiler/src/frontend-inference.lt",
     "compiler/src/frontend-context.lt",
     "compiler/src/frontend-expr.lt",
+    "compiler/src/comptime-eval.lt",
 ];
 loop frontendModules as modPath {
     test.check("ts deps include " + modPath, tsDeps.contains(modPath));

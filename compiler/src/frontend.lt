@@ -19,6 +19,7 @@ infer := import "./frontend-inference";
 ctx := import "./frontend-context";
 expr := import "./frontend-expr";
 sliceBorrows := import "./slice-borrows";
+comptimeEval := import "./comptime-eval";
 io := import "core/io";
 
 /** Shared restricted front-end. */
@@ -160,6 +161,7 @@ pub ITEM_KIND_PUBLIC_TYPE := ir.ITEM_KIND_PUBLIC_TYPE;
 pub ITEM_KIND_PUBLIC_IMPL := ir.ITEM_KIND_PUBLIC_IMPL;
 pub ITEM_KIND_PUBLIC_CONTEXT := ir.ITEM_KIND_PUBLIC_CONTEXT;
 pub ITEM_KIND_PURE_GLOBAL := ir.ITEM_KIND_PURE_GLOBAL;
+pub ITEM_KIND_COMPTIME_DEP := ir.ITEM_KIND_COMPTIME_DEP;
 pub ITEM_KIND_FUNCTION_START := ir.ITEM_KIND_FUNCTION_START;
 pub ITEM_KIND_FUNCTION_END := ir.ITEM_KIND_FUNCTION_END;
 pub ITEM_KIND_SOFT_BUILTIN := ir.ITEM_KIND_SOFT_BUILTIN;
@@ -1896,6 +1898,46 @@ skipRemainingMatchArms := fn(source: String, afterArmBrace: Int, prefix: String)
     if cur < size and source.at(cur) == "}" { cur + 1 } else { cur }
 };
 
+/** Converts active immutable Locals into the metadata tuple shape accepted by `comptimeEval`. */
+collectVisibleCtBindings := fn(locals: List<Local>): List<(name: String, runtime: String, kind: String, constant: Bool, intValue: Int, textValue: String)> {
+    mut out: List<(name: String, runtime: String, kind: String, constant: Bool, intValue: Int, textValue: String)> = [];
+    loop locals as vb {
+        if vb.initState == INIT_STATE_INIT and vb.name =!= "$inComptimeBlock" and vb.name =!= "$self_fn_rt" and
+        vb.kind =!= VALUE_KIND_MODULE and vb.kind =!= VALUE_KIND_MODULE_FUNCTION and
+        (vb.constant or comptimeEval.lookupLocalCtVal(vb.runtime) >= 0) {
+            mut out.pushBack((name = vb.name, runtime = vb.runtime, kind = vb.kind, constant = vb.constant, intValue = vb.intValue, textValue = vb.textValue));
+        }
+    }
+    out
+};
+
+/** Evaluates a Stage-1 `.lt` module initializer (rejecting bare effects/mutable globals before execution) and materializes its target value. */
+stage1EvalTopLevelInit := fn(target: String, source: String, rhsStart: Int, prefix: String, moduleKey: String, expectedKind: String, rawParsed: Parsed, aliases: List<AliasDecl>, locals: List<Local>): Parsed {
+    trimmedStart := skipTrivia(source, rhsStart, prefix);
+    if source.wordAt(trimmedStart, "comptime") or containsFnKind(rawParsed.kind) or rawParsed.kind == VALUE_KIND_NEVER {
+        return rawParsed;
+    }
+    if rawParsed.constant {
+        return rawParsed;
+    }
+    eff := comptimeEval.checkExprEffects(source, trimmedStart, rawParsed.next, prefix, moduleKey);
+    if not eff.pure {
+        failAt(source, if eff.pos >= 0 { eff.pos } else { trimmedStart }, prefix, eff.reason);
+    }
+    dstKind := if expectedKind =!= "" { expectedKind } else { rawParsed.kind };
+    if not comptimeEval.isMaterializableKind(dstKind) {
+        failAt(source, trimmedStart, prefix, "module initializer type " + displayKind(dstKind) + " cannot be materialized at compile time");
+    }
+    ev := comptimeEval.evalExprPure(source, trimmedStart, rawParsed.next, prefix, moduleKey, dstKind, aliases, collectVisibleCtBindings(locals));
+    if not ev.ok or ev.flow =!= "" {
+        errMsg := if ev.error =!= "" { ev.error } else { "module initializer must be compile-time known" };
+        failAt(source, trimmedStart, prefix, errMsg);
+    }
+    mat := comptimeEval.materializeValue(target, dstKind, ev.valId);
+    comptimeEval.registerMaterializedCode(mat.code, ev.valId);
+    (kind = dstKind, code = mat.code, intValue = mat.intValue, textValue = mat.textValue, constant = mat.constant, next = rawParsed.next)
+};
+
 /** Internal driver parsing either a complete module (`monoInstIdx < 0`) or one monomorphized generic instance body (`monoInstIdx >= 0`). */
 parseProgramWithModuleInternal := fn(target: String, sourceIn: String, prefixIn: String, exports: Items, moduleKeyIn: String,
 moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpecs: List<String>, monoInstIdx: Int): Items {
@@ -1911,6 +1953,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     if monoInstIdx < 0 {
         contexts.clearAmbient();
         types.setActiveImplModuleKey(moduleKey);
+        comptimeEval.setActiveModule(moduleKey);
+        comptimeEval.registerModuleMeta(moduleKey, moduleIdentity, source, prefix);
         position = skipTrivia(source, 0, prefix);
         if position == size {
             contexts.saveModuleAmbient(moduleKey);
@@ -2040,6 +2084,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported module name " + exported.name);
             }
+            comptimeEval.registerModuleImport(moduleKey, exported.name, exported.runtime, exported.code);
             (mut locals).pushBack((name = exported.name, runtime = "", kind = VALUE_KIND_MODULE, mutable = false,
             writable = false, depth = 0, constant = false, code = "", intValue = exported.intValue,
             textValue = exported.name, initState = INIT_STATE_INIT));
@@ -2096,6 +2141,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         } else if exported.kind == ITEM_KIND_PUBLIC_VALUE {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
+            }
+            if exported.intValue > 0 {
+                impCtId := exported.intValue - 1;
+                comptimeEval.registerLocalCtVal(exported.runtime, impCtId);
+                ctTok := comptimeEval.comptimeValToken(exported.code, impCtId);
+                if ctTok =!= "" {
+                    mut aliases.pushBack((name = "$ctv:" + exported.name, target = ctTok, at = -1, end = 0, depth = 0));
+                }
             }
             (mut locals).pushBack((name = exported.name, runtime = exported.runtime, kind = exported.code,
             mutable = false, writable = false, depth = 0, constant = false, code = exported.runtime,
@@ -2181,6 +2234,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         if not dupSig and afterHdr < size and source.at(afterHdr) == ";" {
                             hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, fnName, header.params, header.result);
                             if publishedFunctions.has(fnName) and hostRuntime =!= "" {
+                                comptimeEval.registerFnDef(hostRuntime, fnName, moduleKey, moduleIdentity, source, prefix, fnAt, afterHdr, header.params, header.count, header.result, true, aliases);
                                 contexts.registerFnContext(hostRuntime, contexts.extractCtxKindFromParams(header.params));
                                 overloads.registerFnSig(hostRuntime, sigKey, header.genericType, header.params);
                                 mut functions.pushBack((name = fnName, runtime = hostRuntime, result = header.result,
@@ -2192,20 +2246,21 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             }
                         } else if not dupSig and header.count >= 0 and afterHdr < size and source.at(afterHdr) == "{" {
                             var fnRuntime := moduleFunctionRuntime(target, moduleKey, fnName + ovSuffix);
+                            bodyEndFuture := skipBraceBlock(source, afterHdr + 1, prefix);
                             if header.genericType =!= "" {
                                 tplKey := moduleKey + "#" + fnName + ovSuffix;
                                 fnRuntime = "$gen:" + tplKey;
-                                bodyEnd := skipBraceBlock(source, afterHdr + 1, prefix);
                                 generics.registerTemplate((
                                     key = tplKey, qualName = fnName + ovSuffix, typeOpKey = "",
                                     moduleKey = moduleKey, moduleIdentity = moduleIdentity,
                                     prefix = prefix, source = source,
-                                    bodyStart = afterHdr + 1, bodyEnd = bodyEnd, declAt = fnAt,
+                                    bodyStart = afterHdr + 1, bodyEnd = bodyEndFuture, declAt = fnAt,
                                     genericParams = header.genericType, params = header.params,
                                     paramCount = header.count, result = header.result,
                                     selfTarget = "", isPub = publishedFnAts.has(fnAt)
                                 ));
                             }
+                            comptimeEval.registerFnDef(fnRuntime, fnName, moduleKey, moduleIdentity, source, prefix, afterHdr + 1, bodyEndFuture - 1, header.params, header.count, header.result, false, aliases);
                             contexts.registerFnContext(fnRuntime, contexts.extractCtxKindFromParams(header.params));
                             overloads.registerFnSig(fnRuntime, sigKey, header.genericType, header.params);
                             (mut functions).pushBack((name = fnName, runtime = fnRuntime, result = header.result,
@@ -2250,6 +2305,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         if not dupOpSig and afterHdr < size and source.at(afterHdr) == ";" {
                             hostRuntime := builtinsAbi.coreHostFunction(moduleIdentity, qualName, header.params, header.result);
                             if publishedTypeOps.has(qualName) and hostRuntime =!= "" {
+                                comptimeEval.registerFnDef(hostRuntime, qualName, moduleKey, moduleIdentity, source, prefix, opAt, afterHdr, header.params, header.count, header.result, true, aliases);
                                 contexts.registerFnContext(hostRuntime, contexts.extractCtxKindFromParams(header.params));
                                 overloads.registerFnSig(hostRuntime, sigKey, header.genericType, header.params);
                                 mut functions.pushBack((name = typeOpKey, runtime = hostRuntime, result = header.result,
@@ -2261,20 +2317,21 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             }
                         } else if not dupOpSig and afterHdr < size and source.at(afterHdr) == "{" {
                             var fnRuntime := moduleFunctionRuntime(target, moduleKey, qualName + ovSuffix);
+                            opBodyEndFuture := skipBraceBlock(source, afterHdr + 1, prefix);
                             if header.genericType =!= "" {
                                 tplKey := moduleKey + "#" + qualName + ovSuffix;
                                 fnRuntime = "$gen:" + tplKey;
-                                bodyEnd := skipBraceBlock(source, afterHdr + 1, prefix);
                                 generics.registerTemplate((
                                     key = tplKey, qualName = qualName + ovSuffix, typeOpKey = typeOpKey,
                                     moduleKey = moduleKey, moduleIdentity = moduleIdentity,
                                     prefix = prefix, source = source,
-                                    bodyStart = afterHdr + 1, bodyEnd = bodyEnd, declAt = opAt,
+                                    bodyStart = afterHdr + 1, bodyEnd = opBodyEndFuture, declAt = opAt,
                                     genericParams = header.genericType, params = header.params,
                                     paramCount = header.count, result = header.result,
                                     selfTarget = owner.selfTarget, isPub = publishedTypeOpAts.has(opAt)
                                 ));
                             }
+                            comptimeEval.registerFnDef(fnRuntime, qualName, moduleKey, moduleIdentity, source, prefix, afterHdr + 1, opBodyEndFuture - 1, header.params, header.count, header.result, false, aliases);
                             contexts.registerFnContext(fnRuntime, contexts.extractCtxKindFromParams(header.params));
                             overloads.registerFnSig(fnRuntime, sigKey, header.genericType, header.params);
                             (mut functions).pushBack((name = typeOpKey, runtime = fnRuntime, result = header.result,
@@ -4715,9 +4772,13 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if not source.startsWithAt(afterName, ":=") {
                 failAt(source, afterName, prefix, "expected := after mut local name " + localName);
             }
-            rawMutParsed := parseInitializerExpression(target, source, skipTrivia(source, afterName + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            mutRhsStart := skipTrivia(source, afterName + 2, prefix);
+            rawMutParsed := parseInitializerExpression(target, source, mutRhsStart, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
             mutInitState := ctx.extractPartialInitState(rawMutParsed.textValue);
-            parsed := (kind = rawMutParsed.kind, code = rawMutParsed.code, intValue = rawMutParsed.intValue, textValue = ctx.stripPartialInitTag(rawMutParsed.textValue), constant = rawMutParsed.constant, next = rawMutParsed.next);
+            var parsed := (kind = rawMutParsed.kind, code = rawMutParsed.code, intValue = rawMutParsed.intValue, textValue = ctx.stripPartialInitTag(rawMutParsed.textValue), constant = rawMutParsed.constant, next = rawMutParsed.next);
+            if isLtModule and blockCount == 0 and mutInitState == INIT_STATE_INIT {
+                parsed = stage1EvalTopLevelInit(target, source, mutRhsStart, prefix, moduleKey, "", parsed, aliases, locals);
+            }
             locals = checkStatementTrace(target, source, localStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
             if not types.isMutContainerKind(parsed.kind) {
                 failAt(source, localStart, prefix, "mut requires a List, Map, Set, or record value, got " + displayKind(parsed.kind));
@@ -4728,6 +4789,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, localName, moduleKey, depth);
+            if blockCount == 0 and depth == 0 {
+                comptimeEval.registerModuleMutableGlobal(moduleKey, localName, runtime);
+            }
             mutLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) {
                 if mutInitState == INIT_STATE_INIT { computeCallableRhsDeps(parsed.code) } else { "" }
             } else { parsed.code };
@@ -4775,10 +4839,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             var rhsDiverged := false;
             var rawVarRhsCode := "";
             if source.startsWithAt(position, ":=") {
-                position = skipTrivia(source, position + 2, prefix);
+                varRhsStart := skipTrivia(source, position + 2, prefix);
+                position = varRhsStart;
                 rawInfVar := parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
                 declInitState = ctx.extractPartialInitState(rawInfVar.textValue);
                 parsed = (kind = rawInfVar.kind, code = rawInfVar.code, intValue = rawInfVar.intValue, textValue = ctx.stripPartialInitTag(rawInfVar.textValue), constant = rawInfVar.constant, next = rawInfVar.next);
+                if isLtModule and blockCount == 0 and declInitState == INIT_STATE_INIT {
+                    parsed = stage1EvalTopLevelInit(target, source, varRhsStart, prefix, moduleKey, "", parsed, aliases, locals);
+                }
                 rawVarRhsCode = parsed.code;
                 locals = checkStatementTrace(target, source, localStart, prefix, rawVarRhsCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 rejectNonValueBinding(source, localStart, prefix, parsed.kind, localName);
@@ -4841,6 +4909,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         rhsDiverged = parsed.kind == VALUE_KIND_NEVER;
                         converted := if wasDynCoerced { coercedCode } else if declInitState == INIT_STATE_INIT { assignValueCode(target, typed.kind, parsed.kind, parsed.code) } else { parsed.code };
                         parsed = (kind = typed.kind, code = converted, intValue = parsed.intValue, textValue = coercedText, constant = parsed.constant, next = parsed.next);
+                        if isLtModule and blockCount == 0 and declInitState == INIT_STATE_INIT and not wasDynCoerced {
+                            parsed = stage1EvalTopLevelInit(target, source, rhsStart, prefix, moduleKey, typed.kind, parsed, aliases, locals);
+                        }
                     }
                 } else {
                     if types.isDynKind(typed.kind) { failAt(source, localStart, prefix, "dyn Interface binding requires an initializer"); }
@@ -4855,6 +4926,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + localName); }
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, localName, moduleKey, depth);
+            if blockCount == 0 and depth == 0 {
+                comptimeEval.registerModuleMutableGlobal(moduleKey, localName, runtime);
+            }
             varLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) {
                 if declInitState == INIT_STATE_INIT { computeCallableRhsDeps(rawVarRhsCode) } else { "" }
             } else { parsed.code };
@@ -5188,6 +5262,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         }
                         contexts.registerFnContext(hostRuntime, contexts.extractCtxKindFromParams(header.params));
                         overloads.registerFnSig(hostRuntime, opSigKey, header.genericType, header.params);
+                        comptimeEval.registerFnDef(hostRuntime, qualName, moduleKey, moduleIdentity, source, prefix, nameStart, position, header.params, header.count, header.result, true, aliases);
                         if currentLive {
                             mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE_OP, name = typeOpKey, runtime = hostRuntime, code = header.result,
                             intValue = header.count, textValue = header.params));
@@ -5237,6 +5312,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     position = expectSymbol(source, position, "{", prefix);
                     fnOpenBrace := position - 1;
                     functionRuntime := if wasPreRegisteredOp { functions[preOpIdx].runtime } else { moduleFunctionRuntime(target, moduleKey, qualName + ovSuffixOp) };
+                    opBodyEnd := skipBraceBlock(source, position, prefix);
+                    comptimeEval.registerFnDef(functionRuntime, qualName, moduleKey, moduleIdentity, source, prefix, position, opBodyEnd - 1, header.params, header.count, header.result, false, aliases);
                     overloads.registerFnSig(functionRuntime, opSigKey, "", header.params);
                     if not wasPreRegisteredOp {
                         mut functions.pushBack((name = typeOpKey, runtime = functionRuntime, result = header.result,
@@ -5438,6 +5515,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     }
                     contexts.registerFnContext(hostRuntime, contexts.extractCtxKindFromParams(header.params));
                     overloads.registerFnSig(hostRuntime, fnSigKey, header.genericType, header.params);
+                    comptimeEval.registerFnDef(hostRuntime, name, moduleKey, moduleIdentity, source, prefix, nameStart, position, header.params, header.count, header.result, true, aliases);
                     if currentLive {
                         mut items.pushBack((kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = hostRuntime, code = header.result,
                         intValue = header.count, textValue = header.params));
@@ -5486,6 +5564,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 position = expectSymbol(source, position, "{", prefix);
                 fnOpenBrace := position - 1;
                 functionRuntime := if wasPreRegistered { functions[preFnIdx].runtime } else { moduleFunctionRuntime(target, moduleKey, name + ovSuffixFn) };
+                fnBodyEnd := skipBraceBlock(source, position, prefix);
+                comptimeEval.registerFnDef(functionRuntime, name, moduleKey, moduleIdentity, source, prefix, position, fnBodyEnd - 1, header.params, header.count, header.result, false, aliases);
                 overloads.registerFnSig(functionRuntime, fnSigKey, "", header.params);
                 if not wasPreRegistered {
                     mut functions.pushBack((name = name, runtime = functionRuntime, result = header.result,
@@ -5610,7 +5690,12 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             position = afterDeclare;
             rawValParsed := parseInitializerExpression(target, source, position, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
             valInitState := ctx.extractPartialInitState(rawValParsed.textValue);
-            parsed := (kind = rawValParsed.kind, code = rawValParsed.code, intValue = rawValParsed.intValue, textValue = ctx.stripPartialInitTag(rawValParsed.textValue), constant = rawValParsed.constant, next = rawValParsed.next);
+            var parsed := (kind = rawValParsed.kind, code = rawValParsed.code, intValue = rawValParsed.intValue, textValue = ctx.stripPartialInitTag(rawValParsed.textValue), constant = rawValParsed.constant, next = rawValParsed.next);
+            var stage1CtId := -1;
+            if isLtModule and blockCount == 0 and valInitState == INIT_STATE_INIT {
+                parsed = stage1EvalTopLevelInit(target, source, position, prefix, moduleKey, "", parsed, aliases, locals);
+                stage1CtId = comptimeEval.lookupMaterializedCode(parsed.code);
+            }
             locals = checkStatementTrace(target, source, nameStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
             rejectNonValueBinding(source, nameStart, prefix, parsed.kind, name);
             valWritable := if types.isSliceKind(parsed.kind) { sliceBorrows.sliceExprIsMutable(parsed.textValue) } else { false };
@@ -5618,8 +5703,27 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if not valBorrow.ok { failAt(source, nameStart, prefix, valBorrow.error); }
             statementNext := consumeStatementEnd(source, parsed.next, prefix);
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
-            position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, name, moduleKey, depth);
+            var topValCtId := if stage1CtId >= 0 { comptimeEval.registerLocalCtVal(runtime, stage1CtId); stage1CtId }
+            else if valInitState == INIT_STATE_INIT { comptimeEval.registerScalarOrMatLocal(runtime, parsed.kind, parsed.constant, parsed.intValue, parsed.textValue, parsed.code) }
+            else { -1 };
+            if topValCtId < 0 and valInitState == INIT_STATE_INIT and not (isLtModule and blockCount == 0) and not parsed.constant and parsed.kind =!= VALUE_KIND_NEVER {
+                specTop := comptimeEval.tryEvalPureSpeculative(source, position, parsed.next, prefix, moduleKey, parsed.kind, aliases, collectVisibleCtBindings(locals));
+                if specTop.ok {
+                    comptimeEval.registerLocalCtVal(runtime, specTop.valId);
+                    topValCtId = specTop.valId;
+                }
+            }
+            if topValCtId >= 0 and valInitState == INIT_STATE_INIT {
+                if depth == 0 and blockCount == 0 {
+                    comptimeEval.registerLocalCtVal("$mod:" + moduleKey + "." + name, topValCtId);
+                }
+                ctTok := comptimeEval.comptimeValToken(parsed.kind, topValCtId);
+                if ctTok =!= "" {
+                    mut aliases.pushBack((name = "$ctv:" + name, target = ctTok, at = -1, end = 0, depth = depth));
+                }
+            }
+            position = statementNext;
             valLocalCode := if target == TARGET_TS and containsFnKind(parsed.kind) {
                 if valInitState == INIT_STATE_INIT { computeCallableRhsDeps(parsed.code) } else { "" }
             } else { parsed.code };
@@ -5629,7 +5733,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             intValue = parsed.intValue, textValue = valBorrow.textValue, initState = valInitState));
             if depth == 0 and blockCount == 0 and publishedValues.has(name) {
                 mut items.pushBack((kind = ITEM_KIND_PUBLIC_VALUE, name = name, runtime = runtime, code = parsed.kind,
-                intValue = 0, textValue = ""));
+                intValue = if topValCtId >= 0 { topValCtId + 1 } else { 0 }, textValue = ""));
             }
             if currentLive and not currentStopped {
                 itemCode := if valInitState == INIT_STATE_INIT { copiedValueCode(target, parsed.kind, parsed.code) } else { parsed.code };
@@ -5662,6 +5766,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             var parsed := zeroParsed(target, typed.kind, position);
             var declInitState := INIT_STATE_INIT;
             var declIsReserved := false;
+            var annCtRhsStart := -1;
+            var annWasDyn := false;
             if isSingleEquals(source, position) {
                 rhsStart := skipTrivia(source, position + 1, prefix);
                 reservedEnd := isReservedInitMarker(source, rhsStart, prefix);
@@ -5693,6 +5799,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         dynC := expr.coerceToDynIfNeeded(target, source, nameStart, prefix, typed.kind, effWritable, parsed.kind, parsed.code, parsed.textValue, false, locals, functions, mut dummyDrops);
                         if dynC.matched {
                             wasDynAnn = true;
+                            annWasDyn = true;
                             coercedAnnCode = dynC.code;
                             coercedAnnText = dynC.textValue;
                         }
@@ -5701,10 +5808,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         failAt(source, nameStart, prefix, "cannot initialize " + displayKind(typed.kind) + " with " + displayKind(parsed.kind));
                     }
                     parsed = (kind = if wasDynAnn { typed.kind } else { parsed.kind }, code = coercedAnnCode, intValue = parsed.intValue, textValue = coercedAnnText, constant = parsed.constant, next = parsed.next);
+                    if not wasDynAnn and declInitState == INIT_STATE_INIT { annCtRhsStart = rhsStart; }
                     locals = checkStatementTrace(target, source, nameStart, prefix, parsed.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
                 }
             } else if types.isDynKind(typed.kind) {
                 failAt(source, nameStart, prefix, "dyn Interface binding requires an initializer");
+            }
+            var stage1AnnCtId := -1;
+            if isLtModule and blockCount == 0 and annCtRhsStart >= 0 and not annWasDyn {
+                parsed = stage1EvalTopLevelInit(target, source, annCtRhsStart, prefix, moduleKey, typed.kind, parsed, aliases, locals);
+                stage1AnnCtId = comptimeEval.lookupMaterializedCode(parsed.code);
             }
             annBorrow := sliceBorrows.borrowTagForBinding(typed.kind, effWritable, parsed.textValue);
             if not annBorrow.ok { failAt(source, nameStart, prefix, annBorrow.error); }
@@ -5712,6 +5825,30 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if statementNext < 0 { failAt(source, skipTrivia(source, parsed.next, prefix), prefix, "expected ; after local declaration " + name); }
             position = statementNext;
             runtime := claimOrMakeLocalRuntime(target, locals, name, moduleKey, depth);
+            if effWritable and blockCount == 0 and depth == 0 {
+                comptimeEval.registerModuleMutableGlobal(moduleKey, name, runtime);
+            }
+            var annCtId := -1;
+            if not effWritable and declInitState == INIT_STATE_INIT {
+                annCtId = if stage1AnnCtId >= 0 { comptimeEval.registerLocalCtVal(runtime, stage1AnnCtId); stage1AnnCtId }
+                else { comptimeEval.registerScalarOrMatLocal(runtime, typed.kind, parsed.constant, parsed.intValue, parsed.textValue, parsed.code) };
+                if annCtId < 0 and annCtRhsStart >= 0 and not (isLtModule and blockCount == 0) and not parsed.constant and parsed.kind =!= VALUE_KIND_NEVER {
+                    specAnn := comptimeEval.tryEvalPureSpeculative(source, annCtRhsStart, parsed.next, prefix, moduleKey, typed.kind, aliases, collectVisibleCtBindings(locals));
+                    if specAnn.ok {
+                        comptimeEval.registerLocalCtVal(runtime, specAnn.valId);
+                        annCtId = specAnn.valId;
+                    }
+                }
+                if annCtId >= 0 {
+                    if depth == 0 and blockCount == 0 {
+                        comptimeEval.registerLocalCtVal("$mod:" + moduleKey + "." + name, annCtId);
+                    }
+                    ctTok := comptimeEval.comptimeValToken(typed.kind, annCtId);
+                    if ctTok =!= "" {
+                        mut aliases.pushBack((name = "$ctv:" + name, target = ctTok, at = -1, end = 0, depth = depth));
+                    }
+                }
+            }
             rhsDiverged := parsed.kind == VALUE_KIND_NEVER;
             assignedCode := if declIsReserved and target == TARGET_C and types.cTypeNeedsDrop(typed.kind) {
                 "/*@CZEROMEMSET@*/"
@@ -5727,6 +5864,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             mut locals.pushBack((name = name, runtime = runtime, kind = typed.kind,
             mutable = false, writable = effWritable, depth = depth, constant = if declInitState == INIT_STATE_INIT and not numeric.isFloatKind(typed.kind) { parsed.constant } else { false },
             code = annLocalCode, intValue = parsed.intValue, textValue = annBorrow.textValue, initState = declInitState));
+            if depth == 0 and blockCount == 0 and publishedValues.has(name) {
+                mut items.pushBack((kind = ITEM_KIND_PUBLIC_VALUE, name = name, runtime = runtime, code = typed.kind,
+                intValue = if annCtId >= 0 { annCtId + 1 } else { 0 }, textValue = ""));
+            }
             declItemPrefix := if declInitState == INIT_STATE_INIT and not (target == TARGET_TS and effWritable and types.isRecordOrDistinctRecord(typed.kind)) { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
             if currentLive and not currentStopped {
                 if rhsDiverged {

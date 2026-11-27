@@ -160,6 +160,7 @@ pub ITEM_KIND_PUBLIC_TYPE := "PublicType";
 pub ITEM_KIND_PUBLIC_IMPL := "PublicImpl";
 pub ITEM_KIND_PUBLIC_CONTEXT := "PublicContext";
 pub ITEM_KIND_PURE_GLOBAL := "PureGlobal";
+pub ITEM_KIND_COMPTIME_DEP := "ComptimeDep";
 pub ITEM_KIND_FUNCTION_START := "FunctionStart";
 pub ITEM_KIND_FUNCTION_END := "FunctionEnd";
 pub ITEM_KIND_SOFT_BUILTIN := "SoftBuiltin";

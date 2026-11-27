@@ -7,6 +7,7 @@ contexts := import "./contexts";
 overloads := import "./overloads";
 generics := import "./generics";
 hostFs := import "./host-fs";
+comptimeEval := import "./comptime-eval";
 /* Initial source graph traversal for the generated TypeScript compiler. */
 
 /** True when the graph has entered one canonical source path. */
@@ -239,6 +240,14 @@ moduleKeyForPath := fn(graph: frontend.Items, path: String): String {
     ""
 }
 
+/** Returns the module identity recorded on `ITEM_KIND_MODULE_PROCESSED` for `path`, or `""`. */
+moduleIdentityForPath := fn(graph: frontend.Items, path: String): String {
+    loop graph as item {
+        if item.kind == frontend.ITEM_KIND_MODULE_PROCESSED and item.name == path { return item.textValue; }
+    }
+    ""
+}
+
 /** Returns the computed topological DAG level of a processed module `path`. */
 moduleLevelForPath := fn(graph: frontend.Items, path: String): Int {
     loop graph as item {
@@ -341,7 +350,7 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
 
 /** Builds one aliased module namespace from its source-declared public interface. */
 moduleAliasExports := fn(graph: frontend.Items, path: String, modAlias: String): frontend.Items {
-    mut result: frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = moduleKeyForPath(graph, path), code = "",
+    mut result: frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = moduleKeyForPath(graph, path), code = moduleIdentityForPath(graph, path),
     intValue = 0, textValue = path)];
     loop modulePublicDeclarations(graph, path) as item {
         mut result.pushBack((kind = item.kind, name = modAlias + "." + item.name, runtime = item.runtime,
@@ -704,7 +713,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
     isRoot := not hasVisited;
-    if isRoot { generics.resetAll(); interfaces.resetAll(); contexts.resetAll(); overloads.resetAll(); }
+    if isRoot { generics.resetAll(); interfaces.resetAll(); contexts.resetAll(); overloads.resetAll(); comptimeEval.resetComptimeState(); }
     normPath := normalizeSlashes(path);
     rootDir := if isRoot { dirnameOfPath(normPath) } else { rootDirForGraph(initialGraph) };
     logical := logicalModuleName(rootDir, path, display);
@@ -856,8 +865,14 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
     (mut graph).pushBack((kind = frontend.ITEM_KIND_MODULE_PROCESSED, name = path, runtime = moduleKey, code = logical,
-    intValue = level, textValue = ""));
-    if isRoot { return resolveCoreModules(target, graph, builtinSpecs); }
+    intValue = level, textValue = identity));
+    if isRoot {
+        mut outGraph := resolveCoreModules(target, graph, builtinSpecs);
+        loop comptimeEval.getTracedFiles() as ctFile {
+            mut outGraph.pushBack((kind = frontend.ITEM_KIND_COMPTIME_DEP, name = ctFile, runtime = "", code = "", intValue = 0, textValue = ""));
+        }
+        return outGraph;
+    }
     graph
 }
 

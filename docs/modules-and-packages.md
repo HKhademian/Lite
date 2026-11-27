@@ -127,19 +127,7 @@ no blanket ban or effect-checking mechanism is selected.
 
 ### Compile-time-known initial definitions
 
-Selected 2026-11-14 for the **first compiler stage**: applicable top-level
-value definitions in `.lt` modules must have compile-time-known initial values.
-The user clarified this is a first-stage restriction, not a decision to ban
-runtime-dependent module initializers forever. Later compiler stages should
-reach full support as the wider language and module contracts are designed.
-Literal arithmetic and pure
-ordinary function calls on known inputs can supply such values. An explicit
-compile-time computation can also produce one, including through the intended
-effectful compile-time capabilities. Evaluating the initializer for its value
-occurs during compilation rather than as an implicit runtime module-startup
-call in this stage. This is selected design direction, not current `.lt`
-compiler support, a promise that every known expression is supported at once,
-or a complete module initialization algorithm.
+Selected 2026-11-14 for the **first compiler stage** (and implemented in Phase 16 via `compiler/src/comptime-eval.lt`): applicable top-level value definitions in `.lt` modules must have compile-time-known initial values. Bare top-level initializers are statically checked against direct/transitive host effects and mutable module globals before evaluation; effectful compile-time initialization uses an explicit `comptime { ... }` block, and supported scalar and owned compound results (`Record`, `List`, `[T; N]`, `Map`, `Set`, `Union`, `Result`, `Enum`, `Tuple`) materialize identically on TypeScript and C11. See [phase16-comptime-eval.test.lts](lite://repo/compiler/tests/codegen/phase16-comptime-eval.test.lts).
 
 ```text
 /* Illustrative module fragments: imports and visibility omitted. */

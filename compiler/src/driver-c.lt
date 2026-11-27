@@ -1,5 +1,6 @@
 frontend := import "./frontend";
 modules := import "./modules";
+comptimeEval := import "./comptime-eval";
 emitter := import "./emit-c";
 hostFs := import "./host-fs";
 optCfg := import "./opt-config";
@@ -21,6 +22,7 @@ pub run := fn(args: List<String>): Unit {
         io.exit(2);
     }
     builtinSpecs := hostFs.extractBuiltinSpecs(args);
+    comptimeEval.setStdoutIsArtifact(not flags.hasOut);
     cwd := proc.cwd();
     stdinText := if flags.isStdin { io.inputAll() } else { "" };
     loaded := hostFs.loadRootInput(

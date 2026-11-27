@@ -472,8 +472,10 @@ quoteJson := fn(s: String): String {
 pub writeTraceJson := fn(tracePath: String, graph: frontend.Items): Unit {
     mut fileEntries: List<String> = [];
     mut edgeEntries: List<String> = [];
+    mut loadedPaths: Set<String>;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_LOADED {
+            mut loadedPaths.add(item.name);
             hRes := crypto.sha256File(item.name);
             if not hRes.ok {
                 diagLib.fail("", "cannot hash traced source " + item.name + ": " + hRes.error);
@@ -481,6 +483,17 @@ pub writeTraceJson := fn(tracePath: String, graph: frontend.Items): Unit {
             (mut fileEntries).pushBack("{\"path\":" + quoteJson(item.name) + ",\"sha256\":" + quoteJson(hRes.hex) + "}");
         } else if item.kind == frontend.ITEM_KIND_IMPORT_EDGE {
             mut edgeEntries.pushBack("{\"importer\":" + quoteJson(item.name) + ",\"spec\":" + quoteJson(item.code) + ",\"path\":" + quoteJson(item.runtime) + "}");
+        }
+    }
+    loop graph as item {
+        if item.kind == frontend.ITEM_KIND_COMPTIME_DEP and not loadedPaths.has(item.name) {
+            mut loadedPaths.add(item.name);
+            var ctHash := "missing";
+            if fs.kind(item.name) == fs.FILE_KIND_FILE {
+                hCt := crypto.sha256File(item.name);
+                if hCt.ok { ctHash = hCt.hex; }
+            }
+            (mut fileEntries).pushBack("{\"path\":" + quoteJson(item.name) + ",\"sha256\":" + quoteJson(ctHash) + ",\"comptime\":true}");
         }
     }
     body := "{\"files\":[" + fileEntries.join(",") + "],\"edges\":[" + edgeEntries.join(",") + "]}\n";
