@@ -1,7 +1,7 @@
 {
-  "note": "Phase 8 (C11 restrict proofs, @packed/@align/@no_niche, -f[no-]niche-opt, core/option, niche-packed enums, Simd<T, N>, SimdNative<T>, core/simd, SoA<R>, and core/soa). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Phase 9 (interfaces, explicit impl conformance, generic Type<Iface> bounds, dyn Iface fat-pointer dispatch, core/interface module, and TS/C11 codegen). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-27",
-  "sourceSha256": "deca20ed158a65de3af600ee5a3d9d9df4b732efff0d1f90fb114607c3eac76b",
+  "sourceSha256": "103124ed1f78fe16b837c4bc5b686ebe9d466eba048c049866e968502227246d",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
