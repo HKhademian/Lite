@@ -19,7 +19,7 @@ cleanDocComment := fn(rawComment: String): String {
     }
     inner := rawComment.slice(start, end);
     innerLen := inner.length();
-    cleanedLines: mut List<String> = [];
+    mut cleanedLines: List<String> = [];
     var pos := 0;
     loop pos <= innerLen {
         nl := inner.indexOf("\n", pos);
@@ -48,7 +48,7 @@ cleanDocComment := fn(rawComment: String): String {
 /** Normalizes internal line breaks and repeated whitespace in a extracted signature string. */
 normalizeSignature := fn(raw: String): String {
     size := raw.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var lastCh := "";
     var i := 0;
     var pendingSpace := false;
@@ -177,7 +177,7 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
     var sawCode := false;
     var moduleSummary := "";
     var pendingDoc := "";
-    symbolsJson: mut List<String> = [];
+    mut symbolsJson: List<String> = [];
 
     loop pos < size {
         ch := source.at(pos);
@@ -345,7 +345,7 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
 /** Extracts sorted module API documentation records across `lib/core`, `lib/math`, `lib/ds`, `lib/data`, and `lib/extra` `.lt` files under `rootDir`. */
 pub extractAllModulesJson := fn(rootDir: String): String {
     namespaces: List<String> = ["core", "math", "ds", "data", "extra"];
-    modJsonEntries: mut List<String> = [];
+    mut modJsonEntries: List<String> = [];
     loop namespaces as ns {
         nsDir := path.join(rootDir, "lib/" + ns);
         if fs.kind(nsDir) == fs.FILE_KIND_DIR {

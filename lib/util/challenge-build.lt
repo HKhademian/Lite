@@ -14,7 +14,7 @@ challenges := import "util/challenges";
 /** Converts display text to a lowercase URL slug (`"A & B"` -> `"a-and-b"`). */
 pub slugifyText := fn(value: String): String {
     lowered := value.trim().toLowerAscii();
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var prevDash := true;
     var i := 0;
     size := lowered.length();
@@ -42,7 +42,7 @@ pub slugifyText := fn(value: String): String {
 };
 
 replaceSpacesCollapse := fn(raw: String): String {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var inSpace := true;
     var i := 0;
     size := raw.length();
@@ -112,7 +112,7 @@ lookupStringFieldOrNull := fn(objJson: String, objPos: Int, key: String, fallbac
 };
 
 quoteStringList := fn(items: List<String>): String {
-    quoted: mut List<String> = [];
+    mut quoted: List<String> = [];
     loop items as it {
         mut quoted.pushBack(json.quoteString(it));
     }
@@ -124,7 +124,7 @@ dedupTextsPreserveOrder := fn(items: List<String>): List<String> {
 };
 
 titleCaseTopic := fn(slug: String): String {
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     upper := "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     lower := "abcdefghijklmnopqrstuvwxyz";
     var capNext := true;
@@ -205,7 +205,7 @@ collectHtmlPagesSorted := fn(cacheDir: String, subDir: String, prefix: String): 
         empty: List<String> = [];
         return empty;
     }
-    matched: mut List<String> = [];
+    mut matched: List<String> = [];
     loop fs.listDir(dir) as name {
         if name.startsWithAt(0, prefix) and name.endsWith(".html") {
             mut matched.pushBack(path.join(dir, name));
@@ -249,7 +249,7 @@ parseRoadmapListJson := fn(
     }
     raw := challenges.readNormalizedText(tomlPath).text;
     len := raw.length();
-    blockStarts: mut List<Int> = [];
+    mut blockStarts: List<Int> = [];
     var pos := 0;
     loop pos < len {
         atLineStart := pos == 0 or raw.at(pos - 1) == "\n";
@@ -265,9 +265,9 @@ parseRoadmapListJson := fn(
         pos = nl + 1;
     }
 
-    flatIds: mut List<String> = [];
-    seenAcrossGroups: mut Set<String>;
-    groupsJson: mut List<String> = [];
+    mut flatIds: List<String> = [];
+    mut seenAcrossGroups: Set<String>;
+    mut groupsJson: List<String> = [];
     bCount := blockStarts.length();
     var bi := 0;
     loop bi < bCount {
@@ -308,7 +308,7 @@ parseRoadmapListJson := fn(
         if arrEnd < 0 {
             return (ok = false, hasList = false, listJson = "", metaJson = "", error = "unsupported roadmap group in " + tomlPath);
         }
-        groupIds: mut List<String> = [];
+        mut groupIds: List<String> = [];
         var scan := probsStart + 1;
         loop scan < arrEnd {
             if block.at(scan) == "\"" {
@@ -358,8 +358,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     }
 
     entPairs := challenges.parseSortedStringObjectPairs(entitiesJsonText);
-    entKeys: mut List<String> = [];
-    entVals: mut List<String> = [];
+    mut entKeys: List<String> = [];
+    mut entVals: List<String> = [];
     var epi := 0;
     loop epi + 1 < entPairs.length() {
         mut entKeys.pushBack(entPairs[epi]);
@@ -381,17 +381,17 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     allowedCats := json.objectKeys(catalogJsonText, catField.valuePos);
     _unusedSo := soField.found;
 
-    recJsons: mut List<String> = [];
-    recIds: mut List<String> = [];
-    recSources: mut List<String> = [];
-    recNums: mut List<Int> = [];
-    recSets: mut List<String> = [];
-    recCats: mut List<String> = [];
-    recDiffTiers: mut List<String> = [];
-    recTopSrcs: mut List<String> = [];
-    recStatuses: mut List<String> = [];
-    recTopicsAll: mut List<String> = [];
-    recCsvRows: mut List<String> = ["id,title,source,category,primary_topic,topics,raw_topics,tags,difficulty,difficulty_normalized,topics_source,formats,premium,url"];
+    mut recJsons: List<String> = [];
+    mut recIds: List<String> = [];
+    mut recSources: List<String> = [];
+    mut recNums: List<Int> = [];
+    mut recSets: List<String> = [];
+    mut recCats: List<String> = [];
+    mut recDiffTiers: List<String> = [];
+    mut recTopSrcs: List<String> = [];
+    mut recStatuses: List<String> = [];
+    mut recTopicsAll: List<String> = [];
+    mut recCsvRows: List<String> = ["id,title,source,category,primary_topic,topics,raw_topics,tags,difficulty,difficulty_normalized,topics_source,formats,premium,url"];
 
     var yr := 2015;
     loop yr <= 2025 {
@@ -443,9 +443,9 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         yr = yr + 1;
     }
 
-    eulerNums: mut List<Int> = [];
-    eulerNumSet: mut Set<Int>;
-    eulerTitles: mut List<String> = [];
+    mut eulerNums: List<Int> = [];
+    mut eulerNumSet: Set<Int>;
+    mut eulerTitles: List<String> = [];
     loop collectHtmlPagesSorted(cacheDir, "project-euler", "page") as ePath {
         html := challenges.readNormalizedText(ePath).text;
         htmlLen := html.length();
@@ -513,8 +513,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         apiText := fs.readText(lcApiPath).text;
         mText := fs.readText(lcMergedPath).text;
         qField := json.findField(mText, 0, "questions");
-        qKeys: mut List<String> = [];
-        qPositions: mut List<Int> = [];
+        mut qKeys: List<String> = [];
+        mut qPositions: List<Int> = [];
         loop json.arrayOffsets(mText, qField.valuePos) as qp {
             fidS := json.readFieldString(mText, qp, "frontend_id");
             fidVal := if fidS.found and fidS.ok { fidS.value } else {
@@ -526,8 +526,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             if slugV =!= "" { mut qKeys.pushBack(slugV); mut qPositions.pushBack(qp); }
         }
         qOrd := challenges.sortIndexByKeys(qKeys);
-        qSortedK: mut List<String> = [];
-        qSortedP: mut List<Int> = [];
+        mut qSortedK: List<String> = [];
+        mut qSortedP: List<Int> = [];
         loop qOrd as qi { mut qSortedK.pushBack(qKeys[qi]); mut qSortedP.pushBack(qPositions[qi]); }
 
         pairsField := json.findField(apiText, 0, "stat_status_pairs");
@@ -560,7 +560,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             }
             emptyRawTopics: List<String> = [];
             rawTopics := if qHitPos >= 0 { challenges.readStringArray(mText, qHitPos, "topics") } else { emptyRawTopics };
-            mappedTopics: mut List<String> = [];
+            mut mappedTopics: List<String> = [];
             loop rawTopics as rt {
                 lk := json.readFieldString(catalogJsonText, lcField.valuePos, rt);
                 slugTp := if lk.found and lk.ok { lk.value } else { slugifyText(rt) };
@@ -582,7 +582,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             tpSrc := if mappedTopics.length() > 0 { "source" } else { "none" };
             stVal := if mappedTopics.length() > 0 { "verified" } else { "partial" };
 
-            tagsList: mut List<String> = ["leetcode", diffLabel.toLowerAscii()];
+            mut tagsList: List<String> = ["leetcode", diffLabel.toLowerAscii()];
             if paid { mut tagsList.pushBack("premium"); }
 
             accJson := if attempts > 0 { formatFourDecimalsJson(roundDivTiesEven(solved * 10000, attempts)) } else { "null" };
@@ -616,8 +616,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         cfText := fs.readText(cfPath).text;
         resField := json.findField(cfText, 0, "result");
         stArrField := json.findField(cfText, resField.valuePos, "problemStatistics");
-        stKeys: mut List<String> = [];
-        stVals: mut List<Int> = [];
+        mut stKeys: List<String> = [];
+        mut stVals: List<Int> = [];
         loop json.arrayOffsets(cfText, stArrField.valuePos) as sp {
             cId := json.readFieldInt(cfText, sp, "contestId").value;
             cIdx := json.readFieldString(cfText, sp, "index").value;
@@ -626,16 +626,16 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             mut stVals.pushBack(sc);
         }
         stOrd := challenges.sortIndexByKeys(stKeys);
-        stSK: mut List<String> = [];
-        stSV: mut List<Int> = [];
+        mut stSK: List<String> = [];
+        mut stSV: List<Int> = [];
         loop stOrd as si { mut stSK.pushBack(stKeys[si]); mut stSV.pushBack(stVals[si]); }
 
         prArrField := json.findField(cfText, resField.valuePos, "problems");
-        cContestIds: mut List<Int> = [];
-        cIndexes: mut List<String> = [];
-        cSolved: mut List<Int> = [];
-        cRatings: mut List<Int> = [];
-        cPosList: mut List<Int> = [];
+        mut cContestIds: List<Int> = [];
+        mut cIndexes: List<String> = [];
+        mut cSolved: List<Int> = [];
+        mut cRatings: List<Int> = [];
+        mut cPosList: List<Int> = [];
         loop json.arrayOffsets(cfText, prArrField.valuePos) as pp {
             ratR := json.readFieldInt(cfText, pp, "rating");
             tpR := json.readFieldString(cfText, pp, "type");
@@ -656,13 +656,13 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         }
 
         cfN := cContestIds.length();
-        var cfOrd: mut List<Int> = [];
+        var mut cfOrd: List<Int> = [];
         var cfi := 0;
         loop cfi < cfN { mut cfOrd.pushBack(cfi); cfi = cfi + 1; }
         if cfN > 1 {
             var width := 1;
             loop width < cfN {
-                next: mut List<Int> = [];
+                mut next: List<Int> = [];
                 var st := 0;
                 loop st < cfN {
                     mid := if st + width < cfN { st + width } else { cfN };
@@ -691,8 +691,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             }
         }
 
-        cfSelected: mut List<Int> = [];
-        cfSelectedSet: mut Set<Int>;
+        mut cfSelected: List<Int> = [];
+        mut cfSelectedSet: Set<Int>;
         lows: List<Int> = [800, 1200, 1600, 2000];
         highs: List<Int> = [1199, 1599, 1999, 3000];
         var bi := 0;
@@ -724,7 +724,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             solved := cSolved[ci];
             ttl := cleanHtmlTitle(entKeys, entVals, json.readFieldString(cfText, pp, "name").value);
             rawTags := challenges.readStringArray(cfText, pp, "tags");
-            mappedTags: mut List<String> = [];
+            mut mappedTags: List<String> = [];
             loop rawTags as rt {
                 lk := json.readFieldString(catalogJsonText, cfField.valuePos, rt);
                 slugTp := if lk.found and lk.ok { lk.value } else { slugifyText(rt) };
@@ -763,7 +763,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     if fs.kind(csesPath) == fs.FILE_KIND_FILE {
         html := challenges.readNormalizedText(csesPath).text;
         htmlLen := html.length();
-        secCounts: mut Map<String, Int>;
+        mut secCounts: Map<String, Int>;
         var curSec := "";
         var pos := 0;
         loop pos < htmlLen {
@@ -789,7 +789,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
                     if secF.found {
                         offs := json.arrayOffsets(catalogJsonText, secF.valuePos);
                         if offs.length() >= 2 {
-                            tps: mut List<String> = [];
+                            mut tps: List<String> = [];
                             loop json.arrayOffsets(catalogJsonText, offs[0]) as tpPos {
                                 s := json.readStringAt(catalogJsonText, tpPos);
                                 if s.ok { mut tps.pushBack(s.value); }
@@ -838,15 +838,15 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     if fs.kind(atcProbPath) == fs.FILE_KIND_FILE and fs.kind(atcModPath) == fs.FILE_KIND_FILE {
         pText := fs.readText(atcProbPath).text;
         mText := fs.readText(atcModPath).text;
-        cPPos: mut List<Int> = [];
-        cUsers: mut List<Int> = [];
-        cDiffRaw: mut List<String> = [];
-        cDiffTenths: mut List<Int> = [];
-        cPrefixes: mut List<String> = [];
+        mut cPPos: List<Int> = [];
+        mut cUsers: List<Int> = [];
+        mut cDiffRaw: List<String> = [];
+        mut cDiffTenths: List<Int> = [];
+        mut cPrefixes: List<String> = [];
         loop json.arrayOffsets(mText, 0) as _unused { break; }
         mKeys := json.objectKeys(mText, 0);
         mOrd := challenges.sortIndexByKeys(mKeys);
-        sortedMKeys: mut List<String> = [];
+        mut sortedMKeys: List<String> = [];
         loop mOrd as mi { mut sortedMKeys.pushBack(mKeys[mi]); }
         _unusedMk := sortedMKeys.length();
 
@@ -883,13 +883,13 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             }
         }
         aLen := cPPos.length();
-        var aOrd: mut List<Int> = [];
+        var mut aOrd: List<Int> = [];
         var ai := 0;
         loop ai < aLen { mut aOrd.pushBack(ai); ai = ai + 1; }
         if aLen > 1 {
             var width := 1;
             loop width < aLen {
-                next: mut List<Int> = [];
+                mut next: List<Int> = [];
                 var st := 0;
                 loop st < aLen {
                     mid := if st + width < aLen { st + width } else { aLen };
@@ -958,7 +958,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             setName := json.readStringAt(catalogJsonText, offs[0]).value;
             setTopics := challenges.readStringArray(catalogJsonText, arrPos, "dummy");
             _unusedStp := setTopics.length();
-            var tpList: mut List<String> = [];
+            var mut tpList: List<String> = [];
             loop json.arrayOffsets(catalogJsonText, offs[1]) as tpPos {
                 s := json.readStringAt(catalogJsonText, tpPos);
                 if s.ok { mut tpList.pushBack(s.value); mut recTopicsAll.pushBack(s.value); }
@@ -1120,7 +1120,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         }
     }
 
-    seenJsSlugs: mut Set<String>;
+    mut seenJsSlugs: Set<String>;
     loop collectHtmlPagesSorted(cacheDir, "jane-street", "archive") as jsPath {
         html := challenges.readNormalizedText(jsPath).text;
         htmlLen := html.length();
@@ -1172,7 +1172,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
             ttl := cleanHtmlTitle(entKeys, entVals, rawName);
             cid := "jane-street-" + slug;
             curl := "https://www.janestreet.com" + link;
-            tagsList: mut List<String> = ["jane-street"];
+            mut tagsList: List<String> = ["jane-street"];
             if month =!= "" { mut tagsList.pushBack(slugifyText(month)); }
             emptyStrsJs: List<String> = [];
             rec := buildChallengeRecordJson(
@@ -1203,7 +1203,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         di = di + 1;
     }
 
-    sourceOrderIndex: mut Map<String, Int>;
+    mut sourceOrderIndex: Map<String, Int>;
     var soi := 0;
     loop sourceOrder as sName {
         if not sourceOrderIndex.has(sName) {
@@ -1221,14 +1221,14 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         recIds[ia].compare(recIds[ib]) <= 0
     });
 
-    sortedJsons: mut List<String> = [];
-    sortedIds: mut List<String> = [];
-    sortedSources: mut List<String> = [];
-    sortedCats: mut List<String> = [];
-    sortedDiffs: mut List<String> = [];
-    sortedTopSrcs: mut List<String> = [];
-    sortedStatuses: mut List<String> = [];
-    sortedCsvRows: mut List<String> = ["id,title,source,category,primary_topic,topics,raw_topics,tags,difficulty,difficulty_normalized,topics_source,formats,premium,url"];
+    mut sortedJsons: List<String> = [];
+    mut sortedIds: List<String> = [];
+    mut sortedSources: List<String> = [];
+    mut sortedCats: List<String> = [];
+    mut sortedDiffs: List<String> = [];
+    mut sortedTopSrcs: List<String> = [];
+    mut sortedStatuses: List<String> = [];
+    mut sortedCsvRows: List<String> = ["id,title,source,category,primary_topic,topics,raw_topics,tags,difficulty,difficulty_normalized,topics_source,formats,premium,url"];
     loop recOrd as idx {
         mut sortedJsons.pushBack(recJsons[idx]);
         mut sortedIds.pushBack(recIds[idx]);
@@ -1241,8 +1241,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     }
     _unusedAllowedCats := allowedCats.length();
 
-    listsJsonEntries: mut List<String> = [];
-    listsMetaEntries: mut List<String> = [];
+    mut listsJsonEntries: List<String> = [];
+    mut listsMetaEntries: List<String> = [];
 
     rmIds: List<String> = ["blind-75", "neetcode-150"];
     rmTitles: List<String> = ["Blind 75", "NeetCode 150"];
@@ -1272,7 +1272,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     var lyr := 2015;
     loop lyr <= 2025 {
         yStr := lyr.toText();
-        yIds: mut List<String> = [];
+        mut yIds: List<String> = [];
         loop recOrd as idx {
             if recSources[idx] == "advent-of-code" and recSets[idx] == yStr {
                 mut yIds.pushBack(recIds[idx]);
@@ -1287,14 +1287,14 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         lyr = lyr + 1;
     }
 
-    csesListSecs: mut List<String> = [];
+    mut csesListSecs: List<String> = [];
     loop recOrd as idx {
         if recSources[idx] == "cses" and not csesListSecs.contains(recSets[idx]) {
             mut csesListSecs.pushBack(recSets[idx]);
         }
     }
     loop csesListSecs as secName {
-        secIds: mut List<String> = [];
+        mut secIds: List<String> = [];
         loop recOrd as idx {
             if recSources[idx] == "cses" and recSets[idx] == secName {
                 mut secIds.pushBack(recIds[idx]);
@@ -1315,7 +1315,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         offs := json.arrayOffsets(catalogJsonText, arrPos);
         setName := json.readStringAt(catalogJsonText, offs[0]).value;
         cpPrefix := "Set " + setNo + ":";
-        cpIds: mut List<String> = [];
+        mut cpIds: List<String> = [];
         loop recOrd as idx {
             if recSources[idx] == "cryptopals" and recSets[idx].startsWithAt(0, cpPrefix) {
                 mut cpIds.pushBack(recIds[idx]);
@@ -1331,7 +1331,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         }
     }
 
-    peFirst100: mut List<String> = [];
+    mut peFirst100: List<String> = [];
     loop recOrd as idx {
         if recSources[idx] == "project-euler" and recNums[idx] > 0 and recNums[idx] <= 100 {
             mut peFirst100.pushBack(recIds[idx]);
@@ -1351,7 +1351,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     var lci := 0;
     loop lci < 3 {
         catId := lcCatIds[lci];
-        cIds: mut List<String> = [];
+        mut cIds: List<String> = [];
         loop recOrd as idx {
             if recSources[idx] == "leetcode" and recCats[idx] == catId {
                 mut cIds.pushBack(recIds[idx]);
@@ -1374,8 +1374,8 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     _wl := fs.writeText(path.join(dataDir, "lists.jsonl"), if listsJsonEntries.length() == 0 { "" } else { listsJsonEntries.join("\n") + "\n" });
     _wc := fs.writeText(path.join(dataDir, "challenges.csv"), sortedCsvRows.join("\r\n") + "\r\n");
 
-    siEntries: mut List<String> = [];
-    taxSrcEntries: mut List<String> = [];
+    mut siEntries: List<String> = [];
+    mut taxSrcEntries: List<String> = [];
     loop json.arrayOffsets(catalogJsonText, siField.valuePos) as sp {
         offs := json.arrayOffsets(catalogJsonText, sp);
         sid := json.readStringAt(catalogJsonText, offs[0]).value;
@@ -1389,7 +1389,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     }
 
     uniqueSortedTopics := dedupTextsPreserveOrder(recTopicsAll.sortTexts());
-    taxTopicEntries: mut List<String> = [];
+    mut taxTopicEntries: List<String> = [];
     loop uniqueSortedTopics as tid {
         lblR := json.readFieldString(catalogJsonText, tlField.valuePos, tid);
         grpR := json.readFieldString(catalogJsonText, tgField.valuePos, tid);
@@ -1398,7 +1398,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
         mut taxTopicEntries.pushBack("{\"id\":" + json.quoteString(tid) + ",\"label\":" + json.quoteString(lbl) + ",\"group\":" + json.quoteString(grp) + "}");
     }
 
-    taxCatEntries: mut List<String> = [];
+    mut taxCatEntries: List<String> = [];
     loop json.objectKeys(catalogJsonText, catField.valuePos) as cid {
         cdesc := json.readFieldString(catalogJsonText, catField.valuePos, cid).value;
         mut taxCatEntries.pushBack("{\"id\":" + json.quoteString(cid) + ",\"description\":" + json.quoteString(cdesc) + "}");
@@ -1428,7 +1428,7 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     + "  \"sources\": [" + taxSrcEntries.join(",") + "]\n}\n";
     _wt := fs.writeText(path.join(schemaDir, "taxonomy.json"), taxJson);
 
-    sumLines: mut List<String> = [
+    mut sumLines: List<String> = [
     "wrote " + allN.toText() + " challenges, " + listsJsonEntries.length().toText() + " lists"
     ];
     loop sourceOrder as sid {

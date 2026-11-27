@@ -41,10 +41,10 @@ test.checkText("record field assign stdout", "Dir.Left 15 17 1.5\nDir.Right 999 
 /* 2. Compound Map and List/Array index assignment */
 idxProg :=
 "io := import \"core/io\";\n" +
-"counts: mut Map<String, Int> = [\"a\" = 10, \"b\" = 20];\n" +
+"mut counts: Map<String, Int> = [\"a\" = 10, \"b\" = 20];\n" +
 "counts[\"a\"] += 5;\n" +
 "counts[\"b\"] -= 4;\n" +
-"xs: mut List<Int> = [1, 2, 3];\n" +
+"mut xs: List<Int> = [1, 2, 3];\n" +
 "xs[1] += 10;\n" +
 "var arr: [Int; 2] = [4, 5];\n" +
 "arr[0] *= 3;\n" +
@@ -64,8 +64,8 @@ blockAssignProg :=
 "Hero := record { pos: Pos; hp: Int; };\n" +
 "var h := Hero { pos = Pos { x = 1, y = 2 }, hp = 10 };\n" +
 "snap := h;\n" +
-"m: mut Map<String, Int> = [\"hits\" = 0];\n" +
-"xs: mut List<Int> = [10, 20];\n" +
+"mut m: Map<String, Int> = [\"hits\" = 0];\n" +
+"mut xs: List<Int> = [10, 20];\n" +
 "loop [3, 5] {\n" +
 "    h.hp += .item;\n" +
 "    h.pos.x += .index + 1;\n" +

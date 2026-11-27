@@ -1,6 +1,6 @@
 io := import "core/io";
 
-tags: mut Set<String>;
+mut tags: Set<String>;
 mut tags.add("lite");
 mut tags.add("fast");
 mut tags.add("lite");

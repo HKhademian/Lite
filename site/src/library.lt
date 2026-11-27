@@ -50,7 +50,7 @@ pub detectSourceEnvironment := fn(source: String): String {
 };
 
 walkFilesWithSuffix := fn(absDir: String, relBase: String, suffix: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     if fs.kind(absDir) =!= fs.FILE_KIND_DIR { return out; }
     names := fs.listDir(absDir).sortTexts();
     loop names as name {
@@ -98,7 +98,7 @@ pub posixBasename := fn(relPath: String, ext: String): String {
 pub posixJoinAndNormalize := fn(dir: String, spec: String): String {
     joined := if dir == "." or dir == "" { spec } else { dir + "/" + spec };
     parts := joined.split("/");
-    var stack: mut List<String> = [];
+    var mut stack: List<String> = [];
     loop parts as part {
         if part == "" or part == "." {
             continue;
@@ -119,12 +119,12 @@ pub posixJoinAndNormalize := fn(dir: String, spec: String): String {
 collectRelativeModulesJson := fn(
 rootDir: String, hostIds: List<String>, hostTexts: List<String>, entryRelFile: String, entrySource: String
 ): String {
-    var queueFiles: mut List<String> = [entryRelFile];
-    var queueTexts: mut List<String> = [entrySource];
-    seenFiles: mut Set<String>;
+    var mut queueFiles: List<String> = [entryRelFile];
+    var mut queueTexts: List<String> = [entrySource];
+    mut seenFiles: Set<String>;
     mut seenFiles.add(entryRelFile);
-    modSpecs: mut Set<String>;
-    modJsonEntries: mut List<String> = [];
+    mut modSpecs: Set<String>;
+    mut modJsonEntries: List<String> = [];
     var qi := 0;
     loop qi < queueFiles.length() {
         fromFile := queueFiles[qi];
@@ -186,7 +186,7 @@ capitalizeWord := fn(word: String): String {
 /** Formats a source path's filename stem as a human-readable title. */
 pub slugToTitle := fn(relPath: String): String {
     base := posixBasename(relPath, ".lts");
-    words: mut List<String> = [];
+    mut words: List<String> = [];
     var cur := "";
     var i := 0;
     loop i < base.length() {
@@ -207,7 +207,7 @@ pub slugToTitle := fn(relPath: String): String {
 
 cleanSlugBase := fn(preferred: String): String {
     lowered := preferred.toLowerAscii();
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var prevDash := true;
     var i := 0;
     loop i < lowered.length() {
@@ -249,13 +249,13 @@ nextAvailableSlug := fn(used: mut Set<String>, preferred: String): String {
 };
 
 quoteStringList := fn(items: List<String>): String {
-    quoted: mut List<String> = [];
+    mut quoted: List<String> = [];
     loop items as it { mut quoted.pushBack(json.quoteString(it)); }
     "[" + quoted.join(",") + "]"
 };
 
 stripBackticksAndTrim := fn(s: String): String {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var i := 0;
     loop i < s.length() {
         ch := s.at(i);
@@ -316,8 +316,8 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
     "lib/core/file.lt", "lib/core/process.lt", "lib/core/crypto.lt", "lib/core/time.lt",
     "compiler/src/modules.lt"
     ];
-    hostIds: mut List<String> = [];
-    hostTexts: mut List<String> = [];
+    mut hostIds: List<String> = [];
+    mut hostTexts: List<String> = [];
     var hi := 0;
     loop hi < hostSpecIds.length() {
         hRead := fs.readText(path.join(rootDir, hostSpecPaths[hi]));
@@ -328,11 +328,11 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
         hi = hi + 1;
     }
 
-    items: mut List<String> = [];
-    usedSamples: mut Set<String>;
-    usedExamples: mut Set<String>;
-    usedCases: mut Set<String>;
-    usedPieces: mut Set<String>;
+    mut items: List<String> = [];
+    mut usedSamples: Set<String>;
+    mut usedExamples: Set<String>;
+    mut usedCases: Set<String>;
+    mut usedPieces: Set<String>;
 
     trimmedSamples := samplesJson.trim();
     if trimmedSamples =!= "" and json.kindAt(trimmedSamples, 0) == .Array {
@@ -357,7 +357,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
     }
 
     emptyArgs: List<String> = [];
-    exampleFiles: mut List<String> = [];
+    mut exampleFiles: List<String> = [];
     loop walkFilesWithSuffix(path.join(rootDir, "language/examples"), "language/examples", ".lts") as f {
         mut exampleFiles.pushBack(f);
     }
@@ -395,7 +395,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
         tracksF := json.findField(lText, 0, "tracks");
         tOffsets := json.arrayOffsets(lText, tracksF.valuePos);
         tCount := tOffsets.length();
-        tSortKeys: mut List<String> = [];
+        mut tSortKeys: List<String> = [];
         var ti := 0;
         loop ti < tCount {
             ordR := json.readFieldInt(lText, tOffsets[ti], "order");
@@ -473,7 +473,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
             line := lines[li];
             if line == "```lite" or line == "```lts" {
                 var endLi := li + 1;
-                codeLines: mut List<String> = [];
+                mut codeLines: List<String> = [];
                 loop endLi < nLines and not lines[endLi].startsWithAt(0, "```") {
                     mut codeLines.pushBack(lines[endLi]);
                     endLi = endLi + 1;

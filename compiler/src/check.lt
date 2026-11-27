@@ -115,7 +115,7 @@ functionResultType := fn(symbol: Symbol): String {
 functionParamTypes := fn(symbol: Symbol): List<String> {
     tokens := lexer.tokenize(symbol.detail, "");
     count := parser.tokenCount(tokens);
-    types: mut List<String> = [];
+    mut types: List<String> = [];
     var cursor := 0;
     loop cursor < count {
         if parser.isSymbol(parser.tokenAt(tokens, cursor), "(") { break; }
@@ -591,7 +591,7 @@ addSymbol := fn(symbols: Symbols, symbol: Symbol, prefix: String): Symbols {
         checkFail((kind = symbol.kind, text = symbol.name, offset = symbol.offset,
         line = symbol.line, column = symbol.column), prefix, "duplicate top-level name " + symbol.name);
     }
-    result: mut List<Symbol> = [];
+    mut result: List<Symbol> = [];
     loop symbols as item { mut result.pushBack(item); }
     (mut result).pushBack(symbol);
     result
@@ -606,10 +606,10 @@ parseFunctionSymbol := fn(tokens: lexer.Tokens, index: Int, prefix: String): (ne
         checkFail(functionWord, prefix, "expected fn after :=");
     }
     var cursor := parser.expectSymbol(tokens, afterName + 1, "(", prefix);
-    detailBuf: mut tb.TextBuilder;
+    mut detailBuf: tb.TextBuilder;
     mut detailBuf.append("(");
     var parameterCount := 0;
-    parameterNames: mut List<String> = [];
+    mut parameterNames: List<String> = [];
     loop true {
         if parser.isSymbol(parser.tokenAt(tokens, cursor), ")") { break; }
         parameter := parser.tokenAt(tokens, cursor);
@@ -649,7 +649,7 @@ parseFunctionSymbol := fn(tokens: lexer.Tokens, index: Int, prefix: String): (ne
 /** Collects top-level symbols, retaining each sequential value declaration. */
 collectSymbols := fn(tokens: lexer.Tokens, prefix: String): Symbols {
     count := parser.tokenCount(tokens);
-    var symbols: mut List<Symbol> = [];
+    var mut symbols: List<Symbol> = [];
     var cursor := 0;
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
@@ -670,13 +670,10 @@ collectSymbols := fn(tokens: lexer.Tokens, prefix: String): Symbols {
             symbols = addSymbol(symbols, (kind = SYMBOL_KIND_FUNCTION, name = parsed.name, detail = parsed.detail,
             offset = parsed.offset, line = parsed.line, column = parsed.column), prefix);
             cursor = parsed.next;
-        } else if (token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "var") or
-        (token.kind == lexer.TOKEN_KIND_NAME and (parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") or
-        parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":"))) {
+        } else if parser.isDeclarationStart(tokens, cursor) {
             declaration := parser.parseDeclaration(tokens, cursor, prefix);
-            nameToken := parser.tokenAt(tokens, cursor + (if token.kind == lexer.TOKEN_KIND_KEYWORD { 1 } else { 0 }));
             symbols = addSymbol(symbols, (kind = SYMBOL_KIND_VALUE, name = declaration.name, detail = declaration.detail,
-            offset = nameToken.offset, line = nameToken.line, column = nameToken.column), prefix);
+            offset = declaration.offset, line = declaration.line, column = declaration.column), prefix);
             cursor = declaration.next;
         } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "loop" {
             var body := cursor + 1;
@@ -781,7 +778,7 @@ checkEmbeddedMatches := fn(tokens: lexer.Tokens, start: Int, end: Int, symbols: 
 /** Checks block-local declarations, parameter scopes and statement assignments. */
 checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit {
     count := parser.tokenCount(tokens);
-    locals: mut List<Local> = [];
+    mut locals: List<Local> = [];
     var localCount := 0;
     var depth := 0;
     var parens := 0;
@@ -791,13 +788,13 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
     var functionBodyDepth := -1;
     var pendingLoop := false;
     var loopDepth := 0;
-    loopBodies: mut List<Int> = [];
+    mut loopBodies: List<Int> = [];
     var pendingMatch := false;
     var matchCount := 0;
-    matchDepths: mut List<Int> = [];
-    matchParens: mut List<Int> = [];
-    matchBrackets: mut List<Int> = [];
-    matchFallbacks: mut List<Int> = [];
+    mut matchDepths: List<Int> = [];
+    mut matchParens: List<Int> = [];
+    mut matchBrackets: List<Int> = [];
+    mut matchFallbacks: List<Int> = [];
     loop cursor < count {
         token := parser.tokenAt(tokens, cursor);
         if token.kind == lexer.TOKEN_KIND_EOF { break; }
@@ -1004,25 +1001,26 @@ checkLocals := fn(tokens: lexer.Tokens, prefix: String, symbols: Symbols): Unit 
             }
             continue;
         }
-        if (token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "var") or
-        (token.kind == lexer.TOKEN_KIND_NAME and (parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":=") or
-        parser.isSymbol(parser.tokenAt(tokens, cursor + 1), ":"))) {
+        if parser.isDeclarationStart(tokens, cursor) {
             declaration := parser.parseDeclaration(tokens, cursor, prefix);
-            nameToken := parser.tokenAt(tokens, cursor + (if token.kind == lexer.TOKEN_KIND_KEYWORD { 1 } else { 0 }));
+            nameSkip := if token.kind == lexer.TOKEN_KIND_KEYWORD {
+                if parser.tokenAt(tokens, cursor + 1).kind == lexer.TOKEN_KIND_KEYWORD { 2 } else { 1 }
+            } else { 0 };
+            nameToken := parser.tokenAt(tokens, cursor + nameSkip);
             mutable := declaration.detail.startsWithAt(0, "var ");
             var writable := false;
             var work := declaration.detail;
             if mutable { work = work.slice(4, work.length()); }
+            if work.startsWithAt(0, "mut ") {
+                writable = true;
+                work = work.slice(4, work.length());
+            }
             var typeText := "";
             var initText := "";
             if work.startsWithAt(0, ":= ") {
                 initText = work.slice(3, work.length());
                 typeText = simpleType(symbols, locals, initText);
             } else {
-                if work.startsWithAt(0, "mut ") {
-                    writable = true;
-                    work = work.slice(4, work.length());
-                }
                 split := work.indexOf(" = ", 0);
                 if split >= 0 {
                     typeText = work.slice(0, split);

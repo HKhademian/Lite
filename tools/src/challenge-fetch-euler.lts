@@ -19,13 +19,13 @@ extractEulerNumber := fn(entryPath: String): (ok: Bool, num: Int) {
 
 sortNumbersAsc := fn(nums: List<Int>): List<Int> {
     count := nums.length();
-    var used: mut List<Bool> = [];
+    var mut used: List<Bool> = [];
     var k := 0;
     loop k < count {
         mut used.pushBack(false);
         k = k + 1;
     }
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     var picked := 0;
     loop picked < count {
         var bestIdx := -1;
@@ -38,7 +38,7 @@ sortNumbersAsc := fn(nums: List<Int>): List<Int> {
         }
         if bestIdx < 0 { break; }
         /* Track visited indices in a parallel list to append in ascending order. */
-        nextUsed: mut List<Bool> = [];
+        mut nextUsed: List<Bool> = [];
         var u := 0;
         loop u < count {
             mut nextUsed.pushBack(used[u] or u == bestIdx);
@@ -87,7 +87,7 @@ run := fn(rawArgs: List<String>): Int {
         return 1;
     }
     offsets := json.arrayOffsets(treeRead.text, treeField.valuePos);
-    rawNums: mut List<Int> = [];
+    mut rawNums: List<Int> = [];
     loop offsets as off {
         typeF := json.readFieldString(treeRead.text, off, "type");
         pathF := json.readFieldString(treeRead.text, off, "path");
@@ -101,8 +101,8 @@ run := fn(rawArgs: List<String>): Int {
     numbers := sortNumbersAsc(rawNums);
     io.outputLine("public Python solutions: " + numbers.length().toText());
 
-    urls: mut List<String> = [];
-    paths: mut List<String> = [];
+    mut urls: List<String> = [];
+    mut paths: List<String> = [];
     loop numbers as n {
         mut urls.pushBack("https://projecteuler.net/problem=" + n.toText());
         mut paths.pushBack(path.join(cacheDir, "statements/problem-" + n.toText().padLeftWith(3, "0") + ".html"));

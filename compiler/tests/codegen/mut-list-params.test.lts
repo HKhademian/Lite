@@ -32,7 +32,7 @@ src :=
 "    pushChunk(s = c, b = mut b);\n" +
 "};\n" +
 "\n" +
-"b: mut Buf;\n" +
+"mut b: Buf;\n" +
 "pushChunk(mut b, \"hello\");\n" +
 "pushChunk(mut b, \"\");\n" +
 "pushPair(mut b, \" \", \"world\");\n" +
@@ -58,10 +58,10 @@ if ccInfo.available {
 
 /* Negative diagnostics on both TS and C */
 compilerTest.assertCompileErrorContains(root, tsComp, "missing mut at call site (ts)",
-"f := fn(b: mut List<String>): Unit { }; xs: mut List<String>; f(xs);",
+"f := fn(b: mut List<String>): Unit { }; mut xs: List<String>; f(xs);",
 "requires mut argument");
 compilerTest.assertCompileErrorContains(root, cComp, "missing mut at call site (c)",
-"f := fn(b: mut List<String>): Unit { }; xs: mut List<String>; f(xs);",
+"f := fn(b: mut List<String>): Unit { }; mut xs: List<String>; f(xs);",
 "requires mut argument");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "immutable list passed with mut (ts)",

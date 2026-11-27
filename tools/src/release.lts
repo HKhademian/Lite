@@ -59,7 +59,7 @@ handleInternalMode := fn(rawArgs: List<String>): Bool {
     internalEnv := proc.envGet("LITE_RELEASE_INTERNAL");
     if not internalEnv.found or internalEnv.value =!= "1" { return false; }
 
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--profile" {
         _flag := mut args.popFront();
         if args.length() == 0 {
@@ -450,7 +450,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
     if not wrNotes.ok { failRelease(work, wrNotes.error); }
 
     sumFiles := fs.listDir(output);
-    sums: mut tb.TextBuilder;
+    mut sums: tb.TextBuilder;
     loop sumFiles as file {
         dRes := crypto.sha256File(path.join(output, file));
         if not dRes.ok { failRelease(work, dRes.error); }
@@ -464,7 +464,7 @@ prepareRelease := fn(directory: String, output: String, tag: String): Unit {
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--" {
         _sep := mut args.popFront();
     }

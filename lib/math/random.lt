@@ -49,7 +49,7 @@ pub Rng.nextBool := fn(rng: mut Self): Bool {
     (val % 2) == 1
 };
 
-var defaultRng: mut Rng = Rng.create(1234567);
+var mut defaultRng: Rng = Rng.create(1234567);
 
 /** Seeds the module-level default PRNG used by `nextInt`, `rangeInt`, and `nextBool`. */
 pub seed := fn(value: Int): Unit {

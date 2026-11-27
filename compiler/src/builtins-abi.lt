@@ -28,7 +28,7 @@ normalizeHostAbiKind := fn(kind: String): String {
 /** Normalizes pipe-separated `name=kind` host ABI parameters with `normalizeHostAbiKind`. */
 normalizeHostAbiParams := fn(rawParams: String): String {
     if rawParams == "" or rawParams == "...values" { return rawParams; }
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     size := rawParams.length();
     var depth := 0;
     var start := 0;
@@ -44,7 +44,7 @@ normalizeHostAbiParams := fn(rawParams: String): String {
         }
     }
     mut parts.pushBack(rawParams.slice(start, size));
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     loop parts as part {
         eq := part.indexOf("=", 0);
         if eq > 0 {
@@ -625,7 +625,7 @@ parseBuiltinModeSpec := fn(prefix: String, spec: String): Item {
 
 /** Parses `--builtin-mode` specification strings passed down from the compiler entrypoint. */
 pub parseBuiltinModeSpecs := fn(prefix: String, specs: List<String>): Items {
-    rules: mut Items = [];
+    mut rules: Items = [];
     loop specs as spec {
         mut rules.pushBack(parseBuiltinModeSpec(prefix, spec));
     }

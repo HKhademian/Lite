@@ -2,7 +2,7 @@
 
 io := import "core/io";
 
-log: mut List<String> = [];
+mut log: List<String> = [];
 
 /* Nested `@tag` blocks guarantee inner `finally` unwinds before outer `finally` on non-local exits. */
 selected := @pick {

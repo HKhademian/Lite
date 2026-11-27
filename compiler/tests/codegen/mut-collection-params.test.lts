@@ -35,12 +35,12 @@ src :=
 "    mut t.add(tag);\n" +
 "};\n" +
 "\n" +
-"c: mut Counts;\n" +
+"mut c: Counts;\n" +
 "bumpTwice(mut c, \"a\");\n" +
 "bump(mut c, \"b\", 7);\n" +
 "io.outputLine(c.size(), c.getOr(\"a\", 0), c.getOr(\"b\", 0));\n" +
 "\n" +
-"t: mut Tags;\n" +
+"mut t: Tags;\n" +
 "addTag(mut t, \"x\");\n" +
 "addTag(mut t, \"y\");\n" +
 "addTag(mut t, \"x\");\n" +

@@ -30,7 +30,7 @@ runCmd := fn(args: List<String>): CmdResult {
 };
 
 runBin := fn(binName: String, subArgs: List<String>): CmdResult {
-    args: mut List<String> = [path.join(path.join(root, "bin"), binName)];
+    mut args: List<String> = [path.join(path.join(root, "bin"), binName)];
     loop subArgs as a {
         mut args.pushBack(a);
     }

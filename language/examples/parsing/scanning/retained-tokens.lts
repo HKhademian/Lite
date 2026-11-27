@@ -8,7 +8,7 @@ isDigit := fn(text: String): Bool {
 }
 
 tokenize := fn(line: String): List<(kind: String, text: String)> {
-    tokens: mut List<(kind: String, text: String)> = [];
+    mut tokens: List<(kind: String, text: String)> = [];
     size := line.length();
     var position := 0;
     loop position < size {

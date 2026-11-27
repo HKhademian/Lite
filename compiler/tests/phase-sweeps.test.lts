@@ -40,7 +40,7 @@ if not skipHeavy {
     chkRel := "compiler/tests/checker/checker-dump.lts";
 
     /* Compile all L0 core libs and compiler source deps in parallel via external/pool */
-    compileTargets: mut List<String> = [
+    mut compileTargets: List<String> = [
     "lib/core/int.lt", "lib/core/text.lt", "lib/core/source.lt",
     "lib/core/diag.lt", "lib/core/list.lt", "lib/core/test.lt",
     ];
@@ -50,8 +50,8 @@ if not skipHeavy {
             mut compileTargets.pushBack(d);
         }
     }
-    compCmds: mut List<String> = [];
-    compArgs: mut List<String> = [];
+    mut compCmds: List<String> = [];
+    mut compArgs: List<String> = [];
     loop compileTargets as target {
         mut compCmds.pushBack(proc.execPath());
         mut compArgs.pushBack("[" + json.quoteString(tsComp) + "," + json.quoteString(target) + "]");
@@ -169,7 +169,8 @@ if not skipHeavy {
     /* Lite checker collects symbols from the assembled S */
     chkDrv := compilerTest.prepareDriver(root, tsComp, chkRel);
     symSrc := fs.readText(path.join(root, "compiler/tests/checker/symbols.lts")).text;
-    compilerTest.assertDriverMatchesContract(root, contracts, chkRel, chkDrv, "symbols contract", symSrc, 0);
+    symExp := fs.readText(path.join(root, "compiler/tests/checker/symbols.symbols")).text;
+    compilerTest.assertDriver(chkDrv, "symbols exact", symSrc, 0, symExp, "");
     compilerTest.assertDriverMatchesContract(root, contracts, chkRel, chkDrv, "duplicate contract", "x := 1; x := 2;", 0);
     compilerTest.disposeDriver(chkDrv);
 }

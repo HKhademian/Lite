@@ -1,6 +1,6 @@
 io := import "core/io";
 
-values: mut List<Int> = [1, 2];
+mut values: List<Int> = [1, 2];
 mut values.pushBack(3);
 mut values.pushFront(0);
 io.outputLine(values[0], values[3]);

@@ -474,7 +474,7 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
     if types.isSoaKind(kind) {
         recK := types.soaRecordKind(kind);
         fc := types.recordComponentCount(recK);
-        colEntries: mut List<String> = [];
+        mut colEntries: List<String> = [];
         var fi := 0;
         loop fi < fc {
             comp := types.recordComponent(recK, fi);
@@ -487,7 +487,7 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
     if types.isRecordKind(kind) or types.isTupleKind(kind) {
         isRec := types.isRecordKind(kind);
         cnt := if isRec { types.recordComponentCount(kind) } else { types.tupleComponentCount(kind) };
-        extraBuf: mut tb.TextBuilder;
+        mut extraBuf: tb.TextBuilder;
         var idx := 0;
         loop idx < cnt {
             comp := if isRec { types.recordComponent(kind, idx) } else { types.tupleComponent(kind, idx) };
@@ -713,11 +713,11 @@ pub truncateLocals := fn(locals: List<Local>, targetLen: Int): List<Local> {
 
 /** Returns outer-local initialization and callable-dependency updates from `locals[preLen..)` appended to `updates` for `branchDepth`. */
 pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, branchDepth: Int, updates: List<BranchUpdate>): List<BranchUpdate> {
-    nextUpdates: mut List<BranchUpdate> = updates;
+    mut nextUpdates: List<BranchUpdate> = updates;
     var idx := 0;
-    branchRuntimes: mut List<String> = [];
-    branchStates: mut List<String> = [];
-    branchCodes: mut List<String> = [];
+    mut branchRuntimes: List<String> = [];
+    mut branchStates: List<String> = [];
+    mut branchCodes: List<String> = [];
     loop locals as local {
         if idx >= preLen and local.depth >= 0 and local.depth <= maxDepth {
             mut branchRuntimes.pushBack(local.runtime);
@@ -726,7 +726,7 @@ pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, b
         }
         idx = idx + 1;
     }
-    emitted: mut List<String> = [];
+    mut emitted: List<String> = [];
     var rev := 0;
     loop branchRuntimes { rev += 1; }
     loop rev > 0 {
@@ -742,13 +742,13 @@ pub recordBranchUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int, b
 
 /** Joins `branchUpdates` for `blockDepth` into `locals`, returning updated `locals`. */
 pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, hasElse: Bool, liveBranchCount: Int, updates: List<BranchUpdate>): List<Local> {
-    here: mut List<BranchUpdate> = [];
+    mut here: List<BranchUpdate> = [];
     loop updates as u {
         if u.depth == blockDepth { mut here.pushBack(u); }
     }
-    nextLocals: mut List<Local> = locals;
+    mut nextLocals: List<Local> = locals;
     if hasElse and liveBranchCount == 0 { return nextLocals; }
-    seenRuntimes: mut List<String> = [];
+    mut seenRuntimes: List<String> = [];
     loop here as u {
         if not seenRuntimes.contains(u.runtime) {
             mut seenRuntimes.pushBack(u.runtime);
@@ -798,7 +798,7 @@ pub joinBranchLocals := fn(locals: List<Local>, preLen: Int, blockDepth: Int, ha
 
 /** Removes `branchUpdates` entries at `blockDepth`. */
 pub popBranchUpdates := fn(updates: List<BranchUpdate>, blockDepth: Int): List<BranchUpdate> {
-    kept: mut List<BranchUpdate> = [];
+    mut kept: List<BranchUpdate> = [];
     loop updates as u {
         if u.depth =!= blockDepth { mut kept.pushBack(u); }
     }
@@ -807,7 +807,7 @@ pub popBranchUpdates := fn(updates: List<BranchUpdate>, blockDepth: Int): List<B
 
 /** Transitions any outer uninit locals modified inside a loop and propagates callable-dependency updates after the loop. */
 pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List<Local> {
-    updatedRuntimes: mut List<String> = [];
+    mut updatedRuntimes: List<String> = [];
     var idx := 0;
     loop locals as l {
         if idx >= preLen and l.depth >= 0 and l.depth <= maxDepth {
@@ -818,7 +818,7 @@ pub joinLoopUpdates := fn(locals: List<Local>, preLen: Int, maxDepth: Int): List
         idx = idx + 1;
     }
     if updatedRuntimes.length() == 0 { return truncateLocals(locals, preLen); }
-    nextLocals: mut List<Local> = truncateLocals(locals, preLen);
+    mut nextLocals: List<Local> = truncateLocals(locals, preLen);
     loop updatedRuntimes as rt {
         var preIdx := -1;
         var i := 0;
@@ -870,7 +870,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             if count == 0 {
                 return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ ._empty = 0 })", intValue = 0, textValue = "", constant = false, next = next);
             }
-            cCodeBuf: mut tb.TextBuilder;
+            mut cCodeBuf: tb.TextBuilder;
             var index := 0;
             loop index < count {
                 comp := types.tupleComponent(kind, index);
@@ -883,7 +883,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             }
             return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ " + cCodeBuf.build() + " })", intValue = 0, textValue = "", constant = false, next = next);
         }
-        codeBuf: mut tb.TextBuilder;
+        mut codeBuf: tb.TextBuilder;
         mut codeBuf.append("{ ");
         var index := 0;
         loop index < count {
@@ -942,7 +942,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             return (kind = kind, code = "/*@T:" + kind + "@*/((" + types.cSoaTag(kind) + "){ .len = 0 })", intValue = 0, textValue = "", constant = false, next = next);
         }
         fc := types.recordComponentCount(recK);
-        cols: mut List<String> = [];
+        mut cols: List<String> = [];
         var fi := 0;
         loop fi < fc {
             comp := types.recordComponent(recK, fi);
@@ -958,7 +958,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             if ps.length() == 0 {
                 return (kind = kind, code = "/*@T:" + kind + "@*/" + tag + "_mk_0()", intValue = 0, textValue = "", constant = false, next = next);
             }
-            zeroArgs: mut List<String> = [];
+            mut zeroArgs: List<String> = [];
             var pi := 0;
             loop pi < ps.length() {
                 mut zeroArgs.pushBack(self(target, ps[pi], next).code);
@@ -967,7 +967,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             return (kind = kind, code = "/*@T:" + kind + "@*/" + tag + "_mk_0(" + zeroArgs.join(", ") + ")", intValue = 0, textValue = "", constant = false, next = next);
         }
         tsT := types.tsFunctionType(kind);
-        tsInitBuf: mut tb.TextBuilder;
+        mut tsInitBuf: tb.TextBuilder;
         mut tsInitBuf.append("_t: 0 as const");
         var pi := 0;
         loop pi < ps.length() {
@@ -989,7 +989,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             if count == 0 {
                 return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ ._empty = 0 })", intValue = 0, textValue = "", constant = false, next = next);
             }
-            cCodeBuf: mut tb.TextBuilder;
+            mut cCodeBuf: tb.TextBuilder;
             var index := 0;
             loop index < count {
                 comp := types.recordComponent(kind, index);
@@ -1003,7 +1003,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             return (kind = kind, code = "/*@T:" + kind + "@*/((" + tag + "){ " + cCodeBuf.build() + " })", intValue = 0, textValue = "", constant = false, next = next);
         }
         if count == 0 { return (kind = kind, code = "{}", intValue = 0, textValue = "", constant = false, next = next); }
-        codeBuf: mut tb.TextBuilder;
+        mut codeBuf: tb.TextBuilder;
         mut codeBuf.append("{ ");
         var index := 0;
         loop index < count {
@@ -1037,7 +1037,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             }
             elemZero := self(target, elemKind, next).code;
             if extent <= 16 {
-                items: mut List<String> = [];
+                mut items: List<String> = [];
                 var i := 0;
                 loop i < extent {
                     mut items.pushBack(elemZero);
@@ -1048,7 +1048,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             return (kind = kind, code = "/*@T:" + kind + "@*/" + aTag + "_repeat(" + elemZero + ")", intValue = 0, textValue = "", constant = false, next = next);
         }
         elemZero := self(target, elemKind, next).code;
-        items: mut List<String> = [];
+        mut items: List<String> = [];
         var i := 0;
         loop i < extent {
             mut items.pushBack(elemZero);
@@ -1070,8 +1070,8 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             return (kind = kind, code = "((/*@T:" + kind + "@*/" + fTag + "){ NULL, NULL })", intValue = 0, textValue = "", constant = false, next = next);
         }
         paramCount := types.fnParamCount(kind);
-        paramsCodeBuf: mut tb.TextBuilder;
-        voidStmtsBuf: mut tb.TextBuilder;
+        mut paramsCodeBuf: tb.TextBuilder;
+        mut voidStmtsBuf: tb.TextBuilder;
         var idx := 0;
         loop idx < paramCount {
             comp := types.fnParamComponent(kind, idx);
@@ -1105,7 +1105,7 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
 
 /** Returns a copy of `values` with element `index` replaced by `value`. */
 pub setIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
-    updated: mut List<Int> = [];
+    mut updated: List<Int> = [];
     var i := 0;
     loop values as item {
         mut updated.pushBack(if i == index { value } else { item });
@@ -1116,7 +1116,7 @@ pub setIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
 
 /** Returns a copy of `values` with element `index` replaced by `value`. */
 pub setBoolAt := fn(values: List<Bool>, index: Int, value: Bool): List<Bool> {
-    updated: mut List<Bool> = [];
+    mut updated: List<Bool> = [];
     var i := 0;
     loop values as item {
         mut updated.pushBack(if i == index { value } else { item });
@@ -1191,7 +1191,7 @@ pub ternaryChainCode := fn(target: String, resultKind: String, conditionCodes: L
             }
             cVar := if resultKind == ir.VALUE_KIND_UNIT or resultKind == ir.VALUE_KIND_NEVER { "" } else { "lt_cval_" + (branchCodes[0].length() + branchCount).toText() };
             var declPrefix := if cVar == "" { "" } else { types.cValueType(resultKind) + " " + cVar + "; " };
-            stmtBuf: mut tb.TextBuilder;
+            mut stmtBuf: tb.TextBuilder;
             var ci := 0;
             loop ci < branchCount {
                 bCode := if branchKinds[ci] == ir.VALUE_KIND_NEVER or resultKind == ir.VALUE_KIND_UNIT or branchCodes[ci].startsWithAt(0, "/*@CBLK:") {
@@ -1254,9 +1254,9 @@ branchTextValues: List<String>,
 branchCount: Int,
 next: Int
 ): Parsed {
-    keptCondCodes: mut List<String> = [];
-    keptBranchCodes: mut List<String> = [];
-    keptBranchKinds: mut List<String> = [];
+    mut keptCondCodes: List<String> = [];
+    mut keptBranchCodes: List<String> = [];
+    mut keptBranchKinds: List<String> = [];
     var keptCondCount := 0;
     var selectedIndex := -1;
     var hitTrue := false;
@@ -1320,7 +1320,7 @@ pub cRewriteFinallyExits := fn(tryCode: String, finCode: String, fnRetKind: Stri
         return tryCode;
     }
     size := tryCode.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     var rSeq := 0;
@@ -1423,7 +1423,7 @@ pub cReplaceIdentToken := fn(code: String, ident: String, replacement: String): 
     size := code.length();
     idLen := ident.length();
     firstCh := ident.at(0);
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < size {
@@ -1458,7 +1458,7 @@ pub cReplaceExactToken := fn(code: String, needle: String, replacement: String):
     size := code.length();
     nLen := needle.length();
     firstCh := needle.at(0);
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < size {
@@ -1504,12 +1504,12 @@ pub cReplaceExactToken := fn(code: String, needle: String, replacement: String):
 pub cRewriteExitDrops := fn(bodyCode: String, retDropStmt: String, loopDropStmt: String, fnRetKind: String, rewriteId: Int): String {
     if retDropStmt == "" and loopDropStmt == "" { return bodyCode; }
     size := bodyCode.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     var rSeq := 0;
     var innerLoopDepth := 0;
-    loopBraceStack: mut List<Int> = [];
+    mut loopBraceStack: List<Int> = [];
     var braceDepth := 0;
     loop cursor < size {
         ch := bodyCode.at(cursor);
@@ -1657,7 +1657,7 @@ pub ctxCount := fn(ctxs: List<ConstructCtx>): Int {
 
 /** Returns a copy of `ctxs` with `entry` appended at the end. */
 pub appendCtx := fn(ctxs: List<ConstructCtx>, entry: ConstructCtx): List<ConstructCtx> {
-    copy: mut List<ConstructCtx> = ctxs;
+    mut copy: List<ConstructCtx> = ctxs;
     mut copy.pushBack(entry);
     copy
 };
@@ -1714,7 +1714,7 @@ pub visibleLocals := fn(locals: List<Local>, depth: Int): List<Local> {
         if firstDrop <= 0 { return []; }
         return locals.slice(0, firstDrop);
     }
-    kept: mut List<Local> = [];
+    mut kept: List<Local> = [];
     loop locals as entry {
         if (entry.depth >= -1 and entry.depth < depth) or
         (entry.depth <= -2 and (0 - 2 - entry.depth) < depth) {
@@ -1744,7 +1744,7 @@ pub popBlockDecls := fn(decls: List<BlockDecl>, depth: Int): List<BlockDecl> {
         if firstDrop <= 0 { return []; }
         return decls.slice(0, firstDrop);
     }
-    kept: mut List<BlockDecl> = [];
+    mut kept: List<BlockDecl> = [];
     loop decls as entry {
         if entry.depth < depth {
             mut kept.pushBack(entry);
@@ -1772,7 +1772,7 @@ pub rejectDuplicateInBlockNames := fn(source: String, at: Int, prefix: String, n
 
 /** Extracts header-bound symbol names (parameters or loop items) owned by the opening `{ ... }` block. */
 pub seedBlockDeclaredNames := fn(bodySink: String): List<String> {
-    seeded: mut List<String> = [];
+    mut seeded: List<String> = [];
     colonPos := bodySink.indexOf(":", 0);
     if colonPos < 0 { return seeded; }
     namesLen := bodySink.length();
@@ -1832,7 +1832,7 @@ pub filterOtherMarkers := fn(raw: String, excludeId: Int): String {
     excludeKey := excludeId.toText();
     size := raw.length();
     var cursor := 0;
-    kept: mut tb.TextBuilder;
+    mut kept: tb.TextBuilder;
     loop cursor < size {
         eqPos := raw.indexOf("=", cursor);
         if eqPos < 0 { break; }

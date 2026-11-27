@@ -25,11 +25,11 @@ src :=
 "io := import \"core/io\";\n" +
 "\n" +
 "/* 1. Module-level mut globals mutated inside B() while A(Z) holds a read-only parameter */\n" +
-"Z: mut List<Int> = [1, 2];\n" +
-"ZM: mut Map<String, Int> = [\"a\" = 10];\n" +
-"ZS: mut Set<String> = [\"x\"];\n" +
+"mut Z: List<Int> = [1, 2];\n" +
+"mut ZM: Map<String, Int> = [\"a\" = 10];\n" +
+"mut ZS: Set<String> = [\"x\"];\n" +
 "Holder := record { xs: List<Int>; };\n" +
-"var ZH: mut Holder = Holder { xs = [5, 6] };\n" +
+"var mut ZH: Holder = Holder { xs = [5, 6] };\n" +
 "\n" +
 "mutateGlobals := fn(): Unit {\n" +
 "    var i := 0;\n" +
@@ -67,7 +67,7 @@ src :=
 "};\n" +
 "\n" +
 "/* 2. mut parameter forwarded to read-only call while caller's global is mutated */\n" +
-"Z2: mut List<Int> = [7, 8];\n" +
+"mut Z2: List<Int> = [7, 8];\n" +
 "mutateZ2 := fn(): Unit {\n" +
 "    var i := 0;\n" +
 "    loop i < 150 {\n" +
@@ -113,7 +113,7 @@ src :=
 "};\n" +
 "idList := fn(xs: List<Int>): List<Int> { xs };\n" +
 "runZeroCopy := fn(): Unit {\n" +
-"    localC: mut List<Int> = [10, 20, 30];\n" +
+"    mut localC: List<Int> = [10, 20, 30];\n" +
 "    s1 := forwardSum(localC);\n" +
 "    snap := idList(localC);\n" +
 "    mut localC.pushBack(40);\n" +
@@ -129,13 +129,13 @@ src :=
 "    checkGlobalMapSetRec(ZM, ZS, ZH);\n" +
 "    forwardMut(mut Z2);\n" +
 "\n" +
-"    localA: mut List<Int> = [1, 2, 3];\n" +
+"    mut localA: List<Int> = [1, 2, 3];\n" +
 "    snapA := localA;\n" +
 "    appendAll(snapA, mut localA);\n" +
 "    io.outputLine(\"sameCallAlias\", localA.length(), localA[0], localA[3], localA[5]);\n" +
 "\n" +
 "    clAfter := {\n" +
-"        localB: mut List<Int> = [4, 5];\n" +
+"        mut localB: List<Int> = [4, 5];\n" +
 "        cb := fn(): Unit {\n" +
 "            var i := 0;\n" +
 "            loop i < 120 { mut localB.pushBack(i); i += 1; }\n" +
@@ -167,8 +167,8 @@ test.check("TS zero-copy sumList(xs): no array clone", tsComp.stdout.contains("l
 test.check("TS global Z still snapshotted", tsComp.stdout.contains("liteFn_checkGlobalList([...(lite_Z)])"));
 
 /* Negative exclusivity checks on both TS and C11 */
-exclusivityAliasSrc := "f := fn(src: List<Int>, dst: mut List<Int>): Unit { mut dst.pushBack(src[0]); }; xs: mut List<Int> = [1]; f(xs, mut xs);\n";
-exclusivityDupMutSrc := "swap := fn(a: mut List<Int>, b: mut List<Int>): Unit { mut a.pushBack(b[0]); }; xs: mut List<Int> = [1]; swap(mut xs, mut xs);\n";
+exclusivityAliasSrc := "f := fn(src: List<Int>, dst: mut List<Int>): Unit { mut dst.pushBack(src[0]); }; mut xs: List<Int> = [1]; f(xs, mut xs);\n";
+exclusivityDupMutSrc := "swap := fn(a: mut List<Int>, b: mut List<Int>): Unit { mut a.pushBack(b[0]); }; mut xs: List<Int> = [1]; swap(mut xs, mut xs);\n";
 compilerTest.assertCompileErrorContains(root, selTs.path, "exclusivity read-only + mut rejected (TS)", exclusivityAliasSrc, "cannot pass xs as both read-only and mut in the same call");
 compilerTest.assertCompileErrorContains(root, selC.path, "exclusivity read-only + mut rejected (C11)", exclusivityAliasSrc, "cannot pass xs as both read-only and mut in the same call");
 compilerTest.assertCompileErrorContains(root, selTs.path, "exclusivity double mut rejected (TS)", exclusivityDupMutSrc, "cannot pass xs multiple times as mut in the same call");

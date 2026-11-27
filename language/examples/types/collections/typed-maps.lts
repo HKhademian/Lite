@@ -1,6 +1,6 @@
 io := import "core/io";
 
-scores: mut Map<String, Int> = ["alice" = 10];
+mut scores: Map<String, Int> = ["alice" = 10];
 mut scores.set("bob", 25);
 scores["alice"] += 8;
 

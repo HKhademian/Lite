@@ -3,7 +3,7 @@ list := import "core/list";
 text := import "core/text";
 
 splitLines := fn(raw: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     n := raw.length();
     var pos := 0;
     loop pos <= n {
@@ -19,7 +19,7 @@ splitLines := fn(raw: String): List<String> {
 };
 
 splitSpace := fn(line: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     n := line.length();
     var p := 0;
     loop p < n {
@@ -33,7 +33,7 @@ splitSpace := fn(line: String): List<String> {
 };
 
 withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     len := xs.length();
     var k := 0;
     loop k < len {

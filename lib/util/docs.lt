@@ -66,7 +66,7 @@ asciiChar := fn(code: Int): String {
 
 decodePercentUri := fn(target: String): (ok: Bool, value: String) {
     size := target.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var i := 0;
     loop i < size {
@@ -267,7 +267,7 @@ resolveLiteDocSource := fn(directory: String, rawTarget: String): (found: Bool, 
     if clean == "" or clean == "index" or clean == "spec" or clean == "spec/index" {
         return (found = true, isVirtualIndex = true, filePath = "");
     }
-    candidates: mut List<String> = [];
+    mut candidates: List<String> = [];
     if clean == "overview" { mut candidates.pushBack("docs/README.md"); }
     else if clean == "spec-overview" { mut candidates.pushBack("docs/spec/README.md"); }
     else if clean == "contributing" or clean == "CONTRIBUTING" { mut candidates.pushBack("CONTRIBUTING.md"); }
@@ -471,7 +471,7 @@ checkPlayTarget := fn(directory: String, rawTarget: String): Bool {
 resolveLiteBrandSource := fn(directory: String, rawTarget: String): String {
     if hasPathTraversal(rawTarget) { return ""; }
     clean := stripSuffix(rawTarget, ".html");
-    candidates: mut List<String> = [];
+    mut candidates: List<String> = [];
     if clean == "" or clean == "index" or clean == "overview" or clean == "README" or clean == "README.md" or clean == "brand/README.md" {
         mut candidates.pushBack("brand/README.md");
     } else if clean == "name" or clean == "name.md" or clean == "brand/name.md" {
@@ -624,8 +624,8 @@ anchorCache: mut Map<String, String>
 
 /** Verifies Markdown fences, links, heading fragments, and `config/documentation.json` entries under `directory`. */
 pub checkDocuments := fn(directory: String): List<String> {
-    failures: mut List<String> = [];
-    anchorCache: mut Map<String, String>;
+    mut failures: List<String> = [];
+    mut anchorCache: Map<String, String>;
     files := listDocFiles(directory);
 
     loop files as fullFile {
@@ -758,7 +758,7 @@ pub navigationSummary := fn(directory: String): (ok: Bool, text: String, error: 
     if not navField.found {
         return (ok = false, text = "", error = "documentation navigation configuration is missing");
     }
-    lines: mut List<String> = [];
+    mut lines: List<String> = [];
     navItems := json.arrayOffsets(cfgRead.text, navField.valuePos);
     loop navItems as navPos {
         labelRes := json.readFieldString(cfgRead.text, navPos, "label");
@@ -784,7 +784,7 @@ docMatchesQuery := fn(relPath: String, title: String, headings: List<String>, qu
 /** Searches documentation paths, titles, and headings matching case-insensitive `query`. */
 pub searchDocsText := fn(directory: String, query: String): (count: Int, text: String) {
     queryLower := query.toLowerAscii();
-    lines: mut List<String> = [];
+    mut lines: List<String> = [];
     var count := 0;
     files := listDocFiles(directory);
 
@@ -805,7 +805,7 @@ pub searchDocsText := fn(directory: String, query: String): (count: Int, text: S
 /** Formats matching documentation records as 2-space indented JSON (`JSON.stringify(..., null, 2)` parity). */
 pub docsJson := fn(directory: String, query: String): String {
     queryLower := query.toLowerAscii();
-    entries: mut List<String> = [];
+    mut entries: List<String> = [];
     files := listDocFiles(directory);
 
     loop files as fullFile {
@@ -818,7 +818,7 @@ pub docsJson := fn(directory: String, query: String): String {
             hCount := headings.length();
             var headingsJson := "[]";
             if hCount > 0 {
-                hLines: mut List<String> = [];
+                mut hLines: List<String> = [];
                 loop headings as h {
                     mut hLines.pushBack("      " + json.quoteString(h));
                 }

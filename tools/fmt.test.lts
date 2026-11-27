@@ -85,7 +85,7 @@ corpusDirs: List<String> = [
 "language/gym", "samples", "lib/core", "lib/extra"
 ];
 noIgnore: List<String> = [];
-copiedFiles: mut List<String> = [];
+mut copiedFiles: List<String> = [];
 loop corpusDirs as relDir {
     absDir := path.join(root, relDir);
     found := path.collectFiles(absDir, [absDir], ".lts", noIgnore, false);
@@ -102,7 +102,7 @@ loop corpusDirs as relDir {
 test.check("copied corpus files > 0", copiedFiles.length() > 0);
 firstFmt := runNode([liteBin, "fmt", corpusTmp], "");
 test.checkInt("first corpus fmt: " + firstFmt.stderr, 0, firstFmt.status);
-afterFirst: mut List<String> = [];
+mut afterFirst: List<String> = [];
 loop copiedFiles as file {
     mut afterFirst.pushBack(fs.readText(file).text);
 }

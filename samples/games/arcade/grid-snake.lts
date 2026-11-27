@@ -65,8 +65,8 @@ keyBindings: Map<String, Direction> = [
 "d" = .Right,
 ];
 
-snake: mut List<Cell> = [];
-occupied: mut Set<Int>;
+mut snake: List<Cell> = [];
+mut occupied: Set<Int>;
 
 var state := GameState {
     dir = .Right,
@@ -148,7 +148,7 @@ onCanvasUpdate := fn(dt: Float): Int {
     mut snake.pushFront(next);
     mut occupied.add(cellKey(next));
     if ate {
-        var r: mut rand.Rng = state.rng;
+        var mut r: rand.Rng = state.rng;
         fx := mut r.rangeInt(1, cols - 1);
         fy := mut r.rangeInt(1, rows - 1);
         state.food = Cell { x = fx, y = fy };

@@ -192,7 +192,7 @@ assertRejectsTarget(tsComp, "io-exit", exitRej);
 /* unnamed loop sequence traversal supports lists, fixed arrays, empty lists, snapshots, and scope checks */
 unnamedLoopSrc := [
     "io := import \"core/io\";",
-    "xs: mut List<Int> = [10, 20, 30];",
+    "mut xs: List<Int> = [10, 20, 30];",
     "var listCount := 0;",
     "loop xs { mut xs.pushBack(99); listCount += 1; }",
     "arr: [String; 3] = [\"a\", \"b\", \"c\"];",

@@ -8,7 +8,7 @@ tb := import "util/text-builder";
 /** Escapes HTML special characters (`&`, `<`, `>`, `"`). */
 pub escapeHtml := fn(raw: String): String {
     size := raw.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var i := 0;
     loop i < size {
@@ -44,7 +44,7 @@ findLineEnd := fn(source: String, start: Int, size: Int): Int {
 };
 
 splitLines := fn(source: String): List<String> {
-    lines: mut List<String> = [];
+    mut lines: List<String> = [];
     size := source.length();
     var pos := 0;
     loop pos <= size {
@@ -227,7 +227,7 @@ findClosingEmph := fn(line: String, start: Int, doubleStar: Bool): Int {
 /* mode 0 = full HTML, mode 1 = TOC HTML (no nested links), mode 2 = plain text */
 renderInlineWithMode := fn(line: String, mode: Int): String {
     size := line.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var pos := 0;
     loop pos < size {
@@ -548,7 +548,7 @@ parseOrderedItem := fn(line: String): (ok: Bool, indent: Int, body: String) {
 };
 
 parseTableRow := fn(line: String): List<String> {
-    cells: mut List<String> = [];
+    mut cells: List<String> = [];
     trimmed := line.trim();
     size := trimmed.length();
     if size == 0 or not trimmed.contains("|") { return cells; }
@@ -636,9 +636,9 @@ parseTableAligns := fn(line: String, expectedCols: Int): (ok: Bool, packed: Stri
 
 renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, html: String, tocJson: String) {
     total := lines.length();
-    blocks: mut List<String> = [];
-    seenSlugs: mut List<String> = [];
-    tocEntries: mut List<String> = [];
+    mut blocks: List<String> = [];
+    mut seenSlugs: List<String> = [];
+    mut tocEntries: List<String> = [];
     var docTitle := "";
     var fenceIndex := 0;
     var i := 0;
@@ -651,7 +651,7 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
         } else {
             fence := parseFenceOpen(line);
             if fence.ok {
-                bodyLines: mut List<String> = [];
+                mut bodyLines: List<String> = [];
                 i += 1;
                 loop i < total {
                     if isFenceClose(lines[i], fence.ch, fence.count) {
@@ -695,7 +695,7 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                     mut blocks.pushBack("<hr>");
                     i += 1;
                 } else if line.trimStart().startsWithAt(0, ">") {
-                    quoteLines: mut List<String> = [];
+                    mut quoteLines: List<String> = [];
                     loop i < total {
                         qlTrim := lines[i].trimStart();
                         if not qlTrim.startsWithAt(0, ">") { break; }
@@ -715,7 +715,7 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                         else if firstQ == "[!CAUTION]" { alertKind = "caution"; alertLabel = "Caution"; }
                     }
                     if alertKind =!= "" {
-                        innerAlertLines: mut List<String> = [];
+                        mut innerAlertLines: List<String> = [];
                         var qi := 1;
                         qTotal := quoteLines.length();
                         loop qi < qTotal {
@@ -737,21 +737,21 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                         sepRes := parseTableAligns(lines[i + 1], colCount);
                         if sepRes.ok {
                             renderedTable = true;
-                            thParts: mut List<String> = [];
+                            mut thParts: List<String> = [];
                             var ci := 0;
                             loop ci < colCount {
                                 styleAttr := alignCodeStyle(sepRes.packed.at(ci));
                                 mut thParts.pushBack("<th" + styleAttr + ">" + renderInline(headCells[ci]) + "</th>");
                                 ci += 1;
                             }
-                            rowParts: mut List<String> = [];
+                            mut rowParts: List<String> = [];
                             i += 2;
                             loop i < total {
                                 rowTrim := lines[i].trim();
                                 if rowTrim == "" or not rowTrim.contains("|") { break; }
                                 if parseFenceOpen(lines[i]).ok or parseHeadingLine(lines[i]).ok { break; }
                                 rowCells := parseTableRow(lines[i]);
-                                tdParts: mut List<String> = [];
+                                mut tdParts: List<String> = [];
                                 rowLen := rowCells.length();
                                 var rci := 0;
                                 loop rci < colCount {
@@ -770,11 +770,11 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                     if not renderedTable {
                         ulItem := parseBulletItem(line);
                         if ulItem.ok {
-                            itemsHtml: mut List<String> = [];
+                            mut itemsHtml: List<String> = [];
                             loop i < total {
                                 curItem := parseBulletItem(lines[i]);
                                 if not curItem.ok { break; }
-                                itemLines: mut List<String> = [curItem.body];
+                                mut itemLines: List<String> = [curItem.body];
                                 i += 1;
                                 loop i < total {
                                     nextLine := lines[i];
@@ -795,11 +795,11 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                         } else {
                             olItem := parseOrderedItem(line);
                             if olItem.ok {
-                                olItemsHtml: mut List<String> = [];
+                                mut olItemsHtml: List<String> = [];
                                 loop i < total {
                                     curOl := parseOrderedItem(lines[i]);
                                     if not curOl.ok { break; }
-                                    olItemLines: mut List<String> = [curOl.body];
+                                    mut olItemLines: List<String> = [curOl.body];
                                     i += 1;
                                     loop i < total {
                                         nextLine := lines[i];
@@ -818,7 +818,7 @@ renderBodyLines := fn(lines: List<String>, collectToc: Bool): (title: String, ht
                                 }
                                 (mut blocks).pushBack("<ol>" + olItemsHtml.join("") + "</ol>");
                             } else {
-                                paraLines: mut List<String> = [];
+                                mut paraLines: List<String> = [];
                                 loop i < total {
                                     pLine := lines[i];
                                     pTrim := pLine.trim();

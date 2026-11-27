@@ -4,7 +4,7 @@ io := import "core/io";
 
 corpus := "lite is light and lite is explicit and clear";
 size := corpus.length();
-counts: mut Map<String, Int>;
+mut counts: Map<String, Int>;
 
 var start := 0;
 var pos := 0;

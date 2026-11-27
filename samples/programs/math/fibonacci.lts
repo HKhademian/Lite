@@ -19,7 +19,7 @@ fibIter := fn(n: Int): Int {
 
 terms := loop .count < 10 { fibIter(.count - 1) }.collected;
 
-b: mut tb.TextBuilder;
+mut b: tb.TextBuilder;
 loop terms {
     mut b.append((.item).toText());
 }

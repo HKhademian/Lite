@@ -1,7 +1,7 @@
 io := import "core/io";
 
 /* Set literal initializer with [elem, ...] deduplicates in O(1) (empty sets also zero-init) */
-roles: mut Set<String> = ["reader", "editor", "reader"];
+mut roles: Set<String> = ["reader", "editor", "reader"];
 
 /* Independent value snapshots preserve earlier membership */
 frozen: Set<String> = roles;

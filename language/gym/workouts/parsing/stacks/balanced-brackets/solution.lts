@@ -9,7 +9,7 @@ matchingClose := fn(openCh: String): String {
 };
 
 line := io.inputLine();
-stack: mut List<String> = [];
+mut stack: List<String> = [];
 var depth := 0;
 n := line.length();
 var i := 0;

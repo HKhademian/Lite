@@ -10,7 +10,7 @@ hexDigit := fn(nibble: Int): String {
 
 toHex8 := fn(value: Int): String {
     var acc := value :% 4294967296;
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var step := 0;
     loop step < 8 {
         d := acc :% 16;
@@ -33,7 +33,7 @@ fnv32Hex := fn(bytes: List<Int>): String {
 };
 
 splitLines := fn(raw: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     n := raw.length();
     var pos := 0;
     loop pos <= n {

@@ -216,22 +216,22 @@ if ccInfo.available {
         "poolMod := import \"ds/pool\";",
         "internMod := import \"ds/intern\";",
         "lruMod := import \"ds/lru\";",
-        "ia: mut arenaMod.IntArena = arenaMod.TypedArena.create<Int>(8);",
+        "mut ia: arenaMod.IntArena = arenaMod.TypedArena.create<Int>(8);",
         "i0 := (mut ia).alloc(10);",
         "sp := (mut ia).allocSpan(3, 7);",
         "setOk := (mut ia).set(i0, 99);",
         "io.outputLine(\"typed_arena\", ia.isValid(), setOk, ia.get(i0), ia.get(sp.offset), ia.used(), ia.peakUsed());",
         "(mut ia).reset();",
         "(mut ia).destroy();",
-        "fa: mut arenaMod.FloatArena = arenaMod.TypedArena.create<Float>(4);",
+        "mut fa: arenaMod.FloatArena = arenaMod.TypedArena.create<Float>(4);",
         "f0 := (mut fa).alloc(2.5);",
         "io.outputLine(\"float_arena\", f0, fa.get(f0));",
         "(mut fa).destroy();",
-        "tpool: mut poolMod.TextPool = poolMod.Pool.create<String>(4);",
+        "mut tpool: poolMod.TextPool = poolMod.Pool.create<String>(4);",
         "th := (mut tpool).acquire(\"alpha\");",
         "_ := (mut tpool).set(th, \"beta\");",
         "io.outputLine(\"text_pool\", tpool.get(th).unwrapOr(\"none\"), tpool.count(), (mut tpool).release(th));",
-        "ipool: mut poolMod.IntPool = poolMod.Pool.create<Int>(4);",
+        "mut ipool: poolMod.IntPool = poolMod.Pool.create<Int>(4);",
         "ih := (mut ipool).acquire(77);",
         "io.outputLine(\"int_pool\", ipool.get(ih).unwrapOr(-1), ipool.count());",
         "mut poolIntern := internMod.Interner.create();",
@@ -290,7 +290,7 @@ if ccInfo.available {
         "pub createWorld := fn(count: Int): World {",
         "    bank := assets.createAssetBank();",
         "    mut entities := poolMod.Pool.create<Entity>(count);",
-        "    handles: mut List<poolMod.Handle> = [];",
+        "    mut handles: List<poolMod.Handle> = [];",
         "    var i := 0;",
         "    loop i < count {",
         "        m := if i % 4 == 0 { bank.heroMesh.share() } else { bank.sparkMesh.share() };",
@@ -392,8 +392,8 @@ if ccInfo.available {
     dogBinSan := path.join(tmpDir, "dogfood_san");
     _wdc := fs.writeText(dogCFile, dogC.stdout);
 
-    dvmArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", dogCFile, "-o", dogBinVm, "-lm"];
-    dsanArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", dogCFile, "-o", dogBinSan, "-lm"];
+    mut dvmArgs: List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", dogCFile, "-o", dogBinVm, "-lm"];
+    mut dsanArgs: List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", dogCFile, "-o", dogBinSan, "-lm"];
     if proc.platform() == "darwin" {
         mut dvmArgs.pushBack("-framework"); mut dvmArgs.pushBack("Cocoa");
         mut dvmArgs.pushBack("-framework"); mut dvmArgs.pushBack("CoreGraphics");

@@ -10,7 +10,7 @@ applyOp := fn(op: IntOp, value: Int): Int {
 };
 
 mapList := fn(items: List<Int>, f: IntOp): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     loop items as item {
         mut out.pushBack(f(item));
     }
@@ -18,7 +18,7 @@ mapList := fn(items: List<Int>, f: IntOp): List<Int> {
 };
 
 filterList := fn(items: List<Int>, pred: IntCheck): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     loop items as item {
         if pred(item) {
             mut out.pushBack(item);

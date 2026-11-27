@@ -15,13 +15,13 @@ addStep := fn(mult: Int): Int {
     total
 };
 
-hist: mut List<Int> = [base];
+mut hist: List<Int> = [base];
 appendHist := fn(v: Int): Int {
     mut hist.pushBack(v);
     hist[0] + v
 };
 
-closures: mut List<fn(): Int> = [];
+mut closures: List<fn(): Int> = [];
 loop [10, 20, 30] as item {
     mut closures.pushBack(fn(): Int { item + step });
 }

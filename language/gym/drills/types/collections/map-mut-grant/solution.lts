@@ -1,7 +1,7 @@
 io := import "core/io";
 
 bonus := io.inputInt();
-scores: mut Map<String, Int>;
+mut scores: Map<String, Int>;
 scores["base"] = 10;
 mut scores.set("bonus", bonus);
 io.outputLine(scores["base"] + scores["bonus"]);

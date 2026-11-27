@@ -97,7 +97,7 @@ pub Arena.create := fn(capacityBytes: Int): Self {
         emptyData: List<UInt8> = [];
         return Arena { data = emptyData, used = 0, cap = 0, peak = 0, resets = 0, gen = 1 };
     }
-    buf: mut List<UInt8> = [];
+    mut buf: List<UInt8> = [];
     var i := 0;
     loop i < capacityBytes {
         mut buf.pushBack(cast<UInt8>(0));

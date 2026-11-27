@@ -14,7 +14,7 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
     var leadingCloses := 0;
     var sawCode := false;
     var netChange := 0;
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var lastChar := "";
     lineLen := line.length();
@@ -94,7 +94,7 @@ scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, net
 
 /** Formats Lite source text cleanly and idempotently (4-space indentation, LF, single trailing newline). */
 pub formatLite := fn(source: String): String {
-    formatted: mut List<String> = [];
+    mut formatted: List<String> = [];
     var formattedCount := 0;
     var depth := 0;
     var inBlockComment := false;
@@ -157,9 +157,9 @@ pub formatLite := fn(source: String): String {
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "formatter", "fmt");
 
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     var checkOnly := false;
-    targets: mut List<String> = [];
+    mut targets: List<String> = [];
     loop args.length() > 0 {
         arg := mut args.popFront();
         if arg == "--" {
@@ -203,7 +203,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     allFiles := path.collectFiles(proc.cwd(), targets, "", path.defaultIgnoredDirs(), true);
-    files: mut List<String> = [];
+    mut files: List<String> = [];
     loop allFiles as candidate {
         if candidate.endsWith(".lt") or candidate.endsWith(".lts") {
             mut files.pushBack(candidate);

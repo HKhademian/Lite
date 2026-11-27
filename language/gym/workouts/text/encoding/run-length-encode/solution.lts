@@ -6,7 +6,7 @@ n := line.length();
 if n == 0 {
     io.outputLine("");
 } else {
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var cur := line.at(0);
     var run := 1;
     var i := 1;

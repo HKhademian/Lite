@@ -37,8 +37,8 @@ fetchSourceGroup := fn(cacheDir: String, name: String, force: Bool): Bool {
         return fetchOne(cacheDir, "https://cses.fi/problemset/", "cses/problemset.html", force);
     }
     if name == "aoc" {
-        urls: mut List<String> = [];
-        paths: mut List<String> = [];
+        mut urls: List<String> = [];
+        mut paths: List<String> = [];
         var year := 2015;
         loop year <= 2025 {
             yearText := year.toText();
@@ -114,7 +114,7 @@ run := fn(rawArgs: List<String>): Int {
     allNames: List<String> = ["leetcode", "codeforces", "cses", "aoc", "pe", "rosalind", "cryptopals", "jane-street", "atcoder", "roadmaps"];
     var force := false;
     var onlyRaw := "";
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     loop args.length() > 0 {
         arg := mut args.popFront();
         if arg == "--help" or arg == "-h" {
@@ -150,7 +150,7 @@ run := fn(rawArgs: List<String>): Int {
     if root == "" { return failFetch("could not locate LiteScript repository root"); }
     cacheDir := path.join(root, "benchmark/challenges/.cache");
 
-    selected: mut List<String> = [];
+    mut selected: List<String> = [];
     if onlyRaw == "" {
         loop allNames as item { mut selected.pushBack(item); }
     } else {

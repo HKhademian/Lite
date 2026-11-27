@@ -9,7 +9,7 @@ describe := fn(token: Token): String {
     token.kind + ": " + token.text
 }
 
-tokens: mut Tokens = [];
+mut tokens: Tokens = [];
 mut tokens.pushBack((kind = "ident", text = "total"));
 mut tokens.pushBack((kind = "op", text = "+="));
 mut tokens.pushBack((kind = "num", text = "100"));

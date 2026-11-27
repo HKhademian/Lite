@@ -13,7 +13,7 @@ io := import "core/io";
 math := import "math/scalar";
 random := import "math/random";
 
-r: mut random.Rng = random.Rng.create(42);
+mut r: random.Rng = random.Rng.create(42);
 a := mut r.rangeInt(1, 7);
 b := mut r.rangeInt(1, 7);
 io.outputLine(a, b, math.clamp(a + b, 2, 12));

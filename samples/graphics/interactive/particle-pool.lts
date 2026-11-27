@@ -17,14 +17,14 @@ mut active := sparse.SparseSet.create(MAX_PARTICLES);
 mut frameScratch := arena.IntArena.create(MAX_PARTICLES);
 
 /* Parallel component arrays indexed by SlotPool handle index (zero heap churn after startup). */
-var hGen: mut List<Int> = [];
-var px: mut List<Int> = [];
-var py: mut List<Int> = [];
-var vx: mut List<Int> = [];
-var vy: mut List<Int> = [];
-var life: mut List<Int> = [];
-var maxLife: mut List<Int> = [];
-var hueIdx: mut List<Int> = [];
+var mut hGen: List<Int> = [];
+var mut px: List<Int> = [];
+var mut py: List<Int> = [];
+var mut vx: List<Int> = [];
+var mut vy: List<Int> = [];
+var mut life: List<Int> = [];
+var mut maxLife: List<Int> = [];
+var mut hueIdx: List<Int> = [];
 
 var initIdx := 0;
 loop initIdx < MAX_PARTICLES {

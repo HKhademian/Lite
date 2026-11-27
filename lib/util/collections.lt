@@ -5,7 +5,7 @@ pub IntComparator := alias fn(Int, Int): Bool;
 
 /** Returns a stable O(n log n) sorted index permutation `[0..count-1]` ordered by `lessOrEq(i, j)`. */
 pub sortIndicesBy := fn(count: Int, lessOrEq: IntComparator): List<Int> {
-    var src: mut List<Int> = [];
+    var mut src: List<Int> = [];
     var k := 0;
     loop k < count {
         mut src.pushBack(k);
@@ -14,7 +14,7 @@ pub sortIndicesBy := fn(count: Int, lessOrEq: IntComparator): List<Int> {
     if count <= 1 { return src; }
     var width := 1;
     loop width < count {
-        dst: mut List<Int> = [];
+        mut dst: List<Int> = [];
         var left := 0;
         loop left < count {
             mid := if left + width < count { left + width } else { count };
@@ -48,7 +48,7 @@ pub sortIndicesBy := fn(count: Int, lessOrEq: IntComparator): List<Int> {
 
 /** Counts occurrences of each string in `values` in O(n), preserving first-seen key order. */
 pub countTexts := fn(values: List<String>): Map<String, Int> {
-    counts: mut Map<String, Int>;
+    mut counts: Map<String, Int>;
     loop values as v {
         prev := counts.getOr(v, 0);
         mut counts.set(v, prev + 1);

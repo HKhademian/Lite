@@ -43,7 +43,7 @@ src :=
 "};\n" +
 "\n" +
 "/* 5. List of closures capturing loop variables */\n" +
-"tasks: mut List<fn(): Int> = [];\n" +
+"mut tasks: List<fn(): Int> = [];\n" +
 "loop [10, 20, 30] as item {\n" +
 "    mut tasks.pushBack(fn(): Int { item + 5 });\n" +
 "}\n" +

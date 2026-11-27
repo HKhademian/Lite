@@ -20,7 +20,7 @@ replaceAllText := fn(source: String, needle: String, replacement: String): Strin
     nLen := needle.length();
     if nLen == 0 { return source; }
     sLen := source.length();
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var pos := 0;
     loop pos < sLen {
         found := source.indexOf(needle, pos);
@@ -57,7 +57,7 @@ readOptStr := fn(src: String, objPos: Int, key: String): String {
 };
 
 readStringArrayAt := fn(src: String, arrPos: Int): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     offs := json.arrayOffsets(src, arrPos);
     loop offs as off {
         r := json.readStringAt(src, off);
@@ -107,7 +107,7 @@ itemIds: List<String>
     var univCount := 0;
     var playCount := 0;
     var cliCount := 0;
-    orderedHrefObjs: mut List<String> = [];
+    mut orderedHrefObjs: List<String> = [];
     loop itemOffs as iPos {
         env := readOptStr(src, iPos, "environment");
         if env == "universal" {
@@ -134,8 +134,8 @@ itemIds: List<String>
         "getting-started/hello-lite.html"
     };
 
-    trackSections: mut List<String> = [];
-    trackLinks: mut List<String> = [];
+    mut trackSections: List<String> = [];
+    mut trackLinks: List<String> = [];
     loop trackOffs as tPos {
         trId := readOptStr(src, tPos, "id");
         trTitle := readOptStr(src, tPos, "title");
@@ -145,7 +145,7 @@ itemIds: List<String>
         shortTitle := if titleSep < 0 { trTitle } else { trTitle.slice(titleSep + 3, trTitle.length()) };
         mut trackLinks.pushBack("<li data-track-jump=\"" + escapeHtml(trId) + "\"><a href=\"#track-" + escapeHtml(trId) + "\">" + escapeHtml(shortTitle) + "</a></li>");
 
-        cards: mut List<String> = [];
+        mut cards: List<String> = [];
         loop trLessonIds as lid {
             itemIdx := findIdIndex(itemIds, lid);
             if itemIdx < 0 { continue; }
@@ -160,7 +160,7 @@ itemIds: List<String>
             teaches := readStringList(src, iPos, "teaches");
 
             href := trId + "/" + slug + ".html";
-            tagParts: mut List<String> = [];
+            mut tagParts: List<String> = [];
             var ti := 0;
             var tLim := teaches.length();
             if tLim > 4 { tLim = 4; }
@@ -392,13 +392,13 @@ repoUrl: String
     isPlay := itemEnv == "play";
     isCli := itemEnv == "cli";
 
-    sidebarParts: mut List<String> = [];
+    mut sidebarParts: List<String> = [];
     loop trackOffs as tPos {
         trId := readOptStr(src, tPos, "id");
         trTitle := readOptStr(src, tPos, "title");
         trLessonIds := readStringList(src, tPos, "lessonIds");
         openAttr := if trId == itemTrackId { " open" } else { "" };
-        liParts: mut List<String> = [];
+        mut liParts: List<String> = [];
         loop trLessonIds as lid {
             lIdx := findIdIndex(itemIds, lid);
             if lIdx < 0 { continue; }
@@ -422,7 +422,7 @@ repoUrl: String
 
     sourceHref := if repoUrl =!= "" { repoUrl + "/blob/main/" + itemSourceFile } else { "#" };
     helperList := if itemHelperSpecs.length() > 0 {
-        hParts: mut List<String> = [];
+        mut hParts: List<String> = [];
         loop itemHelperSpecs as spec {
             mut hParts.pushBack("<code>" + escapeHtml(spec) + "</code>");
         }
@@ -896,12 +896,12 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
     trackOffs := json.arrayOffsets(inputJson, tracksField.valuePos);
     itemOffs := json.arrayOffsets(inputJson, itemsField.valuePos);
 
-    itemIds: mut List<String> = [];
+    mut itemIds: List<String> = [];
     loop itemOffs as iPos {
         mut itemIds.pushBack(readOptStr(inputJson, iPos, "id"));
     }
 
-    pagesJson: mut List<String> = [];
+    mut pagesJson: List<String> = [];
     indexBody := renderIndexBody(inputJson, trackOffs, itemOffs, itemIds);
     indexPageObj := "{"
     + "\"relPath\":\"learn/index.html\","
@@ -913,8 +913,8 @@ pub buildLearnPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String,
     + "}";
     mut pagesJson.pushBack(indexPageObj);
 
-    payloadsJson: mut List<String> = [];
-    searchEntriesJson: mut List<String> = [];
+    mut payloadsJson: List<String> = [];
+    mut searchEntriesJson: List<String> = [];
     var lessonCount := 0;
     var tutorialCount := 0;
     var idx := 0;

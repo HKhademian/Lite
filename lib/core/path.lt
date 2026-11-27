@@ -58,7 +58,7 @@ pub normalize := fn(raw: String): String {
         start = 1;
     }
 
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var partsCount := 0;
     var segStart := start;
     loop segStart <= size {
@@ -186,7 +186,7 @@ pub withExt := fn(target: String, ext: String): String {
 
 /** Splits a separator-normalized path (after its root prefix) into non-empty components. */
 splitSegments := fn(normalized: String): List<String> {
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     size := normalized.length();
     var start := 0;
     if isWin32() and size >= 2 and normalized.at(0).isAsciiLetter() and normalized.at(1) == ":" {
@@ -223,7 +223,7 @@ pub relative := fn(fromDir: String, toPath: String): String {
     loop common < fromLen and common < toLen and fromSegs[common] == toSegs[common] {
         common = common + 1;
     }
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var up := common;
     loop up < fromLen {
         mut out.pushBack("..");
@@ -261,8 +261,8 @@ pub defaultIgnoredDirs := fn(): List<String> {
 
 /** Walks `targets` in sorted depth-first order, skipping ignored/dot directories and keeping files ending in `extension` (or all files when `extension == ""`). */
 pub collectFiles := fn(baseDir: String, targets: List<String>, extension: String, ignoredNames: List<String>, skipDotEntries: Bool): List<String> {
-    files: mut List<String> = [];
-    stack: mut List<String> = [];
+    mut files: List<String> = [];
+    mut stack: List<String> = [];
     var stackCount := 0;
     var targetIdx := targets.length() - 1;
     loop targetIdx >= 0 {
@@ -303,9 +303,9 @@ pub copyFiltered := fn(srcDir: String, dstDir: String, topSkipNames: List<String
     mkRoot := file.makeDir(dstDir);
     if not mkRoot.ok { return (ok = false, error = mkRoot.error); }
 
-    srcStack: mut List<String> = [];
-    dstStack: mut List<String> = [];
-    depthStack: mut List<Int> = [];
+    mut srcStack: List<String> = [];
+    mut dstStack: List<String> = [];
+    mut depthStack: List<Int> = [];
     var stackCount := 0;
 
     mut srcStack.pushBack(srcDir);

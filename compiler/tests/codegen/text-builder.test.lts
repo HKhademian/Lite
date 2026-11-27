@@ -19,7 +19,7 @@ src :=
 "io := import \"core/io\";\n" +
 "tb := import \"util/text-builder\";\n" +
 "\n" +
-"b: mut tb.TextBuilder;\n" +
+"mut b: tb.TextBuilder;\n" +
 "io.outputLine(b.count(), b.build());\n" +
 "mut b.append(\"alpha\");\n" +
 "mut b.append(\"\");\n" +

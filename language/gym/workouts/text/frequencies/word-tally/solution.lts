@@ -21,7 +21,7 @@ textLessThan := fn(a: String, b: String): Bool {
 };
 
 withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     len := xs.length();
     var k := 0;
     loop k < len {
@@ -32,7 +32,7 @@ withTextAt := fn(xs: List<String>, idx: Int, val: String): List<String> {
 };
 
 withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     len := xs.length();
     var k := 0;
     loop k < len {

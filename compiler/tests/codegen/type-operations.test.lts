@@ -197,13 +197,13 @@ expectRejectBoth("grouped-stray-mut-on-readonly-op",
 
 expectRejectBoth("mut-arg-to-readonly-io",
 "io := import \"core/io\";\n" +
-"xs: mut List<Int> = [1];\n" +
+"mut xs: List<Int> = [1];\n" +
 "io.outputLine(mut xs);\n",
 "expected .operation(...) after mut xs");
 
 expectRejectBoth("grouped-mut-arg-to-readonly-io",
 "io := import \"core/io\";\n" +
-"xs: mut List<Int> = [1];\n" +
+"mut xs: List<Int> = [1];\n" +
 "io.outputLine((mut xs));\n",
 "expected .operation(...) after mut xs");
 

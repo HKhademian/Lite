@@ -26,8 +26,8 @@ formatNsAsMsJson := fn(nsRaw: Int): String {
 };
 
 sortInts := fn(items: List<Int>): List<Int> {
-    out: mut List<Int> = [];
-    rem: mut List<Int> = [];
+    mut out: List<Int> = [];
+    mut rem: List<Int> = [];
     var remCount := 0;
     loop items as item {
         mut rem.pushBack(item);
@@ -43,7 +43,7 @@ sortInts := fn(items: List<Int>): List<Int> {
             i = i + 1;
         }
         (mut out).pushBack(rem[bestIdx]);
-        next: mut List<Int> = [];
+        mut next: List<Int> = [];
         var j := 0;
         loop j < remCount {
             if j =!= bestIdx {
@@ -64,7 +64,7 @@ sortInts := fn(items: List<Int>): List<Int> {
 };
 
 computeToolingHash := fn(rootDir: String): String {
-    digestBytes: mut List<Int> = [];
+    mut digestBytes: List<Int> = [];
     var first := true;
 
     dirs: List<String> = ["tools/", "tools/src/", "lib/util/", "dist/tools/"];
@@ -116,7 +116,7 @@ readCompilerJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: Str
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "benchmark", "bench");
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--" {
         _sep := mut args.popFront();
     }
@@ -145,7 +145,7 @@ run := fn(rawArgs: List<String>): Unit {
     }
     caseFiles := cases.selectCaseFiles(root, filter);
 
-    resultsJson: mut List<String> = [];
+    mut resultsJson: List<String> = [];
     loop caseFiles as caseFile {
         meta := cases.readCaseMeta(root, caseFile);
         if not meta.ok {
@@ -174,7 +174,7 @@ run := fn(rawArgs: List<String>): Unit {
                     }
                     w = w + 1;
                 }
-                samplesNs: mut List<Int> = [];
+                mut samplesNs: List<Int> = [];
                 var s := 0;
                 loop s < meta.samples {
                     t0 := time.monotonicNs();
@@ -190,7 +190,7 @@ run := fn(rawArgs: List<String>): Unit {
                 sorted := sortInts(samplesNs);
                 medianNs := sorted[sorted.length() / 2];
 
-                msFields: mut List<String> = [];
+                mut msFields: List<String> = [];
                 loop samplesNs as sampleNs {
                     mut msFields.pushBack(formatNsAsMsJson(sampleNs));
                 }

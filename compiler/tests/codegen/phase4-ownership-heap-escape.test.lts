@@ -26,7 +26,7 @@ ccInfo := compilerTest.probeCc();
 mutMutSrc := [
     "io := import \"core/io\";",
     "bump := fn(a: mut List<Int>, b: mut List<Int>): Int { (mut a).pushBack(1); (mut b).pushBack(2); a.length() + b.length() };",
-    "xs: mut List<Int> = [10];",
+    "mut xs: List<Int> = [10];",
     "io.outputLine(bump(mut xs, mut xs));"
 ].join("\n");
 tsMutMut := compilerTest.compileStdin(root, tsComp, mutMutSrc, "--target=ts");
@@ -37,7 +37,7 @@ test.check("C rejects mut+mut aliasing", cMutMut.status =!= 0);
 roMutSrc := [
     "io := import \"core/io\";",
     "bump2 := fn(a: List<Int>, b: mut List<Int>): Int { (mut b).pushBack(a.length()); b.length() };",
-    "xs: mut List<Int> = [10, 20];",
+    "mut xs: List<Int> = [10, 20];",
     "io.outputLine(bump2(xs, mut xs));"
 ].join("\n");
 tsRoMut := compilerTest.compileStdin(root, tsComp, roMutSrc, "--target=ts");
@@ -72,14 +72,14 @@ featureSrc := [
     "",
     "/* Scope Data Stack candidate: non-escaping list created and grown in local scope */",
     "scopeLocalTest := fn(n: Int): Int {",
-    "    localXs: mut List<Int> = [1, 2, 3];",
+    "    mut localXs: List<Int> = [1, 2, 3];",
     "    (mut localXs).pushBack(n);",
     "    sumList(localXs) + localXs[1]",
     "};",
     "",
     "/* Move-on-Last-Use candidate: owned local returned/handed off on last use */",
     "buildAndMove := fn(k: Int): List<Int> {",
-    "    xs: mut List<Int> = [k, k + 1, k + 2];",
+    "    mut xs: List<Int> = [k, k + 1, k + 2];",
     "    (mut xs).pushBack(k + 3);",
     "    xs",
     "};",
@@ -114,7 +114,7 @@ featureSrc := [
     "makeCounters := fn(start: Int): List<StepFn> {",
     "    res := {",
     "        var c := start;",
-    "        hist: mut List<Int> = [start];",
+    "        mut hist: List<Int> = [start];",
     "        inc := fn(step: Int): Int {",
     "            c = c + step;",
     "            (mut hist).pushBack(c);",
@@ -143,14 +143,14 @@ featureSrc := [
     "",
     "/* Main test body */",
     "initItems: List<Int> = [1, 2];",
-    "h: mut Holder = Holder { name = \"h1\", items = initItems, meta = [\"a\" = 5, \"b\" = 7] };",
-    "nextItems: mut List<Int> = [3, 4, 5];",
+    "mut h: Holder = Holder { name = \"h1\", items = initItems, meta = [\"a\" = 5, \"b\" = 7] };",
+    "mut nextItems: List<Int> = [3, 4, 5];",
     "srcTail: List<Int> = [6, 7];",
     "hLen := appendMut(mut nextItems, srcTail);",
     "h.items = nextItems;",
     "mKeys := h.meta.keys();",
     "s: Set<String> = [\"x\", \"y\", \"x\"];",
-    "nested: mut List<String> = [\"row_one_long_string_val\", \"row_two_long_string_val\"];",
+    "mut nested: List<String> = [\"row_one_long_string_val\", \"row_two_long_string_val\"];",
     "firstRow := nested[0];",
     "arrFixed: [Int; 3] = [7, 8, 9];",
     "tPair: (String, Int) = (\"tuple_heap_owned_string_value\", 200);",
@@ -282,8 +282,8 @@ if ccInfo.available {
     surfBinSan := path.join(tmpDir, "surf_san");
     _ws := fs.writeText(surfCFile, surfC.stdout);
 
-    svmArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", surfCFile, "-o", surfBinVm, "-lm"];
-    ssanArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", surfCFile, "-o", surfBinSan, "-lm"];
+    mut svmArgs: List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", surfCFile, "-o", surfBinVm, "-lm"];
+    mut ssanArgs: List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", surfCFile, "-o", surfBinSan, "-lm"];
     if proc.platform() == "darwin" {
         mut svmArgs.pushBack("-framework"); mut svmArgs.pushBack("Cocoa");
         mut svmArgs.pushBack("-framework"); mut svmArgs.pushBack("CoreGraphics");

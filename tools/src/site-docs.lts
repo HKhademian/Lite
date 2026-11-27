@@ -5,7 +5,7 @@ project := import "util/project";
 siteDocs := import "../../site/src/docs";
 
 run := fn(rawArgs: List<String>): Unit {
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--" {
         _sep := mut args.popFront();
     }

@@ -260,7 +260,7 @@ _rmL := fs.remove(lTmp);
 
 /* compiler, L0 and lexer declarations carry doc comments */
 splitLines := fn(content: String): List<String> {
-    lines: mut List<String> = [];
+    mut lines: List<String> = [];
     size := content.length();
     var start := 0;
     var i := 0;
@@ -366,7 +366,7 @@ loop ti < 2 {
         test.check("whole bad err", badOut.stderr =!= "");
     }
 
-    badUtf8: mut List<Int> = "io := import \"core/io\"; io.outputLine(42);\n".utf8Encode();
+    mut badUtf8: List<Int> = "io := import \"core/io\"; io.outputLine(42);\n".utf8Encode();
     mut badUtf8.pushBack(255);
     _wUtf := fs.writeBytes(rejSrc, badUtf8);
     utfOut := if isTs { runCmd(path.join(root, "bin/lite-compile-ts"), [rejSrc], root, emptyEnv(), "") } else { runCmd(proc.execPath(), [cComp, rejSrc], root, emptyEnv(), "") };

@@ -135,7 +135,7 @@ pub MaxHeap.create := fn(capacity: Int): Self {
 
 /** Inserts `value` into min-heap `h` in O(log n); returns `false` if full. */
 pub MinHeap.push := fn(h: mut Self, value: Int): Bool {
-    buf: mut List<Int> = h.data;
+    mut buf: List<Int> = h.data;
     ok := pushIntHeap(mut buf, h.cap, value, false);
     if ok { h.data = buf; }
     ok
@@ -143,7 +143,7 @@ pub MinHeap.push := fn(h: mut Self, value: Int): Bool {
 
 /** Removes and returns the minimum value in O(log n). */
 pub MinHeap.pop := fn(h: mut Self): HeapItem<Int> {
-    buf: mut List<Int> = h.data;
+    mut buf: List<Int> = h.data;
     res := popIntHeap(mut buf, false);
     h.data = buf;
     res
@@ -174,7 +174,7 @@ pub MinHeap.clear := fn(h: mut Self): Unit {
 
 /** Inserts `value` into max-heap `h` in O(log n); returns `false` if full. */
 pub MaxHeap.push := fn(h: mut Self, value: Int): Bool {
-    buf: mut List<Int> = h.data;
+    mut buf: List<Int> = h.data;
     ok := pushIntHeap(mut buf, h.cap, value, true);
     if ok { h.data = buf; }
     ok
@@ -182,7 +182,7 @@ pub MaxHeap.push := fn(h: mut Self, value: Int): Bool {
 
 /** Removes and returns the maximum value in O(log n). */
 pub MaxHeap.pop := fn(h: mut Self): HeapItem<Int> {
-    buf: mut List<Int> = h.data;
+    mut buf: List<Int> = h.data;
     res := popIntHeap(mut buf, true);
     h.data = buf;
     res
@@ -225,8 +225,8 @@ pub PriorityQueue.create := fn<T: Type>(capacity: Int): Self<T> {
 pub PriorityQueue.push := fn<T: Type>(pq: mut Self<T>, priority: Int, item: T): Bool {
     cnt := pq.prios.length();
     if cnt >= pq.cap { return false; }
-    ps: mut List<Int> = pq.prios;
-    vs: mut List<T> = pq.items;
+    mut ps: List<Int> = pq.prios;
+    mut vs: List<T> = pq.items;
     mut ps.pushBack(priority);
     mut vs.pushBack(item);
     var idx := cnt;
@@ -255,8 +255,8 @@ pub PriorityQueue.pop := fn<T: Type>(pq: mut Self<T>): PQItem<T> {
     if cnt <= 0 { return .Empty; }
     topP := pq.prios[0];
     topI := pq.items[0];
-    ps: mut List<Int> = pq.prios;
-    vs: mut List<T> = pq.items;
+    mut ps: List<Int> = pq.prios;
+    mut vs: List<T> = pq.items;
     lastP := mut ps.popBack();
     lastI := mut vs.popBack();
     nextCnt := ps.length();

@@ -34,7 +34,7 @@ replaceAllText := fn(source: String, needle: String, replacement: String): Strin
     nLen := needle.length();
     if nLen == 0 { return source; }
     sLen := source.length();
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var pos := 0;
     loop pos < sLen {
         found := source.indexOf(needle, pos);
@@ -71,7 +71,7 @@ readOptStr := fn(src: String, objPos: Int, key: String): String {
 };
 
 readStringList := fn(src: String, objPos: Int, key: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     fld := json.findField(src, objPos, key);
     if not fld.found { return out; }
     offs := json.arrayOffsets(src, fld.valuePos);
@@ -131,7 +131,7 @@ exerciseRelHref := fn(fromOutPath: String, toOutPath: String): String {
 };
 
 renderExerciseList := fn(src: String, subsetOffs: List<Int>): String {
-    cards: mut List<String> = [];
+    mut cards: List<String> = [];
     loop subsetOffs as iPos {
         id := readOptStr(src, iPos, "id");
         title := readOptStr(src, iPos, "title");
@@ -158,14 +158,14 @@ renderGymIndexBody := fn(src: String, itemOffs: List<Int>): String {
     totalCount := itemOffs.length();
     totalStr := totalCount.toText();
 
-    drillOffs: mut List<Int> = [];
-    workoutOffs: mut List<Int> = [];
+    mut drillOffs: List<Int> = [];
+    mut workoutOffs: List<Int> = [];
     var whiteCount := 0;
     var amberCount := 0;
     var emeraldCount := 0;
     var obsidianCount := 0;
-    rawDomains: mut List<String> = [];
-    orderedMetaObjs: mut List<String> = [];
+    mut rawDomains: List<String> = [];
+    mut orderedMetaObjs: List<String> = [];
 
     loop itemOffs as iPos {
         id := readOptStr(src, iPos, "id");
@@ -199,7 +199,7 @@ renderGymIndexBody := fn(src: String, itemOffs: List<Int>): String {
 
     beltNames: List<String> = ["white", "amber", "emerald", "obsidian"];
     beltCounts: List<Int> = [whiteCount, amberCount, emeraldCount, obsidianCount];
-    beltCards: mut List<String> = [];
+    mut beltCards: List<String> = [];
     var bIdx := 0;
     loop bIdx < 4 {
         b := beltNames[bIdx];
@@ -218,7 +218,7 @@ renderGymIndexBody := fn(src: String, itemOffs: List<Int>): String {
     }
 
     sortedDomains := rawDomains.sortTexts();
-    domBtnParts: mut List<String> = [];
+    mut domBtnParts: List<String> = [];
     loop sortedDomains as dom {
         mut domBtnParts.pushBack("<button class=\"gym-filter-btn\" type=\"button\" data-filter-domain=\"" + escapeHtml(dom) + "\" aria-pressed=\"false\">" + escapeHtml(dom) + "</button>");
     }
@@ -524,7 +524,7 @@ curId: String,
 curOutPath: String
 ): String {
     var hasCur := false;
-    liParts: mut List<String> = [];
+    mut liParts: List<String> = [];
     loop subsetOffs as oPos {
         oId := readOptStr(src, oPos, "id");
         oTitle := readOptStr(src, oPos, "title");
@@ -588,7 +588,7 @@ workoutOffs: List<Int>
     hidCount := arrayCountField(src, iPos, "hiddenCases");
     totalCases := visCount + hidCount;
 
-    visCards: mut List<String> = [];
+    mut visCards: List<String> = [];
     loop visOffs as vcPos {
         vcName := readOptStr(src, vcPos, "name");
         vcStdin := readOptStr(src, vcPos, "stdin");
@@ -1249,8 +1249,8 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
     itemOffs := json.arrayOffsets(inputJson, itemsField.valuePos);
     totalCount := itemOffs.length();
 
-    drillOffs: mut List<Int> = [];
-    workoutOffs: mut List<Int> = [];
+    mut drillOffs: List<Int> = [];
+    mut workoutOffs: List<Int> = [];
     loop itemOffs as iPos {
         m := readOptStr(inputJson, iPos, "mode");
         if m == "drill" {
@@ -1260,7 +1260,7 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
         }
     }
 
-    pagesJson: mut List<String> = [];
+    mut pagesJson: List<String> = [];
     indexBody := renderGymIndexBody(inputJson, itemOffs);
     indexPageObj := "{"
     + "\"relPath\":\"gym/index.html\","
@@ -1272,8 +1272,8 @@ pub buildGymPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, e
     + "}";
     mut pagesJson.pushBack(indexPageObj);
 
-    payloadsJson: mut List<String> = [];
-    searchEntriesJson: mut List<String> = [];
+    mut payloadsJson: List<String> = [];
+    mut searchEntriesJson: List<String> = [];
     var idx := 0;
     loop idx < totalCount {
         iPos := itemOffs[idx];

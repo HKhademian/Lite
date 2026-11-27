@@ -34,7 +34,7 @@ runWithModes := fn(label: String, src: String, expected: String, extraArgs: List
 coreOpsSrc :=
 "io := import \"core/io\";\n" +
 "\n" +
-"xs: mut List<Int> = [10, 20];\n" +
+"mut xs: List<Int> = [10, 20];\n" +
 "mut xs.pushBack(30);\n" +
 "mut xs.pushFront(5);\n" +
 "xs[1] += 2;\n" +
@@ -44,7 +44,7 @@ coreOpsSrc :=
 "doubled := xs.map(fn(n) { n * 2 });\n" +
 "big := doubled.filter(fn(n) { n >= 20 });\n" +
 "words: List<String> = [\"a\", \"b\", \"c\"];\n" +
-"words2: mut List<String> = [\"ok\"];\n" +
+"mut words2: List<String> = [\"ok\"];\n" +
 "(mut words2).pushBack(\"hello\");\n" +
 "(((((mut words2))))).pushBack(\"world\");\n" +
 "mut (words2).pushBack(\"!\");\n" +
@@ -57,14 +57,14 @@ coreOpsSrc :=
 "arr[1] += 4;\n" +
 "io.outputLine(arr.length(), arr.isEmpty(), arr[0], arr[1], arr[2]);\n" +
 "\n" +
-"m: mut Map<String, Int>;\n" +
+"mut m: Map<String, Int>;\n" +
 "mut m.set(\"a\", 1);\n" +
 "m[\"b\"] = 2;\n" +
 "m[\"b\"] += 5;\n" +
 "g1 := m.get(\"a\");\n" +
 "io.outputLine(m.size(), m.isEmpty(), m.has(\"a\"), g1.found, g1.value, m.getOr(\"z\", 99), m[\"b\"]);\n" +
 "\n" +
-"s: mut Set<String>;\n" +
+"mut s: Set<String>;\n" +
 "mut s.add(\"x\");\n" +
 "mut s.add(\"y\");\n" +
 "rm := mut s.remove(\"x\");\n" +
@@ -104,9 +104,9 @@ test.check("min ts omits unused List.map", not minTs.stdout.contains("tp_List_op
 
 /* 3. Removed free-function shims and ambient push_back/pop_back are rejected, while dot ops and TypeName.op succeed on TS and C11. */
 rejectSources: List<String> = [
-    "list := import \"core/list\"; xs: mut List<Int> = [1]; _ := list.popBack(mut xs);\n",
-    "xs: mut List<Int> = [1]; push_back(mut xs, 2);\n",
-    "xs: mut List<Int> = [1]; _ := pop_back(mut xs);\n"
+    "list := import \"core/list\"; mut xs: List<Int> = [1]; _ := list.popBack(mut xs);\n",
+    "mut xs: List<Int> = [1]; push_back(mut xs, 2);\n",
+    "mut xs: List<Int> = [1]; _ := pop_back(mut xs);\n"
 ];
 loop rejectSources as rejSrc {
     tsRej := compilerTest.compileStdin(root, tsComp, rejSrc, "");
@@ -119,7 +119,7 @@ loop rejectSources as rejSrc {
 
 acceptBothSrc :=
 "io := import \"core/io\";\n" +
-"xs: mut List<Int> = [1, 2];\n" +
+"mut xs: List<Int> = [1, 2];\n" +
 "mut xs.pushBack(3);\n" +
 "a := mut xs.popBack();\n" +
 "List.pushBack(mut xs, 4);\n" +

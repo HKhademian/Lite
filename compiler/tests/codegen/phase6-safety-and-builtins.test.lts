@@ -124,9 +124,9 @@ checkParity("-fno-check-arithmetic wraps Int8 overflow", arithOvSrc, ["-fno-chec
 
 boundsValidSrc :=
 "io := import \"core/io\";\n" +
-"xs: mut List<Int> = [10, 20, 30];\n" +
+"mut xs: List<Int> = [10, 20, 30];\n" +
 "xs[1] = 25;\n" +
-"arr: mut [Int; 3] = [1, 2, 3];\n" +
+"mut arr: [Int; 3] = [1, 2, 3];\n" +
 "arr[2] = 9;\n" +
 "io.outputLine(xs[1].toText() + \":\" + arr[2].toText());\n";
 
@@ -160,13 +160,13 @@ uncheckedValidSrc :=
 "io := import \"core/io\";\n" +
 "lists := import \"core/list\";\n" +
 "arrs := import \"core/array\";\n" +
-"xs: mut List<Int> = [10, 20, 30];\n" +
+"mut xs: List<Int> = [10, 20, 30];\n" +
 "mut xs.uncheckedSet(1, 77);\n" +
-"arr: mut [Int; 4] = [1, 2, 3, 4];\n" +
+"mut arr: [Int; 4] = [1, 2, 3, 4];\n" +
 "mut arr.uncheckedSet(2, 88);\n" +
-"bits: mut [Bool; 10] = [false, true, false, false, true, false, false, false, true, false];\n" +
+"mut bits: [Bool; 10] = [false, true, false, false, true, false, false, false, true, false];\n" +
 "mut bits.uncheckedSet(7, true);\n" +
-"nibbles: mut [Int4; 6] = [1, -2, 3, -4, 5, -6];\n" +
+"mut nibbles: [Int4; 6] = [1, -2, 3, -4, 5, -6];\n" +
 "mut nibbles.uncheckedSet(4, -7);\n" +
 "io.outputLine(\n" +
 "    xs.uncheckedGet(1).toText() + \":\" + arr.uncheckedGet(2).toText() + \":\" +\n" +
@@ -265,7 +265,7 @@ softAllSrc :=
 "sb1 := UInt64.subWithBorrow(z64, o64, false);\n" +
 "sb2 := UInt64.subWithBorrow(two64, two64, true);\n" +
 "sb3 := UInt64.subWithBorrow(two64, o64, true);\n" +
-"buf: mut List<UInt8> = [1, 2, 3, 4, 5, 6];\n" +
+"mut buf: List<UInt8> = [1, 2, 3, 4, 5, 6];\n" +
 "src: List<UInt8> = [10, 20, 30, 40, 50];\n" +
 "List.fillBytes(mut buf, 1, 3, 9);\n" +
 "List.copyBytes(mut buf, 2, src, 1, 3);\n" +
@@ -319,14 +319,14 @@ checkFault("Int.abs(Int.min) pure faults", absMinSrc, pureModes, "ArithmeticPani
 
 fillOobSrc :=
 "_ := import \"core/list\";\n" +
-"buf: mut List<UInt8> = [1, 2, 3];\n" +
+"mut buf: List<UInt8> = [1, 2, 3];\n" +
 "List.fillBytes(mut buf, 2, 2, 0);\n";
 checkFault("List.fillBytes OOB builtin faults", fillOobSrc, builtinModes, "BoundPanic");
 checkFault("List.fillBytes OOB pure faults", fillOobSrc, pureModes, "BoundPanic");
 
 copyOobSrc :=
 "_ := import \"core/list\";\n" +
-"dst: mut List<UInt8> = [1, 2, 3];\n" +
+"mut dst: List<UInt8> = [1, 2, 3];\n" +
 "src: List<UInt8> = [4, 5];\n" +
 "List.copyBytes(mut dst, 1, src, 1, 2);\n";
 checkFault("List.copyBytes OOB builtin faults", copyOobSrc, builtinModes, "BoundPanic");

@@ -4,7 +4,7 @@ line := io.inputLine();
 shift := io.inputInt();
 k := shift :% 26;
 points := line.toCodePoints();
-out: mut List<Int> = [];
+mut out: List<Int> = [];
 
 loop points as cp {
     nextCp := match {

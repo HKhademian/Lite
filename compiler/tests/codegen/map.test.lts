@@ -19,7 +19,7 @@ cComp := selC.path;
 basicMapSrc :=
 "io := import \"core/io\";\n" +
 "State := enum { Idle; Active; Done; }\n" +
-"scores: mut Map<String, Int>;\n" +
+"mut scores: Map<String, Int>;\n" +
 "scores[\"alice\"] = 10;\n" +
 "mut scores.set(\"bob\", 20);\n" +
 "scores[\"alice\"] = 15;\n" +
@@ -49,7 +49,7 @@ basicMapSrc :=
 "io.outputLine(scores.size());\n" +
 "mut scores.clear();\n" +
 "io.outputLine(scores.size());\n" +
-"labels: mut Map<State, String>;\n" +
+"mut labels: Map<State, String>;\n" +
 "labels[.Idle] = \"waiting\";\n" +
 "mut labels.set(.Active, \"running\");\n" +
 "io.outputLine(labels[.Idle]);\n" +
@@ -65,7 +65,7 @@ compilerTest.assertCompileRunTs(root, tsComp, "basic map operations TS", basicMa
 valueSemSrc :=
 "io := import \"core/io\";\n" +
 "makeCounts := fn(): Map<String, Int> {\n" +
-"    m: mut Map<String, Int>;\n" +
+"    mut m: Map<String, Int>;\n" +
 "    m[\"a\"] = 1;\n" +
 "    m[\"b\"] = 2;\n" +
 "    m\n" +
@@ -88,8 +88,8 @@ valueSemSrc :=
 "var mut m2 := makeCounts();\n" +
 "m2[\"b\"] = 20;\n" +
 "io.outputLine(m2[\"b\"]);\n" +
-"nested: mut Map<String, List<Int>>;\n" +
-"xs: mut List<Int> = [1, 2];\n" +
+"mut nested: Map<String, List<Int>>;\n" +
+"mut xs: List<Int> = [1, 2];\n" +
 "nested[\"nums\"] = xs;\n" +
 "mut xs.pushBack(3);\n" +
 "io.outputLine(nested[\"nums\"]);\n";
@@ -99,7 +99,7 @@ compilerTest.assertCompileRunTs(root, tsComp, "value semantics and nested map TS
 /* 3. Missing key runtime fault on indexing */
 missingKeySrc :=
 "io := import \"core/io\";\n" +
-"m: mut Map<String, Int>;\n" +
+"mut m: Map<String, Int>;\n" +
 "m[\"a\"] = 1;\n" +
 "io.outputLine(m[\"missing\"]);\n";
 missingRun := compilerTest.compileCheckRunTs(root, tsComp, missingKeySrc, "");
@@ -112,8 +112,8 @@ badSrc: List<String> = [
 "m: Map<String, Unit>;\n",
 "m: Map<String, Int>;\nm[\"a\"] = 1;\n",
 "m: Map<String, Int>;\nmut m.set(\"a\", 1);\n",
-"m: mut Map<String, Int>;\nMap.set(m, \"a\", 1);\n",
-"m: mut Map<String, Int>;\nm[42] = 1;\n",
+"mut m: Map<String, Int>;\nMap.set(m, \"a\", 1);\n",
+"mut m: Map<String, Int>;\nm[42] = 1;\n",
 "io := import \"core/io\";\na: Map<String, Int>;\nb: Map<String, Int>;\nio.outputLine(a == b);\n",
 "m: Map<String, Int> = ?;\n"
 ];
@@ -135,7 +135,7 @@ loop bi < 8 {
 
 /* 5. C backend compiles Map values cleanly */
 cMapRes := compilerTest.compileStdin(root, cComp,
-"io := import \"core/io\";\nm: mut Map<String, Int>;\nm[\"a\"] = 1;\nio.outputLine(m[\"a\"]);\n", "");
+"io := import \"core/io\";\nmut m: Map<String, Int>;\nm[\"a\"] = 1;\nio.outputLine(m[\"a\"]);\n", "");
 test.checkInt("map C compiles: " + cMapRes.stderr, 0, cMapRes.status);
 
 test.done("map");

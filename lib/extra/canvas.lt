@@ -31,8 +31,8 @@ var canvasTitle := "";
 var canvasPlaying := false;
 var canvasDrawCount := 0;
 var canvasBg := DEFAULT_BG;
-var canvasPixels: mut List<Int> = [];
-var canvasOps: mut List<Int> = [];
+var mut canvasPixels: List<Int> = [];
+var mut canvasOps: List<Int> = [];
 
 clampByte := fn(value: Int): Int {
     if value < 0 { 0 } else if value > COLOR_CHANNEL_MAX { COLOR_CHANNEL_MAX } else { value }

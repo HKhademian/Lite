@@ -242,7 +242,7 @@
       "expectedStarterFailure": "compile-error",
       "hints": [
         "In-place mutation (`mut items`) is rejected unless `items` was declared with `mut List<Int>`.",
-        "Change `items: List<Int> = [a];` to `items: mut List<Int> = [a];`."
+        "Change `items: List<Int> = [a];` to `mut items: List<Int> = [a];`."
       ],
       "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "lib/core/list.lt"],
       "relatedLessons": ["learn.types.collections.arrays-and-lists"],
@@ -605,7 +605,7 @@
       "brokenStarterSyntax": false,
       "expectedStarterFailure": "compile-error",
       "hints": [
-        "Change `scores: Map<String, Int>;` to `scores: mut Map<String, Int>;` so the map allows writes.",
+        "Change `scores: Map<String, Int>;` to `mut scores: Map<String, Int>;` so the map allows writes.",
         "Pass an explicit `mut` grant to `map.set(mut scores, \"bonus\", bonus);`."
       ],
       "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/maps.md"],
@@ -661,7 +661,7 @@
       "brokenStarterSyntax": false,
       "expectedStarterFailure": "compile-error",
       "hints": [
-        "Change `seen: Set<Int>;` to `seen: mut Set<Int>;` so the set allows mutations.",
+        "Change `seen: Set<Int>;` to `mut seen: Set<Int>;` so the set allows mutations.",
         "Pass an explicit `mut` grant to `set.add(mut seen, 10);` and `set.add(mut seen, x);`."
       ],
       "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/sets.md"],
@@ -1042,7 +1042,7 @@
       "expectedStarterFailure": "wrong-output",
       "hints": [
         "Counting depth alone fails on crossed pairs like `\"([)]\"`.",
-        "Push opening brackets onto a `stack: mut List<String>` and verify `matchingClose(list.popBack(mut stack)) == ch` on every closing bracket."
+        "Push opening brackets onto a `mut stack: List<String>` and verify `matchingClose(list.popBack(mut stack)) == ch` on every closing bracket."
       ],
       "relatedDocs": ["lib/core/list.lt", "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
       "relatedLessons": ["learn.types.collections.arrays-and-lists"],
@@ -1099,7 +1099,7 @@
       "brokenStarterSyntax": false,
       "expectedStarterFailure": "wrong-output",
       "hints": [
-        "Store the matrix flat in `grid: mut List<Int>` at index `r * cols + c`.",
+        "Store the matrix flat in `mut grid: List<Int>` at index `r * cols + c`.",
         "Precompute `rowMin[r]` and `colMax[c]`, then scan row-major for the first cell with `val == rowMin[r] and val == colMax[c]`."
       ],
       "relatedDocs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],
@@ -1361,7 +1361,7 @@
       "brokenStarterSyntax": false,
       "expectedStarterFailure": "wrong-output",
       "hints": [
-        "Pre-parse lines into parallel `ops: mut List<String>` and `args: mut List<Int>` so `JNZ <pc>` can jump to any instruction index `0..instrCount-1`.",
+        "Pre-parse lines into parallel `mut ops: List<String>` and `mut args: List<Int>` so `JNZ <pc>` can jump to any instruction index `0..instrCount-1`.",
         "Track `steps` and return `ERR:LOOP` when exceeding 1000 steps."
       ],
       "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md", "language/learn/handbook/types/tuples-arrays-lists-and-aliases.md"],

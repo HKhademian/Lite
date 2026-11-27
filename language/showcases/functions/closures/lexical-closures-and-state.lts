@@ -15,7 +15,7 @@ cFast := makeCounter(0, 5);
 cOffset := makeCounter(100, 1);
 
 /* Closures can capture and update a surrounding `mut List` across inner scopes. */
-events: mut List<Int> = [];
+mut events: List<Int> = [];
 {
     threshold := 10;
     pushScaled := fn(raw: Int): Unit {
@@ -29,7 +29,7 @@ events: mut List<Int> = [];
 }
 
 /* Loop-body closures capture each iteration's own `item` value independently. */
-getters: mut List<fn(): Int> = [];
+mut getters: List<fn(): Int> = [];
 scale := 10;
 loop [1, 2, 3] as item {
     mut getters.pushBack(fn(): Int { item * scale });

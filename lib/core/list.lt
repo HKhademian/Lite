@@ -54,7 +54,7 @@ pub List.isEmpty := fn<T>(values: Self<T>): Bool {
 
 /** Returns a new list obtained by applying `transform` to every element of `values`. */
 pub List.map := fn<T, U>(values: Self<T>, transform: fn(T): U): List<U> {
-    out: mut List<U> = [];
+    mut out: List<U> = [];
     loop values as item {
         mut out.pushBack(transform(item));
     }
@@ -63,7 +63,7 @@ pub List.map := fn<T, U>(values: Self<T>, transform: fn(T): U): List<U> {
 
 /** Returns a new list containing the elements of `values` satisfying `pred`. */
 pub List.filter := fn<T>(values: Self<T>, pred: fn(T): Bool): List<T> {
-    out: mut List<T> = [];
+    mut out: List<T> = [];
     loop values as item {
         if pred(item) { mut out.pushBack(item); }
     }
@@ -75,9 +75,9 @@ pub List.join := fn(values: Self<String>, separator: String): String {
     n := values.length();
     if n == 0 { return ""; }
     if n == 1 { return values[0]; }
-    var cur: mut List<String> = values;
+    var mut cur: List<String> = values;
     loop cur.length() > 1 {
-        next: mut List<String> = [];
+        mut next: List<String> = [];
         var i := 0;
         m := cur.length();
         loop i + 1 < m {
@@ -96,10 +96,10 @@ pub List.join := fn(values: Self<String>, separator: String): String {
 pub List.sortBy := fn<T: Type>(values: Self<T>, lessOrEqual: fn(T, T): Bool): List<T> {
     n := values.length();
     if n <= 1 { return values; }
-    var src: mut List<T> = values;
+    var mut src: List<T> = values;
     var width := 1;
     loop width < n {
-        dst: mut List<T> = [];
+        mut dst: List<T> = [];
         var left := 0;
         loop left < n {
             mid := if left + width < n { left + width } else { n };
@@ -135,10 +135,10 @@ pub List.sortBy := fn<T: Type>(values: Self<T>, lessOrEqual: fn(T, T): Bool): Li
 pub List.sort := fn<T: Type<OrderedScalar>>(values: Self<T>): List<T> {
     n := values.length();
     if n <= 1 { return values; }
-    var src: mut List<T> = values;
+    var mut src: List<T> = values;
     var width := 1;
     loop width < n {
-        dst: mut List<T> = [];
+        mut dst: List<T> = [];
         var left := 0;
         loop left < n {
             mid := if left + width < n { left + width } else { n };
@@ -174,10 +174,10 @@ pub List.sort := fn<T: Type<OrderedScalar>>(values: Self<T>): List<T> {
 pub List.sortTexts := fn(values: Self<String>): List<String> {
     n := values.length();
     if n <= 1 { return values; }
-    var src: mut List<String> = values;
+    var mut src: List<String> = values;
     var width := 1;
     loop width < n {
-        dst: mut List<String> = [];
+        mut dst: List<String> = [];
         var left := 0;
         loop left < n {
             mid := if left + width < n { left + width } else { n };
@@ -226,8 +226,8 @@ pub List.contains := fn<T: Type<Equatable>>(values: Self<T>, target: T): Bool {
 
 /** Returns unique elements of `values` preserving first-seen order in O(n). */
 pub List.dedup := fn<T: Type<Equatable>>(values: Self<T>): List<T> {
-    seen: mut Set<T>;
-    out: mut List<T> = [];
+    mut seen: Set<T>;
+    mut out: List<T> = [];
     loop values as value {
         if not seen.has(value) {
             mut seen.add(value);

@@ -102,7 +102,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
 
     featField := json.findField(textSrc, 0, "features");
     if not featField.found { return (ok = false, id = "", error = caseFile + ": features must be an array"); }
-    seenFeatures: mut Set<String>;
+    mut seenFeatures: Set<String>;
     loop json.arrayOffsets(textSrc, featField.valuePos) as fPos {
         fStr := json.readStringAt(textSrc, fPos);
         if not fStr.ok { return (ok = false, id = "", error = caseFile + ": features must be strings"); }
@@ -120,7 +120,7 @@ pub validateCaseFile := fn(rootDir: String, caseFile: String): (ok: Bool, id: St
     }
 
     allowedScenario: Set<String> = ["name", "args", "stdin", "stdout", "stderr", "exitCode", "timeoutMs", "artifact", "inputFiles", "outputFiles", "workspace", "tag", "files"];
-    seenScenarios: mut Set<String>;
+    mut seenScenarios: Set<String>;
     loop scenarios as sPos {
         loop json.objectKeys(textSrc, sPos) as sk {
             if not allowedScenario.has(sk) {
@@ -253,7 +253,7 @@ pub matchesCaseFilter := fn(candidate: String, filter: String): Bool {
     filterLen := filter.length();
     startsWild := filter.at(0) == "*";
     endsWild := filter.at(filterLen - 1) == "*";
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var segStart := 0;
     var i := 0;
     loop i <= filterLen {
@@ -311,7 +311,7 @@ pub validateCaseSet := fn(rootDir: String, filter: String): (ok: Bool, matchCoun
     if files.length() == 0 {
         return (ok = false, matchCount = 0, error = "no cases found");
     }
-    seenIds: mut Set<String>;
+    mut seenIds: Set<String>;
     var matches := 0;
     loop files as caseFile {
         checked := validateCaseFile(rootDir, caseFile);
@@ -334,7 +334,7 @@ pub validateCaseSet := fn(rootDir: String, filter: String): (ok: Bool, matchCoun
 pub selectCaseFiles := fn(rootDir: String, filter: String): List<String> {
     files := discoverAllCaseFiles(rootDir);
     if filter == "" { return files; }
-    selected: mut List<String> = [];
+    mut selected: List<String> = [];
     loop files as caseFile {
         readRes := fs.readText(caseFile);
         if readRes.ok {
@@ -416,7 +416,7 @@ buildTsConfigFilesText := fn(rootDir: String, files: List<String>): (ok: Bool, t
     optsField := json.findField(cfgRes.text, 0, "compilerOptions");
     if not optsField.found { return (ok = false, text = "", error = cfgPath + ": missing compilerOptions"); }
 
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     loop json.objectKeys(cfgRes.text, optsField.valuePos) as key {
         if key =!= "types" and key =!= "typeRoots" and key =!= "lib" {
             valField := json.findField(cfgRes.text, optsField.valuePos, key);
@@ -429,7 +429,7 @@ buildTsConfigFilesText := fn(rootDir: String, files: List<String>): (ok: Bool, t
     mut parts.pushBack("\"typeRoots\":[]");
     mut parts.pushBack("\"lib\":[\"ESNext\"]");
 
-    quotedFiles: mut List<String> = [];
+    mut quotedFiles: List<String> = [];
     loop files as f {
         mut quotedFiles.pushBack(json.quoteString(f));
     }
@@ -444,7 +444,7 @@ pub checkTsArtifactFilesWithStatus := fn(rootDir: String, files: List<String>, w
     pkgRes := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
     if not pkgRes.ok { return (ok = false, status = -1, error = pkgRes.error); }
 
-    localFiles: mut List<String> = [];
+    mut localFiles: List<String> = [];
     var idx := 0;
     loop files as srcFile {
         localFile := path.join(workDir, "artifact-" + idx.toText() + ".ts");
@@ -523,7 +523,7 @@ pub writeTsRunner := fn(runnerPath: String): (ok: Bool, error: String) {
 }
 
 runCaseGit := fn(projDir: String, gitArgs: List<String>): (ok: Bool, error: String) {
-    args: mut List<String> = [
+    mut args: List<String> = [
     "-c", "user.name=Case fixture", "-c", "user.email=fixture@example.invalid",
     "-c", "commit.gpgSign=false", "-c", "tag.gpgSign=false",
     "-c", "maintenance.auto=false", "-c", "gc.auto=0",
@@ -575,7 +575,7 @@ prepareToolWorkspace := fn(rootDir: String, caseText: String, sPos: Int, workDir
 }
 
 readStringListAt := fn(caseText: String, arrPos: Int): List<String> {
-    items: mut List<String> = [];
+    mut items: List<String> = [];
     loop json.arrayOffsets(caseText, arrPos) as elPos {
         s := json.readStringAt(caseText, elPos);
         if s.ok { mut items.pushBack(s.value); }
@@ -623,8 +623,8 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
     emptyEnv: List<String> = [];
 
     var actualStatus := -1;
-    var actualStdout: mut List<Int> = [];
-    var actualStderr: mut List<Int> = [];
+    var mut actualStdout: List<Int> = [];
+    var mut actualStderr: List<Int> = [];
     var actualStderrPath := "";
     var artifactSha := "";
     var workspace := rootDir;
@@ -635,7 +635,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
         workspace = wsRes.workspace;
         toolName := json.readFieldString(caseText, 0, "tool").value;
 
-        cmdArgs: mut List<String> = [path.join(workspace, "bin/" + toolName)];
+        mut cmdArgs: List<String> = [path.join(workspace, "bin/" + toolName)];
         loop scenarioArgs as arg {
             mut cmdArgs.pushBack(arg);
         }
@@ -719,7 +719,7 @@ verifyScenarioInWork := fn(rootDir: String, absFile: String, scenarioIdx: Int, w
             runnerPath := path.join(work, "runner.ts");
             wRun := writeTsRunner(runnerPath);
             if not wRun.ok { return (ok = false, artifactSha = "", error = wRun.error); }
-            runArgs: mut List<String> = [runnerPath, outputTsPath];
+            mut runArgs: List<String> = [runnerPath, outputTsPath];
             loop scenarioArgs as arg {
                 mut runArgs.pushBack(arg);
             }
@@ -787,7 +787,7 @@ pub verifyCaseScenario := fn(rootDir: String, caseFile: String, scenarioIdx: Int
 }
 
 hashFileMapJson := fn(caseText: String, objPos: Int, caseDir: String): String {
-    entries: mut List<String> = [];
+    mut entries: List<String> = [];
     loop json.objectKeys(caseText, objPos) as fname {
         fv := json.findField(caseText, objPos, fname);
         digest := crypto.sha256Bytes(streams.readStreamBytes(caseText, fv.valuePos, caseDir));
@@ -816,14 +816,14 @@ pub caseIdentityJson := fn(rootDir: String, caseFile: String): (ok: Bool, jsonTe
     if not sourceHash.ok { return (ok = false, jsonText = "", error = sourceHash.error); }
 
     casesField := json.findField(caseText, 0, "cases");
-    scenarioJsonList: mut List<String> = [];
+    mut scenarioJsonList: List<String> = [];
     loop json.arrayOffsets(caseText, casesField.valuePos) as sPos {
         sName := json.readFieldString(caseText, sPos, "name").value;
         stdinHash := crypto.sha256Bytes(streams.readStreamBytes(caseText, json.findField(caseText, sPos, "stdin").valuePos, caseDir));
         stdoutHash := crypto.sha256Bytes(streams.readStreamBytes(caseText, json.findField(caseText, sPos, "stdout").valuePos, caseDir));
         stderrHash := crypto.sha256Bytes(streams.readStreamBytes(caseText, json.findField(caseText, sPos, "stderr").valuePos, caseDir));
 
-        fields: mut List<String> = [
+        mut fields: List<String> = [
         "\"name\":" + json.quoteString(sName),
         "\"stdin\":" + json.quoteString(stdinHash),
         "\"stdout\":" + json.quoteString(stdoutHash),
@@ -872,7 +872,7 @@ pub runCaseCli := fn(rootDir: String, rawArgs: List<String>): Int {
         return 1;
     }
 
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--cases" {
         _flag := mut args.popFront();
     }
@@ -887,7 +887,7 @@ pub runCaseCli := fn(rootDir: String, rawArgs: List<String>): Int {
     selection := if args.length() == 1 { args[0] } else { "" };
     fileMode := selection =!= "" and selection.endsWith(".json");
 
-    var caseFiles: mut List<String> = [];
+    var mut caseFiles: List<String> = [];
     if fileMode {
         absFile := path.resolve(proc.cwd(), selection);
         checked := validateCaseFile(rootDir, absFile);

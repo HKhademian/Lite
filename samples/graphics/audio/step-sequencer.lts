@@ -22,7 +22,7 @@ Sequencer := record {
 };
 
 /* Flattened 4 rows x 4 steps active pattern */
-cells: mut List<Bool> = [
+mut cells: List<Bool> = [
 true, false, false, true,
 false, true, false, false,
 false, false, true, false,

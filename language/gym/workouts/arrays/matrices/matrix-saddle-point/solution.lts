@@ -5,7 +5,7 @@ cols := io.inputInt();
 if rows <= 0 or cols <= 0 {
     io.outputLine("NONE");
 } else {
-    grid: mut List<Int> = [];
+    mut grid: List<Int> = [];
     var idx := 0;
     total := rows * cols;
     loop idx < total {
@@ -13,7 +13,7 @@ if rows <= 0 or cols <= 0 {
         idx += 1;
     }
 
-    rowMin: mut List<Int> = [];
+    mut rowMin: List<Int> = [];
     var r := 0;
     loop r < rows {
         var lo := grid[r * cols];
@@ -27,7 +27,7 @@ if rows <= 0 or cols <= 0 {
         r += 1;
     }
 
-    colMax: mut List<Int> = [];
+    mut colMax: List<Int> = [];
     var c2 := 0;
     loop c2 < cols {
         var hi := grid[c2];

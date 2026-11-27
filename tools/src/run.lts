@@ -32,7 +32,7 @@ parsePosInt := fn(raw: String): Int {
 };
 
 escapeLiteString := fn(raw: String): String {
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     n := raw.length();
     var runStart := 0;
     var i := 0;
@@ -51,7 +51,7 @@ escapeLiteString := fn(raw: String): String {
 };
 
 splitLines := fn(source: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     n := source.length();
     var pos := 0;
     loop pos <= n {
@@ -384,8 +384,8 @@ buildPlayWrapper := fn(source: String, canvasAlias: String, scale: Int, fps: Int
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    args: mut List<String> = rawArgs;
-    builtinOpts: mut List<String> = [];
+    mut args: List<String> = rawArgs;
+    mut builtinOpts: List<String> = [];
     var target := "ts";
     var targetSet := false;
     var sanitize := false;
@@ -546,7 +546,7 @@ run := fn(rawArgs: List<String>): Unit {
         }
     }
 
-    compileArgs: mut List<String> = [sel.path];
+    mut compileArgs: List<String> = [sel.path];
     loop builtinOpts as opt {
         mut compileArgs.pushBack(opt);
     }
@@ -563,7 +563,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(compiled.status);
     }
 
-    runEnv: mut List<String> = [];
+    mut runEnv: List<String> = [];
     if playCapture =!= "" {
         mut runEnv.pushBack("LITE_CANVAS_HEADLESS=1");
     }
@@ -579,7 +579,7 @@ run := fn(rawArgs: List<String>): Unit {
             io.exit(1);
         }
         binPath := path.join(tempDir.path, baseNoExt);
-        ccArgs: mut List<String> = ["-std=c11", "-O1", cArtifact, "-o", binPath, "-lm"];
+        mut ccArgs: List<String> = ["-std=c11", "-O1", cArtifact, "-o", binPath, "-lm"];
         if sanitize {
             mut ccArgs.pushBack("-fsanitize=address,undefined");
             mut ccArgs.pushBack("-DLITE_ALLOC_SYSTEM");
@@ -645,7 +645,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(1);
     }
 
-    entryArgs: mut List<String> = [runnerPath];
+    mut entryArgs: List<String> = [runnerPath];
     loop args as arg {
         mut entryArgs.pushBack(arg);
     }

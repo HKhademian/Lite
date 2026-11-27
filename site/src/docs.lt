@@ -22,8 +22,8 @@ pub relativeHref := fn(fromOutPath: String, toOutPath: String): String {
         fromDir.split("/")
     };
     toPartsRaw := toOutPath.split("/");
-    fromParts: mut List<String> = [];
-    toParts: mut List<String> = [];
+    mut fromParts: List<String> = [];
+    mut toParts: List<String> = [];
     loop fromPartsRaw as fp { if fp =!= "" and fp =!= "." { mut fromParts.pushBack(fp); } }
     loop toPartsRaw as tp { if tp =!= "" and tp =!= "." { mut toParts.pushBack(tp); } }
 
@@ -33,7 +33,7 @@ pub relativeHref := fn(fromOutPath: String, toOutPath: String): String {
     loop common < fnLen and common < tnLen and fromParts[common] == toParts[common] {
         common = common + 1;
     }
-    ups: mut List<String> = [];
+    mut ups: List<String> = [];
     var ui := common;
     loop ui < fnLen {
         mut ups.pushBack("..");
@@ -54,7 +54,7 @@ pub relativeHref := fn(fromOutPath: String, toOutPath: String): String {
 };
 
 listSortedMdInDir := fn(dirPath: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     if fs.kind(dirPath) =!= fs.FILE_KIND_DIR { return out; }
     loop fs.listDir(dirPath).sortTexts() as name {
         full := path.join(dirPath, name);
@@ -89,7 +89,7 @@ claimOutPath := fn(usedOut: mut Set<String>, preferred: String): String {
 };
 
 loadVerifiedDocsSet := fn(rootDir: String): Set<String> {
-    out: mut Set<String>;
+    mut out: Set<String>;
     cfg := fs.readText(path.join(rootDir, "config/documentation.json"));
     if not cfg.ok { return out; }
     entries := json.findField(cfg.text, 0, "verifiedExamples");
@@ -115,7 +115,7 @@ loadSnippetsJson := fn(rootDir: String): String {
     cfgJson := cfgRead.text;
     snF := json.findField(cfgJson, 0, "snippets");
     if not snF.found { return "[]"; }
-    entries: mut List<String> = [];
+    mut entries: List<String> = [];
     loop json.arrayOffsets(cfgJson, snF.valuePos) as sp {
         docR := json.readFieldString(cfgJson, sp, "document");
         srcR := json.readFieldString(cfgJson, sp, "source");
@@ -171,14 +171,14 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     "Dual-target TS & C11 parity, 3-generation self-hosting, ./bin/lite build, -O0..-O3/-Os, and ./bin/lite ignite."
     ];
 
-    metaSrcs: mut List<String> = [];
-    metaOuts: mut List<String> = [];
-    metaLayers: mut List<String> = [];
-    metaGroups: mut List<String> = [];
-    metaNavs: mut List<String> = [];
-    metaSums: mut List<String> = [];
-    metaChSlugs: mut List<String> = [];
-    metaVerified: mut List<Bool> = [];
+    mut metaSrcs: List<String> = [];
+    mut metaOuts: List<String> = [];
+    mut metaLayers: List<String> = [];
+    mut metaGroups: List<String> = [];
+    mut metaNavs: List<String> = [];
+    mut metaSums: List<String> = [];
+    mut metaChSlugs: List<String> = [];
+    mut metaVerified: List<Bool> = [];
 
     verifiedDocs := loadVerifiedDocsSet(rootDir);
     var hi := 0;
@@ -194,14 +194,14 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         hi = hi + 1;
     }
 
-    usedOut: mut Set<String>;
+    mut usedOut: Set<String>;
 
     startOrder: List<String> = [
     "docs/README.md", "docs/start-here.md", "docs/tour.md", "docs/white-paper.md",
     "docs/principles.md", "docs/decisions-and-open-questions.md", "docs/spec/README.md",
     "docs/normative-pages.md", "docs/grammar-sketch.md"
     ];
-    startSeen: mut Set<String>;
+    mut startSeen: Set<String>;
     loop startOrder as src {
         if fs.kind(path.join(rootDir, src)) == fs.FILE_KIND_FILE {
             mut startSeen.add(src);
@@ -281,7 +281,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     }
 
     compOrder: List<String> = ["compiler/README.md", "compiler/transition-plan.md", "compiler/parity.md", "compiler/gaps.md"];
-    compAll: mut List<String> = [];
+    mut compAll: List<String> = [];
     loop compOrder as cp {
         if fs.kind(path.join(rootDir, cp)) == fs.FILE_KIND_FILE { mut compAll.pushBack(cp); }
     }
@@ -289,7 +289,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         cp := "compiler/" + file;
         if not compOrder.contains(cp) { mut compAll.pushBack(cp); }
     }
-    compSeen: mut Set<String>;
+    mut compSeen: Set<String>;
     loop compAll as src {
         if compSeen.has(src) { continue; }
         (mut compSeen).add(src);
@@ -346,9 +346,9 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
         bi = bi + 1;
     }
 
-    metasJson: mut List<String> = [];
-    mapJson: mut List<String> = [];
-    renderedJson: mut List<String> = [];
+    mut metasJson: List<String> = [];
+    mut mapJson: List<String> = [];
+    mut renderedJson: List<String> = [];
     var mi := 0;
     loop mi < metaSrcs.length() {
         src := metaSrcs[mi];
@@ -431,7 +431,7 @@ injectBeforeFirstH2 := fn(html: String, block: String): String {
 renderChapterRoadmap := fn(
 chIdx: Int, hbSubChIdx: List<Int>, hbSubIds: List<String>, hbSubLabels: List<String>
 ): String {
-    items: mut List<String> = [];
+    mut items: List<String> = [];
     var si := 0;
     var num := 1;
     totalSubs := hbSubChIdx.length();
@@ -488,7 +488,7 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
 
     if layer == "handbook" {
         isSinglePage := activeOutPath == "docs/handbook/single-page.html";
-        treeOut: mut tb.TextBuilder;
+        mut treeOut: tb.TextBuilder;
         totalSubs := hbSubChIdx.length();
         var hi := 0;
         loop hi < hbOuts.length() {
@@ -579,7 +579,7 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
         gymHref := relativeHref(activeOutPath, "gym/");
         playHref := relativeHref(activeOutPath, "playground/");
 
-        aside: mut tb.TextBuilder;
+        mut aside: tb.TextBuilder;
         mut aside.append("<aside class=\"portal-sidebar hb-sidebar\" aria-label=\"Handbook navigation\">\n");
         mut aside.append("      <div class=\"docs-layer-tabs\" role=\"tablist\" aria-label=\"Documentation layer\">\n");
         mut aside.append("        <span class=\"docs-layer-tab active\" aria-selected=\"true\">Handbook</span>\n");
@@ -628,11 +628,11 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
 
     grpIds: List<String> = ["start", "design", "proposals", "compiler", "brand"];
     grpTitles: List<String> = ["Start & Overview", "Design Reference", "Proposals (LP)", "Compiler & Contribute", "Brand & Identity"];
-    grpsOut: mut tb.TextBuilder;
+    mut grpsOut: tb.TextBuilder;
     var gi := 0;
     loop gi < 5 {
         gid := grpIds[gi];
-        lisOut: mut tb.TextBuilder;
+        mut lisOut: tb.TextBuilder;
         var hasActive := gid == "start";
         var cnt := 0;
         var si := 0;
@@ -673,7 +673,7 @@ spOuts: List<String>, spGroups: List<String>, spNavs: List<String>, spTitles: Li
         gi = gi + 1;
     }
 
-    specAside: mut tb.TextBuilder;
+    mut specAside: tb.TextBuilder;
     appendSpecSidebarStart(mut specAside, hbIndexHref);
     mut specAside.append(grpsOut.build());
     mut specAside.append("\n    </aside>");
@@ -691,11 +691,11 @@ dirOutSample: String, spOuts: List<String>, spGroups: List<String>, spNavs: List
 ): List<String> {
     grpIds: List<String> = ["start", "design", "proposals", "compiler", "brand"];
     grpTitles: List<String> = ["Start & Overview", "Design Reference", "Proposals (LP)", "Compiler & Contribute", "Brand & Identity"];
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var gi := 0;
     loop gi < 5 {
         gid := grpIds[gi];
-        lisOut: mut tb.TextBuilder;
+        mut lisOut: tb.TextBuilder;
         var cnt := 0;
         var si := 0;
         loop si < spOuts.length() {
@@ -718,7 +718,7 @@ dirOutSample: String, spOuts: List<String>, spGroups: List<String>, spNavs: List
         }
         if cnt > 0 {
             openAttr := if gid == "start" { " open" } else { "" };
-            blk: mut tb.TextBuilder;
+            mut blk: tb.TextBuilder;
             mut blk.append("<details class=\"portal-nav-group\"");
             mut blk.append(openAttr);
             mut blk.append(">\n        <summary>");
@@ -745,7 +745,7 @@ activeOutPath: String, activeGroup: String, tmpls: List<String>, baseIdx: Int
     activeHref := escapeHtml(siteLib.posixBasename(activeOutPath, ""));
     activeNeedle := "<a href=\"" + activeHref + "\">";
     activeRepl := "<a href=\"" + activeHref + "\" class=\"active\">";
-    grpsOut: mut tb.TextBuilder;
+    mut grpsOut: tb.TextBuilder;
     var gi := 0;
     loop gi < 5 {
         blk := tmpls[baseIdx + gi];
@@ -764,7 +764,7 @@ activeOutPath: String, activeGroup: String, tmpls: List<String>, baseIdx: Int
         }
         gi = gi + 1;
     }
-    specAside: mut tb.TextBuilder;
+    mut specAside: tb.TextBuilder;
     appendSpecSidebarStart(mut specAside, hbIndexHref);
     mut specAside.append(grpsOut.build());
     mut specAside.append("\n    </aside>");
@@ -772,7 +772,7 @@ activeOutPath: String, activeGroup: String, tmpls: List<String>, baseIdx: Int
 };
 
 rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOutIndex: Map<String, Int>, hbChapterIds: List<String>): String {
-    withIds: mut tb.TextBuilder;
+    mut withIds: tb.TextBuilder;
     len := html.length();
     var pos := 0;
     loop pos < len {
@@ -797,7 +797,7 @@ rewriteSinglePageChapterHtml := fn(html: String, anchorPrefix: String, hbOutInde
     }
     step1 := withIds.build();
 
-    withLinks: mut tb.TextBuilder;
+    mut withLinks: tb.TextBuilder;
     sLen := step1.length();
     pos = 0;
     needle := "href=\"";
@@ -870,39 +870,39 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     if not entriesF.found { return (ok = false, jsonText = "", error = "missing entries field"); }
     entryOffs := json.arrayOffsets(inputJson, entriesF.valuePos);
 
-    hbSrcs: mut List<String> = [];
-    hbOuts: mut List<String> = [];
-    hbNavs: mut List<String> = [];
-    hbSums: mut List<String> = [];
-    hbSlugs: mut List<String> = [];
-    hbTitles: mut List<String> = [];
-    hbStatuses: mut List<String> = [];
-    hbVerified: mut List<Bool> = [];
-    hbHtmls: mut List<String> = [];
-    hbRelated: mut List<String> = [];
-    hbTocHtmls: mut List<String> = [];
-    hbTocSearchJson: mut List<String> = [];
-    hbSubChIdx: mut List<Int> = [];
-    hbSubIds: mut List<String> = [];
-    hbSubTexts: mut List<String> = [];
-    hbSubLabels: mut List<String> = [];
+    mut hbSrcs: List<String> = [];
+    mut hbOuts: List<String> = [];
+    mut hbNavs: List<String> = [];
+    mut hbSums: List<String> = [];
+    mut hbSlugs: List<String> = [];
+    mut hbTitles: List<String> = [];
+    mut hbStatuses: List<String> = [];
+    mut hbVerified: List<Bool> = [];
+    mut hbHtmls: List<String> = [];
+    mut hbRelated: List<String> = [];
+    mut hbTocHtmls: List<String> = [];
+    mut hbTocSearchJson: List<String> = [];
+    mut hbSubChIdx: List<Int> = [];
+    mut hbSubIds: List<String> = [];
+    mut hbSubTexts: List<String> = [];
+    mut hbSubLabels: List<String> = [];
 
-    spSrcs: mut List<String> = [];
-    spOuts: mut List<String> = [];
-    spGroups: mut List<String> = [];
-    spNavs: mut List<String> = [];
-    spSums: mut List<String> = [];
-    spVerified: mut List<Bool> = [];
-    spTitles: mut List<String> = [];
-    spStatuses: mut List<String> = [];
-    spHtmls: mut List<String> = [];
-    spRelated: mut List<String> = [];
-    spTocHtmls: mut List<String> = [];
-    spTocL2Ids: mut List<String> = [];
+    mut spSrcs: List<String> = [];
+    mut spOuts: List<String> = [];
+    mut spGroups: List<String> = [];
+    mut spNavs: List<String> = [];
+    mut spSums: List<String> = [];
+    mut spVerified: List<Bool> = [];
+    mut spTitles: List<String> = [];
+    mut spStatuses: List<String> = [];
+    mut spHtmls: List<String> = [];
+    mut spRelated: List<String> = [];
+    mut spTocHtmls: List<String> = [];
+    mut spTocL2Ids: List<String> = [];
 
     emptyStrs: List<String> = [];
 
-    referenceChapters: mut List<String> = [];
+    mut referenceChapters: List<String> = [];
     loop entryOffs as ep {
         mF := json.findField(inputJson, ep, "meta");
         mp := mF.valuePos;
@@ -926,9 +926,9 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mRel := if relHtmlR.found and relHtmlR.ok { relHtmlR.value } else { "" };
 
         curHbIdx := hbOuts.length();
-        tocItemsHtml: mut List<String> = [];
-        tocL2Parts: mut List<String> = [];
-        referenceTopics: mut List<String> = [];
+        mut tocItemsHtml: List<String> = [];
+        mut tocL2Parts: List<String> = [];
+        mut referenceTopics: List<String> = [];
         tocF := json.findField(inputJson, ep, "toc");
         if tocF.found {
             loop json.arrayOffsets(inputJson, tocF.valuePos) as tp {
@@ -998,8 +998,8 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     hbCount := hbOuts.length();
     spCount := spOuts.length();
 
-    pagesJson: mut List<String> = [];
-    searchEntriesJson: mut List<String> = [
+    mut pagesJson: List<String> = [];
+    mut searchEntriesJson: List<String> = [
     "{\"kind\":\"handbook\",\"title\":\"Lite Language Reference\",\"subtitle\":\"Find a syntax rule or example by topic\",\"href\":\"docs/reference.html\",\"keywords\":\"language reference syntax handbook topics\"}",
     "{\"kind\":\"handbook\",\"title\":\"Single-Page Lite Handbook\",\"subtitle\":\"All " + hbCount.toText() + " Shipped Handbook chapters on one searchable page\",\"href\":\"docs/handbook/single-page.html\",\"keywords\":\"handbook single page complete shipped guide\",\"badge\":\"Handbook\"}",
     "{\"kind\":\"doc\",\"title\":\"Design Specification Index\",\"subtitle\":\"All design documents, LP proposals, and compiler architecture pages\",\"href\":\"docs/spec/\",\"keywords\":\"design spec proposals compiler index\",\"badge\":\"Spec\"}"
@@ -1011,7 +1011,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     + "<div class=\"portal-grid reference-topics\">" + referenceChapters.join("\n") + "</div>";
     mut pagesJson.pushBack("{\"relPath\":\"docs/reference.html\",\"title\":\"Language Reference — Lite\",\"description\":\"Browse the language by topic and jump to Handbook examples.\",\"basePath\":\"../\",\"body\":" + json.quoteString(referenceBody) + "}");
 
-    hbCards: mut List<String> = [];
+    mut hbCards: List<String> = [];
     var hi := 0;
     loop hi < hbCount {
         href := relativeHref("docs/index.html", hbOuts[hi]);
@@ -1029,7 +1029,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         hi = hi + 1;
     }
 
-    specHighlights: mut List<String> = [];
+    mut specHighlights: List<String> = [];
     var si := 0;
     loop si < spCount {
         if (spGroups[si] == "start" or spSrcs[si] == "compiler/README.md") and specHighlights.length() < 6 {
@@ -1099,7 +1099,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     + "</section>";
     mut pagesJson.pushBack("{\"relPath\":\"docs/index.html\",\"title\":\"Docs — Lite\",\"description\":\"Start using Lite, learn the language in the Handbook, and find module, CLI, and design references.\",\"basePath\":\"../\",\"body\":" + json.quoteString(docsLandingBody) + "}");
 
-    startCards: mut List<String> = [];
+    mut startCards: List<String> = [];
     si = 0;
     loop si < spCount {
         if spGroups[si] == "start" {
@@ -1118,7 +1118,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         }
         si = si + 1;
     }
-    specBodyOut: mut tb.TextBuilder;
+    mut specBodyOut: tb.TextBuilder;
     mut specBodyOut.append("<div class=\"portal-layout-2col\">\n  ");
     mut specBodyOut.append(renderDocsSidebar("spec", "docs/spec/index.html", emptyStrs, emptyStrs, emptyStrs, emptyStrs, hbSubChIdx, emptyStrs, emptyStrs, emptyStrs, spOuts, spGroups, spNavs, spTitles, spVerified));
     mut specBodyOut.append("\n  <article class=\"md-prose\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n    </div>\n    <h1>Full Design Specification, Proposals &amp; Compiler Docs</h1>\n    <p class=\"hero-lead\">\n      Browse all ");
@@ -1128,8 +1128,8 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     mut specBodyOut.append("\n    </div>\n  </article>\n</div>");
     mut pagesJson.pushBack("{\"relPath\":\"docs/spec/index.html\",\"title\":\"Design Specification — Docs — Lite\",\"description\":\"LiteLang design specification, proposals, and compiler documentation index.\",\"basePath\":\"../../\",\"body\":" + json.quoteString(specBodyOut.build()) + "}");
 
-    hbChapterIds: mut List<String> = [];
-    hbOutIndex: mut Map<String, Int>;
+    mut hbChapterIds: List<String> = [];
+    mut hbOutIndex: Map<String, Int>;
     hi = 0;
     loop hi < hbCount {
         chSlug := if hbSlugs[hi] =!= "" { hbSlugs[hi] } else { hbNavs[hi] };
@@ -1137,8 +1137,8 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut hbOutIndex.set(hbOuts[hi], hi);
         hi = hi + 1;
     }
-    chBlocksOut: mut tb.TextBuilder;
-    singleTocOut: mut tb.TextBuilder;
+    mut chBlocksOut: tb.TextBuilder;
+    mut singleTocOut: tb.TextBuilder;
     hi = 0;
     loop hi < hbCount {
         chSlug := if hbSlugs[hi] =!= "" { hbSlugs[hi] } else { "ch-" + (hi + 1).toText() };
@@ -1164,7 +1164,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         hi = hi + 1;
     }
     emptyBools: List<Bool> = [];
-    singleBodyOut: mut tb.TextBuilder;
+    mut singleBodyOut: tb.TextBuilder;
     mut singleBodyOut.append("<div class=\"portal-layout\" id=\"top\">\n  ");
     mut singleBodyOut.append(renderDocsSidebar("handbook", "docs/handbook/single-page.html", hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, emptyStrs, emptyStrs, emptyStrs, emptyStrs, emptyBools));
     mut singleBodyOut.append("\n  <article class=\"md-prose\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Chapters &amp; Topics</button>\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">Chapters Jump</button>\n    </div>\n    <div class=\"hb-kicker-bar\">\n      <nav class=\"hb-breadcrumbs\" aria-label=\"Breadcrumb\">\n        <a href=\"../\">Docs</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <a href=\"overview-and-setup.html\">Handbook</a>\n        <span aria-hidden=\"true\">&rsaquo;</span>\n        <span class=\"hb-kicker-chapter\">Single-Page View</span>\n      </nav>\n      <div class=\"docs-badge-row\"><span class=\"status-pill status-pill-shipped\">100% Runnable in TS</span></div>\n    </div>\n    <h1>The Lite Handbook (Single-Page Edition)</h1>\n    <p class=\"hero-lead\">All " + hbCount.toText() + " Handbook chapters on one page for reading, searching, or printing.</p>\n    ");
@@ -1217,7 +1217,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         tocEditLink := if repoUrl =!= "" {
             "\n      <a href=\"" + escapeHtml(repoUrl + "/blob/main/" + mSrc) + "\">View source</a>"
         } else { "" };
-        bodyOut: mut tb.TextBuilder;
+        mut bodyOut: tb.TextBuilder;
         mut bodyOut.append("<div class=\"portal-layout\" id=\"top\">\n  ");
         mut bodyOut.append(renderDocsSidebar("handbook", mOut, hbOuts, hbNavs, hbSlugs, hbSums, hbSubChIdx, hbSubIds, hbSubTexts, hbSubLabels, spOuts, spGroups, spNavs, spTitles, spVerified));
         mut bodyOut.append("\n  <article class=\"md-prose\" data-handbook-slug=\"");
@@ -1255,7 +1255,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         dispTitle := if dTitle =!= "" { dTitle } else { mNav };
         pTitle := dispTitle + " — Handbook — Lite";
         pDesc := if mSum =!= "" { mSum } else { dTitle + " (" + mSrc + ")" };
-        pageEntry: mut tb.TextBuilder;
+        mut pageEntry: tb.TextBuilder;
         mut pageEntry.append("{\"relPath\":");
         mut pageEntry.append(json.quoteString(mOut));
         mut pageEntry.append(",\"title\":");
@@ -1267,7 +1267,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut pageEntry.append("}");
         mut pagesJson.pushBack(pageEntry.build());
 
-        searchEntry: mut tb.TextBuilder;
+        mut searchEntry: tb.TextBuilder;
         mut searchEntry.append("{\"kind\":\"handbook\",\"title\":");
         mut searchEntry.append(json.quoteString(dispTitle));
         mut searchEntry.append(",\"subtitle\":");
@@ -1281,9 +1281,9 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         hi = hi + 1;
     }
 
-    specDirIndex: mut Map<String, Int>;
+    mut specDirIndex: Map<String, Int>;
     var specDirCount := 0;
-    specDirTmpls: mut List<String> = [];
+    mut specDirTmpls: List<String> = [];
     si = 0;
     loop si < spCount {
         mSrc := spSrcs[si];
@@ -1320,7 +1320,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         } else {
             "<code>" + escapeHtml(mSrc) + "</code>"
         };
-        spBodyOut: mut tb.TextBuilder;
+        mut spBodyOut: tb.TextBuilder;
         mut spBodyOut.append("<div class=\"portal-layout\" id=\"top\">\n  ");
         mut spBodyOut.append(renderSpecSidebarFromTemplates(mOut, mGrp, specDirTmpls, dirIdx * 5));
         mut spBodyOut.append("\n  <article class=\"md-prose\">\n    <div class=\"portal-mobile-bar\">\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"sidebar\">Spec Menu</button>\n      <button class=\"btn\" type=\"button\" data-drawer-toggle=\"toc\">On This Page</button>\n    </div>\n    <div class=\"portal-card-head\" style=\"margin-bottom: 0.65rem;\">\n      <span class=\"code-card-meta\"><a href=\"");
@@ -1349,7 +1349,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         dispTitle := if dTitle =!= "" { dTitle } else { mNav };
         pTitle := dispTitle + (if isGuide { " — Guide — Lite" } else { " — Design Spec — Lite" });
         pDesc := if mSum =!= "" { mSum } else { dTitle + " (" + mSrc + ")" };
-        spPageEntry: mut tb.TextBuilder;
+        mut spPageEntry: tb.TextBuilder;
         mut spPageEntry.append("{\"relPath\":");
         mut spPageEntry.append(json.quoteString(mOut));
         mut spPageEntry.append(",\"title\":");
@@ -1361,7 +1361,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
         mut spPageEntry.append("}");
         mut pagesJson.pushBack(spPageEntry.build());
 
-        spSearchEntry: mut tb.TextBuilder;
+        mut spSearchEntry: tb.TextBuilder;
         mut spSearchEntry.append("{\"kind\":\"doc\",\"title\":");
         mut spSearchEntry.append(json.quoteString(dispTitle));
         mut spSearchEntry.append(",\"subtitle\":");
@@ -1381,7 +1381,7 @@ pub buildDocsPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: String, 
     loop spTocL2Ids as sse { mut searchEntriesJson.pushBack(sse); }
 
     docsPageCount := pagesJson.length();
-    payloadOut: mut tb.TextBuilder;
+    mut payloadOut: tb.TextBuilder;
     mut payloadOut.append("{\"docsPageCount\":");
     mut payloadOut.append(docsPageCount.toText());
     mut payloadOut.append(",\"handbookCount\":");

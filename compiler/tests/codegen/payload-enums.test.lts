@@ -172,7 +172,7 @@ cowSrc :=
 "    val: Option<String>;\n" +
 "}\n" +
 "\n" +
-"var srcList: mut List<Int> = [1, 2];\n" +
+"var mut srcList: List<Int> = [1, 2];\n" +
 "oList: Option<List<Int>> = .Some(srcList);\n" +
 "(mut srcList).pushBack(99);\n" +
 "oListLen := match oList {\n" +
@@ -180,9 +180,9 @@ cowSrc :=
 "    .None { -1 }\n" +
 "};\n" +
 "\n" +
-"var listOpts: mut List<Option<Int>> = [.None, .Some(10)];\n" +
+"var mut listOpts: List<Option<Int>> = [.None, .Some(10)];\n" +
 "(mut listOpts).pushBack(.Some(20));\n" +
-"var mOpts: mut Map<String, Option<Int>>;\n" +
+"var mut mOpts: Map<String, Option<Int>>;\n" +
 "(mut mOpts).set(\"a\", .Some(33));\n" +
 "h := Holder { label = \"h1\", val = .Some(\"hello\") };\n" +
 "mLookup := mOpts.get(\"a\");\n" +

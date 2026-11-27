@@ -30,7 +30,7 @@ smokeUnitTestFiles := fn(): List<String> {
 };
 
 readGeneratedTestFiles := fn(root: String): List<String> {
-    files: mut List<String> = [];
+    mut files: List<String> = [];
     readRes := fs.readText(path.resolve(root, "igniter/test-suites.ts"));
     if not readRes.ok {
         io.errorLine(readRes.error);
@@ -74,7 +74,7 @@ runPostTestGate := fn(nodeExe: String, args: List<String>, root: String, emptyEn
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "tester", "test");
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--unit-worker" {
         _flag := mut args.popFront();
         if args.length() =!= 1 {
@@ -121,7 +121,7 @@ run := fn(rawArgs: List<String>): Unit {
     reporter := if outputMode == "--verbose" { "spec" } else { "dot" };
     quiet := outputMode == "--mute" or outputMode == "--silence";
 
-    envOverrides: mut List<String> = ["=NODE_TEST_CONTEXT"];
+    mut envOverrides: List<String> = ["=NODE_TEST_CONTEXT"];
     nativeVar := proc.envGet("LITE_TEST_NATIVE");
     if not nativeVar.found or nativeVar.value =!= "1" {
         mut envOverrides.pushBack("LITE_SKIP_NATIVE=1");
@@ -133,7 +133,7 @@ run := fn(rawArgs: List<String>): Unit {
 
     root := project.findRepoRoot();
     suites := if mode == "--smoke" { smokeTestFiles() } else { readGeneratedTestFiles(root) };
-    nodeArgs: mut List<String> = ["--test", "--test-reporter=" + reporter];
+    mut nodeArgs: List<String> = ["--test", "--test-reporter=" + reporter];
     loop suites as suite {
         mut nodeArgs.pushBack(suite);
     }

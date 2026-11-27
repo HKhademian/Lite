@@ -146,7 +146,7 @@ if not skipHeavy {
     ];
     loop sepBoth as src { checkTsAndC("sep-both", src, "", "line\n", 0); }
     loop sepTsOnly as src { checkTsOnly("sep-ts", src, "", "line\n", 0, false); }
-    compilerTest.assertCompileRunTs(root, tsComp, "sep-ts list popBack", "values: mut List<Int> = [1]; mut values.popBack()", "");
+    compilerTest.assertCompileRunTs(root, tsComp, "sep-ts list popBack", "mut values: List<Int> = [1]; mut values.popBack()", "");
     sepInvalid: List<String> = [
         "io := import \"core/io\"; io.outputLine(1) io.outputLine(2);",
         "io := import \"core/io\"; io.outputLine(1)\nio.outputLine(2)",
@@ -165,7 +165,7 @@ if not skipHeavy {
     checkTsAndC("sep-fault", sepFaultSrc, "boundary سلام.lts", "", 1);
 
     /* adjacent String literals join across trivia before expressions and encode once */
-    repX: mut List<String> = [];
+    mut repX: List<String> = [];
     var rx := 0;
     loop rx < 1024 {
         mut repX.pushBack("\"x\"");
@@ -245,7 +245,7 @@ if not skipHeavy {
         checkTsOnly("comma-ts", src, "", inStr, st, false);
     }
     compilerTest.assertCompileRunTs(root, tsComp, "comma-ts String dot ops", "io := import \"core/io\"; io.outputLine(String.length(\"ab\",), \"ab\".at(1,), \"abcd\".slice(1, 3,),);", "2 b bc\n");
-    compilerTest.assertCompileRunTs(root, tsComp, "comma-ts List dot ops", "io := import \"core/io\"; values: mut List<Int> = [1]; mut values.pushBack(2,); io.outputLine(List.popBack(mut values,), List.popBack(mut values,),);", "2 1\n");
+    compilerTest.assertCompileRunTs(root, tsComp, "comma-ts List dot ops", "io := import \"core/io\"; mut values: List<Int> = [1]; mut values.pushBack(2,); io.outputLine(List.popBack(mut values,), List.popBack(mut values,),);", "2 1\n");
     commaInvalid: List<String> = [
         "io := import \"core/io\"; io.outputLine(,);",
         "io := import \"core/io\"; io.outputLine(1,,);",
@@ -261,8 +261,8 @@ if not skipHeavy {
     loop commaInvalid as src { checkInvalidBoth("comma-bad", src, "", false); }
     commaDotInvalid: List<String> = [
         "String.at(\"x\",);",
-        "values: mut List<Int> = [1]; List.pushBack(mut values,);",
-        "values: mut List<Int> = [1]; List.popBack(mut values,,);"
+        "mut values: List<Int> = [1]; List.pushBack(mut values,);",
+        "mut values: List<Int> = [1]; List.popBack(mut values,,);"
     ];
     loop commaDotInvalid as badSrc {
         tsBad := compilerTest.compileStdin(root, tsComp, badSrc, "");
@@ -283,7 +283,7 @@ if not skipHeavy {
             checkTsOnly("comma-fault", src, "comma سلام.lts", "bad", 1, false);
         }
     }
-    commaDotPop := compilerTest.compileCheckRunTsWithInput(root, tsComp, "io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(List.popBack(mut values,),);", "comma سلام.lts", "bad", emptyArgs());
+    commaDotPop := compilerTest.compileCheckRunTsWithInput(root, tsComp, "io := import \"core/io\"; mut values: List<Int> = []; io.outputLine(List.popBack(mut values,),);", "comma سلام.lts", "bad", emptyArgs());
     test.checkInt("comma-fault dot pop status", 1, commaDotPop.status);
     test.checkText("comma-fault dot pop stdout", "", commaDotPop.stdout);
     test.check("comma-fault dot pop stderr: " + commaDotPop.stderr, commaDotPop.stderr.contains("comma سلام.lts:1:") and commaDotPop.stderr.contains("BoundPanic: pop_back on an empty list"));
@@ -320,7 +320,7 @@ if not skipHeavy {
     ];
     loop scopeBoth as src { checkTsAndC("scope-both", src, "", "", 0); }
     loop scopeTsOnly as src { checkTsOnly("scope-ts", src, "", "", 0, false); }
-    compilerTest.assertCompileRunTs(root, tsComp, "scope-ts list popBack shadow", "io := import \"core/io\"; values: mut List<Int> = [1, 2]; { values := mut values.popBack(); io.outputLine(values); } io.outputLine(values);", "2\n[1]\n");
+    compilerTest.assertCompileRunTs(root, tsComp, "scope-ts list popBack shadow", "io := import \"core/io\"; mut values: List<Int> = [1, 2]; { values := mut values.popBack(); io.outputLine(values); } io.outputLine(values);", "2\n[1]\n");
     scopeInvalid: List<String> = [
         "io := import \"core/io\"; io.outputLine(\"before\"); { x := 1; } io.outputLine(x);",
         "io := import \"core/io\"; var x := 1; { y := x; { io.outputLine(y); } } io.outputLine(y);",
@@ -384,9 +384,9 @@ if not skipHeavy {
     loop exprBoth as src { checkTsAndC("expr-both", src, "", "", 0); }
     loop exprTsOnly as src { checkTsOnly("expr-ts", src, "", "", 0, false); }
     exprDotTsOnly: List<(src: String, out: String)> = [
-        (src = "io := import \"core/io\"; var values: mut List<Int> = [1, 2]; mut values.popBack(); io.outputLine(values);", out = "[1]\n"),
-        (src = "io := import \"core/io\"; f := fn(): Int { values: mut List<Int> = [1, 2]; mut values.popBack();; } io.outputLine(f());", out = "2\n"),
-        (src = "f := fn(): Unit { values: mut List<Int> = [1]; mut values.pushBack(2);; } f();", out = "")
+        (src = "io := import \"core/io\"; var mut values: List<Int> = [1, 2]; mut values.popBack(); io.outputLine(values);", out = "[1]\n"),
+        (src = "io := import \"core/io\"; f := fn(): Int { mut values: List<Int> = [1, 2]; mut values.popBack();; } io.outputLine(f());", out = "2\n"),
+        (src = "f := fn(): Unit { mut values: List<Int> = [1]; mut values.pushBack(2);; } f();", out = "")
     ];
     loop exprDotTsOnly as ed {
         compilerTest.assertCompileRunTs(root, tsComp, "expr-ts dot: " + ed.src, ed.src, ed.out);

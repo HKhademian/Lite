@@ -102,7 +102,7 @@ extraCompilerArgs: List<String>
     } else {
         path.join(rootDir, logicalName)
     };
-    args: mut List<String> = [compilerPath, "--stdin", "--name", logicalName, "--root", rootTarget];
+    mut args: List<String> = [compilerPath, "--stdin", "--name", logicalName, "--root", rootTarget];
     loop extraCompilerArgs as extra {
         mut args.pushBack(extra);
     }
@@ -127,7 +127,7 @@ pub compileFile := fn(compilerPath: String, cwdDir: String, args: List<String>):
     test.check("compileFile makeTempDir: " + tmpRes.error, tmpRes.ok);
     workDir := tmpRes.path;
 
-    cmdArgs: mut List<String> = [compilerPath];
+    mut cmdArgs: List<String> = [compilerPath];
     loop args as arg {
         mut cmdArgs.pushBack(arg);
     }
@@ -169,7 +169,7 @@ pub prepareTs := fn(rootDir: String, tsCode: String): PreparedTs {
 
 /** Executes a prepared TS artifact with raw `stdinBytes` and `extraArgs`. */
 pub runPreparedTsWithBytes := fn(prepared: PreparedTs, stdinBytes: List<Int>, extraArgs: List<String>): RunOutput {
-    runArgs: mut List<String> = [prepared.runnerPath, prepared.artifactPath];
+    mut runArgs: List<String> = [prepared.runnerPath, prepared.artifactPath];
     loop extraArgs as extra {
         mut runArgs.pushBack(extra);
     }
@@ -343,7 +343,7 @@ pub compileAndRunC := fn(cCode: String, cc: String, stdinText: String): RunOutpu
 
     ccOut := path.join(workDir, "cc.stdout");
     ccErr := path.join(workDir, "cc.stderr");
-    ccArgs: mut List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", cPath, "-o", exePath, "-lm"];
+    mut ccArgs: List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", cPath, "-o", exePath, "-lm"];
     if proc.platform() == "darwin" and cCode.contains("LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
         mut ccArgs.pushBack("-framework");
         mut ccArgs.pushBack("Cocoa");

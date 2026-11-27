@@ -1,7 +1,7 @@
 io := import "core/io";
 
 x := io.inputInt();
-seen: mut Set<Int>;
+mut seen: Set<Int>;
 mut seen.add(10);
 mut seen.add(x);
 io.outputLine(seen.size());

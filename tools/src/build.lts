@@ -29,7 +29,7 @@ isSupportedPlatform := fn(p: String): Bool {
 
 buildWebHtml := fn(titleText: String, jsBody: String): String {
     safeTitle := mdHtml.escapeHtml(titleText);
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n");
     mut out.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
     mut out.append("<title>" + safeTitle + "</title>\n");
@@ -171,8 +171,8 @@ findTsCompiler := fn(root: String): (ok: Bool, path: String, error: String) {
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    args: mut List<String> = rawArgs;
-    compileOpts: mut List<String> = [];
+    mut args: List<String> = rawArgs;
+    mut compileOpts: List<String> = [];
     var outPath := "";
     var ccOpt := "-O2";
     var explicitCcOpt := false;
@@ -321,7 +321,7 @@ run := fn(rawArgs: List<String>): Unit {
             io.exit(1);
         }
         tsArtifact := if keepTs { finalOut + ".ts" } else { path.join(tempDir.path, baseNoExt + ".ts") };
-        tsArgs: mut List<String> = [];
+        mut tsArgs: List<String> = [];
         if not hasOpt { mut tsArgs.pushBack("-O1"); }
         loop compileOpts as opt { mut tsArgs.pushBack(opt); }
         (mut tsArgs).pushBack(scriptPath);
@@ -376,7 +376,7 @@ run := fn(rawArgs: List<String>): Unit {
     cArtifact := if keepC { finalOut + ".c" } else { path.join(tempDir.path, baseNoExt + ".c") };
     nativeCompiler := findNativeCompiler();
     if nativeCompiler =!= "" {
-        nativeArgs: mut List<String> = [];
+        mut nativeArgs: List<String> = [];
         if not hasOpt { mut nativeArgs.pushBack("-O1"); }
         loop compileOpts as opt { mut nativeArgs.pushBack(opt); }
         (mut nativeArgs).pushBack(scriptPath);
@@ -401,7 +401,7 @@ run := fn(rawArgs: List<String>): Unit {
             io.errorLine("lite build: " + sel.error);
             io.exit(1);
         }
-        nodeArgs: mut List<String> = [sel.path];
+        mut nodeArgs: List<String> = [sel.path];
         if not hasOpt { mut nodeArgs.pushBack("-O1"); }
         loop compileOpts as opt { mut nodeArgs.pushBack(opt); }
         (mut nodeArgs).pushBack(scriptPath);
@@ -427,7 +427,7 @@ run := fn(rawArgs: List<String>): Unit {
     ccEnv := proc.envGet("CC");
     ccCmd := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
     effectiveCcOpt := if sizeOpt and not explicitCcOpt { "-Os" } else { ccOpt };
-    ccArgs: mut List<String> = ["-std=c11", effectiveCcOpt, cArtifact, "-o", finalOut, "-lm"];
+    mut ccArgs: List<String> = ["-std=c11", effectiveCcOpt, cArtifact, "-o", finalOut, "-lm"];
     if sizeOpt and proc.platform() == "darwin" {
         mut ccArgs.pushBack("-Wl,-dead_strip");
     }

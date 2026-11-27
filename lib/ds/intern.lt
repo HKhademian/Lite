@@ -64,8 +64,8 @@ pub Interner.intern := fn(table: mut Self, value: String): SymbolId {
         return cast<SymbolId>(existing.value);
     }
     eid := table.entries.length();
-    es: mut List<String> = table.entries;
-    mp: mut Map<String, Int> = table.lookup;
+    mut es: List<String> = table.entries;
+    mut mp: Map<String, Int> = table.lookup;
     mut es.pushBack(value);
     mut mp.set(value, eid);
     table.entries = es;

@@ -1,7 +1,7 @@
 io := import "core/io";
 
 withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     len := xs.length();
     var k := 0;
     loop k < len {

@@ -32,7 +32,7 @@ runIn := fn(exe: String, args: List<String>, cwd: String, timeoutMs: Int): CmdRe
 };
 
 command := fn(name: String, args: List<String>): CmdResult {
-    cmdArgs: mut List<String> = [path.join(path.join(root, "bin"), name)];
+    mut cmdArgs: List<String> = [path.join(path.join(root, "bin"), name)];
     loop args as a {
         mut cmdArgs.pushBack(a);
     }
@@ -64,7 +64,7 @@ stripShebang := fn(s: String): String {
 };
 
 copyRepoTree := fn(dstRoot: String, relPath: String): Unit {
-    stack: mut List<String> = [relPath];
+    mut stack: List<String> = [relPath];
     loop stack.length() > 0 {
         rel := mut stack.popBack();
         src := path.join(root, rel);
@@ -165,9 +165,9 @@ toolNames: List<String> = [
 o3DirRes := fs.makeTempDir("lite-cli-o3-");
 test.check("o3Dir makeTempDir: " + o3DirRes.error, o3DirRes.ok);
 o3Dir := o3DirRes.path;
-o3Cmds: mut List<String> = [];
-o3ArgsJson: mut List<String> = [];
-o3OutFiles: mut List<String> = [];
+mut o3Cmds: List<String> = [];
+mut o3ArgsJson: List<String> = [];
+mut o3OutFiles: List<String> = [];
 loop toolNames as name {
     srcRel := "tools/src/" + name + ".lts";
     outTs := path.join(o3Dir, name + ".ts");

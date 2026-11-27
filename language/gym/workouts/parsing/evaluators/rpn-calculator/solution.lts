@@ -1,7 +1,7 @@
 io := import "core/io";
 
 splitTokens := fn(line: String): List<String> {
-    tokens: mut List<String> = [];
+    mut tokens: List<String> = [];
     n := line.length();
     var pos := 0;
     loop pos < n {
@@ -20,7 +20,7 @@ splitTokens := fn(line: String): List<String> {
 
 line := io.inputLine();
 tokens := splitTokens(line);
-stack: mut List<Int> = [];
+mut stack: List<Int> = [];
 var depth := 0;
 var failed := false;
 

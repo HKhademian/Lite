@@ -20,9 +20,9 @@ pub AmbientContext := record {
     isLocalModule: Bool;
 };
 
-fnCtxByRuntime: mut Map<String, String>;
-ambientContexts: mut List<AmbientContext> = [];
-ambientByModule: mut Map<String, List<AmbientContext>>;
+mut fnCtxByRuntime: Map<String, String>;
+mut ambientContexts: List<AmbientContext> = [];
+mut ambientByModule: Map<String, List<AmbientContext>>;
 
 /** Resets all context registries before a fresh compilation graph. */
 pub resetAll := fn(): Unit {
@@ -38,7 +38,7 @@ pub clearAmbient := fn(): Unit {
 
 /** Saves the resolved ambient contexts of `moduleKey` for generic monomorphizations. */
 pub saveModuleAmbient := fn(moduleKey: String): Unit {
-    copy: mut List<AmbientContext> = [];
+    mut copy: List<AmbientContext> = [];
     loop ambientContexts as e { mut copy.pushBack(e); }
     mut ambientByModule.set(moduleKey, copy);
 };
@@ -138,7 +138,7 @@ pub isCtxKind := fn(kind: String): Bool {
 
 /** Parses all `(name, isMut, kind)` slots from a canonical `Ctx<...>` kind. */
 pub parseCtxKindSlots := fn(ctxKind: String): List<CtxSlot> {
-    out: mut List<CtxSlot> = [];
+    mut out: List<CtxSlot> = [];
     if not isCtxKind(ctxKind) { return out; }
     size := ctxKind.length() - 1;
     var cursor := 4;
@@ -174,7 +174,7 @@ pub parseCtxKindSlots := fn(ctxKind: String): List<CtxSlot> {
 pub buildCanonicalCtxKind := fn(slots: List<CtxSlot>): String {
     n := slots.length();
     if n == 0 { return ""; }
-    sorted: mut List<CtxSlot> = [];
+    mut sorted: List<CtxSlot> = [];
     loop slots as s { mut sorted.pushBack(s); }
     var i := 1;
     loop i < n {
@@ -187,7 +187,7 @@ pub buildCanonicalCtxKind := fn(slots: List<CtxSlot>): String {
         sorted[j + 1] = cur;
         i = i + 1;
     }
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append("Ctx<");
     var k := 0;
     loop k < n {

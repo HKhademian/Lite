@@ -6,7 +6,7 @@ Parallel wiring lets functions name later variables—and compile-time execution
 
 1. `readSlot` captures `var rootSlot: Int = ?;`, which is uninitialized at line 6. Calling `readSlot()` *after* `rootSlot = 25;` passes trace analysis cleanly.
 2. `initAndRead` performs **write-before-read** (`innerSlot = 18;` then reads `innerSlot * 2`) inside its own closure body.
-3. Pushing a closure reading `lateItem` into `tasks: mut List<fn(): Int>` is allowed before `lateItem := 14;`, because `tasks[0]()` executes only *after* `lateItem` is initialized!
+3. Pushing a closure reading `lateItem` into `mut tasks: List<fn(): Int>` is allowed before `lateItem := 14;`, because `tasks[0]()` executes only *after* `lateItem` is initialized!
 
 > [!WARNING]
 > Calling `readSlot()` on line 7 before `rootSlot = 25;` triggers a compile-time uninitialized-read error.

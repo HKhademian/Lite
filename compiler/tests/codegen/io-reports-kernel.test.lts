@@ -134,7 +134,7 @@ ioCases: List<(source: String, stdin: String, status: Int)> = [
 loop ioCases as ic {
     assertTsContract("io-helper", ic.source, ic.stdin, ic.status);
 }
-compilerTest.assertCompileRunTs(root, tsComp, "io-helper list pushBack", "io := import \"core/io\"; values: mut List<Int> = []; io.outputLine(mut values.pushBack(1), values);", "Unit [1]\n");
+compilerTest.assertCompileRunTs(root, tsComp, "io-helper list pushBack", "io := import \"core/io\"; mut values: List<Int> = []; io.outputLine(mut values.pushBack(1), values);", "Unit [1]\n");
 
 faultSource := "io := import \"core/io\"; io.outputLine(\"before fault\"); values: List<Int> = [1]; io.outputLine(values[2]);";
 recFault := compilerTest.assertContractStatus(contractsJson, "io-bound-fault", faultSource, "", "", 1);

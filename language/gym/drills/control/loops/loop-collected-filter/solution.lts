@@ -1,7 +1,7 @@
 io := import "core/io";
 
 n := io.inputInt();
-raw: mut List<Int> = [];
+mut raw: List<Int> = [];
 var i := 0;
 loop i < n {
     mut raw.pushBack(io.inputInt());

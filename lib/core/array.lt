@@ -46,7 +46,7 @@ pub Array.fill := fn<T: Type, N: Int>(values: mut Self<T, N>, val: T): Unit {
 
 /** Converts fixed-length array `values` into a dynamic `List<T>`. */
 pub Array.toList := fn<T: Type, N: Int>(values: Self<T, N>): List<T> {
-    out: mut List<T> = [];
+    mut out: List<T> = [];
     loop 0..values.length() as i {
         mut out.pushBack(values[i]);
     }
@@ -115,7 +115,7 @@ pub Array.find := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): (f
 
 /** Returns a new fixed-length array `Array<U, N>` obtained by applying `transform` to every element of `values`. */
 pub Array.map := fn<T: Type, U: Type, N: Int>(values: Self<T, N>, transform: fn(T): U): Self<U, N> {
-    out: mut Self<U, N>;
+    mut out: Self<U, N>;
     loop 0..values.length() as i {
         out[i] = transform(values[i]);
     }
@@ -124,7 +124,7 @@ pub Array.map := fn<T: Type, U: Type, N: Int>(values: Self<T, N>, transform: fn(
 
 /** Returns a new `List<T>` containing the elements of `values` satisfying `pred`. */
 pub Array.filter := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): List<T> {
-    out: mut List<T> = [];
+    mut out: List<T> = [];
     loop 0..values.length() as i {
         item := values[i];
         if pred(item) { mut out.pushBack(item); }

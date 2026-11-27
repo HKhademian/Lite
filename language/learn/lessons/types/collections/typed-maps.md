@@ -4,7 +4,7 @@ Lite provides typed key-value maps (`Map<K, V>`) with O(1) lookup, explicit `mut
 
 ## Key Concepts
 
-- **Literals & zero-initialization:** Initialize with `prices: mut Map<String, Int> = ["apple" = 3];` (or inferred `defaults := ["apple" = 3];`, or empty `empty: Map<String, Int>;` / `= []`). Reserved storage (`= ?`) is rejected.
+- **Literals & zero-initialization:** Initialize with `mut prices: Map<String, Int> = ["apple" = 3];` (or inferred `defaults := ["apple" = 3];`, or empty `empty: Map<String, Int>;` / `= []`). Reserved storage (`= ?`) is rejected.
 - **Scalar & enum keys:** Keys must be scalar (`Int*`, `Float*`, `String`, `Bool`) or nominal `enum` types so lookup uses value equality.
 - **Indexed reads & writes:** Write with `prices["apple"] = 4;` or `prices["apple"] += 1;` (requires `mut Map<K, V>`) and read with `prices["apple"]` (faults with `KeyPanic` if the key is missing).
 - **Operations (`core/map`):** Call `prices.size()` (`Int`), `prices.isEmpty()` (`Bool`), `prices.set(k, v)`, `prices.get(k)` (returning `(found: Bool, value: V)`), `prices.getOr(k, fallback)`, `prices.has(k)`, `prices.remove(k)`, `prices.clear()`, `prices.keys()`, and `prices.values()` directly on any `Map<K, V>`.

@@ -6,7 +6,7 @@ compilerBuild := import "util/compiler-build";
 corpus := import "util/corpus";
 
 run := fn(rawArgs: List<String>): Int {
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     var root := "";
     var target := "";
     var manifestPath := "";

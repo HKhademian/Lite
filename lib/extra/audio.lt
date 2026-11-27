@@ -3,7 +3,7 @@
 /** Validated tone request in hertz (20..20000), milliseconds (1..3000), and percent volume (1..100). */
 pub Note := alias (frequency: Int, durationMs: Int, volume: Int);
 
-var toneQueue: mut List<Int> = [];
+var mut toneQueue: List<Int> = [];
 
 /** Queues a tone in hertz (20..20000), milliseconds (1..3000), and volume (1..100); out-of-range calls are ignored. */
 pub tone := fn(frequency: Int, durationMs: Int, volume: Int): Unit {

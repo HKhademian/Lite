@@ -1150,8 +1150,8 @@ aliases: List<AliasDecl>, moduleKey: String, name: String): (def: interfaces.Int
     var cursor := skipTrivia(source, gp.next, prefix);
     cursor = expectSymbol(source, cursor, "{", prefix);
     scopedAliases := types.withSelfAlias(aliases, "$Kind:Self", 0);
-    methods: mut List<interfaces.InterfaceMethod> = [];
-    seenMethodNames: mut Set<String>;
+    mut methods: List<interfaces.InterfaceMethod> = [];
+    mut seenMethodNames: Set<String>;
     var isObjectSafe := true;
     var unsafeReason := "";
     loop true {
@@ -1189,8 +1189,8 @@ aliases: List<AliasDecl>, moduleKey: String, name: String): (def: interfaces.Int
         }
         cursor = expectSymbol(source, cursor, "(", prefix);
         cursor = skipTrivia(source, cursor, prefix);
-        pNames: mut List<String> = [];
-        var nonRecvParams: mut List<String> = [];
+        mut pNames: List<String> = [];
+        var mut nonRecvParams: List<String> = [];
         var pCount := 0;
         var recvMut := false;
         var hasValidRecv := false;
@@ -1312,7 +1312,7 @@ isImplTargetOwned := fn(moduleKey: String, moduleIdentity: String, targetOwnerKe
 /** Appends synthetic `$Kind:P` aliases for impl-level comptime parameters so inline method signatures resolve them. */
 aliasesWithImplParams := fn(aliases: List<AliasDecl>, implParams: String, depth: Int): List<AliasDecl> {
     if implParams == "" { return aliases; }
-    out: mut List<AliasDecl> = [];
+    mut out: List<AliasDecl> = [];
     loop aliases as existing { mut out.pushBack(existing); }
     loop types.splitParamSpecs(implParams) as sp {
         mut out.pushBack((name = sp.name, target = "$Kind:" + sp.name, at = -1, end = 0, depth = depth));
@@ -1440,7 +1440,7 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
     reqMethods := types.instantiatedInterfaceMethods(ifaceParsed.kind);
     delimPos := skipTrivia(source, targetParsed.next, prefix);
     if delimPos < size and source.at(delimPos) == ";" {
-        bindings: mut List<interfaces.ImplMethodBinding> = [];
+        mut bindings: List<interfaces.ImplMethodBinding> = [];
         loop reqMethods as req {
             opKey := "$typeop:" + targetOwnerKey + "." + req.name;
             opCands := sym.findFunctions(functions, opKey);
@@ -1454,7 +1454,7 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
             loop ci < opCands.length() {
                 candIdx := opCands[ci];
                 fInfo := functions[candIdx];
-                actParts: mut List<String> = [];
+                mut actParts: List<String> = [];
                 var ai := 0;
                 loop ai < fInfo.count {
                     mut actParts.pushBack(functionParams[fInfo.first + ai]);
@@ -1468,8 +1468,8 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
                     ownerArgs := types.nominalTypeArgs(firstType);
                     tgtArgs := types.nominalTypeArgs(targetKind);
                     if ownerArgs.length() > 0 and ownerArgs.length() == tgtArgs.length() and firstType =!= targetKind {
-                        ownerParamNames: mut List<String> = [];
-                        subMap: mut Map<String, String>;
+                        mut ownerParamNames: List<String> = [];
+                        mut subMap: Map<String, String>;
                         var oi := 0;
                         loop oi < ownerArgs.length() {
                             mut ownerParamNames.pushBack(ownerArgs[oi]);
@@ -1477,7 +1477,7 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
                             oi = oi + 1;
                         }
                         oParamCsv := ownerParamNames.join(",");
-                        newParts: mut List<String> = [];
+                        mut newParts: List<String> = [];
                         loop actParts as ap {
                             pN := paramNameOf(ap);
                             pRK := paramKindOf(ap);
@@ -1556,17 +1556,17 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
     braceEndPos := scanBraceEnd(source, delimPos, prefix);
     firstInside := skipTrivia(source, delimPos + 1, prefix);
     scopedAliases := types.withSelfAlias(aliasesWithImplParams(aliases, implGenericParams, 99), "$Kind:" + targetKind, 0);
-    mNames: mut List<String> = [];
-    mFnKeys: mut List<String> = [];
-    mRuntimes: mut List<String> = [];
-    mParams: mut List<String> = [];
-    mCounts: mut List<Int> = [];
-    mResults: mut List<String> = [];
-    mGenerics: mut List<String> = [];
-    mDeclAts: mut List<Int> = [];
-    mBodyStarts: mut List<Int> = [];
-    mBodyEnds: mut List<Int> = [];
-    bindings: mut List<interfaces.ImplMethodBinding> = [];
+    mut mNames: List<String> = [];
+    mut mFnKeys: List<String> = [];
+    mut mRuntimes: List<String> = [];
+    mut mParams: List<String> = [];
+    mut mCounts: List<Int> = [];
+    mut mResults: List<String> = [];
+    mut mGenerics: List<String> = [];
+    mut mDeclAts: List<Int> = [];
+    mut mBodyStarts: List<Int> = [];
+    mut mBodyEnds: List<Int> = [];
+    mut bindings: List<interfaces.ImplMethodBinding> = [];
     var scan := firstInside;
     loop scan < braceEndPos - 1 {
         loop scan < braceEndPos - 1 and source.at(scan) == ";" {
@@ -1699,7 +1699,7 @@ live: Bool, ctxs: List<ConstructCtx>, aliases: List<AliasDecl>): Items {
         failAt(source, position, prefix, "expected ( after " + outputName);
     }
     position = skipTrivia(source, position + 1, prefix);
-    result: mut List<Item> = [];
+    mut result: List<Item> = [];
     loop position < sourceLen and source.at(position) =!= ")" {
         argStart := position;
         argument := parseExpressionCtx(target, source, position, prefix, locals, functions, params, currentName, ctxs, aliases);
@@ -1778,7 +1778,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
 
 /** Upgrades uninitialized root bindings and appends forward root `futureValues` visible inside a top-level function body. */
 upgradeRootUninitLocalsForFn := fn(locals: List<Local>, rootAssignedNames: Set<String>, futureValues: List<FutureValue>, functions: List<FunctionInfo>, fnDeclAt: Int): List<Local> {
-    nextLocals: mut List<Local> = locals;
+    mut nextLocals: List<Local> = locals;
     preLen := localsCount(locals);
     var upgradedRootBag := "";
     var rootIdx := 0;
@@ -1890,7 +1890,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     var moduleIdentity := moduleIdentityIn;
     var size := source.length();
     var position := 0;
-    var items: mut Items = [];
+    var mut items: Items = [];
     isLtModule := prefix.endsWith(".lt");
     if monoInstIdx < 0 {
         contexts.clearAmbient();
@@ -1901,7 +1901,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             return items;
         }
     }
-    neededFnSet: mut Set<String>;
+    mut neededFnSet: Set<String>;
     if monoInstIdx < 0 and neededFns =!= "*" {
         nfLen := neededFns.length();
         var nfPos := 0;
@@ -1921,24 +1921,24 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     if monoInstIdx < 0 and skipSoftBuiltins and target == TARGET_TS and moduleIdentity.startsWithAt(0, "lite.core.") {
         builtinRules = parseBuiltinModeSpecs(prefix, builtinSpecs);
     }
-    var aliases: mut List<AliasDecl> = [];
-    publishedFunctions: mut Set<String>;
-    publishedFnAts: mut Set<Int>;
-    publishedTypeOps: mut Set<String>;
-    publishedTypeOpAts: mut Set<Int>;
-    publishedValues: mut Set<String>;
-    publishedTypes: mut Set<String>;
-    declaredFnBlockNames: mut Set<String>;
+    var mut aliases: List<AliasDecl> = [];
+    mut publishedFunctions: Set<String>;
+    mut publishedFnAts: Set<Int>;
+    mut publishedTypeOps: Set<String>;
+    mut publishedTypeOpAts: Set<Int>;
+    mut publishedValues: Set<String>;
+    mut publishedTypes: Set<String>;
+    mut declaredFnBlockNames: Set<String>;
     var hasInnerAlias := monoInstIdx >= 0;
     var hasInnerFn := monoInstIdx >= 0;
-    rootAssignedNames: mut Set<String>;
-    var locals: mut List<Local> = [];
-    var blockDecls: mut List<BlockDecl> = [];
-    var blockAssignedDecls: mut List<BlockDecl> = [];
-    blocks: mut List<String> = [];
-    functions: mut List<FunctionInfo> = [];
-    functionParams: mut List<String> = [];
-    declaredImportAliases: mut Set<String>;
+    mut rootAssignedNames: Set<String>;
+    var mut locals: List<Local> = [];
+    var mut blockDecls: List<BlockDecl> = [];
+    var mut blockAssignedDecls: List<BlockDecl> = [];
+    mut blocks: List<String> = [];
+    mut functions: List<FunctionInfo> = [];
+    mut functionParams: List<String> = [];
+    mut declaredImportAliases: Set<String>;
     var parameterTotal := 0;
     var futureValues: List<FutureValue> = [];
     if monoInstIdx < 0 {
@@ -2358,18 +2358,18 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     var loopForever := false;
     var currentLive := true;
     var liveBranchCount := 0;
-    savedStates: mut List<BlockState> = [];
-    var branchUpdates: mut List<BranchUpdate> = [];
-    var stmtCtxs: mut List<ConstructCtx> = [];
+    mut savedStates: List<BlockState> = [];
+    var mut branchUpdates: List<BranchUpdate> = [];
+    var mut stmtCtxs: List<ConstructCtx> = [];
     var nextStmtCtxId := 1;
-    transferCodes: mut List<String> = [];
+    mut transferCodes: List<String> = [];
     var transferCount := 0;
     var fnTryKey := "";
     monoTryPrefix := if monoInstIdx >= 0 { "#m" + monoInstIdx.toText() } else { "" };
     var fnTransferStart := 0;
-    loopIds: mut List<Int> = [];
-    loopTryKeys: mut List<String> = [];
-    loopTransferStarts: mut List<Int> = [];
+    mut loopIds: List<Int> = [];
+    mut loopTryKeys: List<String> = [];
+    mut loopTransferStarts: List<Int> = [];
     var locCursor := 0;
     var locLine := 1;
     var locLineStart := 0;
@@ -2415,7 +2415,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 mut aliases.pushBack(generics.getEnvAlias(rng.aliasesStart + ei));
                 ei = ei + 1;
             }
-            fvCopy: mut List<FutureValue> = [];
+            mut fvCopy: List<FutureValue> = [];
             ei = 0;
             loop ei < rng.futuresCount {
                 mut fvCopy.pushBack(generics.getEnvFuture(rng.futuresStart + ei));
@@ -3101,7 +3101,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     transferCount = transferCount + 1;
                 }
             }
-            pendingDestrNames: mut List<String> = [];
+            mut pendingDestrNames: List<String> = [];
             var bCursor := 0;
             var bIndex := 0;
             loop bIndex < destructure.count {
@@ -3265,7 +3265,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             fnOpenBrace := mBodyStart - 1;
             mCtxKind := contexts.fnContextFor(fInfo.runtime);
             if currentLive and not currentStopped {
-                paramParts: mut List<String> = [];
+                mut paramParts: List<String> = [];
                 var pi := 0;
                 loop pi < fInfo.count {
                     mut paramParts.pushBack(functionParams[fInfo.first + pi]);
@@ -4652,7 +4652,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         var coercedText := parsed.textValue;
                         var wasDynCoerced := false;
                         if types.isDynKind(typed.kind) {
-                            dummyDrops: mut List<String> = [];
+                            mut dummyDrops: List<String> = [];
                             dynC := expr.coerceToDynIfNeeded(target, source, localStart, prefix, typed.kind, declaredWritable, parsed.kind, parsed.code, parsed.textValue, false, locals, functions, mut dummyDrops);
                             if dynC.matched {
                                 wasDynCoerced = true;
@@ -4749,7 +4749,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 unsupportedAliasTarget(source, targetStart, prefix, "target");
             }
             resolvedType := if gp.hasParams {
-                seenAliases: mut List<String> = [depth.toText() + ":" + name];
+                mut seenAliases: List<String> = [depth.toText() + ":" + name];
                 scopedAliasEnv := aliasesUpToDepth(aliases, depth);
                 resolvedParams := types.resolveComptimeParamSpecs(source, typePosition + 5, prefix, scopedAliasEnv, gp.paramsCsv);
                 rawInner := if aliasEntry.target.startsWithAt(0, "@genraw:") {
@@ -4761,7 +4761,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 tplKind := types.resolveGenericTypeText(source, targetStart, prefix, scopedAliasEnv, rawInner, resolvedParams, seenAliases);
                 "@gentpl:" + types.encodeLengthPrefixedText(resolvedParams) + tplKind
             } else {
-                seenAliases: mut List<String> = [];
+                mut seenAliases: List<String> = [];
                 resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenAliases)
             };
             var exportedDefaults := "";
@@ -4807,7 +4807,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if aliasEntry.target == "" {
                 failAt(source, targetStart, prefix, "expected a type after distinct");
             }
-            seenDistinct: mut List<String> = [depth.toText() + ":" + name];
+            mut seenDistinct: List<String> = [depth.toText() + ":" + name];
             resolvedDistinct := if gp.hasParams {
                 scopedDistEnv := aliasesUpToDepth(aliases, depth);
                 resolvedParams := types.resolveComptimeParamSpecs(source, distPosition + 8, prefix, scopedDistEnv, gp.paramsCsv);
@@ -5497,7 +5497,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     var coercedAnnText := parsed.textValue;
                     var wasDynAnn := false;
                     if types.isDynKind(typed.kind) {
-                        dummyDrops: mut List<String> = [];
+                        mut dummyDrops: List<String> = [];
                         dynC := expr.coerceToDynIfNeeded(target, source, nameStart, prefix, typed.kind, effWritable, parsed.kind, parsed.code, parsed.textValue, false, locals, functions, mut dummyDrops);
                         if dynC.matched {
                             wasDynAnn = true;
@@ -5635,7 +5635,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if recLocalIdx >= 0 and (types.isRecordKind(locals[recLocalIdx].kind) or types.isTupleKind(locals[recLocalIdx].kind)) {
                 var scanPos := position;
                 var curKind := locals[recLocalIdx].kind;
-                fieldChain: mut List<String> = [];
+                mut fieldChain: List<String> = [];
                 var chainValid := true;
                 loop scanPos < size and source.at(scanPos) == "." {
                     fStart := skipTrivia(source, scanPos + 1, prefix);
@@ -5797,7 +5797,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             var assignText := parsed.textValue;
             var wasDynAssign := false;
             if types.isDynKind(entry.kind) {
-                dummyDrops: mut List<String> = [];
+                mut dummyDrops: List<String> = [];
                 dynC := expr.coerceToDynIfNeeded(target, source, nameStart, prefix, entry.kind, entry.writable, parsed.kind, parsed.code, parsed.textValue, false, locals, functions, mut dummyDrops);
                 if dynC.matched {
                     wasDynAssign = true;
@@ -5908,7 +5908,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if currentStopped {
             mut items.pushBack((kind = ITEM_KIND_MAIN_STOP, name = "", runtime = "", code = "", intValue = 0, textValue = ""));
         }
-        rootAssignedList: mut List<String> = [];
+        mut rootAssignedList: List<String> = [];
         loop rootAssignedNames as ra { mut rootAssignedList.pushBack(ra); }
         contexts.saveModuleAmbient(moduleKey);
         generics.saveModuleEnv(moduleKey, locals, functions, functionParams, aliases, futureValues, rootAssignedList);
@@ -5931,7 +5931,7 @@ pub compileGenericInstance := fn(target: String, instIdx: Int): Items {
 
 /** Drains all pending generic monomorphizations to fixed point, returning flat items grouped by `ITEM_KIND_MONO_OWNER` markers. */
 pub drainGenericInstances := fn(target: String): Items {
-    out: mut Items = [];
+    mut out: Items = [];
     loop true {
         nextIdx := generics.nextUncompiledInstanceIndex();
         if nextIdx < 0 { break; }
@@ -5978,7 +5978,7 @@ pub parseProgram := fn(target: String, source: String, prefix: String): Items {
     base := parseProgramWithModule(target, source, prefix, [], "", "");
     monoItems := drainGenericInstances(target);
     if monoItems.length() == 0 { return base; }
-    out: mut Items = [];
+    mut out: Items = [];
     loop base as item { mut out.pushBack(item); }
     loop monoItems as mi {
         if mi.kind =!= ITEM_KIND_MONO_OWNER { mut out.pushBack(mi); }

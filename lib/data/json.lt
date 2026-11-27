@@ -95,7 +95,7 @@ scanStringToken := fn(source: String, start: Int, decode: Bool): JsonString {
         return JsonString { ok = false, value = "", next = start, error = "expected JSON string" };
     }
     var pos := start + 1;
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var hasEscapes := false;
     loop true {
         nextQuote := source.indexOf("\"", pos);
@@ -280,7 +280,7 @@ pub kindAt := fn(source: String, start: Int): JsonKind {
 /** Skips one valid JSON value starting at or after `start`, returning the index immediately after it. */
 pub skipValue := fn(source: String, start: Int): JsonScan {
     size := source.length();
-    stack: mut List<String> = [];
+    mut stack: List<String> = [];
     var stackCount := 0;
     var pos := start;
     var expectKey := false;
@@ -516,7 +516,7 @@ pub readFieldBool := fn(source: String, objectStart: Int, key: String): (found: 
 
 /** Returns starting value offsets of elements inside a JSON array at or after `arrayStart`. */
 pub arrayOffsets := fn(source: String, arrayStart: Int): List<Int> {
-    offsets: mut List<Int> = [];
+    mut offsets: List<Int> = [];
     size := source.length();
     var pos := skipSpaces(source, arrayStart);
     if pos >= size or source.at(pos) =!= "[" { return offsets; }
@@ -538,7 +538,7 @@ pub arrayOffsets := fn(source: String, arrayStart: Int): List<Int> {
 
 /** Returns decoded property names of a JSON object at or after `objectStart`. */
 pub objectKeys := fn(source: String, objectStart: Int): List<String> {
-    keys: mut List<String> = [];
+    mut keys: List<String> = [];
     size := source.length();
     var pos := skipSpaces(source, objectStart);
     if pos >= size or source.at(pos) =!= "{" { return keys; }
@@ -562,7 +562,7 @@ pub objectKeys := fn(source: String, objectStart: Int): List<String> {
     keys
 };
 
-rareCtrlChars: mut List<String> = [];
+mut rareCtrlChars: List<String> = [];
 
 ensureRareCtrlChars := fn(): List<String> {
     if rareCtrlChars.length() == 0 {
@@ -580,7 +580,7 @@ ensureRareCtrlChars := fn(): List<String> {
 quoteStringWithCodePoints := fn(value: String): String {
     cps := value.toCodePoints();
     size := cps.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append("\"");
     var runStart := 0;
     var i := 0;
@@ -626,7 +626,7 @@ pub quoteString := fn(value: String): String {
         return "\"" + value + "\"";
     }
     size := value.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append("\"");
     var runStart := 0;
     loop true {
@@ -683,7 +683,7 @@ pub encodeArray := fn(rawItems: List<String>): String {
 
 /** Encodes a `List<String>` as a JSON string array. */
 pub encodeStringList := fn(items: List<String>): String {
-    encoded: mut List<String> = [];
+    mut encoded: List<String> = [];
     loop items as item {
         mut encoded.pushBack(quoteString(item));
     }
@@ -692,7 +692,7 @@ pub encodeStringList := fn(items: List<String>): String {
 
 /** Encodes a `List<Int>` as a JSON integer array. */
 pub encodeIntList := fn(items: List<Int>): String {
-    encoded: mut List<String> = [];
+    mut encoded: List<String> = [];
     loop items as item {
         mut encoded.pushBack(item.toText());
     }

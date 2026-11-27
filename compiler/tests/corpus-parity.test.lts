@@ -74,10 +74,10 @@ refJson := fs.readText(path.join(root, "compiler/tests/references/generated/curr
 refArtField := json.findField(refJson, 0, "artifacts");
 refArtOffsets := json.arrayOffsets(refJson, refArtField.valuePos);
 
-fixNames: mut List<String> = [];
-fixCats: mut List<String> = [];
-fixSlugs: mut List<String> = [];
-fixCaseKeys: mut List<String> = [];
+mut fixNames: List<String> = [];
+mut fixCats: List<String> = [];
+mut fixSlugs: List<String> = [];
+mut fixCaseKeys: List<String> = [];
 var progCount := 0;
 var rejCount := 0;
 
@@ -85,10 +85,10 @@ tmpWorkRes := fs.makeTempDir("lite-corpus-test-");
 test.check("makeTempDir", tmpWorkRes.ok);
 workDir := tmpWorkRes.path;
 
-progStdinFiles: mut List<String> = [];
-progExpOuts: mut List<String> = [];
-progExpErrs: mut List<String> = [];
-progExpExits: mut List<Int> = [];
+mut progStdinFiles: List<String> = [];
+mut progExpOuts: List<String> = [];
+mut progExpErrs: List<String> = [];
+mut progExpExits: List<Int> = [];
 emptyBytes: List<Int> = [];
 
 var fi := 0;
@@ -150,8 +150,8 @@ test.checkInt("corpus cases count", 94, valTs.cases);
 test.checkInt("corpus programs count", 69, valTs.programs);
 test.checkInt("corpus rejections count", 25, valTs.rejections);
 
-cCmds: mut List<String> = [];
-cArgs: mut List<String> = [];
+mut cCmds: List<String> = [];
+mut cArgs: List<String> = [];
 var ciAll := 0;
 loop ciAll < fixCount {
     mut cCmds.pushBack(proc.execPath());
@@ -164,9 +164,9 @@ cOffs := json.arrayOffsets(cRaw, 0);
 test.checkInt("c corpus compile count", fixCount, cOffs.length());
 
 ccInfo := compilerTest.probeCc();
-ccCmds: mut List<String> = [];
-ccArgs: mut List<String> = [];
-exePaths: mut List<String> = [];
+mut ccCmds: List<String> = [];
+mut ccArgs: List<String> = [];
+mut exePaths: List<String> = [];
 
 var ri := 0;
 var pSeq := 0;

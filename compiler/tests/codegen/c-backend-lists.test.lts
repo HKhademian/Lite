@@ -25,7 +25,7 @@ listProg :=
 "    total\n" +
 "};\n" +
 "arr := [10, 20, 30, 40];\n" +
-"nums: mut List<Int> = [2, 3];\n" +
+"mut nums: List<Int> = [2, 3];\n" +
 "mut nums.pushFront(1);\n" +
 "mut nums.pushBack(4);\n" +
 "saved: List<Int> = nums;\n" +

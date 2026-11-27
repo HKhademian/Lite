@@ -20,7 +20,7 @@ mapProg :=
 "Direction := enum { Up; Down; Left; Right; };\n" +
 "keys: Map<String, Direction> = [\"ArrowUp\" = .Up, \"w\" = .Up, \"s\" = .Down,];\n" +
 "scores := [\"alice\" = 10, \"bob\" = 25];\n" +
-"counts: mut Map<String, Int> = [\"x\" = 1];\n" +
+"mut counts: Map<String, Int> = [\"x\" = 1];\n" +
 "counts[\"y\"] = 2;\n" +
 "emptyM: Map<String, Int> = [];\n" +
 "zeroM: Map<String, Int>;\n" +
@@ -40,7 +40,7 @@ setProg :=
 "Direction := enum { Up; Down; Left; Right; };\n" +
 "tags: Set<String> = [\"lite\", \"fast\", \"lite\"];\n" +
 "dirs: Set<Direction> = [.Up, .Down, .Up];\n" +
-"bag: mut Set<Int> = [1, 2];\n" +
+"mut bag: Set<Int> = [1, 2];\n" +
 "mut bag.add(3);\n" +
 "emptyS: Set<Int> = [];\n" +
 "zeroS: Set<Int>;\n" +

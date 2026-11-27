@@ -13,7 +13,7 @@ replaceAllText := fn(source: String, needle: String, replacement: String): Strin
     nLen := needle.length();
     if nLen == 0 { return source; }
     sLen := source.length();
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var pos := 0;
     loop pos < sLen {
         found := source.indexOf(needle, pos);
@@ -50,7 +50,7 @@ decodePercent := fn(raw: String, plusAsSpace: Bool): (ok: Bool, value: String) {
         return (ok = true, value = raw);
     }
     n := raw.length();
-    bytes: mut List<Int> = [];
+    mut bytes: List<Int> = [];
     var i := 0;
     loop i < n {
         ch := raw.at(i);
@@ -105,7 +105,7 @@ stripScriptAndStyleBlocks := fn(html: String): String {
         return html;
     }
     n := html.length();
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var pos := 0;
     loop pos < n {
         sIdx := scan.indexOf("<script", pos);
@@ -153,7 +153,7 @@ stripScriptAndStyleBlocks := fn(html: String): String {
 
 /** Collects all `\bid="([^"]+)"` values in `html` into a `\n`-delimited lookup blob. */
 collectHtmlIdBlob := fn(html: String): String {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     n := html.length();
     var pos := 0;
     loop pos < n {
@@ -192,7 +192,7 @@ resolveRelInSite := fn(fromRelDir: String, noQuery: String): (escaped: Bool, rel
     if rawWithIndex.indexOf("..", 0) < 0 and rawWithIndex.indexOf("./", 0) < 0 and rawWithIndex.indexOf("//", 0) < 0 and not rawWithIndex.endsWith("/.") and rawWithIndex =!= "." {
         return (escaped = false, relPath = rawWithIndex);
     }
-    segs: mut List<String> = [];
+    mut segs: List<String> = [];
     rLen := rawWithIndex.length();
     var p := 0;
     loop p <= rLen {
@@ -268,9 +268,9 @@ getQueryParam := fn(queryStr: String, key: String): (found: Bool, value: String)
 
 /** Collects all files under `absSiteDir` (relative POSIX paths). */
 collectAllSiteFiles := fn(absSiteDir: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     if fs.kind(absSiteDir) =!= fs.FILE_KIND_DIR { return out; }
-    stack: mut List<String> = [""];
+    mut stack: List<String> = [""];
     loop stack.length() > 0 {
         relDir := mut stack.popBack();
         absDir := if relDir == "" { absSiteDir } else { path.join(absSiteDir, relDir) };
@@ -342,7 +342,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
 
     sortedSiteFiles := collectAllSiteFiles(absSiteDir);
     mut siteFileTable := intern.Interner.create();
-    htmlFiles: mut List<String> = [];
+    mut htmlFiles: List<String> = [];
     loop sortedSiteFiles as relFile {
         _sfId := mut siteFileTable.intern(relFile);
         if relFile.endsWith(".html") {
@@ -351,8 +351,8 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
     }
 
     /* Pre-read and strip all HTML files once, and store one `\n`-delimited ID blob per HTML file. */
-    strippedHtmls: mut List<String> = [];
-    htmlIdBlobs: mut List<String> = [];
+    mut strippedHtmls: List<String> = [];
+    mut htmlIdBlobs: List<String> = [];
     loop htmlFiles as relHtml {
         readRes := fs.readText(path.join(absSiteDir, relHtml));
         stripped := if readRes.ok { stripScriptAndStyleBlocks(readRes.text) } else { "" };
@@ -389,7 +389,7 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
         }
     }
 
-    violations: mut List<String> = [];
+    mut violations: List<String> = [];
     var localLinksChecked := 0;
     var fragmentsChecked := 0;
     var searchEntriesChecked := 0;
@@ -572,8 +572,8 @@ pub validateBuiltSiteReferencesJson := fn(siteDirRaw: String): String {
         graphRead := fs.readText(path.join(absSiteDir, "link-graph.json"));
         if graphRead.ok {
             gText := graphRead.text;
-            nodeUris: mut List<String> = [];
-            nodeOutPaths: mut List<String> = [];
+            mut nodeUris: List<String> = [];
+            mut nodeOutPaths: List<String> = [];
             nodesField := json.findField(gText, 0, "nodes");
             if nodesField.found {
                 loop json.arrayOffsets(gText, nodesField.valuePos) as nPos {

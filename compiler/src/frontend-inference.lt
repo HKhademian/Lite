@@ -224,8 +224,8 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                 }
             }
             if leftKind == "" {
-                tLabels: mut List<String> = [];
-                tParts: mut List<String> = [];
+                mut tLabels: List<String> = [];
+                mut tParts: List<String> = [];
                 var tCur := innerPos;
                 var tCount := 0;
                 var tLabelCount := 0;
@@ -372,7 +372,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
             return (kind = "", next = start);
         }
         var pCur := syntax.skipTrivia(source, hdrPos + 1, prefix);
-        fnParamParts: mut List<String> = [];
+        mut fnParamParts: List<String> = [];
         emptySeen: List<String> = [];
         loop pCur < size and source.at(pCur) =!= ")" {
             pEnd := source.skipName(pCur);
@@ -519,7 +519,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
         if curFnIdx >= 0 and (postPos >= size or source.at(postPos) =!= "(") {
             fnEntry := functions[curFnIdx];
             if fnEntry.count < 0 { return (kind = "", next = start); }
-            fnParts: mut List<String> = [];
+            mut fnParts: List<String> = [];
             var pi := 0;
             loop pi < fnEntry.count {
                 pEntry := params[fnEntry.first + pi];
@@ -786,7 +786,7 @@ pub scanInnerBlockAssignedBag := fn(target: String, source: String, openBracePos
 
 /** Runs up to 4 fixed-point passes over `decls` to resolve forward scalar and destructured declarations into `FutureValue` records. */
 pub resolveFutureDecls := fn(target: String, source: String, prefix: String, moduleKey: String, useModuleRuntime: Bool, decls: Items, assignedBag: String, scopedAliases: List<AliasDecl>, functions: List<FunctionInfo>, functionParams: List<String>, locals: List<Local>): List<FutureValue> {
-    futureValues: mut List<FutureValue> = [];
+    mut futureValues: List<FutureValue> = [];
     var resolvedBag := "";
     var futurePass := 0;
     loop futurePass < 4 {
@@ -847,8 +847,8 @@ pub resolveFutureDecls := fn(target: String, source: String, prefix: String, mod
                         var hadComma := false;
                         var count := 0;
                         var claimedBag := "";
-                        bNames: mut List<String> = [];
-                        bKinds: mut List<String> = [];
+                        mut bNames: List<String> = [];
+                        mut bKinds: List<String> = [];
                         var lastPositional := true;
                         var singleExpected := "";
                         loop patCur < srcLen and source.at(patCur) =!= closeDelim {
@@ -994,7 +994,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
     closeBracePos := blockHasInnerFn(source, openBracePos, prefix);
     if closeBracePos < 0 { return locals; }
     limit := closeBracePos - 1;
-    decls: mut List<Item> = [];
+    mut decls: List<Item> = [];
     var seenDeclBag := seedBag;
     var position := openBracePos + 1;
     var parenDepth := 0;
@@ -1191,10 +1191,10 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
     scopedAliases := types.aliasesUpToDepth(aliases, blockLexDepth);
     futureValues := resolveFutureDecls(target, source, prefix, "", false, decls, assignedBag, scopedAliases, functions, functionParams, locals);
 
-    nextLocals: mut List<Local> = locals;
+    mut nextLocals: List<Local> = locals;
     placeholderDepth := 0 - 2 - blockLexDepth;
-    pushedNames: mut List<String> = [];
-    pushedAts: mut List<Int> = [];
+    mut pushedNames: List<String> = [];
+    mut pushedAts: List<Int> = [];
     var pushedCount := 0;
     loop futureValues as fut {
         if not trace.tokenInPipeBag(seedBag, fut.name) {
@@ -1223,7 +1223,7 @@ functionParams: List<String>, locals: List<Local>): List<Local> {
 
 /** Pre-collects shallow top-level type aliases, `pub` export declarations, future value/fn signatures, and root assignment markers. */
 pub collectModuleDecls := fn(target: String, source: String, prefix: String, moduleKey: String): Items {
-    decls: mut List<Item> = [];
+    mut decls: List<Item> = [];
     size := source.length();
     var position := 0;
     var depth := 0;
@@ -1652,7 +1652,7 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
 /** Appends `(name, depth)` entries to `decls` for every `|name|` token in `assignedBag`. */
 pub appendAssignedBagDecls := fn(assignedBag: String, decls: List<BlockDecl>, depth: Int): List<BlockDecl> {
     if assignedBag == "" { return decls; }
-    nextDecls: mut List<BlockDecl> = [];
+    mut nextDecls: List<BlockDecl> = [];
     loop decls as existing { mut nextDecls.pushBack(existing); }
     len := assignedBag.length();
     var pos := 0;
@@ -1683,7 +1683,7 @@ pub withoutFutureValues := fn(locals: List<Local>): List<Local> {
     }
     if firstDrop < 0 { return locals; }
     sym.rewindLocalsTo(firstDrop);
-    kept: mut List<Local> = [];
+    mut kept: List<Local> = [];
     loop locals as entry {
         if entry.depth >= 0 or entry.depth <= -2 { mut kept.pushBack(entry); }
     }
@@ -1717,7 +1717,7 @@ pub parseImportClause := fn(target: String, source: String, position: Int, modAl
 
 /** Collects top-level import clauses before parsing so imported declarations can seed the importing file's symbol table. */
 pub collectImportClauses := fn(target: String, source: String, prefix: String): Items {
-    imports: mut Items = [];
+    mut imports: Items = [];
     size := source.length();
     var position := 0;
     loop position < size {

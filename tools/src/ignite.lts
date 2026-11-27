@@ -240,7 +240,7 @@ buildNativeIgniterC := fn(rootDir: String, expectedCSha: String, ccCmd: String):
 listToolNames := fn(rootDir: String): List<String> {
     toolsDir := path.join(rootDir, "tools/src");
     entries := fs.listDir(toolsDir);
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     loop entries as entry {
         if entry.endsWith(".lts") {
             mut out.pushBack(entry.slice(0, entry.length() - 4));
@@ -290,7 +290,7 @@ readValidProvenance := fn(rootDir: String, name: String, expectedTarget: String,
     depOffsets := json.arrayOffsets(provText, depsField.valuePos);
     if depOffsets.length() == 0 { return (valid = false, path = "", sha256 = ""); }
 
-    depPaths: mut List<String> = [];
+    mut depPaths: List<String> = [];
     var idx := 0;
     loop depOffsets as dPos {
         dp := json.readFieldString(provText, dPos, "path");
@@ -334,10 +334,10 @@ rootDir: String, name: String, targetName: String, compilerArtifactSha: String, 
 artSha: String, canonSource: String, graph: frontend.Items, fallbackFromC: Bool
 ): (ok: Bool, error: String) {
     provPath := path.join(path.join(rootDir, "dist/tools"), name + ".provenance.json");
-    seenPaths: mut Set<String>;
+    mut seenPaths: Set<String>;
     mut seenPaths.add(canonSource);
-    depJson: mut List<String> = [];
-    edgeJson: mut List<String> = [];
+    mut depJson: List<String> = [];
+    mut edgeJson: List<String> = [];
 
     rootSha := crypto.sha256File(canonSource);
     if not rootSha.ok {
@@ -594,7 +594,7 @@ tsCompilerSha: String, cCompilerSha: String, compilerSourceSha: String, force: B
 /** Runs an ignited tool artifact (native C11 binary or TS script) with forwarded arguments and exits with its status. */
 executeIgnitedTool := fn(artifactPath: String, forwardArgs: List<String>): Unit {
     if artifactPath.endsWith(".ts") {
-        runArgs: mut List<String> = [artifactPath];
+        mut runArgs: List<String> = [artifactPath];
         loop forwardArgs as a {
             mut runArgs.pushBack(a);
         }
@@ -751,7 +751,7 @@ run := fn(rawArgs: List<String>): Unit {
             io.errorLine(seedCompile.error);
             io.exit(1);
         }
-        compArgs: mut List<String> = rawArgs;
+        mut compArgs: List<String> = rawArgs;
         _flag := mut compArgs.popFront();
         driverTs.run(compArgs);
         return;
@@ -778,9 +778,9 @@ run := fn(rawArgs: List<String>): Unit {
     var maxJobs := 0;
     var ensureName := "";
     var runToolName := "";
-    selected: mut List<String> = [];
+    mut selected: List<String> = [];
 
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     loop args.length() > 0 {
         arg := mut args.popFront();
         if arg == "--target" {
@@ -938,11 +938,11 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(1);
     }
 
-    resTarget: mut List<String> = [];
-    resPath: mut List<String> = [];
-    resSha: mut List<String> = [];
-    resRebuilt: mut List<Bool> = [];
-    pendingIndices: mut List<Int> = [];
+    mut resTarget: List<String> = [];
+    mut resPath: List<String> = [];
+    mut resSha: List<String> = [];
+    mut resRebuilt: List<Bool> = [];
+    mut pendingIndices: List<Int> = [];
 
     var si := 0;
     loop si < totalTools {
@@ -992,11 +992,11 @@ run := fn(rawArgs: List<String>): Unit {
         igniterEntryPath := path.join(rootDir, "compiler/bootstrap/igniter");
         isNativeRuntime := proc.runtimeVersion() == "c11";
         workerBin := if isNativeRuntime { proc.execPath() } else { project.nodeExecPath() };
-        workerCmds: mut List<String> = [];
-        workerArgsJson: mut List<String> = [];
+        mut workerCmds: List<String> = [];
+        mut workerArgsJson: List<String> = [];
         var w := 0;
         loop w < workerCount {
-            wArgs: mut List<String> = [];
+            mut wArgs: List<String> = [];
             if not isNativeRuntime {
                 mut wArgs.pushBack(json.quoteString(igniterEntryPath));
             }
@@ -1092,9 +1092,9 @@ run := fn(rawArgs: List<String>): Unit {
         }
     }
 
-    artifactPaths: mut List<String> = [];
-    tsArtifactPaths: mut List<String> = [];
-    toolEntries: mut List<String> = [];
+    mut artifactPaths: List<String> = [];
+    mut tsArtifactPaths: List<String> = [];
+    mut toolEntries: List<String> = [];
     var rebuiltCount := 0;
     var cCount := 0;
     var tsCount := 0;

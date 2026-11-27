@@ -33,7 +33,7 @@ invoke := fn(directory: String, commandRel: String, args: List<String>, timeoutM
     test.check("invoke makeTempDir: " + tmpRes.error, tmpRes.ok);
     outPath := path.join(tmpRes.path, "out");
     errPath := path.join(tmpRes.path, "err");
-    cmdArgs: mut List<String> = [path.join(directory, commandRel)];
+    mut cmdArgs: List<String> = [path.join(directory, commandRel)];
     loop args as a {
         mut cmdArgs.pushBack(a);
     }
@@ -66,7 +66,7 @@ shouldSkipArchivePath := fn(candidate: String): Bool {
 copyToolArchive := fn(dstRoot: String): Unit {
     topDirs: List<String> = ["compiler", "igniter", "lib", "benchmark", "tools", "config", "bin"];
     loop topDirs as topDir {
-        stack: mut List<String> = [topDir];
+        mut stack: List<String> = [topDir];
         loop stack.length() > 0 {
             rel := mut stack.popBack();
             src := path.join(root, rel);

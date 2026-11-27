@@ -38,7 +38,7 @@ parityProg := [
     "    }",
     "};",
     "main := fn(): Unit {",
-    "    xs: mut List<Int> = [10, 20, 30, 40, 50, 60];",
+    "    mut xs: List<Int> = [10, 20, 30, 40, 50, 60];",
     "    {",
     "        s0 := xs[1..5];",
     "        s1 := s0[1..3];",
@@ -46,7 +46,7 @@ parityProg := [
     "        emptyMid := xs[2..2];",
     "        io.outputLine(\"empty:\", emptyMid.length(), emptyMid.isEmpty(), emptyMid);",
     "    }",
-    "    emptyList: mut List<Int> = [];",
+    "    mut emptyList: List<Int> = [];",
     "    {",
     "        es := emptyList[0..0];",
     "        io.outputLine(\"emptyZero:\", es.isEmpty());",
@@ -81,7 +81,7 @@ parityProg := [
     "        sub[1] = 88;",
     "    }",
     "    io.outputLine(\"arr:\", arr, loop arr[..=2] { cast<Int>(.item) + 10 }.collected);",
-    "    pts: mut List<Pair> = [Pair { x = 1, label = \"one\" }, Pair { x = 2, label = \"two\" }, Pair { x = 3, label = \"three\" }];",
+    "    mut pts: List<Pair> = [Pair { x = 1, label = \"one\" }, Pair { x = 2, label = \"two\" }, Pair { x = 3, label = \"three\" }];",
     "    {",
     "        ps := mut pts[0..2];",
     "        ps[1] = Pair { x = 20, label = \"twenty\" };",
@@ -151,23 +151,23 @@ if ccProbe.available {
 
 /* 2. Compile-time borrow, exclusivity, splitAt suspension, escape, closure, and bit-packed rejections */
 compilerTest.assertCompileErrorContains(root, tsComp, "reject mutate owner while read-only slice active",
-"io := import \"core/io\";\nxs: mut List<Int> = [1, 2, 3];\ns := xs[0..2];\nmut xs.pushBack(4);\nio.outputLine(s[0]);\n",
+"io := import \"core/io\";\nmut xs: List<Int> = [1, 2, 3];\ns := xs[0..2];\nmut xs.pushBack(4);\nio.outputLine(s[0]);\n",
 "cannot mutate xs while borrowed by slice s");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject read owner while mut slice active",
-"io := import \"core/io\";\nxs: mut List<Int> = [1, 2, 3];\ns := mut xs[0..2];\nio.outputLine(xs[0]);\ns[0] = 9;\n",
+"io := import \"core/io\";\nmut xs: List<Int> = [1, 2, 3];\ns := mut xs[0..2];\nio.outputLine(xs[0]);\ns[0] = 9;\n",
 "cannot read xs while mutably borrowed by slice s");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject mutate owner while mut slice active",
-"xs: mut List<Int> = [1, 2, 3];\ns := mut xs[0..2];\nxs[2] = 9;\n",
+"mut xs: List<Int> = [1, 2, 3];\ns := mut xs[0..2];\nxs[2] = 9;\n",
 "cannot mutate xs while borrowed by slice s");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject read parent slice while splitAt children live",
-"io := import \"core/io\";\nxs: mut List<Int> = [1, 2, 3, 4];\ns := mut xs[0..4];\n(l, r) := mut s.splitAt(2);\nio.outputLine(s[0], l[0], r[0]);\n",
+"io := import \"core/io\";\nmut xs: List<Int> = [1, 2, 3, 4];\ns := mut xs[0..4];\n(l, r) := mut s.splitAt(2);\nio.outputLine(s[0], l[0], r[0]);\n",
 "cannot access slice s while split into active child borrow");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject mutate parent slice while splitAt children live",
-"xs: mut List<Int> = [1, 2, 3, 4];\ns := mut xs[0..4];\n(l, r) := mut s.splitAt(2);\ns[0] = 5;\n",
+"mut xs: List<Int> = [1, 2, 3, 4];\ns := mut xs[0..4];\n(l, r) := mut s.splitAt(2);\ns[0] = 5;\n",
 "cannot access slice s while split into active child borrow");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject returning Slice<T> from function",
@@ -215,15 +215,15 @@ compilerTest.assertCompileErrorContains(root, tsComp, "reject mutating read-only
 "cannot mutate read-only value s via index assignment");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject aliasing mut slice args (same var)",
-"f := fn(a: mut Slice<Int>, b: mut Slice<Int>): Unit { a[0] = 1; b[0] = 2; };\nxs: mut List<Int> = [1, 2, 3, 4];\ns := mut xs[0..4];\nf(mut s, mut s);\n",
+"f := fn(a: mut Slice<Int>, b: mut Slice<Int>): Unit { a[0] = 1; b[0] = 2; };\nmut xs: List<Int> = [1, 2, 3, 4];\ns := mut xs[0..4];\nf(mut s, mut s);\n",
 "cannot pass s multiple times as mut in the same call");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject aliasing mut slice args (same root list)",
-"f := fn(a: mut Slice<Int>, b: mut Slice<Int>): Unit { a[0] = 1; b[0] = 2; };\nxs: mut List<Int> = [1, 2, 3, 4];\nf(mut xs[0..2], mut xs[2..4]);\n",
+"f := fn(a: mut Slice<Int>, b: mut Slice<Int>): Unit { a[0] = 1; b[0] = 2; };\nmut xs: List<Int> = [1, 2, 3, 4];\nf(mut xs[0..2], mut xs[2..4]);\n",
 "multiple times as mut in the same call");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject aliasing mut owner and read-only slice",
-"f := fn(a: mut List<Int>, b: Slice<Int>): Unit { mut a.pushBack(b[0]); };\nxs: mut List<Int> = [1, 2, 3];\nf(mut xs, xs[0..2]);\n",
+"f := fn(a: mut List<Int>, b: Slice<Int>): Unit { mut a.pushBack(b[0]); };\nmut xs: List<Int> = [1, 2, 3];\nf(mut xs, xs[0..2]);\n",
 "cannot pass xs as both read-only and mut in the same call");
 
 /* 3. Runtime BoundPanic checks on TS and C11 */

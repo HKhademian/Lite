@@ -2,6 +2,6 @@ io := import "core/io";
 
 Token := alias (kind: String, text: String);
 Tokens := alias List<Token>;
-tokens: mut Tokens = [];
+mut tokens: Tokens = [];
 mut tokens.pushBack((kind = "num", text = "42"));
 io.outputLine(tokens[0].text);

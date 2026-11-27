@@ -3,8 +3,8 @@ io := import "core/io";
 word := io.inputLine();
 n := io.inputInt();
 _eol := io.inputLine();
-tags: mut List<String> = [];
-unique: mut Set<String>;
+mut tags: List<String> = [];
+mut unique: Set<String>;
 var i := 0;
 loop i < n {
     t := io.inputLine();

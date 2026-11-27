@@ -1,7 +1,7 @@
 io := import "core/io";
 
 splitLines := fn(raw: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     n := raw.length();
     var pos := 0;
     loop pos <= n {

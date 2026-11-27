@@ -68,7 +68,7 @@ compareText := fn(left: String, right: String): Int {
 /** Converts Windows backslashes to forward slashes so path slugs are platform-uniform. */
 normalizeSlashes := fn(path: String): String {
     if path.indexOf("\\", 0) < 0 { return path; }
-    result: mut tb.TextBuilder;
+    mut result: tb.TextBuilder;
     var index := 0;
     size := path.length();
     loop index < size {
@@ -176,7 +176,7 @@ logicalModuleName := fn(rootDir: String, path: String, display: String): String 
 
 /** Prefix-free, injective target identifier slug for one logical module path. */
 encodeModuleSlug := fn(target: String, logical: String): String {
-    result: mut tb.TextBuilder;
+    mut result: tb.TextBuilder;
     var index := 0;
     size := logical.length();
     loop index < size {
@@ -257,7 +257,7 @@ sortedDepIndices := fn(logicals: List<String>, paths: List<String>, count: Int):
 
 /** Returns public declaration records for one completed source module. */
 modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.Items {
-    result: mut frontend.Items = [];
+    mut result: frontend.Items = [];
     var inside := false;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START { inside = item.name == path; }
@@ -270,11 +270,11 @@ modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.It
 }
 /** Appends an import interface, rejecting alias, value, and duplicate-runtime collisions while allowing overloaded functions. */
 appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, prefix: String): frontend.Items {
-    var result: mut frontend.Items = existing;
-    seenValueOrAlias: mut Set<String>;
-    seenFnNames: mut Set<String>;
-    seenFnRuntimes: mut Set<String>;
-    seenTypes: mut Set<String>;
+    var mut result: frontend.Items = existing;
+    mut seenValueOrAlias: Set<String>;
+    mut seenFnNames: Set<String>;
+    mut seenFnRuntimes: Set<String>;
+    mut seenTypes: Set<String>;
     loop existing as previous {
         if previous.kind == frontend.ITEM_KIND_MODULE_ALIAS or previous.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
             mut seenValueOrAlias.add(previous.name);
@@ -315,8 +315,8 @@ appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, pr
 
 /** Collects all `PublicTypeOp` declarations across already-processed modules in `graph` (excluding `skipModPath`), deduplicated by canonical key+runtime. */
 appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, skipModPath: String): frontend.Items {
-    var result: mut frontend.Items = existing;
-    seenOps: mut Set<String>;
+    var mut result: frontend.Items = existing;
+    mut seenOps: Set<String>;
     loop existing as prev {
         if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or prev.kind == frontend.ITEM_KIND_PUBLIC_IMPL {
             mut seenOps.add(prev.kind + "|" + prev.name + "|" + prev.runtime);
@@ -341,7 +341,7 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
 
 /** Builds one aliased module namespace from its source-declared public interface. */
 moduleAliasExports := fn(graph: frontend.Items, path: String, modAlias: String): frontend.Items {
-    result: mut frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = moduleKeyForPath(graph, path), code = "",
+    mut result: frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = moduleKeyForPath(graph, path), code = "",
     intValue = 0, textValue = path)];
     loop modulePublicDeclarations(graph, path) as item {
         mut result.pushBack((kind = item.kind, name = modAlias + "." + item.name, runtime = item.runtime,
@@ -463,9 +463,9 @@ scanned: mut frontend.TokenBuckets): Unit {
 
 /** Collects `ModuleStart`..`ModuleEnd` slices for modules whose path is in `metaPaths`. */
 collectCoreGraphSlice := fn(graph: frontend.Items, metaPaths: List<String>): frontend.Items {
-    metaSet: mut Set<String>;
+    mut metaSet: Set<String>;
     loop metaPaths as mp { mut metaSet.add(mp); }
-    slice: mut frontend.Items = [];
+    mut slice: frontend.Items = [];
     var keep := false;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START {
@@ -481,9 +481,9 @@ collectCoreGraphSlice := fn(graph: frontend.Items, metaPaths: List<String>): fro
 
 /** Collects non-core top-level `FunctionStart` tokens present in `graph` that are not yet in `scanned`. */
 collectUnscannedNonCoreFns := fn(graph: frontend.Items, metaPaths: List<String>, scanned: frontend.TokenBuckets): List<String> {
-    metaSet: mut Set<String>;
+    mut metaSet: Set<String>;
     loop metaPaths as mp { mut metaSet.add(mp); }
-    result: mut List<String> = [];
+    mut result: List<String> = [];
     var inCore := false;
     var fnDepth := 0;
     loop graph as item {
@@ -522,7 +522,7 @@ hasNewlyReachableToken := fn(candidates: List<String>, reachable: frontend.Token
 
 /** Replaces the body items between `ModuleStart` and `ModuleEnd` for canonical `path`. */
 replaceModuleItems := fn(graph: frontend.Items, path: String, replacement: frontend.Items): frontend.Items {
-    updated: mut frontend.Items = [];
+    mut updated: frontend.Items = [];
     var skipping := false;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START and item.name == path {
@@ -543,7 +543,7 @@ replaceModuleItems := fn(graph: frontend.Items, path: String, replacement: front
 
 /** Strips temporary `CoreModuleMeta`, `CoreModuleSource`, and `CoreModuleImport` bookkeeping records. */
 stripCoreMeta := fn(graph: frontend.Items): frontend.Items {
-    cleaned: mut frontend.Items = [];
+    mut cleaned: frontend.Items = [];
     loop graph as item {
         if item.kind =!= frontend.ITEM_KIND_CORE_MODULE_META and item.kind =!= frontend.ITEM_KIND_CORE_MODULE_SOURCE and item.kind =!= frontend.ITEM_KIND_CORE_MODULE_IMPORT {
             mut cleaned.pushBack(item);
@@ -554,7 +554,7 @@ stripCoreMeta := fn(graph: frontend.Items): frontend.Items {
 
 /** Collects cached import exports for core module `modPath` from `CoreModuleImport` records. */
 coreModuleExports := fn(graph: frontend.Items, modPath: String): frontend.Items {
-    var importedExports: mut frontend.Items = [];
+    var mut importedExports: frontend.Items = [];
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_CORE_MODULE_IMPORT and item.name == modPath {
             if moduleProcessed(graph, item.code) {
@@ -569,7 +569,7 @@ coreModuleExports := fn(graph: frontend.Items, modPath: String): frontend.Items 
 /** Splices compiled generic monomorphization items (grouped by `ITEM_KIND_MONO_OWNER` markers) right before their owning module's `ModuleEnd`. */
 spliceGenericItems := fn(graph: frontend.Items, monoItems: frontend.Items): frontend.Items {
     if monoItems.length() == 0 { return graph; }
-    result: mut frontend.Items = [];
+    mut result: frontend.Items = [];
     var currentModKey := "";
     var insideMod := false;
     loop graph as item {
@@ -598,15 +598,15 @@ spliceGenericItems := fn(graph: frontend.Items, monoItems: frontend.Items): fron
 /** Re-parses verified core modules incrementally until every needed callee function body is present, and drains generic monomorphizations. */
 resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSpecs: List<String>): frontend.Items {
     var graph := initialGraph;
-    allMonoItems: mut frontend.Items = [];
+    mut allMonoItems: frontend.Items = [];
     initMono := frontend.drainGenericInstances(target);
     loop initMono as mi { mut allMonoItems.pushBack(mi); }
 
-    metaPaths: mut List<String> = [];
-    metaKeys: mut List<String> = [];
-    metaDisplays: mut List<String> = [];
-    metaIdentities: mut List<String> = [];
-    metaSources: mut List<String> = [];
+    mut metaPaths: List<String> = [];
+    mut metaKeys: List<String> = [];
+    mut metaDisplays: List<String> = [];
+    mut metaIdentities: List<String> = [];
+    mut metaSources: List<String> = [];
     var metaCount := 0;
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_CORE_MODULE_META {
@@ -621,15 +621,15 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
     }
     if metaCount == 0 { return spliceGenericItems(graph, allMonoItems); }
 
-    compiledFns: mut Set<String>;
+    mut compiledFns: Set<String>;
     addCompiledFnsSet(graph, mut compiledFns);
-    reachableTokens: mut Set<String>;
+    mut reachableTokens: Set<String>;
     scanTopLevelTokens(graph, mut reachableTokens);
     addCompiledFnsSet(allMonoItems, mut compiledFns);
     loop allMonoItems as mi {
         if mi.kind =!= frontend.ITEM_KIND_MONO_OWNER { scanItemTokens(mi, mut reachableTokens); }
     }
-    scannedTokens: mut Set<String>;
+    mut scannedTokens: Set<String>;
     closeReachableTokens(graph, mut reachableTokens, mut scannedTokens);
     var coreGraph := collectCoreGraphSlice(graph, metaPaths);
     var unscannedNonCore := collectUnscannedNonCoreFns(graph, metaPaths, scannedTokens);
@@ -709,7 +709,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     rootDir := if isRoot { dirnameOfPath(normPath) } else { rootDirForGraph(initialGraph) };
     logical := logicalModuleName(rootDir, path, display);
     moduleKey := if isRoot { "" } else { uniqueModuleKey(initialGraph, target, encodeModuleSlug(target, logical)) };
-    var graph: mut frontend.Items = initialGraph;
+    var mut graph: frontend.Items = initialGraph;
     mut graph.pushBack((kind = frontend.ITEM_KIND_MODULE_VISITED, name = path, runtime = rootDir, code = logical,
     intValue = if isRoot { 1 } else { 0 }, textValue = moduleKey));
 
@@ -746,14 +746,14 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     }
 
     clauses := frontend.collectImportClauses(target, source, path);
-    clausePaths: mut List<String> = [];
-    depPaths: mut List<String> = [];
-    depDisplays: mut List<String> = [];
-    depIdentities: mut List<String> = [];
-    depTexts: mut List<String> = [];
-    depLogicals: mut List<String> = [];
+    mut clausePaths: List<String> = [];
+    mut depPaths: List<String> = [];
+    mut depDisplays: List<String> = [];
+    mut depIdentities: List<String> = [];
+    mut depTexts: List<String> = [];
+    mut depLogicals: List<String> = [];
     var depCount := 0;
-    depPathSet: mut Set<String>;
+    mut depPathSet: Set<String>;
     loop clauses as clause {
         loaded := hostFs.readImportedSource(importerPath = path, importerDisplay = display, spec = clause.textValue,
         =projectRoot, =cwd);
@@ -807,7 +807,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     }
     level := maxChildLevel + 1;
 
-    var importedExports: mut frontend.Items = [];
+    var mut importedExports: frontend.Items = [];
     var clauseIndex := 0;
     loop clauses as clause {
         depPath := clausePaths[clauseIndex];
@@ -863,10 +863,10 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
 
 /** Emits all parsed modules in canonical `(level, logical, path)` topological order, with root last. */
 pub moduleItems := fn(graph: frontend.Items): frontend.Items {
-    startIndices: mut List<Int> = [];
-    startLevels: mut List<Int> = [];
-    startLogicals: mut List<String> = [];
-    startPaths: mut List<String> = [];
+    mut startIndices: List<Int> = [];
+    mut startLevels: List<Int> = [];
+    mut startLogicals: List<String> = [];
+    mut startPaths: List<String> = [];
     var moduleCount := 0;
     var index := 0;
     loop graph as item {
@@ -887,7 +887,7 @@ pub moduleItems := fn(graph: frontend.Items): frontend.Items {
             if cmpLogical =!= 0 { cmpLogical < 0 } else { compareText(startPaths[a], startPaths[b]) <= 0 }
         }
     });
-    result: mut frontend.Items = [];
+    mut result: frontend.Items = [];
     loop order as best {
         var itemIndex := startIndices[best];
         loop true {

@@ -255,7 +255,7 @@ pub emlDiv := fn(x: Complex, y: Complex): Complex {
 
 /** Runs a '-'/'1' (push 1) and '.'/'0' (push eml(pop, pop)) stream program. */
 pub runStream := fn(program: String): StreamResult {
-    stack: mut List<Complex> = [];
+    mut stack: List<Complex> = [];
     var depth := 0;
     var loose := false;
     var underflows := 0;
@@ -362,7 +362,7 @@ isAlpha := fn(ch: String): Bool {
 }
 
 tokenize := fn(src: String): List<(kind: String, text: String)> {
-    tokens: mut List<(kind: String, text: String)> = [];
+    mut tokens: List<(kind: String, text: String)> = [];
     size := src.length();
     var i := 0;
     loop i < size {

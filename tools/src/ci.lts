@@ -34,7 +34,7 @@ invokeNode := fn(scriptArgs: List<String>, cwd: String): Unit {
 };
 
 invokeLite := fn(root: String, subArgs: List<String>): Unit {
-    nodeArgs: mut List<String> = [path.join(root, "bin/lite")];
+    mut nodeArgs: List<String> = [path.join(root, "bin/lite")];
     loop subArgs as arg {
         mut nodeArgs.pushBack(arg);
     }
@@ -74,7 +74,7 @@ parseExecutedCount := fn(output: String): (ok: Bool, count: Int) {
 };
 
 collectFailureLines := fn(output: String): List<String> {
-    found: mut List<String> = [];
+    mut found: List<String> = [];
     size := output.length();
     var pos := 0;
     loop pos < size {
@@ -97,7 +97,7 @@ verifyMigration := fn(root: String): Unit {
     if not expectedCount.found or not expectedCount.ok { failCi("invalid config/ts-migration.json: scenarios"); }
     failuresField := json.findField(cfgRead.text, 0, "failures");
     if not failuresField.found { failCi("invalid config/ts-migration.json: failures"); }
-    expectedFailures: mut List<String> = [];
+    mut expectedFailures: List<String> = [];
     offsets := json.arrayOffsets(cfgRead.text, failuresField.valuePos);
     loop offsets as off {
         item := json.readStringAt(cfgRead.text, off);
@@ -199,7 +199,7 @@ runPublish := fn(root: String): Unit {
         }
     }
 
-    ghCreate: mut List<String> = ["release", "create", tag];
+    mut ghCreate: List<String> = ["release", "create", tag];
     entries := fs.listDir(directory);
     loop entries as entry {
         mut ghCreate.pushBack(path.join(directory, entry));
@@ -299,7 +299,7 @@ runTask := fn(root: String, task: String): Unit {
     }
     if task == "package" {
         tag := releaseTag();
-        pkgArgs: mut List<String> = [path.join(root, "bin/lite-release"), path.join(root, "dist/release")];
+        mut pkgArgs: List<String> = [path.join(root, "bin/lite-release"), path.join(root, "dist/release")];
         if tag =!= "" { mut pkgArgs.pushBack(tag); }
         invokeNode(pkgArgs, root);
         return;
@@ -312,7 +312,7 @@ runTask := fn(root: String, task: String): Unit {
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--" {
         _sep := mut args.popFront();
     }

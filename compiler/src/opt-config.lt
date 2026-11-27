@@ -375,7 +375,7 @@ pub parseOptConfig := fn(rawArgs: List<String>, target: String): OptConfig {
     var ovFinite := -1;
     var ovUnchecked := -1;
     var ovDebug := -1;
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     loop args.length() > 0 {
         arg := mut args.popFront();
         if arg == "--sanitize" {

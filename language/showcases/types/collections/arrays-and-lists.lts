@@ -10,7 +10,7 @@ loop fixed as item {
 }
 
 /* `mut` allows in-place list operations; `var mut` with `List<T>` also allows replacing the list variable itself. */
-queue: mut List<Int> = [2, 3];
+mut queue: List<Int> = [2, 3];
 mut queue.pushFront(1);
 mut queue.pushBack(4);
 saved: List<Int> = queue;

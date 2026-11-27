@@ -15,7 +15,7 @@ run := fn(rawArgs: List<String>): Unit {
     project.handleNamedVersionFlag(rawArgs, "compiler", "lite-compile");
 
     var target := TARGET_TS;
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 {
         first := args[0];
         if first == TARGET_TS or first == TARGET_C {

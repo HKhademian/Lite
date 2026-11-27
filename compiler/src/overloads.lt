@@ -5,9 +5,9 @@ contexts := import "./contexts";
 types := import "./frontend-types";
 generics := import "./generics";
 
-fnSigByRuntime: mut Map<String, String>;
-fnGenByRuntime: mut Map<String, String>;
-fnParamsByRuntime: mut Map<String, String>;
+mut fnSigByRuntime: Map<String, String>;
+mut fnGenByRuntime: Map<String, String>;
+mut fnParamsByRuntime: Map<String, String>;
 
 /** Clears all registered overload signature metadata before a fresh compilation graph. */
 pub resetAll := fn(): Unit {
@@ -45,7 +45,7 @@ stripAndSplitParams := fn(paramsEncoded: String, paramCount: Int): List<String> 
         return generics.splitPipeEntries(paramsEncoded, paramCount);
     }
     bare := contexts.stripCtxFromParams(paramsEncoded);
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     if bare == "" { return out; }
     size := bare.length();
     var start := 0;
@@ -66,13 +66,13 @@ Excludes return type and trailing `context(...)` requirements (so overloads diff
 return type or context requirements collide), and normalizes generic parameter names by position.
 */
 pub overloadSigKey := fn(isStatic: Bool, genericParams: String, paramsEncoded: String, paramCount: Int): String {
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append(if isStatic { "S|" } else { "I|" });
     specs := if genericParams =!= "" { types.splitParamSpecs(genericParams) } else {
         emptySpecs: List<(name: String, kind: String)> = [];
         emptySpecs
     };
-    normMap: mut Map<String, String>;
+    mut normMap: Map<String, String>;
     var gi := 0;
     mut out.append("G[");
     loop specs as sp {

@@ -134,8 +134,8 @@ rootDir: String, compilerPath: String, runnerScript: String, batchRel: List<Stri
     } else {
         runnerScript.endsWith(".ts") or runnerScript.endsWith(".js")
     };
-    commands: mut List<String> = [];
-    argListsJson: mut List<String> = [];
+    mut commands: List<String> = [];
+    mut argListsJson: List<String> = [];
     loop batchRel as relFile {
         taskJson := "{\"root\":" + json.quoteString(rootDir)
         + ",\"compiler\":" + json.quoteString(compilerPath)
@@ -230,8 +230,8 @@ pub runUnitTestFiles := fn(rootDir: String, selectedRel: List<String>, maxJobs: 
         path.join(rootDir, "bin/lite-test")
     };
 
-    parallelRel: mut List<String> = [];
-    serialRel: mut List<String> = [];
+    mut parallelRel: List<String> = [];
+    mut serialRel: List<String> = [];
     loop selectedRel as relFile {
         if isSerialUnitTest(relFile) {
             mut serialRel.pushBack(relFile);
@@ -277,7 +277,7 @@ pub runUnitTests := fn(rootDir: String, filter: String, maxJobs: Int, outputMode
     targets: List<String> = [rootDir];
     absFiles := path.collectFiles(rootDir, targets, ".test.lts", ignored, true);
 
-    selectedRel: mut List<String> = [];
+    mut selectedRel: List<String> = [];
     loop absFiles as absFile {
         rel := path.relative(rootDir, absFile);
         if cases.matchesCaseFilter(rel, filter) {
@@ -301,7 +301,7 @@ pub runUnitCli := fn(rootDir: String, rawArgs: List<String>): Int {
         io.errorLine("could not locate LiteScript repository root");
         return 1;
     }
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     var jobs := 0;
     var outputMode := "";
     var filter := "";

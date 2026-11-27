@@ -18,7 +18,7 @@ tsComp := selTs.path;
 prog :=
 "io := import \"core/io\";\n" +
 "list := import \"core/list\";\n" +
-"nums: mut List<Int> = [10, 20, 30, 40];\n" +
+"mut nums: List<Int> = [10, 20, 30, 40];\n" +
 "nums[1] = 25;\n" +
 "mut nums.setAt(3, 45);\n" +
 "var fixed: [Int; 3] = [1, 2, 3];\n" +
@@ -45,7 +45,7 @@ immProg := "xs: List<Int> = [1, 2];\nxs[0] = 5;\n";
 compilerTest.assertCompileError(root, tsComp, "immutable list index assign", immProg, "2:1: cannot mutate read-only value xs via index assignment\n");
 
 /* 3. Out-of-bounds xs[i] = v raises BoundPanic */
-oobProg := "xs: mut List<Int> = [1, 2];\nxs[5] = 9;\n";
+oobProg := "mut xs: List<Int> = [1, 2];\nxs[5] = 9;\n";
 cOob := compilerTest.compileStdin(root, tsComp, oobProg, "");
 test.checkInt("oob compile", 0, cOob.status);
 rOob := compilerTest.checkAndRunTs(root, cOob.stdout);
@@ -66,10 +66,10 @@ test.check("math.sqrt(9.0)", math.abs(math.sqrt(9.0) - 3.0) < 0.0000001);
 test.check("math.lerp", math.abs(math.lerp(10.0, 20.0, 0.25) - 12.5) < 0.0000001);
 
 /* 5. math/random deterministic checks (mutable Rng + module-level default PRNG) */
-var rA: mut rand.Rng = rand.Rng.create(42);
+var mut rA: rand.Rng = rand.Rng.create(42);
 v1 := mut rA.rangeInt(1, 100);
 v2 := mut rA.rangeInt(1, 100);
-var rB: mut rand.Rng = rand.Rng.create(42);
+var mut rB: rand.Rng = rand.Rng.create(42);
 v1b := mut rB.rangeInt(1, 100);
 v2b := mut rB.rangeInt(1, 100);
 test.checkInt("random deterministic 1", v1, v1b);
@@ -80,7 +80,7 @@ mut rA.reseed(42);
 test.checkInt("random reseed reproduces v1", v1, mut rA.rangeInt(1, 100));
 ni := mut rA.nextInt();
 test.check("random nextInt positive", ni >= 1 and ni <= 2147483646);
-var snap: mut rand.Rng = rA;
+var mut snap: rand.Rng = rA;
 afterA := mut rA.nextInt();
 afterSnap := mut snap.nextInt();
 test.checkInt("random COW snapshot isolation", afterA, afterSnap);

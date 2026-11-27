@@ -7,7 +7,7 @@ proc := import "core/process";
 project := import "util/project";
 
 run := fn(rawArgs: List<String>): Int {
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() < 2 {
         io.errorLine("missing compiler artifact or source name");
         return 1;

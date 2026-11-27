@@ -41,7 +41,7 @@ pub FloatRing := alias Ring<Float>;
 /** Creates an empty generic `Ring<T>` with fixed capacity `>= 1`. */
 pub Ring.create := fn<T: Type>(capacity: Int): Self<T> {
     cap := if capacity < 1 { 1 } else { capacity };
-    buf: mut List<T> = [];
+    mut buf: List<T> = [];
     z: T;
     loop 0..cap {
         mut buf.pushBack(z);
@@ -72,7 +72,7 @@ pub Ring.isFull := fn<T: Type>(r: Self<T>): Bool {
 /** Appends `value` in O(1), overwriting the oldest element if full; returns `true` when an overwrite occurred. */
 pub Ring.push := fn<T: Type>(r: mut Self<T>, value: T): Bool {
     tail := (r.head + r.count) % r.cap;
-    buf: mut List<T> = r.data;
+    mut buf: List<T> = r.data;
     mut buf.setAt(tail, value);
     r.data = buf;
     if r.count >= r.cap {
@@ -88,7 +88,7 @@ pub Ring.push := fn<T: Type>(r: mut Self<T>, value: T): Bool {
 pub Ring.tryPush := fn<T: Type>(r: mut Self<T>, value: T): Bool {
     if r.count >= r.cap { return false; }
     tail := (r.head + r.count) % r.cap;
-    buf: mut List<T> = r.data;
+    mut buf: List<T> = r.data;
     mut buf.setAt(tail, value);
     r.data = buf;
     r.count = r.count + 1;
@@ -100,7 +100,7 @@ pub Ring.pop := fn<T: Type>(r: mut Self<T>): RingItem<T> {
     if r.count <= 0 { return .Empty; }
     val := r.data[r.head];
     z: T;
-    buf: mut List<T> = r.data;
+    mut buf: List<T> = r.data;
     mut buf.setAt(r.head, z);
     r.data = buf;
     r.head = (r.head + 1) % r.cap;
@@ -125,7 +125,7 @@ pub Ring.get := fn<T: Type>(r: Self<T>, index: Int): RingItem<T> {
 
 /** Resets `r` to empty and clears stored elements to their zero value. */
 pub Ring.clear := fn<T: Type>(r: mut Self<T>): Unit {
-    buf: mut List<T> = r.data;
+    mut buf: List<T> = r.data;
     z: T;
     loop 0..r.cap as i {
         mut buf.setAt(i, z);

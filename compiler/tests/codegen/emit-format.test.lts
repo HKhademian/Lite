@@ -23,7 +23,7 @@ runComp := fn(compPath: String, extraArgs: List<String>, src: String, name: Stri
     test.check("makeTempDir", tmp.ok);
     outF := path.join(tmp.path, "out.txt");
     errF := path.join(tmp.path, "err.txt");
-    argv: mut List<String> = [compPath, "--stdin", "--name", name];
+    mut argv: List<String> = [compPath, "--stdin", "--name", name];
     loop extraArgs as a { mut argv.pushBack(a); }
     emptyEnv: List<String> = [];
     res := proc.runBytes(proc.execPath(), argv, root, emptyEnv, 30000, src.utf8Encode(), outF, errF);

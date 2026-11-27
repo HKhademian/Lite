@@ -91,8 +91,8 @@ pub IntLru := alias Lru<Int, Int>;
 lruUnlink := fn<K: Type<LruKey>, V: Type>(c: mut Lru<K, V>, idx: Int): Unit {
     p := c.prev[idx];
     n := c.next[idx];
-    pr: mut List<Int> = c.prev;
-    nx: mut List<Int> = c.next;
+    mut pr: List<Int> = c.prev;
+    mut nx: List<Int> = c.next;
     if p >= 0 { mut nx.setAt(p, n); } else { c.head = n; }
     if n >= 0 { mut pr.setAt(n, p); } else { c.tail = p; }
     mut pr.setAt(idx, -1);
@@ -103,8 +103,8 @@ lruUnlink := fn<K: Type<LruKey>, V: Type>(c: mut Lru<K, V>, idx: Int): Unit {
 
 lruPushFront := fn<K: Type<LruKey>, V: Type>(c: mut Lru<K, V>, idx: Int): Unit {
     oldHead := c.head;
-    pr: mut List<Int> = c.prev;
-    nx: mut List<Int> = c.next;
+    mut pr: List<Int> = c.prev;
+    mut nx: List<Int> = c.next;
     mut pr.setAt(idx, -1);
     mut nx.setAt(idx, oldHead);
     if oldHead >= 0 { mut pr.setAt(oldHead, idx); } else { c.tail = idx; }
@@ -116,11 +116,11 @@ lruPushFront := fn<K: Type<LruKey>, V: Type>(c: mut Lru<K, V>, idx: Int): Unit {
 /** Creates a bounded O(1) `Lru<K, V>` cache holding at most `capacity` entries (`>= 1`). */
 pub Lru.create := fn<K: Type<LruKey>, V: Type>(capacity: Int): Self<K, V> {
     cap := if capacity < 1 { 1 } else { capacity };
-    ks: mut List<K> = [];
-    vs: mut List<V> = [];
-    pr: mut List<Int> = [];
-    nx: mut List<Int> = [];
-    fl: mut List<Int> = [];
+    mut ks: List<K> = [];
+    mut vs: List<V> = [];
+    mut pr: List<Int> = [];
+    mut nx: List<Int> = [];
+    mut fl: List<Int> = [];
     zk: K;
     zv: V;
     loop 0..cap as i {
@@ -142,7 +142,7 @@ pub Lru.put := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K, value: V)
     existing := c.index.get(key);
     if existing.found {
         idx := existing.value;
-        vs: mut List<V> = c.vals;
+        mut vs: List<V> = c.vals;
         mut vs.setAt(idx, value);
         c.vals = vs;
         lruUnlink<K, V>(mut c, idx);
@@ -153,13 +153,13 @@ pub Lru.put := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K, value: V)
     var ev := LruEviction<K, V> {};
     var slot := -1;
     if c.freeSlots.length() > 0 {
-        fl: mut List<Int> = c.freeSlots;
+        mut fl: List<Int> = c.freeSlots;
         slot = mut fl.popBack();
         c.freeSlots = fl;
     } else {
         victim := c.tail;
         ev = LruEviction<K, V> { evicted = true, key = c.keys[victim], value = c.vals[victim] };
-        mp: mut Map<K, Int> = c.index;
+        mut mp: Map<K, Int> = c.index;
         _rm := mut mp.remove(c.keys[victim]);
         c.index = mp;
         lruUnlink<K, V>(mut c, victim);
@@ -167,9 +167,9 @@ pub Lru.put := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K, value: V)
         slot = victim;
     }
 
-    ks: mut List<K> = c.keys;
-    vs: mut List<V> = c.vals;
-    mp: mut Map<K, Int> = c.index;
+    mut ks: List<K> = c.keys;
+    mut vs: List<V> = c.vals;
+    mut mp: Map<K, Int> = c.index;
     mut ks.setAt(slot, key);
     mut vs.setAt(slot, value);
     mut mp.set(key, slot);
@@ -210,15 +210,15 @@ pub Lru.remove := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K): Bool 
     res := c.index.get(key);
     if not res.found { return false; }
     idx := res.value;
-    mp: mut Map<K, Int> = c.index;
+    mut mp: Map<K, Int> = c.index;
     _rm := mut mp.remove(key);
     c.index = mp;
     lruUnlink<K, V>(mut c, idx);
     zk: K;
     zv: V;
-    ks: mut List<K> = c.keys;
-    vs: mut List<V> = c.vals;
-    fl: mut List<Int> = c.freeSlots;
+    mut ks: List<K> = c.keys;
+    mut vs: List<V> = c.vals;
+    mut fl: List<Int> = c.freeSlots;
     mut ks.setAt(idx, zk);
     mut vs.setAt(idx, zv);
     mut fl.pushBack(idx);
@@ -233,15 +233,15 @@ pub Lru.evictOldest := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>): LruEvict
     if c.tail < 0 { return LruEviction<K, V> {}; }
     victim := c.tail;
     ev := LruEviction<K, V> { evicted = true, key = c.keys[victim], value = c.vals[victim] };
-    mp: mut Map<K, Int> = c.index;
+    mut mp: Map<K, Int> = c.index;
     _rm := mut mp.remove(c.keys[victim]);
     c.index = mp;
     lruUnlink<K, V>(mut c, victim);
     zk: K;
     zv: V;
-    ks: mut List<K> = c.keys;
-    vs: mut List<V> = c.vals;
-    fl: mut List<Int> = c.freeSlots;
+    mut ks: List<K> = c.keys;
+    mut vs: List<V> = c.vals;
+    mut fl: List<Int> = c.freeSlots;
     mut ks.setAt(victim, zk);
     mut vs.setAt(victim, zv);
     mut fl.pushBack(victim);
@@ -287,11 +287,11 @@ pub Lru.stats := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): LruStats {
 pub Lru.clear := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>): Unit {
     zk: K;
     zv: V;
-    ks: mut List<K> = c.keys;
-    vs: mut List<V> = c.vals;
-    pr: mut List<Int> = c.prev;
-    nx: mut List<Int> = c.next;
-    fl: mut List<Int> = [];
+    mut ks: List<K> = c.keys;
+    mut vs: List<V> = c.vals;
+    mut pr: List<Int> = c.prev;
+    mut nx: List<Int> = c.next;
+    mut fl: List<Int> = [];
     loop 0..c.cap as i {
         mut ks.setAt(i, zk);
         mut vs.setAt(i, zv);

@@ -22,7 +22,7 @@ readOptBool := fn(src: String, objPos: Int, key: String): Bool {
 };
 
 readStringList := fn(src: String, objPos: Int, key: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     fld := json.findField(src, objPos, key);
     if not fld.found { return out; }
     offs := json.arrayOffsets(src, fld.valuePos);
@@ -65,7 +65,7 @@ renderSampleCard := fn(src: String, sPos: Int, basePath: String, includeNote: Bo
     sourceHtml := readOptStr(src, sPos, "sourceHtml");
     output := readOptStr(src, sPos, "output");
 
-    inputParts: mut List<String> = [];
+    mut inputParts: List<String> = [];
     if args.length() > 0 {
         mut inputParts.pushBack("args: " + args.join(" "));
     }
@@ -120,7 +120,7 @@ renderHomeBody := fn(src: String, renderedOffs: List<Int>): String {
     heroCard := if heroPos >= 0 { renderSampleCard(src, heroPos, "", false) } else { "" };
 
     featuredIds: List<String> = ["factorial", "decisions", "script-arguments", "type-aliases"];
-    featuredCards: mut List<String> = [];
+    mut featuredCards: List<String> = [];
     loop featuredIds as fid {
         fPos := findById(src, renderedOffs, fid);
         if fPos >= 0 {
@@ -337,14 +337,14 @@ renderedPlayOffs: List<Int>
 ): String {
     proseLite := readOptStr(src, 0, "proseLite");
 
-    langJumps: mut List<String> = [];
-    langSections: mut List<String> = [];
+    mut langJumps: List<String> = [];
+    mut langSections: List<String> = [];
     loop sampleGroupOffs as gPos {
         gId := readOptStr(src, gPos, "id");
         gTitle := readOptStr(src, gPos, "title");
         gDesc := readOptStr(src, gPos, "description");
         gFolder := readOptStr(src, gPos, "folder");
-        cards: mut List<String> = [];
+        mut cards: List<String> = [];
         loop renderedOffs as sPos {
             if readOptStr(src, sPos, "group") == gId {
                 mut cards.pushBack(renderGalleryCard(src, sPos, "../"));
@@ -368,14 +368,14 @@ renderedPlayOffs: List<Int>
         mut langSections.pushBack(sLines.join("\n"));
     }
 
-    playJumps: mut List<String> = [];
-    playSections: mut List<String> = [];
+    mut playJumps: List<String> = [];
+    mut playSections: List<String> = [];
     loop playGroupOffs as gPos {
         gId := readOptStr(src, gPos, "id");
         gTitle := readOptStr(src, gPos, "title");
         gDesc := readOptStr(src, gPos, "description");
         gFolder := readOptStr(src, gPos, "folder");
-        cards: mut List<String> = [];
+        mut cards: List<String> = [];
         loop renderedPlayOffs as sPos {
             if readOptStr(src, sPos, "group") == gId {
                 mut cards.pushBack(renderGalleryCard(src, sPos, "../"));

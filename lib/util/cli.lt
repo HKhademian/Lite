@@ -6,7 +6,7 @@ path := import "core/path";
 
 /** Strips a leading `--` argument separator when present using `list.popFront`. */
 pub stripLeadingSeparator := fn(rawArgs: List<String>): List<String> {
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--" {
         _sep := mut args.popFront();
     }

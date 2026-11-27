@@ -83,8 +83,8 @@ bumpGeneration := fn(gen: Int): Int {
 
 /** Creates a `SlotPool` pre-populated with `capacity` recyclable generational slots. */
 pub SlotPool.create := fn(capacity: Int): Self {
-    meta: mut List<UInt32> = [];
-    free: mut List<UInt32> = [];
+    mut meta: List<UInt32> = [];
+    mut free: List<UInt32> = [];
     if capacity <= 0 {
         return SlotPool { slotMeta = meta, freeList = free, cap = 0, liveCount = 0 };
     }
@@ -150,9 +150,9 @@ pub SlotPool.clear := fn(p: mut Self): Unit {
 
 /** Creates a typed object pool with capacity `capacity` and dense value storage. */
 pub Pool.create := fn<T: Type>(capacity: Int): Self<T> {
-    vals: mut List<T> = [];
-    meta: mut List<UInt32> = [];
-    free: mut List<UInt32> = [];
+    mut vals: List<T> = [];
+    mut meta: List<UInt32> = [];
+    mut free: List<UInt32> = [];
     if capacity <= 0 {
         return Pool<T> { values = vals, slotMeta = meta, freeList = free, cap = 0, liveCount = 0 };
     }

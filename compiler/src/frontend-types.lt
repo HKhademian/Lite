@@ -81,7 +81,7 @@ pub popBlockAliases := fn(aliases: List<AliasDecl>, depth: Int): List<AliasDecl>
     }
     if firstDrop < 0 { return aliases; }
     sym.rewindAliasesTo(firstDrop);
-    kept: mut List<AliasDecl> = [];
+    mut kept: List<AliasDecl> = [];
     loop aliases as aliasItem {
         if aliasItem.depth < depth { mut kept.pushBack(aliasItem); }
     }
@@ -98,7 +98,7 @@ pub aliasesUpToDepth := fn(aliases: List<AliasDecl>, maxDepth: Int): List<AliasD
         }
     }
     if not hasDeeper { return aliases; }
-    kept: mut List<AliasDecl> = [];
+    mut kept: List<AliasDecl> = [];
     loop aliases as aliasItem {
         if aliasItem.depth <= maxDepth { mut kept.pushBack(aliasItem); }
     }
@@ -317,7 +317,7 @@ pub fnParamComponent := fn(kind: String, targetIndex: Int): (label: String, kind
 
 /** Converts a canonical `fn(...):Ret` kind into `name=kind` parameter entries compatible with call routing. */
 pub fnParamEntries := fn(kind: String): List<String> {
-    entries: mut List<String> = [];
+    mut entries: List<String> = [];
     close := fnCloseParenIndex(kind);
     if close <= 3 { return entries; }
     var cursor := 3;
@@ -341,7 +341,7 @@ pub fnParamEntries := fn(kind: String): List<String> {
 pub fnStripLabels := fn(kind: String): String {
     if not isFnKind(kind) { return kind; }
     count := fnParamCount(kind);
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append("fn(");
     var idx := 0;
     loop idx < count {
@@ -354,7 +354,7 @@ pub fnStripLabels := fn(kind: String): String {
     mut out.append(")");
     ctxK := fnContextKind(kind);
     if ctxK =!= "" {
-        strippedSlots: mut List<contexts.CtxSlot> = [];
+        mut strippedSlots: List<contexts.CtxSlot> = [];
         loop contexts.parseCtxKindSlots(ctxK) as cs {
             sk := if isFnKind(cs.kind) { self(cs.kind) } else { cs.kind };
             mut strippedSlots.pushBack(contexts.CtxSlot { name = cs.name, isMut = cs.isMut, kind = sk });
@@ -369,13 +369,13 @@ pub fnStripLabels := fn(kind: String): String {
 
 /* Cached parsed component lists for tuple and nominal record kinds. */
 ComponentInfo := record { label: String; kind: String; prop: String; };
-componentsCache: mut Map<String, List<ComponentInfo>>;
+mut componentsCache: Map<String, List<ComponentInfo>>;
 
 /** Parses and caches all components of a canonical flat tuple kind `(...)`. */
 cachedTupleComponents := fn(kind: String): List<ComponentInfo> {
     cached := componentsCache.get(kind);
     if cached.found { return cached.value; }
-    out: mut List<ComponentInfo> = [];
+    mut out: List<ComponentInfo> = [];
     if isTupleKind(kind) {
         size := kind.length();
         var cursor := 1;
@@ -432,7 +432,7 @@ pub tupleComponentIndexByLabel := fn(kind: String, label: String): Int {
 /** Converts one tuple expression to `expectedKind` by copying positional components into the receiving labels. */
 pub convertTupleValue := fn(expectedKind: String, actualKind: String, actualCode: String): String {
     count := tupleComponentCount(expectedKind);
-    fieldsBuf: mut tb.TextBuilder;
+    mut fieldsBuf: tb.TextBuilder;
     var index := 0;
     loop index < count {
         expectedComp := tupleComponent(expectedKind, index);
@@ -539,7 +539,7 @@ headerBaseEnd := fn(hdr: String): Int {
 
 /** Splits comma-separated canonical type kinds at top level using `skipKindToken`. */
 splitTopLevelKinds := fn(csv: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     size := csv.length();
     var cursor := 0;
     loop cursor < size {
@@ -580,7 +580,7 @@ headerDisplayName := fn(hdr: String): String {
     shortName := if hashPos >= 0 { base.slice(hashPos + 1, nameEnd) } else { base };
     args := headerTypeArgs(hdr);
     if args.length() == 0 { return shortName; }
-    dispArgs: mut List<String> = [];
+    mut dispArgs: List<String> = [];
     loop args as a {
         mut dispArgs.pushBack(displayKind(a));
     }
@@ -1205,7 +1205,7 @@ pub unionMembers := fn(kind: String): List<String> {
 
 /** Flattens nested `Union<...>` entries and deduplicates preserving declaration order (`""` -> `""`, 1 -> `flat[0]`, 2+ -> `Union<...>`). */
 pub buildUnionKind := fn(members: List<String>): String {
-    flat: mut List<String> = [];
+    mut flat: List<String> = [];
     loop members as m {
         loop unionMembers(m) as sub {
             if sub =!= "" and not flat.contains(sub) {
@@ -1238,7 +1238,7 @@ pub typeConstraintUnion := fn(specKind: String): String {
 
 /** Splits comma-separated items inside raw `Type<A, B>` at top-level `,` while skipping `<...>`, `(...)`, `[...]`, strings, and comments. */
 splitTopLevelCommaRaw := fn(raw: String, prefix: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     size := raw.length();
     var cursor := 0;
     var segStart := 0;
@@ -1291,7 +1291,7 @@ pub constraintIsSubset := fn(subConstraint: String, superConstraint: String): Bo
     subItems := allConstraintMembers(subConstraint);
     supItems := allConstraintMembers(superConstraint);
     var supUnion := "";
-    supIfaces: mut List<String> = [];
+    mut supIfaces: List<String> = [];
     loop supItems as si {
         if isInterfaceKind(si) {
             mut supIfaces.pushBack(si);
@@ -1321,8 +1321,8 @@ pub constraintIsSubset := fn(subConstraint: String, superConstraint: String): Bo
 /** Computes the intersection of multiple `Type<A, B, ...>` constraint bounds (closed unions and/or interfaces), returning `ok = false` when empty. */
 pub intersectConstraintBounds := fn(boundKinds: List<String>): (ok: Bool, kind: String) {
     if boundKinds.length() == 0 { return (ok = false, kind = ""); }
-    unionBounds: mut List<String> = [];
-    ifaceBounds: mut List<String> = [];
+    mut unionBounds: List<String> = [];
+    mut ifaceBounds: List<String> = [];
     loop boundKinds as bk {
         loop allConstraintMembers(bk) as part {
             if isInterfaceKind(part) {
@@ -1338,7 +1338,7 @@ pub intersectConstraintBounds := fn(boundKinds: List<String>): (ok: Bool, kind: 
         var i := 1;
         loop i < unionBounds.length() {
             nextMembers := unionMembers(unionBounds[i]);
-            filtered: mut List<String> = [];
+            mut filtered: List<String> = [];
             loop current as m {
                 if nextMembers.contains(m) {
                     mut filtered.pushBack(m);
@@ -1350,7 +1350,7 @@ pub intersectConstraintBounds := fn(boundKinds: List<String>): (ok: Bool, kind: 
         if current.length() == 0 { return (ok = false, kind = ""); }
         intersectedUnion = buildUnionKind(current);
     }
-    allParts: mut List<String> = [];
+    mut allParts: List<String> = [];
     if intersectedUnion =!= "" { mut allParts.pushBack(intersectedUnion); }
     loop ifaceBounds as ib { mut allParts.pushBack(ib); }
     if allParts.length() == 0 { return (ok = false, kind = ""); }
@@ -1360,7 +1360,7 @@ pub intersectConstraintBounds := fn(boundKinds: List<String>): (ok: Bool, kind: 
 
 /** Parses `genericParams` CSV (e.g. `"T,T2=Type<...>,N=Int,C=Enum<...>"`) into `(name, kind)` pairs. */
 pub splitParamSpecs := fn(csv: String): List<(name: String, kind: String)> {
-    out: mut List<(name: String, kind: String)> = [];
+    mut out: List<(name: String, kind: String)> = [];
     size := csv.length();
     var cursor := 0;
     loop cursor < size {
@@ -1649,7 +1649,7 @@ enumRawPreCheck := fn(rawSource: String, explicitBacking: String, casesStart: In
     if caseCount <= 0 {
         return (ok = false, hasPayload = false, error = "enum must declare at least one case");
     }
-    names: mut List<String> = [];
+    mut names: List<String> = [];
     var cur := casesStart;
     var hasPayload := false;
     var hasNonPayVal := false;
@@ -1698,7 +1698,7 @@ splitPayloadTypeTexts := fn(rawPay: String, prefix: String, items: mut List<Stri
 /** Escapes angle/paren/bracket characters inside a JS/TS string literal so `Enum<...>` never contains unbalanced delimiters. */
 escapeEnumStringLiteral := fn(code: String): String {
     size := code.length();
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var segStart := 0;
     var i := 0;
     loop i < size {
@@ -1780,7 +1780,7 @@ pub recordDeclAt := fn(kind: String): Int {
 cachedRecordComponents := fn(kind: String): List<ComponentInfo> {
     cached := componentsCache.get(kind);
     if cached.found { return cached.value; }
-    out: mut List<ComponentInfo> = [];
+    mut out: List<ComponentInfo> = [];
     semi := recordHeaderSemi(kind);
     if semi >= 0 {
         end := kind.length() - 1;
@@ -1871,15 +1871,15 @@ cStructHash := fn(kind: String): String {
 };
 
 /* Canonical type metadata memoization caches (keyed by canonical kind string). */
-cSupportedCache: mut Map<String, Bool>;
-cFnTagCache: mut Map<String, String>;
-cStructTagCache: mut Map<String, String>;
-cArrayTagCache: mut Map<String, String>;
-cHasListCache: mut Map<String, Bool>;
-cNeedsDropCache: mut Map<String, Bool>;
-cValueTypeCache: mut Map<String, String>;
-containsFnCache: mut Map<String, Bool>;
-tsTypeCache: mut Map<String, String>;
+mut cSupportedCache: Map<String, Bool>;
+mut cFnTagCache: Map<String, String>;
+mut cStructTagCache: Map<String, String>;
+mut cArrayTagCache: Map<String, String>;
+mut cHasListCache: Map<String, Bool>;
+mut cNeedsDropCache: Map<String, Bool>;
+mut cValueTypeCache: Map<String, String>;
+mut containsFnCache: Map<String, Bool>;
+mut tsTypeCache: Map<String, String>;
 
 /** True when `kind` is a C11-supported value kind (scalar, enum, struct, map, set, or list/array of supported elements). */
 cIsSupportedElem := fn(kind: String): Bool {
@@ -1963,7 +1963,7 @@ pub cFnTag := fn(kind: String): String {
         return "";
     }
     pCount := fnParamCount(kind);
-    sigBuf: mut tb.TextBuilder;
+    mut sigBuf: tb.TextBuilder;
     mut sigBuf.append("fn(");
     var i := 0;
     loop i < pCount {
@@ -2357,7 +2357,7 @@ pub encodeRecordPairs := fn(keys: List<String>, values: List<String>): String {
     var count := 0;
     loop keys { count = count + 1; }
     if count == 0 { return ""; }
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append(count.toText());
     mut out.append(";");
     var idx := 0;
@@ -2383,7 +2383,7 @@ pub findRecordDefaultCode := fn(aliases: List<AliasDecl>, recordKind: String, fi
 
 /** Appends `$recpop:<recordKind>` and decoded `$recdef:<recordKind>#<field>` entries from serialized `encoded` defaults onto `aliases`. */
 pub appendEncodedRecordDefaults := fn(aliases: List<AliasDecl>, recordKind: String, encoded: String, depth: Int): List<AliasDecl> {
-    out: mut List<AliasDecl> = aliases;
+    mut out: List<AliasDecl> = aliases;
     mut out.pushBack((name = "$recpop:" + recordKind, target = "1", at = -1, end = 0, depth = depth));
     if encoded == "" { return out; }
     size := encoded.length();
@@ -2410,8 +2410,8 @@ pub appendEncodedRecordDefaults := fn(aliases: List<AliasDecl>, recordKind: Stri
 pub encodeRecordDefaultsFromAliases := fn(aliases: List<AliasDecl>, recordKind: String): String {
     if not isRecordKind(recordKind) { return ""; }
     count := recordComponentCount(recordKind);
-    keys: mut List<String> = [];
-    values: mut List<String> = [];
+    mut keys: List<String> = [];
+    mut values: List<String> = [];
     var idx := 0;
     loop idx < count {
         comp := recordComponent(recordKind, idx);
@@ -2546,7 +2546,7 @@ pub containsFnKind := fn(kind: String): Bool {
 /** Encodes characters in a comptime String value so canonical `ValS<...>` never collides with delimiters or binding separators. */
 encodeComptimeStr := fn(text: String): String {
     size := text.length();
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var segStart := 0;
     var i := 0;
     loop i < size {
@@ -2584,7 +2584,7 @@ encodeComptimeStr := fn(text: String): String {
 /** Decodes percent-escaped canonical payload from `ValS<...>`. */
 decodeComptimeStr := fn(encoded: String): String {
     size := encoded.length();
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var segStart := 0;
     var i := 0;
     loop i < size {
@@ -2727,7 +2727,7 @@ pub comptimeValueTokenKind := fn(tok: String): String {
 
 /** Splits comma-separated comptime parameter specs (`"T,N=Int"` or `"T,C=Enum<...>"`) into parameter names. */
 pub splitCommaNames := fn(csv: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     loop splitParamSpecs(csv) as spec {
         (mut out).pushBack(spec.name);
     }
@@ -2865,14 +2865,14 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
         iKey := ifaceKeyOf(pattern);
         oldArgs := ifaceArgsOf(pattern);
         if oldArgs.length() == 0 { return pattern; }
-        newArgs: mut List<String> = [];
+        mut newArgs: List<String> = [];
         loop oldArgs as oa {
             mut newArgs.pushBack(self(genericParams, oa, bindings));
         }
         return buildInterfaceKind(iKey, newArgs);
     }
     if isAllConstraintKind(pattern) {
-        newMembers: mut List<String> = [];
+        mut newMembers: List<String> = [];
         loop allConstraintMembers(pattern) as am {
             mut newMembers.pushBack(self(genericParams, am, bindings));
         }
@@ -2896,7 +2896,7 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
     }
     if isTupleKind(pattern) {
         n := tupleComponentCount(pattern);
-        parts: mut List<String> = [];
+        mut parts: List<String> = [];
         var i := 0;
         loop i < n {
             comp := tupleComponent(pattern, i);
@@ -2907,7 +2907,7 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
     }
     if isFnKind(pattern) {
         n := fnParamCount(pattern);
-        parts: mut List<String> = [];
+        mut parts: List<String> = [];
         var i := 0;
         loop i < n {
             comp := fnParamComponent(pattern, i);
@@ -2919,7 +2919,7 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
         return "fn(" + parts.join(",") + ")" + fnAtCtxSuffix(substCtx) + ":" + self(genericParams, fnResultKind(pattern), bindings);
     }
     if isCtxKind(pattern) {
-        sSlots: mut List<contexts.CtxSlot> = [];
+        mut sSlots: List<contexts.CtxSlot> = [];
         loop contexts.parseCtxKindSlots(pattern) as cs {
             mut sSlots.pushBack(contexts.CtxSlot { name = cs.name, isMut = cs.isMut, kind = self(genericParams, cs.kind, bindings) });
         }
@@ -2932,13 +2932,13 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
         hdr := pattern.slice(7, semi);
         baseHdr := hdr.slice(0, headerBaseEnd(hdr));
         oldArgs := headerTypeArgs(hdr);
-        newArgs: mut List<String> = [];
+        mut newArgs: List<String> = [];
         loop oldArgs as oa {
             mut newArgs.pushBack(self(genericParams, oa, bindings));
         }
         newHdr := if newArgs.length() > 0 { baseHdr + "<" + newArgs.join(",") + ">" } else { baseHdr };
         fc := recordComponentCount(pattern);
-        fieldParts: mut List<String> = [];
+        mut fieldParts: List<String> = [];
         var fi := 0;
         loop fi < fc {
             comp := recordComponent(pattern, fi);
@@ -2953,7 +2953,7 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
         if not meta.ok { return pattern; }
         baseHdr := meta.header;
         oldArgs := headerTypeArgs(meta.rawHeader);
-        newArgs: mut List<String> = [];
+        mut newArgs: List<String> = [];
         loop oldArgs as oa {
             mut newArgs.pushBack(self(genericParams, oa, bindings));
         }
@@ -2969,18 +2969,18 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
         if bk.next < 0 { return pattern; }
         baseHdr := hdr.text.slice(0, headerBaseEnd(hdr.text));
         oldArgs := headerTypeArgs(hdr.text);
-        newArgs: mut List<String> = [];
+        mut newArgs: List<String> = [];
         loop oldArgs as oa {
             mut newArgs.pushBack(self(genericParams, oa, bindings));
         }
         newHdr := if newArgs.length() > 0 { baseHdr + "<" + newArgs.join(",") + ">" } else { baseHdr };
         if bk.text == "$payload" {
             info := enumHeaderInfo(pattern);
-            encodedPairsBuf: mut tb.TextBuilder;
+            mut encodedPairsBuf: tb.TextBuilder;
             var ci := 0;
             loop ci < info.count {
                 cName := enumCaseAt(pattern, ci).name;
-                newPayloads: mut List<String> = [];
+                mut newPayloads: List<String> = [];
                 loop enumCasePayloads(pattern, ci) as pk {
                     mut newPayloads.pushBack(self(genericParams, pk, bindings));
                 }
@@ -3390,7 +3390,7 @@ pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
 
 /** Encodes a `Map<String, String>` binding table into `name=kind|...` in `paramCsv` order. */
 encodeImplBindings := fn(paramCsv: String, bindings: Map<String, String>): String {
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     loop splitParamSpecs(paramCsv) as sp {
         mut parts.pushBack(sp.name + "=" + bindings.getOr(sp.name, ""));
     }
@@ -3399,7 +3399,7 @@ encodeImplBindings := fn(paramCsv: String, bindings: Map<String, String>): Strin
 
 /** Decodes `"name=kind|..."` into a lookup map. */
 pub decodeImplBindings := fn(encoded: String): Map<String, String> {
-    out: mut Map<String, String>;
+    mut out: Map<String, String>;
     if encoded == "" { return out; }
     var start := 0;
     size := encoded.length();
@@ -3527,14 +3527,14 @@ unifyImplPatternMut := fn(genericParams: String, pattern: String, actual: String
 
 /** Substitutes `InterfaceDef.genericParams` (from `ifaceKind`) and `"Self"` into an `InterfaceMethod`'s non-self params & result. */
 pub instantiatedInterfaceMethods := fn(ifaceKind: String): List<interfaces.InterfaceMethod> {
-    out: mut List<interfaces.InterfaceMethod> = [];
+    mut out: List<interfaces.InterfaceMethod> = [];
     if not isInterfaceKind(ifaceKind) { return out; }
     iIdx := interfaces.findInterface(ifaceKeyOf(ifaceKind));
     if iIdx < 0 { return out; }
     def := interfaces.getInterface(iIdx);
     args := ifaceArgsOf(ifaceKind);
     paramSpecs := splitParamSpecs(def.genericParams);
-    bindings: mut Map<String, String>;
+    mut bindings: Map<String, String>;
     var bi := 0;
     loop bi < paramSpecs.length() and bi < args.length() {
         mut bindings.set(paramSpecs[bi].name, args[bi]);
@@ -3545,7 +3545,7 @@ pub instantiatedInterfaceMethods := fn(ifaceKind: String): List<interfaces.Inter
             mut out.pushBack(m);
         } else {
             newRes := substCanonicalKind(def.genericParams, m.result, bindings);
-            newPList: mut List<String> = [];
+            mut newPList: List<String> = [];
             if m.paramCount > 0 {
                 var pStart := 0;
                 pLen := m.params.length();
@@ -3590,7 +3590,7 @@ pub findImplForConcrete := fn(actualKind: String, ifaceKind: String): (found: Bo
         imp := interfaces.getImpl(ci);
         if not imp.isPub and activeImplModuleKey =!= "" and imp.declModule =!= activeImplModuleKey { continue; }
         if imp.ifaceKey =!= reqKey { continue; }
-        bindings: mut Map<String, String>;
+        mut bindings: Map<String, String>;
         if not unifyImplPatternMut(imp.genericParams, imp.targetPattern, actualKind, mut bindings) { continue; }
         var allBound := true;
         var constraintsOk := true;
@@ -3656,7 +3656,7 @@ pub findImplForConcrete := fn(actualKind: String, ifaceKind: String): (found: Bo
 
 /** Finds all visible 2-arg interface `impl`s (such as `Index<K, V>` / `IndexMut<K, V>`) matching `actualKind` and `reqKey`. */
 pub findMatchingImplsByKey := fn(actualKind: String, reqKey: String): List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> {
-    out: mut List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> = [];
+    mut out: List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> = [];
     if actualKind == "" or reqKey == "" { return out; }
     owner := typeOpOwnerKey(actualKind);
     if owner == "" { return out; }
@@ -3665,7 +3665,7 @@ pub findMatchingImplsByKey := fn(actualKind: String, reqKey: String): List<(impl
         imp := interfaces.getImpl(ci);
         if not imp.isPub and activeImplModuleKey =!= "" and imp.declModule =!= activeImplModuleKey { continue; }
         if imp.ifaceKey =!= reqKey { continue; }
-        bindings: mut Map<String, String>;
+        mut bindings: Map<String, String>;
         if not unifyImplPatternMut(imp.genericParams, imp.targetPattern, actualKind, mut bindings) { continue; }
         var allBound := true;
         loop splitParamSpecs(imp.genericParams) as sp {
@@ -3730,7 +3730,7 @@ pub findImplMethodForConcrete := fn(actualKind: String, methodName: String, allo
     loop candidates as ci {
         imp := interfaces.getImpl(ci);
         if not imp.isPub and activeImplModuleKey =!= "" and imp.declModule =!= activeImplModuleKey { continue; }
-        bindings: mut Map<String, String>;
+        mut bindings: Map<String, String>;
         if not unifyImplPatternMut(imp.genericParams, imp.targetPattern, actualKind, mut bindings) { continue; }
         var allBound := true;
         loop splitParamSpecs(imp.genericParams) as sp {
@@ -3743,7 +3743,7 @@ pub findImplMethodForConcrete := fn(actualKind: String, methodName: String, allo
         } else {
             splitTopLevelKinds(imp.ifaceArgsCsv)
         };
-        subArgs: mut List<String> = [];
+        mut subArgs: List<String> = [];
         loop impArgs as ia {
             mut subArgs.pushBack(if imp.genericParams =!= "" { substCanonicalKind(imp.genericParams, ia, bindings) } else { ia });
         }
@@ -3793,11 +3793,11 @@ pub tsFunctionType := fn(kind: String): String {
     var out := "";
     if isPayloadEnumKind(kind) {
         cc := enumCaseCount(kind);
-        variants: mut List<String> = [];
+        mut variants: List<String> = [];
         var ci := 0;
         loop ci < cc {
             ps := enumCasePayloads(kind, ci);
-            vFieldsBuf: mut tb.TextBuilder;
+            mut vFieldsBuf: tb.TextBuilder;
             mut vFieldsBuf.append("readonly _t: ");
             mut vFieldsBuf.append(ci.toText());
             var pi := 0;
@@ -3820,9 +3820,9 @@ pub tsFunctionType := fn(kind: String): String {
     else if isDynKind(kind) {
         ifaceK := dynInterfaceKind(kind);
         methods := instantiatedInterfaceMethods(ifaceK);
-        vtFields: mut List<String> = [];
+        mut vtFields: List<String> = [];
         loop methods as m {
-            pParts: mut List<String> = ["lite$ds: { v: unknown }"];
+            mut pParts: List<String> = ["lite$ds: { v: unknown }"];
             if m.paramCount > 0 {
                 var pStart := 0;
                 pLen := m.params.length();
@@ -3856,7 +3856,7 @@ pub tsFunctionType := fn(kind: String): String {
         if count == 0 {
             out = "{}";
         } else {
-            soaBuf: mut tb.TextBuilder;
+            mut soaBuf: tb.TextBuilder;
             mut soaBuf.append("{ ");
             var index := 0;
             loop index < count {
@@ -3875,7 +3875,7 @@ pub tsFunctionType := fn(kind: String): String {
     else if isArrayKind(kind) { out = self(arrayElementKind(kind)) + "[]"; }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
-        resultBuf: mut tb.TextBuilder;
+        mut resultBuf: tb.TextBuilder;
         mut resultBuf.append("{ ");
         var index := 0;
         loop index < count {
@@ -3894,7 +3894,7 @@ pub tsFunctionType := fn(kind: String): String {
         if count == 0 {
             out = "{}";
         } else {
-            resultBuf: mut tb.TextBuilder;
+            mut resultBuf: tb.TextBuilder;
             mut resultBuf.append("{ ");
             var index := 0;
             loop index < count {
@@ -3909,7 +3909,7 @@ pub tsFunctionType := fn(kind: String): String {
             out = resultBuf.build();
         }
     } else if isCtxKind(kind) {
-        ctxFieldsBuf: mut tb.TextBuilder;
+        mut ctxFieldsBuf: tb.TextBuilder;
         mut ctxFieldsBuf.append("{ ");
         var ci := 0;
         loop contexts.parseCtxKindSlots(kind) as cs {
@@ -3931,7 +3931,7 @@ pub tsFunctionType := fn(kind: String): String {
         out = ctxFieldsBuf.build();
     } else if isFnKind(kind) {
         count := fnParamCount(kind);
-        paramsBuf: mut tb.TextBuilder;
+        mut paramsBuf: tb.TextBuilder;
         var index := 0;
         loop index < count {
             comp := fnParamComponent(kind, index);
@@ -4006,7 +4006,7 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
     if isPayloadEnumKind(kind) {
         enumName := enumDisplayName(kind);
         count := enumCaseCount(kind);
-        casesBuf: mut tb.TextBuilder;
+        mut casesBuf: tb.TextBuilder;
         var idx := 0;
         loop idx < count {
             cName := enumCaseAt(kind, idx).name;
@@ -4018,7 +4018,7 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
                 mut casesBuf.append(tsLiteral.textLiteralCode(enumName + "." + cName));
                 mut casesBuf.append("; ");
             } else {
-                dispExprBuf: mut tb.TextBuilder;
+                mut dispExprBuf: tb.TextBuilder;
                 mut dispExprBuf.append(tsLiteral.textLiteralCode(enumName + "." + cName + "("));
                 var pi := 0;
                 loop pi < ps.length() {
@@ -4041,7 +4041,7 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
     if isEnumKind(kind) {
         enumName := enumDisplayName(kind);
         count := enumCaseCount(kind);
-        labels: mut List<String> = [];
+        mut labels: List<String> = [];
         var idx := 0;
         loop idx < count {
             cInfo := enumCaseAt(kind, idx);
@@ -4056,7 +4056,7 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
         if count == 0 {
             return "((value: {}): string => { void value; return " + tsLiteral.textLiteralCode(recName + " {}") + "; })(" + code + ")";
         }
-        resultBuf: mut tb.TextBuilder;
+        mut resultBuf: tb.TextBuilder;
         mut resultBuf.append(tsLiteral.textLiteralCode(recName + " { "));
         var index := 0;
         loop index < count {
@@ -4071,7 +4071,7 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
         return "((value: " + tsFunctionType(kind) + "): string => " + resultBuf.build() + " + " + tsLiteral.textLiteralCode(" }") + ")(" + code + ")";
     }
     if isTupleKind(kind) {
-        resultBuf: mut tb.TextBuilder;
+        mut resultBuf: tb.TextBuilder;
         mut resultBuf.append(tsLiteral.textLiteralCode("("));
         count := tupleComponentCount(kind);
         var index := 0;
@@ -4126,7 +4126,7 @@ pub displayKind := fn(kind: String): String {
     }
     if isEnumKind(kind) { return enumDisplayName(kind); }
     if isUnionKind(kind) {
-        parts: mut List<String> = [];
+        mut parts: List<String> = [];
         loop unionMembers(kind) as m {
             mut parts.pushBack(self(m));
         }
@@ -4148,13 +4148,13 @@ pub displayKind := fn(kind: String): String {
         };
         args := ifaceArgsOf(kind);
         if args.length() == 0 { return iName; }
-        dArgs: mut List<String> = [];
+        mut dArgs: List<String> = [];
         loop args as a { mut dArgs.pushBack(self(a)); }
         return iName + "<" + dArgs.join(", ") + ">";
     }
     if isDynKind(kind) { return "dyn " + self(dynInterfaceKind(kind)); }
     if isAllConstraintKind(kind) {
-        dParts: mut List<String> = [];
+        mut dParts: List<String> = [];
         loop allConstraintMembers(kind) as am { mut dParts.pushBack(self(am)); }
         return dParts.join(", ");
     }
@@ -4163,7 +4163,7 @@ pub displayKind := fn(kind: String): String {
     if isSoaKind(kind) { return "SoA<" + self(soaRecordKind(kind)) + ">"; }
     if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + arrayExtentText(kind) + "]"; }
     if isCtxKind(kind) {
-        cParts: mut List<String> = [];
+        mut cParts: List<String> = [];
         loop contexts.parseCtxKindSlots(kind) as cs {
             mut cParts.pushBack((if cs.isMut { "mut " } else { "" }) + cs.name + ": " + self(cs.kind));
         }
@@ -4171,7 +4171,7 @@ pub displayKind := fn(kind: String): String {
     }
     if isFnKind(kind) {
         count := fnParamCount(kind);
-        resultBuf: mut tb.TextBuilder;
+        mut resultBuf: tb.TextBuilder;
         mut resultBuf.append("fn(");
         var index := 0;
         loop index < count {
@@ -4192,7 +4192,7 @@ pub displayKind := fn(kind: String): String {
     }
     if not isTupleKind(kind) { return kind; }
     count := tupleComponentCount(kind);
-    resultBuf: mut tb.TextBuilder;
+    mut resultBuf: tb.TextBuilder;
     mut resultBuf.append("(");
     var index := 0;
     loop index < count {
@@ -4291,8 +4291,8 @@ buildCanonicalEnumKind := fn(hdrText: String, explicitBacking: String, rawSource
     if explicitBacking =!= "" and not isEnumBackingKind(explicitBacking) {
         return (ok = false, kind = "", next = casesStart, error = "unsupported enum backing type " + displayKind(explicitBacking));
     }
-    names: mut List<String> = [];
-    rawVals: mut List<String> = [];
+    mut names: List<String> = [];
+    mut rawVals: List<String> = [];
     var cur := casesStart;
     var hasAnyVal := false;
     var firstValText := "";
@@ -4322,7 +4322,7 @@ buildCanonicalEnumKind := fn(hdrText: String, explicitBacking: String, rawSource
         }
         backingKind = probe.kind;
     }
-    encodedPairsBuf: mut tb.TextBuilder;
+    mut encodedPairsBuf: tb.TextBuilder;
     var nextInt := 0;
     var cIdx := 0;
     loop cIdx < caseCount {
@@ -4666,8 +4666,8 @@ parseContextClauseWith := fn(
     if cursor < size and source.at(cursor) == ")" {
         syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "context requirement list cannot be empty");
     }
-    slots: mut List<contexts.CtxSlot> = [];
-    slotNames: mut List<String> = [];
+    mut slots: List<contexts.CtxSlot> = [];
+    mut slotNames: List<String> = [];
     loop cursor < size and source.at(cursor) =!= ")" {
         var isMut := false;
         if source.wordAt(cursor, "mut") {
@@ -4754,7 +4754,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, errPos, prefix, preChk.error);
         }
         if preChk.hasPayload {
-            encodedPairsBuf: mut tb.TextBuilder;
+            mut encodedPairsBuf: tb.TextBuilder;
             var pCur := cur;
             var ci := 0;
             loop ci < caseCount {
@@ -4764,11 +4764,11 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 var payCsv := "";
                 if vDec.text.startsWithAt(0, "@pay:") {
                     rawPay := vDec.text.slice(5, vDec.text.length());
-                    payItems: mut List<String> = [];
+                    mut payItems: List<String> = [];
                     if not splitPayloadTypeTexts(rawPay, prefix, mut payItems) {
                         syntax.failAt(errSource, errPos, prefix, "enum case " + nDec.text + " payload requires at least one type");
                     }
-                    pKinds: mut List<String> = [];
+                    mut pKinds: List<String> = [];
                     loop payItems as rp {
                         pRes := self(errSource, errPos, false, rp, 0, prefix, aliases, "enum payload", genericType, seen);
                         if syntax.skipTrivia(rp, pRes.next, prefix) < rp.length() {
@@ -4814,7 +4814,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         }
         fieldCount := if countEnd > cur { syntax.parseDigits(source, cur, countEnd) } else { 0 };
         cur = if countEnd < size and source.at(countEnd) == ";" { countEnd + 1 } else { countEnd };
-        parts: mut List<String> = [];
+        mut parts: List<String> = [];
         var idx := 0;
         loop idx < fieldCount {
             fName := decodeLengthPrefixedAt(source, cur);
@@ -4867,8 +4867,8 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     }
     if start < size and source.at(start) == "(" {
         var cursor := syntax.skipTrivia(source, start + 1, prefix);
-        labels: mut List<String> = [];
-        kindTextBuf: mut tb.TextBuilder;
+        mut labels: List<String> = [];
+        mut kindTextBuf: tb.TextBuilder;
         mut kindTextBuf.append("(");
         var count := 0;
         var hadComma := false;
@@ -4987,8 +4987,8 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         afterFn := syntax.skipTrivia(source, start + 2, prefix);
         if afterFn < size and source.at(afterFn) == "(" {
             var cursor := syntax.skipTrivia(source, afterFn + 1, prefix);
-            paramLabels: mut List<String> = [];
-            encodedBuf: mut tb.TextBuilder;
+            mut paramLabels: List<String> = [];
+            mut encodedBuf: tb.TextBuilder;
             mut encodedBuf.append("fn(");
             var count := 0;
             loop true {
@@ -5341,21 +5341,21 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             scopedTplAliases := aliasesUpToDepth(aliases, aliasItem.depth);
             var resolvedTplParamsCsv := tplParamsCsv;
             if isGenRaw and tplParamsCsv =!= "" {
-                resSpecs: mut List<String> = [];
+                mut resSpecs: List<String> = [];
                 emptySpecSeen: List<String> = [];
                 loop splitParamSpecs(tplParamsCsv) as sp {
                     if sp.kind == "" {
                         mut resSpecs.pushBack(sp.name);
                     } else if isTypeConstraintKind(sp.kind) {
                         rawBounds := typeConstraintUnion(sp.kind);
-                        boundList: mut List<String> = [];
+                        mut boundList: List<String> = [];
                         loop splitTopLevelCommaRaw(rawBounds, prefix) as rb {
                             var bCur := syntax.skipTrivia(rb, 0, prefix);
                             bAtom0 := self(errSource, aliasItem.at, false, rb, bCur, prefix, scopedTplAliases, "constraint", "", emptySpecSeen);
                             if bAtom0.kind == ir.VALUE_KIND_UNIT or bAtom0.kind == ir.VALUE_KIND_NEVER {
                                 syntax.failAt(errSource, aliasItem.at, prefix, "unsupported type constraint member " + displayKind(bAtom0.kind));
                             }
-                            bMembers: mut List<String> = [bAtom0.kind];
+                            mut bMembers: List<String> = [bAtom0.kind];
                             bCur = syntax.skipTrivia(rb, bAtom0.next, prefix);
                             loop bCur < rb.length() and rb.at(bCur) == "|" and not rb.startsWithAt(bCur, "||") {
                                 bNext := syntax.skipTrivia(rb, bCur + 1, prefix);
@@ -5389,7 +5389,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             if argCursor >= size or source.at(argCursor) == ">" {
                 syntax.failAt(errSource, if useLocalErr { argCursor } else { errPos }, prefix, "expected at least one type argument in " + name + "<...>");
             }
-            argKinds: mut List<String> = [];
+            mut argKinds: List<String> = [];
             var argIdx := 0;
             loop true {
                 if argIdx >= paramSpecs.length() {
@@ -5449,7 +5449,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                     syntax.failAt(errSource, aliasItem.at, prefix, "recursive type alias " + name);
                     return (kind = "", next = afterClose);
                 }
-                nextSeen: mut List<String> = [];
+                mut nextSeen: List<String> = [];
                 loop seen as sEntry { mut nextSeen.pushBack(sEntry); }
                 (mut nextSeen).pushBack(seenKey);
                 resolved := self(errSource, aliasItem.at, false, tplBody, 0, prefix, scopedTplAliases, "alias", resolvedTplParamsCsv, nextSeen);
@@ -5459,7 +5459,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 }
                 templateKind = resolved.kind;
             }
-            bindings: mut Map<String, String>;
+            mut bindings: Map<String, String>;
             var bi := 0;
             loop bi < paramSpecs.length() {
                 mut bindings.set(paramSpecs[bi].name, argKinds[bi]);
@@ -5486,7 +5486,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, aliasItem.at, prefix, "recursive type alias " + name);
             return (kind = "", next = after);
         }
-        nextSeen: mut List<String> = seen;
+        mut nextSeen: List<String> = seen;
         mut nextSeen.pushBack(seenKey);
         scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
         resolved := self(errSource, aliasItem.at, false, aliasItem.target, 0, prefix, scopedAliases, "alias", "", nextSeen);
@@ -5499,7 +5499,7 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             if resolved.kind == ir.VALUE_KIND_UNIT or resolved.kind == ir.VALUE_KIND_NEVER {
                 syntax.failAt(errSource, aliasItem.at, prefix, "unsupported type set member " + displayKind(resolved.kind));
             }
-            uMembers: mut List<String> = [resolved.kind];
+            mut uMembers: List<String> = [resolved.kind];
             loop trailing < (aliasItem.target).length() and (aliasItem.target).at(trailing) == "|" and not (aliasItem.target).startsWithAt(trailing, "||") {
                 uNext := syntax.skipTrivia(aliasItem.target, trailing + 1, prefix);
                 uAtom := self(errSource, aliasItem.at, false, aliasItem.target, uNext, prefix, scopedAliases, "alias", "", nextSeen);
@@ -5549,7 +5549,7 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if genericType =!= "" and kindHasAnyGenericParam(genericType, first.kind) {
             syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "type set union members must be concrete types");
         }
-        members: mut List<String> = [first.kind];
+        mut members: List<String> = [first.kind];
         loop cursor < size and source.at(cursor) == "|" and not source.startsWithAt(cursor, "||") {
             nextStart := syntax.skipTrivia(source, cursor + 1, prefix);
             atom := parseTypeAtomWithSeen(errSource, errPos, useLocalErr, source, nextStart, prefix, aliases, context, genericType, seen);
@@ -5589,7 +5589,7 @@ pub resolveTypeText := fn(source: String, position: Int, prefix: String, aliases
 /** Resolves all `Type<...>` constraint bounds (including intersections) and discrete value parameter types in `rawParamsCsv` against `aliases`. */
 pub resolveComptimeParamSpecs := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, rawParamsCsv: String): String {
     if rawParamsCsv == "" { return ""; }
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     emptySeen: List<String> = [];
     loop splitParamSpecs(rawParamsCsv) as spec {
         alreadyCsv := out.join(",");
@@ -5597,7 +5597,7 @@ pub resolveComptimeParamSpecs := fn(source: String, position: Int, prefix: Strin
             mut out.pushBack(spec.name);
         } else if isTypeConstraintKind(spec.kind) {
             rawBounds := typeConstraintUnion(spec.kind);
-            boundKinds: mut List<String> = [];
+            mut boundKinds: List<String> = [];
             loop splitTopLevelCommaRaw(rawBounds, prefix) as rb {
                 bParsed := parseTypeWithSeen(source, position, false, rb, 0, prefix, aliases, "constraint", alreadyCsv, emptySeen);
                 if syntax.skipTrivia(rb, bParsed.next, prefix) < rb.length() {
@@ -5723,7 +5723,7 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
     }
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
-    names: mut List<String> = [];
+    mut names: List<String> = [];
     var encoded := "";
     var count := 0;
     if source.startsWithAt(cursor, "...") {
@@ -5740,7 +5740,7 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
             syntax.failAt(source, cursor, prefix, "host value-pack declaration must be its only parameter");
         }
     } else if cursor < size and source.at(cursor) =!= ")" {
-        encodedBuf: mut tb.TextBuilder;
+        mut encodedBuf: tb.TextBuilder;
         loop true {
             if cursor >= size or not source.at(cursor).isNameStart() {
                 syntax.failAt(source, cursor, prefix, "expected a parameter name");
@@ -5816,7 +5816,7 @@ pub parseLocalType := fn(source: String, position: Int, prefix: String, aliases:
 
 /** Returns a copy of `aliases` with `Self` bound at `depth` to `selfTarget` (`ownerKind` or `"$Family:<Name>"`). */
 pub withSelfAlias := fn(aliases: List<AliasDecl>, selfTarget: String, depth: Int): List<AliasDecl> {
-    out: mut List<AliasDecl> = [];
+    mut out: List<AliasDecl> = [];
     loop aliases as existing {
         if existing.name =!= "Self" {
             mut out.pushBack(existing);
@@ -5842,8 +5842,8 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
     scopedAliases := withSelfAlias(aliases, selfTarget, 0);
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
-    names: mut List<String> = [];
-    encodedBuf: mut tb.TextBuilder;
+    mut names: List<String> = [];
+    mut encodedBuf: tb.TextBuilder;
     var count := 0;
     var hasSelfRecv := false;
     if cursor < size and source.at(cursor) =!= ")" {
@@ -5974,7 +5974,7 @@ pub paramKindOf := fn(entry: String): String {
 
 /** Builds a canonical `fn(label:Kind,...)[@ctx(...)]:ResultKind` string from encoded parameter entries, context kind, and return kind. */
 pub fnCanonicalKindWithCtx := fn(params: List<String>, first: Int, count: Int, resultKind: String, ctxKind: String): String {
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append("fn(");
     var idx := 0;
     loop idx < count {
@@ -6243,8 +6243,8 @@ pub collectEnumTargetWithAttrs := fn(source: String, afterEnumKw: Int, prefix: S
     }
     bodyLimit := closeEnd - 1;
     cursor = cursor + 1;
-    names: mut List<String> = [];
-    vals: mut List<String> = [];
+    mut names: List<String> = [];
+    mut vals: List<String> = [];
     var count := 0;
     loop cursor < bodyLimit {
         cursor = syntax.skipItemSeparators(source, cursor, prefix);
@@ -6320,7 +6320,7 @@ pub collectEnumTargetWithAttrs := fn(source: String, afterEnumKw: Int, prefix: S
         mut vals.pushBack(rawVal);
         count = count + 1;
     }
-    pairsBuf: mut tb.TextBuilder;
+    mut pairsBuf: tb.TextBuilder;
     var idx := 0;
     loop idx < count {
         mut pairsBuf.append(encodeLengthPrefixedText(names[idx]));
@@ -6349,8 +6349,8 @@ pub collectRecordTargetWithAttrs := fn(source: String, bracePos: Int, prefix: St
     }
     bodyLimit := closeEnd - 1;
     var cursor := start + 1;
-    names: mut List<String> = [];
-    typesList: mut List<String> = [];
+    mut names: List<String> = [];
+    mut typesList: List<String> = [];
     var count := 0;
     loop cursor < bodyLimit {
         cursor = syntax.skipItemSeparators(source, cursor, prefix);
@@ -6389,7 +6389,7 @@ pub collectRecordTargetWithAttrs := fn(source: String, bracePos: Int, prefix: St
             }
         }
     }
-    pairsBuf: mut tb.TextBuilder;
+    mut pairsBuf: tb.TextBuilder;
     var idx := 0;
     loop idx < count {
         mut pairsBuf.append(encodeLengthPrefixedText(names[idx]));
@@ -6431,7 +6431,7 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
     flags := syntax.scanBlockFastFlags(source, openBracePos, prefix);
     if not flags.hasAliasKw { return baseAliases; }
     limit := if flags.end >= 0 { flags.end } else { source.length() };
-    found: mut List<AliasDecl> = [];
+    mut found: List<AliasDecl> = [];
     var hasFound := false;
     var cursor := openBracePos + 1;
     var parenDepth := 0;
@@ -6529,7 +6529,7 @@ pub collectBlockTypeAliases := fn(source: String, openBracePos: Int, prefix: Str
         }
     }
     if not hasFound { return baseAliases; }
-    out: mut List<AliasDecl> = baseAliases;
+    mut out: List<AliasDecl> = baseAliases;
     loop found as entry { mut out.pushBack(entry); }
     out
 };
@@ -6602,7 +6602,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         preChk := enumRawPreCheck(source, resolvedBacking, cur, caseCount);
         if not preChk.ok { return (ok = false, kind = "", next = start); }
         if preChk.hasPayload {
-            encodedPairsBuf: mut tb.TextBuilder;
+            mut encodedPairsBuf: tb.TextBuilder;
             var pCur := cur;
             var ci := 0;
             loop ci < caseCount {
@@ -6612,9 +6612,9 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
                 var payCsv := "";
                 if vDec.text.startsWithAt(0, "@pay:") {
                     rawPay := vDec.text.slice(5, vDec.text.length());
-                    payItems: mut List<String> = [];
+                    mut payItems: List<String> = [];
                     if not splitPayloadTypeTexts(rawPay, prefix, mut payItems) { return (ok = false, kind = "", next = start); }
-                    pKinds: mut List<String> = [];
+                    mut pKinds: List<String> = [];
                     loop payItems as rp {
                         pRes := self(rp, 0, prefix, aliases, genericType, seen, depthLeft - 1, false);
                         if not pRes.ok or pRes.kind == ir.VALUE_KIND_UNIT or pRes.kind == ir.VALUE_KIND_NEVER or
@@ -6660,7 +6660,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         }
         fieldCount := if countEnd > cur { syntax.parseDigits(source, cur, countEnd) } else { 0 };
         cur = if countEnd < size and source.at(countEnd) == ";" { countEnd + 1 } else { countEnd };
-        parts: mut List<String> = [];
+        mut parts: List<String> = [];
         var idx := 0;
         loop idx < fieldCount {
             fName := decodeLengthPrefixedAt(source, cur);
@@ -6706,8 +6706,8 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
     ch := source.at(start);
     if ch == "(" {
         var cursor := syntax.skipTrivia(source, start + 1, prefix);
-        labels: mut List<String> = [];
-        parts: mut List<String> = [];
+        mut labels: List<String> = [];
+        mut parts: List<String> = [];
         var count := 0;
         var hasNamed := false;
         var hadComma := false;
@@ -6774,8 +6774,8 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = afterFn);
         }
         var pCursor := syntax.skipTrivia(source, afterFn + 1, prefix);
-        paramLabels: mut List<String> = [];
-        paramParts: mut List<String> = [];
+        mut paramLabels: List<String> = [];
+        mut paramParts: List<String> = [];
         loop pCursor < size and source.at(pCursor) =!= ")" {
             var pLabel := "";
             var pTypeStart := pCursor;
@@ -6816,8 +6816,8 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             if cCursor < size and source.at(cCursor) == ")" {
                 return (ok = false, kind = "", next = cCursor);
             }
-            ctxSlots: mut List<contexts.CtxSlot> = [];
-            ctxNames: mut List<String> = [];
+            mut ctxSlots: List<contexts.CtxSlot> = [];
+            mut ctxNames: List<String> = [];
             loop cCursor < size and source.at(cCursor) =!= ")" {
                 var cIsMut := false;
                 if source.wordAt(cCursor, "mut") {
@@ -7145,21 +7145,21 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         scopedTplAliases := aliasesUpToDepth(aliases, aliasItem.depth);
         var resolvedTplParamsCsv := tplParamsCsv;
         if isGenRaw {
-            resSpecs: mut List<String> = [];
+            mut resSpecs: List<String> = [];
             emptySpecSeen: List<String> = [];
             loop splitParamSpecs(tplParamsCsv) as sp {
                 if sp.kind == "" {
                     mut resSpecs.pushBack(sp.name);
                 } else if isTypeConstraintKind(sp.kind) {
                     rawBounds := typeConstraintUnion(sp.kind);
-                    boundList: mut List<String> = [];
+                    mut boundList: List<String> = [];
                     loop splitTopLevelCommaRaw(rawBounds, prefix) as rb {
                         var bCur := syntax.skipTrivia(rb, 0, prefix);
                         bAtom0 := self(rb, bCur, prefix, scopedTplAliases, "", emptySpecSeen, depthLeft - 1, true);
                         if not bAtom0.ok or bAtom0.kind == ir.VALUE_KIND_UNIT or bAtom0.kind == ir.VALUE_KIND_NEVER {
                             return (ok = false, kind = "", next = afterArgsOpen);
                         }
-                        bMembers: mut List<String> = [bAtom0.kind];
+                        mut bMembers: List<String> = [bAtom0.kind];
                         bCur = syntax.skipTrivia(rb, bAtom0.next, prefix);
                         loop bCur < rb.length() and rb.at(bCur) == "|" and not rb.startsWithAt(bCur, "||") {
                             bNext := syntax.skipTrivia(rb, bCur + 1, prefix);
@@ -7189,7 +7189,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if argCursor >= size or source.at(argCursor) == ">" {
             return (ok = false, kind = "", next = argCursor);
         }
-        argKinds: mut List<String> = [];
+        mut argKinds: List<String> = [];
         var argIdx := 0;
         loop true {
             if argIdx >= paramSpecs.length() {
@@ -7244,7 +7244,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         var templateKind := tplBody;
         if isGenRaw {
             if seen.contains(seenKey) { return (ok = false, kind = "", next = afterClose); }
-            nextSeen: mut List<String> = [];
+            mut nextSeen: List<String> = [];
             loop seen as sEntry { mut nextSeen.pushBack(sEntry); }
             (mut nextSeen).pushBack(seenKey);
             resolved := self(tplBody, 0, prefix, scopedTplAliases, resolvedTplParamsCsv, nextSeen, depthLeft - 1, true);
@@ -7253,7 +7253,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             }
             templateKind = resolved.kind;
         }
-        bindings: mut Map<String, String>;
+        mut bindings: Map<String, String>;
         var bi := 0;
         loop bi < paramSpecs.length() {
             mut bindings.set(paramSpecs[bi].name, argKinds[bi]);
@@ -7282,7 +7282,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
     if seen.contains(seenKey) {
         return (ok = false, kind = "", next = afterName);
     }
-    nextSeen: mut List<String> = [];
+    mut nextSeen: List<String> = [];
     loop seen as entry { mut nextSeen.pushBack(entry); }
     (mut nextSeen).pushBack(seenKey);
     scopedAliases := aliasesUpToDepth(aliases, aliasItem.depth);
@@ -7295,7 +7295,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         if resolved.kind == ir.VALUE_KIND_UNIT or resolved.kind == ir.VALUE_KIND_NEVER {
             return (ok = false, kind = "", next = afterName);
         }
-        uMembers: mut List<String> = [resolved.kind];
+        mut uMembers: List<String> = [resolved.kind];
         loop trailing < (aliasItem.target).length() and (aliasItem.target).at(trailing) == "|" and not (aliasItem.target).startsWithAt(trailing, "||") {
             nextElemPos := syntax.skipTrivia(aliasItem.target, trailing + 1, prefix);
             uElem := self(aliasItem.target, nextElemPos, prefix, scopedAliases, "", nextSeen, depthLeft - 1, true);
@@ -7328,7 +7328,7 @@ pub canResolveConstraintTypeAt := fn(source: String, position: Int, prefix: Stri
     if atom0.kind == ir.VALUE_KIND_UNIT or atom0.kind == ir.VALUE_KIND_NEVER or isInterfaceKind(atom0.kind) {
         return (ok = false, kind = "", next = cursor);
     }
-    members: mut List<String> = [atom0.kind];
+    mut members: List<String> = [atom0.kind];
     loop cursor < size and source.at(cursor) == "|" and not source.startsWithAt(cursor, "||") {
         nextPos := syntax.skipTrivia(source, cursor + 1, prefix);
         elem := canResolveTypeAtomAt(source, nextPos, prefix, aliases, genericType, seen, depthLeft, true);
@@ -7349,7 +7349,7 @@ pub canResolveTypeAt := fn(source: String, position: Int, prefix: String, aliase
 /** Non-failing resolution and intersection of comptime `<...>` parameter specs for header guards. */
 pub canResolveComptimeParamSpecs := fn(prefix: String, aliases: List<AliasDecl>, rawParamsCsv: String): (ok: Bool, csv: String) {
     if rawParamsCsv == "" { return (ok = true, csv = ""); }
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     emptySeen: List<String> = [];
     loop splitParamSpecs(rawParamsCsv) as spec {
         alreadyCsv := out.join(",");
@@ -7357,7 +7357,7 @@ pub canResolveComptimeParamSpecs := fn(prefix: String, aliases: List<AliasDecl>,
             mut out.pushBack(spec.name);
         } else if isTypeConstraintKind(spec.kind) {
             rawBounds := typeConstraintUnion(spec.kind);
-            boundKinds: mut List<String> = [];
+            mut boundKinds: List<String> = [];
             loop splitTopLevelCommaRaw(rawBounds, prefix) as rb {
                 bParsed := canResolveConstraintTypeAt(rb, 0, prefix, aliases, alreadyCsv, emptySeen, 32);
                 if not bParsed.ok or syntax.skipTrivia(rb, bParsed.next, prefix) < rb.length() {
@@ -7428,7 +7428,7 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
     }
     if cursor >= size or source.at(cursor) =!= "(" { return false; }
     cursor = syntax.skipTrivia(source, cursor + 1, prefix);
-    names: mut List<String> = [];
+    mut names: List<String> = [];
     emptySeen: List<String> = [];
     var paramCount := 0;
     loop cursor < size and source.at(cursor) =!= ")" {
@@ -7479,7 +7479,7 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
         if cCur >= size or source.at(cCur) =!= "(" { return false; }
         cCur = syntax.skipTrivia(source, cCur + 1, prefix);
         if cCur < size and source.at(cCur) == ")" { return false; }
-        cNames: mut List<String> = [];
+        mut cNames: List<String> = [];
         loop cCur < size and source.at(cCur) =!= ")" {
             var cMut := false;
             if source.wordAt(cCur, "mut") {

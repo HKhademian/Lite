@@ -82,7 +82,7 @@ pub medianInt := fn(values: List<Int>): Int {
 };
 
 syntheticOutputSource := fn(lineCount: Int): String {
-    lines: mut List<String> = ["io := import \"core/io\";"];
+    mut lines: List<String> = ["io := import \"core/io\";"];
     var i := 0;
     loop i < lineCount {
         mut lines.pushBack("io.outputLine(" + i.toText() + ");");
@@ -92,7 +92,7 @@ syntheticOutputSource := fn(lineCount: Int): String {
 };
 
 syntheticExpectedText := fn(lineCount: Int): String {
-    lines: mut List<String> = [];
+    mut lines: List<String> = [];
     var i := 0;
     loop i < lineCount {
         mut lines.pushBack(i.toText());
@@ -127,7 +127,7 @@ maxRssKiB: Int, outPath: String, errPath: String, error: String
     errPath := path.join(workDir, "worker-" + workerSeq.toText() + ".err");
     workerScript := ensureWorkerArtifact(rootDir);
 
-    args: mut List<String> = [workerScript, "T11", artifactPath, if hasSourceRoot { sourceName } else { "" }];
+    mut args: List<String> = [workerScript, "T11", artifactPath, if hasSourceRoot { sourceName } else { "" }];
     if hasSourceRoot {
         mut args.pushBack(sourceName);
     }
@@ -280,13 +280,13 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     compDir := path.join(rootDir, "igniter/tests/compiler");
     fixFiles := path.collectFiles(compDir, [compDir], ".json", [], false);
 
-    corpusInputNames: mut List<String> = [];
-    corpusInputSrcFiles: mut List<String> = [];
-    corpusInputCats: mut List<String> = [];
-    corpusInputExpExits: mut List<Int> = [];
-    corpusInputExpOutFiles: mut List<String> = [];
-    corpusInputExpErrFiles: mut List<String> = [];
-    corpusInputExpTsHashes: mut List<String> = [];
+    mut corpusInputNames: List<String> = [];
+    mut corpusInputSrcFiles: List<String> = [];
+    mut corpusInputCats: List<String> = [];
+    mut corpusInputExpExits: List<Int> = [];
+    mut corpusInputExpOutFiles: List<String> = [];
+    mut corpusInputExpErrFiles: List<String> = [];
+    mut corpusInputExpTsHashes: List<String> = [];
     var corpusInSeq := 0;
 
     loop fixFiles as absFix {
@@ -325,9 +325,9 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     }
 
     outputCounts: List<Int> = [1, 100, 1000];
-    syntheticFiles: mut List<String> = [];
-    syntheticShas: mut List<String> = [];
-    syntheticByteLens: mut List<Int> = [];
+    mut syntheticFiles: List<String> = [];
+    mut syntheticShas: List<String> = [];
+    mut syntheticByteLens: List<Int> = [];
     loop outputCounts as cnt {
         srcText := syntheticOutputSource(cnt);
         srcBytes := srcText.utf8Encode();
@@ -339,20 +339,20 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     }
 
     workloadNames: List<String> = ["output-1", "output-100", "output-1000", "compiler-corpus", "self-build"];
-    syntheticEmittedFiles: mut List<String> = [];
-    resultJsonEntries: mut List<String> = [];
-    mdResultLines: mut List<String> = [];
+    mut syntheticEmittedFiles: List<String> = [];
+    mut resultJsonEntries: List<String> = [];
+    mut mdResultLines: List<String> = [];
 
     var wi := 0;
     loop wi < 5 {
         wName := workloadNames[wi];
-        rawJsonEntries: mut List<String> = [];
-        inputJsonEntries: mut List<String> = [];
-        medProcList: mut List<Int> = [];
-        medLoadList: mut List<Int> = [];
-        medCompList: mut List<Int> = [];
-        medCpuList: mut List<Int> = [];
-        medRssList: mut List<Int> = [];
+        mut rawJsonEntries: List<String> = [];
+        mut inputJsonEntries: List<String> = [];
+        mut medProcList: List<Int> = [];
+        mut medLoadList: List<Int> = [];
+        mut medCompList: List<Int> = [];
+        mut medCpuList: List<Int> = [];
+        mut medRssList: List<Int> = [];
 
         if wi < 3 {
             inBytes := fs.readBytes(syntheticFiles[wi]);
@@ -533,7 +533,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
         ri = ri + 1;
     }
 
-    executionSampleMicros: mut List<Int> = [];
+    mut executionSampleMicros: List<Int> = [];
     expected1000 := syntheticExpectedText(1000);
     var rpass := 0 - warmups;
     loop rpass < samples {
@@ -561,7 +561,7 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
     _rm := fs.remove(workDir);
 
     medExecMicros := medianInt(executionSampleMicros);
-    execSamplesJson: mut List<String> = [];
+    mut execSamplesJson: List<String> = [];
     loop executionSampleMicros as es {
         mut execSamplesJson.pushBack(formatMicrosAsMs(es));
     }
@@ -735,9 +735,9 @@ pub runTextCacheCommand := fn(rootDir: String, args: List<String>): Int {
 
     var workerSeq := 0;
     counts: List<Int> = [100, 1000];
-    rowEntries: mut List<String> = [];
-    compEntries: mut List<String> = [];
-    mdResults: mut List<String> = [];
+    mut rowEntries: List<String> = [];
+    mut compEntries: List<String> = [];
+    mut mdResults: List<String> = [];
 
     loop counts as n {
         srcText := syntheticOutputSource(n);
@@ -745,12 +745,12 @@ pub runTextCacheCommand := fn(rootDir: String, args: List<String>): Int {
         srcByteLen := srcBytes.length();
         rName := "report-" + n.toText();
 
-        beforeWalls: mut List<Int> = [];
-        beforeComps: mut List<Int> = [];
-        beforeRss: mut List<Int> = [];
-        afterWalls: mut List<Int> = [];
-        afterComps: mut List<Int> = [];
-        afterRss: mut List<Int> = [];
+        mut beforeWalls: List<Int> = [];
+        mut beforeComps: List<Int> = [];
+        mut beforeRss: List<Int> = [];
+        mut afterWalls: List<Int> = [];
+        mut afterComps: List<Int> = [];
+        mut afterRss: List<Int> = [];
 
         var pass := -1;
         loop pass < 7 {
@@ -827,7 +827,7 @@ pub runTextCacheCommand := fn(rootDir: String, args: List<String>): Int {
 
     oldSelf := runWorkerOnce(rootDir, workDir, workerSeq, beforePath, sourceBytes, 10000, true, path.relative(rootDir, rootSourcePath));
     workerSeq = workerSeq + 1;
-    selfEntries: mut List<String> = [];
+    mut selfEntries: List<String> = [];
     oldTimedOut := not oldSelf.ok;
     if oldSelf.ok {
         outSha := crypto.sha256Bytes(fs.readBytes(oldSelf.outPath));
@@ -841,7 +841,7 @@ pub runTextCacheCommand := fn(rootDir: String, args: List<String>): Int {
         mut selfEntries.pushBack("{\"version\":\"before\",\"name\":" + json.quoteString(rootSourcePath) + ",\"error\":\"ETIMEDOUT\",\"pass\":0}");
     }
 
-    afterSelfWalls: mut List<Int> = [];
+    mut afterSelfWalls: List<Int> = [];
     var sp := -1;
     loop sp < 7 {
         sRun := runWorkerOnce(rootDir, workDir, workerSeq, afterPath, sourceBytes, 30000, true, path.relative(rootDir, rootSourcePath));

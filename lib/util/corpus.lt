@@ -16,7 +16,7 @@ compilerBuild := import "util/compiler-build";
 
 /** Reads string items from a JSON array starting at `arrPos`. */
 pub readStringListAt := fn(source: String, arrPos: Int): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     if json.kindAt(source, arrPos) =!= .Array { return out; }
     loop json.arrayOffsets(source, arrPos) as elPos {
         s := json.readStringAt(source, elPos);
@@ -27,7 +27,7 @@ pub readStringListAt := fn(source: String, arrPos: Int): List<String> {
 
 /** Validates `--key value` pairs against `allowedKeys`, rejecting unknown, missing, duplicate, or flag-like values. */
 pub parseToolOptions := fn(args: List<String>, allowedKeys: List<String>): (ok: Bool, error: String) {
-    seen: mut List<String> = [];
+    mut seen: List<String> = [];
     count := args.length();
     var i := 0;
     loop i < count {
@@ -118,7 +118,7 @@ ok: Bool, artifactPath: String, sourceSha256: String, artifactSha256: String, bu
 
 /** Formats SHA-256 identity metadata for `relPaths` under `rootDir`. */
 pub toolIdentitiesJson := fn(rootDir: String, relPaths: List<String>): (ok: Bool, jsonText: String, error: String) {
-    entries: mut List<String> = [];
+    mut entries: List<String> = [];
     loop relPaths as rel {
         hRes := crypto.sha256File(path.join(rootDir, rel));
         if not hRes.ok { return (ok = false, jsonText = "", error = hRes.error); }
@@ -197,7 +197,7 @@ pub sourceModuleIdentity := fn(rootDir: String, sourceBytes: List<Int>): String 
 };
 
 indentTwoSpaces := fn(raw: String): String {
-    lines: mut List<String> = [];
+    mut lines: List<String> = [];
     var pos := 0;
     size := raw.length();
     loop pos <= size {
@@ -304,9 +304,9 @@ pub runSelfHostCommand := fn(rootDir: String, args: List<String>): Int {
     var firstArtifactSha := "";
     var fixedPoint := true;
     var lastArtifactSha := sel.artifactSha256;
-    genJsonEntries: mut List<String> = [];
-    genPaths: mut List<String> = [];
-    genHashes: mut List<String> = [];
+    mut genJsonEntries: List<String> = [];
+    mut genPaths: List<String> = [];
+    mut genHashes: List<String> = [];
     emptyEnv: List<String> = [];
     _unusedId := rootIdentity;
     runnerPath := path.join(genWork, "runner.ts");
@@ -534,23 +534,23 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
     _wRun := cases.writeTsRunner(runnerPath);
     emptyEnv: List<String> = [];
 
-    compiledKeys: mut List<String> = [];
-    compiledStatus: mut List<Int> = [];
-    compiledOutFiles: mut List<String> = [];
-    compiledErrFiles: mut List<String> = [];
+    mut compiledKeys: List<String> = [];
+    mut compiledStatus: List<Int> = [];
+    mut compiledOutFiles: List<String> = [];
+    mut compiledErrFiles: List<String> = [];
 
-    distinctProgTexts: mut List<String> = [];
-    distinctProgFiles: mut List<String> = [];
+    mut distinctProgTexts: List<String> = [];
+    mut distinctProgFiles: List<String> = [];
 
-    progFixtureFiles: mut List<String> = [];
-    progCaseNames: mut List<String> = [];
-    progStdinFiles: mut List<String> = [];
-    progExpOutFiles: mut List<String> = [];
-    progExpErrFiles: mut List<String> = [];
-    progExpExits: mut List<Int> = [];
-    progSourceIndices: mut List<Int> = [];
+    mut progFixtureFiles: List<String> = [];
+    mut progCaseNames: List<String> = [];
+    mut progStdinFiles: List<String> = [];
+    mut progExpOutFiles: List<String> = [];
+    mut progExpErrFiles: List<String> = [];
+    mut progExpExits: List<Int> = [];
+    mut progSourceIndices: List<Int> = [];
 
-    mismatches: mut List<String> = [];
+    mut mismatches: List<String> = [];
     var totalCases := 0;
     var rejectionMatches := 0;
     var compileSeq := 0;
@@ -709,7 +709,7 @@ mismatchCount: Int, firstMismatch: String, jsonBody: String, error: String
 
     _rm := fs.remove(workDir);
 
-    quotedMismatches: mut List<String> = [];
+    mut quotedMismatches: List<String> = [];
     loop mismatches as mm {
         mut quotedMismatches.pushBack(json.quoteString(mm));
     }

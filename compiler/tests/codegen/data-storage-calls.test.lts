@@ -94,7 +94,7 @@ assertRejectsAny("fixed-arrays", arrayRej);
 /* mutability and lists support inferred mut/var mut, front/back ops, List<Unit>, tuple copies, and rejections */
 mutListSrc := [
     "io := import \"core/io\";",
-    "values: mut List<Int> = [1, 2];",
+    "mut values: List<Int> = [1, 2];",
     "mut values.pushFront(0);",
     "mut values.pushBack(3);",
     "front := mut values.popFront();",
@@ -108,10 +108,10 @@ mutListSrc := [
     "other = io.inputArgs();",
     "mut other.pushFront(\"a\");",
     "io.outputLine(args, other);",
-    "units: mut List<Unit> = [Unit];",
+    "mut units: List<Unit> = [Unit];",
     "mut units.pushBack(Unit);",
     "io.outputLine(mut units.popFront(), mut units.popBack(), units);",
-    "tuples: mut List<(name: String, n: Int)> = [(name = \"a\", n = 1)];",
+    "mut tuples: List<(name: String, n: Int)> = [(name = \"a\", n = 1)];",
     "item := mut tuples.popBack();",
     "io.outputLine(item.name, item.n, tuples);"
 ].join("\n");
@@ -121,16 +121,16 @@ emptyOps: List<(call: String, msg: String)> = [
     (call = "popBack", msg = "pop_back")
 ];
 loop emptyOps as op {
-    pSrc := "io := import \"core/io\";\nempty: mut List<Unit> = [];\nio.outputLine(mut empty." + op.call + "());";
+    pSrc := "io := import \"core/io\";\nmut empty: List<Unit> = [];\nio.outputLine(mut empty." + op.call + "());";
     pRun := compilerTest.compileCheckRunTs(root, tsComp, pSrc, "");
     test.checkInt("mut-lists empty " + op.call + " status", 1, pRun.status);
     test.check("mut-lists empty " + op.call + " panic: " + pRun.stderr, pRun.stderr.contains("BoundPanic") and pRun.stderr.contains(op.msg + " on an empty list"));
 }
 mutListRej: List<(bad: String, m1: String, m2: String)> = [
     (bad = "mut x := 1;", m1 = "mut requires a List, Map, Set, or record value, got Int", m2 = ""),
-    (bad = "var mut x: List<Int> = [];", m1 = "var mut cannot be combined with explicit type annotation", m2 = ""),
-    (bad = "values: mut List<Int> = [1]; List.popFront(values);", m1 = "popFront requires mut list argument", m2 = ""),
-    (bad = "values: mut List<Int> = [1]; List.pushFront(values, 2);", m1 = "pushFront requires mut list argument", m2 = "")
+    (bad = "mut var x: List<Int> = [];", m1 = "write var mut, not mut var", m2 = ""),
+    (bad = "mut values: List<Int> = [1]; List.popFront(values);", m1 = "popFront requires mut list argument", m2 = ""),
+    (bad = "mut values: List<Int> = [1]; List.pushFront(values, 2);", m1 = "pushFront requires mut list argument", m2 = "")
 ];
 assertRejectsAny("mut-lists", mutListRej);
 

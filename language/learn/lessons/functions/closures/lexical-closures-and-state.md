@@ -5,7 +5,7 @@ Closures in Lite capture surrounding mutable `var` bindings, shared `mut List<T>
 ## Walkthrough
 
 1. `makeCounter(start, step)` allocates an independent mutable `var current` box per call—so `cFast` and `cOffset` advance independently.
-2. `pushScaled` inside the inner scope captures `threshold` and appends directly into the outer `events: mut List<Int>`.
+2. `pushScaled` inside the inner scope captures `threshold` and appends directly into the outer `mut events: List<Int>`.
 3. Inside `loop [1, 2, 3] as item`, each closure captures its own iteration snapshot (`10`, `20`, `30`), avoiding the classic shared-loop-variable pitfall!
 
 > [!TIP]

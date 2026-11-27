@@ -203,7 +203,7 @@ scanString := fn(source: String, position: Int, prefix: String): (text: String, 
     size := source.length();
     var cursor := position + 1;
     var runStart := cursor;
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     loop true {
         if cursor >= size {
             lexFail(source, position, prefix, "unterminated string literal");
@@ -241,7 +241,7 @@ scanString := fn(source: String, position: Int, prefix: String): (text: String, 
 /** Escapes one token's text for a one-line deterministic dump. */
 pub escapedTokenText := fn(text: String): String {
     size := text.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var index := 0;
     loop index < size {
@@ -279,7 +279,7 @@ pub dumpTokens := fn(tokens: Tokens): Unit {
 /** Tokenizes one complete source, ending with an EOF token and exiting 2 on lexical failure. */
 pub tokenize := fn(source: String, prefix: String): Tokens {
     size := source.length();
-    tokens: mut List<Token> = [];
+    mut tokens: List<Token> = [];
     var cursor := 0;
     var line := 1;
     var lineStart := 0;

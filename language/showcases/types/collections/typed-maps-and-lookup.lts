@@ -1,7 +1,7 @@
 io := import "core/io";
 
 /* Map literal initializer with [key = value, ...] entries (empty maps also zero-init) */
-prices: mut Map<String, Int> = ["apple" = 3];
+mut prices: Map<String, Int> = ["apple" = 3];
 mut prices.set("bread", 5);
 prices["apple"] += 1;
 

@@ -2,6 +2,6 @@ io := import "core/io";
 
 a := io.inputInt();
 b := io.inputInt();
-items: mut List<Int> = [a];
+mut items: List<Int> = [a];
 mut items.pushBack(b);
 io.outputLine(items.map(fn(x: Int): String { x.toText() }).join(","));

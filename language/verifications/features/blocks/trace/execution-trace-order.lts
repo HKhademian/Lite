@@ -18,7 +18,7 @@ innerTrace := {
     readSerialZ := fn(): Int { serialZ * 2 };
     serialZ = k + 4;
 
-    ops: mut List<fn(): Int> = [];
+    mut ops: List<fn(): Int> = [];
     mut ops.pushBack(fn(): Int { k + lateListVal });
     lateListVal := 100;
 

@@ -29,12 +29,12 @@ run := fn(rawArgs: List<String>): Int {
         return 1;
     }
 
-    csesUrls: mut List<String> = [];
-    csesPaths: mut List<String> = [];
-    atcUrls: mut List<String> = [];
-    atcPaths: mut List<String> = [];
-    rosUrls: mut List<String> = [];
-    rosPaths: mut List<String> = [];
+    mut csesUrls: List<String> = [];
+    mut csesPaths: List<String> = [];
+    mut atcUrls: List<String> = [];
+    mut atcPaths: List<String> = [];
+    mut rosUrls: List<String> = [];
+    mut rosPaths: List<String> = [];
 
     lines := challenges.splitJsonLines(rawRead.text);
     loop lines as line {

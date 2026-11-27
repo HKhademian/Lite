@@ -134,7 +134,7 @@ badFlagPairs: List<(a: String, b: String)> = [
 ];
 dummySrc := "io := import \"core/io\"; io.outputLine(1);";
 loop badFlagPairs as bf {
-    opts: mut List<String> = [bf.a];
+    mut opts: List<String> = [bf.a];
     if bf.b =!= "" { mut opts.pushBack(bf.b); }
     bTs := compilerTest.compileStdinWithOpts(root, tsComp, root, dummySrc, sourceFile, "", opts);
     test.checkInt("bad-flag ts " + bf.a + " " + bf.b, 2, bTs.status);

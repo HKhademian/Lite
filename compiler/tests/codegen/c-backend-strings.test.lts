@@ -61,7 +61,7 @@ rt := String.fromCodePoints(cps);
 assert(rt.ok and rt.text == utf8 and rt.text.length() == 7, "unicode fromCodePoints roundtrip");
 
 /* 5. Map<String, Int> and Set<String> (including long keys > 8 bytes and UTF-8 keys). */
-m: mut Map<String, Int>;
+mut m: Map<String, Int>;
 longKeyA := "Record<123#456#CompilerState;items:List<Item>,locals:List<Local>,functions:List<FunctionInfo>>";
 longKeyB := "Record<123#456#CompilerState;items:List<Item>,locals:List<Local>,functions:List<FunctionInfo>2>";
 mut m.set(longKeyA, 10);
@@ -74,7 +74,7 @@ assert(m.get("🚀").value == 30, "map utf8 key");
 assert(m.get("").value == 40, "map empty key");
 assert(m.get(h.label).value == 40, "map default-empty key lookup");
 
-s: mut Set<String>;
+mut s: Set<String>;
 mut s.add(longKeyA);
 mut s.add("🚀");
 mut s.add("");

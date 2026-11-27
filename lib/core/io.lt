@@ -98,7 +98,7 @@ decodeLineBytes := fn(lineBytes: List<Int>): (ok: Bool, line: String, eof: Bool,
 /** Reads all remaining bytes synchronously from `reader`. */
 pub Reader.readAll := fn(reader: Self): List<Int> {
     if not reader.ok() { return []; }
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     loop reader.ok() and not reader.atEof() {
         chunk := reader.read(READ_CHUNK_BYTES);
         if not reader.ok() { return []; }
@@ -127,7 +127,7 @@ pub Reader.readLine := fn(reader: Self): (ok: Bool, line: String, eof: Bool, err
     if not reader.ok() {
         return (ok = false, line = "", eof = false, error = reader.error());
     }
-    lineBytes: mut List<Int> = [];
+    mut lineBytes: List<Int> = [];
     loop not reader.atEof() {
         chunk := reader.read(READ_LINE_STEP_BYTES);
         if not reader.ok() {

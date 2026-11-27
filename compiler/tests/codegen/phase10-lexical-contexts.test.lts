@@ -79,7 +79,7 @@ mainPkgSrc := [
     "",
     "readTag := fn() context(appTag: String): String { appTag };",
     "",
-    "bumpAndRead := fn(delta: Int) context(mut rootCount: Int, appTag: String): String {",
+    "bumpAndRead := fn(delta: Int) context(rootCount: mut Int, appTag: String): String {",
     "    rootCount = rootCount + delta;",
     "    appTag + \":\" + rootCount.toText()",
     "};",
@@ -96,7 +96,7 @@ mainPkgSrc := [
     "    if b { x + a * 2 } else { x - a * 2 }",
     "};",
     "",
-    "emitDyn := fn(msg: String) context(mut dynLog: dyn iface.Logger): Unit {",
+    "emitDyn := fn(msg: String) context(dynLog: mut dyn iface.Logger): Unit {",
     "    mut dynLog.log(\"INFO\", msg);",
     "};",
     "",
@@ -238,7 +238,7 @@ staticCtxSrc := [
     "        mut self.lines.pushBack(level + \":\" + msg);",
     "    };",
     "};",
-    "writeBoth := fn<L: Type<iface.Logger>>(tag: String) context(mut log: L): Unit {",
+    "writeBoth := fn<L: Type<iface.Logger>>(tag: String) context(log: mut L): Unit {",
     "    mut log.log(\"DBG\", tag);",
     "    mut log.log(\"DBG\", tag);",
     "};",
@@ -267,11 +267,11 @@ compilerTest.assertCompileErrorContains(root, tsComp, "reject missing context pr
     "missing context x");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject read-only context passed where mut required",
-    "context x := 1;\nneed := fn() context(mut x: Int): Int { x };\nf := fn(): Int { need() };",
+    "context x := 1;\nneed := fn() context(x: mut Int): Int { x };\nf := fn(): Int { need() };",
     "requires mut access");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject immutable binding bound as mut in context override",
-    "need := fn() context(mut x: Int): Int { x };\nf := fn(): Int { v := 1; context (mut x = v) { need() } };",
+    "need := fn() context(x: mut Int): Int { x };\nf := fn(): Int { v := 1; context (mut x = v) { need() } };",
     "cannot bind immutable binding");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject context slot type mismatch",
@@ -279,15 +279,15 @@ compilerTest.assertCompileErrorContains(root, tsComp, "reject context slot type 
     "type mismatch");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject same binding as both explicit mut arg and active mut context",
-    "Box := record { v: Int; };\nbump := fn(a: mut Box) context(mut log: Box): Unit { a.v = a.v + 1; log.v = log.v + 1; };\nf := fn() context(mut log: Box): Unit { bump(mut log); };",
+    "Box := record { v: Int; };\nbump := fn(a: mut Box) context(log: mut Box): Unit { a.v = a.v + 1; log.v = log.v + 1; };\nf := fn() context(log: mut Box): Unit { bump(mut log); };",
     "multiple times as mut");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject same binding as both explicit read-only arg and active mut context",
-    "Box := record { v: Int; };\nbump := fn(a: Box) context(mut log: Box): Int { log.v = log.v + a.v; log.v };\nf := fn() context(mut log: Box): Int { bump(log) };",
+    "Box := record { v: Int; };\nbump := fn(a: Box) context(log: mut Box): Int { log.v = log.v + a.v; log.v };\nf := fn() context(log: mut Box): Int { bump(log) };",
     "both read-only and mut");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject same binding bound twice in context header",
-    "need := fn() context(mut a: Int, mut b: Int): Int { a + b };\nf := fn(): Int { var v := 1; context (mut a = v, mut b = v) { need() } };",
+    "need := fn() context(a: mut Int, b: mut Int): Int { a + b };\nf := fn(): Int { var v := 1; context (mut a = v, mut b = v) { need() } };",
     "cannot bind v multiple times in context override");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject empty context() clause",
@@ -315,7 +315,7 @@ compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate mut qual
     "duplicate mut");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject closure capturing outer mut context slot without context()",
-    "bad := fn() context(mut x: Int): Int { g := fn(): Int { x }; g() };",
+    "bad := fn() context(x: mut Int): Int { g := fn(): Int { x }; g() };",
     "cannot capture borrowed or mut context 'x'");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject ambient context Slice<T>",
@@ -327,11 +327,11 @@ compilerTest.assertCompileErrorContains(root, tsComp, "reject ambient context in
     "ambient context cannot infer borrowed dyn Interface without explicit annotation");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject mutating local while borrowed by active mut context",
-    "need := fn() context(mut x: Int): Int { x };\nf := fn(): Int {\n    var v := 1;\n    context (mut x = v) {\n        v = 2;\n        need()\n    }\n};",
+    "need := fn() context(x: mut Int): Int { x };\nf := fn(): Int {\n    var v := 1;\n    context (mut x = v) {\n        v = 2;\n        need()\n    }\n};",
     "while borrowed by context x");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject reading local while mutably borrowed by active mut context",
-    "need := fn() context(mut x: Int): Int { x };\nf := fn(): Int {\n    var v := 1;\n    context (mut x = v) {\n        v + need()\n    }\n};",
+    "need := fn() context(x: mut Int): Int { x };\nf := fn(): Int {\n    var v := 1;\n    context (mut x = v) {\n        v + need()\n    }\n};",
     "while mutably borrowed by context x");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject impl method adding extra context()",

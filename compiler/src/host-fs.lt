@@ -26,7 +26,7 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
     var tracePath := "";
     var filePath := "";
 
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     loop args.length() > 0 {
         arg := mut args.popFront();
         if arg == "--stdin" or arg == "--sanitize" {
@@ -129,8 +129,8 @@ hasOut: Bool, outPath: String, hasTrace: Bool, tracePath: String, filePath: Stri
 
 /** Extracts repeatable `--builtin-mode` specification values from `rawArgs`. */
 pub extractBuiltinSpecs := fn(rawArgs: List<String>): List<String> {
-    out: mut List<String> = [];
-    args: mut List<String> = rawArgs;
+    mut out: List<String> = [];
+    mut args: List<String> = rawArgs;
     loop args.length() > 0 {
         arg := mut args.popFront();
         if arg == "--builtin-mode" and args.length() > 0 {
@@ -243,8 +243,8 @@ pub displaySourcePath := fn(filePath: String, projectRoot: String): String {
 }
 
 var cachedIdentityRoot := "";
-var cachedIdentityLoaded: mut List<Bool> = [];
-var cachedIdentityTexts: mut List<String> = [];
+var mut cachedIdentityLoaded: List<Bool> = [];
+var mut cachedIdentityTexts: List<String> = [];
 
 /** Identifies source text matching a shipped core/compiler host module in `projectRoot`. */
 pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String {
@@ -443,7 +443,7 @@ hexDigit := fn(n: Int): String {
 
 /** Formats one string as a valid JSON double-quoted literal. */
 quoteJson := fn(s: String): String {
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append("\"");
     codePoints := s.toCodePoints();
     loop codePoints as cp {
@@ -470,8 +470,8 @@ quoteJson := fn(s: String): String {
 
 /** Serializes `{ files, edges }` trace JSON from `graph` to `tracePath`. */
 pub writeTraceJson := fn(tracePath: String, graph: frontend.Items): Unit {
-    fileEntries: mut List<String> = [];
-    edgeEntries: mut List<String> = [];
+    mut fileEntries: List<String> = [];
+    mut edgeEntries: List<String> = [];
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_LOADED {
             hRes := crypto.sha256File(item.name);

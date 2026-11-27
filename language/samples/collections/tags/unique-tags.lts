@@ -1,7 +1,7 @@
 io := import "core/io";
 
 raw := ["cli", "core", "cli", "docs", "core"];
-seen: mut Set<String>;
+mut seen: Set<String>;
 loop raw as item {
     mut seen.add(item);
 }

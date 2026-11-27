@@ -84,7 +84,7 @@ coreSrc :=
 "};\n";
 
 expectRejectBoth("distinct-record-no-field-inheritance",
-coreSrc + "w: mut Wrap<Int> = cast(Box<Int> { value = 1 }); mut w.set(2);\n",
+coreSrc + "mut w: Wrap<Int> = cast(Box<Int> { value = 1 }); mut w.set(2);\n",
 "has no operation value");
 
 /* Rebuild coreSrc cleanly without invalid field access inside distinct Wrap. */
@@ -160,9 +160,9 @@ cleanCoreSrc :=
 "uid := cast<Id<User>>(7);\n" +
 "uid2: Id<User> = cast(7);\n" +
 "pid := cast<Id<Post>>(7);\n" +
-"users: mut StrMap<String>;\n" +
-"idMap: mut Map<Id<User>, String>;\n" +
-"idSet: mut Set<Id<User>>;\n" +
+"mut users: StrMap<String>;\n" +
+"mut idMap: Map<Id<User>, String>;\n" +
+"mut idSet: Set<Id<User>>;\n" +
 "mut users.set(\"u1\", \"Ada\");\n" +
 "mut idMap.set(uid, \"first\");\n" +
 "mut idSet.add(uid);\n" +

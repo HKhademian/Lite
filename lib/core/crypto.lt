@@ -156,7 +156,7 @@ tail: List<Int>, totalBytes: Int
     var h5 := h5In;
     var h6 := h6In;
     var h7 := h7In;
-    padded: mut List<Int> = [];
+    mut padded: List<Int> = [];
     loop tail as b {
         mut padded.pushBack(b);
     }
@@ -196,7 +196,7 @@ pub sha256Reader := fn(reader: io.Reader): (ok: Bool, hex: String, error: String
     var h6: UInt32 = 528734635;
     var h7: UInt32 = 1541459225;
     var totalBytes := 0;
-    var tail: mut List<Int> = [];
+    var mut tail: List<Int> = [];
     loop true {
         chunk := reader.read(16384);
         if not reader.ok() {
@@ -254,7 +254,7 @@ pub sha256Bytes := fn(bytes: List<Int>): String {
         h4 = st.h4; h5 = st.h5; h6 = st.h6; h7 = st.h7;
         pos += 64;
     }
-    tail: mut List<Int> = [];
+    mut tail: List<Int> = [];
     loop pos < total {
         mut tail.pushBack(bytes[pos]);
         pos += 1;
@@ -288,7 +288,7 @@ pub sha256File := fn(path: String): (ok: Bool, hex: String, error: String) {
 pub sha512Bytes := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
     total := bytes.length();
-    padded: mut List<Int> = [];
+    mut padded: List<Int> = [];
     loop bytes as b {
         mut padded.pushBack(b);
     }
@@ -444,7 +444,7 @@ pub isValidHex := fn(encoded: String): Bool {
 pub base64Encode := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
     count := bytes.length();
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var index := 0;
     loop index < count {
         b0 := bytes[index];
@@ -475,7 +475,7 @@ pub base64Decode := fn(encoded: String): List<Int> {
         return [];
     }
     size := encoded.length();
-    var out: mut List<Int> = [];
+    var mut out: List<Int> = [];
     var index := 0;
     loop index < size {
         d0 := b64Alphabet.indexOf(encoded.at(index), 0);
@@ -499,7 +499,7 @@ pub base64Decode := fn(encoded: String): List<Int> {
 /** Encodes raw `0..255` byte values as lowercase hexadecimal text. */
 pub hexEncode := fn(bytes: List<Int>): String {
     checkByteRange(bytes);
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     loop bytes as b {
         mut parts.pushBack(hexAlphabet.at(b / 16) + hexAlphabet.at(b % 16));
     }
@@ -513,7 +513,7 @@ pub hexDecode := fn(encoded: String): List<Int> {
         return [];
     }
     size := encoded.length();
-    var out: mut List<Int> = [];
+    var mut out: List<Int> = [];
     var index := 0;
     loop index < size {
         hi := hexAlphabet.indexOf(encoded.at(index).toLowerAscii(), 0);
@@ -529,15 +529,15 @@ pub hmacSha256Bytes := fn(key: List<Int>, data: List<Int>): String {
     checkByteRange(key);
     keySize := key.length();
     normalized := if keySize > 64 { hexDecode(sha256Bytes(key)) } else { key };
-    var blockKey: mut List<Int> = [];
+    var mut blockKey: List<Int> = [];
     loop normalized as b {
         mut blockKey.pushBack(b);
     }
     loop blockKey.length() < 64 {
         mut blockKey.pushBack(0);
     }
-    var inner: mut List<Int> = [];
-    var outer: mut List<Int> = [];
+    var mut inner: List<Int> = [];
+    var mut outer: List<Int> = [];
     var index := 0;
     loop index < 64 {
         kb := blockKey[index];

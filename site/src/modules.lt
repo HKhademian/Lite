@@ -23,7 +23,7 @@ isWhitespaceChar := fn(ch: String): Bool {
 };
 
 formatInlineDoc := fn(docText: String): String {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     len := docText.length();
     var pos := 0;
     loop pos < len {
@@ -78,11 +78,11 @@ modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts
     prefix := "../../modules/";
     grpNss: List<String> = ["core", "math", "ds", "data", "extra"];
     grpLabels: List<String> = ["Core Modules (core/*)", "Math Modules (math/*)", "Data Structures (ds/*)", "Data & Codecs (data/*)", "Play & Extra (extra/*)"];
-    grpBlocks: mut List<String> = [];
+    mut grpBlocks: List<String> = [];
     var gi := 0;
     loop gi < 5 {
         ns := grpNss[gi];
-        items: mut List<String> = [];
+        mut items: List<String> = [];
         var mi := 0;
         loop mi < modIds.length() {
             if modNss[mi] == ns {
@@ -118,14 +118,14 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     modOffs := json.arrayOffsets(inputJson, modsF.valuePos);
     modCount := modOffs.length();
 
-    modIds: mut List<String> = [];
-    modNss: mut List<String> = [];
-    modNames: mut List<String> = [];
-    modFiles: mut List<String> = [];
-    modEnvs: mut List<String> = [];
-    modSummaries: mut List<String> = [];
-    modImportHtmls: mut List<String> = [];
-    modSymCounts: mut List<Int> = [];
+    mut modIds: List<String> = [];
+    mut modNss: List<String> = [];
+    mut modNames: List<String> = [];
+    mut modFiles: List<String> = [];
+    mut modEnvs: List<String> = [];
+    mut modSummaries: List<String> = [];
+    mut modImportHtmls: List<String> = [];
+    mut modSymCounts: List<Int> = [];
 
     loop modOffs as mp {
         mut modIds.pushBack(json.readFieldString(inputJson, mp, "id").value);
@@ -146,10 +146,10 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         emptyInts: List<Int> = [];
         emptyInts
     };
-    sampIds: mut List<String> = [];
-    sampTitles: mut List<String> = [];
-    sampFiles: mut List<String> = [];
-    sampBadges: mut List<String> = [];
+    mut sampIds: List<String> = [];
+    mut sampTitles: List<String> = [];
+    mut sampFiles: List<String> = [];
+    mut sampBadges: List<String> = [];
     loop sampOffs as sp {
         mut sampIds.pushBack(json.readFieldString(inputJson, sp, "id").value);
         mut sampTitles.pushBack(json.readFieldString(inputJson, sp, "title").value);
@@ -158,23 +158,23 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         mut sampBadges.pushBack(if bR.found and bR.ok { bR.value } else { "sample" });
     }
 
-    edgeModIdx: mut List<Int> = [];
-    edgeSampIdx: mut List<Int> = [];
+    mut edgeModIdx: List<Int> = [];
+    mut edgeSampIdx: List<Int> = [];
     var si := 0;
-    modIdIndex: mut Map<String, Int>;
+    mut modIdIndex: Map<String, Int>;
     var mIdx := 0;
     loop mIdx < modCount {
         mut modIdIndex.set(modIds[mIdx], mIdx);
         mIdx = mIdx + 1;
     }
-    modUsageCounts: mut Map<Int, Int>;
+    mut modUsageCounts: Map<Int, Int>;
     sCount := sampIds.length();
     loop si < sCount {
         sPath := path.join(rootDir, sampFiles[si]);
         sRead := fs.readText(sPath);
         if sRead.ok {
             src := sRead.text;
-            seenModsInSample: mut Set<Int>;
+            mut seenModsInSample: Set<Int>;
             var pos := 0;
             slen := src.length();
             loop pos < slen {
@@ -207,7 +207,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
 
     edgeTotal := edgeModIdx.length();
     edgeOrder := collections.sortIndicesBy(edgeTotal, fn(a: Int, b: Int): Bool { edgeModIdx[a] <= edgeModIdx[b] });
-    edgeModStart: mut Map<Int, Int>;
+    mut edgeModStart: Map<Int, Int>;
     var eoIdx := 0;
     loop eoIdx < edgeTotal {
         em := edgeModIdx[edgeOrder[eoIdx]];
@@ -223,11 +223,11 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     var dataCount := 0;
     var extraCount := 0;
     var totalSymbols := 0;
-    coreCards: mut List<String> = [];
-    mathCards: mut List<String> = [];
-    dsCards: mut List<String> = [];
-    dataCards: mut List<String> = [];
-    extraCards: mut List<String> = [];
+    mut coreCards: List<String> = [];
+    mut mathCards: List<String> = [];
+    mut dsCards: List<String> = [];
+    mut dataCards: List<String> = [];
+    mut extraCards: List<String> = [];
 
     var mi := 0;
     loop mi < modCount {
@@ -247,8 +247,8 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
 
         symsF := json.findField(inputJson, mp, "symbols");
         sOffs := json.arrayOffsets(inputJson, symsF.valuePos);
-        previewParts: mut List<String> = [];
-        symNames: mut List<String> = [];
+        mut previewParts: List<String> = [];
+        mut symNames: List<String> = [];
         var symIdx := 0;
         loop sOffs as sPos {
             sName := json.readFieldString(inputJson, sPos, "name").value;
@@ -371,10 +371,10 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "  })();\n"
     + "</script>";
 
-    pagesJson: mut List<String> = [
+    mut pagesJson: List<String> = [
     "{\"relPath\":\"modules/index.html\",\"title\":\"Modules — Lite\",\"description\":\"Reference documentation for Lite core/*, math/*, ds/*, data/*, and extra/* modules and their public APIs.\",\"basePath\":\"../\",\"body\":" + json.quoteString(indexBody) + "}"
     ];
-    searchEntriesJson: mut List<String> = [];
+    mut searchEntriesJson: List<String> = [];
 
     mi = 0;
     loop mi < modCount {
@@ -389,14 +389,14 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         academyUsagesR := json.readFieldString(inputJson, mp, "academyUsagesHtml");
         academyUsagesHtml := if academyUsagesR.found and academyUsagesR.ok { academyUsagesR.value } else { "" };
 
-        typeCards: mut List<String> = [];
-        constCards: mut List<String> = [];
-        fnCards: mut List<String> = [];
-        fnGroups: mut List<Int> = [];
+        mut typeCards: List<String> = [];
+        mut constCards: List<String> = [];
+        mut fnCards: List<String> = [];
+        mut fnGroups: List<Int> = [];
         fnLabels: List<String> = ["Module function", "Static type function", "Instance type function"];
-        typeToc: mut List<String> = [];
-        constToc: mut List<String> = [];
-        fnToc: mut List<String> = [];
+        mut typeToc: List<String> = [];
+        mut constToc: List<String> = [];
+        mut fnToc: List<String> = [];
 
         symsF := json.findField(inputJson, mp, "symbols");
         loop json.arrayOffsets(inputJson, symsF.valuePos) as sPos {
@@ -434,7 +434,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
             + ",\"badge\":" + json.quoteString(label) + "}");
         }
 
-        usageCards: mut List<String> = [];
+        mut usageCards: List<String> = [];
         var eo := edgeModStart.getOr(mi, edgeTotal);
         loop eo < edgeTotal and edgeModIdx[edgeOrder[eo]] == mi {
             uIdx := edgeSampIdx[edgeOrder[eo]];
@@ -453,8 +453,8 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
             eo = eo + 1;
         }
 
-        secHtml: mut List<String> = [];
-        tocItems: mut List<String> = ["<li><a href=\"#overview\">Overview</a></li>"];
+        mut secHtml: List<String> = [];
+        mut tocItems: List<String> = ["<li><a href=\"#overview\">Overview</a></li>"];
         if typeCards.length() > 0 {
             mut secHtml.pushBack("<section class=\"section\" id=\"types\">\n      <div class=\"section-head\">\n        <h2>Types</h2>\n        <span class=\"code-card-meta\">" + typeCards.length().toText() + "</span>\n      </div>\n      <div class=\"module-symbol-list\">\n        " + typeCards.join("\n") + "\n      </div>\n    </section>");
             mut tocItems.pushBack("<li><a href=\"#types\">Types</a></li>");
@@ -467,10 +467,10 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         }
         if fnCards.length() > 0 {
             mut tocItems.pushBack("<li><a href=\"#functions\">Functions</a></li>");
-            sections: mut List<String> = [];
+            mut sections: List<String> = [];
             groupTitles: List<String> = ["Module functions", "Static type functions", "Instance type functions"];
             loop 0..groupTitles.length() as gi {
-                cards: mut List<String> = [];
+                mut cards: List<String> = [];
                 loop 0..fnCards.length() as fi {
                     if fnGroups[fi] == gi {
                         mut cards.pushBack(fnCards[fi]);

@@ -140,8 +140,8 @@ unqualifiedCases: List<String> = [
 "textAt(\"x\", 0);",
 "textSlice(\"x\", 0, 1);",
 "readSource(\"main.lts\", \"./dep\");",
-"values: mut List<Int> = []; pushBack(mut values, 1);",
-"values: mut List<Int> = []; popBack(mut values);",
+"mut values: List<Int> = []; pushBack(mut values, 1);",
+"mut values: List<Int> = []; popBack(mut values);",
 ];
 loop unqualifiedCases as uSrc {
     compilerTest.assertCompileErrorContains(root, tsComp, "unqualified " + uSrc, uSrc, "unknown value");
@@ -155,15 +155,15 @@ test.check("core/list popBack signature", listSrc.contains("pub List.popBack := 
 test.check("core/list not variadic", not listSrc.contains("pub List.pushBack := fn(..."));
 test.check("core/list popBack not variadic", not listSrc.contains("pub List.popBack := fn(..."));
 
-listProg := "io := import \"core/io\"; values: mut List<Int> = [1]; mut values.pushBack(2); io.outputLine(mut values.popBack(), values);";
+listProg := "io := import \"core/io\"; mut values: List<Int> = [1]; mut values.pushBack(2); io.outputLine(mut values.popBack(), values);";
 compilerTest.assertCompileRunTs(root, tsComp, "core/list valid", listProg, "2 [1]\n");
 cListProgRes := compilerTest.compileStdin(root, cComp, listProg, "");
 test.checkInt("core/list C compiles: " + cListProgRes.stderr, 0, cListProgRes.status);
 invalidListCases: List<String> = [
-"values: mut List<Int> = []; mut values.pushBack(\"x\");",
+"mut values: List<Int> = []; mut values.pushBack(\"x\");",
 "values: List<Int> = []; mut values.pushBack(1);",
 "values: List<Int> = []; mut values.popBack();",
-"values: mut List<Int> = []; pushBack(mut values, 1);",
+"mut values: List<Int> = []; pushBack(mut values, 1);",
 ];
 loop invalidListCases as invSrc {
     resInv := compilerTest.compileStdin(root, tsComp, invSrc, "");

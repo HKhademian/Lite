@@ -53,7 +53,7 @@ parseBytesArray := fn(source: String, arrayPos: Int, label: String): (ok: Bool, 
 }
 
 collectBytesArray := fn(source: String, arrayPos: Int): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     offsets := json.arrayOffsets(source, arrayPos);
     loop offsets as bPos {
         byteRes := json.readIntAt(source, bPos);

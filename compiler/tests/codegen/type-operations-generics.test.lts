@@ -65,7 +65,7 @@ genStandaloneSrc :=
 "};\n" +
 "\n" +
 "mapList := fn<T, U>(items: List<T>, f: fn(T): U): List<U> {\n" +
-"    out: mut List<U> = [];\n" +
+"    mut out: List<U> = [];\n" +
 "    loop items as item {\n" +
 "        mut out.pushBack(f(item));\n" +
 "    }\n" +
@@ -80,10 +80,10 @@ genStandaloneSrc :=
 "a := forwardDouble(21);\n" +
 "b := identity(\"hello\");\n" +
 "p := makePair(second = \"ok\", first = 7);\n" +
-"nums: mut List<Int> = [];\n" +
+"mut nums: List<Int> = [];\n" +
 "pushTwice(mut nums, 5);\n" +
 "repeatInto(mut nums, 9, 2);\n" +
-"words: mut List<String> = [];\n" +
+"mut words: List<String> = [];\n" +
 "pushTwice(mut words, \"go\");\n" +
 "doubled := mapList(nums, fn(n) { n * 2 });\n" +
 "flags := mapList(nums, fn(n) { n > 6 });\n" +
@@ -139,7 +139,7 @@ libSrc :=
 "    f(b.value)\n" +
 "};\n" +
 "pub filterList := fn<T>(items: List<T>, pred: fn(T): Bool): List<T> {\n" +
-"    out: mut List<T> = [];\n" +
+"    mut out: List<T> = [];\n" +
 "    loop items as item {\n" +
 "        if pred(item) { mut out.pushBack(item); }\n" +
 "    }\n" +
@@ -195,7 +195,7 @@ expectRejectBoth("uninferrable-type-param",
 "cannot infer type parameter T");
 
 expectRejectBoth("invalid-set-elem-type",
-"asSet := fn<T>(x: T): Set<T> { s: mut Set<T>; s };\n" +
+"asSet := fn<T>(x: T): Set<T> { mut s: Set<T>; s };\n" +
 "s := asSet([1, 2]);\n",
 "unsupported set element type");
 

@@ -2,7 +2,7 @@
 
 io := import "core/io";
 
-trace: mut List<String> = [];
+mut trace: List<String> = [];
 
 findFirstMultiple := fn(rows: List<Int>, cols: List<Int>, target: Int): Int {
     @search {

@@ -132,7 +132,7 @@ pub validateReleaseJsonText := fn(filePath: String, rootDir: String): (ok: Bool,
 };
 
 archiveTarGz := fn(outDir: String, name: String, sourceDir: String, entries: List<String>): (ok: Bool, error: String) {
-    args: mut List<String> = ["-czf", path.join(outDir, name), "-C", sourceDir];
+    mut args: List<String> = ["-czf", path.join(outDir, name), "-C", sourceDir];
     loop entries as e {
         mut args.pushBack(e);
     }
@@ -220,7 +220,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
     tsMeta := corpus.readCompilerMeta(rootDir, "ts");
     if not tsMeta.ok { _rm := fs.remove(workDir); io.errorLine(tsMeta.error); return 1; }
 
-    compJsonEntries: mut List<String> = [];
+    mut compJsonEntries: List<String> = [];
     targetsList: List<String> = ["ts", "c"];
     loop targetsList as t {
         built := corpus.readCompilerMeta(rootDir, t);
@@ -260,7 +260,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
     fixturesDir := path.join(rootDir, "igniter/tests/compiler");
     cCompiler := path.join(genDir, "c-compiler.ts");
     fixFiles := path.collectFiles(fixturesDir, [fixturesDir], ".json", [], false);
-    progEntries: mut List<String> = [];
+    mut progEntries: List<String> = [];
 
     loop fixFiles as absFix {
         fName := path.baseName(absFix);
@@ -278,7 +278,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
             cSha := crypto.sha256Bytes(fs.readBytes(cOutPath));
             srcSha := crypto.sha256Bytes(srcBytes);
 
-            caseEntries: mut List<String> = [];
+            mut caseEntries: List<String> = [];
             casesField := json.findField(fixJson, 0, "cases");
             loop json.arrayOffsets(fixJson, casesField.valuePos) as sPos {
                 sName := json.readFieldString(fixJson, sPos, "name").value;
@@ -368,7 +368,7 @@ runNative := fn(rootDir: String, outDir: String, inputDir: String): Int {
     cc := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
 
     progsField := json.findField(relInfo.text, 0, "programs");
-    progReportEntries: mut List<String> = [];
+    mut progReportEntries: List<String> = [];
     emptyEnv: List<String> = [];
 
     loop json.arrayOffsets(relInfo.text, progsField.valuePos) as pPos {
@@ -460,7 +460,7 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
         return 1;
     }
 
-    natRepEntries: mut List<String> = [];
+    mut natRepEntries: List<String> = [];
     targets := supportedNativeTargets();
     loop targets as t {
         natPath := path.join(outDir, "native-" + t + ".json");
@@ -485,7 +485,7 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
         io.errorLine("unexpected archive count in " + outDir);
         return 1;
     }
-    assetEntries: mut List<String> = [];
+    mut assetEntries: List<String> = [];
     loop archives as aPath {
         h := crypto.sha256File(aPath);
         if not h.ok { io.errorLine(h.error); return 1; }
@@ -514,7 +514,7 @@ runFinalize := fn(rootDir: String, outDir: String): Int {
     _wn := fs.writeText(path.join(outDir, "RELEASE-NOTES.md"), notes);
 
     entries := fs.listDir(outDir);
-    sumLines: mut List<String> = [];
+    mut sumLines: List<String> = [];
     loop entries as entry {
         if entry =!= "SHA256SUMS" {
             h := crypto.sha256File(path.join(outDir, entry));

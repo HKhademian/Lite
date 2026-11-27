@@ -35,11 +35,11 @@ runCmdOk := fn(exe: String, args: List<String>, cwd: String): String {
 };
 
 runReleaseTool := fn(args: List<String>, directory: String, stdinText: String): String {
-    cmdArgs: mut List<String> = [releaseBin];
+    mut cmdArgs: List<String> = [releaseBin];
     loop args as a {
         mut cmdArgs.pushBack(a);
     }
-    envOver: mut List<String> = ["LITE_RELEASE_INTERNAL=1"];
+    mut envOver: List<String> = ["LITE_RELEASE_INTERNAL=1"];
     cwd := if directory =!= "" {
         mut envOver.pushBack("LITE_RELEASE_ROOT=" + directory);
         directory
@@ -67,7 +67,7 @@ formatReleaseNotes := fn(inputJson: String): String {
 };
 
 splitLines := fn(source: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     n := source.length();
     var pos := 0;
     loop pos <= n {
@@ -256,7 +256,7 @@ _ext := runCmdOk("tar", ["-xzf", path.join(output, archiveName), "-C", extracted
 test.checkText("extracted RELEASE.json matches manifest.json", manifestText, fs.readText(path.join(extracted, "RELEASE.json")).text);
 
 outEntries := fs.listDir(output);
-rawExpected: mut List<String> = [];
+mut rawExpected: List<String> = [];
 loop outEntries as name {
     if name =!= "SHA256SUMS" {
         mut rawExpected.pushBack(name);

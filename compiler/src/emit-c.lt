@@ -12,7 +12,7 @@ tb := import "util/text-builder";
 var cOutUseWriter := false;
 var cCompactEmit := false;
 var cSourceMapMode: optCfg.SourceMapMode = optCfg.SourceMapMode.None;
-cOutBuf: mut tb.TextBuilder;
+mut cOutBuf: tb.TextBuilder;
 
 /** Emits one C11 line to either stdout or the buffered `TextBuilder` for `--out`. */
 outLine := fn(s: String): Unit {
@@ -442,7 +442,7 @@ emitInputHelpers := fn(calls: Set<String>): Unit {
 /** Formats a pipe-separated parameter list as C11 typed parameters or `void`, applying `restrict` only when proven sound. */
 cParameterListWithRestrict := fn(encoded: String, useRestrict: Bool): String {
     if encoded == "" { return "void"; }
-    result: mut tb.TextBuilder;
+    mut result: tb.TextBuilder;
     var start := 0;
     loop true {
         sep := encoded.indexOf("|", start);
@@ -624,7 +624,7 @@ unsupportedAggregateCode := fn(code: String): String {
 
 /* Lazily initialized O(1) rewrite table from `lite$<name>` suffix to C11 runtime function name. */
 var cBuiltinMapReady := false;
-cBuiltinMap: mut Map<String, String>;
+mut cBuiltinMap: Map<String, String>;
 
 /** Populates `cBuiltinMap` once with all registered `lite$...(` -> `lt_...(` C11 runtime mappings. */
 ensureCBuiltinMap := fn(): Unit {
@@ -741,7 +741,7 @@ normalizeCBuiltinCalls := fn(code: String): String {
     ensureCBuiltinMap();
     size := code.length();
     var nextQuote := code.indexOf("\"", 0);
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < size {
@@ -803,7 +803,7 @@ cCall := fn(kind: String, code: String): String {
         frontend.isEnumKind(kind) and not frontend.isPayloadEnumKind(kind) {
             dName := frontend.enumDisplayName(kind);
             cCount := frontend.enumCaseCount(kind);
-            labels: mut List<String> = [];
+            mut labels: List<String> = [];
             var ci := 0;
             loop ci < cCount {
                 mut labels.pushBack(cLiteral.textLiteralCode(dName + "." + frontend.enumCaseNameAt(kind, ci)));
@@ -1006,7 +1006,7 @@ emitFloatArithmeticHelpers := fn(calls: Set<String>, float8Values: Bool, float16
     needF8 := float8Values or float8Literals or usesIntHelper(calls, "lt_f8_to_f64(") or usesIntHelper(calls, "lt_f8_neg(") or usesIntHelper(calls, "lt_f64_to_f8(") or usesIntHelper(calls, "lt_float8_op(") or usesIntHelper(calls, "lt_fma_f8(") or usesIntHelper(calls, "lt_ufma_f8(") or usesIntHelper(calls, "lt_ufadd_f8(") or usesIntHelper(calls, "lt_ufsub_f8(") or usesIntHelper(calls, "lt_ufmul_f8(") or usesIntHelper(calls, "lt_ufdiv_f8(");
     needF16 := float16Values or float16Literals or usesIntHelper(calls, "lt_f16_to_f64(") or usesIntHelper(calls, "lt_f16_neg(") or usesHelperPrefix(calls, "lt_f64_to_f16") or usesIntHelper(calls, "lt_float16_op(") or usesHelperPrefix(calls, "lt_f16_") or usesIntHelper(calls, "lt_fma_f16(") or usesIntHelper(calls, "lt_ufma_f16(") or usesIntHelper(calls, "lt_ufadd_f16(") or usesIntHelper(calls, "lt_ufsub_f16(") or usesIntHelper(calls, "lt_ufmul_f16(") or usesIntHelper(calls, "lt_ufdiv_f16(");
     if needF8 {
-        lutBuf: mut tb.TextBuilder;
+        mut lutBuf: tb.TextBuilder;
         var b := 0;
         loop b < 256 {
             s := b / 128;
@@ -1428,13 +1428,13 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool, config: 
             outLine("");
             return;
         }
-        unionFieldsBuf: mut tb.TextBuilder;
+        mut unionFieldsBuf: tb.TextBuilder;
         mut unionFieldsBuf.append("int _empty; ");
         var ci := 0;
         loop ci < cc {
             pc := frontend.enumCasePayloadCount(kind, ci);
             if pc > 0 {
-                sfBuf: mut tb.TextBuilder;
+                mut sfBuf: tb.TextBuilder;
                 var pi := 0;
                 loop pi < pc {
                     mut sfBuf.append(cScalarType(frontend.enumCasePayloadKind(kind, ci, pi)));
@@ -1460,8 +1460,8 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool, config: 
             if pc == 0 {
                 outLine("LT_INLINE " + tag + " " + tag + "_mk_" + mci.toText() + "(void) { return (" + tag + "){ .tag = " + mci.toText() + ", .u = { ._empty = 0 } }; }");
             } else {
-                pDeclBuf: mut tb.TextBuilder;
-                pInitBuf: mut tb.TextBuilder;
+                mut pDeclBuf: tb.TextBuilder;
+                mut pInitBuf: tb.TextBuilder;
                 var pi := 0;
                 loop pi < pc {
                     pk := frontend.enumCasePayloadKind(kind, mci, pi);
@@ -1490,7 +1490,7 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool, config: 
             var dci := 0;
             loop dci < cc {
                 pc := frontend.enumCasePayloadCount(kind, dci);
-                var caseDrops: mut List<String> = [];
+                var mut caseDrops: List<String> = [];
                 var dpi := 0;
                 loop dpi < pc {
                     pk := frontend.enumCasePayloadKind(kind, dci, dpi);
@@ -1528,7 +1528,7 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool, config: 
                     pi = pi + 1;
                 }
                 if caseHasHeap {
-                    initsBuf: mut tb.TextBuilder;
+                    mut initsBuf: tb.TextBuilder;
                     var ppi := 0;
                     loop ppi < pc {
                         if ppi > 0 { mut initsBuf.append(", "); }
@@ -1592,7 +1592,7 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool, config: 
         emptyAlign := cAlignasPrefix(recAttrs.align, "int");
         outLine("typedef struct " + packedKw + "{ " + emptyAlign + "int _empty; } " + tag + ";");
     } else {
-        fieldsBuf: mut tb.TextBuilder;
+        mut fieldsBuf: tb.TextBuilder;
         var i := 0;
         loop i < count {
             comp := if isRec { frontend.recordComponent(kind, i) } else { frontend.tupleComponent(kind, i) };
@@ -1628,7 +1628,7 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool, config: 
         if count == 0 {
             outLine("    return src;");
         } else {
-            initsBuf: mut tb.TextBuilder;
+            mut initsBuf: tb.TextBuilder;
             var ci := 0;
             loop ci < count {
                 comp := if isRec { frontend.recordComponent(kind, ci) } else { frontend.tupleComponent(kind, ci) };
@@ -1697,7 +1697,7 @@ emitCTupleConvHelper := fn(expectedKind: String, actualKind: String): Unit {
     if count == 0 {
         outLine("    (void)v; return (" + expTag + "){ ._empty = 0 };");
     } else {
-        initsBuf: mut tb.TextBuilder;
+        mut initsBuf: tb.TextBuilder;
         var i := 0;
         loop i < count {
             eComp := frontend.tupleComponent(expectedKind, i);
@@ -2342,7 +2342,7 @@ emitCDynHelpers := fn(kind: String): Unit {
         outLine("typedef struct " + vTag + " {");
         loop methods as m {
             retC := cScalarType(m.result);
-            pTypes: mut List<String> = ["void *"];
+            mut pTypes: List<String> = ["void *"];
             if m.paramCount > 0 {
                 var pStart := 0;
                 pLen := m.params.length();
@@ -3053,7 +3053,7 @@ emitCSoaHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrin
         outLine("LT_INLINE " + rTag + " " + tag + "_pop(" + tag + " *s, size_t at) {");
         outLine("    if (LT_UNLIKELY(s->len == 0u)) { lt_bound_fault(at, \"popBack on empty SoA\"); }");
         outLine("    s->len -= 1u;");
-        fieldsBuf: mut tb.TextBuilder;
+        mut fieldsBuf: tb.TextBuilder;
         var ri := 0;
         loop ri < fc {
             comp := frontend.recordComponent(recK, ri);
@@ -3068,7 +3068,7 @@ emitCSoaHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrin
     if usesIntHelper(calls, tag + "_swap_remove(") {
         outLine("LT_INLINE " + rTag + " " + tag + "_swap_remove(" + tag + " *s, int64_t idx, size_t at) {");
         outLine("    if (LT_UNLIKELY(idx < 0 || (uint64_t)idx >= (uint64_t)s->len)) { lt_bound_fault(at, \"SoA index outside its extent\"); }");
-        fieldsBuf: mut tb.TextBuilder;
+        mut fieldsBuf: tb.TextBuilder;
         var si := 0;
         loop si < fc {
             comp := frontend.recordComponent(recK, si);
@@ -3100,7 +3100,7 @@ emitCSoaHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrin
             if chkG {
                 outLine("    if (LT_UNLIKELY(idx < 0 || (uint64_t)idx >= (uint64_t)s.len)) { lt_bound_fault(at, \"SoA index outside its extent\"); }");
             } else { outLine("    (void)at;"); }
-            fieldsBuf: mut tb.TextBuilder;
+            mut fieldsBuf: tb.TextBuilder;
             var gi := 0;
             loop gi < fc {
                 comp := frontend.recordComponent(recK, gi);
@@ -4206,7 +4206,7 @@ cLastIndexOfStr := fn(s: String, needle: String): Int {
 
 /** Declares hygienic arithmetic/comparison/owned temporaries, jumping directly to markers outside strings and hoisted closure bodies. */
 emitArithmeticTemporaries := fn(items: frontend.Items): Unit {
-    seen: mut Set<String>;
+    mut seen: Set<String>;
     loop items as item {
         code := item.code;
         var nextArg := code.indexOf("lt_arg_", 0);
@@ -4280,8 +4280,8 @@ injectCFnTemps := fn(code: String): String {
     if nextArg < 0 and nextCmp < 0 and nextLtmp < 0 {
         return code.slice(0, mIdx) + code.slice(mIdx + marker.length(), size);
     }
-    decls: mut tb.TextBuilder;
-    seen: mut Set<String>;
+    mut decls: tb.TextBuilder;
+    mut seen: Set<String>;
     var nextQuote := code.indexOf("\"", 0);
     var cursor := 0;
     loop cursor < size {
@@ -4989,7 +4989,7 @@ countCIdentOcc := fn(code: String, ident: String): Int {
 
 /** Builds C cleanup statements for `owned` entries with `depth >= minDepth` in reverse declaration order. */
 buildScopeDropStmt := fn(owned: List<(rt: String, kind: String, depth: Int)>, minDepth: Int): String {
-    buf: mut tb.TextBuilder;
+    mut buf: tb.TextBuilder;
     var i := owned.length() - 1;
     loop i >= 0 {
         o := owned[i];
@@ -5053,10 +5053,10 @@ isSafeScopeListUsage := fn(normCode: String, rt: String, lType: String): Bool {
 
 /** Returns function-level (`depth == 0`, `loopDepth == 0`) `List<T>` variable runtimes safe to allocate on `lt_tl_ctx.scope`. */
 analyzeFnScopeLists := fn(stream: frontend.Items): Set<String> {
-    out: mut Set<String>;
+    mut out: Set<String>;
     n := stream.length();
-    depths: mut List<Int> = [];
-    loopDepths: mut List<Int> = [];
+    mut depths: List<Int> = [];
+    mut loopDepths: List<Int> = [];
     var d := 0;
     var ld := 0;
     var i := 0;
@@ -5106,10 +5106,10 @@ analyzeFnScopeLists := fn(stream: frontend.Items): Set<String> {
 
 /** Computes safe Move-on-Last-Use rewrites (`itemIdx -> "rt|copyFn|moveFn"`) for owned non-scope local variables. */
 analyzeMoveLastUses := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuckets, scopeLists: Set<String>): Map<Int, String> {
-    out: mut Map<Int, String>;
+    mut out: Map<Int, String>;
     n := stream.length();
-    depths: mut List<Int> = [];
-    loopDepths: mut List<Int> = [];
+    mut depths: List<Int> = [];
+    mut loopDepths: List<Int> = [];
     var d := 0;
     var ld := 0;
     var i := 0;
@@ -5197,13 +5197,13 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
     var firstKind := "";
     var firstCode := "";
     var firstTemp := "";
-    writes: mut tb.TextBuilder;
-    multiOutputDrops: mut List<(tmp: String, kind: String)> = [];
+    mut writes: tb.TextBuilder;
+    mut multiOutputDrops: List<(tmp: String, kind: String)> = [];
     var seqLoopId := 0;
-    loopSeqFlags: mut List<Int> = [];
-    loopSeqReleases: mut List<String> = [];
-    scopeOwned: mut List<(rt: String, kind: String, depth: Int)> = [];
-    loopOwnedDepths: mut List<Int> = [];
+    mut loopSeqFlags: List<Int> = [];
+    mut loopSeqReleases: List<String> = [];
+    mut scopeOwned: List<(rt: String, kind: String, depth: Int)> = [];
+    mut loopOwnedDepths: List<Int> = [];
     var pendingLocFile := "";
     var pendingLocLine := 0;
     var pendingLocCol := "";
@@ -5269,7 +5269,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
         if code.indexOf("/*@CBLK:", 0) >= 0 {
             curRetDrop := buildScopeDropStmt(scopeOwned, 0);
             var lrIdx := loopSeqReleases.length() - 1;
-            lrBuf: mut tb.TextBuilder;
+            mut lrBuf: tb.TextBuilder;
             if curRetDrop =!= "" { mut lrBuf.append(curRetDrop); mut lrBuf.append(" "); }
             loop lrIdx >= 0 {
                 rel := loopSeqReleases[lrIdx];
@@ -5328,7 +5328,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 outLine(indent + item.runtime + " = " + code + ";");
             }
         } else if item.kind == frontend.ITEM_KIND_RETURN {
-            retDropsBuf: mut tb.TextBuilder;
+            mut retDropsBuf: tb.TextBuilder;
             allDrop := buildScopeDropStmt(scopeOwned, 0);
             if allDrop =!= "" { mut retDropsBuf.append(allDrop); mut retDropsBuf.append(" "); }
             var lrIdx := loopSeqReleases.length() - 1;
@@ -5683,7 +5683,7 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
 rewriteRestrictSliceForParam := fn(code: String, vTag: String, paramRt: String): String {
     if code == "" or vTag == "" or paramRt == "" or code.indexOf(vTag + "_", 0) < 0 { return code; }
     size := code.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var segStart := 0;
     var cursor := 0;
     prefixTok := vTag + "_";
@@ -5757,7 +5757,7 @@ rewriteRestrictSliceCode := fn(code: String, encodedParams: String): String {
 
 /** Collects identifier/global/callee tokens referenced across `fnItems`. */
 collectFnBodyTokens := fn(fnItems: frontend.Items): Set<String> {
-    fnTokens: mut Set<String>;
+    mut fnTokens: Set<String>;
     loop fnItems as it {
         frontend.codeReachableTokensSet(it.code, mut fnTokens);
         if isCAssignKind(it.kind) and it.runtime =!= "" {
@@ -5808,7 +5808,7 @@ fnCanProveRestrict := fn(encodedParams: String, fnTokens: Set<String>, hoistedGl
 /** Emits one C11 function definition starting at `FUNCTION_START` index `startIndex` and returns the index after `FUNCTION_END`. */
 emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, hoistedGlobals: frontend.TokenBuckets, constHoistedGlobals: frontend.TokenBuckets, restrictFns: Set<String>, restrictMutSliceFns: Set<String>): Int {
     fnItem := reachable[startIndex];
-    fnItems: mut frontend.Items = [];
+    mut fnItems: frontend.Items = [];
     var idx := startIndex + 1;
     var depth := 1;
     loop idx < total {
@@ -5828,8 +5828,8 @@ emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, h
     useMutSliceRestrict := restrictMutSliceFns.has(fnItem.runtime);
     outLine("static " + cScalarType(fnItem.code) + " " + fnItem.runtime + "(" + cParameterListWithRestrict(fnItem.textValue, useRestrict) + ") {");
     emitCParameterReads(fnItem.textValue);
-    restrictSliceParams: mut Set<String>;
-    emitItems: mut frontend.Items = [];
+    mut restrictSliceParams: Set<String>;
+    mut emitItems: frontend.Items = [];
     if useMutSliceRestrict {
         var pStart := 0;
         loop true {
@@ -5879,7 +5879,7 @@ emitOneCFunction := fn(reachable: frontend.Items, startIndex: Int, total: Int, h
 /** Returns all C-supported struct (`S|<kind>`), list (`L|<elemKind>`), map (`M|<kind>`), and set (`E|<kind>`) types referenced by `kind` in post-order. */
 collectSubKinds := fn(kind: String): List<String> {
     if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind)); }
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     if frontend.cArrayTag(kind) =!= "" {
         elKind := frontend.arrayElementKind(kind);
         sub := self(elKind);
@@ -6061,7 +6061,7 @@ collectSubKinds := fn(kind: String): List<String> {
 /** Returns all struct/list/map/set tags and `"FLOAT"`/`"FLOAT32"`/`"STR"` markers reachable inside `kind` for print/copy/float tracking. */
 collectTypeFlags := fn(kind: String): List<String> {
     if frontend.isDistinctKind(kind) { return self(frontend.distinctBaseKind(kind)); }
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     if kind == frontend.VALUE_KIND_STRING {
         mut out.pushBack("STR");
         return out;
@@ -6181,7 +6181,7 @@ collectTypeFlags := fn(kind: String): List<String> {
 
 /** Extracts all `/*@T:<kind>@*/`, `/*@P:<kind>@*/`, and `/*@C:<exp>|<act>@*/` payloads from emitted C expression `code`, jumping via `indexOfText`. */
 extractCTypeAnnotations := fn(code: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var nextAnnot := code.indexOf("/*@", 0);
     if nextAnnot < 0 { return out; }
     size := code.length();
@@ -6211,7 +6211,7 @@ extractCTypeAnnotations := fn(code: String): List<String> {
 
 /** Recursively extracts balanced CFN_START ... CFN_END hoisted closure/trampoline definitions (innermost first), encoded as `<key>\n<body>`. */
 extractCHoistedFns := fn(code: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var nextCfn := code.indexOf("/*@CFN_START:", 0);
     if nextCfn < 0 { return out; }
     size := code.length();
@@ -6247,7 +6247,7 @@ extractCHoistedFns := fn(code: String): List<String> {
 emitCCtxTypeHelper := fn(ctxKind: String): Unit {
     cTag := frontend.cCtxTag(ctxKind);
     if cTag == "" { return; }
-    fieldsBuf: mut tb.TextBuilder;
+    mut fieldsBuf: tb.TextBuilder;
     loop contexts.parseCtxKindSlots(ctxKind) as cs {
         slotC := cScalarType(cs.kind);
         sIdent := "slot_" + frontend.cSafeIdent(cs.name);
@@ -6271,12 +6271,12 @@ emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
     retKind := frontend.fnResultKind(kind);
     retC := cScalarType(retKind);
     pCount := frontend.fnParamCount(kind);
-    fpParamsBuf: mut tb.TextBuilder;
+    mut fpParamsBuf: tb.TextBuilder;
     mut fpParamsBuf.append("void *");
-    callParamsBuf: mut tb.TextBuilder;
+    mut callParamsBuf: tb.TextBuilder;
     mut callParamsBuf.append(fTag);
     mut callParamsBuf.append(" f");
-    callArgsBuf: mut tb.TextBuilder;
+    mut callArgsBuf: tb.TextBuilder;
     mut callArgsBuf.append("f.env");
     var i := 0;
     loop i < pCount {
@@ -7584,7 +7584,7 @@ cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Stri
 /** Replaces verified soft-builtin function bodies with C11 host overrides unless switched to `pure` by `--builtin-mode`. */
 applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: List<String>): frontend.Items {
     rules := frontend.parseBuiltinModeSpecs(prefix, builtinSpecs);
-    out: mut frontend.Items = [];
+    mut out: frontend.Items = [];
     var skippingDepth := 0;
     var pendingSoftFn := "";
     var pendingSoftRuntime := "";
@@ -9285,7 +9285,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     softItems := applyCSoftBuiltins(items, prefix, builtinSpecs);
     reachable := frontend.filterReachableItemsWithConfig(softItems, frontend.TARGET_C, config);
     baseCalls := frontend.targetHelperCallSet(reachable);
-    calls: mut Set<String>;
+    mut calls: Set<String>;
     loop baseCalls as bc { mut calls.add(bc); }
     unsupported := unsupportedBuiltinCode(calls);
     if unsupported =!= "" {
@@ -9309,7 +9309,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     var float16Values := float16Literals or usesHelperPrefix(calls, "lt_f16_") or usesHelperPrefix(calls, "lt_float16_") or usesHelperPrefix(calls, "lt_f64_to_f16") or usesIntHelper(calls, "lt_fma_f16(") or usesIntHelper(calls, "lt_ufma_f16(") or usesIntHelper(calls, "lt_ufadd_f16(") or usesIntHelper(calls, "lt_ufsub_f16(") or usesIntHelper(calls, "lt_ufmul_f16(") or usesIntHelper(calls, "lt_ufdiv_f16(");
     var float32Values := float32Literals or hasFloat32ToText or usesIntHelper(calls, "lt_float32_op(") or usesIntHelper(calls, "lt_f64_to_f32_checked(") or usesIntHelper(calls, "lt_f32_to_bits(") or usesIntHelper(calls, "lt_f32_from_bits(") or usesIntHelper(calls, "lt_f32_ufrom_bits(") or usesIntHelper(calls, "lt_ufadd_f32(") or usesIntHelper(calls, "lt_ufsub_f32(") or usesIntHelper(calls, "lt_ufmul_f32(") or usesIntHelper(calls, "lt_ufdiv_f32(") or usesIntHelper(calls, "lt_ufma_f32(");
     var floatValues := floatLiterals or float8Values or float16Values or float32Values or hasFloatToText or usesFloatArithmetic(calls) or usesIntHelper(calls, "lt_f64_to_bits(");
-    fnRefTokens: mut Set<String>;
+    mut fnRefTokens: Set<String>;
     var fnDepth := 0;
     loop reachable as item {
         baseItemKind := frontend.distinctBaseKind(item.kind);
@@ -9421,8 +9421,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             }
         }
     }
-    hoistedFnKeys: mut Set<String>;
-    hoistedFnDefs: mut List<String> = [];
+    mut hoistedFnKeys: Set<String>;
+    mut hoistedFnDefs: List<String> = [];
     loop reachable as item {
         extracted := extractCHoistedFns(item.code);
         loop extracted as entry {
@@ -9444,11 +9444,11 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             frontend.codeReachableTokensSet(hDef, mut fnRefTokens);
         }
     }
-    hoistedGlobals: mut Set<String>;
-    constHoistedGlobals: mut Set<String>;
-    mutatedGlobals: mut Set<String>;
-    restrictFns: mut Set<String>;
-    restrictMutSliceFns: mut Set<String>;
+    mut hoistedGlobals: Set<String>;
+    mut constHoistedGlobals: Set<String>;
+    mut mutatedGlobals: Set<String>;
+    mut restrictFns: Set<String>;
+    mut restrictMutSliceFns: Set<String>;
     if hasFunctions {
         loop reachable as mItem {
             if (isCAssignKind(mItem.kind) or (isCLocalDeclKind(mItem.kind) and mItem.runtime.contains("_ctxm_"))) and mItem.runtime =!= "" {
@@ -9480,14 +9480,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         hasAnyMutGlobal := hoistedGlobals.size() > constHoistedGlobals.size();
         var rTotalScan := 0;
         loop reachable { rTotalScan = rTotalScan + 1; }
-        fnStarts: mut List<Int> = [];
-        fnEnds: mut List<Int> = [];
-        fnsTouchingMutGlobals: mut Set<String>;
+        mut fnStarts: List<Int> = [];
+        mut fnEnds: List<Int> = [];
+        mut fnsTouchingMutGlobals: Set<String>;
         var rIdx := 0;
         loop rIdx < rTotalScan {
             rItem := reachable[rIdx];
             if rItem.kind == frontend.ITEM_KIND_FUNCTION_START {
-                rBody: mut frontend.Items = [];
+                mut rBody: frontend.Items = [];
                 var bIdx := rIdx + 1;
                 var bDepth := 1;
                 loop bIdx < rTotalScan {
@@ -9550,7 +9550,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         var fScan := 0;
         loop fScan < fnStarts.length() {
             rItem := reachable[fnStarts[fScan]];
-            rBody: mut frontend.Items = [];
+            mut rBody: frontend.Items = [];
             var bi := fnStarts[fScan] + 1;
             bEnd := fnEnds[fScan] - 1;
             loop bi < bEnd {
@@ -9595,14 +9595,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             fScan = fScan + 1;
         }
     }
-    orderedEntries: mut List<String> = [];
-    seenTypeKeys: mut Set<String>;
-    printTypeKeys: mut Set<String>;
-    copyTypeKeys: mut Set<String>;
-    convExpKinds: mut List<String> = [];
-    convActKinds: mut List<String> = [];
-    seenConvNames: mut Set<String>;
-    seedKinds: mut List<String> = [];
+    mut orderedEntries: List<String> = [];
+    mut seenTypeKeys: Set<String>;
+    mut printTypeKeys: Set<String>;
+    mut copyTypeKeys: Set<String>;
+    mut convExpKinds: List<String> = [];
+    mut convActKinds: List<String> = [];
+    mut seenConvNames: Set<String>;
+    mut seedKinds: List<String> = [];
     hasInputArgs := usesIntHelper(calls, "lite$inputArgs(");
     hasMainArgs := hasInputArgs or usesIntHelper(calls, "lite$processEntryPath(") or usesIntHelper(calls, "lite$processExecPath(");
     if hasInputArgs or usesIntHelper(calls, "lite$fileListDir(") or usesIntHelper(calls, "lt_c_text_join(") or usesProcessSpawnBuiltins(calls) or usesIntHelper(calls, "lite$extPoolRunJson(") { mut seedKinds.pushBack("List<String>"); }
@@ -9780,8 +9780,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     var hasAnyRc := false;
     var hasAnySoa := false;
     var hasFnTypes := false;
-    arrSliceNeedFrom: mut Set<String>;
-    sliceSplitKinds: mut List<String> = [];
+    mut arrSliceNeedFrom: Set<String>;
+    mut sliceSplitKinds: List<String> = [];
     loop seedKinds as sk {
         tFlags := collectTypeFlags(sk);
         loop tFlags as tf {
@@ -9863,7 +9863,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             }
         }
     }
-    extraListSeeds: mut List<String> = [];
+    mut extraListSeeds: List<String> = [];
     loop orderedEntries as oe {
         if oe.startsWithAt(0, "S|") {
             sKind := oe.slice(2, oe.length());
@@ -10831,7 +10831,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     emitCVmArenaHelpers(calls);
     if hasFunctions {
         if hasFnOutput { outLine("static int lt_io_status = 0;"); }
-        emittedHoisted: mut Set<String>;
+        mut emittedHoisted: Set<String>;
         var scanDepth := 0;
         var scanBlocks := 0;
         loop reachable as item {
@@ -10887,7 +10887,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             }
         }
     }
-    mainItems: mut frontend.Items = [];
+    mut mainItems: frontend.Items = [];
     if hasFunctions {
         var rTotal := 0;
         loop reachable { rTotal = rTotal + 1; }

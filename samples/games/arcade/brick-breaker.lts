@@ -32,7 +32,7 @@ GameState := record {
     acc: Float;
 };
 
-var bricks: mut List<Bool> = [];
+var mut bricks: List<Bool> = [];
 
 resetBricks := fn(): Unit {
     bricks = loop .count < brickCount { true }.collected;

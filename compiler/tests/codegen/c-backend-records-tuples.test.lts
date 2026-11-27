@@ -46,7 +46,7 @@ src :=
 "Token := alias (kind: String, text: String);\n" +
 "Tokens := alias List<Token>;\n" +
 "describe := fn(tok: Token): String { tok.kind + \":\" + tok.text };\n" +
-"tokens: mut Tokens = [];\n" +
+"mut tokens: Tokens = [];\n" +
 "mut tokens.pushBack((kind = \"id\", text = \"x\"));\n" +
 "mut tokens.pushBack((kind = \"op\", text = \"+\"));\n" +
 "loop tokens as tok { io.outputLine(describe(tok)); }\n" +

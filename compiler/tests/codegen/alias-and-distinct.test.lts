@@ -141,9 +141,9 @@ distinctSrc :=
 "idList: IdList = cast([u1, u3]);\n" +
 "rawIds: List<UserId> = cast(idList);\n" +
 "\n" +
-"names: mut Map<UserId, String> = [u1 = \"Ada\"];\n" +
+"mut names: Map<UserId, String> = [u1 = \"Ada\"];\n" +
 "mut names.set(u3, \"Lin\");\n" +
-"seen: mut Set<UserId> = [u1];\n" +
+"mut seen: Set<UserId> = [u1];\n" +
 "mut seen.add(u2);\n" +
 "\n" +
 "io.outputLine(zeroId, zeroScore, zeroLabel == cast(\"\"), zeroFlag);\n" +
@@ -223,7 +223,7 @@ expectRejectBoth("distinct-ordering-rejected", "U := distinct Int; io := import 
 expectRejectBoth("distinct-field-hidden", "Cat := record { name: String; } M := distinct Cat; m := cast<M>(Cat { name = \"a\" }); s := m.name;", "has no operation name");
 expectRejectBoth("distinct-indexing-hidden", "Row := distinct [Int; 2]; r := cast<Row>([1, 2]); x := r[0];", "does not define $getIndex");
 expectRejectBoth("distinct-base-method-hidden", "Cat := record { name: String; } Cat.meow := fn(me: Self): String { me.name }; M := distinct Cat; m := cast<M>(Cat { name = \"a\" }); s := m.meow();", "has no operation meow");
-expectRejectBoth("distinct-mut-primitive-rejected", "U := distinct Int; u: mut U = cast(1);", "mut requires");
+expectRejectBoth("distinct-mut-primitive-rejected", "U := distinct Int; mut u: U = cast(1);", "mut requires");
 expectRejectBoth("distinct-mut-inferred-primitive-rejected", "U := distinct Int; mut u := cast<U>(1);", "mut requires");
 expectRejectBoth("distinct-unit-rejected", "V := distinct Unit;", "unsupported distinct underlying type Unit");
 expectRejectBoth("op-on-alias-rejected", "Cat := record { x: Int; } A := alias Cat; A.op := fn(me: Self): Int { 1 };", "cannot attach operation to alias or foreign type A");

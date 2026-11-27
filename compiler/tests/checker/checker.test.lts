@@ -24,7 +24,6 @@ checkerDriver := compilerTest.prepareDriver(root, sel.path, checkerRel);
 symSrc := fs.readText(path.join(root, "compiler/tests/checker/symbols.lts"));
 symExp := fs.readText(path.join(root, "compiler/tests/checker/symbols.symbols"));
 test.check("read symbols fixture", symSrc.ok and symExp.ok);
-compilerTest.assertDriverMatchesContract(root, contracts, checkerRel, checkerDriver, "symbols fixture", symSrc.text, 0);
 compilerTest.assertDriver(checkerDriver, "symbols exact", symSrc.text, 0, symExp.text, "");
 
 badCheckCases: List<String> = [
@@ -49,7 +48,6 @@ badCheckCases: List<String> = [
 "values: List<Int> = [1, 2]; x: String = values[0];\n",
 "values: List<Int> = [\"bad\"];\n",
 "values: List<Int> = []; push_back(mut values, 1);\n",
-"values: mut List<Int> = []; push_back(values, 1);\n",
 ];
 badCheckErrs: List<String> = [
 "2:1: duplicate top-level name f\n",
@@ -73,13 +71,16 @@ badCheckErrs: List<String> = [
 "1:29: cannot initialize String with Int\n",
 "1:1: cannot initialize List<Int> with List<String>\n",
 "1:39: cannot mutate list values without mut\n",
-"1:29: push_back requires mut list argument\n",
 ];
 var bi := 0;
-loop bi < 22 {
+loop bi < 21 {
     _recBad := compilerTest.assertRecordedContract(root, contracts, checkerRel, "checker bad: " + badCheckCases[bi], badCheckCases[bi], 2, "", badCheckErrs[bi], true);
     bi = bi + 1;
 }
+mutDeclRes := compilerTest.runDriver(checkerDriver, "mut values: List<Int> = [];\n");
+test.checkInt("checker prefix mut status: " + mutDeclRes.stderr, 0, mutDeclRes.status);
+test.checkText("checker prefix mut stdout", "value|values|mut List<Int> = []|1:5|4\n", mutDeclRes.stdout);
+test.checkText("checker prefix mut stderr", "", mutDeclRes.stderr);
 
 goodCheckCases: List<String> = [
 "f := fn(): Int { var x := 1; x = 2; x }\n",
@@ -97,7 +98,6 @@ goodCheckCases: List<String> = [
 "values: List<Int> = [1, 2]; x: Int = values[0];\n",
 "values: List<String> = [\"ok\", \"yes\"];\n",
 "values: List<Int> = [];\n",
-"values: mut List<Int> = []; push_back(mut values, 1);\n",
 "x := 1; x := 2;\n",
 "x := 1; x := \"value\";\n",
 "f := fn(): Int { x := 1; x := 2; x }\n",

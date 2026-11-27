@@ -17,7 +17,7 @@ runLite := fn(args: List<String>): CmdResult {
     test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
     outPath := path.join(tmpRes.path, "out");
     errPath := path.join(tmpRes.path, "err");
-    cmdArgs: mut List<String> = [path.join(path.join(root, "bin"), "lite")];
+    mut cmdArgs: List<String> = [path.join(path.join(root, "bin"), "lite")];
     loop args as a {
         mut cmdArgs.pushBack(a);
     }

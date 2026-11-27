@@ -167,7 +167,7 @@ extCoreSrc := [
 "sha512 := crypto.sha512Text(\"abc\");",
 "sha512b := crypto.sha512Bytes([97, 98, 99]);",
 "hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);",
-"var longKey: mut List<Int> = [];",
+"var mut longKey: List<Int> = [];",
 "loop longKey.length() < 80 { mut longKey.pushBack(170); }",
 "hmacLong := crypto.hmacSha256Bytes(longKey, [84, 101, 115, 116]);",
 "rand0 := crypto.randomBytes(0);",
@@ -210,7 +210,7 @@ extCoreSrc := [
 ].join("\n");
 extRun := compilerTest.compileCheckRunTs(root, tsComp, extCoreSrc, fixtureName);
 test.checkInt("ext-core status", 0, extRun.status);
-extLines: mut List<String> = [];
+mut extLines: List<String> = [];
 var lineStart := 0;
 var extPos := 0;
 extLen := extRun.stdout.length();
@@ -316,7 +316,7 @@ parentSrc := [
 "outBytes := outW.bytes();",
 "errTxt := errW.text();",
 "bigFile := " + json.quoteString(multiBin) + ";",
-"var big: mut List<Int> = [];",
+"var mut big: List<Int> = [];",
 "loop big.length() < 20000 { mut big.pushBack((big.length() * 13) % 256); }",
 "_wb := file.writeBytes(bigFile, big);",
 "rBig := file.openReader(bigFile);",

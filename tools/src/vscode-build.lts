@@ -10,7 +10,7 @@ project := import "util/project";
 replaceAll := fn(haystack: String, needle: String, replacement: String): String {
     nLen := needle.length();
     if needle.isEmpty() { return haystack; }
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var pos := 0;
     size := haystack.length();
     loop pos <= size {

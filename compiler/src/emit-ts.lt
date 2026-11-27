@@ -48,7 +48,7 @@ tsFunctionType := fn(kind: String): String {
 /** Formats a `|`-separated `name=kind` parameter list as a TypeScript parameter list. */
 tsParameterList := fn(encoded: String): String {
     if encoded == "" { return ""; }
-    result: mut tb.TextBuilder;
+    mut result: tb.TextBuilder;
     var start := 0;
     loop true {
         separator := encoded.indexOf("|", start);
@@ -3859,7 +3859,7 @@ softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Strin
 /** Replaces verified soft-builtin function bodies with host overrides unless switched to `pure` by `--builtin-mode`. */
 applySoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs: List<String>): frontend.Items {
     rules := frontend.parseBuiltinModeSpecs(prefix, builtinSpecs);
-    out: mut frontend.Items = [];
+    mut out: frontend.Items = [];
     var skippingDepth := 0;
     var pendingSoftFn := "";
     var pendingSoftRuntime := "";
@@ -4101,10 +4101,10 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("    try {");
         indent = "        ";
     }
-    lineBuf: mut tb.TextBuilder;
+    mut lineBuf: tb.TextBuilder;
     var count := 0;
     var mainStopped := false;
-    activeTriesBuf: mut tb.TextBuilder;
+    mut activeTriesBuf: tb.TextBuilder;
     mut activeTriesBuf.append("|");
     loop effectiveItems as tryItem {
         if (tryItem.kind == frontend.ITEM_KIND_TRANSFER_CATCH or tryItem.kind == frontend.ITEM_KIND_LOOP_TRANSFER_CATCH) and tryItem.runtime =!= "" {

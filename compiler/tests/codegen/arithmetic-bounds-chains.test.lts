@@ -30,7 +30,7 @@ emptyArgs := fn(): List<String> {
 };
 
 buildSelectorBranches := fn(varName: String, items: List<String>, wrapOutput: Bool, sep: String): String {
-    lines: mut List<String> = [];
+    mut lines: List<String> = [];
     var idx := 0;
     loop items as item {
         kw := if idx == 0 { "if" } else { "else if" };
@@ -57,7 +57,7 @@ int64BoundaryProgram := fn(division: Bool): String {
         integer.intMax - 1,
         integer.intMax
     ];
-    lines: mut List<String> = ["io := import \"core/io\";"];
+    mut lines: List<String> = ["io := import \"core/io\";"];
     var idx := 0;
     loop values as left {
         loop values as right {
@@ -172,13 +172,13 @@ boundCases: List<(body: String, stdout: String, panic: String)> = [
     (body = "values: List<Int> = [7]; io.outputLine(values[-1]);", stdout = "before\n", panic = "BoundPanic: list index outside its extent"),
     (body = "values: List<Int> = [7]; io.outputLine(values[/* سلام */ 1]);", stdout = "before\n", panic = "BoundPanic: list index outside its extent"),
     (body = "values: List<Int> = [7]; io.outputLine(values[9223372036854775807]);", stdout = "before\n", panic = "BoundPanic: list index outside its extent"),
-    (body = "values: mut List<Int> = []; io.outputLine(mut values.popBack());", stdout = "before\n", panic = "BoundPanic: pop_back on an empty list"),
-    (body = "values: mut List<Int> = [7]; io.outputLine(mut values.popBack()); mut values.popBack();", stdout = "before\n7\n", panic = "BoundPanic: pop_back on an empty list"),
+    (body = "mut values: List<Int> = []; io.outputLine(mut values.popBack());", stdout = "before\n", panic = "BoundPanic: pop_back on an empty list"),
+    (body = "mut values: List<Int> = [7]; io.outputLine(mut values.popBack()); mut values.popBack();", stdout = "before\n7\n", panic = "BoundPanic: pop_back on an empty list"),
     (body = "io.outputLine(\"prefix\", \"x\".at(1));", stdout = "before\n", panic = "BoundPanic: textAt index outside text"),
     (body = "var n := 0; loop n < 2 { io.outputLine(\"x\".at(n)); n = n + 1; }", stdout = "before\nx\n", panic = "BoundPanic: textAt index outside text"),
     (body = "io.outputLine(\"x\".slice(0, 2), \"\".at(0));", stdout = "before\n", panic = "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)")
 ];
-boundBodies: mut List<String> = [];
+mut boundBodies: List<String> = [];
 loop boundCases as bc {
     mut boundBodies.pushBack(bc.body);
 }
@@ -205,7 +205,7 @@ loop boundNames as bName {
 }
 
 boundsEffects := "io := import \"core/io\"; items := fn(): List<Int> { io.outputLine(\"items\"); values: List<Int> = [1]; values } index := fn(): Int { io.outputLine(\"index\"); 2 } io.outputLine(\"before\"); io.outputLine(items()[index()]);";
-boundsValid := "io := import \"core/io\"; values: mut List<Int> = [3, 4]; io.outputLine(\"🙂x\".at(0), \"🙂ab\".slice(0, 3), \"\".slice(0, 0), values[0], values[1], mut values.popBack());";
+boundsValid := "io := import \"core/io\"; mut values: List<Int> = [3, 4]; io.outputLine(\"🙂x\".at(0), \"🙂ab\".slice(0, 3), \"\".slice(0, 0), values[0], values[1], mut values.popBack());";
 beRun := compilerTest.compileCheckRunTs(root, tsComp, boundsEffects, "");
 compilerTest.assertRunMatchesContract(contractsJson, "bounds-effects", boundsEffects, "", 1, beRun);
 compilerTest.assertCompileRunTs(root, tsComp, "bounds-valid", boundsValid, "🙂 🙂ab  3 4 4\n");
@@ -269,7 +269,7 @@ constFaultExprs: List<String> = [
     "(9223372036854775807 + 1) / (1 / 0)",
     "(1 / 0) + (9223372036854775807 + 1)"
 ];
-skippedLines: mut List<String> = ["io := import \"core/io\";"];
+mut skippedLines: List<String> = ["io := import \"core/io\";"];
 loop constFaultExprs as expr {
     mut skippedLines.pushBack("if false { io.outputLine(" + expr + "); }");
     mut skippedLines.pushBack("loop false { io.outputLine(" + expr + "); }");
@@ -324,7 +324,7 @@ loop constMiscBad as badSrc {
 
 /* comparison chains compare adjacent values once and skip later operands on both targets */
 cmpOps: List<String> = ["==", "=!=", "<", "<!", "<=", "<!=", ">", ">!", ">=", ">!="];
-chainRows: mut List<String> = ["io := import \"core/io\"; var a := 0; var b := 0; var c := 0;"];
+mut chainRows: List<String> = ["io := import \"core/io\"; var a := 0; var b := 0; var c := 0;"];
 cmpTriples: List<(a: Int, b: Int, c: Int)> = [
     (a = -1, b = 0, c = 1),
     (a = 1, b = 0, c = -1),
@@ -348,7 +348,7 @@ mut chainRows.pushBack("io.outputLine(1 > 2 < (1 / 0), 1 > 2 < (9223372036854775
 mut chainRows.pushBack("io.outputLine(not 1 < 2 < 3, (1 < 2) == true == true, 0 < 1 < 2 and false);");
 mut chainRows.pushBack("var lt_cmp_i_0_0 := 3; io.outputLine(0 < lt_cmp_i_0_0 < 4);");
 mut chainRows.pushBack("var n := 0; loop 0 <= n < 3 { io.outputLine(n); n = n + 1; } io.outputLine(0 <= a < 2 < 3 < 4);");
-repTerms: mut List<String> = ["0"];
+mut repTerms: List<String> = ["0"];
 var ri := 0;
 loop ri < 300 {
     mut repTerms.pushBack("repeated");

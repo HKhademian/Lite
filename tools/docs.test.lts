@@ -21,7 +21,7 @@ runDocs := fn(args: List<String>, directory: String, stdinInput: String): (statu
     test.check("runDocs makeTempDir: " + tmpRes.error, tmpRes.ok);
     outPath := path.join(tmpRes.path, "out");
     errPath := path.join(tmpRes.path, "err");
-    cmdArgs: mut List<String> = [docsBin];
+    mut cmdArgs: List<String> = [docsBin];
     loop args as a {
         mut cmdArgs.pushBack(a);
     }
@@ -35,7 +35,7 @@ runDocs := fn(args: List<String>, directory: String, stdinInput: String): (statu
 };
 
 splitLines := fn(source: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     n := source.length();
     var pos := 0;
     loop pos <= n {

@@ -30,7 +30,7 @@ pub stripCodeBlocks := fn(source: String): String {
         return source;
     }
     size := source.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var pos := 0;
     var inFence := false;
@@ -120,7 +120,7 @@ pub hasUnclosedFence := fn(source: String): Bool {
 
 /** Extracts ATX headings (`#`..`######`) from already code-stripped prose. */
 pub extractHeadings := fn(proseText: String): List<String> {
-    headings: mut List<String> = [];
+    mut headings: List<String> = [];
     if proseText.indexOf("#", 0) < 0 { return headings; }
     size := proseText.length();
     var pos := 0;
@@ -162,7 +162,7 @@ pub extractHeadings := fn(proseText: String): List<String> {
 /** Strips HTML tags (`<...>`) from `source`. */
 pub stripHtmlTags := fn(source: String): String {
     size := source.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var i := 0;
     loop i < size {
@@ -194,7 +194,7 @@ isUnicodeNonWordSymbol := fn(ch: String): Bool {
 pub headingAnchor := fn(heading: String): String {
     cleaned := stripHtmlTags(heading.toLowerAscii());
     size := cleaned.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var i := 0;
     loop i < size {
@@ -217,9 +217,9 @@ pub headingAnchor := fn(heading: String): String {
 
 /** Collects GitHub-style heading anchors (including `-1`, `-2` duplicate suffixes) and explicit HTML `id=`/`name=` anchors. */
 pub collectAnchors := fn(docText: String): List<String> {
-    found: mut List<String> = [];
-    foundSet: mut Set<String>;
-    slugCounts: mut Map<String, Int>;
+    mut found: List<String> = [];
+    mut foundSet: Set<String>;
+    mut slugCounts: Map<String, Int>;
     headings := extractHeadings(stripCodeBlocks(docText));
 
     loop headings as heading {
@@ -274,7 +274,7 @@ pub collectAnchors := fn(docText: String): List<String> {
 
 stripInlineCode := fn(proseText: String): String {
     size := proseText.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var pos := 0;
     loop pos < size {
@@ -299,7 +299,7 @@ stripInlineCode := fn(proseText: String): String {
 
 /** Extracts inline Markdown link and image destination targets from code-stripped prose. */
 pub extractLinkTargets := fn(proseText: String): List<String> {
-    links: mut List<String> = [];
+    mut links: List<String> = [];
     if proseText.indexOf("](", 0) < 0 { return links; }
     clean := stripInlineCode(proseText);
     size := clean.length();
@@ -382,7 +382,7 @@ pub extractLinkTargets := fn(proseText: String): List<String> {
 
 /** Extracts bodies of backtick fences delimited at column 0 (` ``` `) in document order. */
 pub extractBacktickFenceBodies := fn(docText: String): List<String> {
-    bodies: mut List<String> = [];
+    mut bodies: List<String> = [];
     if docText.indexOf("```", 0) < 0 { return bodies; }
     size := docText.length();
     var pos := 0;

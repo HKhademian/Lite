@@ -6,7 +6,7 @@ IntMap := alias fn(Int): Int;
 IntPred := alias fn(Int): Bool;
 
 mapInts := fn(items: List<Int>, mapper: IntMap): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     loop items as item {
         mut out.pushBack(mapper(item));
     }
@@ -14,7 +14,7 @@ mapInts := fn(items: List<Int>, mapper: IntMap): List<Int> {
 };
 
 filterInts := fn(items: List<Int>, keep: IntPred): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     loop items as item {
         if keep(item) {
             mut out.pushBack(item);

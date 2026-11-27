@@ -43,7 +43,7 @@ checkStringArrayField := fn(source: String, objPos: Int, key: String, label: Str
 };
 
 readStringArrayField := fn(source: String, objPos: Int, key: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     field := json.findField(source, objPos, key);
     if not field.found or json.kindAt(source, field.valuePos) =!= .Array {
         return out;
@@ -274,7 +274,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
         return (ok = false, text = "", error = "language/verifications/features.json: features must be an array");
     }
 
-    ids: mut Set<String>;
+    mut ids: Set<String>;
     offsets := json.arrayOffsets(src, featField.valuePos);
     var idx := 0;
     loop offsets as itemPos {
@@ -326,7 +326,7 @@ validateRegistry := fn(rootDir: String): (ok: Bool, text: String, error: String)
 };
 
 registryFeatureIds := fn(regSrc: String, verifiedOnly: Bool): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     featField := json.findField(regSrc, 0, "features");
     loop json.arrayOffsets(regSrc, featField.valuePos) as itemPos {
         if not verifiedOnly or json.readFieldString(regSrc, itemPos, "status").value == "verified" {
@@ -418,7 +418,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         if targetItems.length() == 0 {
             return failManifestText(label + ".targets: expected unique target names");
         }
-        seenTargets: mut List<String> = [];
+        mut seenTargets: List<String> = [];
         loop targetItems as t {
             if t =!= "ts" and t =!= "c" {
                 return failManifestText(label + ".targets: unknown target " + t);
@@ -463,7 +463,7 @@ sourceHashField: String, hasAppend: Bool, appendText: String, text: String, erro
         return failManifestText(label + ".cases: at least one case is required");
     }
 
-    seenNames: mut Set<String>;
+    mut seenNames: Set<String>;
     allowedScenario: List<String> = ["name", "args", "stdin", "stdout", "stderr", "exitCode"];
     var idx := 0;
     loop caseOffsets as sPos {
@@ -535,8 +535,8 @@ collectKindManifests := fn(rootDir: String, kind: String): List<String> {
 
 validateAllManifests := fn(rootDir: String, featureIdSet: Set<String>, verifiedIds: List<String>): (ok: Bool, error: String) {
     dirKinds: List<String> = [KIND_FEATURE, KIND_EXAMPLE, KIND_SAMPLE, KIND_SHOWCASE];
-    ids: mut Set<String>;
-    featureManifestIds: mut Set<String>;
+    mut ids: Set<String>;
+    mut featureManifestIds: Set<String>;
 
     loop dirKinds as kind {
         loop collectKindManifests(rootDir, kind) as f {
@@ -586,11 +586,11 @@ runCoverage := fn(rootDir: String, featureIds: List<String>): Int {
     sampleCount := sampleFiles.length();
     showcaseCount := showcaseFiles.length();
 
-    coveredExamples: mut List<String> = [];
+    mut coveredExamples: List<String> = [];
     loop exampleFiles as ef {
         mut coveredExamples.pushBack(readManifestSourceName(ef));
     }
-    coveredSamples: mut List<String> = [];
+    mut coveredSamples: List<String> = [];
     loop sampleFiles as sf {
         mut coveredSamples.pushBack(readManifestSourceName(sf));
     }
@@ -635,7 +635,7 @@ resolveCompilerBuild := fn(rootDir: String): (ok: Bool, compilerPath: String, se
 };
 
 computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool, hex: String, error: String) {
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     staticFiles: List<String> = [
     "igniter/artifacts.ts",
     "igniter/tsconfig.json",
@@ -660,7 +660,7 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
         if not hStatic.ok { return (ok = false, hex = "", error = hStatic.error); }
         (mut parts).pushBack("[" + json.quoteString(rel) + "," + json.quoteString(hStatic.hex) + "]");
     }
-    depParts: mut List<String> = [];
+    mut depParts: List<String> = [];
     loop compilerDeps as dep {
         full := path.join(rootDir, dep);
         hRes := crypto.sha256File(full);
@@ -673,7 +673,7 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
 };
 
 loadVerifyCache := fn(cacheFile: String, enabled: Bool): Set<String> {
-    passed: mut Set<String>;
+    mut passed: Set<String>;
     if not enabled or fs.kind(cacheFile) =!= fs.FILE_KIND_FILE { return passed; }
     readRes := fs.readText(cacheFile);
     if not readRes.ok or not json.validate(readRes.text).ok or json.kindAt(readRes.text, 0) =!= .Object {
@@ -697,7 +697,7 @@ loadVerifyCache := fn(cacheFile: String, enabled: Bool): Set<String> {
 saveVerifyCache := fn(cacheFile: String, passedKeys: Set<String>): Unit {
     mkRes := fs.makeDir(path.parentDir(cacheFile));
     if not mkRes.ok { return; }
-    entries: mut List<String> = [];
+    mut entries: List<String> = [];
     loop passedKeys as k {
         mut entries.pushBack(json.quoteString(k) + ":true");
     }
@@ -707,7 +707,7 @@ saveVerifyCache := fn(cacheFile: String, passedKeys: Set<String>): Unit {
 
 quotedListJson := fn(items: List<String>): String {
     if items.length() == 0 { return "[]"; }
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     loop items as item {
         mut parts.pushBack(json.quoteString(item));
     }
@@ -774,7 +774,7 @@ verifyStartNs: Int,
 cacheFile: String,
 passedKeysIn: Set<String>
 ): Int {
-    passedKeys: mut Set<String> = passedKeysIn;
+    mut passedKeys: Set<String> = passedKeysIn;
     workerCount := if uncachedManifests < workerBudget { uncachedManifests } else { workerBudget };
     shardTmp := fs.makeTempDir("lite-verify-shards-");
     if not shardTmp.ok {
@@ -785,13 +785,13 @@ passedKeysIn: Set<String>
     isNative := proc.runtimeVersion() == "c11";
     workerBin := if isNative { proc.execPath() } else { project.nodeExecPath() };
     binLitePath := path.join(rootDir, "bin/lite");
-    workerCmds: mut List<String> = [];
-    workerArgsJson: mut List<String> = [];
-    shardResultFiles: mut List<String> = [];
+    mut workerCmds: List<String> = [];
+    mut workerArgsJson: List<String> = [];
+    mut shardResultFiles: List<String> = [];
 
     var w := 1;
     loop w <= workerCount {
-        wArgs: mut List<String> = [];
+        mut wArgs: List<String> = [];
         if not isNative {
             mut wArgs.pushBack(json.quoteString(binLitePath));
             mut wArgs.pushBack(json.quoteString("verify"));
@@ -930,7 +930,7 @@ lastIndexOfText := fn(haystack: String, needle: String): Int {
 };
 
 parseGitStatusPaths := fn(stdout: String): List<String> {
-    paths: mut List<String> = [];
+    mut paths: List<String> = [];
     size := stdout.length();
     var pos := 0;
     loop pos < size {
@@ -1023,7 +1023,7 @@ caseCacheKey := fn(runtimeHash: String, manifestId: String, kind: String, source
 
 formatStringArrayJson := fn(items: List<String>, indent: String): String {
     if items.length() == 0 { return "[]"; }
-    quoted: mut List<String> = [];
+    mut quoted: List<String> = [];
     loop items as item {
         mut quoted.pushBack(indent + "  " + json.quoteString(item));
     }
@@ -1032,7 +1032,7 @@ formatStringArrayJson := fn(items: List<String>, indent: String): String {
 
 formatBytesArrayJson := fn(bytes: List<Int>, indent: String): String {
     if bytes.length() == 0 { return "[]"; }
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     loop bytes as b {
         mut parts.pushBack(indent + "  " + b.toText());
     }
@@ -1078,7 +1078,7 @@ srcText: String, sPos: Int, baseDir: String,
 actualStdout: List<Int>, actualStderr: List<Int>, actualExit: Int
 ): String {
     emptyBytes: List<Int> = [];
-    fields: mut List<String> = [];
+    mut fields: List<String> = [];
     sName := json.readFieldString(srcText, sPos, "name").value;
     mut fields.pushBack("      \"name\": " + json.quoteString(sName));
 
@@ -1105,14 +1105,14 @@ actualStdout: List<Int>, actualStderr: List<Int>, actualExit: Int
 };
 
 formatUpdatedManifestJson := fn(srcText: String, sourceHash: String, scenariosJson: List<String>): String {
-    fields: mut List<String> = [];
+    mut fields: List<String> = [];
     idVal := json.readFieldString(srcText, 0, "id").value;
     kindVal := json.readFieldString(srcText, 0, "kind").value;
     mut fields.pushBack("  \"id\": " + json.quoteString(idVal));
     mut fields.pushBack("  \"kind\": " + json.quoteString(kindVal));
 
     sourceField := json.findField(srcText, 0, "source");
-    srcParts: mut List<String> = [];
+    mut srcParts: List<String> = [];
     if json.findField(srcText, sourceField.valuePos, "file").found {
         mut srcParts.pushBack("    \"file\": " + json.quoteString(json.readFieldString(srcText, sourceField.valuePos, "file").value));
     } else if json.findField(srcText, sourceField.valuePos, "text").found {
@@ -1318,7 +1318,7 @@ stdinBytes: List<Int>, scenarioArgs: List<String>, idx: Int
 ): (ok: Bool, outPath: String, errPath: String, exitCode: Int, error: String) {
     runnerPath := path.join(workDir, "runner.ts");
     _wRun := cases.writeTsRunner(runnerPath);
-    runArgs: mut List<String> = [runnerPath, artifactPath];
+    mut runArgs: List<String> = [runnerPath, artifactPath];
     loop scenarioArgs as arg {
         mut runArgs.pushBack(arg);
     }
@@ -1356,7 +1356,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
         return 2;
     }
     featureIds := registryFeatureIds(reg.text, false);
-    featureIdSet: mut Set<String>;
+    mut featureIdSet: Set<String>;
     loop featureIds as fid { mut featureIdSet.add(fid); }
     verifiedIds := registryFeatureIds(reg.text, true);
     if not isWorker {
@@ -1399,13 +1399,13 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     } else {
         path.join(rootDir, "dist/verifications.json")
     };
-    passedKeys: mut Set<String> = loadVerifyCache(cacheFile, not opts.update and opts.cache);
+    mut passedKeys: Set<String> = loadVerifyCache(cacheFile, not opts.update and opts.cache);
     var cacheDirty := false;
 
     var hasGitChanges := false;
-    gitPaths: mut Set<String>;
+    mut gitPaths: Set<String>;
     var invalidateAll := false;
-    changedFeatures: mut Set<String>;
+    mut changedFeatures: Set<String>;
     if opts.changed {
         gitRes := readGitStatus(rootDir);
         if gitRes.ok {
@@ -1437,9 +1437,9 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
     var cached := 0;
     var pedanticManifests := 0;
     var pedanticScenarios := 0;
-    pedanticCompileNs: mut List<Int> = [0, 0, 0, 0];
-    pedanticRunNs: mut List<Int> = [0, 0, 0, 0];
-    pedanticBytes: mut List<Int> = [0, 0, 0, 0];
+    mut pedanticCompileNs: List<Int> = [0, 0, 0, 0];
+    mut pedanticRunNs: List<Int> = [0, 0, 0, 0];
+    mut pedanticBytes: List<Int> = [0, 0, 0, 0];
 
     dirKinds: List<String> = [KIND_FEATURE, KIND_EXAMPLE, KIND_SAMPLE, KIND_SHOWCASE];
     workerBudget := if opts.jobs > 0 { opts.jobs } else { pool.cpuCount() };
@@ -1501,8 +1501,8 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
         }
     }
 
-    passedAdded: mut List<String> = [];
-    passedRemoved: mut List<String> = [];
+    mut passedAdded: List<String> = [];
+    mut passedRemoved: List<String> = [];
 
     loop dirKinds as mKind {
         loop collectKindManifests(rootDir, mKind) as mFile {
@@ -1519,7 +1519,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
             if selectedManifest {
                 casesField := json.findField(mText, 0, "cases");
                 allScenarios := json.arrayOffsets(mText, casesField.valuePos);
-                selectedOffsets: mut List<Int> = [];
+                mut selectedOffsets: List<Int> = [];
                 loop allScenarios as sPos {
                     sName := json.readFieldString(mText, sPos, "name").value;
                     if shardMatches(mId, sName, opts.hasShard, opts.shardIndex, opts.shardCount) {
@@ -1557,7 +1557,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                         var compileOk := true;
                         var compileError := "";
                         var artifactPath := "";
-                        pedanticArtifacts: mut List<String> = [];
+                        mut pedanticArtifacts: List<String> = [];
                         if needsArtifact {
                             tmpRes := fs.makeTempDir("lite-verify-");
                             if not tmpRes.ok {
@@ -1605,7 +1605,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                             }
                         }
 
-                        updatedScenarios: mut Map<String, String>;
+                        mut updatedScenarios: Map<String, String>;
                         var runSeq := 0;
 
                         loop selectedOffsets as sPos {
@@ -1681,7 +1681,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                                         var baseOutBytes := emptyBytes;
                                         var baseErrBytes := emptyBytes;
                                         var baseExitCode := 0;
-                                        levelMsParts: mut List<String> = [];
+                                        mut levelMsParts: List<String> = [];
                                         var lv := 0;
                                         loop lv < 4 {
                                             lvLabel := mId + "/" + sName + " [ts -O" + lv.toText() + "]";
@@ -1902,7 +1902,7 @@ pub runVerification := fn(rootDir: String, args: List<String>): Int {
                         }
 
                         if opts.update and failures == failuresBefore {
-                            finalScenarios: mut List<String> = [];
+                            mut finalScenarios: List<String> = [];
                             loop allScenarios as sPos {
                                 sName := json.readFieldString(mText, sPos, "name").value;
                                 upd := updatedScenarios.get(sName);

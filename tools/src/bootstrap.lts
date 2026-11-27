@@ -175,7 +175,7 @@ runCSelfHost := fn(rootDir: String, ccBin: String, cOutDir: String, requireSeedM
     ok: Bool, sha256: String, gen3Path: String, error: String
 ) {
     emptyEnv: List<String> = [];
-    args: mut List<String> = [path.join(rootDir, "compiler/scripts/self-host-c.sh")];
+    mut args: List<String> = [path.join(rootDir, "compiler/scripts/self-host-c.sh")];
     if ccBin =!= "" {
         mut args.pushBack("--cc");
         mut args.pushBack(ccBin);
@@ -516,7 +516,7 @@ promoteBootstrap := fn(rootDir: String, ccBin: String, jsonOut: Bool, totalStart
 run := fn(rawArgs: List<String>): Unit {
     project.handleNamedVersionFlag(rawArgs, "cli", "lite-bootstrap");
 
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--" {
         _sep := mut args.popFront();
     }

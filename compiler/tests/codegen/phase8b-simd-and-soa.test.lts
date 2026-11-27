@@ -89,7 +89,7 @@ simdSoaSrc := [
     "    io.outputLine(\"simd:\", nl, fmaMatch, dSum == dScalar, dSum, wrapped[0], xored[1], absOk, dotVal, blended.toArray(), replaced[2], u16[0], uSum, sq[2], f8Dot, i64.reduceAdd(), u64.wrappingReduceAdd(), eqOk);",
     "",
     "    /* 2. POD SoA<Particle> + SIMD column integration + restrict + reserve/swapRemove/pop */",
-    "    var particles: mut SoA<Particle> = SoA.withCapacity(4);",
+    "    var mut particles: SoA<Particle> = SoA.withCapacity(4);",
     "    loop 0..6 as idx {",
     "        mut particles.pushBack(Particle { x = cast<Float32>(idx), y = cast<Float32>(idx * 2), vx = cast<Float32>(1.0), vy = cast<Float32>(-0.5) });",
     "    }",
@@ -106,11 +106,11 @@ simdSoaSrc := [
     "    /* 3. Owning SoA<Entity> with String + Rc + List + Option + capacity growth + copy + swapRemove + clear */",
     "    shared := Rc.create(77);",
     "    {",
-    "        ents: mut SoA<Entity> = SoA.create();",
+    "        mut ents: SoA<Entity> = SoA.create();",
     "        loop 0..10 as k {",
     "            mut ents.pushBack(Entity { name = \"ent-\" + k.toText() + \"-long-label\", tag = if k % 2 == 0 { .Some(k * 10) } else { .None }, hp = shared.share(), nums = [k, k + 1] });",
     "        }",
-    "        entsCopy: mut SoA<Entity> = ents;",
+    "        mut entsCopy: SoA<Entity> = ents;",
     "        rmEnt := mut ents.swapRemove(2);",
     "        mut entsCopy.uncheckedSet(0, Entity { name = \"updated-0\", tag = .Some(999), hp = shared.share(), nums = [42] });",
     "        g0 := entsCopy[0];",
@@ -200,9 +200,9 @@ if ccProbe.available {
         "f := fn(): Unit {",
         "    shared := Rc.create(77);",
         "    {",
-        "        a: mut SoA<E> = SoA.create();",
+        "        mut a: SoA<E> = SoA.create();",
         "        loop 0..5 as k { mut a.pushBack(E { tag = \"e\" + k.toText(), hp = shared.share() }); }",
-        "        b: mut SoA<E> = a;",
+        "        mut b: SoA<E> = a;",
         "        _rm := mut a.swapRemove(1);",
         "        mut b.uncheckedSet(0, E { tag = \"u\", hp = shared.share() });",
         "        io.outputLine(\"mid:\", shared.strongCount());",
@@ -306,22 +306,22 @@ compilerTest.assertCompileErrorContains(root, tsComp, "reject SoA with Slice fie
 "Bad := record { s: Slice<Int>; };\nx: SoA<Bad>;", "borrowed Slice<T> cannot be stored in owning container or type definition");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject pushBack while column slice active",
-"P := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    p: mut SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := p.x;\n    mut p.pushBack(P { x = cast<Float32>(3.0), y = cast<Float32>(4.0) });\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
+"P := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := p.x;\n    mut p.pushBack(P { x = cast<Float32>(3.0), y = cast<Float32>(4.0) });\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject reserve while column slice active",
-"P := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    p: mut SoA<P> = SoA.create();\n    xs := p.x;\n    mut p.reserve(32);\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
+"P := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: SoA<P> = SoA.create();\n    xs := p.x;\n    mut p.reserve(32);\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject swapRemove while column slice active",
-"P := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    p: mut SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := p.x;\n    _r := mut p.swapRemove(0);\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
+"P := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := p.x;\n    _r := mut p.swapRemove(0);\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject same-column mut+mut aliasing in call",
-"P := record { x: Float32; y: Float32; };\ng := fn(a: mut Slice<Float32>, b: mut Slice<Float32>): Unit { a[0] = b[0]; };\nf := fn(): Unit {\n    p: mut SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    g(mut p.x, mut p.x);\n};", "cannot pass p multiple times as mut in the same call");
+"P := record { x: Float32; y: Float32; };\ng := fn(a: mut Slice<Float32>, b: mut Slice<Float32>): Unit { a[0] = b[0]; };\nf := fn(): Unit {\n    mut p: SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    g(mut p.x, mut p.x);\n};", "cannot pass p multiple times as mut in the same call");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject same-column mut+ro aliasing in call",
-"P := record { x: Float32; y: Float32; };\ng := fn(a: mut Slice<Float32>, b: Slice<Float32>): Unit { a[0] = b[0]; };\nf := fn(): Unit {\n    p: mut SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    g(mut p.x, p.x);\n};", "cannot pass p as both read-only and mut in the same call");
+"P := record { x: Float32; y: Float32; };\ng := fn(a: mut Slice<Float32>, b: Slice<Float32>): Unit { a[0] = b[0]; };\nf := fn(): Unit {\n    mut p: SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    g(mut p.x, p.x);\n};", "cannot pass p as both read-only and mut in the same call");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject whole-row read while column mutably borrowed",
-"P := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    p: mut SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := mut p.x;\n    _r := p[0];\n    xs[0] = cast<Float32>(3.0);\n};", "cannot read p while mutably borrowed by slice xs");
+"P := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: SoA<P> = SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := mut p.x;\n    _r := p[0];\n    xs[0] = cast<Float32>(3.0);\n};", "cannot read p while mutably borrowed by slice xs");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject mut column on read-only SoA",
 "P := record { x: Float32; y: Float32; };\nf := fn(p: SoA<P>): Unit {\n    _xs := mut p.x;\n};", "cannot take mutable column slice of read-only binding p");

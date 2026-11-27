@@ -45,7 +45,7 @@ pub Grid.create := fn<T: Type>(width: Int, height: Int, fill: T): Self<T> {
     w := if width < 1 { 1 } else { width };
     h := if height < 1 { 1 } else { height };
     total := w * h;
-    buf: mut List<T> = [];
+    mut buf: List<T> = [];
     loop 0..total {
         mut buf.pushBack(fill);
     }
@@ -70,7 +70,7 @@ pub Grid.getOr := fn<T: Type>(g: Self<T>, x: Int, y: Int, fallback: T): T {
 /** Writes `value` to cell `(x, y)`; returns `false` when out of bounds. */
 pub Grid.set := fn<T: Type>(g: mut Self<T>, x: Int, y: Int, value: T): Bool {
     if not g.inBounds(x, y) { return false; }
-    buf: mut List<T> = g.data;
+    mut buf: List<T> = g.data;
     mut buf.setAt((y * g.width) + x, value);
     g.data = buf;
     true
@@ -84,7 +84,7 @@ pub Grid.fillRect := fn<T: Type>(g: mut Self<T>, x: Int, y: Int, w: Int, h: Int,
     x1 := if x + w > g.width { g.width } else { x + w };
     y1 := if y + h > g.height { g.height } else { y + h };
     if x0 >= x1 or y0 >= y1 { return; }
-    buf: mut List<T> = g.data;
+    mut buf: List<T> = g.data;
     loop y0..y1 as cy {
         rowOff := cy * g.width;
         loop x0..x1 as cx {
@@ -96,7 +96,7 @@ pub Grid.fillRect := fn<T: Type>(g: mut Self<T>, x: Int, y: Int, w: Int, h: Int,
 
 /** Resets every cell in `g` to `fill`. */
 pub Grid.clear := fn<T: Type>(g: mut Self<T>, fill: T): Unit {
-    buf: mut List<T> = g.data;
+    mut buf: List<T> = g.data;
     total := g.width * g.height;
     loop 0..total as i {
         mut buf.setAt(i, fill);
@@ -109,7 +109,7 @@ pub Grid.copyFrom := fn<T: Type>(dst: mut Self<T>, src: Self<T>): Unit {
     cw := if dst.width < src.width { dst.width } else { src.width };
     ch := if dst.height < src.height { dst.height } else { src.height };
     if cw <= 0 or ch <= 0 { return; }
-    buf: mut List<T> = dst.data;
+    mut buf: List<T> = dst.data;
     loop 0..ch as cy {
         dstRow := cy * dst.width;
         srcRow := cy * src.width;

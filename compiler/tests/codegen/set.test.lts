@@ -19,7 +19,7 @@ cComp := selC.path;
 basicSetSrc :=
 "io := import \"core/io\";\n" +
 "Flag := enum { Read; Write; Exec; }\n" +
-"tags: mut Set<String>;\n" +
+"mut tags: Set<String>;\n" +
 "mut tags.add(\"lite\");\n" +
 "mut tags.add(\"fast\");\n" +
 "mut tags.add(\"lite\");\n" +
@@ -36,7 +36,7 @@ basicSetSrc :=
 "io.outputLine(tags.size());\n" +
 "mut tags.clear();\n" +
 "io.outputLine(tags.size());\n" +
-"perms: mut Set<Flag>;\n" +
+"mut perms: Set<Flag>;\n" +
 "mut perms.add(.Read);\n" +
 "mut perms.add(.Exec);\n" +
 "io.outputLine(perms.has(.Read), perms.has(.Write), perms);\n";
@@ -49,7 +49,7 @@ compilerTest.assertCompileRunTs(root, tsComp, "basic set operations TS", basicSe
 valueSemSrc :=
 "io := import \"core/io\";\n" +
 "makeNums := fn(): Set<Int> {\n" +
-"    s: mut Set<Int>;\n" +
+"    mut s: Set<Int>;\n" +
 "    mut s.add(10);\n" +
 "    mut s.add(20);\n" +
 "    s\n" +
@@ -69,7 +69,7 @@ valueSemSrc :=
 "var mut s2 := makeNums();\n" +
 "mut s2.add(5);\n" +
 "io.outputLine(s2.size());\n" +
-"groups: mut Map<String, Set<Int>>;\n" +
+"mut groups: Map<String, Set<Int>>;\n" +
 "groups[\"evens\"] = copy;\n" +
 "io.outputLine(groups[\"evens\"].has(20));\n";
 
@@ -80,8 +80,8 @@ badSrc: List<String> = [
 "s: Set<List<Int>>;\n",
 "s: Set<Unit>;\n",
 "s: Set<String>;\nmut s.add(\"a\");\n",
-"s: mut Set<String>;\nSet.add(s, \"a\");\n",
-"s: mut Set<String>;\nmut s.add(42);\n",
+"mut s: Set<String>;\nSet.add(s, \"a\");\n",
+"mut s: Set<String>;\nmut s.add(42);\n",
 "io := import \"core/io\";\na: Set<String>;\nb: Set<String>;\nio.outputLine(a == b);\n",
 "s: Set<String> = ?;\n"
 ];
@@ -102,7 +102,7 @@ loop bi < 7 {
 
 /* 4. C backend compiles Set values cleanly */
 cSetRes := compilerTest.compileStdin(root, cComp,
-"s: mut Set<String>;\nmut s.add(\"a\");\n", "");
+"mut s: Set<String>;\nmut s.add(\"a\");\n", "");
 test.checkInt("set C compiles: " + cSetRes.stderr, 0, cSetRes.status);
 
 test.done("set");

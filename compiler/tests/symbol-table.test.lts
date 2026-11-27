@@ -11,7 +11,7 @@ makeLocal := fn(name: String, rt: String, kind: String, depth: Int, initState: S
 
 /* 1. Scoped local shadowing, undo rewind, and sibling block isolation */
 sym.resetModule();
-var locals: mut List<ir.Local> = [];
+var mut locals: List<ir.Local> = [];
 mut locals.pushBack(makeLocal("x", "lite_x", "Int", 0, ir.INIT_STATE_INIT));
 mut locals.pushBack(makeLocal("y", "lite_y", "String", 0, ir.INIT_STATE_INIT));
 test.checkInt("root x", 0, sym.localIndex(locals, "x"));
@@ -55,7 +55,7 @@ test.checkInt("reached f visible", 3, sym.localIndex(locals, "f"));
 test.check("reached f clears unready", not sym.localsHasAnyUnready(locals));
 
 /* 3. Alias shadowing: strictly deeper shadows, same-depth first wins, pop restores */
-var aliases: mut List<ir.AliasDecl> = [];
+var mut aliases: List<ir.AliasDecl> = [];
 mut aliases.pushBack((name = "T", target = "Int", at = 0, end = 10, depth = 0));
 mut aliases.pushBack((name = "T", target = "String", at = 12, end = 20, depth = 0));
 test.checkInt("same-depth first alias wins", 0, sym.findAlias(aliases, "T"));
@@ -67,7 +67,7 @@ sym.rewindAliasesTo(aliasMark);
 test.checkInt("popped alias restores depth 0", 0, sym.findAlias(aliases, "T"));
 
 /* 4. Monotonic function index by name and runtime */
-var fns: mut List<ir.FunctionInfo> = [];
+var mut fns: List<ir.FunctionInfo> = [];
 mut fns.pushBack((name = "add", runtime = "lt_fn_add", result = "Int", first = 0, count = 2, declAt = 0));
 mut fns.pushBack((name = "sub", runtime = "lt_fn_sub", result = "Int", first = 2, count = 2, declAt = 20));
 test.checkInt("findFunction add", 0, sym.findFunction(fns, "add"));

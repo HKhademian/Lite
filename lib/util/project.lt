@@ -219,7 +219,7 @@ printVersionMeta := fn(label: String, component: String, asJson: Bool): Unit {
         io.outputLine("artifact: " + relEntry + artDetail);
     }
     if source =!= "" {
-        srcMeta: mut List<String> = [];
+        mut srcMeta: List<String> = [];
         if prov.moduleCount > 0 {
             mut srcMeta.pushBack(prov.moduleCount.toText() + " modules");
         }
@@ -290,7 +290,7 @@ pub forwardNode := fn(scriptRelPath: String, args: List<String>): Unit {
         }
         io.exit(res.status);
     }
-    nodeArgs: mut List<String> = [scriptPath];
+    mut nodeArgs: List<String> = [scriptPath];
     loop args as arg {
         mut nodeArgs.pushBack(arg);
     }
@@ -306,7 +306,7 @@ pub forwardNode := fn(scriptRelPath: String, args: List<String>): Unit {
 pub runCompilerArtifact := fn(artifactPath: String, compilerArgs: List<String>): Int {
     artRead := fs.readText(artifactPath);
     hasEntry := artRead.ok and artRead.text.indexOf("import.meta", 0) >= 0;
-    nodeArgs: mut List<String> = [];
+    mut nodeArgs: List<String> = [];
     if hasEntry {
         mut nodeArgs.pushBack(artifactPath);
     } else {

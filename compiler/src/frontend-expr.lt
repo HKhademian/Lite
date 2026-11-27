@@ -287,9 +287,9 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
     }
     if syntax.looksLikeTupleEntry(source, start + 1, prefix) {
         var cursor := syntax.skipTrivia(source, start + 1, prefix);
-        labels: mut List<String> = [];
-        codes: mut List<String> = [];
-        kinds: mut List<String> = [];
+        mut labels: List<String> = [];
+        mut codes: List<String> = [];
+        mut kinds: List<String> = [];
         var tupleMarkers := "";
         var count := 0;
         loop cursor < sourceSize and source.at(cursor) =!= ")" {
@@ -353,7 +353,7 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
             }
         }
         cursor = syntax.expectSymbol(source, cursor, ")", prefix);
-        kindTextBuf: mut tb.TextBuilder;
+        mut kindTextBuf: tb.TextBuilder;
         mut kindTextBuf.append("(");
         var index := 0;
         loop index < count {
@@ -370,7 +370,7 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
             if count == 0 {
                 return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ ._empty = 0 })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
             }
-            cCodeBuf: mut tb.TextBuilder;
+            mut cCodeBuf: tb.TextBuilder;
             var ci := 0;
             loop ci < count {
                 if ci > 0 { mut cCodeBuf.append(", "); }
@@ -382,7 +382,7 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
             }
             return ctx.withMarkers((kind = tupleKind, code = "/*@T:" + tupleKind + "@*/((" + tag + "){ " + cCodeBuf.build() + " })", intValue = 0, textValue = "", constant = false, next = cursor), tupleMarkers);
         }
-        codeBuf: mut tb.TextBuilder;
+        mut codeBuf: tb.TextBuilder;
         mut codeBuf.append("{ ");
         var ti := 0;
         loop ti < count {
@@ -507,8 +507,8 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
         if afterFirst < source.length() and syntax.isSingleEquals(source, afterFirst) {
             var keyKind := if isMapTarget { types.mapKeyKind(expected) } else { "" };
             var valKind := if isMapTarget { types.mapValueKind(expected) } else { "" };
-            entryCodes: mut List<String> = [];
-            cEntryCodes: mut List<String> = [];
+            mut entryCodes: List<String> = [];
+            mut cEntryCodes: List<String> = [];
             var mapMarkers := "";
             var entryCount := 0;
             var curKeyStart := firstStart;
@@ -574,7 +574,7 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
         }
     }
 
-    elementCodes: mut List<String> = [];
+    mut elementCodes: List<String> = [];
     var listMarkers := "";
     var count := 0;
     loop true {
@@ -663,7 +663,7 @@ parseListOrArrayExpr := fn(target: String, source: String, start: Int, prefix: S
                         "((lite$v: " + tsElem + "): " + tsElem + "[] => { void lite$v; return []; })(" + elemValCode + ")"
                     }
                 } else if element.constant and tsSlot == "lite$v" and repeatCount <= 32 {
-                    repBuf: mut tb.TextBuilder;
+                    mut repBuf: tb.TextBuilder;
                     mut repBuf.append("[");
                     var ri := 0;
                     loop ri < repeatCount {
@@ -870,22 +870,22 @@ ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDe
     if cursor < size and source.at(cursor) == ")" {
         syntax.failAt(source, cursor, prefix, "context override list cannot be empty");
     }
-    slotNames: mut List<String> = [];
-    mutFlags: mut List<Bool> = [];
-    kinds: mut List<String> = [];
-    runtimes: mut List<String> = [];
-    provTexts: mut List<String> = [];
-    borrowMarks: mut List<String> = [];
-    borrowDeclsMut: mut List<Bool> = [];
-    tempNames: mut List<String> = [];
-    tempRuntimes: mut List<String> = [];
-    tempKinds: mut List<String> = [];
-    tempMuts: mut List<Bool> = [];
-    tempCodes: mut List<String> = [];
-    tempInts: mut List<Int> = [];
-    tempTexts: mut List<String> = [];
-    mutBoundRts: mut List<String> = [];
-    roBoundRts: mut List<String> = [];
+    mut slotNames: List<String> = [];
+    mut mutFlags: List<Bool> = [];
+    mut kinds: List<String> = [];
+    mut runtimes: List<String> = [];
+    mut provTexts: List<String> = [];
+    mut borrowMarks: List<String> = [];
+    mut borrowDeclsMut: List<Bool> = [];
+    mut tempNames: List<String> = [];
+    mut tempRuntimes: List<String> = [];
+    mut tempKinds: List<String> = [];
+    mut tempMuts: List<Bool> = [];
+    mut tempCodes: List<String> = [];
+    mut tempInts: List<Int> = [];
+    mut tempTexts: List<String> = [];
+    mut mutBoundRts: List<String> = [];
+    mut roBoundRts: List<String> = [];
     var slotIdx := 0;
     loop cursor < size and source.at(cursor) =!= ")" {
         var lhsMut := false;
@@ -1048,9 +1048,9 @@ expected: String, minimum: Int, ctxs: List<ConstructCtx>, iifeDepth: Int, inferM
 bodySink: String, aliases: List<AliasDecl>): Parsed {
     ovPlan := parseContextOverrideHeader(target, source, kwPos, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     innerDepth := ir.maxLocalLexDepth(locals) + 1;
-    innerLocals: mut List<Local> = locals;
-    preDecls: mut List<String> = [];
-    postDrops: mut List<String> = [];
+    mut innerLocals: List<Local> = locals;
+    mut preDecls: List<String> = [];
+    mut postDrops: List<String> = [];
     var ti := 0;
     loop ti < ovPlan.tempNames.length() {
         tName := ovPlan.tempNames[ti];
@@ -1140,9 +1140,9 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     cursor = syntax.skipTrivia(source, cursor, prefix);
     hasExpectedFn := types.isFnKind(expected);
     expectedParamCount := if hasExpectedFn { types.fnParamCount(expected) } else { 0 };
-    paramNames: mut List<String> = [];
-    paramKinds: mut List<String> = [];
-    encodedKindBuf: mut tb.TextBuilder;
+    mut paramNames: List<String> = [];
+    mut paramKinds: List<String> = [];
+    mut encodedKindBuf: tb.TextBuilder;
     mut encodedKindBuf.append("fn(");
     var paramIdx := 0;
     loop cursor < size and source.at(cursor) =!= ")" {
@@ -1214,7 +1214,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     fnAtCtx := if contexts.isCtxKind(fnCtxKind) { "@ctx(" + fnCtxKind.slice(4, fnCtxKind.length() - 1) + ")" } else { "" };
     var fnKind := encodedKind + ")" + fnAtCtx + ":" + retKind;
     fnLexDepth := ir.maxLocalLexDepth(locals) + 1;
-    fnLocals: mut List<Local> = [];
+    mut fnLocals: List<Local> = [];
     selfRuntime := if isCFnLit { "lt_self_" + nameStart.toText() } else { ir.freshScopeTemp(locals, "lite$self") };
     mut fnLocals.pushBack((name = "$self", runtime = selfRuntime, kind = fnKind,
     mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
@@ -1250,11 +1250,11 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             }
         }
     }
-    tsParamsBuf: mut tb.TextBuilder;
-    cParamsBuf: mut tb.TextBuilder;
+    mut tsParamsBuf: tb.TextBuilder;
+    mut cParamsBuf: tb.TextBuilder;
     mut cParamsBuf.append("void *_env");
-    paramVoidBuf: mut tb.TextBuilder;
-    paramRuntimes: mut List<String> = [];
+    mut paramVoidBuf: tb.TextBuilder;
+    mut paramRuntimes: List<String> = [];
     var pBindIdx := 0;
     loop pBindIdx < paramIdx {
         pName := paramNames[pBindIdx];
@@ -1371,9 +1371,9 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         clName := "lt_cl_" + cid;
         envType := "lt_env_" + cid;
         cRetType := types.cValueType(retKind);
-        capRuntimes: mut List<String> = [];
-        capKinds: mut List<String> = [];
-        capMutables: mut List<Bool> = [];
+        mut capRuntimes: List<String> = [];
+        mut capKinds: List<String> = [];
+        mut capMutables: List<Bool> = [];
         var locScanIdx := 0;
         loop locals as le { locScanIdx = locScanIdx + 1; }
         var ri := locScanIdx - 1;
@@ -1400,15 +1400,15 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
             cExpr := "/*@T:" + fnKind + "@*//*@CFN_START:" + clName + "@*/" + cFnDef + "/*@CFN_END@*/((" + cFnTag + "){ " + clName + ", NULL })";
             return (kind = fnKind, code = cExpr, intValue = 0, textValue = fnKind, constant = false, next = fnBody.next);
         }
-        envFieldsBuf: mut tb.TextBuilder;
+        mut envFieldsBuf: tb.TextBuilder;
         mut envFieldsBuf.append("lt_env_hdr hdr; ");
-        envUnpackBuf: mut tb.TextBuilder;
-        mkParamsBuf: mut tb.TextBuilder;
-        mkInitsBuf: mut tb.TextBuilder;
-        mkArgsBuf: mut tb.TextBuilder;
-        stkInitsBuf: mut tb.TextBuilder;
-        dropBodyBuf: mut tb.TextBuilder;
-        cloneBodyBuf: mut tb.TextBuilder;
+        mut envUnpackBuf: tb.TextBuilder;
+        mut mkParamsBuf: tb.TextBuilder;
+        mut mkInitsBuf: tb.TextBuilder;
+        mut mkArgsBuf: tb.TextBuilder;
+        mut stkInitsBuf: tb.TextBuilder;
+        mut dropBodyBuf: tb.TextBuilder;
+        mut cloneBodyBuf: tb.TextBuilder;
         var bodyRewritten := fnBody.code;
         var ci := 0;
         loop ci < capCount {
@@ -1606,8 +1606,8 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
     size := source.length();
     recAliases := ensureRecordDefaults(target, source, recordKind, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
     recName := types.recordDisplayName(recordKind);
-    suppliedKeys: mut List<String> = [];
-    suppliedCodes: mut List<String> = [];
+    mut suppliedKeys: List<String> = [];
+    mut suppliedCodes: List<String> = [];
     var recMarkers := "";
     var cursor := syntax.skipTrivia(source, braceStart + 1, prefix);
     loop true {
@@ -1694,7 +1694,7 @@ parseRecordLiteral := fn(target: String, source: String, braceStart: Int, prefix
         return ctx.withMarkers((kind = recordKind, code = emptyRecCode, intValue = 0, textValue = "", constant = false, next = cursor), recMarkers);
     }
     encodedSupplied := types.encodeRecordPairs(suppliedKeys, suppliedCodes);
-    fieldExprs: mut List<String> = [];
+    mut fieldExprs: List<String> = [];
     var compIdx := 0;
     loop compIdx < compCount {
         comp := types.recordComponent(recordKind, compIdx);
@@ -1774,8 +1774,8 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
     shape := if openDelim == "{" { "record" } else if openDelim == "(" { "tuple" } else { "array" };
     closeDelim := if openDelim == "{" { "}" } else if openDelim == "(" { ")" } else { "]" };
     var cursor := syntax.skipTrivia(source, openPos + 1, prefix);
-    seenRecBinds: mut List<String> = [];
-    encodedBuf: mut tb.TextBuilder;
+    mut seenRecBinds: List<String> = [];
+    mut encodedBuf: tb.TextBuilder;
     var count := 0;
     var hadComma := false;
     var lastMode := "pos";
@@ -1912,7 +1912,7 @@ pub resolveAggregateBindings := fn(target: String, shape: String, count: Int, en
         }
     }
     var claimedBag := "";
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var clCursor := 0;
     var clIndex := 0;
     loop clIndex < count {
@@ -2417,7 +2417,7 @@ emitPayloadEnumValue := fn(target: String, enumKind: String, caseIdx: Int, argCo
         return "/*@T:" + enumKind + "@*/" + tag + "_mk_" + caseIdx.toText() + "(" + argCodes.join(", ") + ")";
     }
     tsT := types.tsFunctionType(enumKind);
-    objBuf: mut tb.TextBuilder;
+    mut objBuf: tb.TextBuilder;
     mut objBuf.append("_t: ");
     mut objBuf.append(caseIdx.toText());
     mut objBuf.append(" as const");
@@ -2453,7 +2453,7 @@ parseEnumCaseConstruct := fn(target: String, source: String, enumKind: String, c
         syntax.failAt(source, errPos, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + caseName + " requires " + payloads.length().toText() + " payload argument(s)");
     }
     var cursor := syntax.skipTrivia(source, afterCase + 1, prefix);
-    argCodes: mut List<String> = [];
+    mut argCodes: List<String> = [];
     var markers := "";
     var ai := 0;
     loop cursor < size and source.at(cursor) =!= ")" {
@@ -2586,7 +2586,7 @@ pushBlockDeclC := fn(
 
 /** Builds C11 cleanup statements dropping `owned` locals declared before `beforeStmtIdx` (or all if `< 0`) and releasing `cells`. */
 buildBlockDropStmt := fn(owned: List<(stmtIdx: Int, rt: String, kind: String)>, cells: List<(ptr: String, kind: String)>, beforeStmtIdx: Int): String {
-    buf: mut tb.TextBuilder;
+    mut buf: tb.TextBuilder;
     var oi := owned.length() - 1;
     loop oi >= 0 {
         o := owned[oi];
@@ -2637,7 +2637,7 @@ finalizeCBlockStmts := fn(
     if owned.length() == 0 and cells.length() == 0 {
         return stmts.join(" ");
     }
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var si := 0;
     sCount := stmts.length();
     loop si < sCount {
@@ -2665,7 +2665,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     allowOutput := isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isBranchBody or isFnBody or (bodySink == "exprOut");
     bodyDepth := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isFnBody { iifeDepth } else { iifeDepth + 1 };
     stmtReturnPrefix := if isTaggedBody or isLoopBody or isStmtBody or isFinallyBody or isFnBody { "" } else { "return " };
-    var blockLocals: mut List<Local> = locals;
+    var mut blockLocals: List<Local> = locals;
     outerLocalsLen := ctx.localsCount(blockLocals);
     blockLexDepth := ir.maxLocalLexDepth(blockLocals) + 1;
     emptyFuturesHere: List<FutureValue> = [];
@@ -2677,7 +2677,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     } else {
         aliases
     };
-    declaredInBlock: mut List<String> = [];
+    mut declaredInBlock: List<String> = [];
     var seedBag := "";
     loop ctx.seedBlockDeclaredNames(bodySink) as seededName {
         mut declaredInBlock.pushBack(seededName);
@@ -2690,15 +2690,15 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     } else {
         ""
     };
-    statements: mut List<String> = [];
-    blockCells: mut List<(ptr: String, kind: String)> = [];
-    blockOwned: mut List<(stmtIdx: Int, rt: String, kind: String)> = [];
-    taggedPreDecls: mut List<String> = [];
+    mut statements: List<String> = [];
+    mut blockCells: List<(ptr: String, kind: String)> = [];
+    mut blockOwned: List<(stmtIdx: Int, rt: String, kind: String)> = [];
+    mut taggedPreDecls: List<String> = [];
     if hasFnInBlock {
         preScannedLocals := infer.appendBlockFutureLocals(target, source, start, prefix, blockLexDepth, seedBag, blockAssignedBag, blockAliases, functions, params, blockLocals);
         if target == ir.TARGET_C {
             placeholderDepthC := 0 - 2 - blockLexDepth;
-            boxedLocals: mut List<Local> = [];
+            mut boxedLocals: List<Local> = [];
             loop preScannedLocals as entry {
                 if entry.depth == placeholderDepthC and entry.kind =!= "" and entry.kind =!= ir.VALUE_KIND_UNIT and entry.kind =!= ir.VALUE_KIND_NEVER {
                     cT := types.cValueType(entry.kind);
@@ -2723,8 +2723,8 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             blockLocals = preScannedLocals;
         }
     }
-    stmtOwners: mut List<String> = [];
-    stmtDeps: mut List<String> = [];
+    mut stmtOwners: List<String> = [];
+    mut stmtDeps: List<String> = [];
     var trackedStmtCount := 0;
     var statementCount := 0;
     var blockMarkers := "";
@@ -2870,7 +2870,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     mut stmtDeps.pushBack(rhs.code);
                     trackedStmtCount = trackedStmtCount + 1;
                 }
-                pendingDestrNames: mut List<String> = [];
+                mut pendingDestrNames: List<String> = [];
                 var bCursor := 0;
                 var bIndex := 0;
                 loop bIndex < destructure.count {
@@ -3033,7 +3033,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 var outPos := syntax.expectSymbol(source, blockOutputOpen, "(", prefix);
                 outPos = syntax.skipTrivia(source, outPos, prefix);
-                outParts: mut List<String> = [];
+                mut outParts: List<String> = [];
                 var outArgCount := 0;
                 var outDiverged := false;
                 loop outPos < blockSourceSize and source.at(outPos) =!= ")" {
@@ -3061,7 +3061,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                             } else if types.isEnumKind(baseOutKind) and not types.isPayloadEnumKind(baseOutKind) {
                                 dName := types.enumDisplayName(baseOutKind);
                                 cCount := types.enumCaseCount(baseOutKind);
-                                enumLabels: mut List<String> = [];
+                                mut enumLabels: List<String> = [];
                                 var eci := 0;
                                 loop eci < cCount {
                                     mut enumLabels.pushBack(cLiteral.textLiteralCode(dName + "." + types.enumCaseAt(baseOutKind, eci).name));
@@ -3489,7 +3489,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     isLoopTailPartialIf := isLoopBody and afterRawIfTail >= 0 and afterRawIfTail < blockSourceSize and source.at(afterRawIfTail) == "}";
                     ifBranchSink := if isLoopTailPartialIf { "loopBody" } else { "stmt" };
                     ifBranchExpected := if isLoopTailPartialIf { expected } else { "" };
-                    ifPartsBuf: mut tb.TextBuilder;
+                    mut ifPartsBuf: tb.TextBuilder;
                     var allBranchesExit := true;
                     var hasElseBranch := false;
                     var ifCursor := afterItemName;
@@ -3601,7 +3601,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     matchArmSink := if isLoopTailMatch { "loopBody" } else { "stmt" };
                     matchArmExpected := if isLoopTailMatch { expected } else { "" };
                     var matchCursor := syntax.skipItemSeparators(source, afterItemName + 1, prefix);
-                    matchPartsBuf: mut tb.TextBuilder;
+                    mut matchPartsBuf: tb.TextBuilder;
                     var sawFallback := false;
                     var armCount := 0;
                     var allArmsExit := true;
@@ -3786,7 +3786,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                     loopOpen := syntax.expectSymbol(source, loopHeaderPos, "{", prefix);
                     loopId := ctx.nextCtxId(ctxs);
                     loopLabel := "lite$l" + loopId.toText();
-                    loopLocals: mut List<Local> = blockLocals;
+                    mut loopLocals: List<Local> = blockLocals;
                     var loopHeadCode := "";
                     var loopTailClose := " }";
                     if loopItemName =!= "" {
@@ -3931,7 +3931,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if aliasEntry.target == "" {
                     types.unsupportedAliasTarget(source, targetStart, prefix, "target");
                 }
-                seenInner: mut List<String> = [nextAliasDepth.toText() + ":" + itemName];
+                mut seenInner: List<String> = [nextAliasDepth.toText() + ":" + itemName];
                 if gp.hasParams {
                     scopedInnerAliases := types.aliasesUpToDepth(blockAliases, nextAliasDepth);
                     resolvedParams := types.resolveComptimeParamSpecs(source, typePos + 5, prefix, scopedInnerAliases, gp.paramsCsv);
@@ -3975,7 +3975,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 if aliasEntry.target == "" {
                     syntax.failAt(source, targetStart, prefix, "expected a type after distinct");
                 }
-                seenInnerDist: mut List<String> = [nextAliasDepth.toText() + ":" + itemName];
+                mut seenInnerDist: List<String> = [nextAliasDepth.toText() + ":" + itemName];
                 if gp.hasParams {
                     scopedInnerDistAliases := types.aliasesUpToDepth(blockAliases, nextAliasDepth);
                     resolvedDistParams := types.resolveComptimeParamSpecs(source, distPos + 8, prefix, scopedInnerDistAliases, gp.paramsCsv);
@@ -4419,7 +4419,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 recEntry := blockLocals[sym.localIndex(blockLocals, itemName)];
                 var scanPos := afterItemName;
                 var curKind := recEntry.kind;
-                fieldChain: mut List<String> = [];
+                mut fieldChain: List<String> = [];
                 var chainValid := true;
                 loop scanPos < blockSourceSize and source.at(scanPos) == "." {
                     fStart := syntax.skipTrivia(source, scanPos + 1, prefix);
@@ -4921,7 +4921,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         fnCtxIdx := ctx.findCtxByKindIndex(ctxs, "fn");
         fnRetKForDrops := if fnCtxIdx >= 0 { ctxs[fnCtxIdx].valKind } else { "" };
         rawJoined := if target == ir.TARGET_C {
-            parts: mut List<String> = [];
+            mut parts: List<String> = [];
             loop taggedPreDecls as td { mut parts.pushBack(td); }
             if blockOwned.length() > 0 or blockCells.length() > 0 {
                 var si := 0;
@@ -4993,7 +4993,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             if target == ir.TARGET_C {
                 fnCtxIdxFin := ctx.findCtxByKindIndex(ctxs, "fn");
                 fnRetKFin := if fnCtxIdxFin >= 0 { ctxs[fnCtxIdxFin].valKind } else { "" };
-                finStmtsParts: mut List<String> = [];
+                mut finStmtsParts: List<String> = [];
                 if blockOwned.length() > 0 or blockCells.length() > 0 {
                     var fsi := 0;
                     fCount := statements.length();
@@ -5052,7 +5052,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
     fnRetKBlk := if fnCtxIdxBlk >= 0 { ctxs[fnCtxIdxBlk].valKind } else { "" };
     if blockExits {
         if target == ir.TARGET_C {
-            exitStmtsParts: mut List<String> = [];
+            mut exitStmtsParts: List<String> = [];
             if blockOwned.length() > 0 or blockCells.length() > 0 {
                 var esi := 0;
                 eCount := statements.length();
@@ -5078,7 +5078,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
         return if inferMode and blockMarkers =!= "" { ctx.withMarkers(baseBlock, blockMarkers) } else { baseBlock };
     }
     if target == ir.TARGET_C {
-        cPartsEnd: mut List<String> = [];
+        mut cPartsEnd: List<String> = [];
         if blockOwned.length() > 0 or blockCells.length() > 0 {
             var nsi := 0;
             nCount := statements.length();
@@ -5323,7 +5323,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         }
         syntax.rejectMisplacedTag(source, beforeLoopOpen, prefix, "block tag cannot appear before { in loop");
         loopOpen := syntax.expectSymbol(source, beforeLoopOpen, "{", prefix);
-        loopLocals: mut List<Local> = locals;
+        mut loopLocals: List<Local> = locals;
         var loopIterVar := "_i" + idSuffix;
         if isSeqLoop and seqItemName =!= "" {
             var nameTaken := not emitFmt.isSafeTargetIdent(seqItemName, isCLoop);
@@ -5417,7 +5417,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             else { loopValVar + " = lite$transferVal; " };
             var wrappedBody := bodyParsed.code;
             if hasPayCont or hasBareCont or hasPayBrk or hasBareBrk {
-                catchClauses: mut List<String> = [];
+                mut catchClauses: List<String> = [];
                 if hasPayCont {
                     mut catchClauses.pushBack("if (lite$hasTransfer(lite$err, " + contPayId + ")) { " + valAssign + "continue; }");
                 }
@@ -5521,7 +5521,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             hdrHasPayBrk := reach.codeUsesTextCall(hdrCheckText, "lite$throwTransfer(" + brkPayId + ",");
             hdrHasBareBrk := reach.codeUsesTextCall(hdrCheckText, "lite$throwTransfer(" + brkBareId + ",");
             if hdrHasPayBrk or hdrHasBareBrk {
-                hdrClauses: mut List<String> = [];
+                mut hdrClauses: List<String> = [];
                 if hdrHasPayBrk {
                     mut hdrClauses.pushBack("if (lite$hasTransfer(lite$err, " + brkPayId + ")) { " + valAssign + "}");
                 }
@@ -5711,9 +5711,9 @@ PatResult := alias (cond: String, bindings: String, irrefutable: Bool, boolMask:
 mergeEnumCaseBag := fn(acc: String, add: String): (bag: String, added: Int) {
     if add == "" { return (bag = acc, added = 0); }
     baseAcc := if acc == "" { "|" } else { acc };
-    outBuf: mut tb.TextBuilder;
+    mut outBuf: tb.TextBuilder;
     mut outBuf.append(baseAcc);
-    seen: mut Set<String>;
+    mut seen: Set<String>;
     var added := 0;
     size := add.length();
     var pos := 0;
@@ -5862,7 +5862,7 @@ patHasNamedBindings := fn(bindings: String): Bool {
 
 /** Emits JS assignment statements for all bindings in `bindings` using deterministic arm runtime names. */
 emitPatAssignments := fn(target: String, baseLocals: List<Local>, armDepth: Int, bindings: String): String {
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     size := bindings.length();
     var pos := 0;
     loop pos < size {
@@ -6251,7 +6251,7 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
         var tupBindings := "";
         var tupIrref := true;
         var tupMarkers := "";
-        usedSlots: mut Set<Int>;
+        mut usedSlots: Set<Int>;
         var itemCount := 0;
         loop true {
             tCursor = syntax.skipTrivia(source, tCursor, prefix);
@@ -6543,8 +6543,8 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
     if not source.wordAt(nextPos, "or") {
         return first;
     }
-    altConds: mut List<String> = [first.cond];
-    altBindings: mut List<String> = [first.bindings];
+    mut altConds: List<String> = [first.cond];
+    mut altBindings: List<String> = [first.bindings];
     var altCount := 1;
     var anyIrref := first.irrefutable;
     var combinedMask := first.boolMask;
@@ -6586,7 +6586,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
     /* Binding-producing `or` alternatives: emit a short-circuiting check assigning the shared arm bindings on first match. */
     var orCondCode := "";
     if target == ir.TARGET_C {
-        cOrBuf: mut tb.TextBuilder;
+        mut cOrBuf: tb.TextBuilder;
         mut cOrBuf.append("/*@COR@*/bool lt_or = false; ");
         var i := 0;
         loop i < altCount {
@@ -6601,7 +6601,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         }
         orCondCode = cOrBuf.build();
     } else {
-        iifeBuf: mut tb.TextBuilder;
+        mut iifeBuf: tb.TextBuilder;
         mut iifeBuf.append("(() => { ");
         var i := 0;
         loop i < altCount {
@@ -6618,7 +6618,7 @@ parseMatchPattern := fn(target: String, source: String, start: Int, prefix: Stri
         orCondCode = iifeBuf.build();
     }
     /* Preserve binding declarations (names + kinds) with empty per-binding expr sentinel so arm header emits `let rt!: T;` once. */
-    declBindingsBuf: mut tb.TextBuilder;
+    mut declBindingsBuf: tb.TextBuilder;
     bSize := first.bindings.length();
     var bPos := 0;
     loop bPos < bSize {
@@ -6677,7 +6677,7 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
     subjTsType := if types.needsTsTypeAnnotation(subj.kind) { ": " + types.tsFunctionType(subj.kind) } else { "" };
     armDepth := ir.maxLocalLexDepth(locals) + 1;
     var matchMarkers := if inferMode { ctx.collectParsedMarkers("", subj) } else { "" };
-    armsCodeBuf: mut tb.TextBuilder;
+    mut armsCodeBuf: tb.TextBuilder;
     if isCTarget {
         if not canTernary {
             mut armsCodeBuf.append(types.cValueType(subj.kind));
@@ -6707,9 +6707,9 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
         mut armsCodeBuf.append(doneVar);
         mut armsCodeBuf.append(": boolean = false; ");
     }
-    ternaryConds: mut List<String> = [];
-    ternaryVals: mut List<String> = [];
-    ternaryKinds: mut List<String> = [];
+    mut ternaryConds: List<String> = [];
+    mut ternaryVals: List<String> = [];
+    mut ternaryKinds: List<String> = [];
     var ternaryCount := 0;
     isStmtLike := mode == "stmt" or mode == "loopTail";
     var cursor := syntax.skipItemSeparators(source, subjOpen + 1, prefix);
@@ -6785,10 +6785,10 @@ parseSubjectMatchBody := fn(target: String, source: String, matchStart: Int, pre
             continue;
         }
         /* Build arm-local scope with pattern bindings. */
-        armLocals: mut List<Local> = locals;
-        declStmtsBuf: mut tb.TextBuilder;
-        assignStmtsBuf: mut tb.TextBuilder;
-        voidStmtsBuf: mut tb.TextBuilder;
+        mut armLocals: List<Local> = locals;
+        mut declStmtsBuf: tb.TextBuilder;
+        mut assignStmtsBuf: tb.TextBuilder;
+        mut voidStmtsBuf: tb.TextBuilder;
         bSize := pat.bindings.length();
         var bPos := 0;
         loop bPos < bSize {
@@ -7168,13 +7168,13 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             beforeFirstOpen := syntax.skipTrivia(source, condition.next, prefix);
             syntax.rejectMisplacedTag(source, beforeFirstOpen, prefix, "block tag cannot appear before { in if");
             cursor = syntax.expectSymbol(source, beforeFirstOpen, "{", prefix);
-            conditionCodes: mut List<String> = [];
-            conditionStates: mut List<Int> = [];
-            branchCodes: mut List<String> = [];
-            branchKinds: mut List<String> = [];
-            branchConsts: mut List<Bool> = [];
-            branchIntValues: mut List<Int> = [];
-            branchTextValues: mut List<String> = [];
+            mut conditionCodes: List<String> = [];
+            mut conditionStates: List<Int> = [];
+            mut branchCodes: List<String> = [];
+            mut branchKinds: List<String> = [];
+            mut branchConsts: List<Bool> = [];
+            mut branchIntValues: List<Int> = [];
+            mut branchTextValues: List<String> = [];
             var resultKind := "";
             var branchCount := 0;
             var comptimeWon := false;
@@ -7326,13 +7326,13 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
         openMatchPos := syntax.skipTrivia(source, condParseStart + 5, prefix);
         size := source.length();
         var cursor := syntax.skipItemSeparators(source, openMatchPos + 1, prefix);
-        conditionCodes: mut List<String> = [];
-        conditionStates: mut List<Int> = [];
-        branchCodes: mut List<String> = [];
-        branchKinds: mut List<String> = [];
-        branchConsts: mut List<Bool> = [];
-        branchIntValues: mut List<Int> = [];
-        branchTextValues: mut List<String> = [];
+        mut conditionCodes: List<String> = [];
+        mut conditionStates: List<Int> = [];
+        mut branchCodes: List<String> = [];
+        mut branchKinds: List<String> = [];
+        mut branchConsts: List<Bool> = [];
+        mut branchIntValues: List<Int> = [];
+        mut branchTextValues: List<String> = [];
         var matchMarkers := "";
         var resultKind := "";
         var branchCount := 0;
@@ -7472,10 +7472,10 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             resolvedPreThenKind
         };
         var passMarkers := "";
-        passCondCodes: mut List<String> = [];
-        passCondStates: mut List<Int> = [];
-        passBranchCodes: mut List<String> = [];
-        passBranchKinds: mut List<String> = [];
+        mut passCondCodes: List<String> = [];
+        mut passCondStates: List<Int> = [];
+        mut passBranchCodes: List<String> = [];
+        mut passBranchKinds: List<String> = [];
         var passResultKind := "";
         var passBranchCount := 0;
         var passHasElse := false;
@@ -7711,7 +7711,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             }
         }
         if isPass1 {
-            passMarkersBuf: mut tb.TextBuilder;
+            mut passMarkersBuf: tb.TextBuilder;
             mut passMarkersBuf.append(passMarkers);
             var bIdx := 0;
             var allBranchesNever := passBranchCount > 0;
@@ -7757,7 +7757,7 @@ parseCondExpr := fn(target: String, source: String, condParseKind: String, condP
             } else if condParseKind == ir.CTX_KIND_MATCH and passBranchCount == 1 and passHasElse {
                 rawIfStmt = ctx.condBranchStmtCode(target, resolvedPreThenKind, condValVar, passBranchKinds[0], passBranchCodes[0]);
             } else {
-                rawIfBuf: mut tb.TextBuilder;
+                mut rawIfBuf: tb.TextBuilder;
                 condCount := if passHasElse { passBranchCount - 1 } else { passBranchCount };
                 var cIdx := 0;
                 var emittedCondCount := 0;
@@ -8290,8 +8290,8 @@ receiverKind: String, keyKind: String, isMut: Bool, functions: List<FunctionInfo
     reqKey := modKey + (if isMut { "#IndexMut" } else { "#Index" });
     cands := types.findMatchingImplsByKey(receiverKind, reqKey);
     if cands.length() == 0 { return emptyRes; }
-    exactMatches: mut List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> = [];
-    compatMatches: mut List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> = [];
+    mut exactMatches: List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> = [];
+    mut compatMatches: List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> = [];
     loop cands as c {
         if keyKind == "$Range" {
             if types.isRecordKind(c.arg0) and c.arg0.startsWithAt(0, "Record<" + modKey + "#") and types.recordDisplayName(c.arg0) == "Range" {
@@ -8380,7 +8380,7 @@ pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix
             syntax.failAt(source, errPos, prefix, "internal error: missing generic template " + tplKey);
         }
         tpl := generics.getTemplate(tplIdx);
-        bindings: mut Map<String, String>;
+        mut bindings: Map<String, String>;
         uErr := generics.unifyKindMut(tpl.genericParams, recvBase, receiverKind, mut bindings);
         if uErr =!= "" {
             syntax.failAt(source, errPos, prefix, opName + " requires " + types.displayKind(recvBase) + ", got " + types.displayKind(receiverKind));
@@ -8399,7 +8399,7 @@ pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix
         concRes := generics.substKind(tpl.genericParams, info.result, bindings);
         var effRuntime := info.runtime;
         if not inferMode {
-            allSubstParts: mut List<String> = [];
+            mut allSubstParts: List<String> = [];
             loop generics.splitPipeEntries(tpl.params, tpl.paramCount) as tpEntry {
                 tpName := types.paramNameOf(tpEntry);
                 tpRaw := types.paramKindOf(tpEntry);
@@ -8560,7 +8560,7 @@ pub emitHookIndexAssignCode := fn(target: String, source: String, opPos: Int, pr
         vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
         kb := cBorrowExprWithPostDrop(keyKind, keyCode, keyByPtr);
         setExpr := setRuntime + "(&" + entry.runtime + ", " + kb.expr + ", " + vCode + ")";
-        hkDrops: mut List<String> = [];
+        mut hkDrops: List<String> = [];
         if kb.drop =!= "" { mut hkDrops.pushBack(kb.drop); }
         return cWrapExprWithPostDrops(ir.VALUE_KIND_UNIT, setExpr, hkDrops);
     }
@@ -8868,7 +8868,7 @@ readOnlyArgNeedsSnapshot := fn(argCode: String, locals: List<Local>, mutArgRunti
 /** Builds a structural TS writeback assignment statement updating nested field `fieldPathCsv` inside `rootRt`. */
 tsFieldWritebackStmt := fn(rootRt: String, fieldPathCsv: String, valueExpr: String): String {
     fields := fieldPathCsv.split(".");
-    var prefixes: mut List<String> = [rootRt];
+    var mut prefixes: List<String> = [rootRt];
     var i := 0;
     loop i + 1 < fields.length() {
         mut prefixes.pushBack("(" + prefixes[i] + ")." + fields[i]);
@@ -8912,7 +8912,7 @@ resolveImplBindingRuntime := fn(target: String, source: String, errPos: Int, pre
     tpl := generics.getTemplate(tplIdx);
     bMap := types.decodeImplBindings(bindingsEnc);
     effRes := generics.substKind(tpl.genericParams, tpl.result, bMap);
-    allSubstParts: mut List<String> = [];
+    mut allSubstParts: List<String> = [];
     loop generics.splitPipeEntries(tpl.params, tpl.paramCount) as tpEntry {
         tpName := types.paramNameOf(tpEntry);
         tpRaw := types.paramKindOf(tpEntry);
@@ -8984,11 +8984,11 @@ pub coerceToDynIfNeeded := fn(target: String, source: String, errPos: Int, prefi
         } else {
             "{ v: (" + rhsCode + ") }"
         };
-        vtFields: mut List<String> = [];
+        mut vtFields: List<String> = [];
         loop methods as m {
             fnRt := resolveImplBindingRuntime(target, source, errPos, prefix, implDef, imp.bindingsEncoded, m.name, functions);
-            tParams: mut List<String> = ["lite$ds: { v: unknown }"];
-            callArgs: mut List<String> = [];
+            mut tParams: List<String> = ["lite$ds: { v: unknown }"];
+            mut callArgs: List<String> = [];
             if m.recvMut and types.isRecordOrDistinctRecord(rhsKind) {
                 mut callArgs.pushBack("(lite$ds as { v: " + tsConcrete + " })");
             } else {
@@ -9027,15 +9027,15 @@ pub coerceToDynIfNeeded := fn(target: String, source: String, errPos: Int, prefi
     vtTag := types.cVtableTag(expectedKind);
     vtblSym := types.cVtableInstanceSym(expectedKind, rhsKind, implDef.key);
     cConcrete := types.cValueType(rhsKind);
-    cTrampBuf: mut tb.TextBuilder;
-    vtInits: mut List<String> = [];
+    mut cTrampBuf: tb.TextBuilder;
+    mut vtInits: List<String> = [];
     loop methods as m {
         fnRt := resolveImplBindingRuntime(target, source, errPos, prefix, implDef, imp.bindingsEncoded, m.name, functions);
         mCField := types.cFieldName(m.name);
         tName := vtblSym + "_" + mCField;
         mut vtInits.pushBack("." + mCField + " = " + tName);
         retC := types.cValueType(m.result);
-        tParams: mut List<String> = ["void *lite_ds"];
+        mut tParams: List<String> = ["void *lite_ds"];
         var recvExpr := "";
         if m.recvMut and not types.isSliceKind(rhsKind) and not types.isDynKind(rhsKind) {
             recvExpr = "(" + cConcrete + " *)lite_ds";
@@ -9044,7 +9044,7 @@ pub coerceToDynIfNeeded := fn(target: String, source: String, errPos: Int, prefi
         } else {
             recvExpr = "(*((const " + cConcrete + " *)lite_ds))";
         }
-        callArgs: mut List<String> = [recvExpr];
+        mut callArgs: List<String> = [recvExpr];
         if m.paramCount > 0 {
             var pStart := 0;
             pLen := m.params.length();
@@ -9136,14 +9136,14 @@ parseDynMethodDotCall := fn(target: String, source: String, labelStart: Int, ope
     argIifeDepth := if target == ir.TARGET_TS { iifeDepth + 1 } else { iifeDepth };
     var cursor := syntax.skipTrivia(source, openParen + 1, prefix);
     var callMarkers := "";
-    argKinds: mut List<String> = [];
-    argCodes: mut List<String> = [];
+    mut argKinds: List<String> = [];
+    mut argCodes: List<String> = [];
     var ai := 0;
-    postCallDrops: mut List<String> = [];
-    preBlkStmts: mut List<String> = [];
-    mutRecBoxNames: mut List<String> = [];
-    mutRecLocalRuntimes: mut List<String> = [];
-    mutRecKinds: mut List<String> = [];
+    mut postCallDrops: List<String> = [];
+    mut preBlkStmts: List<String> = [];
+    mut mutRecBoxNames: List<String> = [];
+    mut mutRecLocalRuntimes: List<String> = [];
+    mut mutRecKinds: List<String> = [];
     if cursor < size and source.at(cursor) =!= ")" {
         loop true {
             if ai >= m.paramCount {
@@ -9233,7 +9233,7 @@ parseDynMethodDotCall := fn(target: String, source: String, labelStart: Int, ope
             "((lite$dr: " + types.tsFunctionType(receiver.kind) + "): " + types.tsFunctionType(m.result) + " => lite$dr.vt." + m.name + "(lite$dr.data" + allCallArgs + "))(" + receiver.code + ")"
         };
         if mutRecBoxNames.length() > 0 {
-            wbSetup: mut List<String> = [];
+            mut wbSetup: List<String> = [];
             var bi := 0;
             loop bi < mutRecBoxNames.length() {
                 bN := mutRecBoxNames[bi];
@@ -9301,10 +9301,10 @@ postDrops: mut List<String>): String {
         }
         false
     };
-    ctxMutRts: mut List<String> = [];
-    ctxMutNames: mut List<String> = [];
-    ctxMutProvs: mut List<String> = [];
-    slotInits: mut List<String> = [];
+    mut ctxMutRts: List<String> = [];
+    mut ctxMutNames: List<String> = [];
+    mut ctxMutProvs: List<String> = [];
+    mut slotInits: List<String> = [];
     loop slots as cs {
         var foundProv := false;
         var isAmbient := false;
@@ -9486,8 +9486,8 @@ ScannedComptimeArgs := record {
 /** Splits top-level comma-separated `<...>` comptime argument ranges and finds the matching `>` offset. */
 scanOverloadComptimeArgs := fn(source: String, openLt: Int, prefix: String): ScannedComptimeArgs {
     size := source.length();
-    starts: mut List<Int> = [];
-    ends: mut List<Int> = [];
+    mut starts: List<Int> = [];
+    mut ends: List<Int> = [];
     var cur := syntax.skipTrivia(source, openLt + 1, prefix);
     if cur >= size or source.at(cur) == ">" {
         return ScannedComptimeArgs { ok = false, closeGt = openLt, starts = starts, ends = ends };
@@ -9538,8 +9538,8 @@ selectOverloadForCall := fn(
     hasComptime := postPos < size and source.at(postPos) == "<";
     var openParen := postPos;
     var ctArgCount := 0;
-    var ctArgStarts: mut List<Int> = [];
-    var ctArgEnds: mut List<Int> = [];
+    var mut ctArgStarts: List<Int> = [];
+    var mut ctArgEnds: List<Int> = [];
     if hasComptime {
         scannedCt := scanOverloadComptimeArgs(source, postPos, prefix);
         if not scannedCt.ok {
@@ -9554,7 +9554,7 @@ selectOverloadForCall := fn(
         }
     }
     /* Step 1: pre-scan call arguments once. */
-    callArgs: mut List<OverloadCallArg> = [];
+    mut callArgs: List<OverloadCallArg> = [];
     var scanCur := syntax.skipTrivia(source, openParen + 1, prefix);
     loop scanCur < size and source.at(scanCur) =!= ")" {
         argPos := scanCur;
@@ -9667,11 +9667,11 @@ selectOverloadForCall := fn(
     entryCount := callArgs.length();
 
     /* Step 2: evaluate viability and specificity tier for every candidate index. */
-    viableIdxs: mut List<Int> = [];
-    viableBindings: mut List<String> = [];
-    viableTiers: mut List<Int> = [];
-    viableGenParams: mut List<String> = [];
-    viablePatsCsv: mut List<String> = [];
+    mut viableIdxs: List<Int> = [];
+    mut viableBindings: List<String> = [];
+    mut viableTiers: List<Int> = [];
+    mut viableGenParams: List<String> = [];
+    mut viablePatsCsv: List<String> = [];
     paramOffset := if hasRecv { 1 } else { 0 };
 
     loop candIndices as candIdx {
@@ -9680,7 +9680,7 @@ selectOverloadForCall := fn(
         if isStaticTypeCall and hasRecv { continue; }
         if hasRecv and (isStaticTypeOp(info) or info.count < 1) { continue; }
         var preBindEnc := "";
-        genBindings: mut Map<String, String>;
+        mut genBindings: Map<String, String>;
         isGen := info.runtime.startsWithAt(0, "$gen:");
         var gpStr := "";
         if isGen {
@@ -9717,7 +9717,7 @@ selectOverloadForCall := fn(
         if hasComptime {
             if not isGen { continue; }
             allSpecs := types.splitParamSpecs(gpStr);
-            remSpecs: mut List<(name: String, kind: String)> = [];
+            mut remSpecs: List<(name: String, kind: String)> = [];
             loop allSpecs as sp {
                 if not genBindings.has(sp.name) { mut remSpecs.pushBack(sp); }
             }
@@ -9746,8 +9746,8 @@ selectOverloadForCall := fn(
         userCount := info.count - paramOffset;
         if entryCount =!= userCount { continue; }
         /* Route call arguments to candidate parameter slots (positional, named, =shorthand). */
-        slotMatched: mut List<Bool> = [];
-        slotToArg: mut List<Int> = [];
+        mut slotMatched: List<Bool> = [];
+        mut slotToArg: List<Int> = [];
         var si := 0;
         loop si < userCount {
             mut slotMatched.pushBack(false);
@@ -9781,7 +9781,7 @@ selectOverloadForCall := fn(
         /* Validate parameter mutability and unify/match types per slot. */
         var candViable := true;
         var candTier := if isGen { 4 } else { 0 };
-        candPats: mut List<String> = [];
+        mut candPats: List<String> = [];
         if isGen {
             /* Two-pass for generics so bound non-contextual args constrain generic parameters before contextual args. */
             var spIdx := 0;
@@ -9909,7 +9909,7 @@ selectOverloadForCall := fn(
 
     vc := viableIdxs.length();
     if vc == 0 {
-        argTypesDisp: mut List<String> = [];
+        mut argTypesDisp: List<String> = [];
         loop callArgs as ca {
             d := if ca.isMut { "mut " } else { "" };
             mut argTypesDisp.pushBack(d + (if ca.natOk { types.displayKind(ca.natKind) } else { "_" }));
@@ -9921,7 +9921,7 @@ selectOverloadForCall := fn(
     }
 
     /* Step 3: find maximal (undominated) candidates. */
-    bestMask: mut List<Bool> = [];
+    mut bestMask: List<Bool> = [];
     var bi := 0;
     loop bi < vc { mut bestMask.pushBack(true); bi = bi + 1; }
     var i := 0;
@@ -9941,7 +9941,7 @@ selectOverloadForCall := fn(
         }
         i = i + 1;
     }
-    winners: mut List<Int> = [];
+    mut winners: List<Int> = [];
     var wi := 0;
     loop wi < vc {
         if bestMask[wi] { mut winners.pushBack(wi); }
@@ -9962,7 +9962,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     var genParams := "";
     var genTplParamsRaw := "";
     var genTplParamCount := 0;
-    genBindings: mut Map<String, String>;
+    mut genBindings: Map<String, String>;
     if isGenericCall {
         genTplIdx := generics.findTemplate(genTplKey);
         if genTplIdx < 0 {
@@ -9987,8 +9987,8 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     var callMarkers := "";
     var slotEntry: List<Int> = [];
     var slotExplicit: List<Bool> = [];
-    initSlots: mut List<Int> = [];
-    initExplicit: mut List<Bool> = [];
+    mut initSlots: List<Int> = [];
+    mut initExplicit: List<Bool> = [];
     var initIdx := 0;
     loop initIdx < callCount {
         mut initSlots.pushBack(-1);
@@ -9997,19 +9997,19 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     }
     slotEntry = initSlots;
     slotExplicit = initExplicit;
-    entryPositions: mut List<Int> = [];
-    entrySlots: mut List<Int> = [];
-    entryKinds: mut List<String> = [];
-    entryCodes: mut List<String> = [];
-    mutRecBoxNames: mut List<String> = [];
-    mutRecLocalRuntimes: mut List<String> = [];
-    mutRecWritebackStmts: mut List<String> = [];
-    mutRecKinds: mut List<String> = [];
-    mutArgRuntimes: mut List<String> = [];
-    mutArgRoots: mut List<String> = [];
-    mutArgNames: mut List<String> = [];
-    mutArgProvs: mut List<String> = [];
-    entryProvs: mut List<String> = [];
+    mut entryPositions: List<Int> = [];
+    mut entrySlots: List<Int> = [];
+    mut entryKinds: List<String> = [];
+    mut entryCodes: List<String> = [];
+    mut mutRecBoxNames: List<String> = [];
+    mut mutRecLocalRuntimes: List<String> = [];
+    mut mutRecWritebackStmts: List<String> = [];
+    mut mutRecKinds: List<String> = [];
+    mut mutArgRuntimes: List<String> = [];
+    mut mutArgRoots: List<String> = [];
+    mut mutArgNames: List<String> = [];
+    mut mutArgProvs: List<String> = [];
+    mut entryProvs: List<String> = [];
     if hasRecv and callFirst > 0 and types.paramKindOf(callParams[callFirst - 1]).startsWithAt(0, "mut ") {
         var recvRootCanon := if recvRootRuntime =!= "" { recvRootRuntime }
         else if recvWritebackLocal =!= "" { recvWritebackLocal }
@@ -10400,7 +10400,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     var effRuntime := callRuntime;
     var effResult := callResult;
     var effCtxKind := callCtxKind;
-    substSlotKinds: mut List<String> = [];
+    mut substSlotKinds: List<String> = [];
     var substRecvKind := "";
     if isGenericCall {
         if callExpectedRet =!= "" and generics.kindHasUnboundGeneric(genParams, callResult, genBindings) {
@@ -10453,7 +10453,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                 if scErr =!= "" { syntax.failAt(source, errPos, prefix, scErr); }
             }
         }
-        allSubstParts: mut List<String> = [];
+        mut allSubstParts: List<String> = [];
         rawTplEntries := generics.splitPipeEntries(genTplParamsRaw, genTplParamCount);
         var tpIdx := 0;
         loop rawTplEntries as tpEntry {
@@ -10538,13 +10538,13 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         else { "" }
     } else { "" };
     isUserCModuleFn := target == ir.TARGET_C and isModuleFn and not effRuntime.startsWithAt(0, "lite$");
-    preBlkStmts: mut List<String> = [];
-    postCallDrops: mut List<String> = [];
+    mut preBlkStmts: List<String> = [];
+    mut postCallDrops: List<String> = [];
     ctxProjArg := if effCtxKind =!= "" and not inferMode {
         buildContextProjectionArg(target, source, errPos, prefix, calleeDisplay, effCtxKind, locals, functions,
         mutArgRoots, mutArgNames, mutArgProvs, entryCount, entryPositions, entryKinds, entryCodes, entryProvs, mut postCallDrops)
     } else if effCtxKind =!= "" and inferMode {
-        dummyInferDrops: mut List<String> = [];
+        mut dummyInferDrops: List<String> = [];
         _chkCtx := buildContextProjectionArg(target, source, errPos, prefix, calleeDisplay, effCtxKind, locals, functions,
         mutArgRoots, mutArgNames, mutArgProvs, entryCount, entryPositions, entryKinds, entryCodes, entryProvs, mut dummyInferDrops);
         _chkCtx
@@ -10552,7 +10552,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
     var emittedCode := "";
     var emittedResultKind := effResult;
     if isIdentityOrder {
-        finalArgs: mut List<String> = [];
+        mut finalArgs: List<String> = [];
         if hasRecv {
             if target == ir.TARGET_C {
                 mut finalArgs.pushBack(prepCCallArg(isUserCModuleFn, effRuntime, recvExpectedKind, recvCode, mut preBlkStmts, mut postCallDrops));
@@ -10611,7 +10611,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             emittedCode = rawCallExpr;
         }
     } else if target =!= ir.TARGET_TS {
-        discarded: mut List<String> = [];
+        mut discarded: List<String> = [];
         var kIdx := 0;
         loop kIdx < entryCount {
             targetSlot := entrySlots[kIdx];
@@ -10620,7 +10620,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             }
             kIdx = kIdx + 1;
         }
-        reorderedArgs: mut List<String> = [];
+        mut reorderedArgs: List<String> = [];
         if hasRecv {
             if target == ir.TARGET_C {
                 mut reorderedArgs.pushBack(prepCCallArg(isUserCModuleFn, effRuntime, recvExpectedKind, recvCode, mut preBlkStmts, mut postCallDrops));
@@ -10684,7 +10684,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             wrappedReordered
         };
     } else {
-        evalStmts: mut List<String> = [];
+        mut evalStmts: List<String> = [];
         if not isModuleFn {
             mut evalStmts.pushBack("const lite$fn = " + effRuntime + ";");
         }
@@ -10704,7 +10704,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                     argExpected := if isGenericCall { substSlotKinds[targetSlot] } else { types.paramKindOf(callParams[callFirst + targetSlot]) };
                     isMutP := argExpected.startsWithAt(0, "mut ");
                     baseP := if isMutP { argExpected.slice(4, argExpected.length()) } else { argExpected };
-                    dummyDrops: mut List<String> = [];
+                    mut dummyDrops: List<String> = [];
                     argRhs := if types.isDynKind(baseP) {
                         dynArg := coerceToDynIfNeeded(target, source, entryPositions[kIdx], prefix, baseP, isMutP,
                         if entryKinds[kIdx].startsWithAt(0, "mut ") { entryKinds[kIdx].slice(4, entryKinds[kIdx].length()) } else { entryKinds[kIdx] },
@@ -10727,7 +10727,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
             emittedCode = "(() => { " + evalStmts.join(" ") + " })()";
             emittedResultKind = ir.VALUE_KIND_NEVER;
         } else {
-            slotTemps: mut List<String> = [];
+            mut slotTemps: List<String> = [];
             if hasRecv { mut slotTemps.pushBack("lite$recv"); }
             var sIdx := 0;
             loop sIdx < callCount {
@@ -10742,7 +10742,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
         }
     }
     if target == ir.TARGET_TS and mutRecBoxNames.length() > 0 {
-        wbSetup: mut List<String> = [];
+        mut wbSetup: List<String> = [];
         var bi := 0;
         bCount := mutRecBoxNames.length();
         loop bi < bCount {
@@ -10813,7 +10813,7 @@ emitRcHardOpCode := fn(
     if runtime == "lite$core$rc$isEmpty:v1" {
         c := if rTag =!= "" {
             rb := cBorrowExprWithPostDrop(rcKind, recvCode, false);
-            reDrops: mut List<String> = [];
+            mut reDrops: List<String> = [];
             if rb.drop =!= "" { mut reDrops.pushBack(rb.drop); }
             cWrapExprWithPostDrops(ir.VALUE_KIND_BOOL, "((" + rb.expr + ").box == NULL)", reDrops)
         } else { "((" + recvCode + ").box === null)" };
@@ -10822,7 +10822,7 @@ emitRcHardOpCode := fn(
     if runtime == "lite$core$rc$strongCount:v1" {
         c := if rTag =!= "" {
             rb := cBorrowExprWithPostDrop(rcKind, recvCode, false);
-            rcDrops: mut List<String> = [];
+            mut rcDrops: List<String> = [];
             if rb.drop =!= "" { mut rcDrops.pushBack(rb.drop); }
             cWrapExprWithPostDrops(ir.VALUE_KIND_INT, rTag + "_count(" + rb.expr + ")", rcDrops)
         } else { "((" + recvCode + ").box === null ? 0n : BigInt((" + recvCode + ").box.count))" };
@@ -10831,7 +10831,7 @@ emitRcHardOpCode := fn(
     if runtime == "lite$core$rc$get:v1" {
         c := if rTag =!= "" {
             rb := cBorrowExprWithPostDrop(rcKind, recvCode, false);
-            rgDrops: mut List<String> = [];
+            mut rgDrops: List<String> = [];
             if rb.drop =!= "" { mut rgDrops.pushBack(rb.drop); }
             cWrapExprWithPostDrops(elemKind, rTag + "_get(" + rb.expr + ")", rgDrops)
         } else {
@@ -10842,7 +10842,7 @@ emitRcHardOpCode := fn(
     if runtime == "lite$core$rc$share:v1" {
         c := if rTag =!= "" {
             rb := cBorrowExprWithPostDrop(rcKind, recvCode, false);
-            shDrops: mut List<String> = [];
+            mut shDrops: List<String> = [];
             if rb.drop =!= "" { mut shDrops.pushBack(rb.drop); }
             cWrapExprWithPostDrops(rcKind, "/*@T:" + rcKind + "@*/" + rTag + "_copy(" + rb.expr + ")", shDrops)
         } else {
@@ -10883,7 +10883,7 @@ emitRcHardOpCode := fn(
     eqCode := if rTag =!= "" {
         ra := cBorrowExprWithPostDrop(rcKind, recvCode, false);
         rb := cBorrowExprWithPostDrop(rcKind, argCode, false);
-        eqDrops: mut List<String> = [];
+        mut eqDrops: List<String> = [];
         if ra.drop =!= "" { mut eqDrops.pushBack(ra.drop); }
         if rb.drop =!= "" { mut eqDrops.pushBack(rb.drop); }
         cWrapExprWithPostDrops(ir.VALUE_KIND_BOOL, "((" + ra.expr + ").box == (" + rb.expr + ").box)", eqDrops)
@@ -10944,7 +10944,7 @@ tsSimdNegCode := fn(elKind: String, v: String, pos: Int): String {
 /** Emits TypeScript empty `SoA<R>` object literal expression. */
 emitTsSoaZeroCode := fn(recKind: String): String {
     fc := types.recordComponentCount(recKind);
-    cols: mut List<String> = [];
+    mut cols: List<String> = [];
     var fi := 0;
     loop fi < fc {
         comp := types.recordComponent(recKind, fi);
@@ -10958,7 +10958,7 @@ emitTsSoaZeroCode := fn(recKind: String): String {
 emitTsSoaGetCode := fn(recKind: String, soaCode: String, idxCode: String, errPos: Int, uncheckedOp: Bool): String {
     fc := types.recordComponentCount(recKind);
     firstProp := types.recordComponent(recKind, 0).prop;
-    fields: mut List<String> = [];
+    mut fields: List<String> = [];
     var fi := 0;
     loop fi < fc {
         comp := types.recordComponent(recKind, fi);
@@ -10974,7 +10974,7 @@ emitTsSoaGetCode := fn(recKind: String, soaCode: String, idxCode: String, errPos
 emitTsSoaSetCode := fn(recKind: String, soaMutRt: String, idxCode: String, rowCode: String, errPos: Int, uncheckedOp: Bool): String {
     fc := types.recordComponentCount(recKind);
     firstProp := types.recordComponent(recKind, 0).prop;
-    assigns: mut List<String> = [];
+    mut assigns: List<String> = [];
     var fi := 0;
     loop fi < fc {
         comp := types.recordComponent(recKind, fi);
@@ -10988,7 +10988,7 @@ emitTsSoaSetCode := fn(recKind: String, soaMutRt: String, idxCode: String, rowCo
 /** Emits TypeScript `SoA<R>.pushBack` expression. */
 emitTsSoaPushCode := fn(recKind: String, soaMutRt: String, rowCode: String): String {
     fc := types.recordComponentCount(recKind);
-    pushes: mut List<String> = [];
+    mut pushes: List<String> = [];
     var fi := 0;
     loop fi < fc {
         comp := types.recordComponent(recKind, fi);
@@ -11001,7 +11001,7 @@ emitTsSoaPushCode := fn(recKind: String, soaMutRt: String, rowCode: String): Str
 /** Emits TypeScript `SoA<R>.clear` expression. */
 emitTsSoaClearCode := fn(recKind: String, soaMutRt: String): String {
     fc := types.recordComponentCount(recKind);
-    clears: mut List<String> = [];
+    mut clears: List<String> = [];
     var fi := 0;
     loop fi < fc {
         comp := types.recordComponent(recKind, fi);
@@ -11015,7 +11015,7 @@ emitTsSoaClearCode := fn(recKind: String, soaMutRt: String): String {
 emitTsSoaPopCode := fn(recKind: String, soaMutRt: String, errPos: Int): String {
     fc := types.recordComponentCount(recKind);
     firstProp := types.recordComponent(recKind, 0).prop;
-    pops: mut List<String> = [];
+    mut pops: List<String> = [];
     var fi := 0;
     loop fi < fc {
         comp := types.recordComponent(recKind, fi);
@@ -11029,9 +11029,9 @@ emitTsSoaPopCode := fn(recKind: String, soaMutRt: String, errPos: Int): String {
 emitTsSoaSwapRemoveCode := fn(recKind: String, soaMutRt: String, idxCode: String, errPos: Int): String {
     fc := types.recordComponentCount(recKind);
     firstProp := types.recordComponent(recKind, 0).prop;
-    reads: mut List<String> = [];
-    swaps: mut List<String> = [];
-    pops: mut List<String> = [];
+    mut reads: List<String> = [];
+    mut swaps: List<String> = [];
+    mut pops: List<String> = [];
     var fi := 0;
     loop fi < fc {
         comp := types.recordComponent(recKind, fi);
@@ -11443,7 +11443,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             close := syntax.expectSymbol(source, cursor, ")", prefix);
             lenCode := if cTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                lDrops: mut List<String> = [];
+                mut lDrops: List<String> = [];
                 if rb.drop =!= "" { mut lDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(ir.VALUE_KIND_INT, "lt_list_" + cTag + "_len(" + rb.expr + ")", lDrops)
             } else {
@@ -11455,7 +11455,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             close := syntax.expectSymbol(source, cursor, ")", prefix);
             revCode := if cTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                rDrops: mut List<String> = [];
+                mut rDrops: List<String> = [];
                 if rb.drop =!= "" { mut rDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(receiver.kind, "lt_list_" + cTag + "_reverse(" + rb.expr + ")", rDrops)
             } else { "[...(" + receiver.code + ")].reverse()" };
@@ -11502,7 +11502,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
             getCode := if cTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                gDrops: mut List<String> = [];
+                mut gDrops: List<String> = [];
                 if rb.drop =!= "" { mut gDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(elKind, "lt_list_" + cTag + "_uat(" + rb.expr + ", " + iCode + ", " + labelStart.toText() + ")", gDrops)
             } else {
@@ -11552,7 +11552,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             eCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, eArg.kind, eArg.code);
             slCode := if cTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                sDrops: mut List<String> = [];
+                mut sDrops: List<String> = [];
                 if rb.drop =!= "" { mut sDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(receiver.kind, "lt_list_" + cTag + "_slice(" + rb.expr + ", " + sCode + ", " + eCode + ", " + labelStart.toText() + ")", sDrops)
             } else {
@@ -11569,7 +11569,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             close := syntax.expectSymbol(source, cursor, ")", prefix);
             szCode := if mTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                mDrops: mut List<String> = [];
+                mut mDrops: List<String> = [];
                 if rb.drop =!= "" { mut mDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(ir.VALUE_KIND_INT, "((int64_t)(" + rb.expr + ").len)", mDrops)
             } else { "BigInt((" + receiver.code + ").size)" };
@@ -11585,7 +11585,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             kListKind := "List<" + kKind + ">";
             kListCode := if mTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                mkDrops: mut List<String> = [];
+                mut mkDrops: List<String> = [];
                 if rb.drop =!= "" { mut mkDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(kListKind, mTag + "_keys(" + rb.expr + ")", mkDrops)
             } else { "Array.from((" + receiver.code + ").keys())" };
@@ -11596,7 +11596,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             vListKind := "List<" + vKind + ">";
             vListCode := if mTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                mvDrops: mut List<String> = [];
+                mut mvDrops: List<String> = [];
                 if rb.drop =!= "" { mut mvDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(vListKind, mTag + "_values(" + rb.expr + ")", mvDrops)
             } else { "Array.from((" + receiver.code + ").values())" };
@@ -11612,7 +11612,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             close := ctx.expectNonemptyCallClose(source, keyArg.next, prefix);
             hasCode := if mTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                mhDrops: mut List<String> = [];
+                mut mhDrops: List<String> = [];
                 if rb.drop =!= "" { mut mhDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(ir.VALUE_KIND_BOOL, mTag + "_has(" + rb.expr + ", " + keyCode + ")", mhDrops)
             } else { "((" + receiver.code + ").has(" + keyCode + "))" };
@@ -11631,7 +11631,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             resTupleKind := "(found:Bool,value:" + vKind + ")";
             getCode := if mTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                mgDrops: mut List<String> = [];
+                mut mgDrops: List<String> = [];
                 if rb.drop =!= "" { mut mgDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(resTupleKind, "/*@T:" + resTupleKind + "@*/" + mTag + "_get(" + rb.expr + ", " + keyCode + ", " + zeroVal + ")", mgDrops)
             } else if not needsCopy {
@@ -11661,7 +11661,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         }
         getOrCode := if mTag =!= "" {
             rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-            goDrops: mut List<String> = [];
+            mut goDrops: List<String> = [];
             if rb.drop =!= "" { mut goDrops.pushBack(rb.drop); }
             cWrapExprWithPostDrops(vKind, mTag + "_get_or(" + rb.expr + ", " + keyCode + ", " + valCode + ")", goDrops)
         } else if not needsCopy {
@@ -11679,7 +11679,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             close := syntax.expectSymbol(source, cursor, ")", prefix);
             szCode := if sTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                ssDrops: mut List<String> = [];
+                mut ssDrops: List<String> = [];
                 if rb.drop =!= "" { mut ssDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(ir.VALUE_KIND_INT, "((int64_t)(" + rb.expr + ").len)", ssDrops)
             } else { "BigInt((" + receiver.code + ").size)" };
@@ -11695,7 +11695,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             vListKind := "List<" + elemKind + ">";
             valListCode := if sTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                svDrops: mut List<String> = [];
+                mut svDrops: List<String> = [];
                 if rb.drop =!= "" { mut svDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(vListKind, sTag + "_values(" + rb.expr + ")", svDrops)
             } else { "Array.from((" + receiver.code + ").values())" };
@@ -11718,7 +11718,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
         }
         hasCode := if sTag =!= "" {
             rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-            shDrops: mut List<String> = [];
+            mut shDrops: List<String> = [];
             if rb.drop =!= "" { mut shDrops.pushBack(rb.drop); }
             cWrapExprWithPostDrops(ir.VALUE_KIND_BOOL, sTag + "_has(" + rb.expr + ", " + valCode + ")", shDrops)
         } else { "((" + receiver.code + ").has(" + valCode + "))" };
@@ -12135,7 +12135,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             close := syntax.expectSymbol(source, cursor, ")", prefix);
             lCode := if sTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                slDrops: mut List<String> = [];
+                mut slDrops: List<String> = [];
                 if rb.drop =!= "" { mut slDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(ir.VALUE_KIND_INT, "((int64_t)(" + rb.expr + ").len)", slDrops)
             } else { "BigInt((" + receiver.code + ")." + firstProp + ".length)" };
@@ -12145,7 +12145,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             close := syntax.expectSymbol(source, cursor, ")", prefix);
             eCode := if sTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                seDrops: mut List<String> = [];
+                mut seDrops: List<String> = [];
                 if rb.drop =!= "" { mut seDrops.pushBack(rb.drop); }
                 cWrapExprWithPostDrops(ir.VALUE_KIND_BOOL, "((" + rb.expr + ").len == 0)", seDrops)
             } else { "((" + receiver.code + ")." + firstProp + ".length === 0)" };
@@ -12221,7 +12221,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
             gCode := if sTag =!= "" {
                 rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
-                sgDrops: mut List<String> = [];
+                mut sgDrops: List<String> = [];
                 if rb.drop =!= "" { mut sgDrops.pushBack(rb.drop); }
                 fnSuf := if isUnchk { "_uget(" } else { "_get(" };
                 cWrapExprWithPostDrops(recK, "/*@T:" + receiver.kind + "@*/" + sTag + fnSuf + rb.expr + ", " + iCode + ", " + labelStart.toText() + ")", sgDrops)
@@ -12400,7 +12400,7 @@ findTypeOp := fn(functions: List<FunctionInfo>, ownerKey: String, opName: String
 
 /** Returns all instance and static type-operation candidate indices registered for `ownerKey.opName`. */
 findAllTypeOps := fn(functions: List<FunctionInfo>, ownerKey: String, opName: String): List<Int> {
-    out: mut List<Int> = sym.findFunctions(functions, "$typeop:" + ownerKey + "." + opName);
+    mut out: List<Int> = sym.findFunctions(functions, "$typeop:" + ownerKey + "." + opName);
     loop sym.findFunctions(functions, "$statictypeop:" + ownerKey + "." + opName) as si {
         mut out.pushBack(si);
     }
@@ -12432,7 +12432,7 @@ functions: List<FunctionInfo>, params: List<String>, inferMode: Bool
     isStatic := isStaticTypeOp(opInfo);
     if opInfo.runtime.startsWithAt(0, "$gen:") {
         tpl := generics.getTemplate(generics.findTemplate(opInfo.runtime.slice(5, opInfo.runtime.length())));
-        rawB: mut Map<String, String>;
+        mut rawB: Map<String, String>;
         if not isStatic {
             rawRecv := types.paramKindOf(params[opInfo.first]);
             baseRecv := if rawRecv.startsWithAt(0, "mut ") { rawRecv.slice(4, rawRecv.length()) } else { rawRecv };
@@ -12453,7 +12453,7 @@ functions: List<FunctionInfo>, params: List<String>, inferMode: Bool
             pDec := types.decodeLengthPrefixedAt(tpl.selfTarget, 8);
             ownerParamsCsv := pDec.text;
             ownerTplKind := tpl.selfTarget.slice(pDec.next, tpl.selfTarget.length());
-            ownerB: mut Map<String, String>;
+            mut ownerB: Map<String, String>;
             _oErr := generics.unifyKindMut(ownerParamsCsv, ownerTplKind, targetKind, mut ownerB);
             loop types.splitParamSpecs(tpl.genericParams) as sp {
                 if ownerB.has(sp.name) {
@@ -12461,7 +12461,7 @@ functions: List<FunctionInfo>, params: List<String>, inferMode: Bool
                 }
             }
         }
-        cleanB: mut Map<String, String>;
+        mut cleanB: Map<String, String>;
         loop types.splitParamSpecs(tpl.genericParams) as sp {
             if rawB.has(sp.name) {
                 boundVal := rawB.getOr(sp.name, "");
@@ -12542,7 +12542,7 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
             syntax.failAt(source, labelStart, prefix, "internal error: missing generic template " + tplKey);
         }
         tpl := generics.getTemplate(tplIdx);
-        recvBindings: mut Map<String, String>;
+        mut recvBindings: Map<String, String>;
         uErr := generics.unifyKindMut(tpl.genericParams, baseExpected, receiver.kind, mut recvBindings);
         if uErr =!= "" {
             syntax.failAt(source, labelStart, prefix, "operation " + opLabel + " requires " + types.displayKind(baseExpected) + ", got " + types.displayKind(receiver.kind));
@@ -12632,7 +12632,7 @@ parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mN
     _mutPos := mutStart;
     var curKind := entry.kind;
     var curCode := entry.runtime;
-    fieldPath: mut List<String> = [];
+    mut fieldPath: List<String> = [];
     var pos := afterRecv;
     loop true {
         dotPos := syntax.skipTrivia(source, pos, prefix);
@@ -13033,7 +13033,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
                     } else {
                         cCount := types.enumCaseCount(left.kind);
-                        vals: mut List<String> = [];
+                        mut vals: List<String> = [];
                         var ci := 0;
                         loop ci < cCount {
                             rawVal := types.enumCaseAt(left.kind, ci).valueCode;
@@ -13074,7 +13074,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     (ctx.isCFreshOwnedExpr(left.code) or left.code.startsWithAt(0, "/*@T:") or left.code.startsWithAt(0, "/*@CBLK:")) {
                         fb := cBorrowExprWithPostDrop(left.kind, left.code, false);
                         if fb.drop =!= "" {
-                            fbDrops: mut List<String> = [fb.drop];
+                            mut fbDrops: List<String> = [fb.drop];
                             valExpr := ctx.copiedValueCode(target, fieldKind, "(" + fb.expr + ")." + rProp);
                             cWrapExprWithPostDrops(fieldKind, valExpr, fbDrops)
                         } else {
@@ -13216,7 +13216,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 };
                 var hkCode := emitHookIndexReadCode(target, indexStart, left.kind, recvCode, getHook.runtime, kCode);
                 if target == ir.TARGET_C and not getHook.runtime.startsWithAt(0, "lite$") {
-                    hkDrops: mut List<String> = [];
+                    mut hkDrops: List<String> = [];
                     rb := cBorrowExprWithPostDrop(left.kind, recvCode, types.cParamIsConstPtr(left.kind));
                     if rb.drop =!= "" { mut hkDrops.pushBack(rb.drop); }
                     kb := cBorrowExprWithPostDrop(getHook.keyKind, kCode, types.cParamIsConstPtr(getHook.keyKind));
@@ -13271,7 +13271,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     recvCode := ctx.readOnlyArgWithSnapshot(target, left.kind, left.kind, left.code, readOnlyArgNeedsSnapshot(left.code, locals, emptyRangeMutRts, rngClosureHazard));
                     var rngCode := emitHookIndexReadCode(target, bounds.indexStart, left.kind, recvCode, rangeIdx.runtime, rangeExpr);
                     if target == ir.TARGET_C {
-                        rngDrops: mut List<String> = [];
+                        mut rngDrops: List<String> = [];
                         rb := cBorrowExprWithPostDrop(left.kind, recvCode, types.cParamIsConstPtr(left.kind));
                         if rb.drop =!= "" { mut rngDrops.pushBack(rb.drop); }
                         kb := cBorrowExprWithPostDrop(rangeKind, rangeExpr, types.cParamIsConstPtr(rangeKind));
@@ -13357,8 +13357,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         if not types.isFnKind(expected) {
                             syntax.failAt(source, errPos, prefix, "ambiguous reference to overloaded " + (if isOvTop { "type operation " } else { "function " }) + calleeDisplay + "; provide an explicit function type annotation");
                         }
-                        exactMatches: mut List<Int> = [];
-                        compatMatches: mut List<Int> = [];
+                        mut exactMatches: List<Int> = [];
+                        mut compatMatches: List<Int> = [];
                         loop ovCands as ci {
                             cInfo := functions[ci];
                             if cInfo.count < 0 or cInfo.runtime.startsWithAt(0, "$gen:") or cInfo.runtime.startsWithAt(0, "lite$") {
@@ -13459,7 +13459,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     tplKey := info.runtime.slice(5, info.runtime.length());
                     tpl := generics.getTemplate(generics.findTemplate(tplKey));
                     allParamSpecs := types.splitParamSpecs(tpl.genericParams);
-                    expMap: mut Map<String, String>;
+                    mut expMap: Map<String, String>;
                     if preGenBindings =!= "" {
                         loop generics.decodeBindings(preGenBindings) as preB {
                             if preB.kind =!= "" {
@@ -13467,7 +13467,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             }
                         }
                     }
-                    remainingSpecs: mut List<(name: String, kind: String)> = [];
+                    mut remainingSpecs: List<(name: String, kind: String)> = [];
                     loop allParamSpecs as sp {
                         if not expMap.has(sp.name) {
                             mut remainingSpecs.pushBack(sp);
@@ -13477,7 +13477,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     if tpCursor >= source.length() or source.at(tpCursor) == ">" {
                         syntax.failAt(source, tpCursor, prefix, "expected at least one type argument in call to " + calleeDisplay);
                     }
-                    explicitKinds: mut List<String> = [];
+                    mut explicitKinds: List<String> = [];
                     var tpIdx := 0;
                     loop true {
                         if tpIdx >= remainingSpecs.length() {
@@ -13557,9 +13557,9 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         wTag := types.cFnTag(fnValKind);
                         wName := "lt_wrap_" + info.runtime;
                         wRet := types.cValueType(info.result);
-                        wParamsBuf: mut tb.TextBuilder;
+                        mut wParamsBuf: tb.TextBuilder;
                         mut wParamsBuf.append("void *_env");
-                        wArgsBuf: mut tb.TextBuilder;
+                        mut wArgsBuf: tb.TextBuilder;
                         var wi := 0;
                         loop wi < info.count {
                             rawPK := types.paramKindOf(params[info.first + wi]);
@@ -13599,8 +13599,8 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     }
                 } else if info.runtime.startsWithAt(0, "lite$") {
                     var cursor := syntax.skipTrivia(source, postPosition + 1, prefix);
-                    argumentCodes: mut List<String> = [];
-                    hostDrops: mut List<String> = [];
+                    mut argumentCodes: List<String> = [];
+                    mut hostDrops: List<String> = [];
                     var callMarkers := "";
                     var argumentCount := 0;
                     size := source.length();
@@ -13853,9 +13853,9 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
             if not syntax.isComparison(nextOperator.text) {
                 left = firstPair;
             } else {
-                codes: mut List<String> = [left.code, right.code];
-                kinds: mut List<String> = [types.distinctBaseKind(left.kind), types.distinctBaseKind(right.kind)];
-                operators: mut List<String> = [operator.text];
+                mut codes: List<String> = [left.code, right.code];
+                mut kinds: List<String> = [types.distinctBaseKind(left.kind), types.distinctBaseKind(right.kind)];
+                mut operators: List<String> = [operator.text];
                 var count := 1;
                 var previous := right;
                 var end := right.next;
@@ -14056,7 +14056,7 @@ pub parsePartialAssignIf := fn(target: String, source: String, position: Int, pr
         inner = syntax.skipTrivia(source, inner + 1, prefix);
     }
     if not source.wordAt(inner, "if") { return []; }
-    result: mut List<Item> = [];
+    mut result: List<Item> = [];
     var cursor := syntax.skipTrivia(source, inner + 2, prefix);
     var isFirst := true;
     loop true {
@@ -14195,10 +14195,10 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
     } else {
         ""
     };
-    seenRec: mut List<String> = [aliasDepth.toText() + ":" + recName];
-    fieldNames: mut List<String> = [];
-    defaultKeys: mut List<String> = [];
-    defaultCodes: mut List<String> = [];
+    mut seenRec: List<String> = [aliasDepth.toText() + ":" + recName];
+    mut fieldNames: List<String> = [];
+    mut defaultKeys: List<String> = [];
+    mut defaultCodes: List<String> = [];
     var markers := "";
     var cursor := bracePos + 1;
     loop true {

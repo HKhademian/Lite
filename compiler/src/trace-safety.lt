@@ -69,8 +69,8 @@ pub appendPipeBag := fn(bag: String, tok: String): String {
 pub mergePipeBags := fn(base: String, extra: String): String {
     if extra == "" { return base; }
     if base == "" { return extra; }
-    added: mut tb.TextBuilder;
-    seenAdded: mut Set<String>;
+    mut added: tb.TextBuilder;
+    mut seenAdded: Set<String>;
     len := extra.length();
     var pos := 0;
     loop pos < len {
@@ -311,9 +311,9 @@ pub isIndirectUserCallParens := fn(code: String, openPos: Int, closeEnd: Int): B
 /** Strips uninvoked `(function ...)` bodies into `"0"` while keeping immediately-invoked `fn` literals and call arguments intact. */
 pub stripDeferredFnBodies := fn(exprCode: String): (code: String, pairsText: String) {
     len := exprCode.length();
-    outParts: mut List<String> = [];
-    pairParts: mut List<String> = [];
-    parenIsUserCall: mut List<Int> = [];
+    mut outParts: List<String> = [];
+    mut pairParts: List<String> = [];
+    mut parenIsUserCall: List<Int> = [];
     var stackCount := 0;
     var indirectArgOpenBag := "";
     var callDepth := 0;
@@ -566,7 +566,7 @@ localDeclBag: String, writtenOuterBag: String): String {
     var outBag := "";
     if rawBag == "" { return outBag; }
     var seenPairs := "";
-    innerQueue: mut List<String> = [];
+    mut innerQueue: List<String> = [];
     var qCount := 0;
     var pos := 0;
     len := rawBag.length();
@@ -879,7 +879,7 @@ extractExprDepsPair := fn(exprCode: String, skipLhsDecls: Bool): (allBag: String
     if exprCode == "" { return (allBag = "", readBag = ""); }
     allBag := extractCodeRuntimeTokens(exprCode, skipLhsDecls);
     var readBag := "";
-    outerParts: mut List<String> = [];
+    mut outerParts: List<String> = [];
     len := exprCode.length();
     var sliceStart := 0;
     var pos := 0;
@@ -928,7 +928,7 @@ pub computeCallableRhsDeps := fn(rhsCode: String): String {
 /** Propagates outer `equals` and `List.push`/`unshift` updates from emitted block/branch/loop JS `code` onto active `locals`. */
 pub mergeOuterCallableUpdatesFromCode := fn(locals: List<Local>, code: String): List<Local> {
     if code == "" or not sym.hasCallableLocal(locals) { return locals; }
-    nextLocals: mut List<Local> = locals;
+    mut nextLocals: List<Local> = locals;
     stripped := stripDeferredFnBodies(code);
     if stripped.pairsText =!= "" {
         pairsLen := stripped.pairsText.length();
@@ -1110,7 +1110,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
     var totalItems := 0;
     loop items { totalItems = totalItems + 1; }
 
-    allQueue: mut List<String> = [];
+    mut allQueue: List<String> = [];
     var allVisitedBag := "";
     var allCount := 0;
     var aSeedPos := 0;
@@ -1182,8 +1182,8 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                     fnTarget := if curTok.startsWithAt(0, "lt_fn_") { ir.TARGET_C } else { ir.TARGET_TS };
                     paramBag := parseParamRuntimesList(fnTarget, items[startItem].textValue);
                     var scopeDepth := 0;
-                    localShadowRuntimes: mut List<String> = [];
-                    localShadowDepths: mut List<Int> = [];
+                    mut localShadowRuntimes: List<String> = [];
+                    mut localShadowDepths: List<Int> = [];
                     var itIdx := startItem + 1;
                     loop itIdx < totalItems {
                         it := items[itIdx];
@@ -1277,7 +1277,7 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
         }
     }
 
-    readQueue: mut List<String> = [];
+    mut readQueue: List<String> = [];
     var readVisitedBag := "";
     var readCount := 0;
     var rSeedPos := 0;
@@ -1337,8 +1337,8 @@ locals: List<Local>, functions: List<FunctionInfo>, futureValues: List<FutureVal
                     paramBag := parseParamRuntimesList(fnTarget, items[startItem].textValue);
                     var bodyBranchDepth := 0;
                     var scopeDepth := 0;
-                    localShadowRuntimes: mut List<String> = [];
-                    localShadowDepths: mut List<Int> = [];
+                    mut localShadowRuntimes: List<String> = [];
+                    mut localShadowDepths: List<Int> = [];
                     var defWrittenBag := "";
                     var itIdx := startItem + 1;
                     loop itIdx < totalItems {
@@ -1476,7 +1476,7 @@ minExitedLexDepth: Int, locals: List<Local>): Unit {
     allBag := fnDepsAll(deps);
     readBag := fnDepsRead(deps);
 
-    allQ: mut List<String> = [];
+    mut allQ: List<String> = [];
     var allVisited := "";
     var allCount := 0;
     var aPos := 0;
@@ -1553,7 +1553,7 @@ minExitedLexDepth: Int, locals: List<Local>): Unit {
         }
     }
 
-    readQ: mut List<String> = [];
+    mut readQ: List<String> = [];
     var readVisited := "";
     var readCount := 0;
     var rPos := 0;

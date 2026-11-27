@@ -49,7 +49,7 @@ io := import "core/io";
 
 fixed: [Int; 3] = [10, 20, 30];
 [first, _, third] := fixed;
-queue: mut List<Int> = [2, 3];
+mut queue: List<Int> = [2, 3];
 mut queue.pushFront(1);
 mut queue.pushBack(4);
 saved: List<Int> = queue;
@@ -70,7 +70,7 @@ Store typed key-value entries with `Map<K, V>` (scalar or nominal `enum` keys, a
 ```lite
 io := import "core/io";
 
-scores: mut Map<String, Int> = ["alice" = 10];
+mut scores: Map<String, Int> = ["alice" = 10];
 scores["alice"] += 8;
 mut scores.set("bob", 25);
 io.outputLine(scores["alice"], scores.getOr("carol", 0), scores.size(), scores.isEmpty());
@@ -130,7 +130,7 @@ Store unique scalar or nominal `enum` values with `Set<T>`. Sets zero-initialize
 io := import "core/io";
 set := import "core/set";
 
-tags: mut Set<String>;
+mut tags: Set<String>;
 set.add(mut tags, "lite");
 set.add(mut tags, "typed");
 set.add(mut tags, "lite");

@@ -15,7 +15,7 @@ pub escapeSiteHtml := fn(raw: String): String {
         return raw;
     }
     size := raw.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     loop true {
         hit := text.earliestIndex(nextAmp, text.earliestIndex(nextLt, text.earliestIndex(nextGt, text.earliestIndex(nextQuot, nextApos))));
@@ -45,7 +45,7 @@ pub escapeSiteHtml := fn(raw: String): String {
 
 slugifyCommandName := fn(name: String): String {
     lowered := name.toLowerAscii();
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var prevDash := false;
     var i := 0;
     loop i < lowered.length() {
@@ -125,9 +125,9 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     "Exit 0 on successful report or archive creation."
     ];
 
-    cards: mut List<String> = [];
-    navItems: mut List<String> = [];
-    searchEntries: mut List<String> = [];
+    mut cards: List<String> = [];
+    mut navItems: List<String> = [];
+    mut searchEntries: List<String> = [];
     var i := 0;
     n := cmdNames.length();
     loop i < n {

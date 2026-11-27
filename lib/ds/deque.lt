@@ -39,7 +39,7 @@ pub TextDeque := alias Deque<String>;
 /** Creates an empty generic `Deque<T>` with capacity `>= 1`. */
 pub Deque.create := fn<T: Type>(capacity: Int): Self<T> {
     cap := if capacity < 1 { 1 } else { capacity };
-    buf: mut List<T> = [];
+    mut buf: List<T> = [];
     z: T;
     loop 0..cap {
         mut buf.pushBack(z);
@@ -71,7 +71,7 @@ pub Deque.isFull := fn<T: Type>(d: Self<T>): Bool {
 pub Deque.pushBack := fn<T: Type>(d: mut Self<T>, value: T): Bool {
     if d.count >= d.cap { return false; }
     tail := (d.head + d.count) % d.cap;
-    buf: mut List<T> = d.data;
+    mut buf: List<T> = d.data;
     mut buf.setAt(tail, value);
     d.data = buf;
     d.count = d.count + 1;
@@ -82,7 +82,7 @@ pub Deque.pushBack := fn<T: Type>(d: mut Self<T>, value: T): Bool {
 pub Deque.pushFront := fn<T: Type>(d: mut Self<T>, value: T): Bool {
     if d.count >= d.cap { return false; }
     nextHead := (d.head + d.cap - 1) % d.cap;
-    buf: mut List<T> = d.data;
+    mut buf: List<T> = d.data;
     mut buf.setAt(nextHead, value);
     d.data = buf;
     d.head = nextHead;
@@ -96,7 +96,7 @@ pub Deque.popBack := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
     pos := (d.head + d.count - 1) % d.cap;
     val := d.data[pos];
     z: T;
-    buf: mut List<T> = d.data;
+    mut buf: List<T> = d.data;
     mut buf.setAt(pos, z);
     d.data = buf;
     d.count = d.count - 1;
@@ -108,7 +108,7 @@ pub Deque.popFront := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
     if d.count <= 0 { return .Empty; }
     val := d.data[d.head];
     z: T;
-    buf: mut List<T> = d.data;
+    mut buf: List<T> = d.data;
     mut buf.setAt(d.head, z);
     d.data = buf;
     d.head = (d.head + 1) % d.cap;
@@ -133,7 +133,7 @@ pub Deque.get := fn<T: Type>(d: Self<T>, index: Int): DequeItem<T> {
 
 /** Clears `d` and resets all slots to their zero value. */
 pub Deque.clear := fn<T: Type>(d: mut Self<T>): Unit {
-    buf: mut List<T> = d.data;
+    mut buf: List<T> = d.data;
     z: T;
     loop 0..d.cap as i {
         mut buf.setAt(i, z);

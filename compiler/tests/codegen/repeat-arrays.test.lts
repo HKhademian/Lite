@@ -61,7 +61,7 @@ repeatSrc :=
 "\n" +
 "var pts := [Pt { x = 1, items = [10, 20] }; 3];\n" +
 "mut p0 := pts[0];\n" +
-"p0Items: mut List<Int> = p0.items;\n" +
+"mut p0Items: List<Int> = p0.items;\n" +
 "mut p0Items.pushBack(99);\n" +
 "p0.items = p0Items;\n" +
 "p0.x = 77;\n" +

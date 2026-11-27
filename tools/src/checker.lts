@@ -10,9 +10,9 @@ cases := import "util/cases";
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "checker", "check");
-    args: mut List<String> = rawArgs;
-    builtinOpts: mut List<String> = [];
-    positional: mut List<String> = [];
+    mut args: List<String> = rawArgs;
+    mut builtinOpts: List<String> = [];
+    mut positional: List<String> = [];
     loop args.length() > 0 {
         arg := mut args.popFront();
         if arg == "--" {
@@ -58,7 +58,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.errorLine("lite check: " + sel.error);
         io.exit(1);
     }
-    compArgs: mut List<String> = [sel.path];
+    mut compArgs: List<String> = [sel.path];
     loop builtinOpts as opt {
         mut compArgs.pushBack(opt);
     }

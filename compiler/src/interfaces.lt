@@ -43,12 +43,12 @@ pub ImplDef := record {
     declModule: String;
 };
 
-interfaceDefs: mut List<InterfaceDef> = [];
-interfaceByKey: mut Map<String, Int>;
+mut interfaceDefs: List<InterfaceDef> = [];
+mut interfaceByKey: Map<String, Int>;
 
-implDefs: mut List<ImplDef> = [];
-implByKey: mut Map<String, Int>;
-implIdxsByOwner: mut Map<String, List<Int>>;
+mut implDefs: List<ImplDef> = [];
+mut implByKey: Map<String, Int>;
+mut implIdxsByOwner: Map<String, List<Int>>;
 
 /** Resets all interface and conformance registries before a fresh compilation. */
 pub resetAll := fn(): Unit {
@@ -93,7 +93,7 @@ pub getImpl := fn(idx: Int): ImplDef {
 
 /** Returns registered `ImplDef` indices matching `targetOwnerKey` (plus `"*"` wildcard owner targets). */
 pub implIndicesForOwner := fn(ownerKey: String): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     exact := implIdxsByOwner.getOr(ownerKey, []);
     loop exact as idx { mut out.pushBack(idx); }
     wild := implIdxsByOwner.getOr("*", []);
@@ -119,7 +119,7 @@ pub registerImpl := fn(def: ImplDef): Unit {
     mut implDefs.pushBack(def);
     mut implByKey.set(def.key, idx);
     ownerBucket := if def.targetOwnerKey =!= "" { def.targetOwnerKey } else { "*" };
-    var bucket: mut List<Int> = implIdxsByOwner.getOr(ownerBucket, []);
+    var mut bucket: List<Int> = implIdxsByOwner.getOr(ownerBucket, []);
     mut bucket.pushBack(idx);
     mut implIdxsByOwner.set(ownerBucket, bucket);
 };
@@ -150,7 +150,7 @@ parseDec := fn(text: String, start: Int, end: Int): Int {
 
 /** Encodes `parts` using unambiguous `<count>;<len>:<bytes>...` framing. */
 encodeParts := fn(parts: List<String>): String {
-    buf: mut tb.TextBuilder;
+    mut buf: tb.TextBuilder;
     mut buf.append(parts.length().toText());
     mut buf.append(";");
     loop parts as p {
@@ -163,7 +163,7 @@ encodeParts := fn(parts: List<String>): String {
 
 /** Decodes `<count>;<len>:<bytes>...` produced by `encodeParts`. */
 decodeParts := fn(raw: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     len := raw.length();
     semi := raw.indexOf(";", 0);
     if semi <= 0 { return out; }
@@ -185,7 +185,7 @@ decodeParts := fn(raw: String): List<String> {
 
 /** Encodes `InterfaceDef` into an opaque string prefixed with `"@ifacedef:"`. */
 pub encodeInterfaceMeta := fn(def: InterfaceDef): String {
-    mParts: mut List<String> = [];
+    mut mParts: List<String> = [];
     loop def.methods as m {
         mut mParts.pushBack(encodeParts([
             m.name,
@@ -217,7 +217,7 @@ pub decodeInterfaceMeta := fn(raw: String): (ok: Bool, def: InterfaceDef) {
     top := decodeParts(raw.slice(10, raw.length()));
     if top.length() < 8 { return (ok = false, def = emptyDef); }
     rawMethods := decodeParts(top[7]);
-    methods: mut List<InterfaceMethod> = [];
+    mut methods: List<InterfaceMethod> = [];
     loop rawMethods as rm {
         mp := decodeParts(rm);
         if mp.length() < 5 { continue; }
@@ -243,7 +243,7 @@ pub decodeInterfaceMeta := fn(raw: String): (ok: Bool, def: InterfaceDef) {
 
 /** Encodes `ImplDef` into `"@impldef:..."` for `ITEM_KIND_PUBLIC_IMPL`. */
 pub encodeImplMeta := fn(def: ImplDef): String {
-    mParts: mut List<String> = [];
+    mut mParts: List<String> = [];
     loop def.methods as m {
         mut mParts.pushBack(encodeParts([
             m.name,
@@ -274,7 +274,7 @@ pub decodeImplMeta := fn(raw: String): (ok: Bool, def: ImplDef) {
     top := decodeParts(raw.slice(9, raw.length()));
     if top.length() < 9 { return (ok = false, def = emptyDef); }
     rawMethods := decodeParts(top[8]);
-    methods: mut List<ImplMethodBinding> = [];
+    mut methods: List<ImplMethodBinding> = [];
     loop rawMethods as rm {
         mp := decodeParts(rm);
         if mp.length() < 3 { continue; }

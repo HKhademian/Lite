@@ -27,8 +27,8 @@ rtOkSrc :=
 "fortyTwo := 42;\n" +
 "io.outputLine(2 + 3, 2 - 3, -6 * 7, negSeven / two, negSeven % two, -fortyTwo, integer.intMin);\n" +
 "io.outputLine(\"a🙂\".length(), \"a🙂\".at(1), \"a🙂b\".slice(1, 2));\n" +
-"src: mut List<Int> = [1, 2];\n" +
-"copy: mut List<Int> = src;\n" +
+"mut src: List<Int> = [1, 2];\n" +
+"mut copy: List<Int> = src;\n" +
 "mut copy.pushBack(3);\n" +
 "io.outputLine(src.length(), copy.length());\n";
 compilerTest.assertCompileRunTs(root, tsComp, "runtime helpers ok", rtOkSrc, "5 -1 -42 -3 -1 -42 -9223372036854775808\n2 🙂 🙂\n2 3\n");
@@ -74,8 +74,8 @@ loop tbi < 4 {
 
 /* generated text helpers preserve Unicode values after many distinct cached inputs */
 uOriginal := "A🙂éسلام";
-probeLines: mut List<String> = ["io := import \"core/io\";", "original := \"" + uOriginal + "\";", "io.outputLine(original.length(), original.at(1), original.slice(2, 4));"];
-expLines: mut List<String> = ["8 🙂 é"];
+mut probeLines: List<String> = ["io := import \"core/io\";", "original := \"" + uOriginal + "\";", "io.outputLine(original.length(), original.at(1), original.slice(2, 4));"];
+mut expLines: List<String> = ["8 🙂 é"];
 var ui := 0;
 loop ui < 32 {
     idxStr := ui.toText();

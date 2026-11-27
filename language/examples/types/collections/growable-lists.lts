@@ -1,6 +1,6 @@
 io := import "core/io";
 
-values: mut List<Int> = [1, 2];
+mut values: List<Int> = [1, 2];
 saved := values;
 mut values.pushFront(0);
 mut values.pushBack(3);

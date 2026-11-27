@@ -11,8 +11,8 @@ pub SparseSet := record {
 /** Creates a sparse set supporting integer IDs in `0..capacity-1`. */
 pub SparseSet.create := fn(capacity: Int): Self {
     cap := if capacity < 1 { 1 } else { capacity };
-    sp: mut List<Int> = [];
-    dn: mut List<Int> = [];
+    mut sp: List<Int> = [];
+    mut dn: List<Int> = [];
     loop 0..cap {
         mut sp.pushBack(-1);
         mut dn.pushBack(0);
@@ -31,8 +31,8 @@ pub SparseSet.has := fn(s: Self, value: Int): Bool {
 pub SparseSet.insert := fn(s: mut Self, value: Int): Bool {
     if value < 0 or value >= s.cap or s.has(value) { return false; }
     cnt := s.liveCount;
-    sp: mut List<Int> = s.sparse;
-    dn: mut List<Int> = s.dense;
+    mut sp: List<Int> = s.sparse;
+    mut dn: List<Int> = s.dense;
     mut sp.setAt(value, cnt);
     mut dn.setAt(cnt, value);
     s.sparse = sp;
@@ -47,8 +47,8 @@ pub SparseSet.remove := fn(s: mut Self, value: Int): Bool {
     denseIdx := s.sparse[value];
     lastIdx := s.liveCount - 1;
     lastVal := s.dense[lastIdx];
-    sp: mut List<Int> = s.sparse;
-    dn: mut List<Int> = s.dense;
+    mut sp: List<Int> = s.sparse;
+    mut dn: List<Int> = s.dense;
     mut dn.setAt(denseIdx, lastVal);
     mut sp.setAt(lastVal, denseIdx);
     s.sparse = sp;

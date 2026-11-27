@@ -61,20 +61,20 @@ pub GenericInstance := alias (
     compiled: Bool
 );
 
-templates: mut List<GenericTemplate> = [];
-templateByKey: mut Map<String, Int>;
+mut templates: List<GenericTemplate> = [];
+mut templateByKey: Map<String, Int>;
 
-envRanges: mut List<ModuleEnvRange> = [];
-moduleEnvByKey: mut Map<String, Int>;
-envLocalsPool: mut List<Local> = [];
-envFunctionsPool: mut List<FunctionInfo> = [];
-envFnParamsPool: mut List<String> = [];
-envAliasesPool: mut List<AliasDecl> = [];
-envFuturesPool: mut List<FutureValue> = [];
-envAssignedPool: mut List<String> = [];
+mut envRanges: List<ModuleEnvRange> = [];
+mut moduleEnvByKey: Map<String, Int>;
+mut envLocalsPool: List<Local> = [];
+mut envFunctionsPool: List<FunctionInfo> = [];
+mut envFnParamsPool: List<String> = [];
+mut envAliasesPool: List<AliasDecl> = [];
+mut envFuturesPool: List<FutureValue> = [];
+mut envAssignedPool: List<String> = [];
 
-instances: mut List<GenericInstance> = [];
-instanceByKey: mut Map<String, Int>;
+mut instances: List<GenericInstance> = [];
+mut instanceByKey: Map<String, Int>;
 
 /** Resets all generic template, module-environment, and monomorphization state before a fresh compilation. */
 pub resetAll := fn(): Unit {
@@ -190,7 +190,7 @@ pub getEnvAssigned := fn(poolIdx: Int): String { envAssignedPool[poolIdx] };
 
 /** Splits a `|`-delimited parameter encoding into up to `count` entries (ignoring any trailing `$ctx=` entry). */
 pub splitPipeEntries := fn(encoded: String, count: Int): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     if count <= 0 { return out; }
     bare := contexts.stripCtxFromParams(encoded);
     if bare == "" { return out; }
@@ -296,7 +296,7 @@ mangleOneKind := fn(kind: String): String {
 
 /** Encodes `bindings` in `genericParams` declaration order as `T=Int|U=String`. */
 pub encodeBindings := fn(genericParams: String, bindings: Map<String, String>): String {
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     loop splitGenericParams(genericParams) as p {
         mut parts.pushBack(p + "=" + bindings.getOr(p, ""));
     }
@@ -305,7 +305,7 @@ pub encodeBindings := fn(genericParams: String, bindings: Map<String, String>): 
 
 /** Encodes only currently bound entries of `bindings` in `genericParams` order as `T=Int`. */
 pub encodePartialBindings := fn(genericParams: String, bindings: Map<String, String>): String {
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     loop splitGenericParams(genericParams) as p {
         if bindings.has(p) {
             mut parts.pushBack(p + "=" + bindings.getOr(p, ""));
@@ -316,7 +316,7 @@ pub encodePartialBindings := fn(genericParams: String, bindings: Map<String, Str
 
 /** Decodes `"T=Int|U=String"` into a list of `(name, kind)` pairs. */
 pub decodeBindings := fn(bindingsEncoded: String): List<(name: String, kind: String)> {
-    out: mut List<(name: String, kind: String)> = [];
+    mut out: List<(name: String, kind: String)> = [];
     size := bindingsEncoded.length();
     if size == 0 { return out; }
     var start := 0;
@@ -336,7 +336,7 @@ pub decodeBindings := fn(bindingsEncoded: String): List<(name: String, kind: Str
 
 /** Builds a TS/C11-safe deterministic suffix for encoded generic bindings. */
 mangleBindings := fn(bindingsEncoded: String): String {
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     loop decodeBindings(bindingsEncoded) as b {
         mut parts.pushBack(mangleOneKind(b.kind));
     }
@@ -509,7 +509,7 @@ pub substKindForExpected := fn(genericParams: String, pattern: String, bindings:
     }
     if types.isFnKind(pattern) {
         n := types.fnParamCount(pattern);
-        parts: mut List<String> = [];
+        mut parts: List<String> = [];
         var i := 0;
         loop i < n {
             comp := types.fnParamComponent(pattern, i);

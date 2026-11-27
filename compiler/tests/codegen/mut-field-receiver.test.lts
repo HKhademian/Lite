@@ -45,7 +45,7 @@ src :=
 "    mut b.inner.counter.bump(step)\n" +
 "};\n" +
 "\n" +
-"var b: mut Box;\n" +
+"var mut b: Box;\n" +
 "mut b.chunks.pushBack(\"a\");\n" +
 "mut b.chunks.pushBack(\"b\");\n" +
 "mut b.chunks.setAt(1, \"B\");\n" +
@@ -102,21 +102,21 @@ compilerTest.assertCompileErrorContains(root, cComp, "var non-mut root record re
 
 missingMutSrc :=
 "Box := record { chunks: List<String>; };\n" +
-"b: mut Box;\n" +
+"mut b: Box;\n" +
 "b.chunks.pushBack(\"x\");\n";
 compilerTest.assertCompileErrorContains(root, tsComp, "missing mut on field dot call (ts)", missingMutSrc, "cannot call mutating operation pushBack on read-only value");
 compilerTest.assertCompileErrorContains(root, cComp, "missing mut on field dot call (c)", missingMutSrc, "cannot call mutating operation pushBack on read-only value");
 
 nonMutOpSrc :=
 "Box := record { chunks: List<String>; };\n" +
-"b: mut Box;\n" +
+"mut b: Box;\n" +
 "_n := mut b.chunks.length();\n";
 compilerTest.assertCompileErrorContains(root, tsComp, "mut on non-mutating field op (ts)", nonMutOpSrc, "does not mutate its receiver; remove mut");
 compilerTest.assertCompileErrorContains(root, cComp, "mut on non-mutating field op (c)", nonMutOpSrc, "does not mutate its receiver; remove mut");
 
 badFieldSrc :=
 "Box := record { chunks: List<String>; };\n" +
-"b: mut Box;\n" +
+"mut b: Box;\n" +
 "mut b.nope.pushBack(\"x\");\n";
 compilerTest.assertCompileErrorContains(root, tsComp, "missing field on mut path (ts)", badFieldSrc, "type Box has no field nope");
 compilerTest.assertCompileErrorContains(root, cComp, "missing field on mut path (c)", badFieldSrc, "type Box has no field nope");

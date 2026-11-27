@@ -18,7 +18,7 @@ ccInfo := compilerTest.probeCc();
 src :=
 "io := import \"core/io\";\n" +
 "\n" +
-"scores: mut Map<String, Int> = [\"alice\" = 10];\n" +
+"mut scores: Map<String, Int> = [\"alice\" = 10];\n" +
 "mut scores.set(\"bob\", 25);\n" +
 "scores[\"alice\"] += 8;\n" +
 "scores[\"carol\"] = 40;\n" +
@@ -34,7 +34,7 @@ src :=
 "mut scores.clear();\n" +
 "io.outputLine(\"cleared:\", scores.size(), scores.isEmpty());\n" +
 "\n" +
-"tags: mut Set<String> = [\"lite\", \"typed\", \"lite\"];\n" +
+"mut tags: Set<String> = [\"lite\", \"typed\", \"lite\"];\n" +
 "mut tags.add(\"c11\");\n" +
 "snapS: Set<String> = tags;\n" +
 "sRem := mut tags.remove(\"lite\");\n" +
@@ -61,19 +61,19 @@ if ccInfo.available {
 
     tombSrc := "io := import \"core/io\";\n" +
         "text := import \"core/text\";\n" +
-        "m: mut Map<String, Int>;\n" +
+        "mut m: Map<String, Int>;\n" +
         "mut m.set(\"a\", 1); mut m.set(\"b\", 2); mut m.set(\"c\", 3); mut m.set(\"d\", 4);\n" +
         "snap := m;\n" +
         "_r1 := mut m.remove(\"a\"); _r2 := mut m.remove(\"c\");\n" +
         "mut m.set(\"a\", 10);\n" +
         "var sum := 0; loop m as e { sum += e.value; }\n" +
         "io.outputLine(m.keys().join(\",\"), snap.size(), sum);\n" +
-        "s: mut Set<String>;\n" +
+        "mut s: Set<String>;\n" +
         "mut s.add(\"x\"); mut s.add(\"y\"); mut s.add(\"z\");\n" +
         "_rs := mut s.remove(\"x\"); mut s.add(\"x\");\n" +
-        "lv: mut List<String> = []; loop s as v { mut lv.pushBack(v); }\n" +
+        "mut lv: List<String> = []; loop s as v { mut lv.pushBack(v); }\n" +
         "io.outputLine(lv.join(\",\"));\n" +
-        "bigM: mut Map<Int, Int>; bigS: mut Set<Int>;\n" +
+        "mut bigM: Map<Int, Int>; mut bigS: Set<Int>;\n" +
         "loop 0..5000 as i { mut bigM.set(i, i * 2); mut bigS.add(i); }\n" +
         "loop 0..4995 as i { _dm := mut bigM.remove(i); _ds := mut bigS.remove(i); }\n" +
         "io.outputLine(bigM.size(), bigS.size(), bigM.getOr(4999, -1), bigS.has(4999), bigS.has(100));\n";

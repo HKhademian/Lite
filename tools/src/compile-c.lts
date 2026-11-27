@@ -13,9 +13,9 @@ usageExit := fn(): Unit {
 run := fn(rawArgs: List<String>): Unit {
     project.handleNamedVersionFlag(rawArgs, "compiler", "lite-compile-c");
 
-    args: mut List<String> = rawArgs;
-    forwardArgs: mut List<String> = [];
-    positional: mut List<String> = [];
+    mut args: List<String> = rawArgs;
+    mut forwardArgs: List<String> = [];
+    mut positional: List<String> = [];
     var seenTarget := false;
     loop args.length() > 0 {
         arg := mut args.popFront();

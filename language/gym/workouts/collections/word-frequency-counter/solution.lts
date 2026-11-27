@@ -2,7 +2,7 @@ io := import "core/io";
 
 n := io.inputInt();
 _eol := io.inputLine();
-counts: mut Map<String, Int>;
+mut counts: Map<String, Int>;
 var i := 0;
 loop i < n {
     word := io.inputLine();

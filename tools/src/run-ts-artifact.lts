@@ -9,7 +9,7 @@ project := import "util/project";
 cases := import "util/cases";
 
 splitNonEmptyCsv := fn(raw: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     size := raw.length();
     if size == 0 { return out; }
     var start := 0;
@@ -34,7 +34,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(1);
     }
 
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--" {
         _sep := mut args.popFront();
     }
@@ -153,7 +153,7 @@ run := fn(rawArgs: List<String>): Unit {
 
     emptyBytes: List<Int> = [];
     stdinBytes := if hasSrc { fs.readBytes(path.resolve(cwd, srcVal)) } else { emptyBytes };
-    cmdArgs: mut List<String> = [runnerPath];
+    mut cmdArgs: List<String> = [runnerPath];
     loop extraArgs as a {
         mut cmdArgs.pushBack(a);
     }

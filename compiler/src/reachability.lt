@@ -139,10 +139,10 @@ scanCodeCallsSet := fn(code: String, seen: mut Set<String>, userFnsOnly: Bool): 
 
 /** Collects distinct target or user-function call tokens into a `|`-delimited string, skipping quoted text. */
 scanCodeCalls := fn(code: String, existing: String, userFnsOnly: Bool): String {
-    found: mut Set<String>;
+    mut found: Set<String>;
     scanCodeCallsSet(code, mut found, userFnsOnly);
     if found.size() == 0 { return existing; }
-    added: mut tb.TextBuilder;
+    mut added: tb.TextBuilder;
     loop found as tok {
         entry := tok + "|";
         if existing.indexOf("|" + entry, 0) < 0 {
@@ -164,7 +164,7 @@ pub userFunctionCalls := fn(code: String, existing: String): String {
 
 /** Collects a program's target helper call names once as an O(1)-lookup `Set<String>`. */
 pub targetHelperCallSet := fn(items: Items): Set<String> {
-    calls: mut Set<String>;
+    mut calls: Set<String>;
     loop items as item { scanCodeCallsSet(item.code, mut calls, false); }
     calls
 };
@@ -181,7 +181,7 @@ pub hasHelperToken := fn(calls: String, needle: String): Bool {
 
 /** Creates an empty token set. */
 pub emptyTokenBuckets := fn(): TokenBuckets {
-    empty: mut Set<String>;
+    mut empty: Set<String>;
     empty
 };
 
@@ -197,7 +197,7 @@ pub tokenBucketAdd := fn(s: mut TokenBuckets, needle: String): Unit {
 
 /** Serializes all tokens in `s` into one `|`-delimited string. */
 pub flattenTokenBuckets := fn(s: TokenBuckets): String {
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append("|");
     loop s as tok {
         mut out.append(tok);
@@ -264,9 +264,9 @@ codeReachableTokensQueue := fn(code: String, tokens: mut TokenBuckets, queue: mu
 
 /** Propagates reachable tokens through top-level functions and pure globals in `graph` via an O(V + E) single-index BFS worklist. */
 pub closeReachableGraph := fn(graph: Items, reachable: mut TokenBuckets, scanned: mut TokenBuckets): Unit {
-    fnStarts: mut Map<String, Int>;
-    fnEnds: mut Map<String, Int>;
-    pureDeclIdx: mut Map<String, Int>;
+    mut fnStarts: Map<String, Int>;
+    mut fnEnds: Map<String, Int>;
+    mut pureDeclIdx: Map<String, Int>;
     n := graph.length();
     var fnDepth := 0;
     var blockDepth := 0;
@@ -318,7 +318,7 @@ pub closeReachableGraph := fn(graph: Items, reachable: mut TokenBuckets, scanned
         }
         i = i + 1;
     }
-    queue: mut List<String> = [];
+    mut queue: List<String> = [];
     loop reachable as tok {
         if not scanned.has(tok) {
             mut queue.pushBack(tok);
@@ -561,7 +561,7 @@ pub pruneBlockStatements := fn(stmts: List<String>, owners: List<String>, deps: 
     var hasPrunable := false;
     loop stmts { total = total + 1; }
     if total == 0 {
-        emptyOut: mut List<String> = [];
+        mut emptyOut: List<String> = [];
         return emptyOut;
     }
     var checkIdx := 0;
@@ -574,7 +574,7 @@ pub pruneBlockStatements := fn(stmts: List<String>, owners: List<String>, deps: 
     }
     if not hasPrunable { return stmts; }
 
-    reachable: mut Set<String>;
+    mut reachable: Set<String>;
     if hasTail {
         codeReachableTokensSet(tailCode, mut reachable);
     }
@@ -586,7 +586,7 @@ pub pruneBlockStatements := fn(stmts: List<String>, owners: List<String>, deps: 
         seedIdx = seedIdx + 1;
     }
 
-    scannedIdxs: mut Set<Int>;
+    mut scannedIdxs: Set<Int>;
     loop true {
         beforeCount := reachable.size();
         var scanIdx := 0;
@@ -603,7 +603,7 @@ pub pruneBlockStatements := fn(stmts: List<String>, owners: List<String>, deps: 
         if reachable.size() == beforeCount { break; }
     }
 
-    kept: mut List<String> = [];
+    mut kept: List<String> = [];
     var outIdx := 0;
     loop outIdx < total {
         ow := owners[outIdx];
@@ -647,7 +647,7 @@ findLocalDecl := fn(runtime: String, startBlockId: Int, declHead: Map<String, In
 
 /** Collects declaration item indices referenced by `code` at `startBlockId`. */
 collectLocalDeclDeps := fn(code: String, startBlockId: Int, declCount: Int, declHead: Map<String, Int>, declBlockIds: List<Int>, parentBlockIds: List<Int>, declPrev: List<Int>, declIdxs: List<Int>): List<Int> {
-    found: mut List<Int> = [];
+    mut found: List<Int> = [];
     if declCount <= 0 or startBlockId <= 0 or code == "" { return found; }
     var nextLite := code.indexOf("lite", 0);
     var nextLt := code.indexOf("lt_", 0);
@@ -702,18 +702,18 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     loop items { total = total + 1; }
     if total == 0 { return items; }
     var hasPrunable := false;
-    blockStack: mut List<Int> = [0];
+    mut blockStack: List<Int> = [0];
     var stackLen := 1;
-    parentBlockIds: mut List<Int> = [-1];
+    mut parentBlockIds: List<Int> = [-1];
     var nextBlockId := 1;
-    declHead: mut Map<String, Int>;
-    declPrev: mut List<Int> = [];
-    declBlockIds: mut List<Int> = [];
-    declIdxs: mut List<Int> = [];
-    declPrunables: mut List<Bool> = [];
+    mut declHead: Map<String, Int>;
+    mut declPrev: List<Int> = [];
+    mut declBlockIds: List<Int> = [];
+    mut declIdxs: List<Int> = [];
+    mut declPrunables: List<Bool> = [];
     var declCount := 0;
-    itemEvalBlocks: mut List<Int> = [];
-    itemOwners: mut List<Int> = [];
+    mut itemEvalBlocks: List<Int> = [];
+    mut itemOwners: List<Int> = [];
     var idx := 0;
     loop idx < total {
         item := items[idx];
@@ -778,14 +778,14 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
     }
     if not hasPrunable { return items; }
 
-    depTargets: mut List<Int> = [];
+    mut depTargets: List<Int> = [];
     var depTotal := 0;
-    depStarts: mut List<Int> = [];
-    depEnds: mut List<Int> = [];
+    mut depStarts: List<Int> = [];
+    mut depEnds: List<Int> = [];
 
-    resolvedOwners: mut List<Int> = [];
-    ownerItemsHead: mut Map<Int, Int>;
-    ownerItemsNext: mut List<Int> = [];
+    mut resolvedOwners: List<Int> = [];
+    mut ownerItemsHead: Map<Int, Int>;
+    mut ownerItemsNext: List<Int> = [];
     var idx2 := 0;
     loop idx2 < total {
         item := items[idx2];
@@ -821,8 +821,8 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
         idx2 = idx2 + 1;
     }
 
-    liveDecls: mut Set<Int>;
-    queue: mut List<Int> = [];
+    mut liveDecls: Set<Int>;
+    mut queue: List<Int> = [];
     var qHead := 0;
     var qTail := 0;
     var seedIdx := 0;
@@ -862,7 +862,7 @@ pub pruneBlockScopedItems := fn(items: Items, target: String): Items {
         }
     }
 
-    peeled: mut Items = [];
+    mut peeled: Items = [];
     var peeledLen := 0;
     var k := 0;
     loop k < total {
@@ -911,13 +911,13 @@ pub simplifyConstantBranches := fn(items: Items, target: String): Items {
         }
     }
     if not hasConstBranch or hasCUnsupported { return items; }
-    frameKinds: mut List<Int> = [];
-    frameModes: mut List<Int> = [];
-    frameTakens: mut List<Bool> = [];
-    frameSkips: mut List<Bool> = [];
-    frameParentSkips: mut List<Bool> = [];
+    mut frameKinds: List<Int> = [];
+    mut frameModes: List<Int> = [];
+    mut frameTakens: List<Bool> = [];
+    mut frameSkips: List<Bool> = [];
+    mut frameParentSkips: List<Bool> = [];
     var stackLen := 0;
-    out: mut Items = [];
+    mut out: Items = [];
     loop items as item {
         currentlySkipping := if stackLen > 0 { frameSkips[stackLen - 1] } else { false };
         if item.kind == ir.ITEM_KIND_IF {
@@ -1069,11 +1069,11 @@ unwrapSyntheticScopes := fn(items: Items): Items {
     var total := 0;
     loop items { total = total + 1; }
     if total == 0 { return items; }
-    openIdxs: mut List<Int> = [];
-    isSynths: mut List<Bool> = [];
-    hasDecls: mut List<Bool> = [];
+    mut openIdxs: List<Int> = [];
+    mut isSynths: List<Bool> = [];
+    mut hasDecls: List<Bool> = [];
     var stackLen := 0;
-    dropSet: mut Set<Int>;
+    mut dropSet: Set<Int>;
     var hasDrop := false;
     var hasAnySynth := false;
     var idx := 0;
@@ -1120,7 +1120,7 @@ unwrapSyntheticScopes := fn(items: Items): Items {
         idx = idx + 1;
     }
     if not hasAnySynth or not hasDrop { return items; }
-    out: mut Items = [];
+    mut out: Items = [];
     var k := 0;
     loop k < total {
         if not dropSet.has(k) {
@@ -1183,7 +1183,7 @@ isSimpleTsScalarLiteral := fn(code: String): Bool {
 
 /** Replaces one element at `index` in a bounded small list of Strings. */
 setSmallTextAt := fn(values: List<String>, index: Int, value: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var i := 0;
     loop values as item {
         mut out.pushBack(if i == index { value } else { item });
@@ -1194,7 +1194,7 @@ setSmallTextAt := fn(values: List<String>, index: Int, value: String): List<Stri
 
 /** Replaces one element at `index` in a bounded small list of Ints. */
 setSmallIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     var i := 0;
     loop values as item {
         mut out.pushBack(if i == index { value } else { item });
@@ -1205,7 +1205,7 @@ setSmallIntAt := fn(values: List<Int>, index: Int, value: Int): List<Int> {
 
 /** Replaces one element at `index` in a bounded small list of Bools. */
 setSmallBoolAt := fn(values: List<Bool>, index: Int, value: Bool): List<Bool> {
-    out: mut List<Bool> = [];
+    mut out: List<Bool> = [];
     var i := 0;
     loop values as item {
         mut out.pushBack(if i == index { value } else { item });
@@ -1233,7 +1233,7 @@ rewriteAndMarkActiveReads := fn(code: String, activeSet: TokenBuckets, activeNam
     canSub := allowSub and code.indexOf("=>", 0) < 0 and
     code.indexOf("{", 0) < 0 and code.indexOf(" = ", 0) < 0 and
     code.indexOf("===", 0) < 0 and code.indexOf("!==", 0) < 0;
-    parts: mut List<String> = [];
+    mut parts: List<String> = [];
     var segStart := 0;
     var changed := false;
     var readPipe := "";
@@ -1344,7 +1344,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
     }
     if total == 0 or not hasVarOrAssign { return items; }
 
-    var activeSet: mut Set<String>;
+    var mut activeSet: Set<String>;
     var activeNames: List<String> = [];
     var activeDeclIdxs: List<Int> = [];
     var activeDeclMerged: List<Bool> = [];
@@ -1356,13 +1356,13 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
     var activeConstCodes: List<String> = [];
     var activeCount := 0;
 
-    dropSet: mut Set<Int>;
+    mut dropSet: Set<Int>;
     var hasDrops := false;
-    overrideIdxs: mut List<Int> = [];
-    overrideCodes: mut List<String> = [];
+    mut overrideIdxs: List<Int> = [];
+    mut overrideCodes: List<String> = [];
     var overrideCount := 0;
     var anyRewrite := false;
-    outItems: mut Items = [];
+    mut outItems: Items = [];
 
     var idx := 0;
     loop idx < total {
@@ -1393,7 +1393,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
         };
         newCode := rewritten.code;
         if rewritten.readPipe =!= "" {
-            nextReadFlags: mut List<Bool> = [];
+            mut nextReadFlags: List<Bool> = [];
             var rIdx := 0;
             loop rIdx < activeCount {
                 tag := "|" + rIdx.toText() + "|";
@@ -1436,15 +1436,15 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
             litCode := if isSimpleTsScalarLiteral(newCode) { newCode } else { "" };
             if activeCount < 64 {
                 mut activeSet.add(item.runtime);
-                nextNames: mut List<String> = [];
-                nextDeclIdxs: mut List<Int> = [];
-                nextDeclMerged: mut List<Bool> = [];
-                nextDeclCodes: mut List<String> = [];
-                nextWriteIdxs: mut List<Int> = [];
-                nextWriteIsDecl: mut List<Bool> = [];
-                nextWritePure: mut List<Bool> = [];
-                nextRead: mut List<Bool> = [];
-                nextConstCodes: mut List<String> = [];
+                mut nextNames: List<String> = [];
+                mut nextDeclIdxs: List<Int> = [];
+                mut nextDeclMerged: List<Bool> = [];
+                mut nextDeclCodes: List<String> = [];
+                mut nextWriteIdxs: List<Int> = [];
+                mut nextWriteIsDecl: List<Bool> = [];
+                mut nextWritePure: List<Bool> = [];
+                mut nextRead: List<Bool> = [];
+                mut nextConstCodes: List<String> = [];
                 var copyI := 0;
                 loop copyI < activeCount {
                     mut nextNames.pushBack(activeNames[copyI]);
@@ -1504,15 +1504,15 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
                 }
             } else if activeCount < 64 {
                 mut activeSet.add(item.runtime);
-                nextNames: mut List<String> = [];
-                nextDeclIdxs: mut List<Int> = [];
-                nextDeclMerged: mut List<Bool> = [];
-                nextDeclCodes: mut List<String> = [];
-                nextWriteIdxs: mut List<Int> = [];
-                nextWriteIsDecl: mut List<Bool> = [];
-                nextWritePure: mut List<Bool> = [];
-                nextRead: mut List<Bool> = [];
-                nextConstCodes: mut List<String> = [];
+                mut nextNames: List<String> = [];
+                mut nextDeclIdxs: List<Int> = [];
+                mut nextDeclMerged: List<Bool> = [];
+                mut nextDeclCodes: List<String> = [];
+                mut nextWriteIdxs: List<Int> = [];
+                mut nextWriteIsDecl: List<Bool> = [];
+                mut nextWritePure: List<Bool> = [];
+                mut nextRead: List<Bool> = [];
+                mut nextConstCodes: List<String> = [];
                 var copyI := 0;
                 loop copyI < activeCount {
                     mut nextNames.pushBack(activeNames[copyI]);
@@ -1564,7 +1564,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
         return items;
     }
 
-    finalItems: mut Items = [];
+    mut finalItems: Items = [];
     var ovPos := 0;
     var k := 0;
     loop k < total {
@@ -1609,7 +1609,7 @@ replaceParamToken := fn(body: String, paramRt: String, argCode: String): String 
     if body.indexOf(paramRt, 0) < 0 { return body; }
     pLen := paramRt.length();
     bLen := body.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var cursor := 0;
     var flushed := 0;
     loop cursor < bLen {
@@ -1680,9 +1680,9 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String, maxBodySize: I
     loop items { total = total + 1; }
     if total < 3 or maxBodySize <= 0 { return items; }
     paramPrefix := "lite_";
-    leafBodies: mut Map<String, String>;
-    leafParams1: mut Map<String, String>;
-    leafParams2: mut Map<String, String>;
+    mut leafBodies: Map<String, String>;
+    mut leafParams1: Map<String, String>;
+    mut leafParams2: Map<String, String>;
     var fnDepth := 0;
     var i := 0;
     loop i < total {
@@ -1754,7 +1754,7 @@ inlineSingleExprLeafFunctions := fn(items: Items, target: String, maxBodySize: I
     if leafBodies.size() == 0 { return items; }
 
     fnPrefix := if target == ir.TARGET_TS { "liteFn" } else { "lt_fn_" };
-    rewritten: mut Items = [];
+    mut rewritten: Items = [];
     loop items as it {
         newCode := if it.kind == ir.ITEM_KIND_FUNCTION_START or it.kind == ir.ITEM_KIND_FUNCTION_END or it.code == "" {
             it.code
@@ -1771,7 +1771,7 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
     firstHit := code.indexOf(fnPrefix, 0);
     if code == "" or firstHit < 0 { return code; }
     cLen := code.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var copyFrom := 0;
     var cursor := 0;
     var nextFn := firstHit;
@@ -1868,7 +1868,7 @@ inlineLeafCallsInCode := fn(code: String, target: String, fnPrefix: String, leaf
 
 /** Extracts reachable runtime tokens (`lite...` / `lt_...`) from `code` outside quoted strings. */
 extractReachableCodeTokens := fn(code: String): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var nextLite := code.indexOf("lite", 0);
     var nextLt := code.indexOf("lt_", 0);
     if nextLite < 0 and nextLt < 0 { return out; }
@@ -2034,7 +2034,7 @@ foldPureConstIntCode := fn(code: String, target: String): String {
 
 /** Constant-folds pure integer scalar local, assignment, and return expressions across `items`. */
 foldConstantScalarItems := fn(items: Items, target: String): Items {
-    out: mut Items = [];
+    mut out: Items = [];
     loop items as item {
         if item.kind == ir.ITEM_KIND_LOCAL_INT or item.kind == ir.ITEM_KIND_VAR_INT or item.kind == ir.ITEM_KIND_ASSIGN_INT or item.kind == ir.ITEM_KIND_RETURN {
             folded := foldPureConstIntCode(item.code, target);
@@ -2059,7 +2059,7 @@ filterCommentItems := fn(items: Items, preserveComments: Bool, preserveDocs: Boo
         }
     }
     if not hasComment { return items; }
-    out: mut Items = [];
+    mut out: Items = [];
     loop items as it {
         if it.kind == ir.ITEM_KIND_COMMENT {
             isDoc := it.intValue == 1;
@@ -2111,11 +2111,11 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
     }
     pruneUserDecls := cfg.dce;
     var hasPrunable := false;
-    reachable: mut Set<String>;
-    queue: mut List<String> = [];
-    fnStarts: mut Map<String, Int>;
-    fnEnds: mut Map<String, Int>;
-    pureDeclIdx: mut Map<String, Int>;
+    mut reachable: Set<String>;
+    mut queue: List<String> = [];
+    mut fnStarts: Map<String, Int>;
+    mut fnEnds: Map<String, Int>;
+    mut pureDeclIdx: Map<String, Int>;
     prunedCount := pruned.length();
     var fnDepth := 0;
     var blockDepth := 0;
@@ -2191,7 +2191,7 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
     }
     if not hasPrunable { return pruned; }
 
-    scanned: mut Set<String>;
+    mut scanned: Set<String>;
     var qHead := 0;
     loop qHead < queue.length() {
         tok := queue[qHead];
@@ -2222,7 +2222,7 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
         }
     }
 
-    filtered: mut Items = [];
+    mut filtered: Items = [];
     var keepFnDepth := 0;
     var keepBlockDepth := 0;
     var keepFn := false;

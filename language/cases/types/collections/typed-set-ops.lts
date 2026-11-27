@@ -1,6 +1,6 @@
 io := import "core/io";
 
-nums: mut Set<Int>;
+mut nums: Set<Int>;
 mut nums.add(10);
 mut nums.add(20);
 mut nums.add(10);

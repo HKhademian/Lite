@@ -17,7 +17,7 @@ cComp := selC.path;
 ccProbe := compilerTest.probeCc();
 
 /* Generate a 256-case Enum: Int8 (0 spare bit patterns -> automatic tagged fallback). */
-e256Cases: mut tb.TextBuilder;
+mut e256Cases: tb.TextBuilder;
 mut e256Cases.append("C0 = -128; ");
 var ei := 1;
 loop ei < 256 {
@@ -133,7 +133,7 @@ layoutSrc := [
     "};",
     "main := fn(): Unit {",
     "    checkOptions();",
-    "    xs: mut List<Int> = [1, 2, 3, 4, 5, 6];",
+    "    mut xs: List<Int> = [1, 2, 3, 4, 5, 6];",
     "    {",
     "        ms := mut xs[0..6];",
     "        (l, r) := mut ms.splitAt(3);",
@@ -145,7 +145,7 @@ layoutSrc := [
     "        s1 := mut xs[0..2];",
     "        mutGlobalSliceBump(mut s1);",
     "    }",
-    "    dst: mut List<Int> = [100];",
+    "    mut dst: List<Int> = [100];",
     "    src: List<Int> = [200, 300];",
     "    purePushFromSrc(mut dst, src);",
     "    io.outputLine(\"restrict:\", xs, ovSum, globalTick, dst);",

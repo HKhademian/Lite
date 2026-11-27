@@ -11,7 +11,7 @@ mdHtml := import "util/markdown-html";
 project := import "util/project";
 
 splitNonEmptyLines := fn(raw: String): List<String> {
-    lines: mut List<String> = [];
+    mut lines: List<String> = [];
     size := raw.length();
     var pos := 0;
     loop pos <= size {
@@ -28,7 +28,7 @@ splitNonEmptyLines := fn(raw: String): List<String> {
 };
 
 renderSelectedJson := fn(rootDir: String, targets: List<String>): String {
-    entries: mut List<String> = [];
+    mut entries: List<String> = [];
     loop targets as rel {
         fullFile := path.resolve(rootDir, rel);
         readRes := fs.readText(fullFile);
@@ -45,7 +45,7 @@ renderSelectedJson := fn(rootDir: String, targets: List<String>): String {
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "docs", "docs");
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
 
     envRoot := proc.envGet("LITE_DOCS_ROOT");
     rootDir := if envRoot.found and envRoot.value =!= "" { envRoot.value } else { project.findRepoRoot() };
@@ -77,7 +77,7 @@ run := fn(rawArgs: List<String>): Unit {
             io.exit(0);
         }
         allDocFiles := docsUtil.listDocFiles(rootDir);
-        relDocFiles: mut List<String> = [];
+        mut relDocFiles: List<String> = [];
         loop allDocFiles as fullDoc {
             mut relDocFiles.pushBack(path.relative(rootDir, fullDoc));
         }

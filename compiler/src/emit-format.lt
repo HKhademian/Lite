@@ -27,7 +27,7 @@ pub isSafeTargetIdent := fn(name: String, isC: Bool): Bool {
 
 /** Returns `n` spaces for 4-space indentation levels. */
 indentSpaces := fn(level: Int): String {
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var i := 0;
     loop i < level {
         mut out.append("    ");
@@ -98,7 +98,7 @@ pub replaceIdentToken := fn(code: String, ident: String, replacement: String): S
     if code.indexOf(ident, 0) < 0 { return code; }
     n := code.length();
     m := ident.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var flushed := 0;
     var i := 0;
     loop i < n {
@@ -348,12 +348,12 @@ pub formatEmittedLine := fn(rawLine: String): String {
     baseSpaces := rawLine.length() - trimmed.length();
     baseIndent := rawLine.slice(0, baseSpaces);
     n := trimmed.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var blockDepth := 0;
     var parenDepth := 0;
     /* Parallel stacks for open `{`: braceKind (1 = expanded statement block, 0 = inline data/type brace) and parenDepth at open. */
-    braceStack: mut List<Int> = [];
-    braceParenStack: mut List<Int> = [];
+    mut braceStack: List<Int> = [];
+    mut braceParenStack: List<Int> = [];
     var i := 0;
     var atLineStart := true;
     var changed := false;

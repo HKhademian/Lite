@@ -2,7 +2,7 @@
 io := import "core/io";
 
 items := ["alpha", "beta", "alpha", "gamma", "beta", "delta"];
-unique: mut Set<String>;
+mut unique: Set<String>;
 loop items as item {
     mut unique.add(item);
 }

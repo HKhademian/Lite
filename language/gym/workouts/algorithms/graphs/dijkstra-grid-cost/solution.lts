@@ -1,7 +1,7 @@
 io := import "core/io";
 
 withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     len := xs.length();
     var k := 0;
     loop k < len {
@@ -12,7 +12,7 @@ withIntAt := fn(xs: List<Int>, idx: Int, val: Int): List<Int> {
 };
 
 withBoolAt := fn(xs: List<Bool>, idx: Int, val: Bool): List<Bool> {
-    out: mut List<Bool> = [];
+    mut out: List<Bool> = [];
     len := xs.length();
     var k := 0;
     loop k < len {
@@ -30,7 +30,7 @@ if rows <= 0 or cols <= 0 {
     total := rows * cols;
     emptyInts: List<Int> = [];
     emptyBools: List<Bool> = [];
-    cost: mut List<Int> = [];
+    mut cost: List<Int> = [];
     var mut dist := emptyInts;
     var mut seen := emptyBools;
     INF := 1000000000000;

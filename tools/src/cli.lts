@@ -56,7 +56,7 @@ routeTarget := fn(command: String): String {
 };
 
 run := fn(rawArgs: List<String>): Unit {
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     if args.length() > 0 and args[0] == "--" {
         _sep := mut args.popFront();
     }
@@ -77,7 +77,7 @@ run := fn(rawArgs: List<String>): Unit {
         io.exit(2);
     }
     if command == "play" {
-        playArgs: mut List<String> = ["--play"];
+        mut playArgs: List<String> = ["--play"];
         loop args as a {
             mut playArgs.pushBack(a);
         }

@@ -16,9 +16,9 @@ effectiveDelim := fn(delimiter: String): String {
 /** Parses RFC-4180 CSV text using `delimiter` (`","` when empty) into a `CsvTable`. */
 pub CsvTable.parse := fn(source: String, delimiter: String): Self {
     delim := effectiveDelim(delimiter);
-    fields: mut List<String> = [];
-    rowStarts: mut List<Int> = [];
-    rowLens: mut List<Int> = [];
+    mut fields: List<String> = [];
+    mut rowStarts: List<Int> = [];
+    mut rowLens: List<Int> = [];
     size := source.length();
     var pos := 0;
 
@@ -29,7 +29,7 @@ pub CsvTable.parse := fn(source: String, delimiter: String): Self {
         loop inRow {
             if pos < size and source.at(pos) == "\"" {
                 pos += 1;
-                parts: mut List<String> = [];
+                mut parts: List<String> = [];
                 var segStart := pos;
                 loop pos < size {
                     if source.at(pos) == "\"" {
@@ -123,7 +123,7 @@ pub CsvTable.cell := fn(t: Self, row: Int, col: Int): String {
 
 /** Returns a fresh `List<String>` containing all fields in `row`. */
 pub CsvTable.row := fn(t: Self, row: Int): List<String> {
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     if row < 0 or row >= t.rowStarts.length() { return out; }
     start := t.rowStarts[row];
     cnt := t.rowLens[row];
@@ -140,7 +140,7 @@ pub CsvTable.encodeField := fn(value: String, delimiter: String): String {
     delim := effectiveDelim(delimiter);
     needsQuote := value.contains(delim) or value.contains("\"") or value.contains("\n") or value.contains("\r");
     if not needsQuote { return value; }
-    parts: mut List<String> = ["\""];
+    mut parts: List<String> = ["\""];
     size := value.length();
     var segStart := 0;
     var i := 0;
@@ -160,7 +160,7 @@ pub CsvTable.encodeField := fn(value: String, delimiter: String): String {
 /** Formats one row of fields separated by `delimiter` (`","` when empty). */
 pub CsvTable.encodeRow := fn(fields: List<String>, delimiter: String): String {
     delim := effectiveDelim(delimiter);
-    encoded: mut List<String> = [];
+    mut encoded: List<String> = [];
     loop fields as field {
         mut encoded.pushBack(Self.encodeField(field, delim));
     }
@@ -170,7 +170,7 @@ pub CsvTable.encodeRow := fn(fields: List<String>, delimiter: String): String {
 /** Serializes all rows in `table` separated by `\n`. */
 pub CsvTable.encode := fn(table: Self, delimiter: String): String {
     delim := effectiveDelim(delimiter);
-    rows: mut List<String> = [];
+    mut rows: List<String> = [];
     rCount := table.rowCount();
     var r := 0;
     loop r < rCount {

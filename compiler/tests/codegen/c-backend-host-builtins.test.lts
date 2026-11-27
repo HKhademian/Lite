@@ -74,7 +74,7 @@ src :=
 "io.outputLine(crypto.sha256Text(\"abc\"));\n" +
 "\n" +
 "/* 5. Copy-on-Write list value semantics */\n" +
-"a: mut List<Int> = [1, 2, 3];\n" +
+"mut a: List<Int> = [1, 2, 3];\n" +
 "b := a;\n" +
 "a[0] = 99;\n" +
 "mut a.pushBack(4);\n" +

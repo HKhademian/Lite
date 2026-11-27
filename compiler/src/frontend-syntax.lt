@@ -95,7 +95,7 @@ sanitizeCommentBody := fn(body: String): String {
         return body;
     }
     n := body.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     var runStart := 0;
     var i := 0;
     loop i < n {
@@ -120,7 +120,7 @@ sanitizeCommentBody := fn(body: String): String {
 
 /** Pre-scans standalone leading `/* ... */` and `/** ... */` comments in `source` in O(N) time, skipping string literals. */
 pub scanRootComments := fn(source: String, prefix: String): List<(endPos: Int, isDoc: Bool, text: String)> {
-    out: mut List<(endPos: Int, isDoc: Bool, text: String)> = [];
+    mut out: List<(endPos: Int, isDoc: Bool, text: String)> = [];
     if source.indexOf("/*", 0) < 0 { return out; }
     size := source.length();
     var i := 0;
@@ -497,7 +497,7 @@ pub parseText := fn(target: String, source: String, position: Int, prefix: Strin
     var literalStart := position;
     var cursor := position + 1;
     var runStart := cursor;
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     loop true {
         if cursor >= size {
             failAt(source, literalStart, prefix, "unterminated string literal");
@@ -677,7 +677,7 @@ pub skipBalancedArgument := fn(source: String, position: Int, prefix: String): I
 
 /** Collects explicit `name = ...` and `=name` parameter labels present in a call argument list starting at `openParen`. */
 pub collectExplicitCallLabels := fn(source: String, openParen: Int, prefix: String): List<String> {
-    labels: mut List<String> = [];
+    mut labels: List<String> = [];
     size := source.length();
     var cursor := skipTrivia(source, openParen + 1, prefix);
     loop cursor < size and source.at(cursor) =!= ")" {
@@ -915,7 +915,7 @@ skipCommentNoFail := fn(source: String, position: Int): Int {
 
 var braceIndexSource := "";
 var braceIndexComplete := false;
-braceIndexMap: mut Map<Int, Int>;
+mut braceIndexMap: Map<Int, Int>;
 
 /** Builds a single-pass O(N) map from every opening `{` offset in `source` to the offset immediately after its matching `}`. */
 ensureBraceIndex := fn(source: String): Unit {
@@ -924,7 +924,7 @@ ensureBraceIndex := fn(source: String): Unit {
     mut braceIndexMap.clear();
     braceIndexComplete = false;
     size := source.length();
-    openStack: mut List<Int> = [];
+    mut openStack: List<Int> = [];
     var cursor := 0;
     var nextOpen := source.indexOf("{", 0);
     var nextClose := source.indexOf("}", 0);
@@ -1401,7 +1401,7 @@ pub loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): 
 
 /** Encodes all line-start character offsets once for positioned runtime arithmetic faults. */
 pub lineStartCodes := fn(source: String): String {
-    parts: mut List<String> = ["0"];
+    mut parts: List<String> = ["0"];
     size := source.length();
     var position := 0;
     loop position < size {

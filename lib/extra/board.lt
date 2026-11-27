@@ -128,7 +128,7 @@ pub drawSprite := fn(x: Int, y: Int, rows: List<String>, glyph: String, color: c
 
 /** Creates a row-major pixel buffer matching the latest canvas dimensions filled with `color`. */
 pub fillGrid := fn(color: canvas.Color): List<canvas.Color> {
-    pixels: mut List<canvas.Color> = [];
+    mut pixels: List<canvas.Color> = [];
     total := canvas.getWidth() * canvas.getHeight();
     var index := 0;
     loop index < total {

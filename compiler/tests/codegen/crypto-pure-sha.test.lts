@@ -95,7 +95,7 @@ benchSrc := [
     "crypto := import \"core/crypto\";",
     "io := import \"core/io\";",
     "time := import \"core/time\";",
-    "buf: mut List<Int> = [];",
+    "mut buf: List<Int> = [];",
     "var i := 0;",
     "loop i < 1048576 {",
     "    mut buf.pushBack(i % 251);",

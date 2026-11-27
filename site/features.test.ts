@@ -66,8 +66,8 @@ test('highlightLite highlights newer built-in types and operators', () => {
   assert(html.includes('<span class="tok-keyword">match</span>'), 'missing keyword highlight: match');
   assert(highlightLite('User := record { name: String; };').includes('<span class="tok-keyword">record</span>'), 'missing keyword highlight: record');
   assert(highlightLite('State := enum { Ready; Done; };').includes('<span class="tok-keyword">enum</span>'), 'missing keyword highlight: enum');
-  assert(highlightLite('scores: mut Map<String, Int>;').includes('<span class="tok-type">Map</span>'), 'missing type highlight: Map');
-  assert(highlightLite('tags: mut Set<String>;').includes('<span class="tok-type">Set</span>'), 'missing type highlight: Set');
+  assert(highlightLite('mut scores: Map<String, Int>;').includes('<span class="tok-type">Map</span>'), 'missing type highlight: Map');
+  assert(highlightLite('mut tags: Set<String>;').includes('<span class="tok-type">Set</span>'), 'missing type highlight: Set');
   const opHtml = highlightLite('a ** b += c :/= d :%= e <!= f >!= g <! h >! i');
   for (const op of ['**', '+=', ':/=', ':%=', '&lt;!=', '&gt;!=', '&lt;!', '&gt;!']) {
     assert(opHtml.includes(`<span class="tok-op">${op}</span>`), `missing operator highlight: ${op}`);

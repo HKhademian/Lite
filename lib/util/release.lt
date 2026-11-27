@@ -232,7 +232,7 @@ pub versionsJson := fn(rootDir: String): (ok: Bool, jsonText: String, error: Str
     verRead := fs.readText(path.join(rootDir, "config/versions.json"));
     if not verRead.ok { return (ok = false, jsonText = "", error = verRead.error); }
 
-    entries: mut List<String> = [];
+    mut entries: List<String> = [];
     loop allComponents() as component {
         if component == "igniter" {
             mut entries.pushBack("\"igniter\":" + json.quoteString(igniterRes.version));
@@ -292,7 +292,7 @@ bootstrapSupport: String,
 tagMessage: String
 ): String {
     componentText := if not hasComponent { "unpublished snapshot" } else { componentName + " v" + componentVersion };
-    lines: mut List<String> = [
+    mut lines: List<String> = [
     "# " + label,
     "",
     "- **Source commit**: `" + commit + "`",
@@ -364,7 +364,7 @@ pub formatComponentVersionsJson := fn(rootDir: String, indent: String): (ok: Boo
         return (ok = false, jsonText = "", error = verRead.error);
     }
     components := allComponents();
-    entries: mut List<String> = [];
+    mut entries: List<String> = [];
     loop components as component {
         if component == "igniter" {
             mut entries.pushBack(indent + "  \"igniter\": " + json.quoteString(igniterRes.version));

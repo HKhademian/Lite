@@ -84,7 +84,7 @@ appFnSrc := [
     "io.outputLine(\"step\", makeStep(0)(10), makeStep(1)(10));",
     "io.outputLine(\"comb\", applyCombine(fn(n, s) { s + \":\" }, 3, \"k\"));",
     "arr: [Op; 2] = [fn(x) { x + 1 }, incByTen];",
-    "opList: mut List<Op> = [fn(x) { x * 2 }, opsMod.double];",
+    "mut opList: List<Op> = [fn(x) { x * 2 }, opsMod.double];",
     "mut opList.pushBack(fn(x) { x - 1 });",
     "io.outputLine(\"colls\", arr[0](4), arr[1](4), opList[0](5), opList[1](5), opList[2](5));",
     "var sink: fn(Int): Unit = fn(n: Int): Unit { io.outputLine(\"sink\", n); };",

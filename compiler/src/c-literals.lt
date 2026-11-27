@@ -14,7 +14,7 @@ pub intLiteralCode := fn(value: Int, negative: Bool, digits: String): String {
 /** Escapes a String as a readable C literal, including trigraph-safe `?`. */
 pub textLiteralCode := fn(value: String): String {
     size := value.length();
-    out: mut tb.TextBuilder;
+    mut out: tb.TextBuilder;
     mut out.append("\"");
     var runStart := 0;
     var position := 0;

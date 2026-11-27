@@ -94,7 +94,7 @@ pub parseType := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: In
     }
     if isSymbol(token, "(") {
         var cursor := index + 1;
-        textBuf: mut tb.TextBuilder;
+        mut textBuf: tb.TextBuilder;
         mut textBuf.append("(");
         var first := true;
         loop true {
@@ -127,7 +127,7 @@ pub parseType := fn(tokens: lexer.Tokens, index: Int, prefix: String): (next: In
 /** Quotes one String value as valid normalized expression text. */
 quotedText := fn(text: String): String {
     escaped := lexer.escapedTokenText(text);
-    result: mut tb.TextBuilder;
+    mut result: tb.TextBuilder;
     var index := 0;
     loop index < escaped.length() {
         ch := escaped.at(index);
@@ -199,7 +199,7 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         leftText = token.text;
         cursor = index + 1;
     } else if token.kind == lexer.TOKEN_KIND_STRING {
-        valueBuf: mut tb.TextBuilder;
+        mut valueBuf: tb.TextBuilder;
         mut valueBuf.append(token.text);
         cursor = index + 1;
         loop tokenAt(tokens, cursor).kind == lexer.TOKEN_KIND_STRING {
@@ -214,7 +214,7 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         leftText = token.text;
         cursor = index + 1;
         if isSymbol(tokenAt(tokens, cursor), "(") {
-            argBuf: mut tb.TextBuilder;
+            mut argBuf: tb.TextBuilder;
             var argCount := 0;
             cursor = cursor + 1;
             loop true {
@@ -254,7 +254,7 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         firstText = firstText + first.text;
         cursor = first.next;
         if firstLabel or isSymbol(tokenAt(tokens, cursor), ",") {
-            tupleBuf: mut tb.TextBuilder;
+            mut tupleBuf: tb.TextBuilder;
             mut tupleBuf.append("(");
             mut tupleBuf.append(firstText);
             if isSymbol(tokenAt(tokens, cursor), ",") { cursor = cursor + 1; }
@@ -284,7 +284,7 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         }
     } else if isSymbol(token, "[") {
         cursor = index + 1;
-        listBuf: mut tb.TextBuilder;
+        mut listBuf: tb.TextBuilder;
         mut listBuf.append("[");
         var itemCount := 0;
         loop true {
@@ -308,7 +308,7 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         opening := expectSymbol(tokens, condition.next, "{", prefix);
         branchValue := self(tokens, opening, prefix, 0);
         closing := expectSymbol(tokens, branchValue.next, "}", prefix);
-        ifBuf: mut tb.TextBuilder;
+        mut ifBuf: tb.TextBuilder;
         mut ifBuf.append("if ");
         mut ifBuf.append(condition.text);
         mut ifBuf.append(" { ");
@@ -349,7 +349,7 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
             parseFail(token, prefix, "unsupported feature \"match\"");
         }
         cursor = index + 2;
-        matchBuf: mut tb.TextBuilder;
+        mut matchBuf: tb.TextBuilder;
         mut matchBuf.append("match {");
         var sawFallback := false;
         loop true {
@@ -411,7 +411,7 @@ pub parseExpression := fn(tokens: lexer.Tokens, index: Int, prefix: String, mini
         parseFail(token, prefix, "expected an expression");
         return (next = index, text = "");
     }
-    postfixBuf: mut tb.TextBuilder;
+    mut postfixBuf: tb.TextBuilder;
     mut postfixBuf.append(leftText);
     loop true {
         if cursor > 0 and isSymbol(tokenAt(tokens, cursor - 1), "}") { break; }
@@ -525,7 +525,7 @@ pub parseDeclaration := fn(tokens: lexer.Tokens, index: Int, prefix: String): (n
 /** Parses a source made only of declarations, ending at EOF. */
 pub parseDeclarations := fn(tokens: lexer.Tokens, prefix: String): Nodes {
     count := tokenCount(tokens);
-    nodes: mut List<Node> = [];
+    mut nodes: List<Node> = [];
     var cursor := 0;
     loop cursor < count {
         token := tokenAt(tokens, cursor);
@@ -538,13 +538,27 @@ pub parseDeclarations := fn(tokens: lexer.Tokens, prefix: String): Nodes {
     nodes
 }
 
+/** True when `cursor` begins a variable declaration (`var ...`, `mut name :=/: ...`, `mut var ...`, or `name :=/: ...`), not a `mut recv.op()` call. */
+pub isDeclarationStart := fn(tokens: lexer.Tokens, cursor: Int): Bool {
+    t0 := tokenAt(tokens, cursor);
+    if t0.kind == lexer.TOKEN_KIND_KEYWORD and t0.text == "var" { return true; }
+    if t0.kind == lexer.TOKEN_KIND_KEYWORD and t0.text == "mut" {
+        t1 := tokenAt(tokens, cursor + 1);
+        if t1.kind == lexer.TOKEN_KIND_KEYWORD and t1.text == "var" { return true; }
+        t2 := tokenAt(tokens, cursor + 2);
+        return t1.kind == lexer.TOKEN_KIND_NAME and (isSymbol(t2, ":=") or isSymbol(t2, ":"));
+    }
+    t1 := tokenAt(tokens, cursor + 1);
+    t0.kind == lexer.TOKEN_KIND_NAME and (isSymbol(t1, ":=") or isSymbol(t1, ":"))
+};
+
 /** Parses one `{ ... }` block or the whole source when `closed` is false into normalized text. */
 pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: Bool): (next: Int, text: String) {
     var cursor := index;
     if closed {
         cursor = expectSymbol(tokens, cursor, "{", prefix);
     }
-    bodyBuf: mut tb.TextBuilder;
+    mut bodyBuf: tb.TextBuilder;
     var itemCount := 0;
     loop true {
         token := tokenAt(tokens, cursor);
@@ -572,7 +586,7 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
                 parseFail(tokenAt(tokens, condition.next), prefix, "expected { after if condition");
             }
             branch := self(tokens, condition.next, prefix, true);
-            branchBuf: mut tb.TextBuilder;
+            mut branchBuf: tb.TextBuilder;
             mut branchBuf.append("if ");
             mut branchBuf.append(condition.text);
             mut branchBuf.append(" ");
@@ -610,7 +624,7 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
                 parseFail(token, prefix, "unsupported feature \"match\"");
             }
             var armCursor := cursor + 2;
-            armsBuf: mut tb.TextBuilder;
+            mut armsBuf: tb.TextBuilder;
             var armCount := 0;
             var sawFallback := false;
             loop true {
@@ -706,7 +720,7 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
             name := token.text;
             var afterName := cursor + 3;
             afterName = expectSymbol(tokens, afterName, "(", prefix);
-            parametersBuf: mut tb.TextBuilder;
+            mut parametersBuf: tb.TextBuilder;
             var parameterCount := 0;
             loop true {
                 if isSymbol(tokenAt(tokens, afterName), ")") { break; }
@@ -749,9 +763,7 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
             ended := consumeStatementEnd(tokens, aliasType.next, prefix);
             itemText = token.text + " := " + typeWord.text + " " + aliasType.text;
             cursor = ended;
-        } else if token.kind == lexer.TOKEN_KIND_KEYWORD and token.text == "var" or
-        (token.kind == lexer.TOKEN_KIND_NAME and (isSymbol(tokenAt(tokens, cursor + 1), ":=") or
-        isSymbol(tokenAt(tokens, cursor + 1), ":"))) {
+        } else if isDeclarationStart(tokens, cursor) {
             declaration := parseDeclaration(tokens, cursor, prefix);
             itemText = declaration.name + " " + declaration.detail;
             cursor = declaration.next;
@@ -777,7 +789,7 @@ pub parseBlock := fn(tokens: lexer.Tokens, index: Int, prefix: String, closed: B
 /** Parses a complete source as one Program node containing normalized item text. */
 pub parseProgram := fn(tokens: lexer.Tokens, prefix: String): Nodes {
     parsed := parseBlock(tokens, 0, prefix, false);
-    nodes: mut List<Node> = [];
+    mut nodes: List<Node> = [];
     mut nodes.pushBack((kind = NODE_KIND_PROGRAM, name = "", detail = parsed.text, offset = 0, line = 1, column = 1));
     nodes
 }
@@ -802,7 +814,7 @@ pub parseTypeAlias := fn(tokens: lexer.Tokens, index: Int, prefix: String): (nex
 /** Parses a source made only of type alias declarations, ending at EOF. */
 pub parseTypeDeclarations := fn(tokens: lexer.Tokens, prefix: String): Nodes {
     count := tokenCount(tokens);
-    nodes: mut List<Node> = [];
+    mut nodes: List<Node> = [];
     var cursor := 0;
     loop cursor < count {
         token := tokenAt(tokens, cursor);

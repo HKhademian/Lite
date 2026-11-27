@@ -33,24 +33,24 @@ AliasUndo := alias (
 
 /* --- Active module-scoped O(1) indexes --- */
 
-localByName: mut Map<String, Int>;
-runtimeByName: mut Map<String, Int>;
-unreadyRuntimes: mut Set<String>;
-localUndo: mut List<LocalUndo> = [];
+mut localByName: Map<String, Int>;
+mut runtimeByName: Map<String, Int>;
+mut unreadyRuntimes: Set<String>;
+mut localUndo: List<LocalUndo> = [];
 var indexedLocalLen := 0;
 var callableLocalCount := 0;
 var futureLocalCount := 0;
 
-aliasByName: mut Map<String, Int>;
-aliasDepthByName: mut Map<String, Int>;
-aliasUndo: mut List<AliasUndo> = [];
+mut aliasByName: Map<String, Int>;
+mut aliasDepthByName: Map<String, Int>;
+mut aliasUndo: List<AliasUndo> = [];
 var indexedAliasLen := 0;
 
-fnByName: mut Map<String, Int>;
-fnTailByName: mut Map<String, Int>;
-fnOverloadNext: mut List<Int> = [];
-fnByRuntime: mut Map<String, Int>;
-fnIndexedNames: mut List<String> = [];
+mut fnByName: Map<String, Int>;
+mut fnTailByName: Map<String, Int>;
+mut fnOverloadNext: List<Int> = [];
+mut fnByRuntime: Map<String, Int>;
+mut fnIndexedNames: List<String> = [];
 var indexedFnLen := 0;
 
 /** True when `a` matches the local state recorded in undo entry `u`. */
@@ -395,7 +395,7 @@ pub findFunction := fn(functions: List<FunctionInfo>, name: String): Int {
 
 /** Returns all function indices declared under `name` in declaration order. */
 pub findFunctions := fn(functions: List<FunctionInfo>, name: String): List<Int> {
-    out: mut List<Int> = [];
+    mut out: List<Int> = [];
     syncFunctions(functions);
     var cur := fnByName.getOr(name, -1);
     loop cur >= 0 {

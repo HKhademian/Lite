@@ -367,7 +367,7 @@ pub checkCanMutateColumn := fn(locals: List<Local>, targetRuntime: String, colNa
 pub rootOwnersPipeBag := fn(provenance: String): String {
     payload := stripProvenanceKind(provenance);
     if payload == "" or payload == "param" { return ""; }
-    out: mut List<String> = [];
+    mut out: List<String> = [];
     var start := 0;
     size := payload.length();
     loop start < size {

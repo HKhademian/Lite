@@ -47,7 +47,7 @@ runIgniteCheck := fn(rootDir: String): Unit {
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "doctor", "doctor");
 
-    args: mut List<String> = rawArgs;
+    mut args: List<String> = rawArgs;
     var docsOnly := false;
     if args.length() > 0 and args[0] == "--docs" {
         _flag := mut args.popFront();

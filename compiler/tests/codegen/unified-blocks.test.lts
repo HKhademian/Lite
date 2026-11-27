@@ -396,7 +396,7 @@ loop slice2bOkC as okSrc {
 }
 
 compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff1", "io := import \"core/io\"; var out := 1; dead := { out = 9; 5 }; io.outputLine(out);", "9\n");
-compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff2", "io := import \"core/io\"; xs: mut List<Int> = [1]; dead := { mut xs.pushBack(2); 5 }; io.outputLine(xs);", "[1, 2]\n");
+compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff2", "io := import \"core/io\"; mut xs: List<Int> = [1]; dead := { mut xs.pushBack(2); 5 }; io.outputLine(xs);", "[1, 2]\n");
 compilerTest.assertCompileRunTs(root, tsComp, "slice2b eff3", "io := import \"core/io\"; bump := fn(): Int { io.outputLine(\"ran\"); 1 }; x := { y := bump(); f := bump; z := f(); w := (fn(): Int { io.outputLine(\"iife\"); 2 })(); 5 }; io.outputLine(x);", "ran\nran\niife\n5\n");
 
 slice2bPanics: List<String> = [
@@ -433,9 +433,9 @@ slice3Caps := [
     "{ f := fn(): Unit { wx = 9; }; f(); }",
     "outerParam := fn(p: Int): Int { inner := fn(): Int { p }; inner() };",
     "outerCall := fn(): Int { aFn := fn(): Int { 4 }; bFn := fn(): Int { aFn() }; bFn() };",
-    "xs: mut List<Int> = [5];",
+    "mut xs: List<Int> = [5];",
     "g := { f := fn(): Int { mut xs.pushBack(6); xs[0] + xs[1] }; f() };",
-    "closures: mut List<fn(): Int> = [];",
+    "mut closures: List<fn(): Int> = [];",
     "loop [10, 20, 30] as item {",
     "  f := fn(): Int { item };",
     "  mut closures.pushBack(f);",
@@ -595,7 +595,7 @@ slice3Precedence := [
     "  before()",
     "};",
     "listPushRes := {",
-    "  ops: mut List<fn(): Int> = [];",
+    "  mut ops: List<fn(): Int> = [];",
     "  mut ops.pushBack(fn(): Int { lateNum });",
     "  lateNum := 77;",
     "  ops[0]()",
@@ -618,7 +618,7 @@ slice3BadRej: List<(src: String, msg: String)> = [
     (src = "{ var y: Int = ?; f := fn(): Int { y }; _ := f(); }", msg = "cannot read uninitialized local y"),
     (src = "{ var y: Int = ?; before := fn(): Int { y = 9; y }; _ := y; }", msg = "cannot read uninitialized local y"),
     (src = "{ y: Int = ?; f := fn(): Unit { y = 2; }; f(); }", msg = "cannot assign to possibly initialized immutable local y"),
-    (src = "{ ops: mut List<fn(): Int> = []; mut ops.pushBack(fn(): Int { late }); _ := ops[0](); late := 7; }", msg = "cannot call before late is initialized"),
+    (src = "{ mut ops: List<fn(): Int> = []; mut ops.pushBack(fn(): Int { late }); _ := ops[0](); late := 7; }", msg = "cannot call before late is initialized"),
     (src = "make := fn(): fn(): Int { r := fn(): Int { y }; return r; y := 5; fn(): Int { 0 } }; _ := make();", msg = "cannot call before y is initialized"),
     (src = "v := @b { r := fn(): Int { y }; return @b r; y := 5; fn(): Int { 0 } };", msg = "cannot call before y is initialized"),
     (src = "v := loop true { var y: Int = ?; r := fn(): Int { y }; break r; y = 1; } then { fn(): Int { 0 } };", msg = "cannot call before y is initialized"),

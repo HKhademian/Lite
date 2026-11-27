@@ -242,8 +242,8 @@ pub validateManifestFile := fn(manifestPathRaw: String): (ok: Bool, target: Stri
     if count == 0 {
         return (ok = false, target = "", jsonText = "", error = manifestPath + ": files must be a nonempty array");
     }
-    files: mut List<String> = [];
-    filesQuoted: mut List<String> = [];
+    mut files: List<String> = [];
+    mut filesQuoted: List<String> = [];
     var idx := 0;
     loop idx < count {
         pos := offsets[idx];
@@ -315,7 +315,7 @@ depsQuoted: List<String>
         return failBuild("compiler cache integrity mismatch: " + cacheDir);
     }
 
-    pDepsParts: mut List<String> = [];
+    mut pDepsParts: List<String> = [];
     loop json.arrayOffsets(pText, pDepsField.valuePos) as pos {
         d := json.readStringAt(pText, pos);
         if not d.ok { return failBuild("compiler cache integrity mismatch: " + cacheDir); }
@@ -325,7 +325,7 @@ depsQuoted: List<String>
         return failBuild("compiler cache integrity mismatch: " + cacheDir);
     }
 
-    pDhParts: mut List<String> = [];
+    mut pDhParts: List<String> = [];
     loop json.arrayOffsets(pText, pDepHashesField.valuePos) as pos {
         p := json.readFieldString(pText, pos, "path");
         s := json.readFieldString(pText, pos, "sha256");
@@ -340,7 +340,7 @@ depsQuoted: List<String>
         return failBuild("compiler cache integrity mismatch: " + cacheDir);
     }
 
-    pEdgeParts: mut List<String> = [];
+    mut pEdgeParts: List<String> = [];
     loop json.arrayOffsets(pText, pEdgesField.valuePos) as pos {
         imp := json.readFieldString(pText, pos, "importer");
         sp := json.readFieldString(pText, pos, "spec");
@@ -421,8 +421,8 @@ seedPath: String
         return tryHitFail("compiler source dependency index is invalid: " + indexPath);
     }
 
-    depPaths: mut List<String> = [];
-    depsQuoted: mut List<String> = [];
+    mut depPaths: List<String> = [];
+    mut depsQuoted: List<String> = [];
     loop json.arrayOffsets(idxText, depsField.valuePos) as pos {
         d := json.readStringAt(idxText, pos);
         if not d.ok { return tryHitFail("compiler source dependency index is invalid: " + indexPath); }
@@ -430,8 +430,8 @@ seedPath: String
         mut depsQuoted.pushBack(json.quoteString(d.value));
     }
 
-    dhPaths: mut List<String> = [];
-    dhCompact: mut List<String> = [];
+    mut dhPaths: List<String> = [];
+    mut dhCompact: List<String> = [];
     var allHashesOk := true;
     loop json.arrayOffsets(idxText, dhField.valuePos) as pos {
         p := json.readFieldString(idxText, pos, "path");
@@ -451,7 +451,7 @@ seedPath: String
         }
     }
 
-    edgesCompact: mut List<String> = [];
+    mut edgesCompact: List<String> = [];
     var edgesValid := true;
     loop json.arrayOffsets(idxText, edgesField.valuePos) as pos {
         imp := json.readFieldString(idxText, pos, "importer");
@@ -533,7 +533,7 @@ strictCheckArtifact := fn(rootDir: String, artifactPath: String, tscWorkDir: Str
     exeName := if proc.platform() == "win32" { "tsc.exe" } else { "tsc" };
     nativeTsc := path.join(rootDir, "igniter/node_modules/@typescript/typescript-" + proc.platform() + "-" + proc.arch() + "/lib/" + exeName);
     emptyEnv: List<String> = [];
-    tscArgs: mut List<String> = [];
+    mut tscArgs: List<String> = [];
     cmd := if fs.kind(nativeTsc) == fs.FILE_KIND_FILE {
         mut tscArgs.pushBack("-p");
         mut tscArgs.pushBack(cfgPath);
@@ -655,7 +655,7 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
         return failBuild("generated compiler returned invalid source dependency list");
     }
 
-    seenShaByPath: mut Map<String, String>;
+    mut seenShaByPath: Map<String, String>;
     seenShaByPath[sourcePath] = sourceRootSha256;
     loop json.arrayOffsets(traceRead.text, filesField.valuePos) as fPos {
         fp := json.readFieldString(traceRead.text, fPos, "path");
@@ -675,9 +675,9 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
         }
     }
 
-    depsQuoted: mut List<String> = [];
-    dhCompact: mut List<String> = [];
-    dhPretty: mut List<String> = [];
+    mut depsQuoted: List<String> = [];
+    mut dhCompact: List<String> = [];
+    mut dhPretty: List<String> = [];
     loop seenShaByPath as entry {
         absFile := entry.key;
         expectedHash := entry.value;
@@ -692,8 +692,8 @@ pub buildCompiler := fn(rootDirRaw: String, target: String): CompilerBuildResult
         mut dhPretty.pushBack("{\n      \"path\": " + json.quoteString(relFile) + ",\n      \"sha256\": " + json.quoteString(expectedHash) + "\n    }");
     }
 
-    edgesCompact: mut List<String> = [];
-    edgesPretty: mut List<String> = [];
+    mut edgesCompact: List<String> = [];
+    mut edgesPretty: List<String> = [];
     loop json.arrayOffsets(traceRead.text, edgesField.valuePos) as ePos {
         eImp := json.readFieldString(traceRead.text, ePos, "importer");
         eSpec := json.readFieldString(traceRead.text, ePos, "spec");
