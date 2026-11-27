@@ -1,7 +1,7 @@
 {
-  "note": "Phase 16 (portable compiler-embedded compile-time evaluator across TS and C11, Stage-1 .lt pure evaluation with bare-effect and mutable-global rejection before execution, comptime { ... } with build-host I/O and --trace-json file dependency tracking, identical owned-value TS/C11 materialization, dual-stage user functions, and speculative .lts propagation for [T; N] / fn<N>()). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Phase 17 (standalone inferred structural records Record<$anon;...> with empty {}, quoted/shorthand fields, written-order evaluation & comptime support; unified symbol/module/fn & full/partial generic fn aliases across blocks and module pub re-exports; parameter defaults with inference, earlier-param reads, overload tie-breaking, ?: public omission markers, zero-callable omission, and C11 owned cleanup; contravariant/covariant callable value variance & T ! E widening). All 69 TS and C corpus artifact hashes and Phase 17 rejection cases verified.",
   "recorded": "2026-11-27",
-  "sourceSha256": "20cf5b0430a4fdf0f52b88ff9b455c439da40dff4b98f7a9a40e3c69c814f5a9",
+  "sourceSha256": "28fd7b7ad36fd41b79bb0c509e0a217d01f27de3218f52d61a1a44f3fd3dbfad",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
