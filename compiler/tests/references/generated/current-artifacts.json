@@ -1,7 +1,7 @@
 {
-  "note": "Phase 14 (definite initialization for partial expressions, immutable Bool predicate correlation, dynamic 1-byte C11 init/drop guards only for maybe-initialized owned locals, and uninitialized-array slice rejection). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Phase 15 (runtime A | B unions with normalization/widening/type tests/narrowing/match, and basic T ! E / T! fallibles backed by core/error.Error + ToError, .ok/.err, ! propagation across finally, and else(err) recovery). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-27",
-  "sourceSha256": "f2576ce1e9cdefefaee3d98069a62fa489eba4cc51f8465ce6950c6a3524af72",
+  "sourceSha256": "d257373bdee690a7c77f3cecb4a3c16d352c36fb686642a04adac2f23c8f4466",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
