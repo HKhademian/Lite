@@ -100,4 +100,37 @@ Canonical typed examples, declaration templates, function/receiver parameter rul
 
 Additional qualified aliases, per-alternative union capabilities, and complete callable-type grammar still need separate contracts. This selection does not adopt ref, public pointers, or a borrowing model.
 
+## Planned variable-definition migration
+
+The revised placement rule puts `mut` next to the name when defining a variable and next to the type when declaring an access contract. The rules above describe the current compiler and the syntax that this migration replaces.
+
+```text
+mut r := random.Rng.create(42);
+mut seeded: random.Rng = random.Rng.create(42);
+var mut replaceable: random.Rng = random.Rng.create(42);
+
+advance := fn(r: mut random.Rng): Int {
+    mut r.nextInt()
+};
+first := advance(mut r);
+second := mut r.nextInt();
+```
+
+`mut` grants writable access to the held value. `var` permits replacing the binding. Use `var mut` in that order when both permissions are needed. A variable-definition prefix qualifies access to the whole value; access qualifiers inside a compound type retain their type-level scope wherever supported. Contextual static lookup such as `.create(42)` is a separate feature.
+
+### Locations to review
+
+- **Storage definitions.** Use the same prefix in `.lts` script bodies, function and block locals, and `.lt` module values wherever the existing storage and export rules already permit `mut`. Apply it to explicit initializers, omitted initializers, and `= ?` reserved storage wherever those forms are supported. The initializer form should not change modifier placement. Confirm public and module-scope forms against their existing visibility and initialization rules.
+- **Access contracts.** Keep `r: mut Rng` in named parameters, including closures and interface signatures, and `r: mut Self` for method receivers. Keep `mut T` in unnamed parameter types and wherever a type position already supports qualified access. Record fields and tuple element types describe the shape of a value. They do not use the variable-definition prefix merely because a field has a default.
+- **Patterns and loop binders.** Check typed destructuring, `match` and conditional pattern bindings, and `loop ... as` independently. A type constraint on a matched value and an access grant for a newly introduced binding are separate decisions. Preserve the current rules in the first migration.
+- **Context syntax.** Revisit the placement in the proposed function requirement `context(mut alloc: Allocator)` and the typed package default `pub context mut alloc: Allocator := ...`. The contract/definition split suggests `context(alloc: mut Allocator)` for the requirement and the existing prefix for the default definition. `context (mut alloc = arena) { ... }` grants access at the supply site. Confirm those spellings in the Contexts design pass.
+- **Call sites and type-side `var`.** Retain `advance(mut rng)`, `mut rng.nextInt()`, and writable field or index grants. Retain `fn(target: var T)` and the corresponding caller-replacement grant.
+
+### Implementation and verification order
+
+1. Add the new declaration head in the maintained Lite frontend. Audit the token parser and checker, block and top-level declaration paths, inference and declaration scans, and module export discovery. Map the prefix to the existing writable-access representation so type checking, ownership and lowering all see the same permissions.
+2. Define the cutover with a targeted diagnostic for the former whole-binding spelling `r: mut T`. Use a migration compiler or transitional seed for repository source adoption. Check for collisions with expression statements such as `mut rng.nextInt()` and preserve valid type-side qualifiers nested in type expressions.
+3. Add focused cases for inferred and typed bindings, `var mut`, supported zero and reserved initialization, script/module/block scope, and explicit argument and receiver grants. Reject reversed or repeated modifiers, mutation through a read-only binding, replacement through a fixed `mut` binding, and reads before first initialization. Compare TS and C11 output and diagnostics, including receiver mutation through a typed parameter and a binding captured by a closure.
+4. Verify compiler support and promote a seed before adopting the new spelling in compiler and library sources. Migrate definitions using syntax-aware matching so parameter and compound-type qualifiers keep their positions. Update the grammar, declarations reference, handbook, examples, formatter, highlighting and editor grammar as applicable. Run the full dual-target tests, corpus parity, and bootstrap verification before retiring the old declaration spelling.
+
 Related: [mutability](lite://doc/mutability), [declarations](lite://doc/declarations-and-assignment), [functions](lite://doc/functions), [caller-location keywords](lite://doc/caller-location-keywords), [type aliases](lite://doc/type-aliases), and [slot qualifier](lite://doc/slot-access-qualifier).
