@@ -11,9 +11,9 @@ Lite provides pure, dual-target (TypeScript + C11) math, deterministic random ge
 ```lite
 io := import "core/io";
 math := import "math/scalar";
-rng := import "math/random";
+random := import "math/random";
 
-var r: mut rng.Rng = rng.Rng.create(42);
+r: mut random.Rng = random.Rng.create(42);
 a := mut r.rangeInt(1, 7);
 b := mut r.rangeInt(1, 7);
 io.outputLine(a, b, math.clamp(a + b, 2, 12));
