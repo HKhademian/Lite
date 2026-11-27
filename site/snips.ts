@@ -335,6 +335,7 @@ export const snipsClientJs = `(function () {
     }
 
     runBtn.addEventListener("click", async function () {
+      if (runBtn.getAttribute("aria-disabled") === "true") return;
       stopRun();
       var run = { worker: null, stage: null };
       activeRun = run;
@@ -362,7 +363,7 @@ export const snipsClientJs = `(function () {
       closeBtn.addEventListener("click", function () {
         stopRun();
         outBox.hidden = true;
-        runBtn.disabled = false;
+        runBtn.removeAttribute("aria-disabled");
         runBtn.focus();
       });
       head.appendChild(summary);
@@ -377,7 +378,7 @@ export const snipsClientJs = `(function () {
       }
 
       var t0 = performance.now();
-      runBtn.disabled = true;
+      runBtn.setAttribute("aria-disabled", "true");
       try {
         var runtime = await import("./play-stage.js");
         if (activeRun !== run) return;
@@ -442,7 +443,7 @@ export const snipsClientJs = `(function () {
         appendOutput((err && err.message) || "Could not run snippet in this browser.");
         stopRun();
       } finally {
-        if (activeRun === run || !activeRun) runBtn.disabled = false;
+        if (activeRun === run || !activeRun) runBtn.removeAttribute("aria-disabled");
       }
     });
   }
