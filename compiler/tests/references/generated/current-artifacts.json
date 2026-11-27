@@ -1,7 +1,7 @@
 {
-  "note": "Phase 17 (standalone inferred structural records Record<$anon;...> with empty {}, quoted/shorthand fields, written-order evaluation & comptime support; unified symbol/module/fn & full/partial generic fn aliases across blocks and module pub re-exports; parameter defaults with inference, earlier-param reads, overload tie-breaking, ?: public omission markers, zero-callable omission, and C11 owned cleanup; contravariant/covariant callable value variance & T ! E widening). All 69 TS and C corpus artifact hashes and Phase 17 rejection cases verified.",
+  "note": "Phase 18 (post-Phase 7–10 hardening: interface associated types Type[<Bound>][=Default] & default method bodies across dyn/generic/bodyless/cross-module impls; C/FFI NULL context ambient default shims, ContextPanic without defaults, unused-context diagnostics with '_' opt-out & escaping mut/borrowed closure rejection; bit-packed Bool/Int1..4/UInt1..4 slices with non-byte splitAt, loop mut break flush & leak-free toList; float-niche finite ingress & Option<Float64/32/16/8> qNaN packing). All 69 TS and C corpus artifact hashes and Phases 6–18 verified.",
   "recorded": "2026-11-27",
-  "sourceSha256": "28fd7b7ad36fd41b79bb0c509e0a217d01f27de3218f52d61a1a44f3fd3dbfad",
+  "sourceSha256": "9f3dd5229b7e37b43d70067f7188801f5aef7084551f6c76e066f1b924293332",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
