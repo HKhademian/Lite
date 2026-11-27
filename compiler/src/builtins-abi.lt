@@ -262,6 +262,55 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Slice.splitAt" and params == "values=Slice<T>|mid=Int" and result == "(left:Slice<T>,right:Slice<T>)" { "lite$core$slice$splitAt:v1" }
         else if name == "Slice.toList" and params == "values=Slice<T>" and result == "List<T>" { "lite$core$slice$toList:v1" }
         else { "" }
+    } else if moduleIdentity == "lite.core.simd.v1" {
+        if name == "Simd.splat" and params == "value=T" and result == "Simd<T,N>" { "lite$core$simd$splat:v1" }
+        else if name == "Simd.fromArray" and params == "values=[T;N]" and result == "Simd<T,N>" { "lite$core$simd$fromArray:v1" }
+        else if name == "Simd.load" and params == "slice=Slice<T>|offset=Int" and result == "Simd<T,N>" { "lite$core$simd$load:v1" }
+        else if name == "Simd.nativeLanes" and params == "" and result == ir.VALUE_KIND_INT { "lite$core$simd$nativeLanes:v1" }
+        else if name == "Simd.lanes" and params == "v=Simd<T,N>" and result == ir.VALUE_KIND_INT { "lite$core$simd$lanes:v1" }
+        else if name == "Simd.toArray" and params == "v=Simd<T,N>" and result == "[T;N]" { "lite$core$simd$toArray:v1" }
+        else if (name == "Simd.get" or name == "Simd.$getIndex") and params == "v=Simd<T,N>|index=Int" and result == "T" { "lite$core$simd$get:v1" }
+        else if name == "Simd.withLane" and params == "v=Simd<T,N>|index=Int|value=T" and result == "Simd<T,N>" { "lite$core$simd$withLane:v1" }
+        else if name == "Simd.store" and params == "v=Simd<T,N>|dst=mut Slice<T>|offset=Int" and result == ir.VALUE_KIND_UNIT { "lite$core$simd$store:v1" }
+        else if name == "Simd.add" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$add:v1" }
+        else if name == "Simd.sub" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$sub:v1" }
+        else if name == "Simd.mul" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$mul:v1" }
+        else if name == "Simd.div" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$div:v1" }
+        else if name == "Simd.neg" and params == "v=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$neg:v1" }
+        else if name == "Simd.abs" and params == "v=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$abs:v1" }
+        else if name == "Simd.min" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$min:v1" }
+        else if name == "Simd.max" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$max:v1" }
+        else if name == "Simd.wrappingAdd" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$wrappingAdd:v1" }
+        else if name == "Simd.wrappingSub" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$wrappingSub:v1" }
+        else if name == "Simd.wrappingMul" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$wrappingMul:v1" }
+        else if name == "Simd.bitAnd" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$bitAnd:v1" }
+        else if name == "Simd.bitOr" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$bitOr:v1" }
+        else if name == "Simd.bitXor" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$bitXor:v1" }
+        else if name == "Simd.bitNot" and params == "v=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$bitNot:v1" }
+        else if name == "Simd.fma" and params == "a=Simd<T,N>|b=Simd<T,N>|c=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$fma:v1" }
+        else if name == "Simd.sqrt" and params == "v=Simd<T,N>" and result == "Simd<T,N>" { "lite$core$simd$sqrt:v1" }
+        else if name == "Simd.reduceAdd" and params == "v=Simd<T,N>" and result == "T" { "lite$core$simd$reduceAdd:v1" }
+        else if name == "Simd.wrappingReduceAdd" and params == "v=Simd<T,N>" and result == "T" { "lite$core$simd$wrappingReduceAdd:v1" }
+        else if name == "Simd.reduceMin" and params == "v=Simd<T,N>" and result == "T" { "lite$core$simd$reduceMin:v1" }
+        else if name == "Simd.reduceMax" and params == "v=Simd<T,N>" and result == "T" { "lite$core$simd$reduceMax:v1" }
+        else if name == "Simd.dot" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "T" { "lite$core$simd$dot:v1" }
+        else if name == "Simd.select" and params == "whenTrue=Simd<T,N>|whenFalse=Simd<T,N>|mask=[Bool;N]" and result == "Simd<T,N>" { "lite$core$simd$select:v1" }
+        else { "" }
+    } else if moduleIdentity == "lite.core.soa.v1" {
+        if name == "SoA.create" and params == "" and result == "SoA<R>" { "lite$core$soa$create:v1" }
+        else if name == "SoA.withCapacity" and params == "cap=Int" and result == "SoA<R>" { "lite$core$soa$withCapacity:v1" }
+        else if name == "SoA.length" and params == "values=SoA<R>" and result == ir.VALUE_KIND_INT { "lite$core$soa$length:v1" }
+        else if name == "SoA.isEmpty" and params == "values=SoA<R>" and result == ir.VALUE_KIND_BOOL { "lite$core$soa$isEmpty:v1" }
+        else if name == "SoA.reserve" and params == "values=mut SoA<R>|minCap=Int" and result == ir.VALUE_KIND_UNIT { "lite$core$soa$reserve:v1" }
+        else if name == "SoA.clear" and params == "values=mut SoA<R>" and result == ir.VALUE_KIND_UNIT { "lite$core$soa$clear:v1" }
+        else if name == "SoA.pushBack" and params == "values=mut SoA<R>|row=R" and result == ir.VALUE_KIND_UNIT { "lite$core$soa$pushBack:v1" }
+        else if name == "SoA.popBack" and params == "values=mut SoA<R>" and result == "R" { "lite$core$soa$popBack:v1" }
+        else if name == "SoA.swapRemove" and params == "values=mut SoA<R>|index=Int" and result == "R" { "lite$core$soa$swapRemove:v1" }
+        else if (name == "SoA.get" or name == "SoA.$getIndex") and params == "values=SoA<R>|index=Int" and result == "R" { "lite$core$soa$get:v1" }
+        else if (name == "SoA.set" or name == "SoA.$setIndex") and params == "values=mut SoA<R>|index=Int|row=R" and result == ir.VALUE_KIND_UNIT { "lite$core$soa$set:v1" }
+        else if name == "SoA.uncheckedGet" and params == "values=SoA<R>|index=Int" and result == "R" { "lite$core$soa$uncheckedGet:v1" }
+        else if name == "SoA.uncheckedSet" and params == "values=mut SoA<R>|index=Int|row=R" and result == ir.VALUE_KIND_UNIT { "lite$core$soa$uncheckedSet:v1" }
+        else { "" }
     } else if moduleIdentity == "lite.ds.arena.v1" {
         if name == "vmArenaCreate" and params == "capacityBytes=Int" and result == ir.VALUE_KIND_INT { "lite$vmArenaCreate" }
         else if name == "vmArenaWriteByte" and params == "handle=Int|offset=Int|value=Int" and result == ir.VALUE_KIND_BOOL { "lite$vmArenaWriteByte" }

@@ -151,7 +151,19 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
         if types.isMapKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare map values"); }
         if types.isSetKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare set values"); }
         if types.isRcKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare Rc values"); }
+        if types.isSoaKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare SoA values"); }
         if types.isFnKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare function values"); }
+        if types.isSimdKind(baseKind) {
+            cmpCode := if target == ir.TARGET_C {
+                sTag := types.cSimdTag(baseKind);
+                eqExpr := sTag + "_eq(" + left.code + ", " + right.code + ")";
+                if operator == "=!=" { "(!" + eqExpr + ")" } else { eqExpr }
+            } else {
+                eqExpr := "lite$simdEq(" + left.code + ", " + right.code + ")";
+                if operator == "=!=" { "(!" + eqExpr + ")" } else { eqExpr }
+            };
+            return boolParsed(cmpCode, false, false, right.next);
+        }
         if numeric.isFloatKind(baseKind) {
             fCodes: List<String> = [left.code, right.code];
             fKinds: List<String> = [baseKind, baseKind];
@@ -195,11 +207,25 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     if types.isRcKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare Rc values");
     }
+    if types.isSoaKind(left.kind) {
+        syntax.failAt(source, at, prefix, "cannot compare SoA values");
+    }
     if types.isFnKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare function values");
     }
     if operator =!= "==" and operator =!= "=!=" {
         syntax.failAt(source, at, prefix, "operator " + operator + " requires Int operands");
+    }
+    if types.isSimdKind(left.kind) {
+        cmpCode := if target == ir.TARGET_C {
+            sTag := types.cSimdTag(left.kind);
+            eqExpr := sTag + "_eq(" + left.code + ", " + right.code + ")";
+            if operator == "=!=" { "(!" + eqExpr + ")" } else { eqExpr }
+        } else {
+            eqExpr := "lite$simdEq(" + left.code + ", " + right.code + ")";
+            if operator == "=!=" { "(!" + eqExpr + ")" } else { eqExpr }
+        };
+        return boolParsed(cmpCode, false, false, right.next);
     }
     if left.constant and right.constant {
         value := if left.kind == ir.VALUE_KIND_STRING {
@@ -365,6 +391,27 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
             code
         }
     }
+    else if types.isSoaKind(kind) {
+        if target == ir.TARGET_C {
+            sTag := types.cSoaTag(kind);
+            if sTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, sTag + "_with_cap(") and not code.startsWithAt(0, sTag + "_copy(") and not code.startsWithAt(0, sTag + "_move(") {
+                sTag + "_copy(" + code + ")"
+            } else {
+                code
+            }
+        } else if target == ir.TARGET_TS and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, "{ ") {
+            tsDeepCloneValueCode(kind, code)
+        } else {
+            code
+        }
+    }
+    else if types.isSimdKind(kind) {
+        if target == ir.TARGET_TS and not code.startsWithAt(0, "lite$simd") {
+            "[" + "...(" + code + ")]"
+        } else {
+            code
+        }
+    }
     else if target == ir.TARGET_C and types.isFnKind(kind) {
         fTag := types.cFnTag(kind);
         if fTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, "((/*@T:") and not code.startsWithAt(0, fTag + "_copy(") and not code.startsWithAt(0, fTag + "_move(") and not code.startsWithAt(0, "lt_mk_") {
@@ -416,6 +463,22 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
     }
     if types.isRcKind(kind) {
         return "lite$rcShare(" + expr + ")";
+    }
+    if types.isSimdKind(kind) {
+        return "[...(" + expr + ")]";
+    }
+    if types.isSoaKind(kind) {
+        recK := types.soaRecordKind(kind);
+        fc := types.recordComponentCount(recK);
+        colEntries: mut List<String> = [];
+        var fi := 0;
+        loop fi < fc {
+            comp := types.recordComponent(recK, fi);
+            fListCloned := self("List<" + comp.kind + ">", "(lite$soac." + comp.prop + ")");
+            mut colEntries.pushBack(comp.prop + ": " + fListCloned);
+            fi = fi + 1;
+        }
+        return "(((lite$soac: " + types.tsFunctionType(kind) + ") => ({ " + colEntries.join(", ") + " }))(" + expr + "))";
     }
     if types.isRecordKind(kind) or types.isTupleKind(kind) {
         isRec := types.isRecordKind(kind);
@@ -858,6 +921,31 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
         }
         elTs := types.tsFunctionType(types.sliceElementKind(kind));
         (kind = kind, code = "({ data: ([] as " + elTs + "[]), off: 0, len: 0 })", intValue = 0, textValue = "", constant = false, next = next)
+    }
+    else if types.isSimdKind(kind) {
+        elKind := types.simdElementKind(kind);
+        n := types.simdLaneCount(kind);
+        if target == ir.TARGET_C and types.cSimdTag(kind) =!= "" {
+            zEl := self(target, elKind, next).code;
+            return (kind = kind, code = "/*@T:" + kind + "@*/" + types.cSimdTag(kind) + "_splat(" + zEl + ")", intValue = 0, textValue = "", constant = false, next = next);
+        }
+        zEl := self(target, elKind, next).code;
+        return (kind = kind, code = "lite$simdSplat(" + zEl + ", " + n.toText() + ")", intValue = 0, textValue = "", constant = false, next = next);
+    }
+    else if types.isSoaKind(kind) {
+        recK := types.soaRecordKind(kind);
+        if target == ir.TARGET_C and types.cSoaTag(kind) =!= "" {
+            return (kind = kind, code = "/*@T:" + kind + "@*/((" + types.cSoaTag(kind) + "){ .len = 0 })", intValue = 0, textValue = "", constant = false, next = next);
+        }
+        fc := types.recordComponentCount(recK);
+        cols: mut List<String> = [];
+        var fi := 0;
+        loop fi < fc {
+            comp := types.recordComponent(recK, fi);
+            mut cols.pushBack(comp.prop + ": []");
+            fi = fi + 1;
+        }
+        return (kind = kind, code = "({ " + cols.join(", ") + " } as " + types.tsFunctionType(kind) + ")", intValue = 0, textValue = "", constant = false, next = next);
     }
     else if types.isPayloadEnumKind(kind) {
         ps := types.enumCasePayloads(kind, 0);
@@ -1956,7 +2044,7 @@ pub storageKind := fn(kind: String): String {
     match {
         types.isListKind(kind) or types.isArrayKind(kind) { "List" }
         types.isTupleKind(kind) { "Tuple" }
-        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) { "Record" }
+        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) { "Record" }
         types.isFnKind(kind) { "Fn" }
         numeric.isIntKind(kind) { ir.VALUE_KIND_INT }
         numeric.isFloatKind(kind) { ir.VALUE_KIND_FLOAT }
@@ -1966,7 +2054,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

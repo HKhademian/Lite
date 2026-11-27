@@ -66,6 +66,37 @@ pub makeSliceProvenance := fn(provKind: String, recvRuntime: String, recvDepth: 
     provKind + ":" + head + tail
 };
 
+/** Builds `SoA<R>` column slice provenance preserving disjoint `col@<field>` tag and any outer chain. */
+pub makeColumnSliceProvenance := fn(provKind: String, recvRuntime: String, recvDepth: Int, recvName: String, recvLocalText: String, colName: String): String {
+    head := recvRuntime + "#" + recvDepth.toText() + "#" + recvName;
+    prev := stripProvenanceKind(recvLocalText);
+    tail := if prev =!= "" and prev =!= "param" { "|" + prev } else { "" };
+    provKind + ":" + head + "|col@" + colName + tail
+};
+
+/** Returns the `rt` of `rt#depth#name` directly associated with a `col@<field>` entry, or the first entry runtime. */
+colOwnerAndField := fn(payload: String): (rootRt: String, col: String) {
+    if payload == "" { return (rootRt = "", col = ""); }
+    var lastOwnerRt := "";
+    var start := 0;
+    size := payload.length();
+    loop start < size {
+        sep := payload.indexOf("|", start);
+        end := if sep >= 0 { sep } else { size };
+        entry := payload.slice(start, end);
+        if entry.startsWithAt(0, "col@") {
+            return (rootRt = lastOwnerRt, col = entry.slice(4, entry.length()));
+        }
+        h1 := entry.indexOf("#", 0);
+        if h1 > 0 {
+            lastOwnerRt = entry.slice(0, h1);
+        }
+        if sep < 0 { break; }
+        start = sep + 1;
+    }
+    (rootRt = "", col = "")
+};
+
 /** Converts a `Slice<T>` local entry into a read-only expression provenance when referenced by identifier. */
 pub sliceIdentifierProvenance := fn(runtime: String, depth: Int, name: String, localText: String): String {
     prev := stripProvenanceKind(localText);
@@ -97,11 +128,16 @@ payloadHasToken := fn(payload: String, tok: String): Bool {
     ("|" + payload + "|").indexOf("|" + tok + "|", 0) >= 0
 };
 
-/** True when two provenances come from opposite halves of the same `splitAt` call (`splitL@<id>` vs `splitR@<id>`). */
+/** True when two provenances come from opposite halves of the same `splitAt` call or distinct columns of the same `SoA<R>`. */
 pub areDisjointSplitProvenances := fn(provA: String, provB: String): Bool {
     payA := stripProvenanceKind(provA);
     payB := stripProvenanceKind(provB);
     if payA == "" or payB == "" { return false; }
+    colA := colOwnerAndField(payA);
+    colB := colOwnerAndField(payB);
+    if colA.col =!= "" and colB.col =!= "" and colA.rootRt =!= "" and colA.rootRt == colB.rootRt and colA.col =!= colB.col {
+        return true;
+    }
     var start := 0;
     size := payA.length();
     loop start < size {
@@ -251,6 +287,54 @@ pub checkCanMutateBinding := fn(locals: List<Local>, targetRuntime: String, targ
                 hit := findOwnerInPayload(payload, 0, targetRuntime);
                 if hit.found {
                     syntax.failAt(source, pos, prefix, "cannot mutate " + targetName + " while borrowed by slice " + b.name);
+                }
+            }
+        }
+        i = i + 1;
+    }
+};
+
+/** Fails if reading `targetRuntime.colName` conflicts with an active mutable whole-container or same-column borrow in `locals`. */
+pub checkCanReadColumn := fn(locals: List<Local>, targetRuntime: String, colName: String, targetName: String, source: String, pos: Int, prefix: String): Unit {
+    if targetRuntime == "" { return; }
+    var i := 0;
+    n := locals.length();
+    loop i < n {
+        if isLatestActiveSliceLocal(locals, i) {
+            b := locals[i];
+            bKind := provenanceKind(b.textValue);
+            payload := stripProvenanceKind(b.textValue);
+            if bKind == "borrow_mut" or bKind == "borrow_split" {
+                hit := findOwnerInPayload(payload, 0, targetRuntime);
+                if hit.found {
+                    bCol := colOwnerAndField(payload);
+                    if bCol.col == "" or bCol.rootRt =!= targetRuntime or bCol.col == colName {
+                        syntax.failAt(source, pos, prefix, "cannot read " + targetName + "." + colName + " while mutably borrowed by slice " + b.name);
+                    }
+                }
+            }
+        }
+        i = i + 1;
+    }
+};
+
+/** Fails if mutably borrowing `targetRuntime.colName` conflicts with an active whole-container or same-column borrow in `locals`. */
+pub checkCanMutateColumn := fn(locals: List<Local>, targetRuntime: String, colName: String, targetName: String, source: String, pos: Int, prefix: String): Unit {
+    if targetRuntime == "" { return; }
+    var i := 0;
+    n := locals.length();
+    loop i < n {
+        if isLatestActiveSliceLocal(locals, i) {
+            b := locals[i];
+            bKind := provenanceKind(b.textValue);
+            payload := stripProvenanceKind(b.textValue);
+            if bKind == "borrow_ro" or bKind == "borrow_mut" or bKind == "borrow_split" {
+                hit := findOwnerInPayload(payload, 0, targetRuntime);
+                if hit.found {
+                    bCol := colOwnerAndField(payload);
+                    if bCol.col == "" or bCol.rootRt =!= targetRuntime or bCol.col == colName {
+                        syntax.failAt(source, pos, prefix, "cannot mutably borrow " + targetName + "." + colName + " while borrowed by slice " + b.name);
+                    }
                 }
             }
         }

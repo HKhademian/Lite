@@ -305,8 +305,33 @@ pub cSliceTag := fn(kind: String): String { types.cSliceTag(kind) };
 /** True when `moduleIdentity` is a registered core module allowed to declare `Slice<T>` constructors. */
 isCoreSliceHostModule := fn(moduleIdentity: String): Bool {
     moduleIdentity == "lite.core.list.v1" or moduleIdentity == "lite.core.array.v1" or
-    moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.core.slice.v1"
+    moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.core.slice.v1" or
+    moduleIdentity == "lite.core.simd.v1"
 };;
+/** True when `kind` is canonical `Simd<T,N>`. */
+pub isSimdKind := fn(kind: String): Bool { types.isSimdKind(kind) };
+/** Returns element kind `T` from `Simd<T,N>`. */
+pub simdElementKind := fn(kind: String): String { types.simdElementKind(kind) };
+/** Returns integer lane count `N` from `Simd<T,N>`. */
+pub simdLaneCount := fn(kind: String): Int { types.simdLaneCount(kind) };
+/** Returns raw lane count text from `Simd<T,N>`. */
+pub simdLaneCountText := fn(kind: String): String { types.simdLaneCountText(kind) };
+/** True when `kind` is an admitted `Simd` lane scalar type. */
+pub isSimdElemKind := fn(kind: String): Bool { types.isSimdElemKind(kind) };
+/** Returns byte width of a `Simd` element kind. */
+pub simdElemByteWidth := fn(kind: String): Int { types.simdElemByteWidth(kind) };
+/** Returns target lane count for `SimdNative<T>`. */
+pub simdNativeLaneCount := fn(kind: String): Int { types.simdNativeLaneCount(kind) };
+/** Returns true when `(elemKind, lanes)` is valid for `Simd<T, N>`. */
+pub isValidSimdLaneCount := fn(elemKind: String, lanes: Int): Bool { types.isValidSimdLaneCount(elemKind, lanes) };
+/** Returns C11 typedef name `lt_simd_<tag>_<n>` or `""`. */
+pub cSimdTag := fn(kind: String): String { types.cSimdTag(kind) };
+/** True when `kind` is canonical `SoA<R>`. */
+pub isSoaKind := fn(kind: String): Bool { types.isSoaKind(kind) };
+/** Returns underlying record kind `R` from `SoA<R>`. */
+pub soaRecordKind := fn(kind: String): String { types.soaRecordKind(kind) };
+/** Returns C11 typedef name `lt_soa_<hash>` or `""`. */
+pub cSoaTag := fn(kind: String): String { types.cSoaTag(kind) };
 /** True when `kind` is a nominal `enum` type kind. */
 pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
 /** True when `kind` is a payload-bearing nominal `enum` type kind. */
@@ -1426,7 +1451,22 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     (moduleIdentity == "lite.core.slice.v1" and
                     (fnName == "length" or fnName == "isEmpty" or fnName == "uncheckedGet" or
                     fnName == "uncheckedSet" or fnName == "splitAt" or fnName == "toList" or
-                    fnName == "$getIndex" or fnName == "$setIndex" or fnName == "$getSlice" or fnName == "$getMutSlice"));
+                    fnName == "$getIndex" or fnName == "$setIndex" or fnName == "$getSlice" or fnName == "$getMutSlice")) or
+                    (moduleIdentity == "lite.core.simd.v1" and
+                    (fnName == "splat" or fnName == "fromArray" or fnName == "load" or fnName == "nativeLanes" or
+                    fnName == "lanes" or fnName == "toArray" or fnName == "get" or fnName == "$getIndex" or
+                    fnName == "withLane" or fnName == "store" or fnName == "add" or fnName == "sub" or
+                    fnName == "mul" or fnName == "div" or fnName == "neg" or fnName == "abs" or
+                    fnName == "min" or fnName == "max" or fnName == "wrappingAdd" or fnName == "wrappingSub" or
+                    fnName == "wrappingMul" or fnName == "bitAnd" or fnName == "bitOr" or fnName == "bitXor" or
+                    fnName == "bitNot" or fnName == "fma" or fnName == "sqrt" or fnName == "reduceAdd" or
+                    fnName == "wrappingReduceAdd" or fnName == "reduceMin" or fnName == "reduceMax" or
+                    fnName == "dot" or fnName == "select")) or
+                    (moduleIdentity == "lite.core.soa.v1" and
+                    (fnName == "create" or fnName == "withCapacity" or fnName == "length" or fnName == "isEmpty" or
+                    fnName == "reserve" or fnName == "clear" or fnName == "pushBack" or fnName == "popBack" or
+                    fnName == "swapRemove" or fnName == "get" or fnName == "set" or fnName == "$getIndex" or
+                    fnName == "$setIndex" or fnName == "uncheckedGet" or fnName == "uncheckedSet"));
                     if canPreParseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic) {
                         header := parseFunctionHeader(source, headerPos, prefix, aliases, fnListIntrinsic);
                         if types.containsSliceKind(header.result) and not isCoreSliceHostModule(moduleIdentity) {
@@ -3920,7 +3960,22 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 (moduleIdentity == "lite.core.slice.v1" and
                 (name == "length" or name == "isEmpty" or name == "uncheckedGet" or
                 name == "uncheckedSet" or name == "splitAt" or name == "toList" or
-                name == "$getIndex" or name == "$setIndex" or name == "$getSlice" or name == "$getMutSlice"));
+                name == "$getIndex" or name == "$setIndex" or name == "$getSlice" or name == "$getMutSlice")) or
+                (moduleIdentity == "lite.core.simd.v1" and
+                (name == "splat" or name == "fromArray" or name == "load" or name == "nativeLanes" or
+                name == "lanes" or name == "toArray" or name == "get" or name == "$getIndex" or
+                name == "withLane" or name == "store" or name == "add" or name == "sub" or
+                name == "mul" or name == "div" or name == "neg" or name == "abs" or
+                name == "min" or name == "max" or name == "wrappingAdd" or name == "wrappingSub" or
+                name == "wrappingMul" or name == "bitAnd" or name == "bitOr" or name == "bitXor" or
+                name == "bitNot" or name == "fma" or name == "sqrt" or name == "reduceAdd" or
+                name == "wrappingReduceAdd" or name == "reduceMin" or name == "reduceMax" or
+                name == "dot" or name == "select")) or
+                (moduleIdentity == "lite.core.soa.v1" and
+                (name == "create" or name == "withCapacity" or name == "length" or name == "isEmpty" or
+                name == "reserve" or name == "clear" or name == "pushBack" or name == "popBack" or
+                name == "swapRemove" or name == "get" or name == "set" or name == "$getIndex" or
+                name == "$setIndex" or name == "uncheckedGet" or name == "uncheckedSet"));
                 header := parseFunctionHeader(source, position, prefix, aliases, listIntrinsic);
                 if types.containsSliceKind(header.result) and not isCoreSliceHostModule(moduleIdentity) {
                     failAt(source, nameStart, prefix, "borrowed Slice<T> cannot escape via function return type");

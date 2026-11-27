@@ -249,6 +249,15 @@ mangleOneKind := fn(kind: String): String {
     if types.isSliceKind(kind) {
         return "Sl_" + self(types.sliceElementKind(kind)) + "_E";
     }
+    if types.isSimdKind(kind) {
+        return "D_" + self(types.simdElementKind(kind)) + "_" + types.simdLaneCountText(kind) + "_E";
+    }
+    if types.isSimdNativeKind(kind) {
+        return "Dn_" + self(types.simdNativeElementKind(kind)) + "_E";
+    }
+    if types.isSoaKind(kind) {
+        return "O_" + self(types.soaRecordKind(kind)) + "_E";
+    }
     if types.isMapKind(kind) {
         return "M_" + self(types.mapKeyKind(kind)) + "_" + self(types.mapValueKind(kind)) + "_E";
     }
@@ -398,6 +407,19 @@ pub kindHasUnboundGeneric := fn(genericParams: String, kind: String, bindings: M
     if types.isSliceKind(kind) {
         return self(genericParams, types.sliceElementKind(kind), bindings);
     }
+    if types.isSimdKind(kind) {
+        nTxt := types.simdLaneCountText(kind);
+        if types.valueParamKind(genericParams, nTxt) =!= "" and not bindings.has(nTxt) {
+            return true;
+        }
+        return self(genericParams, types.simdElementKind(kind), bindings);
+    }
+    if types.isSimdNativeKind(kind) {
+        return self(genericParams, types.simdNativeElementKind(kind), bindings);
+    }
+    if types.isSoaKind(kind) {
+        return self(genericParams, types.soaRecordKind(kind), bindings);
+    }
     if types.isMapKind(kind) {
         return self(genericParams, types.mapKeyKind(kind), bindings) or self(genericParams, types.mapValueKind(kind), bindings);
     }
@@ -530,6 +552,46 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
             return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
         }
         return self(genericParams, types.sliceElementKind(pattern), types.sliceElementKind(actual), mut bindings);
+    }
+    if types.isSimdKind(pattern) {
+        if not types.isSimdKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        pLanesText := types.simdLaneCountText(pattern);
+        aLanes := types.simdLaneCount(actual);
+        if types.valueParamKind(genericParams, pLanesText) == ir.VALUE_KIND_INT {
+            if aLanes <= 1 {
+                return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+            }
+            laneTok := types.comptimeIntToken(aLanes);
+            if bindings.has(pLanesText) {
+                existingLanes := bindings.getOr(pLanesText, "");
+                if existingLanes =!= laneTok {
+                    return "conflicting bindings for " + pLanesText + ": " + types.displayKind(existingLanes) + " vs " + types.displayKind(laneTok);
+                }
+            } else {
+                (mut bindings).set(pLanesText, laneTok);
+            }
+        } else if types.simdLaneCount(pattern) =!= aLanes {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        return self(genericParams, types.simdElementKind(pattern), types.simdElementKind(actual), mut bindings);
+    }
+    if types.isSimdNativeKind(pattern) {
+        if not types.isSimdKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        elAct := types.simdElementKind(actual);
+        if not types.isSimdElemKind(elAct) or types.simdLaneCount(actual) =!= types.simdNativeLaneCount(elAct) {
+            return "expected SimdNative<" + types.simdNativeElementKind(pattern) + ">, got " + types.displayKind(actual);
+        }
+        return self(genericParams, types.simdNativeElementKind(pattern), elAct, mut bindings);
+    }
+    if types.isSoaKind(pattern) {
+        if not types.isSoaKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        return self(genericParams, types.soaRecordKind(pattern), types.soaRecordKind(actual), mut bindings);
     }
     if types.isMapKind(pattern) {
         if not types.isMapKind(actual) {

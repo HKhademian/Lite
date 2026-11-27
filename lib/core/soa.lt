@@ -1,0 +1,46 @@
+/* Core parallel-column structure-of-arrays container (`SoA<R>`) with row operations and zero-copy disjoint column slice views. */
+
+/** Creates an empty `SoA<R>` container with parallel column buffers allocated lazily on demand. */
+pub SoA.create := fn<R: Type>(): Self<R>;
+
+/** Creates an empty `SoA<R>` container with space for at least `cap` rows preallocated across all columns. */
+pub SoA.withCapacity := fn<R: Type>(cap: Int): Self<R>;
+
+/** Returns the number of rows currently stored in `values`. */
+pub SoA.length := fn<R: Type>(values: Self<R>): Int;
+
+/** True when `values` contains zero rows. */
+pub SoA.isEmpty := fn<R: Type>(values: Self<R>): Bool;
+
+/** Ensures capacity for at least `minCap` rows without changing length, faulting if `minCap < 0`. */
+pub SoA.reserve := fn<R: Type>(values: mut Self<R>, minCap: Int): Unit;
+
+/** Removes all rows and drops owning field values while retaining allocated column capacity. */
+pub SoA.clear := fn<R: Type>(values: mut Self<R>): Unit;
+
+/** Appends one row `row` by distributing its fields across parallel column arrays. */
+pub SoA.pushBack := fn<R: Type>(values: mut Self<R>, row: R): Unit;
+
+/** Removes and returns the last row, faulting when empty. */
+pub SoA.popBack := fn<R: Type>(values: mut Self<R>): R;
+
+/** Removes row `index` in O(1) time by moving the last row into its slot, faulting when out of bounds. */
+pub SoA.swapRemove := fn<R: Type>(values: mut Self<R>, index: Int): R;
+
+/** Materializes and returns row `index` (deep-copying owning fields), faulting when out of bounds. */
+pub SoA.get := fn<R: Type>(values: Self<R>, index: Int): R;
+
+/** Replaces row `index` across all columns (dropping any overwritten owning fields), faulting when out of bounds. */
+pub SoA.set := fn<R: Type>(values: mut Self<R>, index: Int, row: R): Unit;
+
+/** Indexing alias for `SoA.get`. */
+pub SoA.$getIndex := fn<R: Type>(values: Self<R>, index: Int): R;
+
+/** Indexing assignment alias for `SoA.set`. */
+pub SoA.$setIndex := fn<R: Type>(values: mut Self<R>, index: Int, row: R): Unit;
+
+/** Returns row `index`, skipping bounds checks when `-fno-check-unchecked` is active. */
+pub SoA.uncheckedGet := fn<R: Type>(values: Self<R>, index: Int): R;
+
+/** Replaces row `index`, skipping bounds checks when `-fno-check-unchecked` is active. */
+pub SoA.uncheckedSet := fn<R: Type>(values: mut Self<R>, index: Int, row: R): Unit;

@@ -250,13 +250,13 @@ var cachedIdentityTexts: mut List<String> = [];
 pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String {
     if projectRoot == "" { return ""; }
     paths: List<String> = [
-    "lib/core/io.lt", "lib/core/int.lt", "lib/core/list.lt", "lib/core/array.lt", "lib/core/map.lt", "lib/core/set.lt", "lib/core/rc.lt", "lib/core/slice.lt", "lib/core/text.lt",
+    "lib/core/io.lt", "lib/core/int.lt", "lib/core/list.lt", "lib/core/array.lt", "lib/core/map.lt", "lib/core/set.lt", "lib/core/rc.lt", "lib/core/slice.lt", "lib/core/simd.lt", "lib/core/soa.lt", "lib/core/text.lt",
     "lib/core/file.lt", "lib/core/process.lt", "lib/core/crypto.lt", "lib/core/time.lt",
     "lib/ds/arena.lt", "lib/external/ts.lt", "lib/external/http.lt", "lib/external/bench.lt",
     "lib/external/pool.lt", "lib/extra/surface.lt", "compiler/src/modules.lt"
     ];
     identities: List<String> = [
-    "lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.array.v1", "lite.core.map.v1", "lite.core.set.v1", "lite.core.rc.v1", "lite.core.slice.v1", "lite.core.text.v1",
+    "lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.array.v1", "lite.core.map.v1", "lite.core.set.v1", "lite.core.rc.v1", "lite.core.slice.v1", "lite.core.simd.v1", "lite.core.soa.v1", "lite.core.text.v1",
     "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1",
     "lite.ds.arena.v1", "lite.external.ts.v1", "lite.external.http.v1", "lite.external.bench.v1",
     "lite.external.pool.v1", "lite.extra.surface.v1", "lite.compiler.modules.v1"

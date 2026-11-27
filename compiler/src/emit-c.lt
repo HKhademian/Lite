@@ -56,6 +56,8 @@ cScalarType := fn(kind: String): String {
     else if frontend.cSetTag(kind) =!= "" { frontend.cSetTag(kind) }
     else if frontend.cRcTag(kind) =!= "" { frontend.cRcTag(kind) }
     else if frontend.cSliceTag(kind) =!= "" { frontend.cSliceTag(kind) }
+    else if frontend.cSimdTag(kind) =!= "" { frontend.cSimdTag(kind) }
+    else if frontend.cSoaTag(kind) =!= "" { frontend.cSoaTag(kind) }
     else if frontend.cStructTag(kind) =!= "" { frontend.cStructTag(kind) }
     else if frontend.cFnTag(kind) =!= "" { frontend.cFnTag(kind) }
     else if kind == frontend.VALUE_KIND_UNIT or kind == frontend.VALUE_KIND_NEVER { "void" }
@@ -113,6 +115,8 @@ checkUnsupportedCType := fn(kind: String): Unit {
     if frontend.isSetKind(kind) and frontend.cSetTag(kind) == "" { diagLib.fail("", "C backend does not support set values yet"); }
     if frontend.isRcKind(kind) and frontend.cRcTag(kind) == "" { diagLib.fail("", "C backend does not support Rc values yet"); }
     if frontend.isSliceKind(kind) and frontend.cSliceTag(kind) == "" { diagLib.fail("", "C backend does not support Slice values yet"); }
+    if frontend.isSimdKind(kind) and frontend.cSimdTag(kind) == "" { diagLib.fail("", "C backend does not support Simd values yet"); }
+    if frontend.isSoaKind(kind) and frontend.cSoaTag(kind) == "" { diagLib.fail("", "C backend does not support SoA values yet"); }
     if frontend.isRecordKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support record values yet"); }
     if frontend.isPayloadEnumKind(kind) and frontend.cStructTag(kind) == "" { diagLib.fail("", "C backend does not support payload enum values yet"); }
     if frontend.isListKind(kind) and cListTagForKind(kind) == "" { diagLib.fail("", "C backend does not support list values yet"); }
@@ -538,8 +542,8 @@ unsupportedAggregateCode := fn(code: String): String {
         } else if ch == "/" and (code.startsWithAt(cursor, "/*@T:") or code.startsWithAt(cursor, "/*@C:") or code.startsWithAt(cursor, "/*@P:")) {
             endTag := code.indexOf("@*/", cursor + 5);
             cursor = if endTag >= 0 { endTag + 3 } else { size };
-        } else if ch == "(" and (code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "(const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_") or code.startsWithAt(cursor, "((lt_arr_") or code.startsWithAt(cursor, "((lt_rc_") or code.startsWithAt(cursor, "((lt_slice_") or code.startsWithAt(cursor, "((lt_list_") or code.startsWithAt(cursor, "((/*@T:") or code.startsWithAt(cursor, "(/*@T:")) {
-            isDouble := code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_") or code.startsWithAt(cursor, "((lt_arr_") or code.startsWithAt(cursor, "((lt_rc_") or code.startsWithAt(cursor, "((lt_slice_") or code.startsWithAt(cursor, "((lt_list_") or code.startsWithAt(cursor, "((/*@T:");
+        } else if ch == "(" and (code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "(const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_") or code.startsWithAt(cursor, "((lt_arr_") or code.startsWithAt(cursor, "((lt_rc_") or code.startsWithAt(cursor, "((lt_slice_") or code.startsWithAt(cursor, "((lt_simd_") or code.startsWithAt(cursor, "((lt_soa_") or code.startsWithAt(cursor, "((lt_list_") or code.startsWithAt(cursor, "((/*@T:") or code.startsWithAt(cursor, "(/*@T:")) {
+            isDouble := code.startsWithAt(cursor, "((const ") or code.startsWithAt(cursor, "((lt_s_") or code.startsWithAt(cursor, "((lt_fnv_") or code.startsWithAt(cursor, "((lt_arr_") or code.startsWithAt(cursor, "((lt_rc_") or code.startsWithAt(cursor, "((lt_slice_") or code.startsWithAt(cursor, "((lt_simd_") or code.startsWithAt(cursor, "((lt_soa_") or code.startsWithAt(cursor, "((lt_list_") or code.startsWithAt(cursor, "((/*@T:");
             var depth := 0;
             loop cursor < size {
                 c2 := code.at(cursor);
@@ -797,6 +801,8 @@ cCall := fn(kind: String, code: String): String {
         frontend.cSetTag(kind) =!= "" { frontend.cSetTag(kind) + "_print(" + code + ")" }
         frontend.cRcTag(kind) =!= "" { frontend.cRcTag(kind) + "_print(" + code + ")" }
         frontend.cSliceTag(kind) =!= "" { frontend.cSliceTag(kind) + "_print(" + code + ")" }
+        frontend.cSimdTag(kind) =!= "" { frontend.cSimdTag(kind) + "_print(" + code + ")" }
+        frontend.cSoaTag(kind) =!= "" { frontend.cSoaTag(kind) + "_print(" + code + ")" }
         frontend.cStructTag(kind) =!= "" { frontend.cStructTag(kind) + "_print(" + code + ")" }
         frontend.isIntScalarKind(kind) { "printf(\"%\" PRId64, (int64_t)(" + code + "))" }
         kind == frontend.VALUE_KIND_BOOL { "printf(\"%s\", ((" + code + ") ? \"true\" : \"false\"))" }
@@ -1200,9 +1206,36 @@ usesAnyListBounds := fn(calls: Set<String>, config: optCfg.OptConfig): Bool {
         ) {
             return true;
         }
+        if tok.startsWithAt(0, "lt_simd_") and (
+        tok.endsWith("_load(") or tok.endsWith("_store(") or tok.endsWith("_at(") or tok.endsWith("_with_lane(")
+        ) {
+            return true;
+        }
+        if tok.startsWithAt(0, "lt_soa_") and (
+        tok.endsWith("_with_cap(") or tok.endsWith("_reserve(") or
+        tok.endsWith("_pop(") or tok.endsWith("_swap_remove(") or
+        ((tok.endsWith("_get(") or tok.endsWith("_set(")) and config.checkBounds) or
+        ((tok.endsWith("_uget(") or tok.endsWith("_uset(")) and config.checkUnchecked)
+        ) {
+            return true;
+        }
     }
     if config.checkBounds and (usesIntHelper(calls, "lt_c_list_fill_bytes(") or usesIntHelper(calls, "lt_c_list_copy_bytes(")) {
         return true;
+    }
+    false
+};
+
+/** True when any emitted `lt_simd_` call may fault with ArithmeticPanic under checkArithmetic or checkFloatFinite. */
+usesSimdArith := fn(calls: Set<String>): Bool {
+    loop calls as tok {
+        if tok.startsWithAt(0, "lt_simd_") and (
+        tok.endsWith("_add(") or tok.endsWith("_sub(") or tok.endsWith("_mul(") or tok.endsWith("_div(") or
+        tok.endsWith("_neg(") or tok.endsWith("_abs(") or tok.endsWith("_fma(") or tok.endsWith("_sqrt(") or
+        tok.endsWith("_reduce_add(") or tok.endsWith("_dot(")
+        ) {
+            return true;
+        }
     }
     false
 };
@@ -2329,7 +2362,7 @@ emitCSliceHelpers := fn(kind: String, calls: Set<String>, needPrint: Bool, confi
         outLine("}");
     }
     if hasAt {
-        outLine("static " + cType + " " + vTag + "_at(" + vTag + " s, int64_t idx, size_t at) {");
+        outLine("LT_INLINE " + cType + " " + vTag + "_at(" + vTag + " s, int64_t idx, size_t at) {");
         if config.checkBounds {
             outLine("    if (LT_UNLIKELY(idx < 0 || idx >= s.len)) { lt_bound_fault(at, \"slice index outside its extent\"); }");
         } else {
@@ -2357,7 +2390,7 @@ emitCSliceHelpers := fn(kind: String, calls: Set<String>, needPrint: Bool, confi
         outLine("}");
     }
     if hasSet {
-        outLine("static void " + vTag + "_set(" + vTag + " s, int64_t idx, " + cType + " val, size_t at) {");
+        outLine("LT_INLINE void " + vTag + "_set(" + vTag + " s, int64_t idx, " + cType + " val, size_t at) {");
         if config.checkBounds {
             outLine("    if (LT_UNLIKELY(idx < 0 || idx >= s.len)) { lt_bound_fault(at, \"slice index outside its extent\"); }");
         } else {
@@ -2460,7 +2493,631 @@ emitCSliceHelpers := fn(kind: String, calls: Set<String>, needPrint: Bool, confi
     outLine("");
 };
 
+/** Emits portable ISO C11 fixed-width vector typedef (with Clang/GCC native `vector_size` union and `LITE_SIMD_SCALAR` fallback) and lane helpers. */
+emitCSimdHelpers := fn(kind: String, calls: Set<String>, needPrint: Bool, config: optCfg.OptConfig): Unit {
+    eKind := frontend.simdElementKind(kind);
+    n := frontend.simdLaneCount(kind);
+    nTxt := n.toText();
+    tag := frontend.cSimdTag(kind);
+    cT := cScalarType(eKind);
+    eTag := frontend.cListTag(eKind);
+    bw := frontend.simdElemByteWidth(eKind);
+    totalBytes := n * bw;
+    isFloat := numeric.isFloatKind(eKind);
+    isSigned := numeric.isSignedIntKind(eKind);
+    uT := if eKind == frontend.VALUE_KIND_FLOAT32 { "float" }
+    else if eKind == frontend.VALUE_KIND_FLOAT { "double" }
+    else if bw == 1 { "uint8_t" }
+    else if bw == 2 { "uint16_t" }
+    else if bw == 4 { "uint32_t" }
+    else { "uint64_t" };
+    minConst := if bw == 1 { "INT8_MIN" } else if bw == 2 { "INT16_MIN" } else if bw == 4 { "INT32_MIN" } else { "INT64_MIN" };
+    useVec := totalBytes <= 32;
+    if useVec {
+        outLine("#if (defined(__clang__) || defined(__GNUC__)) && !defined(LITE_SIMD_SCALAR)");
+        outLine("typedef " + uT + " " + tag + "_vec __attribute__((vector_size(" + totalBytes.toText() + ")));");
+        outLine("typedef union { _Alignas(" + totalBytes.toText() + ") " + cT + " lanes[" + nTxt + "]; " + tag + "_vec vec; } " + tag + ";");
+        outLine("#else");
+        outLine("typedef struct { _Alignas(" + totalBytes.toText() + ") " + cT + " lanes[" + nTxt + "]; } " + tag + ";");
+        outLine("#endif");
+    } else {
+        outLine("typedef struct { _Alignas(" + totalBytes.toText() + ") " + cT + " lanes[" + nTxt + "]; } " + tag + ";");
+    }
+    if usesIntHelper(calls, tag + "_splat(") {
+        outLine("LT_INLINE " + tag + " " + tag + "_splat(" + cT + " v) {");
+        outLine("    " + tag + " out;");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = v; }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_from_arr(") and frontend.cArrayTag("[" + eKind + ";" + nTxt + "]") =!= "" {
+        arrT := frontend.cArrayTag("[" + eKind + ";" + nTxt + "]");
+        outLine("LT_INLINE " + tag + " " + tag + "_from_arr(" + arrT + " a) {");
+        outLine("    " + tag + " out;");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = a.data[i]; }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_to_arr(") and frontend.cArrayTag("[" + eKind + ";" + nTxt + "]") =!= "" {
+        arrT := frontend.cArrayTag("[" + eKind + ";" + nTxt + "]");
+        outLine("LT_INLINE " + arrT + " " + tag + "_to_arr(" + tag + " v) {");
+        outLine("    " + arrT + " out;");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.data[i] = v.lanes[i]; }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_load(") and eTag =!= "" {
+        slT := "lt_slice_" + eTag;
+        outLine("LT_INLINE " + tag + " " + tag + "_load(" + slT + " s, int64_t off, size_t at) {");
+        outLine("    if (LT_UNLIKELY(off < 0 || off + " + nTxt + " > s.len)) { lt_bound_fault(at, \"simd load outside slice extent\"); }");
+        outLine("    " + tag + " out;");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = s.data[off + i]; }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_store(") and eTag =!= "" {
+        slT := "lt_slice_" + eTag;
+        outLine("LT_INLINE void " + tag + "_store(" + tag + " v, " + slT + " s, int64_t off, size_t at) {");
+        outLine("    if (LT_UNLIKELY(off < 0 || off + " + nTxt + " > s.len)) { lt_bound_fault(at, \"simd store outside slice extent\"); }");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { s.data[off + i] = v.lanes[i]; }");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_at(") {
+        outLine("LT_INLINE " + cT + " " + tag + "_at(" + tag + " v, int64_t idx, size_t at) {");
+        outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + nTxt + ")) { lt_bound_fault(at, \"simd lane index outside its extent\"); }");
+        outLine("    return v.lanes[idx];");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_with_lane(") {
+        outLine("LT_INLINE " + tag + " " + tag + "_with_lane(" + tag + " v, int64_t idx, " + cT + " val, size_t at) {");
+        outLine("    if (LT_UNLIKELY(idx < 0 || idx >= " + nTxt + ")) { lt_bound_fault(at, \"simd lane index outside its extent\"); }");
+        outLine("    v.lanes[idx] = val;");
+        outLine("    return v;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_eq(") {
+        outLine("LT_INLINE bool " + tag + "_eq(" + tag + " a, " + tag + " b) {");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { if (a.lanes[i] != b.lanes[i]) { return false; } }");
+        outLine("    return true;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_select(") and frontend.cArrayTag("[Bool;" + nTxt + "]") =!= "" {
+        maskT := frontend.cArrayTag("[Bool;" + nTxt + "]");
+        outLine("LT_INLINE " + tag + " " + tag + "_select(" + tag + " a, " + tag + " b, " + maskT + " mask) {");
+        outLine("    " + tag + " out;");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) {");
+        outLine("        out.lanes[i] = mask.data[i] ? a.lanes[i] : b.lanes[i];");
+        outLine("    }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    binCheckedOps: List<String> = ["add", "sub", "mul", "div"];
+    binOpsSym: List<String> = ["+", "-", "*", "/"];
+    binBuiltinNames: List<String> = ["__builtin_add_overflow", "__builtin_sub_overflow", "__builtin_mul_overflow", ""];
+    var bi := 0;
+    loop bi < 4 {
+        bName := binCheckedOps[bi];
+        if usesIntHelper(calls, tag + "_" + bName + "(") {
+            bSym := binOpsSym[bi];
+            bOv := binBuiltinNames[bi];
+            outLine("LT_INLINE " + tag + " " + tag + "_" + bName + "(" + tag + " a, " + tag + " b, size_t at) {");
+            outLine("    " + tag + " out;");
+            if isFloat {
+                if config.checkArithmetic and bName == "div" {
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { if (LT_UNLIKELY(b.lanes[i] == 0)) { lt_int_fault(at, \"division by zero\"); } }");
+                }
+                if useVec {
+                    outLine("#if (defined(__clang__) || defined(__GNUC__)) && !defined(LITE_SIMD_SCALAR)");
+                    outLine("    out.vec = a.vec " + bSym + " b.vec;");
+                    outLine("#else");
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = a.lanes[i] " + bSym + " b.lanes[i]; }");
+                    outLine("#endif");
+                } else {
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = a.lanes[i] " + bSym + " b.lanes[i]; }");
+                }
+                if config.checkFloatFinite {
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { if (LT_UNLIKELY(!isfinite(out.lanes[i]))) { lt_int_fault(at, \"non-finite floating value\"); } }");
+                } else if not (config.checkArithmetic and bName == "div") {
+                    outLine("    (void)at;");
+                }
+            } else if config.checkArithmetic {
+                if bName == "div" {
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) {");
+                    outLine("        if (LT_UNLIKELY(b.lanes[i] == 0)) { lt_int_fault(at, \"division by zero\"); }");
+                    if isSigned {
+                        outLine("        if (LT_UNLIKELY(a.lanes[i] == " + minConst + " && b.lanes[i] == -1)) { lt_int_fault(at, \"integer outside range\"); }");
+                    }
+                    outLine("        out.lanes[i] = (" + cT + ")(a.lanes[i] / b.lanes[i]);");
+                    outLine("    }");
+                } else {
+                    outLine("#if defined(__GNUC__) || defined(__clang__)");
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) {");
+                    outLine("        if (LT_UNLIKELY(" + bOv + "(a.lanes[i], b.lanes[i], &out.lanes[i]))) { lt_int_fault(at, \"integer outside range\"); }");
+                    outLine("    }");
+                    outLine("#else");
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (" + cT + ")((" + uT + ")a.lanes[i] " + bSym + " (" + uT + ")b.lanes[i]); }");
+                    outLine("    (void)at;");
+                    outLine("#endif");
+                }
+            } else {
+                outLine("    (void)at;");
+                if useVec and bName =!= "div" {
+                    outLine("#if (defined(__clang__) || defined(__GNUC__)) && !defined(LITE_SIMD_SCALAR)");
+                    outLine("    out.vec = a.vec " + bSym + " b.vec;");
+                    outLine("#else");
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (" + cT + ")((" + uT + ")a.lanes[i] " + bSym + " (" + uT + ")b.lanes[i]); }");
+                    outLine("#endif");
+                } else {
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (" + cT + ")(a.lanes[i] " + bSym + " b.lanes[i]); }");
+                }
+            }
+            outLine("    return out;");
+            outLine("}");
+        }
+        bi = bi + 1;
+    }
+    if usesIntHelper(calls, tag + "_neg(") {
+        outLine("LT_INLINE " + tag + " " + tag + "_neg(" + tag + " v, size_t at) {");
+        outLine("    " + tag + " out;");
+        if isFloat {
+            outLine("    (void)at;");
+            if useVec {
+                outLine("#if (defined(__clang__) || defined(__GNUC__)) && !defined(LITE_SIMD_SCALAR)");
+                outLine("    out.vec = -v.vec;");
+                outLine("#else");
+                outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = -v.lanes[i]; }");
+                outLine("#endif");
+            } else {
+                outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = -v.lanes[i]; }");
+            }
+        } else {
+            if config.checkArithmetic {
+                outLine("    for (int i = 0; i < " + nTxt + "; i += 1) {");
+                outLine("        if (LT_UNLIKELY(v.lanes[i] == " + minConst + ")) { lt_int_fault(at, \"integer outside range\"); }");
+                outLine("        out.lanes[i] = (" + cT + ")((" + uT + ")0u - (" + uT + ")v.lanes[i]);");
+                outLine("    }");
+            } else {
+                outLine("    (void)at;");
+                outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (" + cT + ")((" + uT + ")0u - (" + uT + ")v.lanes[i]); }");
+            }
+        }
+        outLine("    return out;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_abs(") {
+        outLine("LT_INLINE " + tag + " " + tag + "_abs(" + tag + " v, size_t at) {");
+        outLine("    " + tag + " out;");
+        if isFloat {
+            outLine("    (void)at;");
+            absFn := if eKind == frontend.VALUE_KIND_FLOAT32 { "fabsf" } else { "fabs" };
+            outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = " + absFn + "(v.lanes[i]); }");
+        } else {
+            if not config.checkArithmetic { outLine("    (void)at;"); }
+            outLine("    for (int i = 0; i < " + nTxt + "; i += 1) {");
+            if config.checkArithmetic {
+                outLine("        if (LT_UNLIKELY(v.lanes[i] == " + minConst + ")) { lt_int_fault(at, \"integer outside range\"); }");
+            }
+            outLine("        out.lanes[i] = v.lanes[i] < 0 ? (" + cT + ")((" + uT + ")0u - (" + uT + ")v.lanes[i]) : v.lanes[i];");
+            outLine("    }");
+        }
+        outLine("    return out;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_min(") {
+        outLine("LT_INLINE " + tag + " " + tag + "_min(" + tag + " a, " + tag + " b) {");
+        outLine("    " + tag + " out;");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (a.lanes[i] < b.lanes[i]) ? a.lanes[i] : b.lanes[i]; }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_max(") {
+        outLine("LT_INLINE " + tag + " " + tag + "_max(" + tag + " a, " + tag + " b) {");
+        outLine("    " + tag + " out;");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (a.lanes[i] > b.lanes[i]) ? a.lanes[i] : b.lanes[i]; }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    if not isFloat {
+        vecBinNames: List<String> = ["wadd", "wsub", "wmul", "band", "bor", "bxor"];
+        vecBinSyms: List<String> = ["+", "-", "*", "&", "|", "^"];
+        var vi := 0;
+        loop vi < 6 {
+            vName := vecBinNames[vi];
+            if usesIntHelper(calls, tag + "_" + vName + "(") {
+                vSym := vecBinSyms[vi];
+                outLine("LT_INLINE " + tag + " " + tag + "_" + vName + "(" + tag + " a, " + tag + " b) {");
+                outLine("    " + tag + " out;");
+                if useVec {
+                    outLine("#if (defined(__clang__) || defined(__GNUC__)) && !defined(LITE_SIMD_SCALAR)");
+                    outLine("    out.vec = a.vec " + vSym + " b.vec;");
+                    outLine("#else");
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (" + cT + ")((" + uT + ")a.lanes[i] " + vSym + " (" + uT + ")b.lanes[i]); }");
+                    outLine("#endif");
+                } else {
+                    outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (" + cT + ")((" + uT + ")a.lanes[i] " + vSym + " (" + uT + ")b.lanes[i]); }");
+                }
+                outLine("    return out;");
+                outLine("}");
+            }
+            vi = vi + 1;
+        }
+        if usesIntHelper(calls, tag + "_bit_not(") {
+            outLine("LT_INLINE " + tag + " " + tag + "_bit_not(" + tag + " v) {");
+            outLine("    " + tag + " out;");
+            if useVec {
+                outLine("#if (defined(__clang__) || defined(__GNUC__)) && !defined(LITE_SIMD_SCALAR)");
+                outLine("    out.vec = ~v.vec;");
+                outLine("#else");
+                outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (" + cT + ")(~(" + uT + ")v.lanes[i]); }");
+                outLine("#endif");
+            } else {
+                outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = (" + cT + ")(~(" + uT + ")v.lanes[i]); }");
+            }
+            outLine("    return out;");
+            outLine("}");
+        }
+        if usesIntHelper(calls, tag + "_wreduce_add(") {
+            outLine("LT_INLINE " + cT + " " + tag + "_wreduce_add(" + tag + " v) {");
+            outLine("    " + uT + " acc = (" + uT + ")v.lanes[0];");
+            outLine("    for (int i = 1; i < " + nTxt + "; i += 1) { acc = (" + uT + ")(acc + (" + uT + ")v.lanes[i]); }");
+            outLine("    return (" + cT + ")acc;");
+            outLine("}");
+        }
+    } else {
+        if usesIntHelper(calls, tag + "_fma(") {
+            fmaFn := if eKind == frontend.VALUE_KIND_FLOAT32 { "fmaf" } else { "fma" };
+            outLine("LT_INLINE " + tag + " " + tag + "_fma(" + tag + " a, " + tag + " b, " + tag + " c, size_t at) {");
+            outLine("    " + tag + " out;");
+            outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = " + fmaFn + "(a.lanes[i], b.lanes[i], c.lanes[i]); }");
+            if config.checkFloatFinite {
+                outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { if (LT_UNLIKELY(!isfinite(out.lanes[i]))) { lt_int_fault(at, \"non-finite floating value\"); } }");
+            } else { outLine("    (void)at;"); }
+            outLine("    return out;");
+            outLine("}");
+        }
+        if usesIntHelper(calls, tag + "_sqrt(") {
+            sqrtFn := if eKind == frontend.VALUE_KIND_FLOAT32 { "sqrtf" } else { "sqrt" };
+            outLine("LT_INLINE " + tag + " " + tag + "_sqrt(" + tag + " v, size_t at) {");
+            outLine("    " + tag + " out;");
+            outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { out.lanes[i] = " + sqrtFn + "(v.lanes[i]); }");
+            if config.checkFloatFinite {
+                outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { if (LT_UNLIKELY(!isfinite(out.lanes[i]))) { lt_int_fault(at, \"non-finite floating value\"); } }");
+            } else { outLine("    (void)at;"); }
+            outLine("    return out;");
+            outLine("}");
+        }
+    }
+    if usesIntHelper(calls, tag + "_reduce_add(") {
+        outLine("LT_INLINE " + cT + " " + tag + "_reduce_add(" + tag + " v, size_t at) {");
+        outLine("    " + cT + " acc = v.lanes[0];");
+        if isFloat {
+            outLine("    for (int i = 1; i < " + nTxt + "; i += 1) {");
+            outLine("        acc = acc + v.lanes[i];");
+            if config.checkFloatFinite { outLine("        if (LT_UNLIKELY(!isfinite(acc))) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+            outLine("    }");
+            if not config.checkFloatFinite { outLine("    (void)at;"); }
+        } else if config.checkArithmetic {
+            outLine("    for (int i = 1; i < " + nTxt + "; i += 1) {");
+            outLine("#if defined(__GNUC__) || defined(__clang__)");
+            outLine("        if (LT_UNLIKELY(__builtin_add_overflow(acc, v.lanes[i], &acc))) { lt_int_fault(at, \"integer outside range\"); }");
+            outLine("#else");
+            outLine("        acc = (" + cT + ")((" + uT + ")acc + (" + uT + ")v.lanes[i]); (void)at;");
+            outLine("#endif");
+            outLine("    }");
+        } else {
+            outLine("    (void)at;");
+            outLine("    for (int i = 1; i < " + nTxt + "; i += 1) { acc = (" + cT + ")((" + uT + ")acc + (" + uT + ")v.lanes[i]); }");
+        }
+        outLine("    return acc;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_dot(") {
+        outLine("LT_INLINE " + cT + " " + tag + "_dot(" + tag + " a, " + tag + " b, size_t at) {");
+        outLine("    " + cT + " p[" + nTxt + "];");
+        if isFloat {
+            outLine("    for (int i = 0; i < " + nTxt + "; i += 1) {");
+            outLine("        p[i] = a.lanes[i] * b.lanes[i];");
+            if config.checkFloatFinite { outLine("        if (LT_UNLIKELY(!isfinite(p[i]))) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+            outLine("    }");
+            outLine("    " + cT + " acc = p[0];");
+            outLine("    for (int i = 1; i < " + nTxt + "; i += 1) {");
+            outLine("        acc = acc + p[i];");
+            if config.checkFloatFinite { outLine("        if (LT_UNLIKELY(!isfinite(acc))) { lt_int_fault(at, \"non-finite floating value\"); }"); }
+            outLine("    }");
+            if not config.checkFloatFinite { outLine("    (void)at;"); }
+        } else if config.checkArithmetic {
+            outLine("    for (int i = 0; i < " + nTxt + "; i += 1) {");
+            outLine("#if defined(__GNUC__) || defined(__clang__)");
+            outLine("        if (LT_UNLIKELY(__builtin_mul_overflow(a.lanes[i], b.lanes[i], &p[i]))) { lt_int_fault(at, \"integer outside range\"); }");
+            outLine("#else");
+            outLine("        p[i] = (" + cT + ")((" + uT + ")a.lanes[i] * (" + uT + ")b.lanes[i]); (void)at;");
+            outLine("#endif");
+            outLine("    }");
+            outLine("    " + cT + " acc = p[0];");
+            outLine("    for (int i = 1; i < " + nTxt + "; i += 1) {");
+            outLine("#if defined(__GNUC__) || defined(__clang__)");
+            outLine("        if (LT_UNLIKELY(__builtin_add_overflow(acc, p[i], &acc))) { lt_int_fault(at, \"integer outside range\"); }");
+            outLine("#else");
+            outLine("        acc = (" + cT + ")((" + uT + ")acc + (" + uT + ")p[i]);");
+            outLine("#endif");
+            outLine("    }");
+        } else {
+            outLine("    (void)at;");
+            outLine("    for (int i = 0; i < " + nTxt + "; i += 1) { p[i] = (" + cT + ")((" + uT + ")a.lanes[i] * (" + uT + ")b.lanes[i]); }");
+            outLine("    " + cT + " acc = p[0];");
+            outLine("    for (int i = 1; i < " + nTxt + "; i += 1) { acc = (" + cT + ")((" + uT + ")acc + (" + uT + ")p[i]); }");
+        }
+        outLine("    return acc;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_reduce_min(") {
+        outLine("LT_INLINE " + cT + " " + tag + "_reduce_min(" + tag + " v) {");
+        outLine("    " + cT + " acc = v.lanes[0];");
+        outLine("    for (int i = 1; i < " + nTxt + "; i += 1) { if (v.lanes[i] < acc) { acc = v.lanes[i]; } }");
+        outLine("    return acc;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_reduce_max(") {
+        outLine("LT_INLINE " + cT + " " + tag + "_reduce_max(" + tag + " v) {");
+        outLine("    " + cT + " acc = v.lanes[0];");
+        outLine("    for (int i = 1; i < " + nTxt + "; i += 1) { if (v.lanes[i] > acc) { acc = v.lanes[i]; } }");
+        outLine("    return acc;");
+        outLine("}");
+    }
+    if needPrint {
+        outLine("static int " + tag + "_print(" + tag + " v) {");
+        outLine("    if (printf(\"Simd(\") < 0) { return -1; }");
+        outLine("    for (int i = 0; i < " + nTxt + "; i += 1) {");
+        outLine("        if (i > 0 && printf(\", \") < 0) { return -1; }");
+        outLine("        if (" + cCall(eKind, "v.lanes[i]") + " < 0) { return -1; }");
+        outLine("    }");
+        outLine("    return printf(\")\") < 0 ? -1 : 0;");
+        outLine("}");
+    }
+    outLine("");
+};
+
 /** Emits portable ISO C11 16 B `rc`-free list struct and helpers for `tag`. */
+emitCSoaHelpers := fn(kind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool, config: optCfg.OptConfig): Unit {
+    recK := frontend.soaRecordKind(kind);
+    tag := frontend.cSoaTag(kind);
+    rTag := frontend.cStructTag(recK);
+    fc := frontend.recordComponentCount(recK);
+    outLine("typedef struct {");
+    var fi := 0;
+    loop fi < fc {
+        comp := frontend.recordComponent(recK, fi);
+        cT := cScalarType(comp.kind);
+        outLine("    " + cT + " *f_" + fi.toText() + ";");
+        fi = fi + 1;
+    }
+    outLine("    uint32_t len;");
+    outLine("    uint32_t cap;");
+    outLine("} " + tag + ";");
+    hasDropElem := frontend.cTypeNeedsDrop(recK);
+    outLine("LT_INLINE void " + tag + "_drop(" + tag + " *s) {");
+    if hasDropElem {
+        outLine("    for (uint32_t i = 0u; i < s->len; i += 1u) {");
+        var di := 0;
+        loop di < fc {
+            comp := frontend.recordComponent(recK, di);
+            dFn := frontend.cDropFnForKind(comp.kind);
+            if dFn =!= "" {
+                outLine("        " + dFn + "(&s->f_" + di.toText() + "[i]);");
+            }
+            di = di + 1;
+        }
+        outLine("    }");
+    }
+    var fi2 := 0;
+    loop fi2 < fc {
+        outLine("    if (s->f_" + fi2.toText() + " != NULL) { lt_heap_free(s->f_" + fi2.toText() + "); s->f_" + fi2.toText() + " = NULL; }");
+        fi2 = fi2 + 1;
+    }
+    outLine("    s->len = 0u; s->cap = 0u;");
+    outLine("}");
+    outLine("LT_INLINE " + tag + " " + tag + "_move(" + tag + " *src) {");
+    outLine("    " + tag + " out = *src;");
+    outLine("    *src = (" + tag + "){ .len = 0 };");
+    outLine("    return out;");
+    outLine("}");
+    hasWithCap := usesIntHelper(calls, tag + "_with_cap(");
+    hasReserve := usesIntHelper(calls, tag + "_reserve(");
+    hasPush := usesIntHelper(calls, tag + "_push(");
+    if hasWithCap or hasReserve or hasPush {
+        outLine("static void " + tag + "_grow(" + tag + " *s, uint32_t min_cap) {");
+        outLine("    if (s->cap >= min_cap) { return; }");
+        outLine("    uint32_t next_cap = (s->cap == 0u) ? 8u : (s->cap * 2u);");
+        outLine("    if (next_cap < min_cap) { next_cap = min_cap; }");
+        var gi := 0;
+        loop gi < fc {
+            comp := frontend.recordComponent(recK, gi);
+            cT := cScalarType(comp.kind);
+            fPtr := "s->f_" + gi.toText();
+            nk := "nf_" + gi.toText();
+            outLine("    " + cT + " *" + nk + " = (" + cT + " *)lt_heap_alloc((size_t)next_cap * sizeof(" + cT + "));");
+            outLine("    if (s->len > 0u && " + fPtr + " != NULL) { memcpy(" + nk + ", " + fPtr + ", (size_t)s->len * sizeof(" + cT + ")); }");
+            outLine("    if (" + fPtr + " != NULL) { lt_heap_free(" + fPtr + "); }");
+            outLine("    " + fPtr + " = " + nk + ";");
+            gi = gi + 1;
+        }
+        outLine("    s->cap = next_cap;");
+        outLine("}");
+    }
+    if hasWithCap {
+        outLine("LT_INLINE " + tag + " " + tag + "_with_cap(int64_t cap, size_t at) {");
+        outLine("    if (LT_UNLIKELY(cap < 0 || cap > UINT32_MAX)) { lt_bound_fault(at, \"SoA capacity out of range\"); }");
+        outLine("    " + tag + " out = (" + tag + "){ .len = 0 };");
+        outLine("    if (cap > 0) { " + tag + "_grow(&out, (uint32_t)cap); }");
+        outLine("    return out;");
+        outLine("}");
+    }
+    if hasReserve {
+        outLine("LT_INLINE void " + tag + "_reserve(" + tag + " *s, int64_t min_cap, size_t at) {");
+        outLine("    if (LT_UNLIKELY(min_cap < 0 || min_cap > UINT32_MAX)) { lt_bound_fault(at, \"SoA capacity out of range\"); }");
+        outLine("    if (min_cap > 0) { " + tag + "_grow(s, (uint32_t)min_cap); }");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_clear(") {
+        outLine("LT_INLINE void " + tag + "_clear(" + tag + " *s) {");
+        if hasDropElem {
+            outLine("    for (uint32_t i = 0u; i < s->len; i += 1u) {");
+            var ci := 0;
+            loop ci < fc {
+                comp := frontend.recordComponent(recK, ci);
+                dFn := frontend.cDropFnForKind(comp.kind);
+                if dFn =!= "" { outLine("        " + dFn + "(&s->f_" + ci.toText() + "[i]);"); }
+                ci = ci + 1;
+            }
+            outLine("    }");
+        }
+        outLine("    s->len = 0u;");
+        outLine("}");
+    }
+    if hasPush {
+        outLine("LT_INLINE void " + tag + "_push(" + tag + " *s, " + rTag + " row) {");
+        outLine("    if (s->len == s->cap) { " + tag + "_grow(s, s->len + 1u); }");
+        var pi := 0;
+        loop pi < fc {
+            comp := frontend.recordComponent(recK, pi);
+            cf := frontend.cFieldName(comp.prop);
+            outLine("    s->f_" + pi.toText() + "[s->len] = row." + cf + ";");
+            pi = pi + 1;
+        }
+        outLine("    s->len += 1u;");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_pop(") {
+        outLine("LT_INLINE " + rTag + " " + tag + "_pop(" + tag + " *s, size_t at) {");
+        outLine("    if (LT_UNLIKELY(s->len == 0u)) { lt_bound_fault(at, \"popBack on empty SoA\"); }");
+        outLine("    s->len -= 1u;");
+        fieldsBuf: mut tb.TextBuilder;
+        var ri := 0;
+        loop ri < fc {
+            comp := frontend.recordComponent(recK, ri);
+            cf := frontend.cFieldName(comp.prop);
+            if ri > 0 { mut fieldsBuf.append(", "); }
+            mut fieldsBuf.append("." + cf + " = s->f_" + ri.toText() + "[s->len]");
+            ri = ri + 1;
+        }
+        outLine("    return (" + rTag + "){ " + fieldsBuf.build() + " };");
+        outLine("}");
+    }
+    if usesIntHelper(calls, tag + "_swap_remove(") {
+        outLine("LT_INLINE " + rTag + " " + tag + "_swap_remove(" + tag + " *s, int64_t idx, size_t at) {");
+        outLine("    if (LT_UNLIKELY(idx < 0 || (uint64_t)idx >= (uint64_t)s->len)) { lt_bound_fault(at, \"SoA index outside its extent\"); }");
+        fieldsBuf: mut tb.TextBuilder;
+        var si := 0;
+        loop si < fc {
+            comp := frontend.recordComponent(recK, si);
+            cf := frontend.cFieldName(comp.prop);
+            if si > 0 { mut fieldsBuf.append(", "); }
+            mut fieldsBuf.append("." + cf + " = s->f_" + si.toText() + "[idx]");
+            si = si + 1;
+        }
+        outLine("    " + rTag + " out = (" + rTag + "){ " + fieldsBuf.build() + " };");
+        outLine("    uint32_t last = s->len - 1u;");
+        outLine("    if ((uint32_t)idx != last) {");
+        var mi := 0;
+        loop mi < fc {
+            outLine("        s->f_" + mi.toText() + "[idx] = s->f_" + mi.toText() + "[last];");
+            mi = mi + 1;
+        }
+        outLine("    }");
+        outLine("    s->len = last;");
+        outLine("    return out;");
+        outLine("}");
+    }
+    var gMode := 0;
+    loop gMode < 2 {
+        isUnchG := gMode == 1;
+        gFn := if isUnchG { "_uget" } else { "_get" };
+        chkG := if isUnchG { config.checkUnchecked } else { config.checkBounds };
+        if usesIntHelper(calls, tag + gFn + "(") {
+            outLine("LT_INLINE " + rTag + " " + tag + gFn + "(" + tag + " s, int64_t idx, size_t at) {");
+            if chkG {
+                outLine("    if (LT_UNLIKELY(idx < 0 || (uint64_t)idx >= (uint64_t)s.len)) { lt_bound_fault(at, \"SoA index outside its extent\"); }");
+            } else { outLine("    (void)at;"); }
+            fieldsBuf: mut tb.TextBuilder;
+            var gi := 0;
+            loop gi < fc {
+                comp := frontend.recordComponent(recK, gi);
+                cf := frontend.cFieldName(comp.prop);
+                cFn := cKindOps(comp.kind).copyFn;
+                valExpr := if cFn =!= "" { cFn + "(s.f_" + gi.toText() + "[idx])" } else { "s.f_" + gi.toText() + "[idx]" };
+                if gi > 0 { mut fieldsBuf.append(", "); }
+                mut fieldsBuf.append("." + cf + " = " + valExpr);
+                gi = gi + 1;
+            }
+            outLine("    return (" + rTag + "){ " + fieldsBuf.build() + " };");
+            outLine("}");
+        }
+        gMode = gMode + 1;
+    }
+    var sMode := 0;
+    loop sMode < 2 {
+        isUnchS := sMode == 1;
+        sFn := if isUnchS { "_uset" } else { "_set" };
+        chkS := if isUnchS { config.checkUnchecked } else { config.checkBounds };
+        if usesIntHelper(calls, tag + sFn + "(") {
+            outLine("LT_INLINE void " + tag + sFn + "(" + tag + " *s, int64_t idx, " + rTag + " row, size_t at) {");
+            if chkS {
+                outLine("    if (LT_UNLIKELY(idx < 0 || (uint64_t)idx >= (uint64_t)s->len)) { lt_bound_fault(at, \"SoA index outside its extent\"); }");
+            } else { outLine("    (void)at;"); }
+            var si := 0;
+            loop si < fc {
+                comp := frontend.recordComponent(recK, si);
+                cf := frontend.cFieldName(comp.prop);
+                dFn := frontend.cDropFnForKind(comp.kind);
+                if dFn =!= "" { outLine("    " + dFn + "(&s->f_" + si.toText() + "[idx]);"); }
+                outLine("    s->f_" + si.toText() + "[idx] = row." + cf + ";");
+                si = si + 1;
+            }
+            outLine("}");
+        }
+        sMode = sMode + 1;
+    }
+    var ciCol := 0;
+    loop ciCol < fc {
+        if usesIntHelper(calls, tag + "_col_" + ciCol.toText() + "(") {
+            comp := frontend.recordComponent(recK, ciCol);
+            lTag := frontend.cListTag(comp.kind);
+            if lTag =!= "" {
+                slT := "lt_slice_" + lTag;
+                outLine("LT_INLINE " + slT + " " + tag + "_col_" + ciCol.toText() + "(" + tag + " s) {");
+                outLine("    return (s.len == 0u) ? (" + slT + "){ .data = NULL, .len = 0 } : (" + slT + "){ .data = s.f_" + ciCol.toText() + ", .len = (int64_t)s.len };");
+                outLine("}");
+            }
+        }
+        ciCol = ciCol + 1;
+    }
+    if needCopy or usesIntHelper(calls, tag + "_copy(") {
+        outLine("LT_INLINE " + tag + " " + tag + "_copy(" + tag + " src) {");
+        outLine("    if (src.len == 0u) { return (" + tag + "){ .len = 0 }; }");
+        outLine("    " + tag + " out = (" + tag + "){ .len = src.len, .cap = src.len };");
+        var xi := 0;
+        loop xi < fc {
+            comp := frontend.recordComponent(recK, xi);
+            cT := cScalarType(comp.kind);
+            cFn := cKindOps(comp.kind).copyFn;
+            outLine("    out.f_" + xi.toText() + " = (" + cT + " *)lt_heap_alloc((size_t)src.len * sizeof(" + cT + "));");
+            if cFn =!= "" {
+                outLine("    for (uint32_t i = 0u; i < src.len; i += 1u) { out.f_" + xi.toText() + "[i] = " + cFn + "(src.f_" + xi.toText() + "[i]); }");
+            } else {
+                outLine("    memcpy(out.f_" + xi.toText() + ", src.f_" + xi.toText() + ", (size_t)src.len * sizeof(" + cT + "));");
+            }
+            xi = xi + 1;
+        }
+        outLine("    return out;");
+        outLine("}");
+    }
+    if needPrint {
+        outLine("static int " + tag + "_print(" + tag + " s) {");
+        outLine("    return printf(\"SoA(len=%\" PRIu32 \")\", s.len) < 0 ? -1 : 0;");
+        outLine("}");
+    }
+    outLine("");
+};
 emitCListTagHelpers := fn(tag: String, elemKind: String, calls: Set<String>, needCopy: Bool, needPrint: Bool, needFrom: Bool, config: optCfg.OptConfig): Unit {
     cType := frontend.cListElemType(tag);
     cElemConstPtr := "const " + cType + " *";
@@ -3014,10 +3671,11 @@ emitIntArithmeticHelpers := fn(calls: Set<String>, source: String, prefix: Strin
     (config.checkFloatFinite and usesCheckedFloatFinite) or
     (config.checkUnchecked and (usesHelperPrefix(calls, "lt_ufadd_") or usesHelperPrefix(calls, "lt_ufsub_") or usesHelperPrefix(calls, "lt_ufmul_") or usesHelperPrefix(calls, "lt_ufdiv_") or usesHelperPrefix(calls, "lt_ufma_") or usesIntHelper(calls, "lt_f32_ufrom_bits(") or usesIntHelper(calls, "lt_f64_ufrom_bits(")));
     usesUnchIntFault := config.checkUnchecked and usesUncheckedInt(calls);
-    usesArith := usesCheckedIntFault or usesCheckedFloatFault or usesUnchIntFault;
+    usesSimdFault := (config.checkArithmetic or config.checkFloatFinite) and usesSimdArith(calls);
+    usesArith := usesCheckedIntFault or usesCheckedFloatFault or usesUnchIntFault or usesSimdFault;
     usesBounds := usesIntHelper(calls, "lite$textAt(") or usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(") or
     usesAnyListBounds(calls, config);
-    if not usesArithHelpers and not usesArith and not usesBounds { return; }
+    if not usesArithHelpers and not usesArith and not usesBounds and not usesSimdArith(calls) { return; }
     outLine("#ifndef LT_UNLIKELY");
     outLine("#if defined(__GNUC__) || defined(__clang__)");
     outLine("#define LT_UNLIKELY(x) __builtin_expect(!!(x), 0)");
@@ -5215,6 +5873,37 @@ collectSubKinds := fn(kind: String): List<String> {
         (mut out).pushBack("V|" + kind);
         return out;
     }
+    if frontend.isSimdKind(kind) {
+        if frontend.cSimdTag(kind) == "" { return out; }
+        eKind := frontend.simdElementKind(kind);
+        nTxt := frontend.simdLaneCountText(kind);
+        subArr := self("[" + eKind + ";" + nTxt + "]");
+        loop subArr as s { mut out.pushBack(s); }
+        subSl := self("Slice<" + eKind + ">");
+        loop subSl as s { mut out.pushBack(s); }
+        subMask := self("[Bool;" + nTxt + "]");
+        loop subMask as s { mut out.pushBack(s); }
+        (mut out).pushBack("D|" + kind);
+        return out;
+    }
+    if frontend.isSoaKind(kind) {
+        if frontend.cSoaTag(kind) == "" { return out; }
+        recK := frontend.soaRecordKind(kind);
+        subRec := self(recK);
+        loop subRec as s { mut out.pushBack(s); }
+        fc := frontend.recordComponentCount(recK);
+        var fi := 0;
+        loop fi < fc {
+            fK := frontend.recordComponent(recK, fi).kind;
+            if frontend.cListTag(fK) =!= "" {
+                subCol := self("Slice<" + fK + ">");
+                loop subCol as s { mut out.pushBack(s); }
+            }
+            fi = fi + 1;
+        }
+        (mut out).pushBack("O|" + kind);
+        return out;
+    }
     if frontend.isPayloadEnumKind(kind) {
         if frontend.cStructTag(kind) == "" { return out; }
         cc := frontend.enumCaseCount(kind);
@@ -5324,6 +6013,22 @@ collectTypeFlags := fn(kind: String): List<String> {
         (mut out).pushBack("V:" + tag);
         subE := self(frontend.sliceElementKind(kind));
         loop subE as s { mut out.pushBack(s); }
+        return out;
+    }
+    if frontend.isSimdKind(kind) {
+        tag := frontend.cSimdTag(kind);
+        if tag == "" { return out; }
+        (mut out).pushBack("D:" + tag);
+        subE := self(frontend.simdElementKind(kind));
+        loop subE as s { mut out.pushBack(s); }
+        return out;
+    }
+    if frontend.isSoaKind(kind) {
+        tag := frontend.cSoaTag(kind);
+        if tag == "" { return out; }
+        (mut out).pushBack("O:" + tag);
+        subR := self(frontend.soaRecordKind(kind));
+        loop subR as s { mut out.pushBack(s); }
         return out;
     }
     if frontend.isPayloadEnumKind(kind) {
@@ -8520,11 +9225,21 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isSliceKind(item.name) and frontend.cSliceTag(item.name) == "") {
             diagLib.fail("", "C backend does not support Slice values yet");
         }
+        if (frontend.isSimdKind(item.kind) and frontend.cSimdTag(item.kind) == "") or
+        (frontend.isSimdKind(item.textValue) and frontend.cSimdTag(item.textValue) == "") or
+        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isSimdKind(item.name) and frontend.cSimdTag(item.name) == "") {
+            diagLib.fail("", "C backend does not support Simd values yet");
+        }
+        if (frontend.isSoaKind(item.kind) and frontend.cSoaTag(item.kind) == "") or
+        (frontend.isSoaKind(item.textValue) and frontend.cSoaTag(item.textValue) == "") or
+        (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isSoaKind(item.name) and frontend.cSoaTag(item.name) == "") {
+            diagLib.fail("", "C backend does not support SoA values yet");
+        }
         isSupportedDistDecl := if frontend.isDistinctKind(item.textValue) {
             base := frontend.distinctBaseKind(item.textValue);
-            frontend.isIntScalarKind(base) or frontend.isFloatScalarKind(base) or base == frontend.VALUE_KIND_BOOL or base == frontend.VALUE_KIND_STRING or frontend.isEnumKind(base) or frontend.cArrayTag(base) =!= "" or cListTagForKind(base) =!= "" or frontend.cStructTag(base) =!= "" or frontend.cMapTag(base) =!= "" or frontend.cSetTag(base) =!= "" or frontend.cRcTag(base) =!= "" or frontend.cSliceTag(base) =!= "" or frontend.cFnTag(base) =!= ""
+            frontend.isIntScalarKind(base) or frontend.isFloatScalarKind(base) or base == frontend.VALUE_KIND_BOOL or base == frontend.VALUE_KIND_STRING or frontend.isEnumKind(base) or frontend.cArrayTag(base) =!= "" or cListTagForKind(base) =!= "" or frontend.cStructTag(base) =!= "" or frontend.cMapTag(base) =!= "" or frontend.cSetTag(base) =!= "" or frontend.cRcTag(base) =!= "" or frontend.cSliceTag(base) =!= "" or frontend.cSimdTag(base) =!= "" or frontend.cSoaTag(base) =!= "" or frontend.cFnTag(base) =!= ""
         } else { false };
-        isUnsupportedRecordDecl := (item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD) and not frontend.isEnumKind(item.textValue) and not isSupportedDistDecl and frontend.cStructTag(item.textValue) == "" and frontend.cMapTag(item.textValue) == "" and frontend.cSetTag(item.textValue) == "" and frontend.cRcTag(item.textValue) == "" and frontend.cSliceTag(item.textValue) == "";
+        isUnsupportedRecordDecl := (item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD) and not frontend.isEnumKind(item.textValue) and not isSupportedDistDecl and frontend.cStructTag(item.textValue) == "" and frontend.cMapTag(item.textValue) == "" and frontend.cSetTag(item.textValue) == "" and frontend.cRcTag(item.textValue) == "" and frontend.cSliceTag(item.textValue) == "" and frontend.cSimdTag(item.textValue) == "" and frontend.cSoaTag(item.textValue) == "";
         if (frontend.isRecordKind(item.kind) and frontend.cStructTag(item.kind) == "") or
         (item.kind == frontend.ITEM_KIND_DISCARD and frontend.isRecordKind(item.name) and frontend.cStructTag(item.name) == "") or isUnsupportedRecordDecl {
             diagLib.fail("", "C backend does not support record values yet");
@@ -8784,7 +9499,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         mut seedKinds.pushBack("Slice<UInt8>");
     }
     loop reachable as item {
-        if frontend.cArrayTag(item.kind) =!= "" or cListTagForKind(item.kind) =!= "" or frontend.cStructTag(item.kind) =!= "" or frontend.cMapTag(item.kind) =!= "" or frontend.cSetTag(item.kind) =!= "" or frontend.cRcTag(item.kind) =!= "" or frontend.cSliceTag(item.kind) =!= "" or frontend.cFnTag(item.kind) =!= "" {
+        if frontend.cArrayTag(item.kind) =!= "" or cListTagForKind(item.kind) =!= "" or frontend.cStructTag(item.kind) =!= "" or frontend.cMapTag(item.kind) =!= "" or frontend.cSetTag(item.kind) =!= "" or frontend.cRcTag(item.kind) =!= "" or frontend.cSliceTag(item.kind) =!= "" or frontend.cSimdTag(item.kind) =!= "" or frontend.cSoaTag(item.kind) =!= "" or frontend.cFnTag(item.kind) =!= "" {
             mut seedKinds.pushBack(item.kind);
             pFlags := collectTypeFlags(item.kind);
             loop pFlags as pf {
@@ -8793,14 +9508,14 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 else { mut printTypeKeys.add(pf); }
             }
         }
-        if item.kind == frontend.ITEM_KIND_DISCARD and (frontend.cArrayTag(item.name) =!= "" or cListTagForKind(item.name) =!= "" or frontend.cStructTag(item.name) =!= "" or frontend.cMapTag(item.name) =!= "" or frontend.cSetTag(item.name) =!= "" or frontend.cRcTag(item.name) =!= "" or frontend.cSliceTag(item.name) =!= "" or frontend.cFnTag(item.name) =!= "") {
+        if item.kind == frontend.ITEM_KIND_DISCARD and (frontend.cArrayTag(item.name) =!= "" or cListTagForKind(item.name) =!= "" or frontend.cStructTag(item.name) =!= "" or frontend.cMapTag(item.name) =!= "" or frontend.cSetTag(item.name) =!= "" or frontend.cRcTag(item.name) =!= "" or frontend.cSliceTag(item.name) =!= "" or frontend.cSimdTag(item.name) =!= "" or frontend.cSoaTag(item.name) =!= "" or frontend.cFnTag(item.name) =!= "") {
             mut seedKinds.pushBack(item.name);
         }
         if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST or
         item.kind == frontend.ITEM_KIND_LOCAL_TUPLE or item.kind == frontend.ITEM_KIND_VAR_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or
         item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or
         item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
-            if frontend.cArrayTag(item.textValue) =!= "" or cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" or frontend.cRcTag(item.textValue) =!= "" or frontend.cSliceTag(item.textValue) =!= "" or frontend.cFnTag(item.textValue) =!= "" {
+            if frontend.cArrayTag(item.textValue) =!= "" or cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" or frontend.cRcTag(item.textValue) =!= "" or frontend.cSliceTag(item.textValue) =!= "" or frontend.cSimdTag(item.textValue) =!= "" or frontend.cSoaTag(item.textValue) =!= "" or frontend.cFnTag(item.textValue) =!= "" {
                 mut seedKinds.pushBack(item.textValue);
             }
         }
@@ -8836,7 +9551,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             }
         }
         if item.kind == frontend.ITEM_KIND_FUNCTION_START {
-            if frontend.cArrayTag(item.code) =!= "" or cListTagForKind(item.code) =!= "" or frontend.cStructTag(item.code) =!= "" or frontend.cMapTag(item.code) =!= "" or frontend.cSetTag(item.code) =!= "" or frontend.cRcTag(item.code) =!= "" or frontend.cSliceTag(item.code) =!= "" or frontend.cFnTag(item.code) =!= "" {
+            if frontend.cArrayTag(item.code) =!= "" or cListTagForKind(item.code) =!= "" or frontend.cStructTag(item.code) =!= "" or frontend.cMapTag(item.code) =!= "" or frontend.cSetTag(item.code) =!= "" or frontend.cRcTag(item.code) =!= "" or frontend.cSliceTag(item.code) =!= "" or frontend.cSimdTag(item.code) =!= "" or frontend.cSoaTag(item.code) =!= "" or frontend.cFnTag(item.code) =!= "" {
                 mut seedKinds.pushBack(item.code);
             }
             if item.textValue =!= "" {
@@ -8849,7 +9564,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                     if pEq >= 0 {
                         rawPKind := pEntry.slice(pEq + 1, pEntry.length());
                         pKind := if rawPKind.startsWithAt(0, "mut ") { rawPKind.slice(4, rawPKind.length()) } else { rawPKind };
-                        if frontend.cArrayTag(pKind) =!= "" or cListTagForKind(pKind) =!= "" or frontend.cStructTag(pKind) =!= "" or frontend.cMapTag(pKind) =!= "" or frontend.cSetTag(pKind) =!= "" or frontend.cRcTag(pKind) =!= "" or frontend.cSliceTag(pKind) =!= "" or frontend.cFnTag(pKind) =!= "" {
+                        if frontend.cArrayTag(pKind) =!= "" or cListTagForKind(pKind) =!= "" or frontend.cStructTag(pKind) =!= "" or frontend.cMapTag(pKind) =!= "" or frontend.cSetTag(pKind) =!= "" or frontend.cRcTag(pKind) =!= "" or frontend.cSliceTag(pKind) =!= "" or frontend.cSimdTag(pKind) =!= "" or frontend.cSoaTag(pKind) =!= "" or frontend.cFnTag(pKind) =!= "" {
                             mut seedKinds.pushBack(pKind);
                         }
                     }
@@ -8914,6 +9629,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if hasCallPrefix(calls, "lt_list_str_") { mut seedKinds.pushBack("List<String>"); }
     var hasAnyList := false;
     var hasAnyRc := false;
+    var hasAnySoa := false;
     var hasFnTypes := false;
     arrSliceNeedFrom: mut Set<String>;
     sliceSplitKinds: mut List<String> = [];
@@ -8931,6 +9647,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             isE := sub.startsWithAt(0, "E|");
             isR := sub.startsWithAt(0, "R|");
             isV := sub.startsWithAt(0, "V|");
+            isD := sub.startsWithAt(0, "D|");
+            isO := sub.startsWithAt(0, "O|");
             isF := sub.startsWithAt(0, "F|");
             payload := sub.slice(2, sub.length());
             if isA {
@@ -8978,6 +9696,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             else if isE { "E:" + frontend.cSetTag(payload) }
             else if isR { "R:" + frontend.cRcTag(payload) }
             else if isV { "V:" + frontend.cSliceTag(payload) }
+            else if isD { "D:" + frontend.cSimdTag(payload) }
+            else if isO { "O:" + frontend.cSoaTag(payload) }
             else if isF { "F:" + frontend.cFnTag(payload) }
             else { "S:" + frontend.cStructTag(payload) };
             if not seenTypeKeys.has(tKey) {
@@ -8985,6 +9705,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                 mut orderedEntries.pushBack(sub);
                 if isL or isM or isE { hasAnyList = true; }
                 if isR { hasAnyRc = true; }
+                if isO { hasAnySoa = true; }
                 if isF { hasFnTypes = true; }
             }
         }
@@ -9035,6 +9756,16 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
                     if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
                 }
             }
+        } else if oe.startsWithAt(0, "O|") {
+            oKind := oe.slice(2, oe.length());
+            oTag := frontend.cSoaTag(oKind);
+            recK := frontend.soaRecordKind(oKind);
+            if frontend.cTypeNeedsDrop(recK) and (usesIntHelper(calls, oTag + "_get(") or usesIntHelper(calls, oTag + "_uget(") or usesIntHelper(calls, oTag + "_copy(") or frontend.tokenBucketHas(copyTypeKeys, "O:" + oTag)) {
+                cFlags := collectTypeFlags(recK);
+                loop cFlags as cf {
+                    if cf =!= "FLOAT" and cf =!= "FLOAT32" { mut copyTypeKeys.add(cf); }
+                }
+            }
         }
     }
     loop extraListSeeds as el { mut orderedEntries.pushBack(el); }
@@ -9052,7 +9783,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     needStrFromCstr := hasInputArgs or hasUnicodeHost or hasPosixHost or hasExtraCanvas or usesIntHelper(calls, "lt_c_utf8_decode_strict(");
     needStrFromBuf := hasInput or hasUnicodeHost or usesStreamBuiltins(calls) or usesTimeBuiltins(calls) or usesCFileSoft(calls) or usesCUtf8Soft(calls);
     usesBoxAlloc := usesIntHelper(calls, "lt_box_alloc(") or hasAnyRc;
-    usesHeap := hasAnyList or hasHoistedFns or hasFnTypes or hasInputArgs or usesBoxAlloc or usesIntHelper(calls, "calloc(");
+    usesHeap := hasAnyList or hasAnySoa or hasHoistedFns or hasFnTypes or hasInputArgs or usesBoxAlloc or usesIntHelper(calls, "calloc(");
     usesRuntimeCtx := usesArena or usesHeap or needStrFromCstr or needStrFromBuf;
     if hasPosixHost or usesRuntimeCtx {
         outLine("#if defined(__APPLE__)");
@@ -9208,7 +9939,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         outLine("#include <poll.h>");
         outLine("#include <sys/wait.h>");
     }
-    if usesFloatArithmetic(calls) or float8Values or float16Values or hasInputFloat or hasExtraCanvas or usesIntHelper(calls, "lt_trunc_f64_to_int(") or usesIntHelper(calls, "lt_trunc_f64_to_uint(") or usesHelperPrefix(calls, "lt_utrunc_") or usesHelperPrefix(calls, "lt_ufma_") { outLine("#include <math.h>"); }
+    if usesFloatArithmetic(calls) or float8Values or float16Values or hasInputFloat or hasExtraCanvas or usesIntHelper(calls, "lt_trunc_f64_to_int(") or usesIntHelper(calls, "lt_trunc_f64_to_uint(") or usesHelperPrefix(calls, "lt_utrunc_") or usesHelperPrefix(calls, "lt_ufma_") or (floatValues and usesHelperPrefix(calls, "lt_simd_")) { outLine("#include <math.h>"); }
     if hasExtraCanvas {
         outLine("#include <sys/resource.h>");
         outLine("#if defined(__APPLE__)");
@@ -9773,6 +10504,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         isE := oe.startsWithAt(0, "E|");
         isR := oe.startsWithAt(0, "R|");
         isV := oe.startsWithAt(0, "V|");
+        isD := oe.startsWithAt(0, "D|");
+        isO := oe.startsWithAt(0, "O|");
         isF := oe.startsWithAt(0, "F|");
         payload := oe.slice(2, oe.length());
         if isL {
@@ -9805,6 +10538,15 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             vTag := frontend.cSliceTag(payload);
             vNeedPrint := frontend.tokenBucketHas(printTypeKeys, "V:" + vTag);
             emitCSliceHelpers(payload, calls, vNeedPrint, config);
+        } else if isD {
+            dTag := frontend.cSimdTag(payload);
+            dNeedPrint := frontend.tokenBucketHas(printTypeKeys, "D:" + dTag);
+            emitCSimdHelpers(payload, calls, dNeedPrint, config);
+        } else if isO {
+            oTag := frontend.cSoaTag(payload);
+            oNeedCopy := frontend.tokenBucketHas(copyTypeKeys, "O:" + oTag);
+            oNeedPrint := frontend.tokenBucketHas(printTypeKeys, "O:" + oTag);
+            emitCSoaHelpers(payload, calls, oNeedCopy, oNeedPrint, config);
         } else if isF {
             emitCFnTypeHelper(payload, calls);
         } else {

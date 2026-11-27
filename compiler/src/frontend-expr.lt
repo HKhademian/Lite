@@ -1710,7 +1710,26 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         if entry.textValue == "closure_forbidden" {
             syntax.failAt(source, nameStart, prefix, "borrowed Slice<T> cannot be captured by closure");
         }
-        sliceBorrows.checkCanReadBinding(locals, entry.runtime, name, source, nameStart, prefix);
+        soaColPeek := if types.isSoaKind(entry.kind) {
+            dotChk := syntax.skipTrivia(source, next, prefix);
+            if dotChk < source.length() and source.at(dotChk) == "." {
+                cSt := syntax.skipTrivia(source, dotChk + 1, prefix);
+                if cSt < source.length() and source.at(cSt).isNameStart() {
+                    cEnd := source.skipName(cSt);
+                    cName := source.slice(cSt, cEnd);
+                    afterC := syntax.skipTrivia(source, cEnd, prefix);
+                    if (afterC >= source.length() or source.at(afterC) =!= "(") and
+                    types.recordFieldKind(types.soaRecordKind(entry.kind), cName) =!= "" {
+                        cName
+                    } else { "" }
+                } else { "" }
+            } else { "" }
+        } else { "" };
+        if soaColPeek =!= "" {
+            sliceBorrows.checkCanReadColumn(locals, entry.runtime, soaColPeek, name, source, nameStart, prefix);
+        } else {
+            sliceBorrows.checkCanReadBinding(locals, entry.runtime, name, source, nameStart, prefix);
+        }
         idText := if types.isSliceKind(entry.kind) {
             sliceBorrows.sliceIdentifierProvenance(entry.runtime, entry.depth, name, entry.textValue)
         } else {
@@ -1733,7 +1752,26 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         if entry.textValue == "closure_forbidden" {
             syntax.failAt(source, nameStart, prefix, "borrowed Slice<T> cannot be captured by closure");
         }
-        sliceBorrows.checkCanReadBinding(locals, entry.runtime, name, source, nameStart, prefix);
+        soaColPeek := if types.isSoaKind(entry.kind) {
+            dotChk := syntax.skipTrivia(source, next, prefix);
+            if dotChk < source.length() and source.at(dotChk) == "." {
+                cSt := syntax.skipTrivia(source, dotChk + 1, prefix);
+                if cSt < source.length() and source.at(cSt).isNameStart() {
+                    cEnd := source.skipName(cSt);
+                    cName := source.slice(cSt, cEnd);
+                    afterC := syntax.skipTrivia(source, cEnd, prefix);
+                    if (afterC >= source.length() or source.at(afterC) =!= "(") and
+                    types.recordFieldKind(types.soaRecordKind(entry.kind), cName) =!= "" {
+                        cName
+                    } else { "" }
+                } else { "" }
+            } else { "" }
+        } else { "" };
+        if soaColPeek =!= "" {
+            sliceBorrows.checkCanReadColumn(locals, entry.runtime, soaColPeek, name, source, nameStart, prefix);
+        } else {
+            sliceBorrows.checkCanReadBinding(locals, entry.runtime, name, source, nameStart, prefix);
+        }
         idText := if types.isSliceKind(entry.kind) {
             sliceBorrows.sliceIdentifierProvenance(entry.runtime, entry.depth, name, entry.textValue)
         } else {
@@ -1825,7 +1863,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         return ctx.withMarkers((kind = targetKind, code = castCode, intValue = if castConst { arg.intValue } else { 0 }, textValue = if castConst { arg.textValue } else { "" }, constant = castConst, next = closeParen), argMarkers);
     }
     if afterName < source.length() and (source.at(afterName) == "." or source.at(afterName) == "<") and
-    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "Rc" or (source.at(afterName) == "." and (name == "String" or numeric.isNumericKind(name)))) {
+    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "Rc" or name == "Simd" or name == "SimdNative" or name == "SoA" or (source.at(afterName) == "." and (name == "String" or numeric.isNumericKind(name)))) {
         var resolvedType := "";
         var typeOwnerKey := "";
         var aliasParamsCsv := "";
@@ -1863,8 +1901,8 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                 }
                 syntax.failAt(source, dotPos, prefix, "expected { or . after type " + types.displayKind(resolvedType));
             }
-        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "Rc" or name == "String" or numeric.isNumericKind(name) {
-            typeOwnerKey = name;
+        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "Rc" or name == "Simd" or name == "SimdNative" or name == "SoA" or name == "String" or numeric.isNumericKind(name) {
+            typeOwnerKey = if name == "SimdNative" { "Simd" } else { name };
         } else if inferMode {
             genInfo := types.genericAliasTemplateInfo(source, nameStart, prefix, aliases, name);
             if genInfo.ownerKey =!= "" {
@@ -7851,6 +7889,20 @@ pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix
         vK := types.mapValueKind(receiverKind);
         return (found = true, runtime = info.runtime, keyKind = kK, valKind = vK, resultKind = if opName == "$setIndex" { ir.VALUE_KIND_UNIT } else { vK });
     }
+    if info.runtime == "lite$core$simd$get:v1" {
+        if not types.isSimdKind(receiverKind) {
+            syntax.failAt(source, errPos, prefix, opName + " requires Simd, got " + types.displayKind(receiverKind));
+        }
+        elK := types.simdElementKind(receiverKind);
+        return (found = true, runtime = info.runtime, keyKind = ir.VALUE_KIND_INT, valKind = elK, resultKind = elK);
+    }
+    if info.runtime == "lite$core$soa$get:v1" or info.runtime == "lite$core$soa$set:v1" {
+        if not types.isSoaKind(receiverKind) {
+            syntax.failAt(source, errPos, prefix, opName + " requires SoA, got " + types.displayKind(receiverKind));
+        }
+        recK := types.soaRecordKind(receiverKind);
+        return (found = true, runtime = info.runtime, keyKind = ir.VALUE_KIND_INT, valKind = recK, resultKind = if opName == "$setIndex" { ir.VALUE_KIND_UNIT } else { recK });
+    }
     if info.runtime.startsWithAt(0, "$gen:") {
         tplKey := info.runtime.slice(5, info.runtime.length());
         tplIdx := generics.findTemplate(tplKey);
@@ -7919,6 +7971,19 @@ emitHookIndexReadCode := fn(target: String, errPos: Int, recvKind: String, recvC
             return types.cMapTag(recvKind) + "_at(" + recvCode + ", " + keyCode + ", " + errPos.toText() + ")";
         }
         return "lite$mapAt((" + recvCode + "), " + keyCode + ", " + errPos.toText() + ")";
+    }
+    if getRuntime == "lite$core$simd$get:v1" {
+        if target == ir.TARGET_C {
+            return types.cSimdTag(recvKind) + "_at(" + recvCode + ", " + keyCode + ", " + errPos.toText() + ")";
+        }
+        return "lite$simdAt(" + recvCode + ", " + keyCode + ", " + errPos.toText() + ")";
+    }
+    if getRuntime == "lite$core$soa$get:v1" {
+        if target == ir.TARGET_C {
+            return "/*@T:" + recvKind + "@*/" + types.cSoaTag(recvKind) + "_get(" + recvCode + ", " + keyCode + ", " + errPos.toText() + ")";
+        }
+        recK := types.soaRecordKind(recvKind);
+        return emitTsSoaGetCode(recK, recvCode, keyCode, errPos, false);
     }
     getRuntime + "(" + recvCode + ", " + keyCode + ")"
 };
@@ -7999,6 +8064,17 @@ pub emitHookIndexAssignCode := fn(target: String, source: String, opPos: Int, pr
         }
         vCode := ctx.assignValueCode(target, valKind, valParsed.kind, valParsed.code);
         return "(" + entry.runtime + ").set(" + keyCode + ", " + vCode + ")";
+    }
+    if setRuntime == "lite$core$soa$set:v1" {
+        if isCompound {
+            syntax.failAt(source, opPos, prefix, "compound indexing assignment is not supported on SoA rows");
+        }
+        recK := types.soaRecordKind(entry.kind);
+        vCode := ctx.assignValueCode(target, recK, valParsed.kind, valParsed.code);
+        if target == ir.TARGET_C {
+            return types.cSoaTag(entry.kind) + "_set(&" + entry.runtime + ", " + keyCode + ", " + vCode + ", " + opPos.toText() + ")";
+        }
+        return emitTsSoaSetCode(recK, entry.runtime, keyCode, vCode, opPos, false);
     }
     if target == ir.TARGET_C {
         keyByPtr := types.cParamIsConstPtr(keyKind);
@@ -9197,6 +9273,393 @@ emitRcHardOpCode := fn(
     (kind = ir.VALUE_KIND_BOOL, code = eqCode)
 };
 
+/** Looks up field index, JS prop name, and canonical kind for column `colName` in `SoA<R>`, or `idx = -1`. */
+soaColInfo := fn(soaKind: String, colName: String): (idx: Int, prop: String, kind: String) {
+    recK := types.soaRecordKind(soaKind);
+    fc := types.recordComponentCount(recK);
+    var fi := 0;
+    loop fi < fc {
+        comp := types.recordComponent(recK, fi);
+        if comp.label == colName {
+            return (idx = fi, prop = comp.prop, kind = comp.kind);
+        }
+        fi = fi + 1;
+    }
+    (idx = -1, prop = "", kind = "")
+};
+
+/** Emits zero-copy borrowed `Slice<ColKind>` expression for `soaCode.<colName>`. */
+emitSoaColumnSliceCode := fn(target: String, soaKind: String, soaCode: String, colIdx: Int, colProp: String, colKind: String): String {
+    sliceKind := "Slice<" + colKind + ">";
+    if target == ir.TARGET_C {
+        return "/*@T:" + sliceKind + "@*/" + types.cSoaTag(soaKind) + "_col_" + colIdx.toText() + "(" + soaCode + ")";
+    }
+    "/*@T:" + sliceKind + "@*/({ data: (" + soaCode + ")." + colProp + ", off: 0, len: (" + soaCode + ")." + colProp + ".length })"
+};
+
+/** Emits TS checked binary arithmetic (`+`, `-`, `*`, `/`) for a `Simd<T, N>` lane element type `elKind`. */
+tsSimdBinOpCode := fn(elKind: String, op: String, a: String, b: String, pos: Int): String {
+    if elKind == ir.VALUE_KIND_FLOAT32 {
+        ir.targetFloat32BinaryCode(ir.TARGET_TS, op, a, b, pos)
+    } else if elKind == ir.VALUE_KIND_FLOAT {
+        ir.targetFloatBinaryCode(ir.TARGET_TS, op, a, b, pos)
+    } else {
+        ctx.runtimeTypedIntegerCode(ir.TARGET_TS, elKind, op, a, b, pos)
+    }
+};
+
+/** Emits TS checked unary negation (`-v`) for a signed `Simd<T, N>` lane element type `elKind`. */
+tsSimdNegCode := fn(elKind: String, v: String, pos: Int): String {
+    if elKind == ir.VALUE_KIND_FLOAT32 {
+        "(Math.fround(-(" + v + ")))"
+    } else if elKind == ir.VALUE_KIND_FLOAT {
+        "(-(" + v + "))"
+    } else if elKind == ir.VALUE_KIND_INT {
+        ir.targetIntNegateCode(ir.TARGET_TS, v, pos)
+    } else {
+        ctx.runtimeTypedIntegerCode(ir.TARGET_TS, elKind, "-", "0n", v, pos)
+    }
+};
+
+/** Emits TypeScript empty `SoA<R>` object literal expression. */
+emitTsSoaZeroCode := fn(recKind: String): String {
+    fc := types.recordComponentCount(recKind);
+    cols: mut List<String> = [];
+    var fi := 0;
+    loop fi < fc {
+        comp := types.recordComponent(recKind, fi);
+        mut cols.pushBack(comp.prop + ": []");
+        fi = fi + 1;
+    }
+    "({ " + cols.join(", ") + " } as " + types.tsFunctionType("SoA<" + recKind + ">") + ")"
+};
+
+/** Emits TypeScript `SoA<R>.get` / `uncheckedGet` / `$getIndex` expression. */
+emitTsSoaGetCode := fn(recKind: String, soaCode: String, idxCode: String, errPos: Int, uncheckedOp: Bool): String {
+    fc := types.recordComponentCount(recKind);
+    firstProp := types.recordComponent(recKind, 0).prop;
+    fields: mut List<String> = [];
+    var fi := 0;
+    loop fi < fc {
+        comp := types.recordComponent(recKind, fi);
+        copiedF := ctx.copiedValueCode(ir.TARGET_TS, comp.kind, "lite$s." + comp.prop + "[lite$si]!");
+        mut fields.pushBack(comp.prop + ": " + copiedF);
+        fi = fi + 1;
+    }
+    chkFlag := if uncheckedOp { "false" } else { "true" };
+    "((lite$s: " + types.tsFunctionType("SoA<" + recKind + ">") + ", lite$si: number) => ({ " + fields.join(", ") + " }))(" + soaCode + ", lite$soaCheckIdx(" + idxCode + ", (" + soaCode + ")." + firstProp + ".length, " + errPos.toText() + ", " + chkFlag + "))"
+};
+
+/** Emits TypeScript `SoA<R>.set` / `uncheckedSet` / `$setIndex` expression. */
+emitTsSoaSetCode := fn(recKind: String, soaMutRt: String, idxCode: String, rowCode: String, errPos: Int, uncheckedOp: Bool): String {
+    fc := types.recordComponentCount(recKind);
+    firstProp := types.recordComponent(recKind, 0).prop;
+    assigns: mut List<String> = [];
+    var fi := 0;
+    loop fi < fc {
+        comp := types.recordComponent(recKind, fi);
+        mut assigns.pushBack("lite$s." + comp.prop + "[lite$si] = lite$r." + comp.prop + ";");
+        fi = fi + 1;
+    }
+    chkFlag := if uncheckedOp { "false" } else { "true" };
+    "((lite$s: " + types.tsFunctionType("SoA<" + recKind + ">") + ", lite$si: number, lite$r: " + types.tsFunctionType(recKind) + "): void => { " + assigns.join(" ") + " })(" + soaMutRt + ", lite$soaCheckIdx(" + idxCode + ", (" + soaMutRt + ")." + firstProp + ".length, " + errPos.toText() + ", " + chkFlag + "), " + rowCode + ")"
+};
+
+/** Emits TypeScript `SoA<R>.pushBack` expression. */
+emitTsSoaPushCode := fn(recKind: String, soaMutRt: String, rowCode: String): String {
+    fc := types.recordComponentCount(recKind);
+    pushes: mut List<String> = [];
+    var fi := 0;
+    loop fi < fc {
+        comp := types.recordComponent(recKind, fi);
+        mut pushes.pushBack("lite$s." + comp.prop + ".push(lite$r." + comp.prop + ");");
+        fi = fi + 1;
+    }
+    "((lite$s: " + types.tsFunctionType("SoA<" + recKind + ">") + ", lite$r: " + types.tsFunctionType(recKind) + "): void => { " + pushes.join(" ") + " })(" + soaMutRt + ", " + rowCode + ")"
+};
+
+/** Emits TypeScript `SoA<R>.clear` expression. */
+emitTsSoaClearCode := fn(recKind: String, soaMutRt: String): String {
+    fc := types.recordComponentCount(recKind);
+    clears: mut List<String> = [];
+    var fi := 0;
+    loop fi < fc {
+        comp := types.recordComponent(recKind, fi);
+        mut clears.pushBack("lite$s." + comp.prop + ".length = 0;");
+        fi = fi + 1;
+    }
+    "((lite$s: " + types.tsFunctionType("SoA<" + recKind + ">") + "): void => { " + clears.join(" ") + " })(" + soaMutRt + ")"
+};
+
+/** Emits TypeScript `SoA<R>.popBack` expression. */
+emitTsSoaPopCode := fn(recKind: String, soaMutRt: String, errPos: Int): String {
+    fc := types.recordComponentCount(recKind);
+    firstProp := types.recordComponent(recKind, 0).prop;
+    pops: mut List<String> = [];
+    var fi := 0;
+    loop fi < fc {
+        comp := types.recordComponent(recKind, fi);
+        mut pops.pushBack(comp.prop + ": lite$s." + comp.prop + ".pop()!");
+        fi = fi + 1;
+    }
+    "((lite$s: " + types.tsFunctionType("SoA<" + recKind + ">") + "): " + types.tsFunctionType(recKind) + " => { if (lite$s." + firstProp + ".length === 0) lite$soaEmptyFault(" + errPos.toText() + "); return { " + pops.join(", ") + " }; })(" + soaMutRt + ")"
+};
+
+/** Emits TypeScript `SoA<R>.swapRemove` expression. */
+emitTsSoaSwapRemoveCode := fn(recKind: String, soaMutRt: String, idxCode: String, errPos: Int): String {
+    fc := types.recordComponentCount(recKind);
+    firstProp := types.recordComponent(recKind, 0).prop;
+    reads: mut List<String> = [];
+    swaps: mut List<String> = [];
+    pops: mut List<String> = [];
+    var fi := 0;
+    loop fi < fc {
+        comp := types.recordComponent(recKind, fi);
+        mut reads.pushBack(comp.prop + ": lite$s." + comp.prop + "[lite$si]!");
+        mut swaps.pushBack("lite$s." + comp.prop + "[lite$si] = lite$s." + comp.prop + "[lite$last]!;");
+        mut pops.pushBack("lite$s." + comp.prop + ".pop();");
+        fi = fi + 1;
+    }
+    "((lite$s: " + types.tsFunctionType("SoA<" + recKind + ">") + ", lite$si: number): " + types.tsFunctionType(recKind) + " => { const lite$last = lite$s." + firstProp + ".length - 1; const lite$res = { " + reads.join(", ") + " }; if (lite$si !== lite$last) { " + swaps.join(" ") + " } " + pops.join(" ") + " return lite$res; })(" + soaMutRt + ", lite$soaCheckIdx(" + idxCode + ", (" + soaMutRt + ")." + firstProp + ".length, " + errPos.toText() + ", true))"
+};
+
+/** Parses explicit `<T, N>` or `<T>` on a static `Simd.*` intrinsic call when not already supplied on the receiver type. */
+parseSimdCallExplicitShape := fn(source: String, cursorIn: Int, expectSingleT: Bool, prefix: String, aliases: List<AliasDecl>, inferMode: Bool): (matched: Bool, kind: String, elemKind: String, next: Int) {
+    size := source.length();
+    if cursorIn >= size or source.at(cursorIn) =!= "<" {
+        return (matched = false, kind = "", elemKind = "", next = cursorIn);
+    }
+    tStart := syntax.skipTrivia(source, cursorIn + 1, prefix);
+    if tStart >= size or source.at(tStart) == ">" {
+        syntax.failAt(source, tStart, prefix, "expected a Simd element type");
+    }
+    tParsed := if inferMode {
+        emptySeen: List<String> = [];
+        canT := types.canResolveTypeAt(source, tStart, prefix, aliases, "", emptySeen, 32);
+        if not canT.ok {
+            return (matched = false, kind = "", elemKind = "", next = cursorIn);
+        }
+        (kind = canT.kind, next = canT.next)
+    } else {
+        types.parseTypeAt(source, tStart, prefix, aliases, "Simd element", "")
+    };
+    if not types.isSimdElemKind(tParsed.kind) {
+        syntax.failAt(source, tStart, prefix, "unsupported Simd lane type " + types.displayKind(tParsed.kind));
+    }
+    if expectSingleT {
+        gt := syntax.expectSymbol(source, syntax.skipTrivia(source, tParsed.next, prefix), ">", prefix);
+        return (matched = true, kind = "", elemKind = tParsed.kind, next = syntax.skipTrivia(source, gt, prefix));
+    }
+    afterT := syntax.skipTrivia(source, tParsed.next, prefix);
+    if afterT < size and source.at(afterT) == ">" {
+        syntax.failAt(source, tStart, prefix, "Simd requires two arguments: Simd<T, N> (runtime-scalable or sizeless SIMD vectors are not supported)");
+    }
+    comma := syntax.expectSymbol(source, afterT, ",", prefix);
+    extStart := syntax.skipTrivia(source, comma, prefix);
+    if extStart < size and source.at(extStart) == "*" {
+        syntax.failAt(source, extStart, prefix, "runtime-scalable or sizeless SIMD vectors are not supported; expected compile-time power-of-two lane count N");
+    }
+    var extEnd := extStart;
+    loop extEnd < size and source.at(extEnd).isDigit() { extEnd = extEnd + 1; }
+    if extEnd == extStart {
+        syntax.failAt(source, extStart, prefix, "expected positive power-of-two lane count N in Simd<T, N>");
+    }
+    n := syntax.parseDigits(source, extStart, extEnd);
+    if not types.isValidSimdLaneCount(tParsed.kind, n) {
+        syntax.failAt(source, extStart, prefix, "unsupported Simd shape Simd<" + types.displayKind(tParsed.kind) + ", " + n.toText() + ">");
+    }
+    gt := syntax.expectSymbol(source, syntax.skipTrivia(source, extEnd, prefix), ">", prefix);
+    (matched = true, kind = "Simd<" + tParsed.kind + "," + n.toText() + ">", elemKind = tParsed.kind, next = syntax.skipTrivia(source, gt, prefix))
+};
+
+/** Parses `Simd.*` static constructor/query calls (`splat`, `fromArray`, `load`, `nativeLanes`). */
+parseSimdStaticIntrinsicCall := fn(
+    target: String, source: String, runtime: String, errPos: Int, postPos: Int, explicitSimdIn: String,
+    prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>,
+    currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>
+): Parsed {
+    var cursor := syntax.skipTrivia(source, postPos, prefix);
+    if runtime == "lite$core$simd$nativeLanes:v1" {
+        var elemKind := if explicitSimdIn =!= "" and types.isSimdKind(explicitSimdIn) { types.simdElementKind(explicitSimdIn) } else { "" };
+        if elemKind == "" {
+            sh := parseSimdCallExplicitShape(source, cursor, true, prefix, aliases, inferMode);
+            if not sh.matched {
+                if inferMode { return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = postPos); }
+                syntax.failAt(source, errPos, prefix, "Simd.nativeLanes requires element type argument <T>");
+            }
+            elemKind = sh.elemKind;
+            cursor = sh.next;
+        }
+        openParen := syntax.expectSymbol(source, cursor, "(", prefix);
+        close := syntax.expectSymbol(source, syntax.skipTrivia(source, openParen, prefix), ")", prefix);
+        nLanes := types.simdNativeLaneCount(elemKind);
+        cCode := if target == ir.TARGET_C { "(INT64_C(" + nLanes.toText() + "))" } else { nLanes.toText() + "n" };
+        return (kind = ir.VALUE_KIND_INT, code = cCode, intValue = nLanes, textValue = "", constant = true, next = close);
+    }
+    var targetSimdKind := if explicitSimdIn =!= "" and types.isSimdKind(explicitSimdIn) { explicitSimdIn } else { "" };
+    if targetSimdKind == "" and cursor < source.length() and source.at(cursor) == "<" {
+        sh := parseSimdCallExplicitShape(source, cursor, false, prefix, aliases, inferMode);
+        if not sh.matched {
+            return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = postPos);
+        }
+        targetSimdKind = sh.kind;
+        cursor = sh.next;
+    }
+    if targetSimdKind == "" and runtime =!= "lite$core$simd$fromArray:v1" and expected =!= "" and types.isSimdKind(expected) {
+        targetSimdKind = expected;
+    }
+    openParen := syntax.expectSymbol(source, cursor, "(", prefix);
+    argStart := syntax.skipTrivia(source, openParen, prefix);
+    if runtime == "lite$core$simd$splat:v1" {
+        if targetSimdKind == "" {
+            if inferMode { return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = postPos); }
+            syntax.failAt(source, errPos, prefix, "Simd.splat requires explicit Simd<T, N> type");
+        }
+        elK := types.simdElementKind(targetSimdKind);
+        n := types.simdLaneCount(targetSimdKind);
+        valArg := parseBinaryCtx(target, source, argStart, prefix, locals, functions, params, currentName, elK, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if not types.isCompatibleKind(elK, valArg.kind) {
+            syntax.failAt(source, argStart, prefix, "Simd.splat expects " + types.displayKind(elK) + ", got " + types.displayKind(valArg.kind));
+        }
+        close := ctx.expectNonemptyCallClose(source, valArg.next, prefix);
+        vCode := ctx.assignValueCode(target, elK, valArg.kind, valArg.code);
+        outCode := if target == ir.TARGET_C {
+            "/*@T:" + targetSimdKind + "@*/" + types.cSimdTag(targetSimdKind) + "_splat(" + vCode + ")"
+        } else {
+            "lite$simdSplat(" + vCode + ", " + n.toText() + ")"
+        };
+        return ctx.withMarkers((kind = targetSimdKind, code = outCode, intValue = 0, textValue = "", constant = false, next = close),
+            if inferMode { ctx.collectParsedMarkers("", valArg) } else { "" });
+    }
+    if runtime == "lite$core$simd$fromArray:v1" {
+        expArr := if targetSimdKind =!= "" { "[" + types.simdElementKind(targetSimdKind) + ";" + types.simdLaneCount(targetSimdKind).toText() + "]" } else { "" };
+        arrArg := parseBinaryCtx(target, source, argStart, prefix, locals, functions, params, currentName, expArr, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if not types.isArrayKind(arrArg.kind) or types.arrayExtent(arrArg.kind) <= 1 {
+            syntax.failAt(source, argStart, prefix, "Simd.fromArray expects a fixed-size [T; N] array, got " + types.displayKind(arrArg.kind));
+        }
+        arrEl := types.arrayElementKind(arrArg.kind);
+        arrN := types.arrayExtent(arrArg.kind);
+        if targetSimdKind == "" {
+            if not types.isValidSimdLaneCount(arrEl, arrN) {
+                syntax.failAt(source, argStart, prefix, "unsupported Simd array shape [" + types.displayKind(arrEl) + "; " + arrN.toText() + "]");
+            }
+            targetSimdKind = "Simd<" + arrEl + "," + arrN.toText() + ">";
+        } else {
+            reqArr := "[" + types.simdElementKind(targetSimdKind) + ";" + types.simdLaneCount(targetSimdKind).toText() + "]";
+            if not types.isCompatibleKind(reqArr, arrArg.kind) {
+                syntax.failAt(source, argStart, prefix, "Simd.fromArray expects " + types.displayKind(reqArr) + ", got " + types.displayKind(arrArg.kind));
+            }
+        }
+        close := ctx.expectNonemptyCallClose(source, arrArg.next, prefix);
+        reqArrFinal := "[" + types.simdElementKind(targetSimdKind) + ";" + types.simdLaneCount(targetSimdKind).toText() + "]";
+        aCode := ctx.assignValueCode(target, reqArrFinal, arrArg.kind, arrArg.code);
+        outCode := if target == ir.TARGET_C {
+            "/*@T:" + targetSimdKind + "@*/" + types.cSimdTag(targetSimdKind) + "_from_arr(" + aCode + ")"
+        } else {
+            "lite$simdFromArray(" + aCode + ")"
+        };
+        return ctx.withMarkers((kind = targetSimdKind, code = outCode, intValue = 0, textValue = "", constant = false, next = close),
+            if inferMode { ctx.collectParsedMarkers("", arrArg) } else { "" });
+    }
+    /* lite$core$simd$load:v1 */
+    slArg := parseBinaryCtx(target, source, argStart, prefix, locals, functions, params, currentName, if targetSimdKind =!= "" { "Slice<" + types.simdElementKind(targetSimdKind) + ">" } else { "" }, 0, ctxs, iifeDepth, inferMode, "", aliases);
+    if targetSimdKind == "" {
+        if inferMode { return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = postPos); }
+        syntax.failAt(source, errPos, prefix, "Simd.load requires explicit Simd<T, N> type");
+    }
+    elK := types.simdElementKind(targetSimdKind);
+    n := types.simdLaneCount(targetSimdKind);
+    reqSlice := "Slice<" + elK + ">";
+    if not types.isCompatibleKind(reqSlice, slArg.kind) {
+        syntax.failAt(source, argStart, prefix, "Simd.load expects " + types.displayKind(reqSlice) + ", got " + types.displayKind(slArg.kind));
+    }
+    comma := syntax.expectSymbol(source, syntax.skipTrivia(source, slArg.next, prefix), ",", prefix);
+    offStart := syntax.skipTrivia(source, comma, prefix);
+    offArg := parseBinaryCtx(target, source, offStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+    if not numeric.isIntKind(offArg.kind) {
+        syntax.failAt(source, offStart, prefix, "Simd.load offset must be Int, got " + types.displayKind(offArg.kind));
+    }
+    close := ctx.expectNonemptyCallClose(source, offArg.next, prefix);
+    offCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, offArg.kind, offArg.code);
+    outCode := if target == ir.TARGET_C {
+        "/*@T:" + targetSimdKind + "@*/" + types.cSimdTag(targetSimdKind) + "_load(" + slArg.code + ", " + offCode + ", " + errPos.toText() + ")"
+    } else {
+        "lite$simdLoad(" + slArg.code + ", " + offCode + ", " + n.toText() + ", " + errPos.toText() + ")"
+    };
+    ctx.withMarkers((kind = targetSimdKind, code = outCode, intValue = 0, textValue = "", constant = false, next = close),
+        if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", slArg), offArg) } else { "" })
+};
+
+/** Parses `SoA.create()` and `SoA.withCapacity(cap)` static constructors. */
+parseSoaStaticIntrinsicCall := fn(
+    target: String, source: String, runtime: String, errPos: Int, postPos: Int, explicitSoaIn: String,
+    prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>,
+    currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>
+): Parsed {
+    var cursor := syntax.skipTrivia(source, postPos, prefix);
+    var targetSoaKind := if explicitSoaIn =!= "" and types.isSoaKind(explicitSoaIn) { explicitSoaIn } else { "" };
+    if targetSoaKind == "" and cursor < source.length() and source.at(cursor) == "<" {
+        rStart := syntax.skipTrivia(source, cursor + 1, prefix);
+        if inferMode {
+            emptySeen: List<String> = [];
+            canR := types.canResolveTypeAt(source, rStart, prefix, aliases, "", emptySeen, 32);
+            if not canR.ok {
+                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = postPos);
+            }
+            if not types.isRecordKind(canR.kind) or types.recordComponentCount(canR.kind) == 0 or types.containsSliceKind(canR.kind) {
+                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = postPos);
+            }
+            gt := syntax.expectSymbol(source, syntax.skipTrivia(source, canR.next, prefix), ">", prefix);
+            targetSoaKind = "SoA<" + canR.kind + ">";
+            cursor = syntax.skipTrivia(source, gt, prefix);
+        } else {
+            pR := types.parseTypeAt(source, rStart, prefix, aliases, "SoA record type", "");
+            if types.containsSliceKind(pR.kind) {
+                syntax.failAt(source, rStart, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+            }
+            if not types.isRecordKind(pR.kind) or types.recordComponentCount(pR.kind) == 0 {
+                syntax.failAt(source, rStart, prefix, "SoA<R> requires a non-empty record type, got " + types.displayKind(pR.kind));
+            }
+            gt := syntax.expectSymbol(source, syntax.skipTrivia(source, pR.next, prefix), ">", prefix);
+            targetSoaKind = "SoA<" + pR.kind + ">";
+            cursor = syntax.skipTrivia(source, gt, prefix);
+        }
+    }
+    if targetSoaKind == "" and expected =!= "" and types.isSoaKind(expected) {
+        targetSoaKind = expected;
+    }
+    if targetSoaKind == "" {
+        if inferMode { return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = postPos); }
+        syntax.failAt(source, errPos, prefix, "SoA constructor requires record type argument R");
+    }
+    recKind := types.soaRecordKind(targetSoaKind);
+    sTag := if target == ir.TARGET_C { types.cSoaTag(targetSoaKind) } else { "" };
+    openParen := syntax.expectSymbol(source, cursor, "(", prefix);
+    if runtime == "lite$core$soa$create:v1" {
+        close := syntax.expectSymbol(source, syntax.skipTrivia(source, openParen, prefix), ")", prefix);
+        outCode := if target == ir.TARGET_C {
+            "/*@T:" + targetSoaKind + "@*/((" + sTag + "){ .len = 0 })"
+        } else {
+            emitTsSoaZeroCode(recKind)
+        };
+        return (kind = targetSoaKind, code = outCode, intValue = 0, textValue = "", constant = false, next = close);
+    }
+    capStart := syntax.skipTrivia(source, openParen, prefix);
+    capArg := parseBinaryCtx(target, source, capStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+    if not numeric.isIntKind(capArg.kind) {
+        syntax.failAt(source, capStart, prefix, "SoA.withCapacity expects Int, got " + types.displayKind(capArg.kind));
+    }
+    close := ctx.expectNonemptyCallClose(source, capArg.next, prefix);
+    cCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, capArg.kind, capArg.code);
+    outCode := if target == ir.TARGET_C {
+        "/*@T:" + targetSoaKind + "@*/" + sTag + "_with_cap(" + cCode + ", " + errPos.toText() + ")"
+    } else {
+        "(lite$soaCheckCap(" + cCode + ", " + errPos.toText() + "), " + emitTsSoaZeroCode(recKind) + ")"
+    };
+    ctx.withMarkers((kind = targetSoaKind, code = outCode, intValue = 0, textValue = "", constant = false, next = close),
+        if inferMode { ctx.collectParsedMarkers("", capArg) } else { "" })
+};
+
 /** Parses `Rc.create(val)`, `Rc<T>.create(val)`, or `Rc.create<T>(val)`. */
 parseRcCreateIntrinsicCall := fn(
     target: String, source: String, errPos: Int, postPos: Int, explicitElemIn: String,
@@ -9757,6 +10220,422 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             return ctx.withMarkers((kind = pairKind, code = splitCode, intValue = 0, textValue = splitProv, constant = false, next = close), markers);
         }
     }
+    if runtime.startsWithAt(0, "lite$core$simd$") {
+        elKind := types.simdElementKind(receiver.kind);
+        nLanes := types.simdLaneCount(receiver.kind);
+        simTag := if target == ir.TARGET_C { types.cSimdTag(receiver.kind) } else { "" };
+        isFloatLane := numeric.isFloatKind(elKind);
+        isUnsignedLane := numeric.isUnsignedIntKind(elKind);
+        if runtime == "lite$core$simd$wrappingAdd:v1" or runtime == "lite$core$simd$wrappingSub:v1" or
+        runtime == "lite$core$simd$wrappingMul:v1" or runtime == "lite$core$simd$wrappingReduceAdd:v1" or
+        runtime == "lite$core$simd$bitAnd:v1" or runtime == "lite$core$simd$bitOr:v1" or
+        runtime == "lite$core$simd$bitXor:v1" or runtime == "lite$core$simd$bitNot:v1" {
+            if isFloatLane {
+                syntax.failAt(source, labelStart, prefix, "Simd." + opLabel + " requires an integer Simd type, got " + types.displayKind(receiver.kind));
+            }
+        } else if runtime == "lite$core$simd$neg:v1" or runtime == "lite$core$simd$abs:v1" {
+            if isUnsignedLane {
+                syntax.failAt(source, labelStart, prefix, "Simd." + opLabel + " is not supported on unsigned Simd type " + types.displayKind(receiver.kind));
+            }
+        } else if runtime == "lite$core$simd$fma:v1" or runtime == "lite$core$simd$sqrt:v1" {
+            if not isFloatLane {
+                syntax.failAt(source, labelStart, prefix, "Simd." + opLabel + " requires a floating-point Simd type, got " + types.displayKind(receiver.kind));
+            }
+        }
+        if runtime == "lite$core$simd$lanes:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            lCode := if target == ir.TARGET_C { "(INT64_C(" + nLanes.toText() + "))" } else { nLanes.toText() + "n" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lCode, intValue = nLanes, textValue = "", constant = true, next = close), markers);
+        }
+        if runtime == "lite$core$simd$toArray:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            arrKind := "[" + elKind + ";" + nLanes.toText() + "]";
+            aCode := if simTag =!= "" {
+                "/*@T:" + arrKind + "@*/" + simTag + "_to_arr(" + receiver.code + ")"
+            } else {
+                "lite$simdToArray(" + receiver.code + ")"
+            };
+            return ctx.withMarkers((kind = arrKind, code = aCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$simd$get:v1" {
+            idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
+            if not numeric.isIntKind(idxArg.kind) {
+                syntax.failAt(source, cursor, prefix, "Simd.get index must be Int, got " + types.displayKind(idxArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, idxArg.next, prefix);
+            iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+            gCode := if simTag =!= "" {
+                simTag + "_at(" + receiver.code + ", " + iCode + ", " + labelStart.toText() + ")"
+            } else {
+                "lite$simdAt(" + receiver.code + ", " + iCode + ", " + labelStart.toText() + ")"
+            };
+            return ctx.withMarkers((kind = elKind, code = gCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$simd$withLane:v1" {
+            idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
+            if not numeric.isIntKind(idxArg.kind) {
+                syntax.failAt(source, cursor, prefix, "Simd.withLane index must be Int, got " + types.displayKind(idxArg.kind));
+            }
+            comma := syntax.expectSymbol(source, syntax.skipTrivia(source, idxArg.next, prefix), ",", prefix);
+            vStart := syntax.skipTrivia(source, comma, prefix);
+            valArg := parseBinaryCtx(target, source, vStart, prefix, locals, functions, params, currentName, elKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, valArg); }
+            if not types.isCompatibleKind(elKind, valArg.kind) {
+                syntax.failAt(source, vStart, prefix, "Simd.withLane value must be " + types.displayKind(elKind) + ", got " + types.displayKind(valArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, valArg.next, prefix);
+            iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+            vCode := ctx.assignValueCode(target, elKind, valArg.kind, valArg.code);
+            wCode := if simTag =!= "" {
+                "/*@T:" + receiver.kind + "@*/" + simTag + "_with_lane(" + receiver.code + ", " + iCode + ", " + vCode + ", " + labelStart.toText() + ")"
+            } else {
+                "lite$simdWithLane(" + receiver.code + ", " + iCode + ", " + vCode + ", " + labelStart.toText() + ")"
+            };
+            return ctx.withMarkers((kind = receiver.kind, code = wCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$simd$store:v1" {
+            lease := tryParseGroupedMutLease(source, cursor, prefix, false);
+            if not lease.matched {
+                syntax.failAt(source, cursor, prefix, "Simd.store requires mut Slice<" + types.displayKind(elKind) + ">");
+            }
+            mName := source.slice(lease.nameStart, lease.nameEnd);
+            afterLease := syntax.skipTrivia(source, lease.next, prefix);
+            isMutSubExpr := afterLease < source.length() and (source.at(afterLease) == "[" or source.at(afterLease) == ".");
+            var slCode := "";
+            var slEnd := lease.next;
+            if isMutSubExpr {
+                mutArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+                if inferMode { markers = ctx.collectParsedMarkers(markers, mutArg); }
+                if not types.isSliceKind(mutArg.kind) or not sliceBorrows.sliceExprIsMutable(mutArg.textValue) {
+                    syntax.failAt(source, cursor, prefix, "Simd.store target must resolve to a mutable Slice<" + types.displayKind(elKind) + ">");
+                }
+                if not types.isCompatibleKind("Slice<" + elKind + ">", mutArg.kind) {
+                    syntax.failAt(source, cursor, prefix, "Simd.store expects Slice<" + types.displayKind(elKind) + ">, got " + types.displayKind(mutArg.kind));
+                }
+                slCode = mutArg.code;
+                slEnd = mutArg.next;
+            } else {
+                mIdx := sym.localIndex(locals, mName);
+                if mIdx < 0 { syntax.failAt(source, lease.nameStart, prefix, "unknown value " + mName); }
+                mEntry := locals[mIdx];
+                if not types.isSliceKind(mEntry.kind) {
+                    syntax.failAt(source, lease.nameStart, prefix, "Simd.store expects Slice<" + types.displayKind(elKind) + ">, got " + types.displayKind(mEntry.kind));
+                }
+                if not mEntry.writable {
+                    syntax.failAt(source, lease.nameStart, prefix, "cannot store into read-only slice " + mName);
+                }
+                if not types.isCompatibleKind("Slice<" + elKind + ">", mEntry.kind) {
+                    syntax.failAt(source, lease.nameStart, prefix, "Simd.store expects Slice<" + types.displayKind(elKind) + ">, got " + types.displayKind(mEntry.kind));
+                }
+                sliceBorrows.checkCanMutateBinding(locals, mEntry.runtime, mName, source, lease.nameStart, prefix);
+                slCode = mEntry.runtime;
+                slEnd = lease.next;
+            }
+            comma := syntax.expectSymbol(source, syntax.skipTrivia(source, slEnd, prefix), ",", prefix);
+            offStart := syntax.skipTrivia(source, comma, prefix);
+            offArg := parseBinaryCtx(target, source, offStart, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, offArg); }
+            if not numeric.isIntKind(offArg.kind) {
+                syntax.failAt(source, offStart, prefix, "Simd.store offset must be Int, got " + types.displayKind(offArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, offArg.next, prefix);
+            oCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, offArg.kind, offArg.code);
+            stCode := if simTag =!= "" {
+                simTag + "_store(" + receiver.code + ", " + slCode + ", " + oCode + ", " + labelStart.toText() + ")"
+            } else {
+                "lite$simdStore(" + receiver.code + ", " + slCode + ", " + oCode + ", " + labelStart.toText() + ")"
+            };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = stCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$simd$neg:v1" or runtime == "lite$core$simd$abs:v1" or
+        runtime == "lite$core$simd$bitNot:v1" or runtime == "lite$core$simd$sqrt:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            uCode := if simTag =!= "" {
+                if runtime == "lite$core$simd$neg:v1" {
+                    "/*@T:" + receiver.kind + "@*/" + simTag + "_neg(" + receiver.code + ", " + labelStart.toText() + ")"
+                } else if runtime == "lite$core$simd$abs:v1" {
+                    "/*@T:" + receiver.kind + "@*/" + simTag + "_abs(" + receiver.code + ", " + labelStart.toText() + ")"
+                } else if runtime == "lite$core$simd$bitNot:v1" {
+                    "/*@T:" + receiver.kind + "@*/" + simTag + "_bit_not(" + receiver.code + ")"
+                } else {
+                    "/*@T:" + receiver.kind + "@*/" + simTag + "_sqrt(" + receiver.code + ", " + labelStart.toText() + ")"
+                }
+            } else {
+                tsEl := types.tsFunctionType(elKind);
+                body := if runtime == "lite$core$simd$neg:v1" {
+                    tsSimdNegCode(elKind, "lite$lx", labelStart)
+                } else if runtime == "lite$core$simd$abs:v1" {
+                    if isFloatLane {
+                        "(lite$lx < 0 ? -lite$lx : lite$lx)"
+                    } else {
+                        "(lite$lx < 0n ? " + tsSimdNegCode(elKind, "lite$lx", labelStart) + " : lite$lx)"
+                    }
+                } else if runtime == "lite$core$simd$bitNot:v1" {
+                    ir.targetNumericBuiltinCode(ir.TARGET_TS, elKind, "bitNot", "lite$lx", "", "", elKind, labelStart, "")
+                } else {
+                    if elKind == ir.VALUE_KIND_FLOAT32 {
+                        "lite$f32Round(Math.sqrt(lite$lx), " + labelStart.toText() + ")"
+                    } else {
+                        "lite$f64Round(Math.sqrt(lite$lx), " + labelStart.toText() + ")"
+                    }
+                };
+                "lite$simdMap1(" + receiver.code + ", (lite$lx: " + tsEl + "): " + tsEl + " => " + body + ")"
+            };
+            return ctx.withMarkers((kind = receiver.kind, code = uCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$simd$reduceAdd:v1" or runtime == "lite$core$simd$wrappingReduceAdd:v1" or
+        runtime == "lite$core$simd$reduceMin:v1" or runtime == "lite$core$simd$reduceMax:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            rCode := if simTag =!= "" {
+                if runtime == "lite$core$simd$reduceAdd:v1" {
+                    simTag + "_reduce_add(" + receiver.code + ", " + labelStart.toText() + ")"
+                } else if runtime == "lite$core$simd$wrappingReduceAdd:v1" {
+                    simTag + "_wreduce_add(" + receiver.code + ")"
+                } else if runtime == "lite$core$simd$reduceMin:v1" {
+                    simTag + "_reduce_min(" + receiver.code + ")"
+                } else {
+                    simTag + "_reduce_max(" + receiver.code + ")"
+                }
+            } else {
+                tsEl := types.tsFunctionType(elKind);
+                body := if runtime == "lite$core$simd$reduceAdd:v1" {
+                    tsSimdBinOpCode(elKind, "+", "lite$la", "lite$lb", labelStart)
+                } else if runtime == "lite$core$simd$wrappingReduceAdd:v1" {
+                    ir.targetNumericBuiltinCode(ir.TARGET_TS, elKind, "wrappingAdd", "lite$la", "lite$lb", "", elKind, labelStart, "")
+                } else if runtime == "lite$core$simd$reduceMin:v1" {
+                    "(lite$la < lite$lb ? lite$la : lite$lb)"
+                } else {
+                    "(lite$la > lite$lb ? lite$la : lite$lb)"
+                };
+                "lite$simdReduce(" + receiver.code + ", (lite$la: " + tsEl + ", lite$lb: " + tsEl + "): " + tsEl + " => " + body + ")"
+            };
+            return ctx.withMarkers((kind = elKind, code = rCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$simd$fma:v1" {
+            bArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, receiver.kind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, bArg); }
+            if not types.isCompatibleKind(receiver.kind, bArg.kind) {
+                syntax.failAt(source, cursor, prefix, "Simd.fma argument 2 must be " + types.displayKind(receiver.kind) + ", got " + types.displayKind(bArg.kind));
+            }
+            comma2 := syntax.expectSymbol(source, syntax.skipTrivia(source, bArg.next, prefix), ",", prefix);
+            cStart := syntax.skipTrivia(source, comma2, prefix);
+            cArg := parseBinaryCtx(target, source, cStart, prefix, locals, functions, params, currentName, receiver.kind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, cArg); }
+            if not types.isCompatibleKind(receiver.kind, cArg.kind) {
+                syntax.failAt(source, cStart, prefix, "Simd.fma argument 3 must be " + types.displayKind(receiver.kind) + ", got " + types.displayKind(cArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, cArg.next, prefix);
+            fCode := if simTag =!= "" {
+                "/*@T:" + receiver.kind + "@*/" + simTag + "_fma(" + receiver.code + ", " + bArg.code + ", " + cArg.code + ", " + labelStart.toText() + ")"
+            } else {
+                tsEl := types.tsFunctionType(elKind);
+                fBody := ir.targetNumericBuiltinCode(ir.TARGET_TS, elKind, "fma", "lite$la", "lite$lb", "lite$lc", elKind, labelStart, "");
+                "lite$simdMap3(" + receiver.code + ", " + bArg.code + ", " + cArg.code + ", (lite$la: " + tsEl + ", lite$lb: " + tsEl + ", lite$lc: " + tsEl + "): " + tsEl + " => " + fBody + ")"
+            };
+            return ctx.withMarkers((kind = receiver.kind, code = fCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$simd$select:v1" {
+            bArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, receiver.kind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, bArg); }
+            if not types.isCompatibleKind(receiver.kind, bArg.kind) {
+                syntax.failAt(source, cursor, prefix, "Simd.select argument 2 must be " + types.displayKind(receiver.kind) + ", got " + types.displayKind(bArg.kind));
+            }
+            comma2 := syntax.expectSymbol(source, syntax.skipTrivia(source, bArg.next, prefix), ",", prefix);
+            mStart := syntax.skipTrivia(source, comma2, prefix);
+            maskKind := "[Bool;" + nLanes.toText() + "]";
+            mArg := parseBinaryCtx(target, source, mStart, prefix, locals, functions, params, currentName, maskKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, mArg); }
+            if not types.isCompatibleKind(maskKind, mArg.kind) {
+                syntax.failAt(source, mStart, prefix, "Simd.select mask must be " + types.displayKind(maskKind) + ", got " + types.displayKind(mArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, mArg.next, prefix);
+            mCode := ctx.assignValueCode(target, maskKind, mArg.kind, mArg.code);
+            sCode := if simTag =!= "" {
+                "/*@T:" + receiver.kind + "@*/" + simTag + "_select(" + receiver.code + ", " + bArg.code + ", " + mCode + ")"
+            } else {
+                "lite$simdSelect(" + receiver.code + ", " + bArg.code + ", " + mCode + ")"
+            };
+            return ctx.withMarkers((kind = receiver.kind, code = sCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        /* Binary Simd ops: add, sub, mul, div, min, max, wrappingAdd/Sub/Mul, bitAnd/Or/Xor, dot */
+        bArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, receiver.kind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+        if inferMode { markers = ctx.collectParsedMarkers(markers, bArg); }
+        if not types.isCompatibleKind(receiver.kind, bArg.kind) {
+            syntax.failAt(source, cursor, prefix, "Simd." + opLabel + " argument must be " + types.displayKind(receiver.kind) + ", got " + types.displayKind(bArg.kind));
+        }
+        close := ctx.expectNonemptyCallClose(source, bArg.next, prefix);
+        isDot := runtime == "lite$core$simd$dot:v1";
+        retK := if isDot { elKind } else { receiver.kind };
+        binCode := if simTag =!= "" {
+            tPref := if isDot { "" } else { "/*@T:" + receiver.kind + "@*/" };
+            if runtime == "lite$core$simd$add:v1" { tPref + simTag + "_add(" + receiver.code + ", " + bArg.code + ", " + labelStart.toText() + ")" }
+            else if runtime == "lite$core$simd$sub:v1" { tPref + simTag + "_sub(" + receiver.code + ", " + bArg.code + ", " + labelStart.toText() + ")" }
+            else if runtime == "lite$core$simd$mul:v1" { tPref + simTag + "_mul(" + receiver.code + ", " + bArg.code + ", " + labelStart.toText() + ")" }
+            else if runtime == "lite$core$simd$div:v1" { tPref + simTag + "_div(" + receiver.code + ", " + bArg.code + ", " + labelStart.toText() + ")" }
+            else if runtime == "lite$core$simd$min:v1" { tPref + simTag + "_min(" + receiver.code + ", " + bArg.code + ")" }
+            else if runtime == "lite$core$simd$max:v1" { tPref + simTag + "_max(" + receiver.code + ", " + bArg.code + ")" }
+            else if runtime == "lite$core$simd$wrappingAdd:v1" { tPref + simTag + "_wadd(" + receiver.code + ", " + bArg.code + ")" }
+            else if runtime == "lite$core$simd$wrappingSub:v1" { tPref + simTag + "_wsub(" + receiver.code + ", " + bArg.code + ")" }
+            else if runtime == "lite$core$simd$wrappingMul:v1" { tPref + simTag + "_wmul(" + receiver.code + ", " + bArg.code + ")" }
+            else if runtime == "lite$core$simd$bitAnd:v1" { tPref + simTag + "_band(" + receiver.code + ", " + bArg.code + ")" }
+            else if runtime == "lite$core$simd$bitOr:v1" { tPref + simTag + "_bor(" + receiver.code + ", " + bArg.code + ")" }
+            else if runtime == "lite$core$simd$bitXor:v1" { tPref + simTag + "_bxor(" + receiver.code + ", " + bArg.code + ")" }
+            else { simTag + "_dot(" + receiver.code + ", " + bArg.code + ", " + labelStart.toText() + ")" }
+        } else {
+            tsEl := types.tsFunctionType(elKind);
+            if isDot {
+                mulBody := tsSimdBinOpCode(elKind, "*", "lite$la", "lite$lb", labelStart);
+                redBody := tsSimdBinOpCode(elKind, "+", "lite$la", "lite$lb", labelStart);
+                "lite$simdReduce(lite$simdMap2(" + receiver.code + ", " + bArg.code + ", (lite$la: " + tsEl + ", lite$lb: " + tsEl + "): " + tsEl + " => " + mulBody + "), (lite$la: " + tsEl + ", lite$lb: " + tsEl + "): " + tsEl + " => " + redBody + ")"
+            } else {
+                opBody := if runtime == "lite$core$simd$add:v1" { tsSimdBinOpCode(elKind, "+", "lite$la", "lite$lb", labelStart) }
+                else if runtime == "lite$core$simd$sub:v1" { tsSimdBinOpCode(elKind, "-", "lite$la", "lite$lb", labelStart) }
+                else if runtime == "lite$core$simd$mul:v1" { tsSimdBinOpCode(elKind, "*", "lite$la", "lite$lb", labelStart) }
+                else if runtime == "lite$core$simd$div:v1" { tsSimdBinOpCode(elKind, "/", "lite$la", "lite$lb", labelStart) }
+                else if runtime == "lite$core$simd$min:v1" { "(lite$la < lite$lb ? lite$la : lite$lb)" }
+                else if runtime == "lite$core$simd$max:v1" { "(lite$la > lite$lb ? lite$la : lite$lb)" }
+                else if runtime == "lite$core$simd$wrappingAdd:v1" { ir.targetNumericBuiltinCode(ir.TARGET_TS, elKind, "wrappingAdd", "lite$la", "lite$lb", "", elKind, labelStart, "") }
+                else if runtime == "lite$core$simd$wrappingSub:v1" { ir.targetNumericBuiltinCode(ir.TARGET_TS, elKind, "wrappingSub", "lite$la", "lite$lb", "", elKind, labelStart, "") }
+                else if runtime == "lite$core$simd$wrappingMul:v1" { ir.targetNumericBuiltinCode(ir.TARGET_TS, elKind, "wrappingMul", "lite$la", "lite$lb", "", elKind, labelStart, "") }
+                else if runtime == "lite$core$simd$bitAnd:v1" { ir.targetNumericBuiltinCode(ir.TARGET_TS, elKind, "bitAnd", "lite$la", "lite$lb", "", elKind, labelStart, "") }
+                else if runtime == "lite$core$simd$bitOr:v1" { ir.targetNumericBuiltinCode(ir.TARGET_TS, elKind, "bitOr", "lite$la", "lite$lb", "", elKind, labelStart, "") }
+                else { ir.targetNumericBuiltinCode(ir.TARGET_TS, elKind, "bitXor", "lite$la", "lite$lb", "", elKind, labelStart, "") };
+                "lite$simdMap2(" + receiver.code + ", " + bArg.code + ", (lite$la: " + tsEl + ", lite$lb: " + tsEl + "): " + tsEl + " => " + opBody + ")"
+            }
+        };
+        return ctx.withMarkers((kind = retK, code = binCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+    }
+    if runtime.startsWithAt(0, "lite$core$soa$") {
+        recK := types.soaRecordKind(receiver.kind);
+        sTag := if target == ir.TARGET_C { types.cSoaTag(receiver.kind) } else { "" };
+        firstProp := if types.recordComponentCount(recK) > 0 { types.recordComponent(recK, 0).prop } else { "" };
+        if runtime == "lite$core$soa$length:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            lCode := if sTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                slDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut slDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(ir.VALUE_KIND_INT, "((int64_t)(" + rb.expr + ").len)", slDrops)
+            } else { "BigInt((" + receiver.code + ")." + firstProp + ".length)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_INT, code = lCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$soa$isEmpty:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            eCode := if sTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                seDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut seDrops.pushBack(rb.drop); }
+                cWrapExprWithPostDrops(ir.VALUE_KIND_BOOL, "((" + rb.expr + ").len == 0)", seDrops)
+            } else { "((" + receiver.code + ")." + firstProp + ".length === 0)" };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_BOOL, code = eCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$soa$clear:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            clrCode := if sTag =!= "" { sTag + "_clear(&" + mutRt + ")" } else { emitTsSoaClearCode(recK, mutRt) };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = clrCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$soa$popBack:v1" {
+            close := syntax.expectSymbol(source, cursor, ")", prefix);
+            popCode := if sTag =!= "" {
+                "/*@T:" + recK + "@*/" + sTag + "_pop(&" + mutRt + ", " + labelStart.toText() + ")"
+            } else {
+                emitTsSoaPopCode(recK, mutRt, labelStart)
+            };
+            return ctx.withMarkers((kind = recK, code = popCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$soa$reserve:v1" {
+            capArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, capArg); }
+            if not numeric.isIntKind(capArg.kind) {
+                syntax.failAt(source, cursor, prefix, "SoA.reserve expects Int, got " + types.displayKind(capArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, capArg.next, prefix);
+            cCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, capArg.kind, capArg.code);
+            rCode := if sTag =!= "" {
+                sTag + "_reserve(&" + mutRt + ", " + cCode + ", " + labelStart.toText() + ")"
+            } else {
+                "lite$soaCheckCap(" + cCode + ", " + labelStart.toText() + ")"
+            };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = rCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$soa$pushBack:v1" {
+            rowArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, recK, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, rowArg); }
+            if not types.isCompatibleKind(recK, rowArg.kind) {
+                syntax.failAt(source, cursor, prefix, "SoA.pushBack row must be " + types.displayKind(recK) + ", got " + types.displayKind(rowArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, rowArg.next, prefix);
+            rowCode := ctx.assignValueCode(target, recK, rowArg.kind, rowArg.code);
+            pCode := if sTag =!= "" {
+                sTag + "_push(&" + mutRt + ", " + rowCode + ")"
+            } else {
+                emitTsSoaPushCode(recK, mutRt, rowCode)
+            };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = pCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$soa$swapRemove:v1" {
+            idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
+            if not numeric.isIntKind(idxArg.kind) {
+                syntax.failAt(source, cursor, prefix, "SoA.swapRemove index must be Int, got " + types.displayKind(idxArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, idxArg.next, prefix);
+            iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+            srCode := if sTag =!= "" {
+                "/*@T:" + recK + "@*/" + sTag + "_swap_remove(&" + mutRt + ", " + iCode + ", " + labelStart.toText() + ")"
+            } else {
+                emitTsSoaSwapRemoveCode(recK, mutRt, iCode, labelStart)
+            };
+            return ctx.withMarkers((kind = recK, code = srCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$soa$get:v1" or runtime == "lite$core$soa$uncheckedGet:v1" {
+            isUnchk := runtime == "lite$core$soa$uncheckedGet:v1";
+            idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
+            if not numeric.isIntKind(idxArg.kind) {
+                syntax.failAt(source, cursor, prefix, opLabel + " index must be Int, got " + types.displayKind(idxArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, idxArg.next, prefix);
+            iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+            gCode := if sTag =!= "" {
+                rb := cBorrowExprWithPostDrop(receiver.kind, receiver.code, false);
+                sgDrops: mut List<String> = [];
+                if rb.drop =!= "" { mut sgDrops.pushBack(rb.drop); }
+                fnSuf := if isUnchk { "_uget(" } else { "_get(" };
+                cWrapExprWithPostDrops(recK, "/*@T:" + receiver.kind + "@*/" + sTag + fnSuf + rb.expr + ", " + iCode + ", " + labelStart.toText() + ")", sgDrops)
+            } else {
+                emitTsSoaGetCode(recK, receiver.code, iCode, labelStart, isUnchk)
+            };
+            return ctx.withMarkers((kind = recK, code = gCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+        if runtime == "lite$core$soa$set:v1" or runtime == "lite$core$soa$uncheckedSet:v1" {
+            isUnchk := runtime == "lite$core$soa$uncheckedSet:v1";
+            idxArg := parseBinaryCtx(target, source, cursor, prefix, locals, functions, params, currentName, ir.VALUE_KIND_INT, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, idxArg); }
+            if not numeric.isIntKind(idxArg.kind) {
+                syntax.failAt(source, cursor, prefix, opLabel + " index must be Int, got " + types.displayKind(idxArg.kind));
+            }
+            comma := syntax.expectSymbol(source, syntax.skipTrivia(source, idxArg.next, prefix), ",", prefix);
+            rStart := syntax.skipTrivia(source, comma, prefix);
+            rowArg := parseBinaryCtx(target, source, rStart, prefix, locals, functions, params, currentName, recK, 0, ctxs, iifeDepth, inferMode, "", aliases);
+            if inferMode { markers = ctx.collectParsedMarkers(markers, rowArg); }
+            if not types.isCompatibleKind(recK, rowArg.kind) {
+                syntax.failAt(source, rStart, prefix, opLabel + " row must be " + types.displayKind(recK) + ", got " + types.displayKind(rowArg.kind));
+            }
+            close := ctx.expectNonemptyCallClose(source, rowArg.next, prefix);
+            iCode := ctx.assignValueCode(target, ir.VALUE_KIND_INT, idxArg.kind, idxArg.code);
+            rowCode := ctx.assignValueCode(target, recK, rowArg.kind, rowArg.code);
+            sCode := if sTag =!= "" {
+                fnSuf := if isUnchk { "_uset(&" } else { "_set(&" };
+                sTag + fnSuf + mutRt + ", " + iCode + ", " + rowCode + ", " + labelStart.toText() + ")"
+            } else {
+                emitTsSoaSetCode(recK, mutRt, iCode, rowCode, labelStart, isUnchk)
+            };
+            return ctx.withMarkers((kind = ir.VALUE_KIND_UNIT, code = sCode, intValue = 0, textValue = "", constant = false, next = close), markers);
+        }
+    }
     if runtime == "lite$core$text$bytes:v1" {
         close := syntax.expectSymbol(source, cursor, ")", prefix);
         bytesKind := "Slice<UInt8>";
@@ -9918,6 +10797,9 @@ functions: List<FunctionInfo>, params: List<String>, inferMode: Bool
     if opInfo.runtime == "lite$core$rc$create:v1" {
         return (ok = true, initBindings = types.rcElementKind(targetKind));
     }
+    if opInfo.runtime.startsWithAt(0, "lite$core$simd$") or opInfo.runtime.startsWithAt(0, "lite$core$soa$") {
+        return (ok = true, initBindings = targetKind);
+    }
     isStatic := isStaticTypeOp(opInfo);
     if opInfo.runtime.startsWithAt(0, "$gen:") {
         tpl := generics.getTemplate(generics.findTemplate(opInfo.runtime.slice(5, opInfo.runtime.length())));
@@ -9989,7 +10871,9 @@ isHardBuiltinTypeOpRuntime := fn(runtime: String): Bool {
     runtime.startsWithAt(0, "lite$core$map$") or
     runtime.startsWithAt(0, "lite$core$set$") or
     runtime.startsWithAt(0, "lite$core$rc$") or
-    runtime.startsWithAt(0, "lite$core$slice$")
+    runtime.startsWithAt(0, "lite$core$slice$") or
+    runtime.startsWithAt(0, "lite$core$simd$") or
+    runtime.startsWithAt(0, "lite$core$soa$")
 };
 
 /** Parses a type-attached dot call `receiver.op(args...)`, validating explicit call-site `mut` lease, `mut Self` permission, unifying generic receivers, and forwarding receiver as argument 0. */
@@ -10184,6 +11068,19 @@ parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mN
             mut fieldPath.pushBack(label);
             pos = afterLabel;
             continue;
+        }
+        if types.isSoaKind(curKind) and (afterLabel >= size or source.at(afterLabel) =!= "(") {
+            col := soaColInfo(curKind, label);
+            if col.idx < 0 {
+                syntax.failAt(source, labelStart, prefix, "SoA<" + types.recordDisplayName(types.soaRecordKind(curKind)) + "> has no field or operation " + label);
+            }
+            if not entry.writable {
+                syntax.failAt(source, mNameStart, prefix, "cannot take mutable column slice of read-only binding " + recvName);
+            }
+            sliceBorrows.checkCanMutateColumn(locals, entry.runtime, label, recvName, source, mNameStart, prefix);
+            colSliceCode := emitSoaColumnSliceCode(target, curKind, curCode, col.idx, col.prop, col.kind);
+            colProv := sliceBorrows.makeColumnSliceProvenance("mut_slice", entry.runtime, entry.depth, recvName, entry.textValue, label);
+            return (kind = "Slice<" + col.kind + ">", code = colSliceCode, intValue = 0, textValue = colProv, constant = false, next = labelEnd);
         }
         ownerKey := types.typeOpOwnerKey(curKind);
         opIdx := if ownerKey =!= "" { findTypeOp(functions, ownerKey, label) } else { -1 };
@@ -10516,11 +11413,25 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     ownerKey := types.typeOpOwnerKey(left.kind);
                     opIdx := if ownerKey =!= "" { findTypeOp(functions, ownerKey, label) } else { -1 };
                     afterOpLabel := syntax.skipTrivia(source, labelEnd, prefix);
-                    if opIdx >= 0 {
-                        if afterOpLabel >= sourceLen or source.at(afterOpLabel) =!= "(" {
-                            syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(left.kind) + "." + label + " must be called with (...)");
-                        }
+                    if opIdx >= 0 and afterOpLabel < sourceLen and source.at(afterOpLabel) == "(" {
                         left = parseTypeOpDotCall(target, source, labelStart, afterOpLabel, left, curRecvLocalIdx, opIdx, label, false, "", expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                    } else if types.isSoaKind(left.kind) and (afterOpLabel >= sourceLen or source.at(afterOpLabel) =!= "(") {
+                        col := soaColInfo(left.kind, label);
+                        if col.idx < 0 {
+                            syntax.failAt(source, labelStart, prefix, "SoA<" + types.recordDisplayName(types.soaRecordKind(left.kind)) + "> has no field or operation " + label);
+                        }
+                        rootIdx := extractAddressableLocal(locals, left.code);
+                        if rootIdx < 0 {
+                            syntax.failAt(source, labelStart, prefix, "column slice requires an addressable SoA binding");
+                        }
+                        rEntry := locals[rootIdx];
+                        sliceBorrows.checkCanReadColumn(locals, rEntry.runtime, label, rEntry.name, source, labelStart, prefix);
+                        colSliceCode := emitSoaColumnSliceCode(target, left.kind, left.code, col.idx, col.prop, col.kind);
+                        colProv := sliceBorrows.makeColumnSliceProvenance("ro_slice", rEntry.runtime, rEntry.depth, rEntry.name, rEntry.textValue, label);
+                        left = ctx.withMarkers((kind = "Slice<" + col.kind + ">", code = colSliceCode, intValue = 0, textValue = colProv, constant = false, next = labelEnd),
+                            if inferMode { ctx.collectParsedMarkers("", left) } else { "" });
+                    } else if opIdx >= 0 {
+                        syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(left.kind) + "." + label + " must be called with (...)");
                     } else if types.isEnumKind(left.kind) {
                         syntax.failAt(source, labelStart, prefix, "enum " + types.enumDisplayName(left.kind) + " has no field or operation " + label);
                     } else if types.isRecordKind(left.kind) {
@@ -10683,6 +11594,10 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     left = parseSetIntrinsicCall(target, source, postPosition, setOpName, setOpName, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else if info.runtime == "lite$core$rc$create:v1" {
                     left = parseRcCreateIntrinsicCall(target, source, errPos, postPosition, preGenBindings, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
+                } else if info.runtime == "lite$core$simd$splat:v1" or info.runtime == "lite$core$simd$fromArray:v1" or info.runtime == "lite$core$simd$load:v1" or info.runtime == "lite$core$simd$nativeLanes:v1" {
+                    left = parseSimdStaticIntrinsicCall(target, source, info.runtime, errPos, postPosition, preGenBindings, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
+                } else if info.runtime == "lite$core$soa$create:v1" or info.runtime == "lite$core$soa$withCapacity:v1" {
+                    left = parseSoaStaticIntrinsicCall(target, source, info.runtime, errPos, postPosition, preGenBindings, prefix, locals, functions, params, currentName, expected, ctxs, iifeDepth, inferMode, aliases);
                 } else if info.runtime == "lite$core$rc$ptrEqual:v1" {
                     openPtrEq := syntax.expectSymbol(source, syntax.skipTrivia(source, postPosition, prefix), "(", prefix);
                     aStart := syntax.skipTrivia(source, openPtrEq, prefix);
@@ -11007,6 +11922,7 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
                     if types.isMapKind(peerKind) { syntax.failAt(source, operatorPosition, prefix, "cannot compare map values"); }
                     if types.isSetKind(peerKind) { syntax.failAt(source, operatorPosition, prefix, "cannot compare set values"); }
                     if types.isRcKind(peerKind) { syntax.failAt(source, operatorPosition, prefix, "cannot compare Rc values"); }
+                    if types.isSoaKind(peerKind) { syntax.failAt(source, operatorPosition, prefix, "cannot compare SoA values"); }
                     if types.isFnKind(peerKind) { syntax.failAt(source, operatorPosition, prefix, "cannot compare function values"); }
                     if operator.text =!= "==" and operator.text =!= "=!=" and not numeric.isNumericKind(peerKind) {
                         syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " requires Int operands");
@@ -11046,6 +11962,10 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
                     syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for set values");
                 } else if types.isRcKind(peerKind) {
                     syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for Rc values");
+                } else if types.isSoaKind(peerKind) {
+                    syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for SoA values");
+                } else if types.isSimdKind(peerKind) {
+                    syntax.failAt(source, operatorPosition, prefix, "operator " + operator.text + " is not supported for Simd values");
                 } else if operator.text == "+" {
                     syntax.failAt(source, operatorPosition, prefix, "cannot mix Int and String operands");
                 } else {

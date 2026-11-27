@@ -698,10 +698,10 @@ pub distinctBaseKind := fn(kind: String): String {
     cur
 };
 
-/** True when `kind` (or its distinct base representation) is a mutable List, Array, Map, Set, Rc, Slice, or nominal record. */
+/** True when `kind` (or its distinct base representation) is a mutable List, Array, Map, Set, Rc, Slice, SoA, or nominal record. */
 pub isMutContainerKind := fn(kind: String): Bool {
     base := distinctBaseKind(kind);
-    isListKind(base) or isArrayKind(base) or isMapKind(base) or isSetKind(base) or isRcKind(base) or isSliceKind(base) or isRecordKind(base)
+    isListKind(base) or isArrayKind(base) or isMapKind(base) or isSetKind(base) or isRcKind(base) or isSliceKind(base) or isSoaKind(base) or isRecordKind(base)
 };
 
 /** True when `kind` is a nominal record or distinct type whose base representation is a nominal record. */
@@ -752,6 +752,120 @@ pub sliceElementKind := fn(kind: String): String {
     kind.slice(6, kind.length() - 1)
 };
 
+/** True when `kind` is canonical `Simd<T,N>`. */
+pub isSimdKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 7 and kind.startsWithAt(0, "Simd<") and kind.at(size - 1) == ">"
+};
+
+/** Finds top-level comma in `Simd<T,N>`, or -1. */
+simdCommaPos := fn(kind: String): Int {
+    if not isSimdKind(kind) { return -1; }
+    end := kind.length() - 1;
+    tEnd := skipKindToken(kind, 5);
+    if tEnd < end and kind.at(tEnd) == "," { tEnd } else { -1 }
+};
+
+/** Returns element type `T` of canonical `Simd<T,N>`, or `""`. */
+pub simdElementKind := fn(kind: String): String {
+    comma := simdCommaPos(kind);
+    if comma < 0 { "" } else { kind.slice(5, comma) }
+};
+
+/** Returns raw lane count text `N` of canonical `Simd<T,N>`, or `""`. */
+pub simdLaneCountText := fn(kind: String): String {
+    comma := simdCommaPos(kind);
+    if comma < 0 { "" } else { kind.slice(comma + 1, kind.length() - 1) }
+};
+
+/** Returns integer lane count `N` of canonical `Simd<T,N>`, or -2 if symbolic generic param. */
+pub simdLaneCount := fn(kind: String): Int {
+    nTxt := simdLaneCountText(kind);
+    if nTxt == "" { return 0; }
+    var i := 0;
+    loop i < nTxt.length() {
+        if not nTxt.at(i).isDigit() { return -2; }
+        i = i + 1;
+    }
+    syntax.parseDigits(nTxt, 0, nTxt.length())
+};
+
+/** True when `kind` is generic placeholder `SimdNative<T>`. */
+pub isSimdNativeKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 12 and kind.startsWithAt(0, "SimdNative<") and kind.at(size - 1) == ">"
+};
+
+/** Returns element kind `T` from generic `SimdNative<T>`, or `""`. */
+pub simdNativeElementKind := fn(kind: String): String {
+    if not isSimdNativeKind(kind) { return ""; }
+    kind.slice(11, kind.length() - 1)
+};
+
+/** True when `kind` is an admitted byte-aligned fixed SIMD scalar lane type (`Int8..Int`, `UInt8..UInt64`, `Float32`, `Float`). */
+pub isSimdElemKind := fn(kind: String): Bool {
+    kind == ir.VALUE_KIND_INT8 or kind == ir.VALUE_KIND_INT16 or kind == ir.VALUE_KIND_INT32 or kind == ir.VALUE_KIND_INT or
+    kind == ir.VALUE_KIND_UINT8 or kind == ir.VALUE_KIND_UINT16 or kind == ir.VALUE_KIND_UINT32 or kind == ir.VALUE_KIND_UINT64 or
+    kind == ir.VALUE_KIND_FLOAT32 or kind == ir.VALUE_KIND_FLOAT
+};
+
+/** Returns byte width of an admitted `Simd` lane scalar type, or 0 otherwise. */
+pub simdElemByteWidth := fn(kind: String): Int {
+    if kind == ir.VALUE_KIND_INT8 or kind == ir.VALUE_KIND_UINT8 { 1 }
+    else if kind == ir.VALUE_KIND_INT16 or kind == ir.VALUE_KIND_UINT16 { 2 }
+    else if kind == ir.VALUE_KIND_INT32 or kind == ir.VALUE_KIND_UINT32 or kind == ir.VALUE_KIND_FLOAT32 { 4 }
+    else if kind == ir.VALUE_KIND_INT or kind == ir.VALUE_KIND_UINT64 or kind == ir.VALUE_KIND_FLOAT { 8 }
+    else { 0 }
+};
+
+/** Returns true when `(elemKind, lanes)` is a valid fixed power-of-two SIMD shape (`2..64` lanes, total `<= 64` bytes). */
+pub isValidSimdLaneCount := fn(elemKind: String, lanes: Int): Bool {
+    if not isSimdElemKind(elemKind) { return false; }
+    if lanes =!= 2 and lanes =!= 4 and lanes =!= 8 and lanes =!= 16 and lanes =!= 32 and lanes =!= 64 {
+        return false;
+    }
+    bw := simdElemByteWidth(elemKind);
+    bw > 0 and lanes * bw <= 64
+};
+
+/** Returns the compile-time 128-bit baseline target lane count for `SimdNative<T>`. */
+pub simdNativeLaneCount := fn(elemKind: String): Int {
+    bw := simdElemByteWidth(elemKind);
+    if bw <= 0 { 0 } else { 16 / bw }
+};
+
+/** True when `kind` is canonical parallel-column `SoA<R>`. */
+pub isSoaKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 5 and kind.startsWithAt(0, "SoA<") and kind.at(size - 1) == ">"
+};
+
+/** Returns underlying record kind `R` from canonical `SoA<R>`, or `""`. */
+pub soaRecordKind := fn(kind: String): String {
+    if not isSoaKind(kind) { return ""; }
+    kind.slice(4, kind.length() - 1)
+};
+
+/** Maps a C-supported `Simd<T,N>` kind to its C11 typedef name `lt_simd_<tag>_<n>`, or `""`. */
+pub cSimdTag := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if not isSimdKind(kind) { return ""; }
+    el := simdElementKind(kind);
+    n := simdLaneCount(kind);
+    if not isValidSimdLaneCount(el, n) { return ""; }
+    s := cScalarTag(el);
+    if s =!= "" { "lt_simd_" + s + "_" + n.toText() } else { "" }
+};
+
+/** Maps a C-supported `SoA<R>` kind to its C11 typedef name `lt_soa_<hash>`, or `""`. */
+pub cSoaTag := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if not isSoaKind(kind) { return ""; }
+    rec := soaRecordKind(kind);
+    if not isRecordKind(rec) or recordComponentCount(rec) == 0 or not cIsSupportedElem(rec) { return ""; }
+    "lt_soa_" + cStructHash(rec)
+};
+
 /** True when `kind` is or transitively contains a borrowed `Slice<T>` type. */
 pub containsSliceKind := fn(kind: String): Bool {
     if kind.indexOf("Slice<", 0) < 0 { return false; }
@@ -762,6 +876,9 @@ pub containsSliceKind := fn(kind: String): Bool {
     if isMapKind(kind) { return self(mapKeyKind(kind)) or self(mapValueKind(kind)); }
     if isSetKind(kind) { return self(setElementKind(kind)); }
     if isRcKind(kind) { return self(rcElementKind(kind)); }
+    if isSimdKind(kind) { return self(simdElementKind(kind)); }
+    if isSimdNativeKind(kind) { return self(simdNativeElementKind(kind)); }
+    if isSoaKind(kind) { return self(soaRecordKind(kind)); }
     if isTupleKind(kind) {
         var i := 0;
         n := tupleComponentCount(kind);
@@ -1100,6 +1217,8 @@ pub typeOpOwnerKey := fn(kind: String): String {
     if isSetKind(kind) { return "Set"; }
     if isRcKind(kind) { return "Rc"; }
     if isSliceKind(kind) { return "Slice"; }
+    if isSimdKind(kind) { return "Simd"; }
+    if isSoaKind(kind) { return "SoA"; }
     if isArrayKind(kind) { return "Array"; }
     if kind == ir.VALUE_KIND_STRING or kind == ir.VALUE_KIND_BOOL or numeric.isNumericKind(kind) {
         return kind;
@@ -1139,6 +1258,8 @@ pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String
     if moduleIdentity == "lite.core.set.v1" and typeName == "Set" { return "Set"; }
     if moduleIdentity == "lite.core.rc.v1" and typeName == "Rc" { return "Rc"; }
     if moduleIdentity == "lite.core.slice.v1" and typeName == "Slice" { return "Slice"; }
+    if moduleIdentity == "lite.core.simd.v1" and typeName == "Simd" { return "Simd"; }
+    if moduleIdentity == "lite.core.soa.v1" and typeName == "SoA" { return "SoA"; }
     if moduleIdentity == "lite.core.text.v1" and
     (typeName == "String" or typeName == "Bool" or numeric.isFloatKind(typeName)) {
         return typeName;
@@ -1152,7 +1273,7 @@ pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String
 
 /** True when `typeName` is a generic built-in type family requiring explicit `Self<...>` arguments. */
 pub isGenericCoreOwner := fn(typeName: String): Bool {
-    typeName == "List" or typeName == "Map" or typeName == "Set" or typeName == "Rc" or typeName == "Slice" or typeName == "Array"
+    typeName == "List" or typeName == "Map" or typeName == "Set" or typeName == "Rc" or typeName == "Slice" or typeName == "Simd" or typeName == "SoA" or typeName == "Array"
 };
 
 /** Returns the backing scalar kind of canonical enum kind `kind`, or `""` for a plain or payload enum. */
@@ -1487,6 +1608,11 @@ cIsSupportedElem := fn(kind: String): Bool {
     else if isSetKind(kind) { ok = isMapKeyKind(setElementKind(kind)); }
     else if isRcKind(kind) { ok = self(rcElementKind(kind)); }
     else if isSliceKind(kind) { ok = cListTag(sliceElementKind(kind)) =!= ""; }
+    else if isSimdKind(kind) { ok = isValidSimdLaneCount(simdElementKind(kind), simdLaneCount(kind)); }
+    else if isSoaKind(kind) {
+        rk := soaRecordKind(kind);
+        ok = isRecordKind(rk) and recordComponentCount(rk) > 0 and self(rk);
+    }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
         ok = true;
@@ -1567,10 +1693,10 @@ pub cStructTag := fn(kind: String): String {
     tag
 };
 
-/** True when `kind` is a list/wildcard-array/map/set/rc or a fixed array/tuple/record/payload-enum transitively containing one. */
+/** True when `kind` is a list/wildcard-array/map/set/rc/soa or a fixed array/tuple/record/payload-enum transitively containing one. */
 pub cTypeHasListField := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isRcKind(kind) { return true; }
+    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isRcKind(kind) or isSoaKind(kind) { return true; }
     if isArrayKind(kind) {
         return if arrayExtent(kind) < 0 { true } else { self(arrayElementKind(kind)) };
     }
@@ -1606,10 +1732,10 @@ pub cTypeHasListField := fn(kind: String): Bool {
     res
 };
 
-/** True when C11 representation of `kind` owns heap memory or closure environments requiring drop/copy (`List`, `Map`, `Set`, `Rc`, `fn`, or composites containing them). */
+/** True when C11 representation of `kind` owns heap memory or closure environments requiring drop/copy (`List`, `Map`, `Set`, `Rc`, `SoA`, `fn`, or composites containing them). */
 pub cTypeNeedsDrop := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isRcKind(kind) or isFnKind(kind) { return true; }
+    if isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isRcKind(kind) or isSoaKind(kind) or isFnKind(kind) { return true; }
     if isArrayKind(kind) {
         return if arrayExtent(kind) < 0 { true } else { self(arrayElementKind(kind)) };
     }
@@ -1648,7 +1774,7 @@ pub cTypeNeedsDrop := fn(kind: String): Bool {
 /** True when a non-`mut` parameter of `kind` is passed by `const *` borrow in C11. */
 pub cParamIsConstPtr := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    isListKind(kind) or (isArrayKind(kind) and cArrayTag(kind) == "") or isMapKind(kind) or isSetKind(kind) or cStructTag(kind) =!= ""
+    isListKind(kind) or (isArrayKind(kind) and cArrayTag(kind) == "") or isMapKind(kind) or isSetKind(kind) or isSoaKind(kind) or cStructTag(kind) =!= ""
 };
 
 /** Returns the C11 `_drop` helper name for `kind`, or `""` when `kind` has trivial value semantics. */
@@ -1664,6 +1790,8 @@ pub cDropFnForKind := fn(kind: String): String {
         cSetTag(kind) + "_drop"
     } else if cRcTag(kind) =!= "" {
         cRcTag(kind) + "_drop"
+    } else if cSoaTag(kind) =!= "" {
+        cSoaTag(kind) + "_drop"
     } else if cArrayTag(kind) =!= "" and cTypeNeedsDrop(kind) {
         cArrayTag(kind) + "_drop"
     } else if cStructTag(kind) =!= "" and cTypeNeedsDrop(kind) {
@@ -1756,6 +1884,8 @@ cNonArrayListTag := fn(elemKind: String): String {
     sTag := cScalarTag(elemKind);
     if sTag =!= "" { sTag }
     else if isRcKind(elemKind) { cRcTag(elemKind) }
+    else if isSimdKind(elemKind) { cSimdTag(elemKind) }
+    else if isSoaKind(elemKind) { cSoaTag(elemKind) }
     else if isTupleKind(elemKind) or isRecordKind(elemKind) or isPayloadEnumKind(elemKind) { cStructTag(elemKind) }
     else if isFnKind(elemKind) { cFnTag(elemKind) }
     else { "" }
@@ -1875,6 +2005,8 @@ pub cValueType := fn(kind: String): String {
     else if cSetTag(kind) =!= "" { cSetTag(kind) }
     else if cRcTag(kind) =!= "" { cRcTag(kind) }
     else if cSliceTag(kind) =!= "" { cSliceTag(kind) }
+    else if cSimdTag(kind) =!= "" { cSimdTag(kind) }
+    else if cSoaTag(kind) =!= "" { cSoaTag(kind) }
     else if cStructTag(kind) =!= "" { cStructTag(kind) }
     else if cFnTag(kind) =!= "" { cFnTag(kind) }
     else { "lt_str" };
@@ -1993,7 +2125,7 @@ pub encodeRecordDefaultsFromAliases := fn(aliases: List<AliasDecl>, recordKind: 
 
 /** True when TS local/var declarations of `kind` require an explicit type annotation (empty lists, maps, arrays, records, enums, or callables). */
 pub needsTsTypeAnnotation := fn(kind: String): Bool {
-    isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isSliceKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or isDistinctKind(kind) or containsFnKind(kind)
+    isListKind(kind) or isMapKind(kind) or isSetKind(kind) or isSliceKind(kind) or isSimdKind(kind) or isSoaKind(kind) or isArrayKind(kind) or isRecordKind(kind) or isEnumKind(kind) or isDistinctKind(kind) or containsFnKind(kind)
 };
 
 /** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
@@ -2056,6 +2188,7 @@ pub containsFnKind := fn(kind: String): Bool {
     else if isSetKind(kind) { res = self(setElementKind(kind)); }
     else if isRcKind(kind) { res = self(rcElementKind(kind)); }
     else if isSliceKind(kind) { res = self(sliceElementKind(kind)); }
+    else if isSoaKind(kind) { res = self(soaRecordKind(kind)); }
     else if isArrayKind(kind) { res = self(arrayElementKind(kind)); }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
@@ -2284,6 +2417,11 @@ pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
     if isSetKind(kind) { return self(genericParams, setElementKind(kind)); }
     if isRcKind(kind) { return self(genericParams, rcElementKind(kind)); }
     if isSliceKind(kind) { return self(genericParams, sliceElementKind(kind)); }
+    if isSimdKind(kind) {
+        return self(genericParams, simdElementKind(kind)) or valueParamKind(genericParams, simdLaneCountText(kind)) =!= "";
+    }
+    if isSimdNativeKind(kind) { return self(genericParams, simdNativeElementKind(kind)); }
+    if isSoaKind(kind) { return self(genericParams, soaRecordKind(kind)); }
     if isMapKind(kind) { return self(genericParams, mapKeyKind(kind)) or self(genericParams, mapValueKind(kind)); }
     if isArrayKind(kind) {
         return self(genericParams, arrayElementKind(kind)) or valueParamKind(genericParams, arrayExtentText(kind)) =!= "";
@@ -2351,6 +2489,28 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
     }
     if isSliceKind(pattern) {
         return "Slice<" + self(genericParams, sliceElementKind(pattern), bindings) + ">";
+    }
+    if isSimdKind(pattern) {
+        var lanesStr := simdLaneCountText(pattern);
+        if valueParamKind(genericParams, lanesStr) =!= "" and bindings.has(lanesStr) {
+            bound := bindings.getOr(lanesStr, "");
+            if isComptimeIntToken(bound) {
+                lanesStr = comptimeIntValue(bound).toText();
+            } else if bound =!= "" {
+                lanesStr = bound;
+            }
+        }
+        return "Simd<" + self(genericParams, simdElementKind(pattern), bindings) + "," + lanesStr + ">";
+    }
+    if isSimdNativeKind(pattern) {
+        subEl := self(genericParams, simdNativeElementKind(pattern), bindings);
+        if isSimdElemKind(subEl) {
+            return "Simd<" + subEl + "," + simdNativeLaneCount(subEl).toText() + ">";
+        }
+        return "SimdNative<" + subEl + ">";
+    }
+    if isSoaKind(pattern) {
+        return "SoA<" + self(genericParams, soaRecordKind(pattern), bindings) + ">";
     }
     if isMapKind(pattern) {
         return "Map<" + self(genericParams, mapKeyKind(pattern), bindings) + "," +
@@ -2465,7 +2625,7 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
 /** True when `kind` contains strings, heap containers, handles, or closures forbidden inside `@packed` structs. */
 packedRecordFieldUnsafe := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if kind == ir.VALUE_KIND_STRING or cTypeNeedsDrop(kind) { return true; }
+    if kind == ir.VALUE_KIND_STRING or cTypeNeedsDrop(kind) or isSimdKind(kind) or isSimdNativeKind(kind) { return true; }
     if isArrayKind(kind) { return self(arrayElementKind(kind)); }
     if isTupleKind(kind) {
         var i := 0;
@@ -2531,6 +2691,44 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         }
         if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
         return self(elem, allowGenericParams);
+    }
+    if isSimdKind(kind) {
+        elem := simdElementKind(kind);
+        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isSimdElemKind(elem) {
+            return "unsupported Simd lane type " + displayKind(elem);
+        }
+        lanesText := simdLaneCountText(kind);
+        if valueParamKind(allowGenericParams, lanesText) =!= ir.VALUE_KIND_INT {
+            lanes := simdLaneCount(kind);
+            if lanes =!= 2 and lanes =!= 4 and lanes =!= 8 and lanes =!= 16 and lanes =!= 32 and lanes =!= 64 {
+                return "Simd lane count must be a power of two (2..64), got " + lanesText;
+            }
+            if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isValidSimdLaneCount(elem, lanes) {
+                return "unsupported Simd shape " + displayKind(kind) + " (total width must be <= 64 bytes)";
+            }
+        }
+        return self(elem, allowGenericParams);
+    }
+    if isSimdNativeKind(kind) {
+        elem := simdNativeElementKind(kind);
+        if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isSimdElemKind(elem) {
+            return "unsupported Simd lane type " + displayKind(elem);
+        }
+        return self(elem, allowGenericParams);
+    }
+    if isSoaKind(kind) {
+        rec := soaRecordKind(kind);
+        if containsSliceKind(rec) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        if not isGenericParamName(allowGenericParams, distinctBaseKind(rec)) {
+            if not isRecordKind(rec) or recordComponentCount(rec) == 0 {
+                return "SoA<R> requires a non-empty record type, got " + displayKind(rec);
+            }
+            if not cIsSupportedElem(rec) {
+                return "unsupported SoA record type " + displayKind(rec);
+            }
+        }
+        return self(rec, allowGenericParams);
     }
     if isMapKind(kind) {
         k := mapKeyKind(kind);
@@ -2720,7 +2918,7 @@ pub scanComptimeTypeParams := fn(source: String, start: Int, prefix: String): (o
                 cursor = afterKind;
             } else if kindText == ir.VALUE_KIND_FLOAT or kindText == ir.VALUE_KIND_FLOAT32 or kindText == "Float64" or
             kindText == ir.VALUE_KIND_UNIT or kindText == ir.VALUE_KIND_NEVER or kindText == "List" or
-            kindText == "Map" or kindText == "Set" or kindText == "Rc" or kindText == "Array" or syntax.isReservedWord(kindText) or
+            kindText == "Map" or kindText == "Set" or kindText == "Rc" or kindText == "Slice" or kindText == "Simd" or kindText == "SimdNative" or kindText == "SoA" or kindText == "Array" or syntax.isReservedWord(kindText) or
             numeric.isNarrowNumericKind(kindText) or numeric.numericAliasKind(kindText) =!= "" {
                 return (ok = false, hasParams = true, paramsCsv = paramsCsv, next = kindStart, errPos = kindStart, errMsg = "unsupported comptime parameter kind " + kindText + "; only Type, Int, Bool, String, and payload-free enums are supported");
             } else {
@@ -2820,6 +3018,29 @@ pub tsFunctionType := fn(kind: String): String {
     else if isSetKind(kind) { out = "Set<" + self(setElementKind(kind)) + ">"; }
     else if isRcKind(kind) { out = "{ box: { count: number; value: " + self(rcElementKind(kind)) + " } | null }"; }
     else if isSliceKind(kind) { out = "{ readonly data: " + self(sliceElementKind(kind)) + "[]; readonly off: number; readonly len: number }"; }
+    else if isSimdKind(kind) { out = self(simdElementKind(kind)) + "[]"; }
+    else if isSoaKind(kind) {
+        recK := soaRecordKind(kind);
+        count := recordComponentCount(recK);
+        if count == 0 {
+            out = "{}";
+        } else {
+            soaBuf: mut tb.TextBuilder;
+            mut soaBuf.append("{ ");
+            var index := 0;
+            loop index < count {
+                comp := recordComponent(recK, index);
+                if index > 0 { mut soaBuf.append("; "); }
+                mut soaBuf.append(tupleObjectKey(comp.label, index));
+                mut soaBuf.append(": ");
+                mut soaBuf.append(self(comp.kind));
+                mut soaBuf.append("[]");
+                index = index + 1;
+            }
+            mut soaBuf.append(" }");
+            out = soaBuf.build();
+        }
+    }
     else if isArrayKind(kind) { out = self(arrayElementKind(kind)) + "[]"; }
     else if isTupleKind(kind) {
         count := tupleComponentCount(kind);
@@ -2910,6 +3131,16 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
     if isSliceKind(kind) {
         elemKind := sliceElementKind(kind);
         return "((s: " + tsFunctionType(kind) + "): string => \"[\" + s.data.slice(s.off, s.off + s.len).map((value: " + tsFunctionType(elemKind) + ") => " + self(elemKind, "value") + ").join(\", \") + \"]\")(" + code + ")";
+    }
+    if isSimdKind(kind) {
+        elemKind := simdElementKind(kind);
+        return "(\"Simd(\" + (" + code + ").map((value: " + tsFunctionType(elemKind) + ") => " + self(elemKind, "value") + ").join(\", \") + \")\")";
+    }
+    if isSoaKind(kind) {
+        recK := soaRecordKind(kind);
+        firstProp := if recordComponentCount(recK) > 0 { recordComponent(recK, 0).prop } else { "" };
+        if firstProp == "" { return "\"SoA(len=0)\""; }
+        return "(\"SoA(len=\" + (" + code + ")." + firstProp + ".length + \")\")";
     }
     if isPayloadEnumKind(kind) {
         enumName := enumDisplayName(kind);
@@ -3047,6 +3278,9 @@ pub displayKind := fn(kind: String): String {
     if isSetKind(kind) { return "Set<" + self(setElementKind(kind)) + ">"; }
     if isRcKind(kind) { return "Rc<" + self(rcElementKind(kind)) + ">"; }
     if isSliceKind(kind) { return "Slice<" + self(sliceElementKind(kind)) + ">"; }
+    if isSimdKind(kind) { return "Simd<" + self(simdElementKind(kind)) + ", " + simdLaneCountText(kind) + ">"; }
+    if isSimdNativeKind(kind) { return "SimdNative<" + self(simdNativeElementKind(kind)) + ">"; }
+    if isSoaKind(kind) { return "SoA<" + self(soaRecordKind(kind)) + ">"; }
     if isArrayKind(kind) { return "[" + self(arrayElementKind(kind)) + "; " + arrayExtentText(kind) + "]"; }
     if isFnKind(kind) {
         count := fnParamCount(kind);
@@ -3323,7 +3557,7 @@ resolveDiscreteType := fn(aliases: List<AliasDecl>, rawTypeName: String, prefix:
         if tgt == "" or tgt.startsWithAt(0, "@recraw:") or tgt.startsWithAt(0, "@distraw:") or
         tgt.startsWithAt(0, "@genraw:") or tgt.startsWithAt(0, "@gentpl:") or tgt.startsWithAt(0, "$Val:") or
         isRecordKind(tgt) or isDistinctKind(tgt) or isTupleKind(tgt) or isListKind(tgt) or
-        isArrayKind(tgt) or isMapKind(tgt) or isSetKind(tgt) or isRcKind(tgt) or isSliceKind(tgt) or isFnKind(tgt) or
+        isArrayKind(tgt) or isMapKind(tgt) or isSetKind(tgt) or isRcKind(tgt) or isSliceKind(tgt) or isSimdKind(tgt) or isSimdNativeKind(tgt) or isSoaKind(tgt) or isFnKind(tgt) or
         tgt.startsWithAt(0, "(") or tgt.startsWithAt(0, "[") or tgt.startsWithAt(0, "fn") {
             return (ok = false, kind = "", error = "unsupported comptime parameter type " + rawTypeName + "; only Int, Bool, String, and payload-free enums are supported");
         }
@@ -3987,6 +4221,83 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in Slice type" });
         }
         return (kind = "Slice<" + elemParsed.kind + ">", next = close + 1);
+    }
+    if resolvedName == "Simd" and afterName < size and source.at(afterName) == "<" {
+        innerStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if innerStart >= size or source.at(innerStart) == ">" {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "expected a Simd element type");
+        }
+        inner := self(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, "Simd element", genericType, seen);
+        if containsSliceKind(inner.kind) {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        }
+        if not isGenericParamName(genericType, distinctBaseKind(inner.kind)) and not isSimdElemKind(inner.kind) {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "unsupported Simd lane type " + displayKind(inner.kind));
+        }
+        afterElem := syntax.skipTrivia(source, inner.next, prefix);
+        if afterElem < size and source.at(afterElem) == ">" {
+            syntax.failAt(errSource, nameStart, prefix, "Simd requires two arguments: Simd<T, N> (runtime-scalable or sizeless SIMD vectors are not supported)");
+        }
+        if afterElem >= size or source.at(afterElem) =!= "," {
+            syntax.failAt(errSource, if useLocalErr { afterElem } else { errPos }, prefix, if useLocalErr { "expected , in Simd<T, N>" } else { "expected , and lane count N in Simd<T, N> type" });
+        }
+        extentStart := syntax.skipTrivia(source, afterElem + 1, prefix);
+        if extentStart < size and source.at(extentStart) == "*" {
+            syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "runtime-scalable or sizeless SIMD vectors are not supported; expected compile-time power-of-two lane count N");
+        }
+        ext := parseArrayExtentWithSeen(errSource, errPos, useLocalErr, source, extentStart, ">", "expected > in Simd<T, N> type", prefix, aliases, genericType);
+        if valueParamKind(genericType, ext.extText) =!= ir.VALUE_KIND_INT {
+            lanes := syntax.parseDigits(ext.extText, 0, ext.extText.length());
+            if lanes =!= 2 and lanes =!= 4 and lanes =!= 8 and lanes =!= 16 and lanes =!= 32 and lanes =!= 64 {
+                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "Simd lane count must be a power of two (2..64), got " + ext.extText);
+            }
+            if not isGenericParamName(genericType, distinctBaseKind(inner.kind)) and not isValidSimdLaneCount(inner.kind, lanes) {
+                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "unsupported Simd shape Simd<" + displayKind(inner.kind) + ", " + ext.extText + "> (total width must be <= 64 bytes)");
+            }
+        }
+        return (kind = "Simd<" + inner.kind + "," + ext.extText + ">", next = ext.next);
+    }
+    if resolvedName == "SimdNative" and afterName < size and source.at(afterName) == "<" {
+        elemStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if elemStart >= size or source.at(elemStart) == ">" {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected a SimdNative element type");
+        }
+        elemParsed := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "SimdNative element", genericType, seen);
+        close := syntax.skipTrivia(source, elemParsed.next, prefix);
+        if close >= size or source.at(close) =!= ">" {
+            syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in SimdNative type" });
+        }
+        if isGenericParamName(genericType, distinctBaseKind(elemParsed.kind)) {
+            return (kind = "SimdNative<" + elemParsed.kind + ">", next = close + 1);
+        }
+        if not isSimdElemKind(elemParsed.kind) {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported Simd lane type " + displayKind(elemParsed.kind));
+        }
+        nativeLanes := simdNativeLaneCount(elemParsed.kind);
+        return (kind = "Simd<" + elemParsed.kind + "," + nativeLanes.toText() + ">", next = close + 1);
+    }
+    if resolvedName == "SoA" and afterName < size and source.at(afterName) == "<" {
+        recStart := syntax.skipTrivia(source, afterName + 1, prefix);
+        if recStart >= size or source.at(recStart) == ">" {
+            syntax.failAt(errSource, if useLocalErr { recStart } else { errPos }, prefix, "expected a record type in SoA<R>");
+        }
+        recParsed := self(errSource, errPos, useLocalErr, source, recStart, prefix, aliases, "SoA record", genericType, seen);
+        if containsSliceKind(recParsed.kind) {
+            syntax.failAt(errSource, if useLocalErr { recStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        }
+        if not isGenericParamName(genericType, distinctBaseKind(recParsed.kind)) {
+            if not isRecordKind(recParsed.kind) or recordComponentCount(recParsed.kind) == 0 {
+                syntax.failAt(errSource, if useLocalErr { recStart } else { errPos }, prefix, "SoA<R> requires a non-empty record type, got " + displayKind(recParsed.kind));
+            }
+            if not cIsSupportedElem(recParsed.kind) {
+                syntax.failAt(errSource, if useLocalErr { recStart } else { errPos }, prefix, "unsupported SoA record type " + displayKind(recParsed.kind));
+            }
+        }
+        close := syntax.skipTrivia(source, recParsed.next, prefix);
+        if close >= size or source.at(close) =!= ">" {
+            syntax.failAt(errSource, if useLocalErr { close } else { errPos }, prefix, if useLocalErr { "expected >" } else { "expected > in SoA type" });
+        }
+        return (kind = "SoA<" + recParsed.kind + ">", next = close + 1);
     }
     if isGenericParamName(genericType, name) { return (kind = name, next = after); }
     if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT or numeric.isNarrowNumericKind(name) {
@@ -5552,6 +5863,102 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = close);
         }
         return (ok = true, kind = "Slice<" + elemRes.kind + ">", next = close + 1);
+    }
+    if resolvedName == "Simd" {
+        afterSm := syntax.skipTrivia(source, afterName, prefix);
+        if afterSm >= size or source.at(afterSm) =!= "<" {
+            return (ok = false, kind = "", next = afterSm);
+        }
+        elemRes := self(source, afterSm + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        if not elemRes.ok or (not isGenericParamName(genericType, distinctBaseKind(elemRes.kind)) and not isSimdElemKind(elemRes.kind)) {
+            return (ok = false, kind = "", next = afterSm + 1);
+        }
+        comma := syntax.skipTrivia(source, elemRes.next, prefix);
+        if comma >= size or source.at(comma) =!= "," {
+            return (ok = false, kind = "", next = comma);
+        }
+        extPos := syntax.skipTrivia(source, comma + 1, prefix);
+        var extEnd := extPos;
+        var lanesTxt := "";
+        if extPos < size and source.at(extPos).isNameStart() {
+            extEnd = source.skipName(extPos);
+            candName := source.slice(extPos, extEnd);
+            if valueParamKind(genericType, candName) == ir.VALUE_KIND_INT {
+                lanesTxt = candName;
+            } else {
+                aIdx := findAlias(aliases, candName);
+                if aIdx >= 0 and (aliases[aIdx].target).startsWithAt(0, "$Val:") {
+                    tok := (aliases[aIdx].target).slice(5, (aliases[aIdx].target).length());
+                    if isComptimeIntToken(tok) and comptimeIntValue(tok) > 1 {
+                        lanesTxt = comptimeIntValue(tok).toText();
+                    }
+                }
+            }
+        } else {
+            loop extEnd < size and source.at(extEnd).isDigit() { extEnd = extEnd + 1; }
+            if extEnd > extPos {
+                nVal := syntax.parseDigits(source, extPos, extEnd);
+                lanesTxt = nVal.toText();
+            }
+        }
+        if lanesTxt == "" {
+            return (ok = false, kind = "", next = extPos);
+        }
+        if valueParamKind(genericType, lanesTxt) =!= ir.VALUE_KIND_INT {
+            nLanes := syntax.parseDigits(lanesTxt, 0, lanesTxt.length());
+            if nLanes =!= 2 and nLanes =!= 4 and nLanes =!= 8 and nLanes =!= 16 and nLanes =!= 32 and nLanes =!= 64 {
+                return (ok = false, kind = "", next = extPos);
+            }
+            if not isGenericParamName(genericType, distinctBaseKind(elemRes.kind)) and not isValidSimdLaneCount(elemRes.kind, nLanes) {
+                return (ok = false, kind = "", next = extPos);
+            }
+        }
+        close := syntax.skipTrivia(source, extEnd, prefix);
+        if close >= size or source.at(close) =!= ">" {
+            return (ok = false, kind = "", next = close);
+        }
+        return (ok = true, kind = "Simd<" + elemRes.kind + "," + lanesTxt + ">", next = close + 1);
+    }
+    if resolvedName == "SimdNative" {
+        afterSn := syntax.skipTrivia(source, afterName, prefix);
+        if afterSn >= size or source.at(afterSn) =!= "<" {
+            return (ok = false, kind = "", next = afterSn);
+        }
+        elemRes := self(source, afterSn + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        if not elemRes.ok {
+            return (ok = false, kind = "", next = afterSn + 1);
+        }
+        close := syntax.skipTrivia(source, elemRes.next, prefix);
+        if close >= size or source.at(close) =!= ">" {
+            return (ok = false, kind = "", next = close);
+        }
+        if isGenericParamName(genericType, distinctBaseKind(elemRes.kind)) {
+            return (ok = true, kind = "SimdNative<" + elemRes.kind + ">", next = close + 1);
+        }
+        if not isSimdElemKind(elemRes.kind) {
+            return (ok = false, kind = "", next = afterSn + 1);
+        }
+        return (ok = true, kind = "Simd<" + elemRes.kind + "," + simdNativeLaneCount(elemRes.kind).toText() + ">", next = close + 1);
+    }
+    if resolvedName == "SoA" {
+        afterSoa := syntax.skipTrivia(source, afterName, prefix);
+        if afterSoa >= size or source.at(afterSoa) =!= "<" {
+            return (ok = false, kind = "", next = afterSoa);
+        }
+        recRes := self(source, afterSoa + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
+        if not recRes.ok or containsSliceKind(recRes.kind) {
+            return (ok = false, kind = "", next = afterSoa + 1);
+        }
+        if not isGenericParamName(genericType, distinctBaseKind(recRes.kind)) {
+            if not isRecordKind(recRes.kind) or recordComponentCount(recRes.kind) == 0 or not cIsSupportedElem(recRes.kind) {
+                return (ok = false, kind = "", next = afterSoa + 1);
+            }
+        }
+        close := syntax.skipTrivia(source, recRes.next, prefix);
+        if close >= size or source.at(close) =!= ">" {
+            return (ok = false, kind = "", next = close);
+        }
+        return (ok = true, kind = "SoA<" + recRes.kind + ">", next = close + 1);
     }
     if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT {
         return (ok = true, kind = name, next = afterName);

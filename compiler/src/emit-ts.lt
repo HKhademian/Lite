@@ -171,6 +171,22 @@ usesSliceUncheckedSet := fn(calls: String): Bool { usesBuiltin(calls, "sliceUnch
 usesSliceSplitAt := fn(calls: String): Bool { usesBuiltin(calls, "sliceSplitAt") }
 usesSliceToList := fn(calls: String): Bool { usesBuiltin(calls, "sliceToList") }
 usesSliceIter := fn(calls: String): Bool { usesBuiltin(calls, "sliceIter") }
+usesSimdSplat := fn(calls: String): Bool { usesBuiltin(calls, "simdSplat") }
+usesSimdFromArray := fn(calls: String): Bool { usesBuiltin(calls, "simdFromArray") }
+usesSimdToArray := fn(calls: String): Bool { usesBuiltin(calls, "simdToArray") }
+usesSimdLoad := fn(calls: String): Bool { usesBuiltin(calls, "simdLoad") }
+usesSimdStore := fn(calls: String): Bool { usesBuiltin(calls, "simdStore") }
+usesSimdAt := fn(calls: String): Bool { usesBuiltin(calls, "simdAt") }
+usesSimdWithLane := fn(calls: String): Bool { usesBuiltin(calls, "simdWithLane") }
+usesSimdEq := fn(calls: String): Bool { usesBuiltin(calls, "simdEq") }
+usesSimdMap1 := fn(calls: String): Bool { usesBuiltin(calls, "simdMap1") }
+usesSimdMap2 := fn(calls: String): Bool { usesBuiltin(calls, "simdMap2") }
+usesSimdMap3 := fn(calls: String): Bool { usesBuiltin(calls, "simdMap3") }
+usesSimdReduce := fn(calls: String): Bool { usesBuiltin(calls, "simdReduce") }
+usesSimdSelect := fn(calls: String): Bool { usesBuiltin(calls, "simdSelect") }
+usesSoaCheckCap := fn(calls: String): Bool { usesBuiltin(calls, "soaCheckCap") }
+usesSoaCheckIdx := fn(calls: String): Bool { usesBuiltin(calls, "soaCheckIdx") }
+usesSoaEmptyFault := fn(calls: String): Bool { usesBuiltin(calls, "soaEmptyFault") }
 usesStrBytes := fn(calls: String): Bool { usesBuiltin(calls, "strBytes") }
 
 /** True when any emitted item calls a host filesystem builtin. */
@@ -346,7 +362,7 @@ usesFloatArithmetic := fn(calls: String): Bool {
     usesBuiltin(calls, "floatOp") or usesBuiltin(calls, "float32Op") or
     usesBuiltin(calls, "float16Op") or usesBuiltin(calls, "float8Op") or
     usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "f16Round") or
-    usesBuiltin(calls, "f32Round") or usesBuiltin(calls, "floatPower") or
+    usesBuiltin(calls, "f32Round") or usesBuiltin(calls, "f64Round") or usesBuiltin(calls, "floatPower") or
     usesBuiltin(calls, "fma8") or usesBuiltin(calls, "fma16") or
     usesBuiltin(calls, "fma32") or usesBuiltin(calls, "fma64") or
     usesUncheckedFloat(calls) or
@@ -414,6 +430,13 @@ emitFloatArithmeticHelpers := fn(calls: String, config: optCfg.OptConfig): Unit 
         outLine("    return r;");
         outLine("}");
     }
+    if usesBuiltin(calls, "f64Round") {
+        outLine("function lite$f64Round(value: number, at: number): number {");
+        if config.checkFloatFinite { outLine("    if (!Number.isFinite(value)) lite$fault(\"ArithmeticPanic\", at, \"non-finite floating value\");"); }
+        else { outLine("    void at;"); }
+        outLine("    return value;");
+        outLine("}");
+    }
     if usesBuiltin(calls, "floatPower") {
         outLine("function lite$floatPower(left: number, right: number, at: number): number {");
         if config.checkArithmetic { outLine("    if (left === 0 && right < 0) lite$fault(\"ArithmeticPanic\", at, \"zero cannot be raised to a negative power\");"); }
@@ -467,7 +490,7 @@ emitFloatArithmeticHelpers := fn(calls: String, config: optCfg.OptConfig): Unit 
 
 /** True when positioned bounds faults may be raised by text or list helpers. */
 usesBounds := fn(calls: String): Bool {
-    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesListSet(calls) or usesListUncheckedIndex(calls) or usesListUncheckedSet(calls) or usesListSlice(calls) or usesSliceFrom(calls) or usesSliceSub(calls) or usesSliceAt(calls) or usesSliceSet(calls) or usesSliceUncheckedAt(calls) or usesSliceUncheckedSet(calls) or usesSliceSplitAt(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet") or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes")
+    usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListIndex(calls) or usesListSet(calls) or usesListUncheckedIndex(calls) or usesListUncheckedSet(calls) or usesListSlice(calls) or usesSliceFrom(calls) or usesSliceSub(calls) or usesSliceAt(calls) or usesSliceSet(calls) or usesSliceUncheckedAt(calls) or usesSliceUncheckedSet(calls) or usesSliceSplitAt(calls) or usesSimdLoad(calls) or usesSimdStore(calls) or usesSimdAt(calls) or usesSimdWithLane(calls) or usesSoaCheckCap(calls) or usesSoaCheckIdx(calls) or usesSoaEmptyFault(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet") or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes")
 }
 
 /** True when runtime faults or input failures may require construct-level `finally` unwinding. */
@@ -490,9 +513,9 @@ emitIntArithmeticHelpers := fn(calls: String, source: String, prefix: String, co
     needUnchHelpers := usesUncheckedInt(calls);
     if not needCheckedHelpers and not needUnchHelpers and not usesBounds(calls) and not usesFloatArithmetic(calls) { return; }
     integers := needCheckedHelpers or needUnchHelpers;
-    hasHardBounds := usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListSlice(calls) or usesSliceFrom(calls) or usesSliceSub(calls) or usesSliceSplitAt(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet");
-    hasIdxBounds := config.checkBounds and (usesListIndex(calls) or usesListSet(calls) or usesSliceAt(calls) or usesSliceSet(calls) or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes"));
-    hasUnchBounds := config.checkUnchecked and (usesListUncheckedIndex(calls) or usesListUncheckedSet(calls) or usesSliceUncheckedAt(calls) or usesSliceUncheckedSet(calls));
+    hasHardBounds := usesBuiltin(calls, "textAt") or usesBuiltin(calls, "textSlice") or usesBuiltin(calls, "textSkipWhile") or usesListSlice(calls) or usesSliceFrom(calls) or usesSliceSub(calls) or usesSliceSplitAt(calls) or usesSimdLoad(calls) or usesSimdStore(calls) or usesSimdAt(calls) or usesSimdWithLane(calls) or usesSoaCheckCap(calls) or usesSoaEmptyFault(calls) or usesMapIndex(calls) or usesListPop(calls) or usesListPopFront(calls) or usesBuiltin(calls, "rcGet");
+    hasIdxBounds := config.checkBounds and (usesListIndex(calls) or usesListSet(calls) or usesSliceAt(calls) or usesSliceSet(calls) or usesSoaCheckIdx(calls) or usesBuiltin(calls, "listFillBytes") or usesBuiltin(calls, "listCopyBytes"));
+    hasUnchBounds := config.checkUnchecked and (usesListUncheckedIndex(calls) or usesListUncheckedSet(calls) or usesSliceUncheckedAt(calls) or usesSliceUncheckedSet(calls) or usesSoaCheckIdx(calls));
     needsIntFaultFn := (config.checkArithmetic and needCheckedHelpers) or (config.checkUnchecked and needUnchHelpers);
     hasFloatArithCheck := usesBuiltin(calls, "floatOp") or usesBuiltin(calls, "float32Op") or usesBuiltin(calls, "float16Op") or usesBuiltin(calls, "float8Op") or usesBuiltin(calls, "floatPower");
     hasFloatFiniteCheck := hasFloatArithCheck or usesBuiltin(calls, "f8Round") or usesBuiltin(calls, "f16Round") or usesBuiltin(calls, "f32Round") or usesBuiltin(calls, "fma8") or usesBuiltin(calls, "fma16") or usesBuiltin(calls, "fma32") or usesBuiltin(calls, "fma64") or usesBuiltin(calls, "f32FromBits") or usesBuiltin(calls, "f64FromBits");
@@ -3245,6 +3268,129 @@ emitSliceIterHelper := fn(): Unit {
     outLine("}");
     outLine("");
 };
+
+emitSimdAndSoaHelpers := fn(calls: String, config: optCfg.OptConfig): Unit {
+    if usesSimdSplat(calls) {
+        outLine("function lite$simdSplat<T>(v: T, n: number): T[] {");
+        outLine("    return Array.from({ length: n }, () => v);");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdFromArray(calls) {
+        outLine("function lite$simdFromArray<T>(a: readonly T[]): T[] {");
+        outLine("    return a.slice();");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdToArray(calls) {
+        outLine("function lite$simdToArray<T>(v: readonly T[]): T[] {");
+        outLine("    return v.slice();");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdLoad(calls) {
+        outLine("function lite$simdLoad<T>(s: { readonly data: T[]; readonly off: number; readonly len: number }, off: bigint, n: number, at: number): T[] {");
+        outLine("    if (off < 0n || off + BigInt(n) > BigInt(s.len)) { lite$fault(\"BoundPanic\", at, \"simd load outside slice extent\"); }");
+        outLine("    const start = s.off + Number(off);");
+        outLine("    return s.data.slice(start, start + n);");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdStore(calls) {
+        outLine("function lite$simdStore<T>(v: readonly T[], s: { readonly data: T[]; readonly off: number; readonly len: number }, off: bigint, at: number): void {");
+        outLine("    if (off < 0n || off + BigInt(v.length) > BigInt(s.len)) { lite$fault(\"BoundPanic\", at, \"simd store outside slice extent\"); }");
+        outLine("    const start = s.off + Number(off);");
+        outLine("    for (let i = 0; i < v.length; i += 1) { s.data[start + i] = v[i] as T; }");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdAt(calls) {
+        outLine("function lite$simdAt<T>(v: readonly T[], idx: bigint, at: number): T {");
+        outLine("    if (idx < 0n || idx >= BigInt(v.length)) { lite$fault(\"BoundPanic\", at, \"simd lane index outside its extent\"); }");
+        outLine("    return v[Number(idx)] as T;");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdWithLane(calls) {
+        outLine("function lite$simdWithLane<T>(v: readonly T[], idx: bigint, val: T, at: number): T[] {");
+        outLine("    if (idx < 0n || idx >= BigInt(v.length)) { lite$fault(\"BoundPanic\", at, \"simd lane index outside its extent\"); }");
+        outLine("    const out = v.slice();");
+        outLine("    out[Number(idx)] = val;");
+        outLine("    return out;");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdEq(calls) {
+        outLine("function lite$simdEq<T>(a: readonly T[], b: readonly T[]): boolean {");
+        outLine("    for (let i = 0; i < a.length; i += 1) { if (a[i] !== b[i]) return false; }");
+        outLine("    return true;");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdMap1(calls) {
+        outLine("function lite$simdMap1<T>(a: readonly T[], f: (x: T) => T): T[] {");
+        outLine("    const out: T[] = new Array(a.length);");
+        outLine("    for (let i = 0; i < a.length; i += 1) { out[i] = f(a[i] as T); }");
+        outLine("    return out;");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdMap2(calls) {
+        outLine("function lite$simdMap2<T>(a: readonly T[], b: readonly T[], f: (x: T, y: T) => T): T[] {");
+        outLine("    const out: T[] = new Array(a.length);");
+        outLine("    for (let i = 0; i < a.length; i += 1) { out[i] = f(a[i] as T, b[i] as T); }");
+        outLine("    return out;");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdMap3(calls) {
+        outLine("function lite$simdMap3<T>(a: readonly T[], b: readonly T[], c: readonly T[], f: (x: T, y: T, z: T) => T): T[] {");
+        outLine("    const out: T[] = new Array(a.length);");
+        outLine("    for (let i = 0; i < a.length; i += 1) { out[i] = f(a[i] as T, b[i] as T, c[i] as T); }");
+        outLine("    return out;");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdReduce(calls) {
+        outLine("function lite$simdReduce<T>(a: readonly T[], f: (acc: T, x: T) => T): T {");
+        outLine("    let acc = a[0] as T;");
+        outLine("    for (let i = 1; i < a.length; i += 1) { acc = f(acc, a[i] as T); }");
+        outLine("    return acc;");
+        outLine("}");
+        outLine("");
+    }
+    if usesSimdSelect(calls) {
+        outLine("function lite$simdSelect<T>(a: readonly T[], b: readonly T[], mask: readonly boolean[]): T[] {");
+        outLine("    const out: T[] = new Array(a.length);");
+        outLine("    for (let i = 0; i < a.length; i += 1) { out[i] = (mask[i] ? a[i] : b[i]) as T; }");
+        outLine("    return out;");
+        outLine("}");
+        outLine("");
+    }
+    if usesSoaCheckCap(calls) {
+        outLine("function lite$soaCheckCap(cap: bigint, at: number): void {");
+        outLine("    if (cap < 0n) { lite$fault(\"BoundPanic\", at, \"SoA capacity cannot be negative\"); }");
+        outLine("}");
+        outLine("");
+    }
+    if usesSoaCheckIdx(calls) {
+        outLine("function lite$soaCheckIdx(idx: bigint, len: number, at: number, checked: boolean): number {");
+        chkB := if config.checkBounds { "true" } else { "false" };
+        chkU := if config.checkUnchecked { "true" } else { "false" };
+        outLine("    if ((checked && " + chkB + ") || (!checked && " + chkU + ")) {");
+        outLine("        if (idx < 0n || idx >= BigInt(len)) { lite$fault(\"BoundPanic\", at, \"SoA index outside its extent\"); }");
+        outLine("    } else { void at; }");
+        outLine("    return Number(idx);");
+        outLine("}");
+        outLine("");
+    }
+    if usesSoaEmptyFault(calls) {
+        outLine("function lite$soaEmptyFault(at: number): never {");
+        outLine("    return lite$fault(\"BoundPanic\", at, \"popBack on empty SoA\");");
+        outLine("}");
+        outLine("");
+    }
+};
 emitStrBytesHelper := fn(): Unit {
     outLine("function lite$strBytes(s: string): { readonly data: bigint[]; readonly off: number; readonly len: number } {");
     outLine("    const data: bigint[] = [];");
@@ -3908,6 +4054,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     if usesSliceSplitAt(calls) { emitSliceSplitAtHelper(); }
     if usesSliceToList(calls) { emitSliceToListHelper(); }
     if usesSliceIter(calls) or hasSliceLoopSeq { emitSliceIterHelper(); }
+    emitSimdAndSoaHelpers(calls, config);
     if usesStrBytes(calls) { emitStrBytesHelper(); }
     if usesMapIndex(calls) { emitMapIndexHelper(); }
     if usesMapGet(calls) { emitMapGetHelper(); }
