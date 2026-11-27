@@ -4,7 +4,7 @@ The selected design uses `alias` to give a type or an existing symbol another
 name. The `distinct` declaration creates a fresh type identity from a type
 expression. Record and enum declarations create their own nominal types.
 
-**Compiler status.** Transparent type aliases (`Name := alias TypeExpression`, including generic `Name := alias<...> TypeExpression`) and distinct nominal types (`Name := distinct TypeExpression`, including generic `Name := distinct<...> TypeExpression` with explicit `cast<T>(expr)` and context-inferred `cast(expr)`) are implemented across both TS and C11 backends; legacy `:= type` declarations have been migrated to `:= alias`. Lexically scoped symbol aliases (`xalias := alias x1`, `points := alias pointLib`, `f := alias g`) and specialized or partially specialized generic function aliases (`ivec2 := alias vecN<Int, 2>`, `splat2 := alias<T: Type<Numeric>> splat<T, 2>`) remain planned.
+**Compiler status.** Transparent type aliases (`Name := alias TypeExpression`, including generic `Name := alias<...> TypeExpression`), distinct nominal types (`Name := distinct TypeExpression`, including generic `Name := distinct<...> TypeExpression` with explicit `cast<T>(expr)` and context-inferred `cast(expr)`), lexically scoped symbol/module/function aliases (`xalias := alias x1`, `points := alias pointLib`, `f := alias g`, including `pub` re-exports), and specialized or partially specialized generic function aliases (`ivec2 := alias vecN<Int, 2>`, `splat2 := alias<T: Type<Numeric>> splat<T, 2>`) are implemented across both TS and C11 backends; legacy `:= type` declarations have been migrated to `:= alias`.
 
 ## Name a structural type or an existing type
 
@@ -80,7 +80,7 @@ s := Vec2.splat(3.5);     // pre-binds N = 2, infers T = Float
 
 ### Specializing standalone generic functions with `alias`
 
-Planned design (not yet implemented in the compiler):
+Implemented in Phase 17 on both TS and C11 backends:
 
 ```text
 pub IVec2 := alias Vec<Int, 2>;

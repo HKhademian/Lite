@@ -1377,6 +1377,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
         kind == ir.ITEM_KIND_LOOP or kind == ir.ITEM_KIND_LOOP_SEQ or kind == ir.ITEM_KIND_END_LOOP or
         kind == ir.ITEM_KIND_SCOPE or kind == ir.ITEM_KIND_END_SCOPE or
         kind == ir.ITEM_KIND_FUNCTION_START or kind == ir.ITEM_KIND_FUNCTION_END or
+        kind == ir.ITEM_KIND_OPT_PARAM_INIT or
         kind == ir.ITEM_KIND_RETURN or kind == ir.ITEM_KIND_BREAK or kind == ir.ITEM_KIND_CONTINUE or
         kind == ir.ITEM_KIND_UNREACHABLE or kind == ir.ITEM_KIND_MAIN_STOP or
         kind == ir.ITEM_KIND_CALL or kind == ir.ITEM_KIND_DISCARD or kind == ir.ITEM_KIND_END_OUTPUT;
@@ -1385,6 +1386,7 @@ pub optimizeStraightLineVars := fn(items: Items, target: String): Items {
         kind == ir.ITEM_KIND_LOOP or kind == ir.ITEM_KIND_END_LOOP or
         kind == ir.ITEM_KIND_SCOPE or kind == ir.ITEM_KIND_END_SCOPE or
         kind == ir.ITEM_KIND_FUNCTION_START or kind == ir.ITEM_KIND_FUNCTION_END or
+        kind == ir.ITEM_KIND_OPT_PARAM_INIT or
         kind == ir.ITEM_KIND_DISCARD;
         rewritten := if isPreFlushBarrier {
             (code = item.code, readPipe = "", changed = false)

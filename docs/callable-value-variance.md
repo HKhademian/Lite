@@ -1,6 +1,6 @@
 # Safe callable input and result adaptation
 
-Status: **selected 2026-10-25 for ordinary value/fallible outcome adaptation and basic var T invariance, including required and omission-capable ordinary input views; design-only, not compiler/runtime verification**.
+Status: **implemented in Phase 17 across TS and C11 backends** (`compiler/tests/codegen/phase17-inferred-records-and-callables.test.lts`), covering contravariant ordinary inputs, covariant results and `T ! E` error widening, `mut` parameter invariance, omission-promise enforcement, zero-callable preservation, and single-evaluation adaptation.
 
 ## Direct assignment is valid
 

@@ -1,0 +1,322 @@
+/* Phase 17 verification: standalone inferred structural records, symbol/module/fn/generic aliases,
+   parameter defaults + inference + overloads + optional callables, callable value variance,
+   and complete rejection matrix across TS (tsc --strict) and C11 (-Wall -Wextra -Werror + ASan/UBSan + LITE_CHECK_LEAKS=1). */
+
+test := import "core/test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+emptyBytes := fn(): List<Int> {
+    xs: List<Int> = [];
+    xs
+};
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccProbe := compilerTest.probeCc();
+
+runTargetArtifact := fn(label: String, tsCode: String, cCode: String, expectedOut: String): Unit {
+    tsChk := compilerTest.checkTsCode(root, tsCode);
+    test.check(label + " tsc --strict: " + tsChk.error, tsChk.ok);
+    tsRun := compilerTest.checkAndRunTs(root, tsCode);
+    test.checkInt(label + " ts run status: " + tsRun.stderr, 0, tsRun.status);
+    test.checkText(label + " ts stdout", expectedOut, tsRun.stdout);
+
+    if not ccProbe.available {
+        return;
+    }
+    tmpDir := fs.makeTempDir("lite-p17-run-");
+    test.check(label + " makeTempDir", tmpDir.ok);
+    cPath := path.join(tmpDir.path, "prog.c");
+    test.check(label + " write prog.c", fs.writeText(cPath, cCode).ok);
+
+    vmBin := path.join(tmpDir.path, "prog_vm");
+    ccVmOut := path.join(tmpDir.path, "cc_vm.out");
+    ccVmErr := path.join(tmpDir.path, "cc_vm.err");
+    ccVm := proc.runBytes(ccProbe.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", cPath, "-o", vmBin, "-lm"], tmpDir.path, [], 30000, emptyBytes(), ccVmOut, ccVmErr);
+    test.checkInt(label + " cc vm: " + fs.readText(ccVmErr).text, 0, ccVm.status);
+    runVmOut := path.join(tmpDir.path, "run_vm.out");
+    runVmErr := path.join(tmpDir.path, "run_vm.err");
+    runVm := proc.runBytes(vmBin, [], tmpDir.path, ["LITE_CHECK_LEAKS=1"], 10000, emptyBytes(), runVmOut, runVmErr);
+    test.checkInt(label + " vm status: " + fs.readText(runVmErr).text, 0, runVm.status);
+    test.checkText(label + " vm stderr", "", fs.readText(runVmErr).text);
+    test.checkText(label + " vm stdout parity", expectedOut, fs.readText(runVmOut).text);
+
+    sanBin := path.join(tmpDir.path, "prog_san");
+    ccSanOut := path.join(tmpDir.path, "cc_san.out");
+    ccSanErr := path.join(tmpDir.path, "cc_san.err");
+    ccSan := proc.runBytes(ccProbe.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", cPath, "-o", sanBin, "-lm"], tmpDir.path, [], 30000, emptyBytes(), ccSanOut, ccSanErr);
+    test.checkInt(label + " cc san: " + fs.readText(ccSanErr).text, 0, ccSan.status);
+    runSanOut := path.join(tmpDir.path, "run_san.out");
+    runSanErr := path.join(tmpDir.path, "run_san.err");
+    runSan := proc.runBytes(sanBin, [], tmpDir.path, ["LITE_CHECK_LEAKS=1"], 10000, emptyBytes(), runSanOut, runSanErr);
+    test.checkInt(label + " san status: " + fs.readText(runSanErr).text, 0, runSan.status);
+    test.checkText(label + " san stderr", "", fs.readText(runSanErr).text);
+    test.checkText(label + " san stdout parity", expectedOut, fs.readText(runSanOut).text);
+    _ := fs.remove(tmpDir.path);
+};
+
+runAll := fn(label: String, src: String, expectedOut: String): Unit {
+    tsCompRes := compilerTest.compileStdin(root, tsComp, src, "");
+    test.checkInt(label + " ts compile: " + tsCompRes.stderr, 0, tsCompRes.status);
+    var cCode := "";
+    if ccProbe.available {
+        cCompRes := compilerTest.compileStdin(root, cComp, src, "");
+        test.checkInt(label + " c compile: " + cCompRes.stderr, 0, cCompRes.status);
+        cCode = cCompRes.stdout;
+    }
+    runTargetArtifact(label, tsCompRes.stdout, cCode, expectedOut);
+};
+
+compileProjFile := fn(compPath: String, workDir: String, entryRel: String, outFile: String): compilerTest.RunOutput {
+    compOut := path.join(workDir, "comp.stdout");
+    compErr := path.join(workDir, "comp.stderr");
+    args: List<String> = [compPath, entryRel, "--out", outFile];
+    res := proc.runBytes(project.nodeExecPath(), args, workDir, [], 60000, emptyBytes(), compOut, compErr);
+    test.check("compileProjFile error: " + res.error, res.error == "");
+    (status = res.status, stdout = fs.readText(compOut).text, stderr = fs.readText(compErr).text)
+};
+
+expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
+    compilerTest.assertCompileErrorContains(root, tsComp, label + " ts", src, expectedMsg);
+    if ccProbe.available {
+        compilerTest.assertCompileErrorContains(root, cComp, label + " c", src, expectedMsg);
+    }
+};
+
+/* 1. Standalone inferred structural records: empty, ident/quoted/shorthand, : Type, written-order eval, eq, mutation, generics, comptime */
+{
+    recSrc := [
+        "io := import \"core/io\";",
+        "UserID := distinct Int;",
+        "Named := record { a: Int = 7; b: String = \"ok\"; };",
+        "var log := \"\";",
+        "tick := fn(tag: String, v: Int): Int { log = log + tag + \",\"; v };",
+        "empty := {};",
+        "alice := \"alice\";",
+        "carl := \"test\";",
+        "scores := {",
+        "    \"alice\": Float = 10,",
+        "    \"bob\": UserID = cast(25),",
+        "    \"carl\" = carl,",
+        "    \"hello world\" = 42,",
+        "};",
+        "r1 := { b = tick(\"b\", 2), a = tick(\"a\", 1) };",
+        "r2 := { a = 1, b = 2 };",
+        "mut mr := { \"score\" = 10, sub = { \"tag\" = \"init\" } };",
+        "mr.\"score\" += 5;",
+        "mr.sub.\"tag\" = \"done\";",
+        "id := fn<T>(v: T): T { v };",
+        "gRec := id({ \"k\" = 99, x = true });",
+        "takeStruct := fn(v: { \"p\": Int, q: String }): String { v.q + \":\" + v.\"p\".toText() };",
+        "nom: Named = {};",
+        "takeEmpty := fn(e: {}): Bool { true };",
+        "samePair: List<{ a: Int, b: Int }> = [r1, r2];",
+        "cm := comptime { c := { \"a\" = 3, \"b space\" = 4 }; c.\"a\" + c.\"b space\" };",
+        "io.outputLine(takeEmpty(empty), r1.a == r2.a and r1.b == r2.b, samePair.length(), log, scores.\"alice\", cast<Int>(scores.\"bob\"), scores.\"carl\", scores.\"hello world\");",
+        "io.outputLine(mr.\"score\", mr.sub.\"tag\", gRec.\"k\", gRec.x, takeStruct({ \"p\" = 8, q = \"v\" }), nom.a, nom.b, cm);"
+    ].join("\n");
+    runAll("inferred structural records", recSrc, "true true 2 b,a, 10 25 test 42\n15 done 99 true v:8 7 ok 7\n");
+}
+
+/* 2. Symbol, module, function, full & partial specialized generic function aliases across modules & blocks */
+{
+    dirRes := fs.makeTempDir("lite-p17-mod-");
+    test.check("p17 mod makeTempDir", dirRes.ok);
+    dir := dirRes.path;
+    pointLibLt := [
+        "pub Point := record { x: Int; y: Int; };",
+        "pub ORIGIN := 100;",
+        "pub norm1 := fn(p: Point): Int { p.x + p.y };",
+        "pub vecN := fn<T: Type<Int>, N: Int>(arr: [T; N]): Int {",
+        "    var s: Int = 0;",
+        "    loop arr as v { s = s + cast<Int>(v); }",
+        "    s",
+        "};",
+        "pub splatSum := fn<T: Type<Int>, N: Int>(v: T): Int {",
+        "    arr: [T; N] = [v; N];",
+        "    vecN<T, N>(arr)",
+        "};",
+        "pub add := fn(x: Int): Int { x + 1 };",
+        "pub add := fn(x: Int, y: Int): Int { x + y };",
+        "pub ivec2 := alias vecN<Int, 2>;",
+        "pub sp3 := alias<T: Type<Int>> splatSum<T, 3>;",
+        "pub addAlias := alias add;"
+    ].join("\n");
+    entryLts := [
+        "io := import \"core/io\";",
+        "ptLib := import \"./point_lib\";",
+        "points := alias ptLib;",
+        "Pair := alias points.Point;",
+        "var acc := 10;",
+        "accAlias := alias acc;",
+        "accAlias += 5;",
+        "mut xs: List<Int> = [1, 2];",
+        "xsAlias := alias xs;",
+        "(mut xsAlias).pushBack(3);",
+        "origAlias := alias points.ORIGIN;",
+        "iv := alias points.ivec2;",
+        "s3 := alias points.sp3;",
+        "fAdd := alias points.addAlias;",
+        "ivPtr: fn([Int; 2]): Int = iv;",
+        "s3Float := alias s3<Int>;",
+        "fwdRun := fn(): Int { fwdAlias(4) };",
+        "fwdAlias := alias localDouble;",
+        "localDouble := fn(x: Int): Int { x * 2 };",
+        "blkOut := do {",
+        "    var b := 20;",
+        "    bAlias := alias b;",
+        "    bAlias = 33;",
+        "    b",
+        "};",
+        "p: Pair = points.Point { x = 3, y = 4 };",
+        "fwdRes := fwdRun();",
+        "io.outputLine(acc, xs.length(), origAlias, points.norm1(p), iv([4, 5]), ivPtr([6, 7]), s3(5), s3Float(2), fAdd(9), fAdd(4, 6), fwdRes, blkOut);"
+    ].join("\n");
+    test.check("write point_lib.lt", fs.writeText(path.join(dir, "point_lib.lt"), pointLibLt).ok);
+    test.check("write main.lts", fs.writeText(path.join(dir, "main.lts"), entryLts).ok);
+
+    tsOut := path.join(dir, "out.ts");
+    tsRes := compileProjFile(tsComp, dir, "main.lts", tsOut);
+    test.checkInt("mod aliases ts compile: " + tsRes.stderr, 0, tsRes.status);
+    tsCode := fs.readText(tsOut).text;
+
+    var cCode := "";
+    if ccProbe.available {
+        cOut := path.join(dir, "out.c");
+        cRes := compileProjFile(cComp, dir, "main.lts", cOut);
+        test.checkInt("mod aliases c compile: " + cRes.stderr, 0, cRes.status);
+        cCode = fs.readText(cOut).text;
+    }
+    runTargetArtifact("symbol and specialized generic aliases", tsCode, cCode, "15 3 100 7 9 13 15 6 10 10 8 33\n");
+    _ := fs.remove(dir);
+}
+
+/* 3. Parameter defaults, inference, earlier-param reads, overloads, ?: markers, zero-callables, owned C11 cleanup */
+{
+    defSrc := [
+        "io := import \"core/io\";",
+        "var evalLog := \"\";",
+        "step := fn(tag: String, v: Int): Int { evalLog = evalLog + tag + \",\"; v };",
+        "makeRange := fn(start = 0, count = 3, end = start + count): (start: Int, count: Int, end: Int) {",
+        "    (start = start, count = count, end = end)",
+        "};",
+        "runCallFwd := fn(): Int { callFwd() };",
+        "callFwd := fn(a = 7, b = a + 3): Int { a + b };",
+        "fwdCalled := runCallFwd();",
+        "ov := fn(x: Int): Int { x + 100 };",
+        "ov := fn(x: Int, y: Int = 50): Int { x + y };",
+        "genDef := fn<T>(x: T, mult = 2): Int { mult };",
+        "oneOpt := fn(x = 7): Int { x + 10 };",
+        "applyOpt := fn(f: fn(n?: Int): Int): Int { f() + f(4) };",
+        "applyReq := fn(f: fn(n: Int): Int): Int { f(5) };",
+        "base := 10;",
+        "cls := fn(x = base, y = x * 2): Int { x + y };",
+        "ownedStr := fn(prefix: String = \"[\", body: String = \"item\" + \"]\", early: Bool = false): String {",
+        "    if early { return prefix + \"EARLY\"; }",
+        "    prefix + body",
+        "};",
+        "ownedCls := fn(s: String = \"cls_def\" + \"!\"): Int { s.length() };",
+        "ownedUnit := fn(acc: mut List<Int>, xs: List<Int> = [1, 2, 3]): Unit {",
+        "    loop xs as v { (mut acc).pushBack(v); }",
+        "};",
+        "var zeroCnt := 0;",
+        "FnBox := record { f: fn(x?: Int): Int; };",
+        "var fnBox := FnBox {};",
+        "zeroDefFn := fn(x = do { zeroCnt += 1; 99 }): Int { zeroCnt += 10; x };",
+        "zeroOptRes := fnBox.f();",
+        "fnBox = FnBox { f = zeroDefFn };",
+        "liveOptRes := fnBox.f();",
+        "rA := makeRange();",
+        "rB := makeRange(count = step(\"c\", 5), start = step(\"s\", 10));",
+        "mut mutL: List<Int> = [];",
+        "ownedUnit(mut mutL);",
+        "ownedUnit(mut mutL, [9]);",
+        "io.outputLine(rA.start, rA.count, rA.end, rB.start, rB.count, rB.end, evalLog, fwdCalled);",
+        "io.outputLine(ov(5), ov(5, 2), genDef(\"hi\"), applyOpt(oneOpt), applyReq(ov), cls(), cls(3));",
+        "io.outputLine(ownedStr(), ownedStr(\"{\", \"x}\"), ownedStr(early = true), ownedCls(), ownedCls(\"ab\"), mutL.length());",
+        "io.outputLine(zeroOptRes, liveOptRes, zeroCnt);"
+    ].join("\n");
+    runAll("parameter defaults and optional callables", defSrc, "0 3 3 10 5 15 c,s, 17\n105 7 2 31 105 30 9\n[item] {x} [EARLY 8 2 4\n0 99 11\n");
+}
+
+/* 4. Callable value variance: contravariant params, covariant results & T ! E, zero preservation, mut invariance, single eval */
+{
+    varSrc := [
+        "io := import \"core/io\";",
+        "E1 := distinct String;",
+        "E2 := distinct String;",
+        "var srcEvals := 0;",
+        "showIS := fn(v: Int | String): String { match v { n: Int { n.toText() } s: String { s } } };",
+        "makeWide := fn(): fn(v: Int | String, extra?: Int): Int {",
+        "    srcEvals += 1;",
+        "    fn(v: Int | String, extra: Int = 10): Int {",
+        "        match v {",
+        "            n: Int { n + extra }",
+        "            s: String { s.length() + extra }",
+        "        }",
+        "    }",
+        "};",
+        "var adapted: fn(n: Int, e?: Int): (Int | String) = makeWide();",
+        "r1 := adapted(5);",
+        "r2 := adapted(5, 20);",
+        "narrowFail := fn(x: Int): Int ! E1 {",
+        "    if x < 0 { return .err(cast<E1>(\"neg\")); }",
+        "    x * 3",
+        "};",
+        "wideFail: fn(Int): (Int | String) ! (E1 | E2) = narrowFail;",
+        "fOut := match wideFail(4) {",
+        "    .ok(v) { showIS(v) }",
+        "    .err(e) { \"err\" }",
+        "};",
+        "widenRet: fn(Int): (Int | String) = fn(x: Int): Int { x + 1 };",
+        "wRes := widenRet(9);",
+        "mutList := fn(xs: mut List<Int>): Int { xs.length() };",
+        "mutCov: fn(mut List<Int>): (Int | String) = mutList;",
+        "mut ls: List<Int> = [1, 2, 3];",
+        "mLen := mutCov(mut ls);",
+        "io.outputLine(srcEvals, showIS(r1), showIS(r2), fOut, showIS(wRes), showIS(mLen));"
+    ].join("\n");
+    runAll("callable value variance", varSrc, "1 15 25 12 10 3\n");
+}
+
+/* 5. Complete negative / rejection matrix */
+rejCases: List<(label: String, src: String, msg: String)> = [
+    (label = "bare block int", src = "x := { 1 };", msg = "standalone block expressions must use do { ... }"),
+    (label = "bare block stmt", src = "x := { y := 1; y };", msg = "standalone block expressions must use do { ... }"),
+    (label = "dup inferred field", src = "x := { a = 1, \"a\" = 2 };", msg = "duplicate record field"),
+    (label = "self cycle alias", src = "a := alias a;", msg = "recursive type alias a"),
+    (label = "mutual cycle alias", src = "a := alias b; b := alias a;", msg = "recursive type alias"),
+    (label = "uninit local alias", src = "f := fn(): Unit { x: Int = ?; y := alias x; };", msg = "cannot alias uninitialized"),
+    (label = "computed expr alias", src = "x := 1; y := alias x + 1;", msg = "alias target cannot be a computed expression"),
+    (label = "value as type alias", src = "x := 1; ax := alias x; y: ax = 1;", msg = "value, not a type"),
+    (label = "question mark in fn def", src = "f := fn(x?: Int): Int { 0 };", msg = "default parameters in function definitions must use = expression"),
+    (label = "equals in fn type sig", src = "f: fn(Int = 1): Int = fn(x: Int): Int { x };", msg = "function types cannot declare default values"),
+    (label = "mut param default", src = "f := fn(x: mut List<Int> = []): Unit { };", msg = "mut parameters cannot have default values"),
+    (label = "self param ref", src = "f := fn(x: Int = x + 1): Int { x };", msg = "default for parameter x cannot reference parameter x"),
+    (label = "forward param ref", src = "f := fn(x: Int = y, y: Int = 1): Int { x };", msg = "default for parameter x cannot reference parameter y"),
+    (label = "overload default collision", src = "f := fn(x: Int): Int { x }; f := fn(x: Int = 1): Int { x };", msg = "duplicate function f"),
+    (label = "ambiguous omitted overload", src = "f := fn(a: Int = 1): Int { a }; f := fn(b: String = \"x\"): Int { 2 }; r := f();", msg = "ambiguous call to overloaded f"),
+    (label = "variance narrow param", src = "f: fn(Int | String): Int = fn(x: Int): Int { x };", msg = "cannot initialize"),
+    (label = "variance wide ret", src = "f: fn(Int): Int = fn(x: Int): Int | String { x };", msg = "cannot initialize"),
+    (label = "variance mut param", src = "f: fn(List<Int>): Int = fn(x: mut List<Int>): Int { 0 };", msg = "cannot initialize"),
+    (label = "variance missing opt promise", src = "f: fn(x?: Int): Int = fn(x: Int): Int { x };", msg = "cannot initialize")
+];
+loop rejCases as rc {
+    rejectBoth := fn(lbl: String, src: String, msg: String): Unit {
+        expectRejectBoth(lbl, src, msg);
+    };
+    rejectBoth(rc.label, rc.src, rc.msg);
+}
+
+test.done("phase17-inferred-records-and-callables");

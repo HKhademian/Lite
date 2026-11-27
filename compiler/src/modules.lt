@@ -713,7 +713,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
     isRoot := not hasVisited;
-    if isRoot { generics.resetAll(); interfaces.resetAll(); contexts.resetAll(); overloads.resetAll(); comptimeEval.resetComptimeState(); }
+    if isRoot { frontend.resetTypeStates(); generics.resetAll(); interfaces.resetAll(); contexts.resetAll(); overloads.resetAll(); comptimeEval.resetComptimeState(); }
     normPath := normalizeSlashes(path);
     rootDir := if isRoot { dirnameOfPath(normPath) } else { rootDirForGraph(initialGraph) };
     logical := logicalModuleName(rootDir, path, display);

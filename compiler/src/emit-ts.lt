@@ -56,7 +56,8 @@ tsParameterList := fn(encoded: String): String {
         if separator >= 0 { end = separator; }
         entry := encoded.slice(start, end);
         equals := entry.indexOf("=", 0);
-        parameterName := entry.slice(0, equals);
+        parameterName := frontend.paramNameOf(entry);
+        isOpt := frontend.paramIsOptional(entry);
         rawParameterKind := entry.slice(equals + 1, entry.length());
         isMutParam := rawParameterKind.startsWithAt(0, "mut ");
         parameterKind := if isMutParam {
@@ -65,6 +66,11 @@ tsParameterList := fn(encoded: String): String {
         if result.count() > 0 { mut result.append(", "); }
         if parameterName == "$ctx" {
             mut result.append("lite$ctx: ");
+            mut result.append(tsFunctionType(parameterKind));
+        } else if isOpt {
+            mut result.append("lite__opt_");
+            mut result.append(parameterName);
+            mut result.append("?: ");
             mut result.append(tsFunctionType(parameterKind));
         } else {
             mut result.append("lite_");
@@ -93,10 +99,11 @@ reportParameterReads := fn(encoded: String, indent: String): Unit {
         var end := encoded.length();
         if separator >= 0 { end = separator; }
         entry := encoded.slice(start, end);
-        equals := entry.indexOf("=", 0);
-        pName := entry.slice(0, equals);
+        pName := frontend.paramNameOf(entry);
         if pName == "$ctx" {
             outLine(indent + "void lite$ctx;");
+        } else if frontend.paramIsOptional(entry) {
+            outLine(indent + "void lite__opt_" + pName + ";");
         } else {
             outLine(indent + "void lite_" + pName + ";");
         }
@@ -4166,6 +4173,10 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             tsFunctionType(item.code) + " {");
             indent = indent + "    ";
             reportParameterReads(item.textValue, indent);
+        } else if item.kind == frontend.ITEM_KIND_OPT_PARAM_INIT {
+            tsOptTy := tsFunctionType(item.textValue);
+            outLine(indent + "const " + item.runtime + ": " + tsOptTy + " = lite__opt_" + item.name + " !== undefined ? lite__opt_" + item.name + " : (" + item.code + ");");
+            outLine(indent + "void " + item.runtime + ";");
         } else if item.kind == frontend.ITEM_KIND_FUNCTION_END {
             indent = dedent(indent);
             outLine(indent + "}");

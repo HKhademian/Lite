@@ -449,7 +449,8 @@ cParameterListWithRestrict := fn(encoded: String, useRestrict: Bool): String {
         end := if sep >= 0 { sep } else { encoded.length() };
         entry := encoded.slice(start, end);
         eq := entry.indexOf("=", 0);
-        paramName := entry.slice(0, eq);
+        paramName := frontend.paramNameOf(entry);
+        isOpt := frontend.paramIsOptional(entry);
         rawParamKind := entry.slice(eq + 1, entry.length());
         isMutParam := rawParamKind.startsWithAt(0, "mut ");
         paramKind := if isMutParam { rawParamKind.slice(4, rawParamKind.length()) } else { rawParamKind };
@@ -457,21 +458,27 @@ cParameterListWithRestrict := fn(encoded: String, useRestrict: Bool): String {
         if paramName == "$ctx" {
             mut result.append("const ");
             mut result.append(frontend.cCtxTag(paramKind));
-            mut result.append(" *");
-        } else if isMutParam and not frontend.isSliceKind(paramKind) and not frontend.isDynKind(paramKind) {
+            mut result.append(" *lite_ctx");
+        } else if isOpt {
+            pSafe := frontend.cSafeIdent(paramName);
+            mut result.append("bool lt_has_");
+            mut result.append(pSafe);
+            mut result.append(", ");
             mut result.append(cScalarType(paramKind));
-            mut result.append(if useRestrict { " * restrict " } else { " *" });
-        } else if frontend.cParamIsConstPtr(paramKind) {
-            mut result.append("const ");
-            mut result.append(cScalarType(paramKind));
-            mut result.append(if useRestrict { " * restrict " } else { " *" });
+            mut result.append(" lite_");
+            mut result.append(pSafe);
         } else {
-            mut result.append(cScalarType(paramKind));
-            mut result.append(" ");
-        }
-        if paramName == "$ctx" {
-            mut result.append("lite_ctx");
-        } else {
+            if isMutParam and not frontend.isSliceKind(paramKind) and not frontend.isDynKind(paramKind) {
+                mut result.append(cScalarType(paramKind));
+                mut result.append(if useRestrict { " * restrict " } else { " *" });
+            } else if frontend.cParamIsConstPtr(paramKind) {
+                mut result.append("const ");
+                mut result.append(cScalarType(paramKind));
+                mut result.append(if useRestrict { " * restrict " } else { " *" });
+            } else {
+                mut result.append(cScalarType(paramKind));
+                mut result.append(" ");
+            }
             mut result.append("lite_");
             mut result.append(frontend.cSafeIdent(paramName));
         }
@@ -494,10 +501,12 @@ emitCParameterReads := fn(encoded: String): Unit {
         sep := encoded.indexOf("|", start);
         end := if sep >= 0 { sep } else { encoded.length() };
         entry := encoded.slice(start, end);
-        eq := entry.indexOf("=", 0);
-        pName := entry.slice(0, eq);
+        pName := frontend.paramNameOf(entry);
         if pName == "$ctx" {
             outLine("    (void)lite_ctx;");
+        } else if frontend.paramIsOptional(entry) {
+            pSafe := frontend.cSafeIdent(pName);
+            outLine("    (void)lt_has_" + pSafe + "; (void)lite_" + pSafe + ";");
         } else {
             outLine("    (void)lite_" + frontend.cSafeIdent(pName) + ";");
         }
@@ -1852,17 +1861,21 @@ emitCStructHelpers := fn(kind: String, needCopy: Bool, needPrint: Bool, needEq: 
     if needPrint {
         outLine("static int " + tag + "_print(" + tag + " v) {");
         if isRec {
-            recName := frontend.recordDisplayName(kind);
+            isAnon := frontend.isAnonRecordKind(kind);
+            recName := if isAnon { "" } else { frontend.recordDisplayName(kind) };
             if count == 0 {
                 outLine("    (void)v;");
-                outLine("    return printf(\"%s\", " + cLiteral.textLiteralCode(recName + " {}") + ");");
+                emptyTxt := if isAnon { "{}" } else { recName + " {}" };
+                outLine("    return printf(\"%s\", " + cLiteral.textLiteralCode(emptyTxt) + ");");
             } else {
-                outLine("    if (printf(\"%s\", " + cLiteral.textLiteralCode(recName + " { ") + ") < 0) { return -1; }");
+                openTxt := if isAnon { "{ " } else { recName + " { " };
+                outLine("    if (printf(\"%s\", " + cLiteral.textLiteralCode(openTxt) + ") < 0) { return -1; }");
                 var pi := 0;
                 loop pi < count {
                     comp := frontend.recordComponent(kind, pi);
                     sep := if pi == 0 { "" } else { ", " };
-                    outLine("    if (printf(\"%s\", " + cLiteral.textLiteralCode(sep + comp.label + " = ") + ") < 0) { return -1; }");
+                    keyDisp := if isAnon and not frontend.isSimpleRecordFieldIdent(comp.label) { "\"" + comp.label + "\"" } else { comp.label };
+                    outLine("    if (printf(\"%s\", " + cLiteral.textLiteralCode(sep + keyDisp + " = ") + ") < 0) { return -1; }");
                     outLine("    if (" + cCall(comp.kind, "v." + frontend.cFieldName(comp.prop)) + " < 0) { return -1; }");
                     pi = pi + 1;
                 }
@@ -5498,7 +5511,27 @@ emitCItemStream := fn(stream: frontend.Items, hoistedGlobals: frontend.TokenBuck
                 code = frontend.cRewriteExitDrops(code, fullRetDrop, curLoopDrop, fnResult, streamIdx + 10000);
             }
         }
-        if isCLocalDeclKind(item.kind) {
+        if item.kind == frontend.ITEM_KIND_OPT_PARAM_INIT {
+            pSafe := frontend.cSafeIdent(item.name);
+            hasVar := "lt_has_" + pSafe;
+            ownFlag := "lt_own_" + pSafe;
+            dFn := frontend.cDropFnForKind(item.textValue);
+            unwrapCode := if code.startsWithAt(0, "/*@CBLK:") {
+                endHdr := code.indexOf("@*/", 8);
+                retVar := code.slice(8, endHdr);
+                blkBody := code.slice(endHdr + 3, code.length());
+                blkBody + " " + item.runtime + " = " + retVar + ";"
+            } else {
+                item.runtime + " = " + code + ";"
+            };
+            if dFn =!= "" {
+                outLine(indent + "uint8_t " + ownFlag + " = 0; (void)" + ownFlag + ";");
+                outLine(indent + "if (!" + hasVar + ") { " + unwrapCode + " " + ownFlag + " = 1; }");
+                mut scopeOwned.pushBack((rt = item.runtime, kind = item.textValue, depth = 0, initFlag = ownFlag));
+            } else {
+                outLine(indent + "if (!" + hasVar + ") { " + unwrapCode + " }");
+            }
+        } else if isCLocalDeclKind(item.kind) {
             ownedK := cItemOwnedKind(item);
             needsInitFlag := item.intValue == 1 and ownedK =!= "";
             initFlagName := if needsInitFlag { "lt_init_" + item.runtime } else { "" };
@@ -6326,7 +6359,9 @@ collectSubKinds := fn(kind: String): List<String> {
         pCount := frontend.fnParamCount(kind);
         var pi := 0;
         loop pi < pCount {
-            subP := self(frontend.fnParamComponent(kind, pi).kind);
+            rawPK := frontend.fnParamComponent(kind, pi).kind;
+            basePK := if rawPK.startsWithAt(0, "mut ") { rawPK.slice(4, rawPK.length()) } else { rawPK };
+            subP := self(basePK);
             loop subP as s { mut out.pushBack(s); }
             pi = pi + 1;
         }
@@ -6588,18 +6623,46 @@ emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
     mut callParamsBuf.append(" f");
     mut callArgsBuf: tb.TextBuilder;
     mut callArgsBuf.append("f.env");
+    mut voidUnusedBuf: tb.TextBuilder;
     var i := 0;
     loop i < pCount {
-        pC := cScalarType(frontend.fnParamComponent(kind, i).kind);
+        rawPK := frontend.fnParamComponent(kind, i).kind;
+        isMutP := rawPK.startsWithAt(0, "mut ");
+        basePK := if isMutP { rawPK.slice(4, rawPK.length()) } else { rawPK };
+        pC := if isMutP and not frontend.isSliceKind(basePK) and not frontend.isDynKind(basePK) { cScalarType(basePK) + " *" } else { cScalarType(basePK) };
         aName := "a" + i.toText();
-        mut fpParamsBuf.append(", ");
-        mut fpParamsBuf.append(pC);
-        mut callParamsBuf.append(", ");
-        mut callParamsBuf.append(pC);
-        mut callParamsBuf.append(" ");
-        mut callParamsBuf.append(aName);
-        mut callArgsBuf.append(", ");
-        mut callArgsBuf.append(aName);
+        if frontend.fnParamIsOptional(kind, i) {
+            hName := "h" + i.toText();
+            mut fpParamsBuf.append(", bool, ");
+            mut fpParamsBuf.append(pC);
+            mut callParamsBuf.append(", bool ");
+            mut callParamsBuf.append(hName);
+            mut callParamsBuf.append(", ");
+            mut callParamsBuf.append(pC);
+            mut callParamsBuf.append(" ");
+            mut callParamsBuf.append(aName);
+            mut callArgsBuf.append(", ");
+            mut callArgsBuf.append(hName);
+            mut callArgsBuf.append(", ");
+            mut callArgsBuf.append(aName);
+            mut voidUnusedBuf.append("(void)");
+            mut voidUnusedBuf.append(hName);
+            mut voidUnusedBuf.append("; (void)");
+            mut voidUnusedBuf.append(aName);
+            mut voidUnusedBuf.append("; ");
+        } else {
+            mut fpParamsBuf.append(", ");
+            mut fpParamsBuf.append(pC);
+            mut callParamsBuf.append(", ");
+            mut callParamsBuf.append(pC);
+            mut callParamsBuf.append(" ");
+            mut callParamsBuf.append(aName);
+            mut callArgsBuf.append(", ");
+            mut callArgsBuf.append(aName);
+            mut voidUnusedBuf.append("(void)");
+            mut voidUnusedBuf.append(aName);
+            mut voidUnusedBuf.append("; ");
+        }
         i = i + 1;
     }
     fnCtx := frontend.fnContextKind(kind);
@@ -6611,10 +6674,12 @@ emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
         mut callParamsBuf.append(cCtxPtr);
         mut callParamsBuf.append("lite_ctx");
         mut callArgsBuf.append(", lite_ctx");
+        mut voidUnusedBuf.append("(void)lite_ctx; ");
     }
     fpParams := fpParamsBuf.build();
     callParams := callParamsBuf.build();
     callArgs := callArgsBuf.build();
+    voidUnused := voidUnusedBuf.build();
     outLine("typedef struct " + fTag + " { " + retC + " (*fn)(" + fpParams + "); void *env; } " + fTag + ";");
     outLine("LT_INLINE " + fTag + " " + fTag + "_copy(" + fTag + " f) {");
     outLine("    if (f.env != NULL) { lt_env_hdr *h = (lt_env_hdr *)f.env; if (h->clone != NULL) { return (" + fTag + "){ f.fn, h->clone(f.env) }; } }");
@@ -6627,9 +6692,10 @@ emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
     outLine("LT_INLINE " + fTag + " " + fTag + "_move(" + fTag + " *f) { " + fTag + " r = *f; f->fn = NULL; f->env = NULL; return r; }");
     if usesIntHelper(calls, fTag + "_call(") {
         if retC == "void" {
-            outLine("static void " + fTag + "_call(" + callParams + ") { f.fn(" + callArgs + "); }");
+            outLine("static void " + fTag + "_call(" + callParams + ") { if (f.fn == NULL) { " + voidUnused + "return; } f.fn(" + callArgs + "); }");
         } else {
-            outLine("static " + retC + " " + fTag + "_call(" + callParams + ") { return f.fn(" + callArgs + "); }");
+            zRet := normalizeCBuiltinCalls(frontend.cZeroExprForFnCall(retKind));
+            outLine("static " + retC + " " + fTag + "_call(" + callParams + ") { if (f.fn == NULL) { " + voidUnused + "return " + zRet + "; } return f.fn(" + callArgs + "); }");
         }
     }
     outLine("");
@@ -9974,7 +10040,8 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         if item.kind == frontend.ITEM_KIND_LOCAL_LIST or item.kind == frontend.ITEM_KIND_VAR_LIST or item.kind == frontend.ITEM_KIND_ASSIGN_LIST or
         item.kind == frontend.ITEM_KIND_LOCAL_TUPLE or item.kind == frontend.ITEM_KIND_VAR_TUPLE or item.kind == frontend.ITEM_KIND_ASSIGN_TUPLE or
         item.kind == frontend.ITEM_KIND_LOCAL_RECORD or item.kind == frontend.ITEM_KIND_VAR_RECORD or item.kind == frontend.ITEM_KIND_ASSIGN_RECORD or
-        item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN {
+        item.kind == frontend.ITEM_KIND_LOCAL_FN or item.kind == frontend.ITEM_KIND_VAR_FN or item.kind == frontend.ITEM_KIND_ASSIGN_FN or
+        item.kind == frontend.ITEM_KIND_OPT_PARAM_INIT {
             if frontend.cArrayTag(item.textValue) =!= "" or cListTagForKind(item.textValue) =!= "" or frontend.cStructTag(item.textValue) =!= "" or frontend.cMapTag(item.textValue) =!= "" or frontend.cSetTag(item.textValue) =!= "" or frontend.cRcTag(item.textValue) =!= "" or frontend.cSliceTag(item.textValue) =!= "" or frontend.cDynTag(item.textValue) =!= "" or frontend.cSimdTag(item.textValue) =!= "" or frontend.cSoaTag(item.textValue) =!= "" or frontend.cCtxTag(item.textValue) =!= "" or frontend.cFnTag(item.textValue) =!= "" {
                 mut seedKinds.pushBack(item.textValue);
             }

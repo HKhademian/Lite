@@ -3015,9 +3015,18 @@ evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: St
         ch := source.at(cursor);
         if ch == "." {
             fStart := syntax.skipTrivia(source, cursor + 1, prefix);
-            if fStart >= limitPos or not source.at(fStart).isNameStart() { break; }
-            fEnd := source.skipName(fStart);
-            fName := source.slice(fStart, fEnd);
+            var fName := "";
+            var fEnd := fStart;
+            if fStart < limitPos and source.at(fStart) == "\"" and types.isRecordKind(ctPool[curId].kind) {
+                qF := syntax.parseText(ir.TARGET_TS, source, fStart, prefix);
+                fName = qF.textValue;
+                fEnd = qF.next;
+            } else if fStart < limitPos and source.at(fStart).isNameStart() {
+                fEnd = source.skipName(fStart);
+                fName = source.slice(fStart, fEnd);
+            } else {
+                break;
+            }
             afterF := syntax.skipTrivia(source, fEnd, prefix);
             if afterF < limitPos and (source.at(afterF) == "(" or source.at(afterF) == "<") {
                 var argParen := afterF;
@@ -3445,8 +3454,12 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
         } else {
             return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve ." + cName + " at compile time" }, next = cEnd);
         }
-    } else if ch == "{" and types.isRecordKind(expectedKind) {
-        recR := evalRecordLiteralAt(source, start, limitPos, prefix, expectedKind, mut frame, mut budget);
+    } else if ch == "{" {
+        recR := if types.isRecordKind(expectedKind) and not types.isAnonRecordKind(expectedKind) {
+            evalRecordLiteralAt(source, start, limitPos, prefix, expectedKind, mut frame, mut budget)
+        } else {
+            evalInferredRecordLiteralAt(source, start, limitPos, prefix, expectedKind, mut frame, mut budget)
+        };
         if recR.outcome.flow =!= FLOW_NONE { return recR; }
         res = recR.outcome;
         resNext = recR.next;
@@ -3824,6 +3837,105 @@ evalRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int, prefix:
         mut fieldVals.setAt(0, makeStrVal("Error", "", mut budget));
     }
     (outcome = CtOutcome { ok = true, valId = makeRecordVal(recordKind, fieldVals, fieldNames, mut budget), flow = FLOW_NONE, error = "" }, next = endPos)
+};
+
+/** Evaluates an inferred structural record literal `{}` or `{ "k"[: T] = v, k[: T] = v, =shorthand }` in written order and sorts fields into canonical `Record<$anon;...>` order. */
+evalInferredRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int, prefix: String, expectedKind: String, frame: mut CtFrame, budget: mut EvalBudget): (outcome: CtOutcome, next: Int) {
+    expRec := if types.isAnonRecordKind(expectedKind) { expectedKind } else { "" };
+    var cursor := syntax.skipTrivia(source, openBrace + 1, prefix);
+    if cursor < limitPos and source.at(cursor) == "}" {
+        emptyK := types.buildAnonRecordKind([]);
+        return (outcome = CtOutcome { ok = true, valId = makeRecordVal(emptyK, [], [], mut budget), flow = FLOW_NONE, error = "" }, next = cursor + 1);
+    }
+    if cursor >= limitPos {
+        return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "expected } in record literal" }, next = openBrace);
+    }
+    if not syntax.isSingleEquals(source, cursor) and source.at(cursor) =!= "\"" {
+        var looksLikeRec := false;
+        if source.at(cursor).isNameStart() {
+            fE := source.skipName(cursor);
+            fLbl := source.slice(cursor, fE);
+            fAfter := syntax.skipTrivia(source, fE, prefix);
+            if not syntax.isReservedWord(fLbl) and fAfter < limitPos and (syntax.isSingleEquals(source, fAfter) or (source.at(fAfter) == ":" and not source.startsWithAt(fAfter, ":="))) {
+                looksLikeRec = true;
+            }
+        }
+        if not looksLikeRec {
+            return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "standalone block expressions must use do { ... }" }, next = openBrace);
+        }
+    }
+    mut fieldSpecs: List<(label: String, kind: String)> = [];
+    mut supMap: Map<String, Int>;
+    loop cursor < limitPos and source.at(cursor) =!= "}" {
+        var kName := "";
+        var explicitKind := "";
+        var valPos := cursor;
+        if syntax.isSingleEquals(source, cursor) {
+            shS := syntax.skipTrivia(source, cursor + 1, prefix);
+            shE := source.skipName(shS);
+            kName = source.slice(shS, shE);
+            valPos = shS;
+        } else if source.at(cursor) == "\"" {
+            qStr := syntax.parseText(ir.TARGET_TS, source, cursor, prefix);
+            kName = qStr.textValue;
+            afterQ := syntax.skipTrivia(source, qStr.next, prefix);
+            if afterQ < limitPos and source.at(afterQ) == ":" and not source.startsWithAt(afterQ, ":=") {
+                tyR := resolveCtTypeAt(source, syntax.skipTrivia(source, afterQ + 1, prefix), prefix, frame.aliases);
+                if not tyR.ok {
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve record field type" }, next = afterQ);
+                }
+                explicitKind = tyR.kind;
+                eqP := syntax.skipTrivia(source, tyR.next, prefix);
+                valPos = syntax.skipTrivia(source, eqP + 1, prefix);
+            } else {
+                valPos = syntax.skipTrivia(source, afterQ + 1, prefix);
+            }
+        } else {
+            kE := source.skipName(cursor);
+            kName = source.slice(cursor, kE);
+            afterK := syntax.skipTrivia(source, kE, prefix);
+            if afterK < limitPos and source.at(afterK) == ":" and not source.startsWithAt(afterK, ":=") {
+                tyR := resolveCtTypeAt(source, syntax.skipTrivia(source, afterK + 1, prefix), prefix, frame.aliases);
+                if not tyR.ok {
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve record field type" }, next = afterK);
+                }
+                explicitKind = tyR.kind;
+                eqP := syntax.skipTrivia(source, tyR.next, prefix);
+                valPos = syntax.skipTrivia(source, eqP + 1, prefix);
+            } else {
+                valPos = syntax.skipTrivia(source, afterK + 1, prefix);
+            }
+        }
+        if supMap.has(kName) {
+            return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "duplicate record field " + kName }, next = cursor);
+        }
+        hintKind := if explicitKind =!= "" { explicitKind } else if expRec =!= "" { types.recordFieldKind(expRec, kName) } else { "" };
+        ev := evalExprAt(source, valPos, limitPos, prefix, hintKind, mut frame, mut budget);
+        if ev.outcome.flow =!= FLOW_NONE { return ev; }
+        vId := cloneValIfContainer(ev.outcome.valId, "", mut budget);
+        vKind := if explicitKind =!= "" { explicitKind } else { ctPool[vId].kind };
+        cVal := if explicitKind =!= "" { coerceCtValue(explicitKind, ctPool[vId].kind, vId, mut budget) } else { vId };
+        mut fieldSpecs.pushBack((label = kName, kind = vKind));
+        mut supMap.set(kName, cVal);
+        cursor = syntax.skipTrivia(source, ev.next, prefix);
+        if cursor < limitPos and (source.at(cursor) == "," or source.at(cursor) == ";") {
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+        } else { break; }
+    }
+    endPos := if cursor < limitPos and source.at(cursor) == "}" { cursor + 1 } else { cursor };
+    recKind := types.buildAnonRecordKind(fieldSpecs);
+    compCount := types.recordComponentCount(recKind);
+    mut fieldVals: List<Int> = [];
+    mut fieldNames: List<String> = [];
+    var ci := 0;
+    loop ci < compCount {
+        comp := types.recordComponent(recKind, ci);
+        mut fieldNames.pushBack(comp.label);
+        got := supMap.get(comp.label);
+        mut fieldVals.pushBack(got.value);
+        ci = ci + 1;
+    }
+    (outcome = CtOutcome { ok = true, valId = makeRecordVal(recKind, fieldVals, fieldNames, mut budget), flow = FLOW_NONE, error = "" }, next = endPos)
 };
 
 /** Precedence-climbing expression evaluator (`minimum` precedence), handling `: Type`, `else`, comparisons, `and`/`or`, and arithmetic. */
@@ -4327,7 +4439,7 @@ pub materializeValue := fn(target: String, kind: String, valId: Int): (code: Str
             if target == ir.TARGET_C {
                 mut parts.pushBack("." + types.cFieldName(comp.prop) + " = " + mc);
             } else {
-                mut parts.pushBack(comp.prop + ": " + mc);
+                mut parts.pushBack(types.tsRecordPropKey(comp.label) + ": " + mc);
             }
             i = i + 1;
         }

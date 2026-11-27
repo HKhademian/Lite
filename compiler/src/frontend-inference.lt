@@ -286,6 +286,94 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
     } else if ch == "{" {
         blockClose := syntax.scanBraceEnd(source, start, prefix);
         if blockClose < 0 { return (kind = "", next = start); }
+        inBrace := syntax.skipTrivia(source, start + 1, prefix);
+        var isRecLit := false;
+        if inBrace < blockClose and source.at(inBrace) == "}" {
+            leftKind = types.buildAnonRecordKind([]);
+            leftNext = blockClose;
+            isRecLit = true;
+        } else if inBrace < blockClose and (syntax.isSingleEquals(source, inBrace) or source.at(inBrace) == "\"") {
+            isRecLit = true;
+        } else if inBrace < blockClose and source.at(inBrace).isNameStart() {
+            rKeyEnd := source.skipName(inBrace);
+            rKeyName := source.slice(inBrace, rKeyEnd);
+            rAfter := syntax.skipTrivia(source, rKeyEnd, prefix);
+            if not syntax.isReservedWord(rKeyName) and rAfter < blockClose and (syntax.isSingleEquals(source, rAfter) or (source.at(rAfter) == ":" and not source.startsWithAt(rAfter, ":="))) {
+                isRecLit = true;
+            }
+        }
+        if isRecLit and leftKind == "" {
+            mut rFields: List<(label: String, kind: String)> = [];
+            mut rSeen: List<String> = [];
+            var rCur := inBrace;
+            var rOk := true;
+            loop rCur < blockClose - 1 {
+                var rLabel := "";
+                var rValStart := rCur;
+                var rExpKind := "";
+                if syntax.isSingleEquals(source, rCur) {
+                    shS := syntax.skipTrivia(source, rCur + 1, prefix);
+                    if shS >= blockClose - 1 or not source.at(shS).isNameStart() { rOk = false; break; }
+                    shE := source.skipName(shS);
+                    rLabel = source.slice(shS, shE);
+                    rValStart = shS;
+                } else if source.at(rCur) == "\"" {
+                    qStr := syntax.parseText(ir.TARGET_TS, source, rCur, prefix);
+                    rLabel = qStr.textValue;
+                    afterQ := syntax.skipTrivia(source, qStr.next, prefix);
+                    if afterQ < blockClose and source.at(afterQ) == ":" and not source.startsWithAt(afterQ, ":=") {
+                        tRes := types.canResolveTypeAt(source, syntax.skipTrivia(source, afterQ + 1, prefix), prefix, aliases, "", [], 32);
+                        if not tRes.ok { rOk = false; break; }
+                        rExpKind = tRes.kind;
+                        eqP := syntax.skipTrivia(source, tRes.next, prefix);
+                        if not syntax.isSingleEquals(source, eqP) { rOk = false; break; }
+                        rValStart = syntax.skipTrivia(source, eqP + 1, prefix);
+                    } else if syntax.isSingleEquals(source, afterQ) {
+                        rValStart = syntax.skipTrivia(source, afterQ + 1, prefix);
+                    } else {
+                        rOk = false; break;
+                    }
+                } else if source.at(rCur).isNameStart() {
+                    kE := source.skipName(rCur);
+                    rLabel = source.slice(rCur, kE);
+                    afterK := syntax.skipTrivia(source, kE, prefix);
+                    if afterK < blockClose and source.at(afterK) == ":" and not source.startsWithAt(afterK, ":=") {
+                        tRes := types.canResolveTypeAt(source, syntax.skipTrivia(source, afterK + 1, prefix), prefix, aliases, "", [], 32);
+                        if not tRes.ok { rOk = false; break; }
+                        rExpKind = tRes.kind;
+                        eqP := syntax.skipTrivia(source, tRes.next, prefix);
+                        if not syntax.isSingleEquals(source, eqP) { rOk = false; break; }
+                        rValStart = syntax.skipTrivia(source, eqP + 1, prefix);
+                    } else if syntax.isSingleEquals(source, afterK) {
+                        rValStart = syntax.skipTrivia(source, afterK + 1, prefix);
+                    } else {
+                        rOk = false; break;
+                    }
+                } else {
+                    rOk = false; break;
+                }
+                if rSeen.contains(rLabel) { rOk = false; break; }
+                mut rSeen.pushBack(rLabel);
+                vInf := self(source, rValStart, prefix, aliases, functions, params, locals, futureValues, rExpKind, 0, depthLeft - 1);
+                fKind := if rExpKind =!= "" { rExpKind } else { vInf.kind };
+                if fKind == "" or fKind == ir.VALUE_KIND_UNIT or fKind == ir.VALUE_KIND_NEVER { rOk = false; break; }
+                mut rFields.pushBack((label = rLabel, kind = fKind));
+                if vInf.next <= rValStart { rOk = false; break; }
+                rAfter := syntax.skipTrivia(source, vInf.next, prefix);
+                if rAfter < blockClose - 1 and source.at(rAfter) == "," {
+                    rCur = syntax.skipTrivia(source, rAfter + 1, prefix);
+                } else if rAfter == blockClose - 1 {
+                    rCur = rAfter;
+                    break;
+                } else {
+                    rOk = false; break;
+                }
+            }
+            if not rOk { return (kind = "", next = start); }
+            leftKind = types.buildAnonRecordKind(rFields);
+            leftNext = blockClose;
+        }
+        if not isRecLit {
         tailPos := tryInferBlockTailStart(source, start, blockClose, prefix);
         if tailPos < 0 {
             leftKind = ir.VALUE_KIND_UNIT;
@@ -307,6 +395,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
             }
         }
         leftNext = endAfterBlk;
+        }
     } else if ch == "i" and source.wordAt(start, "if") {
         var curIf := start + 2;
         var accKind := "";

@@ -129,6 +129,9 @@ pub tupleObjectKey := fn(label: String, index: Int): String {
 pub skipKindToken := fn(kind: String, start: Int): Int {
     size := kind.length();
     if start >= size { return start; }
+    if kind.startsWithAt(start, "mut ") {
+        return self(kind, start + 4);
+    }
     if kind.startsWithAt(start, "fn(") {
         var cursor := start + 2;
         var depth := 0;
@@ -140,6 +143,19 @@ pub skipKindToken := fn(kind: String, start: Int): Int {
                 if depth == 0 { cursor = cursor + 1; break; }
             }
             cursor = cursor + 1;
+        }
+        if kind.startsWithAt(cursor, "@ctx(") {
+            var cCur := cursor + 4;
+            var cDepth := 0;
+            loop cCur < size {
+                cCh := kind.at(cCur);
+                if cCh == "(" or cCh == "[" or cCh == "<" { cDepth = cDepth + 1; }
+                else if cCh == ")" or cCh == "]" or cCh == ">" {
+                    cDepth = cDepth - 1;
+                    if cDepth == 0 { cursor = cCur + 1; break; }
+                }
+                cCur = cCur + 1;
+            }
         }
         if cursor < size and kind.at(cursor) == ":" {
             return self(kind, cursor + 1);
@@ -277,14 +293,15 @@ pub fnResultKind := fn(kind: String): String {
     kind.slice(colon + 1, kind.length())
 };
 
-/** Parses `label:Kind` components inside a parameter list `fn(...)`; returns parameter count. */
+/** Parses `label[?]:Kind` components inside a parameter list `fn(...)`; returns parameter count. */
 pub fnParamCount := fn(kind: String): Int {
     close := fnCloseParenIndex(kind);
     if close <= 3 { return 0; }
     var cursor := 3;
     var count := 0;
     loop cursor < close {
-        if kind.at(cursor) =!= ":" { cursor = kind.skipName(cursor); }
+        if kind.at(cursor) =!= ":" and kind.at(cursor) =!= "?" { cursor = kind.skipName(cursor); }
+        if cursor < close and kind.at(cursor) == "?" { cursor = cursor + 1; }
         if cursor < close and kind.at(cursor) == ":" { cursor = cursor + 1; }
         cursor = skipKindToken(kind, cursor);
         count = count + 1;
@@ -301,11 +318,12 @@ pub fnParamComponent := fn(kind: String, targetIndex: Int): (label: String, kind
     var index := 0;
     loop cursor < close {
         var label := "";
-        if kind.at(cursor) =!= ":" {
+        if kind.at(cursor) =!= ":" and kind.at(cursor) =!= "?" {
             nameStart := cursor;
             cursor = kind.skipName(cursor);
             label = kind.slice(nameStart, cursor);
         }
+        if cursor < close and kind.at(cursor) == "?" { cursor = cursor + 1; }
         if cursor < close and kind.at(cursor) == ":" { cursor = cursor + 1; }
         typeStart := cursor;
         cursor = skipKindToken(kind, cursor);
@@ -318,7 +336,42 @@ pub fnParamComponent := fn(kind: String, targetIndex: Int): (label: String, kind
     (label = "", kind = "")
 };
 
-/** Converts a canonical `fn(...):Ret` kind into `name=kind` parameter entries compatible with call routing. */
+/** True when parameter `targetIndex` of canonical `fn(...):Ret` kind is omittable (`n?:T` or `?:T`). */
+pub fnParamIsOptional := fn(kind: String, targetIndex: Int): Bool {
+    close := fnCloseParenIndex(kind);
+    if close <= 3 or targetIndex < 0 { return false; }
+    var cursor := 3;
+    var index := 0;
+    loop cursor < close {
+        if kind.at(cursor) =!= ":" and kind.at(cursor) =!= "?" {
+            cursor = kind.skipName(cursor);
+        }
+        var isOpt := false;
+        if cursor < close and kind.at(cursor) == "?" {
+            isOpt = true;
+            cursor = cursor + 1;
+        }
+        if cursor < close and kind.at(cursor) == ":" { cursor = cursor + 1; }
+        cursor = skipKindToken(kind, cursor);
+        if index == targetIndex { return isOpt; }
+        index = index + 1;
+        if cursor < close and kind.at(cursor) == "," { cursor = cursor + 1; }
+    }
+    false
+};
+
+/** True when any parameter of canonical `fn(...):Ret` kind is omittable. */
+pub fnHasOptionalParams := fn(kind: String): Bool {
+    n := fnParamCount(kind);
+    var i := 0;
+    loop i < n {
+        if fnParamIsOptional(kind, i) { return true; }
+        i = i + 1;
+    }
+    false
+};
+
+/** Converts a canonical `fn(...):Ret` kind into `name[?]=kind` parameter entries compatible with call routing. */
 pub fnParamEntries := fn(kind: String): List<String> {
     mut entries: List<String> = [];
     close := fnCloseParenIndex(kind);
@@ -326,21 +379,26 @@ pub fnParamEntries := fn(kind: String): List<String> {
     var cursor := 3;
     loop cursor < close {
         var label := "";
-        if kind.at(cursor) =!= ":" {
+        if kind.at(cursor) =!= ":" and kind.at(cursor) =!= "?" {
             nameStart := cursor;
             cursor = kind.skipName(cursor);
             label = kind.slice(nameStart, cursor);
         }
+        var optSuffix := "";
+        if cursor < close and kind.at(cursor) == "?" {
+            optSuffix = "?";
+            cursor = cursor + 1;
+        }
         if cursor < close and kind.at(cursor) == ":" { cursor = cursor + 1; }
         typeStart := cursor;
         cursor = skipKindToken(kind, cursor);
-        mut entries.pushBack(label + "=" + kind.slice(typeStart, cursor));
+        mut entries.pushBack(label + optSuffix + "=" + kind.slice(typeStart, cursor));
         if cursor < close and kind.at(cursor) == "," { cursor = cursor + 1; }
     }
     entries
 };
 
-/** Removes parameter labels from a canonical `fn` kind when joining differently labeled callable branches. */
+/** Removes parameter labels (preserving `?` omission markers) from a canonical `fn` kind when joining differently labeled callable branches. */
 pub fnStripLabels := fn(kind: String): String {
     if not isFnKind(kind) { return kind; }
     count := fnParamCount(kind);
@@ -350,6 +408,7 @@ pub fnStripLabels := fn(kind: String): String {
     loop idx < count {
         if idx > 0 { mut out.append(","); }
         comp := fnParamComponent(kind, idx);
+        if fnParamIsOptional(kind, idx) { mut out.append("?"); }
         mut out.append(":");
         mut out.append(if isFnKind(comp.kind) { self(comp.kind) } else { comp.kind });
         idx = idx + 1;
@@ -1580,6 +1639,7 @@ pub enumIdentityHeader := fn(kind: String): String {
 
 /** Returns the canonical nominal type-operation owner key for `kind`, or `""` for non-nominal types. */
 pub typeOpOwnerKey := fn(kind: String): String {
+    if isAnonRecordKind(kind) { return ""; }
     if isRecordKind(kind) {
         semi := recordHeaderSemi(kind);
         if semi <= 7 { return ""; }
@@ -1821,10 +1881,119 @@ escapeEnumStringLiteral := fn(code: String): String {
     parts.join("")
 };
 
-/** True when `kind` is this compiler's canonical nominal record kind `Record<id#at#DisplayName;f1:K1,...>`. */
+/** True when `kind` is this compiler's canonical nominal or structural anonymous record kind `Record<...;...>`. */
 pub isRecordKind := fn(kind: String): Bool {
     size := kind.length();
     size > 8 and kind.startsWithAt(0, "Record<") and kind.at(size - 1) == ">"
+};
+
+/** True when `kind` is a standalone structural anonymous record `Record<$anon;...>`. */
+pub isAnonRecordKind := fn(kind: String): Bool {
+    isRecordKind(kind) and kind.startsWithAt(7, "$anon;")
+};
+
+/** True when `label` can appear directly as a clean unescaped canonical record field key. */
+pub isSimpleRecordFieldIdent := fn(label: String): Bool {
+    if label == "" or label.startsWithAt(0, "$") { return false; }
+    if not label.at(0).isNameStart() { return false; }
+    label.skipName(0) == label.length()
+};
+
+hexByte2 := fn(b: Int): String {
+    hex := "0123456789abcdef";
+    hi := (b / 16) % 16;
+    lo := b % 16;
+    hex.at(hi) + hex.at(lo)
+};
+
+hexVal1 := fn(ch: String): Int {
+    if ch == "0" { 0 } else if ch == "1" { 1 } else if ch == "2" { 2 } else if ch == "3" { 3 }
+    else if ch == "4" { 4 } else if ch == "5" { 5 } else if ch == "6" { 6 } else if ch == "7" { 7 }
+    else if ch == "8" { 8 } else if ch == "9" { 9 } else if ch == "a" { 10 } else if ch == "b" { 11 }
+    else if ch == "c" { 12 } else if ch == "d" { 13 } else if ch == "e" { 14 } else if ch == "f" { 15 }
+    else { -1 }
+};
+
+/** Encodes a record field label into a delimiter-safe canonical field key (`raw` or `$k_<utf8hex>`). */
+pub encodeRecordFieldLabel := fn(rawLabel: String): String {
+    if isSimpleRecordFieldIdent(rawLabel) { return rawLabel; }
+    mut out: tb.TextBuilder;
+    mut out.append("$k_");
+    loop rawLabel.utf8Encode() as b {
+        mut out.append(hexByte2(b));
+    }
+    out.build()
+};
+
+/** Decodes an encoded record field key back into its source field label. */
+pub decodeRecordFieldLabel := fn(encLabel: String): String {
+    if not encLabel.startsWithAt(0, "$k_") { return encLabel; }
+    mut bytes: List<Int> = [];
+    var i := 3;
+    len := encLabel.length();
+    loop i + 1 < len {
+        hi := hexVal1(encLabel.at(i));
+        lo := hexVal1(encLabel.at(i + 1));
+        if hi < 0 or lo < 0 { return encLabel; }
+        mut bytes.pushBack(hi * 16 + lo);
+        i = i + 2;
+    }
+    res := String.fromUtf8Strict(bytes);
+    if res.ok { res.text } else { encLabel }
+};
+
+/** Builds a canonical key-sorted structural anonymous record kind `Record<$anon;f1:K1,...>`. */
+pub buildAnonRecordKind := fn(fields: List<(label: String, kind: String)>): String {
+    n := fields.length();
+    if n == 0 { return "Record<$anon;>"; }
+    mut sorted := fields;
+    var i := 0;
+    loop i < n {
+        var minIdx := i;
+        var j := i + 1;
+        loop j < n {
+            if sorted[j].label.compare(sorted[minIdx].label) < 0 {
+                minIdx = j;
+            }
+            j = j + 1;
+        }
+        if minIdx =!= i {
+            tmp := sorted[i];
+            mut sorted.setAt(i, sorted[minIdx]);
+            mut sorted.setAt(minIdx, tmp);
+        }
+        i = i + 1;
+    }
+    mut parts: List<String> = [];
+    loop sorted as f {
+        mut parts.pushBack(encodeRecordFieldLabel(f.label) + ":" + f.kind);
+    }
+    "Record<$anon;" + parts.join(",") + ">"
+};
+
+/** Returns true when `label` is safe to write unquoted as a JS/TS property name (`obj.label`). */
+isJsSimpleIdent := fn(label: String): Bool {
+    if label == "" or label == "__proto__" or label == "constructor" { return false; }
+    c0 := label.at(0);
+    if not (c0.isAsciiLetter() or c0 == "_") { return false; }
+    var i := 1;
+    len := label.length();
+    loop i < len {
+        ch := label.at(i);
+        if not (ch.isAsciiLetter() or ch.isDigit() or ch == "_") { return false; }
+        i = i + 1;
+    }
+    true
+};
+
+/** Formats a record field label as a TS object-literal or interface property key. */
+pub tsRecordPropKey := fn(label: String): String {
+    if isJsSimpleIdent(label) { label } else { tsLiteral.textLiteralCode(label) }
+};
+
+/** Formats a TS property read expression for field `label` on `objCode`. */
+pub tsRecordFieldAccess := fn(objCode: String, label: String): String {
+    if isJsSimpleIdent(label) { objCode + "." + label } else { objCode + "[" + tsLiteral.textLiteralCode(label) + "]" }
 };
 
 /** Finds the top-level `;` separating header metadata from fields in `Record<id#at#Name[<...>];...>`, or -1 when malformed. */
@@ -1847,8 +2016,21 @@ recordHeaderSemi := fn(kind: String): Int {
     -1
 };
 
-/** Returns the source declaration display name from canonical `Record<id#at#DisplayName[<...>];...>`. */
+/** Returns the source declaration display name from canonical `Record<id#at#DisplayName[<...>];...>`, or anonymous record shape. */
 pub recordDisplayName := fn(kind: String): String {
+    if isAnonRecordKind(kind) {
+        fc := recordComponentCount(kind);
+        if fc == 0 { return "{}"; }
+        mut parts: List<String> = [];
+        var fi := 0;
+        loop fi < fc {
+            comp := recordComponent(kind, fi);
+            keyTxt := if isSimpleRecordFieldIdent(comp.label) { comp.label } else { "\"" + comp.label + "\"" };
+            mut parts.pushBack(keyTxt + ": " + displayKind(comp.kind));
+            fi = fi + 1;
+        }
+        return "{ " + parts.join(", ") + " }";
+    }
     semi := recordHeaderSemi(kind);
     if semi <= 7 { return kind; }
     headerDisplayName(kind.slice(7, semi))
@@ -1885,13 +2067,15 @@ cachedRecordComponents := fn(kind: String): List<ComponentInfo> {
         var index := 0;
         loop cursor < end {
             nameStart := cursor;
-            cursor = kind.skipName(cursor);
-            label := kind.slice(nameStart, cursor);
+            cursor = if kind.at(cursor) == "$" { kind.skipName(cursor + 1) } else { kind.skipName(cursor) };
+            encLabel := kind.slice(nameStart, cursor);
+            label := decodeRecordFieldLabel(encLabel);
             if cursor < end and kind.at(cursor) == ":" { cursor = cursor + 1; }
             typeStart := cursor;
             cursor = skipKindToken(kind, cursor);
             fieldKind := kind.slice(typeStart, cursor);
-            mut out.pushBack(ComponentInfo { label = label, kind = fieldKind, prop = tupleRuntimeProp(label, index) });
+            propName := if encLabel.startsWithAt(0, "$k_") { encLabel } else { tupleRuntimeProp(label, index) };
+            mut out.pushBack(ComponentInfo { label = label, kind = fieldKind, prop = propName });
             index = index + 1;
             if cursor < end and kind.at(cursor) == "," { cursor = cursor + 1; }
         }
@@ -2038,7 +2222,9 @@ cIsSupportedElem := fn(kind: String): Bool {
         var paramsOk := true;
         var pi := 0;
         loop pi < pCount {
-            if not self(fnParamComponent(kind, pi).kind) { paramsOk = false; break; }
+            rawPK := fnParamComponent(kind, pi).kind;
+            basePK := if rawPK.startsWithAt(0, "mut ") { rawPK.slice(4, rawPK.length()) } else { rawPK };
+            if not self(basePK) { paramsOk = false; break; }
             pi = pi + 1;
         }
         fnCtx := fnContextKind(kind);
@@ -2074,6 +2260,7 @@ pub cFnTag := fn(kind: String): String {
     var i := 0;
     loop i < pCount {
         if i > 0 { mut sigBuf.append(","); }
+        if fnParamIsOptional(kind, i) { mut sigBuf.append("?"); }
         mut sigBuf.append(fnParamComponent(kind, i).kind);
         i = i + 1;
     }
@@ -2551,7 +2738,7 @@ pub needsTsTypeAnnotation := fn(kind: String): Bool {
 };
 
 /** True when `expectedKind` and `actualKind` represent structurally identical kinds modulo callable/tuple parameter labels. */
-exactShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
+pub exactShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
     if expectedKind == actualKind { return true; }
     if isCtxKind(expectedKind) and isCtxKind(actualKind) {
         eSlots := contexts.parseCtxKindSlots(expectedKind);
@@ -2577,6 +2764,7 @@ exactShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
         if count =!= fnParamCount(actualKind) { return false; }
         var idx := 0;
         loop idx < count {
+            if fnParamIsOptional(expectedKind, idx) =!= fnParamIsOptional(actualKind, idx) { return false; }
             eComp := fnParamComponent(expectedKind, idx);
             aComp := fnParamComponent(actualKind, idx);
             if not self(eComp.kind, aComp.kind) { return false; }
@@ -2629,6 +2817,68 @@ exactShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
 /** True when `expectedKind` and `actualKind` are callable kinds with matching parameter and return shapes. */
 pub fnShapeMatches := fn(expectedKind: String, actualKind: String): Bool {
     isFnKind(expectedKind) and isFnKind(actualKind) and exactShapeMatches(expectedKind, actualKind)
+};
+
+/** True when `expectedKind` and `actualKind` share identical runtime ABI shapes (modulo labels). */
+pub fnRuntimeSameShape := fn(expectedKind: String, actualKind: String): Bool {
+    fnShapeMatches(expectedKind, actualKind)
+};
+
+/** Subtype relation permitted during callable input contravariance and result covariance (no implicit numeric or record coercions). */
+isCallableVarianceSubkind := fn(superKind: String, subKind: String): Bool {
+    if superKind == subKind or exactShapeMatches(superKind, subKind) { return true; }
+    if superKind =!= "" and subKind == ir.VALUE_KIND_NEVER { return true; }
+    if isFnKind(superKind) and isFnKind(subKind) {
+        return fnVarianceCompatible(superKind, subKind);
+    }
+    if isUnionKind(superKind) {
+        eMems := unionMembers(superKind);
+        loop unionMembers(subKind) as am {
+            var matched := false;
+            loop eMems as em {
+                if self(em, am) { matched = true; break; }
+            }
+            if not matched { return false; }
+        }
+        return true;
+    }
+    if isResultKind(superKind) and isResultKind(subKind) {
+        return self(resultOkKind(superKind), resultOkKind(subKind)) and
+        self(resultErrKind(superKind), resultErrKind(subKind));
+    }
+    false
+};
+
+/** True when `actualKind` can be safely adapted into destination callable view `expectedKind`. */
+pub fnVarianceCompatible := fn(expectedKind: String, actualKind: String): Bool {
+    if not isFnKind(expectedKind) or not isFnKind(actualKind) { return false; }
+    if exactShapeMatches(expectedKind, actualKind) { return true; }
+    eCtx := fnContextKind(expectedKind);
+    aCtx := fnContextKind(actualKind);
+    if (eCtx == "" and aCtx =!= "") or (eCtx =!= "" and aCtx == "") { return false; }
+    if eCtx =!= "" and not exactShapeMatches(eCtx, aCtx) { return false; }
+    count := fnParamCount(expectedKind);
+    if count =!= fnParamCount(actualKind) { return false; }
+    var idx := 0;
+    loop idx < count {
+        eOpt := fnParamIsOptional(expectedKind, idx);
+        aOpt := fnParamIsOptional(actualKind, idx);
+        if eOpt and not aOpt { return false; }
+        eRaw := fnParamComponent(expectedKind, idx).kind;
+        aRaw := fnParamComponent(actualKind, idx).kind;
+        eMut := eRaw.startsWithAt(0, "mut ");
+        aMut := aRaw.startsWithAt(0, "mut ");
+        if eMut or aMut {
+            if not eMut or not aMut { return false; }
+            eBase := eRaw.slice(4, eRaw.length());
+            aBase := aRaw.slice(4, aRaw.length());
+            if not exactShapeMatches(eBase, aBase) { return false; }
+        } else if not isCallableVarianceSubkind(aRaw, eRaw) {
+            return false;
+        }
+        idx = idx + 1;
+    }
+    isCallableVarianceSubkind(fnResultKind(expectedKind), fnResultKind(actualKind))
 };
 
 /** True when `kind` is or contains a callable function kind (for display and backend checks). */
@@ -3061,7 +3311,8 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
         var i := 0;
         loop i < n {
             comp := fnParamComponent(pattern, i);
-            mut parts.pushBack(comp.label + ":" + self(genericParams, comp.kind, bindings));
+            optTok := if fnParamIsOptional(pattern, i) { "?:" } else { ":" };
+            mut parts.pushBack(comp.label + optTok + self(genericParams, comp.kind, bindings));
             i = i + 1;
         }
         rawCtx := fnContextKind(pattern);
@@ -3102,7 +3353,7 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
         var fi := 0;
         loop fi < fc {
             comp := recordComponent(pattern, fi);
-            mut fieldParts.pushBack(comp.label + ":" + self(genericParams, comp.kind, bindings));
+            mut fieldParts.pushBack(encodeRecordFieldLabel(comp.label) + ":" + self(genericParams, comp.kind, bindings));
             fi = fi + 1;
         }
         return "Record<" + newHdr + ";" + fieldParts.join(",") + ">";
@@ -3592,13 +3843,16 @@ pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
     (isArrayKind(expectedKind) and arrayExtent(expectedKind) == -1 and isArrayKind(actualKind) and self(arrayElementKind(expectedKind), arrayElementKind(actualKind))) {
         return true;
     }
+    if isFnKind(expectedKind) and isFnKind(actualKind) {
+        return fnVarianceCompatible(expectedKind, actualKind);
+    }
     if isUnionKind(expectedKind) {
         if unionContainsAll(expectedKind, actualKind) { return true; }
         eMems := unionMembers(expectedKind);
         loop unionMembers(actualKind) as am {
             var matched := false;
             loop eMems as em {
-                if em == am or exactShapeMatches(em, am) { matched = true; break; }
+                if em == am or exactShapeMatches(em, am) or (isFnKind(em) and isFnKind(am) and fnVarianceCompatible(em, am)) { matched = true; break; }
             }
             if not matched { return false; }
         }
@@ -3731,10 +3985,24 @@ unifyImplPatternMut := fn(genericParams: String, pattern: String, actual: String
         n := fnParamCount(pattern);
         var i := 0;
         loop i < n {
+            if fnParamIsOptional(pattern, i) =!= fnParamIsOptional(actual, i) { return false; }
             if not self(genericParams, fnParamComponent(pattern, i).kind, fnParamComponent(actual, i).kind, mut bindings) { return false; }
             i = i + 1;
         }
         return self(genericParams, fnResultKind(pattern), fnResultKind(actual), mut bindings);
+    }
+    if isAnonRecordKind(pattern) {
+        if not isAnonRecordKind(actual) or recordComponentCount(pattern) =!= recordComponentCount(actual) { return false; }
+        fc := recordComponentCount(pattern);
+        var fi := 0;
+        loop fi < fc {
+            pc := recordComponent(pattern, fi);
+            ac := recordComponent(actual, fi);
+            if pc.label =!= ac.label { return false; }
+            if not self(genericParams, pc.kind, ac.kind, mut bindings) { return false; }
+            fi = fi + 1;
+        }
+        return true;
     }
     if isUnionKind(pattern) {
         if not isUnionKind(actual) { return false; }
@@ -4150,7 +4418,7 @@ pub tsFunctionType := fn(kind: String): String {
             loop index < count {
                 comp := recordComponent(kind, index);
                 if index > 0 { mut resultBuf.append("; "); }
-                mut resultBuf.append(tupleObjectKey(comp.label, index));
+                mut resultBuf.append(tsRecordPropKey(comp.label));
                 mut resultBuf.append(": ");
                 mut resultBuf.append(self(comp.kind));
                 index = index + 1;
@@ -4215,9 +4483,18 @@ pub tsFunctionType := fn(kind: String): String {
             comp := fnParamComponent(kind, index);
             if index > 0 { mut paramsBuf.append(", "); }
             paramLabel := if comp.label =!= "" { "lite_" + comp.label } else { "lite_arg" + index.toText() };
-            mut paramsBuf.append(paramLabel);
-            mut paramsBuf.append(": ");
-            mut paramsBuf.append(self(comp.kind));
+            isMutP := comp.kind.startsWithAt(0, "mut ");
+            basePK := if isMutP { comp.kind.slice(4, comp.kind.length()) } else { comp.kind };
+            tsPT := if isMutP and isRecordOrDistinctRecord(basePK) { "{ v: " + self(basePK) + " }" } else { self(basePK) };
+            if fnParamIsOptional(kind, index) {
+                mut paramsBuf.append(paramLabel);
+                mut paramsBuf.append("?: ");
+                mut paramsBuf.append(tsPT);
+            } else {
+                mut paramsBuf.append(paramLabel);
+                mut paramsBuf.append(": ");
+                mut paramsBuf.append(tsPT);
+            }
             index = index + 1;
         }
         fnCtx := fnContextKind(kind);
@@ -4329,21 +4606,24 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
         return "([" + labels.join(", ") + "][" + code + "]!)";
     }
     if isRecordKind(kind) {
-        recName := recordDisplayName(kind);
+        isAnon := isAnonRecordKind(kind);
+        recName := if isAnon { "" } else { recordDisplayName(kind) };
         count := recordComponentCount(kind);
         if count == 0 {
-            return "((value: {}): string => { void value; return " + tsLiteral.textLiteralCode(recName + " {}") + "; })(" + code + ")";
+            emptyDisp := if isAnon { "{}" } else { recName + " {}" };
+            return "((value: {}): string => { void value; return " + tsLiteral.textLiteralCode(emptyDisp) + "; })(" + code + ")";
         }
         mut resultBuf: tb.TextBuilder;
-        mut resultBuf.append(tsLiteral.textLiteralCode(recName + " { "));
+        mut resultBuf.append(tsLiteral.textLiteralCode(if isAnon { "{ " } else { recName + " { " }));
         var index := 0;
         loop index < count {
             comp := recordComponent(kind, index);
             separator := if index == 0 { "" } else { ", " };
+            keyDisp := if isAnon and not isSimpleRecordFieldIdent(comp.label) { "\"" + comp.label + "\"" } else { comp.label };
             mut resultBuf.append(" + ");
-            mut resultBuf.append(tsLiteral.textLiteralCode(separator + comp.label + " = "));
+            mut resultBuf.append(tsLiteral.textLiteralCode(separator + keyDisp + " = "));
             mut resultBuf.append(" + ");
-            mut resultBuf.append(self(comp.kind, "value." + comp.prop));
+            mut resultBuf.append(self(comp.kind, tsRecordFieldAccess("value", comp.label)));
             index = index + 1;
         }
         return "((value: " + tsFunctionType(kind) + "): string => " + resultBuf.build() + " + " + tsLiteral.textLiteralCode(" }") + ")(" + code + ")";
@@ -4490,12 +4770,14 @@ pub displayKind := fn(kind: String): String {
         var index := 0;
         loop index < count {
             comp := fnParamComponent(kind, index);
+            isOpt := fnParamIsOptional(kind, index);
             if index > 0 { mut resultBuf.append(", "); }
             if comp.label == "" {
+                if isOpt { mut resultBuf.append("?:"); }
                 mut resultBuf.append(self(comp.kind));
             } else {
                 mut resultBuf.append(comp.label);
-                mut resultBuf.append(": ");
+                mut resultBuf.append(if isOpt { "?: " } else { ": " });
                 mut resultBuf.append(self(comp.kind));
             }
             index = index + 1;
@@ -5343,6 +5625,58 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         mut kindTextBuf.append(")");
         return (kind = kindTextBuf.build(), next = cursor);
     }
+    if start < size and source.at(start) == "{" {
+        var cursor := syntax.skipTrivia(source, start + 1, prefix);
+        mut labels: List<String> = [];
+        mut fields: List<(label: String, kind: String)> = [];
+        loop cursor < size and source.at(cursor) =!= "}" {
+            var label := "";
+            labelAt := cursor;
+            if source.at(cursor) == "\"" {
+                qParsed := syntax.parseText(ir.TARGET_TS, source, cursor, prefix);
+                label = qParsed.textValue;
+                cursor = syntax.skipTrivia(source, qParsed.next, prefix);
+            } else if source.at(cursor).isNameStart() {
+                labelEnd := source.skipName(cursor);
+                label = source.slice(cursor, labelEnd);
+                if syntax.isReservedWord(label) {
+                    syntax.unsupportedFeature(errSource, if useLocalErr { cursor } else { errPos }, label, prefix);
+                }
+                cursor = syntax.skipTrivia(source, labelEnd, prefix);
+            } else {
+                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected field name in structural record type");
+            }
+            if labels.contains(label) {
+                syntax.failAt(errSource, if useLocalErr { labelAt } else { errPos }, prefix, "duplicate record field " + label);
+            }
+            mut labels.pushBack(label);
+            if cursor >= size or source.at(cursor) =!= ":" {
+                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected : after field name " + label + " in record type");
+            }
+            fTypeStart := syntax.skipTrivia(source, cursor + 1, prefix);
+            fParsed := parseTypeWithSeen(errSource, errPos, useLocalErr, source, fTypeStart, prefix, aliases, "record field", genericType, seen);
+            if fParsed.kind == ir.VALUE_KIND_UNIT {
+                syntax.failAt(errSource, if useLocalErr { fTypeStart } else { errPos }, prefix, "unsupported record field type Unit");
+            }
+            bErr := borrowedStorageError(fParsed.kind);
+            if bErr =!= "" {
+                syntax.failAt(errSource, if useLocalErr { fTypeStart } else { errPos }, prefix, bErr);
+            }
+            mut fields.pushBack((label = label, kind = fParsed.kind));
+            cursor = syntax.skipTrivia(source, fParsed.next, prefix);
+            if cursor < size and (source.at(cursor) == "," or source.at(cursor) == ";") {
+                cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            } else if cursor < size and source.at(cursor) == "}" {
+                break;
+            } else {
+                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected , or } in structural record type");
+            }
+        }
+        if cursor >= size or source.at(cursor) =!= "}" {
+            syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "expected } in structural record type");
+        }
+        return (kind = buildAnonRecordKind(fields), next = cursor + 1);
+    }
     if start < size and source.at(start) == "[" {
         elemStart := syntax.skipTrivia(source, start + 1, prefix);
         inner := parseTypeWithSeen(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "array element", genericType, seen);
@@ -5378,12 +5712,34 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                     break;
                 }
                 var label := "";
+                var isOptional := false;
                 var paramStart := cursor;
-                if source.at(cursor).isNameStart() {
+                if cursor < size and source.at(cursor) == "?" {
+                    isOptional = true;
+                    afterQ := syntax.skipTrivia(source, cursor + 1, prefix);
+                    if afterQ >= size or source.at(afterQ) =!= ":" {
+                        syntax.failAt(errSource, if useLocalErr { afterQ } else { errPos }, prefix, "expected : after ? in function parameter type");
+                    }
+                    paramStart = syntax.skipTrivia(source, afterQ + 1, prefix);
+                } else if source.at(cursor).isNameStart() {
                     nameEnd := source.skipName(cursor);
                     firstName := source.slice(cursor, nameEnd);
                     afterName := syntax.skipTrivia(source, nameEnd, prefix);
-                    if afterName < size and source.at(afterName) == ":" {
+                    if afterName < size and source.at(afterName) == "?" {
+                        afterQ := syntax.skipTrivia(source, afterName + 1, prefix);
+                        if afterQ < size and source.at(afterQ) == ":" {
+                            label = firstName;
+                            if syntax.isReservedWord(label) {
+                                syntax.unsupportedFeature(errSource, if useLocalErr { cursor } else { errPos }, label, prefix);
+                            }
+                            if paramLabels.contains(label) {
+                                syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "duplicate parameter " + label);
+                            }
+                            (mut paramLabels).pushBack(label);
+                            isOptional = true;
+                            paramStart = syntax.skipTrivia(source, afterQ + 1, prefix);
+                        }
+                    } else if afterName < size and source.at(afterName) == ":" {
                         label = firstName;
                         if syntax.isReservedWord(label) {
                             syntax.unsupportedFeature(errSource, if useLocalErr { cursor } else { errPos }, label, prefix);
@@ -5395,13 +5751,29 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                         paramStart = syntax.skipTrivia(source, afterName + 1, prefix);
                     }
                 }
+                var pAccess := "";
+                if source.wordAt(paramStart, "mut") {
+                    pAccess = "mut ";
+                    if isOptional {
+                        syntax.failAt(errSource, if useLocalErr { paramStart } else { errPos }, prefix, "mut parameters cannot be optional");
+                    }
+                    paramStart = syntax.skipTrivia(source, paramStart + 3, prefix);
+                }
                 paramType := parseTypeWithSeen(errSource, errPos, useLocalErr, source, paramStart, prefix, aliases, "function", genericType, seen);
+                if pAccess =!= "" and not isGenericParamName(genericType, paramType.kind) and not isMutContainerKind(paramType.kind) {
+                    syntax.failAt(errSource, if useLocalErr { paramStart } else { errPos }, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
+                }
                 if count > 0 { mut encodedBuf.append(","); }
                 mut encodedBuf.append(label);
+                if isOptional { mut encodedBuf.append("?"); }
                 mut encodedBuf.append(":");
+                mut encodedBuf.append(pAccess);
                 mut encodedBuf.append(paramType.kind);
                 count = count + 1;
                 cursor = syntax.skipTrivia(source, paramType.next, prefix);
+                if cursor < size and syntax.isSingleEquals(source, cursor) {
+                    syntax.failAt(errSource, if useLocalErr { cursor } else { errPos }, prefix, "function types cannot declare default values; use ? for omittable parameters");
+                }
                 if cursor < size and source.at(cursor) == "," {
                     cursor = syntax.skipTrivia(source, cursor + 1, prefix);
                 } else if cursor < size and source.at(cursor) == ")" {
@@ -5449,7 +5821,14 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     nameStart := if useLocalErr { start } else { errPos };
     parsedName := typeNameAt(source, start, prefix);
     after := parsedName.next;
-    name := parsedName.name;
+    var name := parsedName.name;
+    dotPos := name.indexOf(".", 0);
+    if dotPos > 0 {
+        modAliasIdx := findAlias(aliases, "$modalias:" + name.slice(0, dotPos));
+        if modAliasIdx >= 0 {
+            name = aliases[modAliasIdx].target + name.slice(dotPos, name.length());
+        }
+    }
     afterName := syntax.skipTrivia(source, after, prefix);
     var resolvedName := name;
     if name == "Self" {
@@ -5685,6 +6064,10 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     index := findAlias(aliases, name);
     if index >= 0 {
         aliasItem := aliases[index];
+        if aliasItem.target == "$symalias" {
+            syntax.failAt(errSource, nameStart, prefix, name + " is a value, not a type");
+            return (kind = "", next = after);
+        }
         seenKey := (aliasItem.depth).toText() + ":" + name;
         if aliasItem.target == "" {
             unsupportedAliasTarget(errSource, aliasItem.at, prefix, "target");
@@ -6123,6 +6506,25 @@ pub parseContextClause := fn(source: String, kwPos: Int, prefix: String, aliases
     parseContextClauseWith(parseTypeAtomWithSeen, source, kwPos, true, source, kwPos, prefix, aliases, genericType, emptySeen)
 };
 
+/** Source span for one optional parameter's default expression. */
+pub FnDefaultSpan := record { idx: Int; start: Int; end: Int; };
+mut fnDefaultSpansByKey: Map<String, List<FnDefaultSpan>>;
+
+/** Clears cached parameter default spans across independent compiler invocations. */
+pub resetAll := fn(): Unit {
+    mut fnDefaultSpansByKey.clear();
+};
+
+/** Returns any scanned parameter default spans registered by `parseFunctionHeader` / `parseTypeOpHeader` for `(prefix, headerPos)`. */
+pub getFnDefaultSpans := fn(prefix: String, headerPos: Int): List<FnDefaultSpan> {
+    fnDefaultSpansByKey.getOr(prefix + ":" + headerPos.toText(), [])
+};
+
+/** Returns any scanned parameter default spans keyed by function body opening position `(prefix, bodyStart)`. */
+pub getFnDefaultSpansByBodyStart := fn(prefix: String, bodyStart: Int): List<FnDefaultSpan> {
+    fnDefaultSpansByKey.getOr(prefix + "@b:" + bodyStart.toText(), [])
+};
+
 /** Parses a function signature. The optional `T` binder is only enabled for the registered core list declarations. */
 pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, listIntrinsic: Bool): (next: Int, result: String, params: String, count: Int, genericType: String) {
     size := source.length();
@@ -6156,6 +6558,7 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
     mut names: List<String> = [];
+    mut defSpans: List<FnDefaultSpan> = [];
     var encoded := "";
     var count := 0;
     if source.startsWithAt(cursor, "...") {
@@ -6186,31 +6589,73 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
             }
             (mut names).pushBack(parameterName);
             cursor = syntax.skipTrivia(source, cursor, prefix);
-            cursor = syntax.expectSymbol(source, cursor, ":", prefix);
-            cursor = syntax.skipTrivia(source, cursor, prefix);
+            if cursor < size and source.at(cursor) == "?" {
+                syntax.failAt(source, cursor, prefix, "default parameters in function definitions must use = expression; ? is only for function type signatures");
+            }
             var access := "";
-            if source.wordAt(cursor, "mut") {
-                access = "mut ";
-                cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+            var paramKind := "";
+            var isOpt := false;
+            if cursor < size and syntax.isSingleEquals(source, cursor) {
+                defStart := syntax.skipTrivia(source, cursor + 1, prefix);
+                defEnd := syntax.skipBalancedArgument(source, defStart, prefix);
+                if defEnd <= defStart {
+                    syntax.failAt(source, defStart, prefix, "expected default expression for parameter " + parameterName);
+                }
+                isOpt = true;
+                paramKind = "$InferParam";
+                mut defSpans.pushBack(FnDefaultSpan { idx = count, start = defStart, end = defEnd });
+                cursor = syntax.skipTrivia(source, defEnd, prefix);
+            } else {
+                cursor = syntax.expectSymbol(source, cursor, ":", prefix);
+                cursor = syntax.skipTrivia(source, cursor, prefix);
+                if source.wordAt(cursor, "mut") {
+                    access = "mut ";
+                    cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+                }
+                typed := parseFunctionType(source, cursor, prefix, aliases, genericType);
+                if access =!= "" and not listIntrinsic and not isGenericParamName(genericType, typed.kind) and not isMutContainerKind(typed.kind) {
+                    syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
+                }
+                paramKind = typed.kind;
+                cursor = syntax.skipTrivia(source, typed.next, prefix);
+                if cursor < size and syntax.isSingleEquals(source, cursor) {
+                    if access =!= "" {
+                        syntax.failAt(source, cursor, prefix, "mut parameters cannot have default values");
+                    }
+                    if listIntrinsic {
+                        syntax.failAt(source, cursor, prefix, "intrinsic parameter cannot have a default value");
+                    }
+                    defStart := syntax.skipTrivia(source, cursor + 1, prefix);
+                    defEnd := syntax.skipBalancedArgument(source, defStart, prefix);
+                    if defEnd <= defStart {
+                        syntax.failAt(source, defStart, prefix, "expected default expression for parameter " + parameterName);
+                    }
+                    isOpt = true;
+                    mut defSpans.pushBack(FnDefaultSpan { idx = count, start = defStart, end = defEnd });
+                    cursor = syntax.skipTrivia(source, defEnd, prefix);
+                }
             }
-            typed := parseFunctionType(source, cursor, prefix, aliases, genericType);
-            if access =!= "" and not listIntrinsic and not isGenericParamName(genericType, typed.kind) and not isMutContainerKind(typed.kind) {
-                syntax.failAt(source, cursor, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
-            }
-            cursor = syntax.skipTrivia(source, typed.next, prefix);
             if count > 0 { mut encodedBuf.append("|"); }
             mut encodedBuf.append(parameterName);
+            if isOpt { mut encodedBuf.append("?"); }
             mut encodedBuf.append("=");
             mut encodedBuf.append(access);
-            mut encodedBuf.append(typed.kind);
+            mut encodedBuf.append(paramKind);
             count = count + 1;
             if cursor < size and source.at(cursor) == "," {
                 cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+                if cursor < size and source.at(cursor) == ")" { break; }
             } else {
                 break;
             }
         }
         encoded = encodedBuf.build();
+    }
+    spanKey := prefix + ":" + position.toText();
+    if defSpans.length() > 0 {
+        mut fnDefaultSpansByKey.set(spanKey, defSpans);
+    } else if fnDefaultSpansByKey.has(spanKey) {
+        mut fnDefaultSpansByKey.set(spanKey, []);
     }
     cursor = syntax.expectSymbol(source, cursor, ")", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
@@ -6223,6 +6668,15 @@ pub parseFunctionHeader := fn(source: String, position: Int, prefix: String, ali
     }
     cursor = syntax.expectSymbol(source, cursor, ":", prefix);
     resultType := parseFunctionType(source, cursor, prefix, aliases, genericType);
+    afterRetBrace := syntax.skipTrivia(source, resultType.next, prefix);
+    if afterRetBrace < size and source.at(afterRetBrace) == "{" {
+        bKey := prefix + "@b:" + (afterRetBrace + 1).toText();
+        if defSpans.length() > 0 {
+            mut fnDefaultSpansByKey.set(bKey, defSpans);
+        } else if fnDefaultSpansByKey.has(bKey) {
+            mut fnDefaultSpansByKey.set(bKey, []);
+        }
+    }
     (next = resultType.next, result = resultType.kind, params = contexts.appendCtxToParams(encoded, fnCtxKind), count = count, genericType = genericType)
 };
 
@@ -6270,6 +6724,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
     cursor = syntax.expectSymbol(source, cursor, "(", prefix);
     cursor = syntax.skipTrivia(source, cursor, prefix);
     mut names: List<String> = [];
+    mut defSpans: List<FnDefaultSpan> = [];
     mut encodedBuf: tb.TextBuilder;
     var count := 0;
     var hasSelfRecv := false;
@@ -6287,27 +6742,62 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
             }
             (mut names).pushBack(parameterName);
             cursor = syntax.skipTrivia(source, cursor, prefix);
-            cursor = syntax.expectSymbol(source, cursor, ":", prefix);
-            cursor = syntax.skipTrivia(source, cursor, prefix);
+            if cursor < size and source.at(cursor) == "?" {
+                syntax.failAt(source, cursor, prefix, "default parameters in function definitions must use = expression; ? is only for function type signatures");
+            }
             var access := "";
-            if source.wordAt(cursor, "mut") {
-                access = "mut ";
-                cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+            var paramKind := "";
+            var isOpt := false;
+            if cursor < size and syntax.isSingleEquals(source, cursor) {
+                if count == 0 {
+                    syntax.failAt(source, nameStart, prefix, "receiver parameter of type operation " + opName + " must have explicit type");
+                }
+                defStart := syntax.skipTrivia(source, cursor + 1, prefix);
+                defEnd := syntax.skipBalancedArgument(source, defStart, prefix);
+                if defEnd <= defStart {
+                    syntax.failAt(source, defStart, prefix, "expected default expression for parameter " + parameterName);
+                }
+                isOpt = true;
+                paramKind = "$InferParam";
+                mut defSpans.pushBack(FnDefaultSpan { idx = count, start = defStart, end = defEnd });
+                cursor = syntax.skipTrivia(source, defEnd, prefix);
+            } else {
+                cursor = syntax.expectSymbol(source, cursor, ":", prefix);
+                cursor = syntax.skipTrivia(source, cursor, prefix);
+                if source.wordAt(cursor, "mut") {
+                    access = "mut ";
+                    cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+                }
+                typeStart := cursor;
+                typed := parseFunctionType(source, typeStart, prefix, scopedAliases, genericType);
+                if count == 0 and source.wordAt(typeStart, "Self") and typeOpOwnerKey(typed.kind) == ownerKey {
+                    hasSelfRecv = true;
+                }
+                if access =!= "" and not isGenericCoreOwner(typeName) and not isGenericParamName(genericType, distinctBaseKind(typed.kind)) and not isMutContainerKind(typed.kind) {
+                    syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
+                }
+                paramKind = typed.kind;
+                cursor = syntax.skipTrivia(source, typed.next, prefix);
+                if cursor < size and syntax.isSingleEquals(source, cursor) {
+                    if access =!= "" {
+                        syntax.failAt(source, cursor, prefix, "mut parameters cannot have default values");
+                    }
+                    defStart := syntax.skipTrivia(source, cursor + 1, prefix);
+                    defEnd := syntax.skipBalancedArgument(source, defStart, prefix);
+                    if defEnd <= defStart {
+                        syntax.failAt(source, defStart, prefix, "expected default expression for parameter " + parameterName);
+                    }
+                    isOpt = true;
+                    mut defSpans.pushBack(FnDefaultSpan { idx = count, start = defStart, end = defEnd });
+                    cursor = syntax.skipTrivia(source, defEnd, prefix);
+                }
             }
-            typeStart := cursor;
-            typed := parseFunctionType(source, typeStart, prefix, scopedAliases, genericType);
-            if count == 0 and source.wordAt(typeStart, "Self") and typeOpOwnerKey(typed.kind) == ownerKey {
-                hasSelfRecv = true;
-            }
-            if access =!= "" and not isGenericCoreOwner(typeName) and not isGenericParamName(genericType, distinctBaseKind(typed.kind)) and not isMutContainerKind(typed.kind) {
-                syntax.failAt(source, typeStart, prefix, "mut parameter signatures are reserved for List, Map, Set, or record parameters or registered core declarations");
-            }
-            cursor = syntax.skipTrivia(source, typed.next, prefix);
             if count > 0 { mut encodedBuf.append("|"); }
             mut encodedBuf.append(parameterName);
+            if isOpt { mut encodedBuf.append("?"); }
             mut encodedBuf.append("=");
             mut encodedBuf.append(access);
-            mut encodedBuf.append(typed.kind);
+            mut encodedBuf.append(paramKind);
             count = count + 1;
             if cursor < size and source.at(cursor) == "," {
                 cursor = syntax.skipTrivia(source, cursor + 1, prefix);
@@ -6316,6 +6806,12 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
                 break;
             }
         }
+    }
+    spanKey := prefix + ":" + position.toText();
+    if defSpans.length() > 0 {
+        mut fnDefaultSpansByKey.set(spanKey, defSpans);
+    } else if fnDefaultSpansByKey.has(spanKey) {
+        mut fnDefaultSpansByKey.set(spanKey, []);
     }
     encoded := encodedBuf.build();
     cursor = syntax.expectSymbol(source, cursor, ")", prefix);
@@ -6382,24 +6878,55 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
             syntax.failAt(source, position, prefix, opName + " on " + typeName + " must return a Slice value");
         }
     }
+    afterRetBrace := syntax.skipTrivia(source, resultType.next, prefix);
+    if afterRetBrace < size and source.at(afterRetBrace) == "{" {
+        bKey := prefix + "@b:" + (afterRetBrace + 1).toText();
+        if defSpans.length() > 0 {
+            mut fnDefaultSpansByKey.set(bKey, defSpans);
+        } else if fnDefaultSpansByKey.has(bKey) {
+            mut fnDefaultSpansByKey.set(bKey, []);
+        }
+    }
     (next = resultType.next, result = resultType.kind, params = contexts.appendCtxToParams(encoded, fnCtxKind), count = count, genericType = genericType, hasSelfRecv = hasSelfRecv)
 };
 
-/** Returns the source name from one encoded `name=kind` function parameter entry. */
+/** Returns the source name from one encoded `name[?]=kind` function parameter entry. */
 pub paramNameOf := fn(entry: String): String {
     separator := entry.indexOf("=", 0);
     if separator < 0 { return entry; }
+    if separator > 0 and entry.at(separator - 1) == "?" {
+        return entry.slice(0, separator - 1);
+    }
     entry.slice(0, separator)
 };
 
-/** Returns the kind from one encoded `name=kind` function parameter entry. */
+/** True when encoded parameter entry `name[?]=kind` carries a `?` optional marker. */
+pub paramIsOptional := fn(entry: String): Bool {
+    separator := entry.indexOf("=", 0);
+    separator > 0 and entry.at(separator - 1) == "?"
+};
+
+/** Returns the kind from one encoded `name[?]=kind` function parameter entry. */
 pub paramKindOf := fn(entry: String): String {
     separator := entry.indexOf("=", 0);
     if separator < 0 { return ""; }
     entry.slice(separator + 1, entry.length())
 };
 
-/** Builds a canonical `fn(label:Kind,...)[@ctx(...)]:ResultKind` string from encoded parameter entries, context kind, and return kind. */
+/** Joins `count` consecutive encoded parameter entries starting at `first` with `"|"`. */
+pub slicePipeRange := fn(allParams: List<String>, first: Int, count: Int): String {
+    if count <= 0 or first < 0 { return ""; }
+    mut out: tb.TextBuilder;
+    var i := 0;
+    loop i < count {
+        if i > 0 { mut out.append("|"); }
+        mut out.append(allParams[first + i]);
+        i = i + 1;
+    }
+    out.build()
+};
+
+/** Builds a canonical `fn(label[?]:Kind,...)[@ctx(...)]:ResultKind` string from encoded parameter entries, context kind, and return kind. */
 pub fnCanonicalKindWithCtx := fn(params: List<String>, first: Int, count: Int, resultKind: String, ctxKind: String): String {
     mut out: tb.TextBuilder;
     mut out.append("fn(");
@@ -6408,6 +6935,7 @@ pub fnCanonicalKindWithCtx := fn(params: List<String>, first: Int, count: Int, r
         if idx > 0 { mut out.append(","); }
         entry := params[first + idx];
         mut out.append(paramNameOf(entry));
+        if paramIsOptional(entry) { mut out.append("?"); }
         mut out.append(":");
         mut out.append(paramKindOf(entry));
         idx = idx + 1;
@@ -6464,6 +6992,29 @@ collectSingleTypeTarget := fn(source: String, position: Int, prefix: String): (t
                 depth = depth + 1;
                 cursor = cursor + 1;
             } else if ch == "]" {
+                depth = depth - 1;
+                cursor = cursor + 1;
+                if depth == 0 {
+                    return (text = source.slice(start, cursor), next = cursor);
+                }
+            } else {
+                cursor = cursor + 1;
+            }
+        }
+        (text = source.slice(start, size), next = size)
+    } else if start < size and source.at(start) == "{" {
+        var cursor := start;
+        var depth := 0;
+        loop cursor < size {
+            ch := source.at(cursor);
+            if ch == "\"" {
+                cursor = syntax.skipAliasString(source, cursor);
+            } else if ch == "/" and source.startsWithAt(cursor, "/*") {
+                cursor = syntax.skipComment(source, cursor, prefix);
+            } else if ch == "{" {
+                depth = depth + 1;
+                cursor = cursor + 1;
+            } else if ch == "}" {
                 depth = depth - 1;
                 cursor = cursor + 1;
                 if depth == 0 {
@@ -7235,6 +7786,52 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         }
         return (ok = true, kind = "(" + parts.join(",") + ")", next = cursor + 1);
     }
+    if ch == "{" {
+        var bCursor := syntax.skipTrivia(source, start + 1, prefix);
+        mut labels: List<String> = [];
+        mut fields: List<(label: String, kind: String)> = [];
+        loop bCursor < size and source.at(bCursor) =!= "}" {
+            var label := "";
+            if source.at(bCursor) == "\"" {
+                if not canScanValidStringLiteral(source, bCursor, prefix) {
+                    return (ok = false, kind = "", next = bCursor);
+                }
+                qLit := syntax.parseText(ir.TARGET_TS, source, bCursor, prefix);
+                label = qLit.textValue;
+                bCursor = syntax.skipTrivia(source, qLit.next, prefix);
+            } else if source.at(bCursor).isNameStart() {
+                lEnd := source.skipName(bCursor);
+                label = source.slice(bCursor, lEnd);
+                if syntax.isReservedWord(label) { return (ok = false, kind = "", next = bCursor); }
+                bCursor = syntax.skipTrivia(source, lEnd, prefix);
+            } else {
+                return (ok = false, kind = "", next = bCursor);
+            }
+            if labels.contains(label) { return (ok = false, kind = "", next = bCursor); }
+            mut labels.pushBack(label);
+            if bCursor >= size or source.at(bCursor) =!= ":" {
+                return (ok = false, kind = "", next = bCursor);
+            }
+            fTypeStart := syntax.skipTrivia(source, bCursor + 1, prefix);
+            fRes := canResolveTypeAt(source, fTypeStart, prefix, aliases, genericType, seen, depthLeft - 1);
+            if not fRes.ok or fRes.kind == ir.VALUE_KIND_UNIT or borrowedStorageError(fRes.kind) =!= "" {
+                return (ok = false, kind = "", next = fTypeStart);
+            }
+            mut fields.pushBack((label = label, kind = fRes.kind));
+            bCursor = syntax.skipTrivia(source, fRes.next, prefix);
+            if bCursor < size and (source.at(bCursor) == "," or source.at(bCursor) == ";") {
+                bCursor = syntax.skipTrivia(source, bCursor + 1, prefix);
+            } else if bCursor < size and source.at(bCursor) == "}" {
+                break;
+            } else {
+                return (ok = false, kind = "", next = bCursor);
+            }
+        }
+        if bCursor >= size or source.at(bCursor) =!= "}" {
+            return (ok = false, kind = "", next = bCursor);
+        }
+        return (ok = true, kind = buildAnonRecordKind(fields), next = bCursor + 1);
+    }
     if ch == "[" {
         elem := canResolveTypeAt(source, start + 1, prefix, aliases, genericType, seen, depthLeft - 1);
         if not elem.ok or elem.kind == ir.VALUE_KIND_UNIT { return (ok = false, kind = "", next = start); }
@@ -7257,23 +7854,51 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         mut paramParts: List<String> = [];
         loop pCursor < size and source.at(pCursor) =!= ")" {
             var pLabel := "";
+            var pOpt := false;
             var pTypeStart := pCursor;
-            if source.at(pCursor).isNameStart() {
+            if pCursor < size and source.at(pCursor) == "?" {
+                afterQ := syntax.skipTrivia(source, pCursor + 1, prefix);
+                if afterQ >= size or source.at(afterQ) =!= ":" { return (ok = false, kind = "", next = afterQ); }
+                pOpt = true;
+                pTypeStart = syntax.skipTrivia(source, afterQ + 1, prefix);
+            } else if source.at(pCursor).isNameStart() {
                 afterPLabel := source.skipName(pCursor);
-                pColon := syntax.skipTrivia(source, afterPLabel, prefix);
-                if pColon < size and source.at(pColon) == ":" {
+                pAfter := syntax.skipTrivia(source, afterPLabel, prefix);
+                if pAfter < size and source.at(pAfter) == "?" {
+                    afterQ := syntax.skipTrivia(source, pAfter + 1, prefix);
+                    if afterQ < size and source.at(afterQ) == ":" {
+                        candidate := source.slice(pCursor, afterPLabel);
+                        if syntax.isReservedWord(candidate) or paramLabels.contains(candidate) {
+                            return (ok = false, kind = "", next = pCursor);
+                        }
+                        pLabel = candidate;
+                        mut paramLabels.pushBack(pLabel);
+                        pOpt = true;
+                        pTypeStart = syntax.skipTrivia(source, afterQ + 1, prefix);
+                    }
+                } else if pAfter < size and source.at(pAfter) == ":" {
                     candidate := source.slice(pCursor, afterPLabel);
                     if syntax.isReservedWord(candidate) or paramLabels.contains(candidate) {
                         return (ok = false, kind = "", next = pCursor);
                     }
                     pLabel = candidate;
                     mut paramLabels.pushBack(pLabel);
-                    pTypeStart = syntax.skipTrivia(source, pColon + 1, prefix);
+                    pTypeStart = syntax.skipTrivia(source, pAfter + 1, prefix);
                 }
+            }
+            var pAccess := "";
+            if source.wordAt(pTypeStart, "mut") {
+                if pOpt { return (ok = false, kind = "", next = pTypeStart); }
+                pAccess = "mut ";
+                pTypeStart = syntax.skipTrivia(source, pTypeStart + 3, prefix);
             }
             parsedParam := canResolveTypeAt(source, pTypeStart, prefix, aliases, genericType, seen, depthLeft - 1);
             if not parsedParam.ok { return (ok = false, kind = "", next = pTypeStart); }
-            (mut paramParts).pushBack(pLabel + ":" + parsedParam.kind);
+            if pAccess =!= "" and not isGenericParamName(genericType, parsedParam.kind) and not isMutContainerKind(parsedParam.kind) {
+                return (ok = false, kind = "", next = pTypeStart);
+            }
+            optTok := if pOpt { "?:" } else { ":" };
+            (mut paramParts).pushBack(pLabel + optTok + pAccess + parsedParam.kind);
             pCursor = syntax.skipTrivia(source, parsedParam.next, prefix);
             if pCursor < size and source.at(pCursor) == "," {
                 pCursor = syntax.skipTrivia(source, pCursor + 1, prefix);
@@ -7369,7 +7994,10 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         memCheckStart := syntax.skipTrivia(source, dotCheck + 1, prefix);
         if memCheckStart < size and source.at(memCheckStart).isNameStart() {
             memCheckEnd := source.skipName(memCheckStart);
-            qualCandidate := name + "." + source.slice(memCheckStart, memCheckEnd);
+            rawModPart := name;
+            modAliasIdx := findAlias(aliases, "$modalias:" + rawModPart);
+            effModPart := if modAliasIdx >= 0 { aliases[modAliasIdx].target } else { rawModPart };
+            qualCandidate := effModPart + "." + source.slice(memCheckStart, memCheckEnd);
             if findAlias(aliases, qualCandidate) >= 0 {
                 name = qualCandidate;
                 afterName = memCheckEnd;
@@ -7601,6 +8229,9 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         return (ok = false, kind = "", next = afterName);
     }
     aliasItem := aliases[aliasIdx];
+    if aliasItem.target == "$symalias" {
+        return (ok = false, kind = "", next = afterName);
+    }
     seenKey := (aliasItem.depth).toText() + ":" + name;
     if aliasItem.target == "" {
         return (ok = false, kind = "", next = afterName);
@@ -8001,22 +8632,39 @@ pub canPreParseFunctionHeader := fn(source: String, position: Int, prefix: Strin
         if syntax.isReservedWord(pName) or names.contains(pName) { return false; }
         (mut names).pushBack(pName);
         afterPName := syntax.skipTrivia(source, nameEnd, prefix);
-        if afterPName >= size or source.at(afterPName) =!= ":" { return false; }
-        cursor = syntax.skipTrivia(source, afterPName + 1, prefix);
-        var isMutP := false;
-        if source.wordAt(cursor, "mut") {
-            isMutP = true;
-            cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+        if afterPName < size and syntax.isSingleEquals(source, afterPName) {
+            if listIntrinsic { return false; }
+            defStart := syntax.skipTrivia(source, afterPName + 1, prefix);
+            defEnd := syntax.skipBalancedArgument(source, defStart, prefix);
+            if defEnd <= defStart { return false; }
+            paramCount = paramCount + 1;
+            cursor = syntax.skipTrivia(source, defEnd, prefix);
+        } else {
+            if afterPName >= size or source.at(afterPName) =!= ":" { return false; }
+            cursor = syntax.skipTrivia(source, afterPName + 1, prefix);
+            var isMutP := false;
+            if source.wordAt(cursor, "mut") {
+                isMutP = true;
+                cursor = syntax.skipTrivia(source, cursor + 3, prefix);
+            }
+            pType := canResolveTypeAt(source, cursor, prefix, aliases, genericType, emptySeen, 32);
+            if not pType.ok { return false; }
+            if isMutP and not listIntrinsic and not isGenericParamName(genericType, pType.kind) and not isMutContainerKind(pType.kind) {
+                return false;
+            }
+            paramCount = paramCount + 1;
+            cursor = syntax.skipTrivia(source, pType.next, prefix);
+            if cursor < size and syntax.isSingleEquals(source, cursor) {
+                if isMutP or listIntrinsic { return false; }
+                defStart := syntax.skipTrivia(source, cursor + 1, prefix);
+                defEnd := syntax.skipBalancedArgument(source, defStart, prefix);
+                if defEnd <= defStart { return false; }
+                cursor = syntax.skipTrivia(source, defEnd, prefix);
+            }
         }
-        pType := canResolveTypeAt(source, cursor, prefix, aliases, genericType, emptySeen, 32);
-        if not pType.ok { return false; }
-        if isMutP and not listIntrinsic and not isGenericParamName(genericType, pType.kind) and not isMutContainerKind(pType.kind) {
-            return false;
-        }
-        paramCount = paramCount + 1;
-        cursor = syntax.skipTrivia(source, pType.next, prefix);
         if cursor < size and source.at(cursor) == "," {
             cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            if cursor < size and source.at(cursor) == ")" { break; }
         } else {
             break;
         }

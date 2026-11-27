@@ -110,6 +110,7 @@ pub compareBools := fn(operator: String, left: Bool, right: Bool): Bool {
 
 /** Monotonic suffix counter for C11 union/result conversion temporaries. */
 var cUnionTmpSeq := 0;
+var cAdaptSeq := 0;
 
 /** Returns true when `kind` supports `==` / `=!=` value comparison (including unions/results of comparable scalars). */
 isEqualityComparableKind := fn(kind: String): Bool {
@@ -401,6 +402,7 @@ pub isCFreshOwnedExpr := fn(code: String): Bool {
     }
     if c.startsWithAt(0, "lt_fn_") or c.startsWithAt(0, "lt_fnv_") or
     c.startsWithAt(0, "lt_mk_") or c.startsWithAt(0, "lt_wrap_") or
+    c.startsWithAt(0, "lt_adp_mk_") or
     c.startsWithAt(0, "lt_list_") or c.startsWithAt(0, "lt_map_") or
     c.startsWithAt(0, "lt_set_") or c.startsWithAt(0, "lt_arr_") or
     c.startsWithAt(0, "lt_rc_") or c.startsWithAt(0, "(lt_rc_") or
@@ -552,7 +554,7 @@ pub copiedValueCode := fn(target: String, kind: String, code: String): String {
     }
     else if target == ir.TARGET_C and types.isFnKind(kind) {
         fTag := types.cFnTag(kind);
-        if fTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, "((/*@T:") and not code.startsWithAt(0, fTag + "_copy(") and not code.startsWithAt(0, fTag + "_move(") and not code.startsWithAt(0, "lt_mk_") {
+        if fTag =!= "" and not code.startsWithAt(0, "/*@T:") and not code.startsWithAt(0, "((/*@T:") and not code.startsWithAt(0, fTag + "_copy(") and not code.startsWithAt(0, fTag + "_move(") and not code.startsWithAt(0, "lt_mk_") and not code.startsWithAt(0, "lt_adp_mk_") {
             fTag + "_copy(" + code + ")"
         } else {
             code
@@ -660,11 +662,11 @@ pub tsDeepCloneValueCode := fn(kind: String, expr: String): String {
         var idx := 0;
         loop idx < cnt {
             comp := if isRec { types.recordComponent(kind, idx) } else { types.tupleComponent(kind, idx) };
-            fExpr := "lite$rc." + comp.prop;
+            fExpr := if isRec { types.tsRecordFieldAccess("lite$rc", comp.label) } else { "lite$rc." + comp.prop };
             fCloned := self(comp.kind, fExpr);
             if fCloned =!= fExpr {
                 mut extraBuf.append(", ");
-                mut extraBuf.append(comp.prop);
+                mut extraBuf.append(if isRec { types.tsRecordPropKey(comp.label) } else { comp.prop });
                 mut extraBuf.append(": ");
                 mut extraBuf.append(fCloned);
             }
@@ -685,8 +687,20 @@ convertUnionOrResultCode := fn(target: String, expectedKind: String, actualKind:
     }
     if types.isUnionKind(expectedKind) {
         if not types.isUnionKind(actualKind) {
-            idx := types.unionMemberIndex(expectedKind, actualKind);
+            eMems := types.unionMembers(expectedKind);
+            var idx := types.unionMemberIndex(expectedKind, actualKind);
+            if idx < 0 and types.isFnKind(actualKind) {
+                var ei := 0;
+                loop ei < eMems.length() {
+                    if types.isFnKind(eMems[ei]) and types.fnVarianceCompatible(eMems[ei], actualKind) {
+                        idx = ei;
+                        break;
+                    }
+                    ei = ei + 1;
+                }
+            }
             if idx < 0 { return actualCode; }
+            targetMemKind := eMems[idx];
             if target == ir.TARGET_C {
                 expTag := types.cStructTag(expectedKind);
                 if actualKind == ir.VALUE_KIND_UNIT {
@@ -696,13 +710,13 @@ convertUnionOrResultCode := fn(target: String, expectedKind: String, actualKind:
                         "/*@T:" + expectedKind + "@*/((void)(" + actualCode + "), " + expTag + "_mk_" + idx.toText() + "())"
                     };
                 }
-                vCode := if copyOwned { copiedValueCode(target, actualKind, actualCode) } else { actualCode };
+                vCode := convertValueWithCopy(target, targetMemKind, actualKind, actualCode, copyOwned);
                 if vCode.startsWithAt(0, "/*@CBLK:") {
                     cUnionTmpSeq = cUnionTmpSeq + 1;
                     sid := cUnionTmpSeq.toText();
                     pVar := "lt_up_" + sid;
                     dVar := "lt_ud_" + sid;
-                    return "/*@CBLK:" + dVar + "@*/" + expTag + " " + dVar + "; { " + types.cValueType(actualKind) + " " + pVar + "; " + cUnwrapIntoVar(pVar, actualKind, vCode) + " " + dVar + " = /*@T:" + expectedKind + "@*/" + expTag + "_mk_" + idx.toText() + "(" + pVar + "); }";
+                    return "/*@CBLK:" + dVar + "@*/" + expTag + " " + dVar + "; { " + types.cValueType(targetMemKind) + " " + pVar + "; " + cUnwrapIntoVar(pVar, targetMemKind, vCode) + " " + dVar + " = /*@T:" + expectedKind + "@*/" + expTag + "_mk_" + idx.toText() + "(" + pVar + "); }";
                 }
                 return "/*@T:" + expectedKind + "@*/" + expTag + "_mk_" + idx.toText() + "(" + vCode + ")";
             }
@@ -710,7 +724,7 @@ convertUnionOrResultCode := fn(target: String, expectedKind: String, actualKind:
             if actualKind == ir.VALUE_KIND_UNIT {
                 return "((() => { void (" + actualCode + "); return ({ _u: " + idx.toText() + " as const } as " + tsT + "); })())";
             }
-            vCode := if copyOwned { copiedValueCode(target, actualKind, actualCode) } else { actualCode };
+            vCode := convertValueWithCopy(target, targetMemKind, actualKind, actualCode, copyOwned);
             return "({ _u: " + idx.toText() + " as const, _v: " + vCode + " } as " + tsT + ")";
         }
         actMems := types.unionMembers(actualKind);
@@ -863,10 +877,258 @@ pub convertUnionNarrowCode := fn(target: String, dstUnionKind: String, srcUnionK
     convertUnionOrResultCode(target, dstUnionKind, srcUnionKind, srcCode, true)
 };
 
+/** Adapts a callable value `actualCode` of kind `actualKind` to compatible destination view `expectedKind` (contravariant params, optional omission preservation, covariant returns/fallibles). */
+adaptFnValueCode := fn(target: String, expectedKind: String, actualKind: String, actualCode: String, copyOwned: Bool): String {
+    srcExpr := if copyOwned { copiedValueCode(target, actualKind, actualCode) } else { actualCode };
+    count := types.fnParamCount(expectedKind);
+    eCtx := types.fnContextKind(expectedKind);
+    eRet := types.fnResultKind(expectedKind);
+    aRet := types.fnResultKind(actualKind);
+    if target == ir.TARGET_TS {
+        tsAct := types.tsFunctionType(actualKind);
+        mut expParamsBuf: tb.TextBuilder;
+        mut voidBuf: tb.TextBuilder;
+        mut callArgsBuf: tb.TextBuilder;
+        var idx := 0;
+        loop idx < count {
+            eComp := types.fnParamComponent(expectedKind, idx);
+            aComp := types.fnParamComponent(actualKind, idx);
+            eOpt := types.fnParamIsOptional(expectedKind, idx);
+            aOpt := types.fnParamIsOptional(actualKind, idx);
+            _unusedOpt := aOpt;
+            eIsMut := eComp.kind.startsWithAt(0, "mut ");
+            eBase := if eIsMut { eComp.kind.slice(4, eComp.kind.length()) } else { eComp.kind };
+            tsEK := if eIsMut and types.isRecordOrDistinctRecord(eBase) { "{ v: " + types.tsFunctionType(eBase) + " }" } else { types.tsFunctionType(eBase) };
+            aName := "lite$a_" + idx.toText();
+            if idx > 0 {
+                mut expParamsBuf.append(", ");
+                mut callArgsBuf.append(", ");
+            }
+            if eIsMut {
+                mut expParamsBuf.append(aName);
+                mut expParamsBuf.append(": ");
+                mut expParamsBuf.append(tsEK);
+                mut voidBuf.append("void ");
+                mut voidBuf.append(aName);
+                mut voidBuf.append("; ");
+                mut callArgsBuf.append(aName);
+            } else if eOpt {
+                mut expParamsBuf.append(aName);
+                mut expParamsBuf.append("?: ");
+                mut expParamsBuf.append(tsEK);
+                mut voidBuf.append("void ");
+                mut voidBuf.append(aName);
+                mut voidBuf.append("; ");
+                convA := convertValueWithCopy(target, aComp.kind, eComp.kind, aName, false);
+                mut callArgsBuf.append("(");
+                mut callArgsBuf.append(aName);
+                mut callArgsBuf.append(" !== undefined ? ");
+                mut callArgsBuf.append(convA);
+                mut callArgsBuf.append(" : undefined)");
+            } else {
+                mut expParamsBuf.append(aName);
+                mut expParamsBuf.append(": ");
+                mut expParamsBuf.append(tsEK);
+                mut voidBuf.append("void ");
+                mut voidBuf.append(aName);
+                mut voidBuf.append("; ");
+                convA := convertValueWithCopy(target, aComp.kind, eComp.kind, aName, false);
+                mut callArgsBuf.append(convA);
+            }
+            idx = idx + 1;
+        }
+        if eCtx =!= "" {
+            if count > 0 {
+                mut expParamsBuf.append(", ");
+                mut callArgsBuf.append(", ");
+            }
+            mut expParamsBuf.append("lite$ctx: ");
+            mut expParamsBuf.append(types.tsFunctionType(eCtx));
+            mut callArgsBuf.append("lite$ctx");
+        }
+        tsERet := types.tsFunctionType(eRet);
+        callSrc := "lite$src(" + callArgsBuf.build() + ")";
+        bodyStr := if eRet == ir.VALUE_KIND_UNIT {
+            voidBuf.build() + "void (" + callSrc + ");"
+        } else if eRet == aRet or types.exactShapeMatches(eRet, aRet) {
+            voidBuf.build() + "return " + callSrc + ";"
+        } else {
+            convRet := convertValueWithCopy(target, eRet, aRet, "lite$r", false);
+            voidBuf.build() + "const lite$r = " + callSrc + "; return " + convRet + ";"
+        };
+        return "((lite$src: " + tsAct + ") => (" + expParamsBuf.build() + "): " + tsERet + " => { " + bodyStr + " })(" + srcExpr + ")";
+    }
+    cAdaptSeq = cAdaptSeq + 1;
+    aid := cAdaptSeq.toText();
+    fnName := "lt_adp_" + aid;
+    envType := "lt_adp_env_" + aid;
+    dropName := "lt_adp_drop_" + aid;
+    cloneName := "lt_adp_clone_" + aid;
+    mkName := "lt_adp_mk_" + aid;
+    expTag := types.cFnTag(expectedKind);
+    actTag := types.cFnTag(actualKind);
+    actDrop := types.cDropFnForKind(actualKind);
+    actCopy := types.cCopyFnForKind(actualKind);
+    cERet := types.cValueType(eRet);
+    cARet := types.cValueType(aRet);
+    mut fpBuf: tb.TextBuilder;
+    mut fpBuf.append("void *_env");
+    mut preCallBuf: tb.TextBuilder;
+    mut postDropBuf: tb.TextBuilder;
+    mut callArgsBuf: tb.TextBuilder;
+    mut callArgsBuf.append("_e->src");
+    var idx := 0;
+    loop idx < count {
+        eComp := types.fnParamComponent(expectedKind, idx);
+        aComp := types.fnParamComponent(actualKind, idx);
+        eOpt := types.fnParamIsOptional(expectedKind, idx);
+        aOpt := types.fnParamIsOptional(actualKind, idx);
+        eIsMut := eComp.kind.startsWithAt(0, "mut ");
+        hVar := "h" + idx.toText();
+        aVar := "a" + idx.toText();
+        caVar := "ca" + idx.toText();
+        if eIsMut {
+            eBase := eComp.kind.slice(4, eComp.kind.length());
+            cMutT := if not types.isSliceKind(eBase) and not types.isDynKind(eBase) {
+                types.cValueType(eBase) + " *"
+            } else {
+                types.cValueType(eBase)
+            };
+            mut fpBuf.append(", ");
+            mut fpBuf.append(cMutT);
+            mut fpBuf.append(" ");
+            mut fpBuf.append(aVar);
+            mut callArgsBuf.append(", ");
+            mut callArgsBuf.append(aVar);
+        } else if eOpt {
+            cEK := types.cValueType(eComp.kind);
+            cAK := types.cValueType(aComp.kind);
+            mut fpBuf.append(", bool ");
+            mut fpBuf.append(hVar);
+            mut fpBuf.append(", ");
+            mut fpBuf.append(cEK);
+            mut fpBuf.append(" ");
+            mut fpBuf.append(aVar);
+            needsRecDrop := eComp.kind =!= aComp.kind and types.isFnKind(aComp.kind) and not types.fnRuntimeSameShape(aComp.kind, eComp.kind);
+            aArgDrop := if needsRecDrop { types.cDropFnForKind(aComp.kind) } else { "" };
+            mut preCallBuf.append(cAK);
+            mut preCallBuf.append(" ");
+            mut preCallBuf.append(caVar);
+            mut preCallBuf.append("; memset(&");
+            mut preCallBuf.append(caVar);
+            mut preCallBuf.append(", 0, sizeof(");
+            mut preCallBuf.append(caVar);
+            mut preCallBuf.append(")); if (");
+            mut preCallBuf.append(hVar);
+            mut preCallBuf.append(") { ");
+            convExpr := convertValueWithCopy(target, aComp.kind, eComp.kind, aVar, false);
+            mut preCallBuf.append(cUnwrapIntoVar(caVar, aComp.kind, convExpr));
+            mut preCallBuf.append(" } ");
+            mut callArgsBuf.append(", ");
+            mut callArgsBuf.append(hVar);
+            mut callArgsBuf.append(", ");
+            mut callArgsBuf.append(caVar);
+            if aArgDrop =!= "" {
+                mut postDropBuf.append("if (");
+                mut postDropBuf.append(hVar);
+                mut postDropBuf.append(") { ");
+                mut postDropBuf.append(aArgDrop);
+                mut postDropBuf.append("(&");
+                mut postDropBuf.append(caVar);
+                mut postDropBuf.append("); } ");
+            }
+        } else {
+            cEK := types.cValueType(eComp.kind);
+            cAK := types.cValueType(aComp.kind);
+            mut fpBuf.append(", ");
+            mut fpBuf.append(cEK);
+            mut fpBuf.append(" ");
+            mut fpBuf.append(aVar);
+            needsRecDrop := eComp.kind =!= aComp.kind and types.isFnKind(aComp.kind) and not types.fnRuntimeSameShape(aComp.kind, eComp.kind);
+            aArgDrop := if needsRecDrop { types.cDropFnForKind(aComp.kind) } else { "" };
+            mut preCallBuf.append(cAK);
+            mut preCallBuf.append(" ");
+            mut preCallBuf.append(caVar);
+            mut preCallBuf.append("; ");
+            convExpr := convertValueWithCopy(target, aComp.kind, eComp.kind, aVar, false);
+            mut preCallBuf.append(cUnwrapIntoVar(caVar, aComp.kind, convExpr));
+            mut preCallBuf.append(" ");
+            if aOpt {
+                mut callArgsBuf.append(", true");
+            }
+            mut callArgsBuf.append(", ");
+            mut callArgsBuf.append(caVar);
+            if aArgDrop =!= "" {
+                mut postDropBuf.append(aArgDrop);
+                mut postDropBuf.append("(&");
+                mut postDropBuf.append(caVar);
+                mut postDropBuf.append("); ");
+            }
+        }
+        idx = idx + 1;
+    }
+    if eCtx =!= "" {
+        mut fpBuf.append(", const ");
+        mut fpBuf.append(types.cCtxTag(eCtx));
+        mut fpBuf.append(" *lite_ctx");
+        mut callArgsBuf.append(", lite_ctx");
+    }
+    rawCall := actTag + "_call(" + callArgsBuf.build() + ")";
+    mut bodyBuf: tb.TextBuilder;
+    mut bodyBuf.append(envType);
+    mut bodyBuf.append(" *_e = (");
+    mut bodyBuf.append(envType);
+    mut bodyBuf.append(" *)_env; ");
+    mut bodyBuf.append(preCallBuf.build());
+    if eRet == ir.VALUE_KIND_UNIT {
+        mut bodyBuf.append("(void)(");
+        mut bodyBuf.append(rawCall);
+        mut bodyBuf.append("); ");
+        mut bodyBuf.append(postDropBuf.build());
+    } else if aRet == ir.VALUE_KIND_NEVER {
+        mut bodyBuf.append(rawCall);
+        mut bodyBuf.append("; ");
+        mut bodyBuf.append(postDropBuf.build());
+        if eRet =!= ir.VALUE_KIND_NEVER {
+            mut bodyBuf.append("return ");
+            mut bodyBuf.append(zeroParsed(target, eRet, 0).code);
+            mut bodyBuf.append(";");
+        }
+    } else if eRet == aRet or types.exactShapeMatches(eRet, aRet) {
+        mut bodyBuf.append(cERet);
+        mut bodyBuf.append(" er = ");
+        mut bodyBuf.append(rawCall);
+        mut bodyBuf.append("; ");
+        mut bodyBuf.append(postDropBuf.build());
+        mut bodyBuf.append("return er;");
+    } else {
+        mut bodyBuf.append(cARet);
+        mut bodyBuf.append(" ar = ");
+        mut bodyBuf.append(rawCall);
+        mut bodyBuf.append("; ");
+        mut bodyBuf.append(postDropBuf.build());
+        mut bodyBuf.append(cERet);
+        mut bodyBuf.append(" er; ");
+        convRet := convertValueWithCopy(target, eRet, aRet, "ar", true);
+        mut bodyBuf.append(cUnwrapIntoVar("er", eRet, convRet));
+        mut bodyBuf.append(" ");
+        aRetDrop := types.cDropFnForKind(aRet);
+        if aRetDrop =!= "" {
+            mut bodyBuf.append(aRetDrop);
+            mut bodyBuf.append("(&ar); ");
+        }
+        mut bodyBuf.append("return er;");
+    }
+    cDef := "typedef struct { lt_env_hdr hdr; " + actTag + " src; } " + envType + ";\nstatic " + cERet + " " + fnName + "(" + fpBuf.build() + ") { " + bodyBuf.build() + " }\nLT_INLINE void " + dropName + "(void *p) { " + envType + " *e = (" + envType + " *)p; " + actDrop + "(&e->src); lt_heap_free(e); }\nLT_INLINE void *" + cloneName + "(void *p) { " + envType + " *s = (" + envType + " *)p; " + envType + " *d = (" + envType + " *)lt_heap_alloc(sizeof(" + envType + ")); d->hdr = (lt_env_hdr){ " + dropName + ", " + cloneName + " }; d->src = " + actCopy + "(s->src); return d; }\nLT_INLINE " + expTag + " " + mkName + "(" + actTag + " s) { " + envType + " *e = (" + envType + " *)lt_heap_alloc(sizeof(" + envType + ")); e->hdr = (lt_env_hdr){ " + dropName + ", " + cloneName + " }; e->src = s; return (" + expTag + "){ " + fnName + ", e }; }";
+    "/*@T:" + expectedKind + "@*//*@T:" + actualKind + "@*//*@CFN_START:" + fnName + "@*/" + cDef + "/*@CFN_END@*/" + mkName + "(" + srcExpr + ")"
+};
+
 /** Shared scalar/tuple/union/result conversion helper parameterized by ownership copy (`copyOwned`). */
 convertValueWithCopy := fn(target: String, expectedKind: String, actualKind: String, actualCode: String, copyOwned: Bool): String {
     if actualKind == ir.VALUE_KIND_NEVER {
         actualCode
+    } else if types.isFnKind(expectedKind) and types.isFnKind(actualKind) and not types.fnRuntimeSameShape(expectedKind, actualKind) {
+        adaptFnValueCode(target, expectedKind, actualKind, actualCode, copyOwned)
     } else if types.isUnionKind(expectedKind) or types.isResultKind(expectedKind) {
         convertUnionOrResultCode(target, expectedKind, actualKind, actualCode, copyOwned)
     } else if expectedKind == ir.VALUE_KIND_FLOAT8 and actualKind =!= ir.VALUE_KIND_FLOAT8 and numeric.isNumericKind(actualKind) {
@@ -1615,12 +1877,22 @@ pub zeroParsed := fn(target: String, kind: String, next: Int): Parsed {
             comp := types.fnParamComponent(kind, idx);
             pName := "lite_" + idx.toText();
             if idx > 0 { mut paramsCodeBuf.append(", "); }
-            mut paramsCodeBuf.append(pName);
-            mut paramsCodeBuf.append(": ");
-            mut paramsCodeBuf.append(types.tsFunctionType(comp.kind));
-            mut voidStmtsBuf.append("void ");
-            mut voidStmtsBuf.append(pName);
-            mut voidStmtsBuf.append("; ");
+            tsPT := types.tsFunctionType(comp.kind);
+            if types.fnParamIsOptional(kind, idx) {
+                mut paramsCodeBuf.append(pName);
+                mut paramsCodeBuf.append("?: ");
+                mut paramsCodeBuf.append(tsPT);
+                mut voidStmtsBuf.append("void ");
+                mut voidStmtsBuf.append(pName);
+                mut voidStmtsBuf.append("; ");
+            } else {
+                mut paramsCodeBuf.append(pName);
+                mut paramsCodeBuf.append(": ");
+                mut paramsCodeBuf.append(tsPT);
+                mut voidStmtsBuf.append("void ");
+                mut voidStmtsBuf.append(pName);
+                mut voidStmtsBuf.append("; ");
+            }
             idx = idx + 1;
         }
         paramsCode := paramsCodeBuf.build();

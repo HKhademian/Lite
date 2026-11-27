@@ -229,7 +229,7 @@ runBoth("do statements and nested stmt blocks", doStmtSrc, "16\n");
 /* 4. Complete negative / rejection matrix (both TS & C11) */
 rejCases: List<(label: String, src: String, msg: String)> = [
     (label = "bare expr block init", src = "x := { 1 };", msg = "standalone block expressions must use do { ... }"),
-    (label = "bare expr block empty", src = "x := {};", msg = "standalone block expressions must use do { ... }"),
+    (label = "bare expr block stmts", src = "x := { y := 1; y };", msg = "standalone block expressions must use do { ... }"),
     (label = "bare expr block arg", src = "io := import \"core/io\"; io.outputLine({ 1 });", msg = "standalone block expressions must use do { ... }"),
     (label = "bare expr block fn stmt does not yield", src = "f := fn(): Int { { 42 } };", msg = "function f must return Int"),
     (label = "bare expr block do tail", src = "x := do { { 42 } };", msg = "standalone block expressions must use do { ... }"),

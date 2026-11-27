@@ -76,6 +76,10 @@ mut envAssignedPool: List<String> = [];
 mut instances: List<GenericInstance> = [];
 mut instanceByKey: Map<String, Int>;
 
+mut fnAliasTargetKey: Map<String, String>;
+mut fnAliasFixedEnc: Map<String, String>;
+mut fnAliasParams: Map<String, String>;
+
 /** Resets all generic template, module-environment, and monomorphization state before a fresh compilation. */
 pub resetAll := fn(): Unit {
     mut templates.clear();
@@ -90,6 +94,16 @@ pub resetAll := fn(): Unit {
     mut envAssignedPool.clear();
     mut instances.clear();
     mut instanceByKey.clear();
+    mut fnAliasTargetKey.clear();
+    mut fnAliasFixedEnc.clear();
+    mut fnAliasParams.clear();
+};
+
+/** Registers a partial generic function alias redirecting instantiations of `aliasTplKey` to `targetTplKey`. */
+pub registerFnAliasTarget := fn(aliasTplKey: String, targetTplKey: String, fixedBindingsEnc: String, aliasParams: String): Unit {
+    mut fnAliasTargetKey.set(aliasTplKey, targetTplKey);
+    mut fnAliasFixedEnc.set(aliasTplKey, fixedBindingsEnc);
+    mut fnAliasParams.set(aliasTplKey, aliasParams);
 };
 
 /** Registers or refreshes one `GenericTemplate` keyed by `tpl.key`. */
@@ -349,21 +363,73 @@ mangleBindings := fn(bindingsEncoded: String): String {
 
 /** Requests (or reuses cached) concrete monomorphization of `templateKey` for `bindingsEncoded`, returning its target runtime name. */
 pub requestInstance := fn(target: String, templateKey: String, bindingsEncoded: String, substParams: String, substResult: String): String {
-    cacheKey := templateKey + "|" + bindingsEncoded;
+    var curTplKey := templateKey;
+    var curEnc := bindingsEncoded;
+    var hops := 0;
+    loop hops < 32 {
+        tgtK := fnAliasTargetKey.getOr(curTplKey, "");
+        if tgtK == "" { break; }
+        aliasGP := fnAliasParams.getOr(curTplKey, "");
+        fixedEnc := fnAliasFixedEnc.getOr(curTplKey, "");
+        mut callBindMap: Map<String, String>;
+        loop decodeBindings(curEnc) as cb {
+            mut callBindMap.set(cb.name, cb.kind);
+        }
+        mut mergedMap: Map<String, String>;
+        loop decodeBindings(fixedEnc) as fb {
+            val := if types.valueParamKind(aliasGP, fb.kind) =!= "" {
+                callBindMap.getOr(fb.kind, fb.kind)
+            } else if aliasGP =!= "" {
+                substKind(aliasGP, fb.kind, callBindMap)
+            } else {
+                fb.kind
+            };
+            mut mergedMap.set(fb.name, val);
+        }
+        tgtTpl := templates[findTemplate(tgtK)];
+        curEnc = encodeBindings(tgtTpl.genericParams, mergedMap);
+        curTplKey = tgtK;
+        hops = hops + 1;
+    }
+    cacheKey := curTplKey + "|" + curEnc;
     existing := instanceByKey.getOr(cacheKey, -1);
     if existing >= 0 {
         return instances[existing].runtime;
     }
-    tplIdx := findTemplate(templateKey);
+    tplIdx := findTemplate(curTplKey);
     tpl := templates[tplIdx];
-    mangled := mangleBindings(bindingsEncoded);
+    mangled := mangleBindings(curEnc);
     instRuntime := ir.moduleFunctionRuntime(target, tpl.moduleKey, tpl.qualName + "__G_" + mangled);
+    var effSubstParams := substParams;
+    var effSubstResult := substResult;
+    if curTplKey =!= templateKey {
+        mut tgtMap: Map<String, String>;
+        loop decodeBindings(curEnc) as tb {
+            mut tgtMap.set(tb.name, tb.kind);
+        }
+        effSubstResult = substKind(tpl.genericParams, tpl.result, tgtMap);
+        mut sParts: List<String> = [];
+        loop splitPipeEntries(tpl.params, tpl.paramCount) as tpE {
+            pNm := types.paramNameOf(tpE);
+            rawPK := types.paramKindOf(tpE);
+            isMut := rawPK.startsWithAt(0, "mut ");
+            basePK := if isMut { rawPK.slice(4, rawPK.length()) } else { rawPK };
+            subPK := substKind(tpl.genericParams, basePK, tgtMap);
+            mut sParts.pushBack(pNm + "=" + (if isMut { "mut " } else { "" }) + subPK);
+        }
+        tplCtx := contexts.extractCtxKindFromParams(tpl.params);
+        effSubstParams = if tplCtx =!= "" {
+            contexts.appendCtxToParams(sParts.join("|"), substKind(tpl.genericParams, tplCtx, tgtMap))
+        } else {
+            sParts.join("|")
+        };
+    }
     idx := instances.length();
     mut instances.pushBack((
-        templateKey = templateKey,
-        bindingsEncoded = bindingsEncoded,
-        substParams = substParams,
-        substResult = substResult,
+        templateKey = curTplKey,
+        bindingsEncoded = curEnc,
+        substParams = effSubstParams,
+        substResult = effSubstResult,
         runtime = instRuntime,
         moduleKey = tpl.moduleKey,
         compiled = false
@@ -741,6 +807,24 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
             if cErr =!= "" { return cErr; }
         }
         return self(genericParams, types.fnResultKind(pattern), types.fnResultKind(actual), mut bindings);
+    }
+    if types.isAnonRecordKind(pattern) {
+        if not types.isAnonRecordKind(actual) or types.recordComponentCount(pattern) =!= types.recordComponentCount(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        rn := types.recordComponentCount(pattern);
+        var ri := 0;
+        loop ri < rn {
+            pc := types.recordComponent(pattern, ri);
+            ac := types.recordComponent(actual, ri);
+            if pc.label =!= ac.label {
+                return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+            }
+            cErr := self(genericParams, pc.kind, ac.kind, mut bindings);
+            if cErr =!= "" { return cErr; }
+            ri = ri + 1;
+        }
+        return "";
     }
     pArgs := types.nominalTypeArgs(pattern);
     if pArgs.length() > 0 {

@@ -164,6 +164,7 @@ pub ITEM_KIND_PURE_GLOBAL := ir.ITEM_KIND_PURE_GLOBAL;
 pub ITEM_KIND_COMPTIME_DEP := ir.ITEM_KIND_COMPTIME_DEP;
 pub ITEM_KIND_FUNCTION_START := ir.ITEM_KIND_FUNCTION_START;
 pub ITEM_KIND_FUNCTION_END := ir.ITEM_KIND_FUNCTION_END;
+pub ITEM_KIND_OPT_PARAM_INIT := ir.ITEM_KIND_OPT_PARAM_INIT;
 pub ITEM_KIND_SOFT_BUILTIN := ir.ITEM_KIND_SOFT_BUILTIN;
 pub ITEM_KIND_TRANSFER_TRY := ir.ITEM_KIND_TRANSFER_TRY;
 pub ITEM_KIND_TRANSFER_CATCH := ir.ITEM_KIND_TRANSFER_CATCH;
@@ -356,6 +357,10 @@ pub containsDynKind := fn(kind: String): Bool { types.containsDynKind(kind) };
 pub cDynTag := fn(kind: String): String { types.cDynTag(kind) };
 pub isCtxKind := fn(kind: String): Bool { types.isCtxKind(kind) };
 pub cCtxTag := fn(kind: String): String { types.cCtxTag(kind) };
+pub fnParamIsOptional := fn(kind: String, targetIndex: Int): Bool { types.fnParamIsOptional(kind, targetIndex) };
+pub fnHasOptionalParams := fn(kind: String): Bool { types.fnHasOptionalParams(kind) };
+pub paramNameOf := fn(entry: String): String { types.paramNameOf(entry) };
+pub paramIsOptional := fn(entry: String): Bool { types.paramIsOptional(entry) };
 pub fnContextKind := fn(kind: String): String { types.fnContextKind(kind) };
 /** Returns C11 vtable struct typedef `lt_vt_<hash>`. */
 pub cVtableTag := fn(kind: String): String { types.cVtableTag(kind) };
@@ -451,8 +456,20 @@ pub recordDisplayName := fn(kind: String): String { types.recordDisplayName(kind
 pub recordComponentCount := fn(kind: String): Int { types.recordComponentCount(kind) };
 /** Returns the field label, kind, and runtime prop at `targetIndex` of a nominal record `kind`. */
 pub recordComponent := fn(kind: String, targetIndex: Int): (label: String, kind: String, prop: String) { types.recordComponent(kind, targetIndex) };
-/** True when `kind` is a nominal `record` type kind. */
+/** True when `kind` is a nominal `record` or anonymous structural record type kind. */
 pub isRecordKind := fn(kind: String): Bool { types.isRecordKind(kind) };
+/** True when `kind` is an anonymous structural record `Record<$anon;...>`. */
+pub isAnonRecordKind := fn(kind: String): Bool { types.isAnonRecordKind(kind) };
+/** True when `label` is a clean unescaped field identifier. */
+pub isSimpleRecordFieldIdent := fn(label: String): Bool { types.isSimpleRecordFieldIdent(label) };
+/** Formats a record field label as a TS property key. */
+pub tsRecordPropKey := fn(label: String): String { types.tsRecordPropKey(label) };
+/** Formats a TS record field access expression. */
+pub tsRecordFieldAccess := fn(objCode: String, label: String): String { types.tsRecordFieldAccess(objCode, label) };
+/** Returns the C11 zero-value initializer expression for a callable return type. */
+pub cZeroExprForFnCall := fn(kind: String): String { ctx.zeroParsed(TARGET_C, kind, 0).code };
+/** Clears transient frontend type caches/spans. */
+pub resetTypeStates := fn(): Unit { types.resetAll(); };
 /** True when `kind` is a nominal `distinct` type kind. */
 pub isDistinctKind := fn(kind: String): Bool { types.isDistinctKind(kind) };
 /** Returns the user-facing display name for a nominal distinct `kind`. */
@@ -586,9 +603,6 @@ parseFunctionHeader := fn(source: String, position: Int, prefix: String, aliases
 
 /** True when `moduleIdentity` is a verified `lite.core.*` or `lite.external.*` host module identity. */
 pub isHostModuleIdentity := fn(moduleIdentity: String): Bool { builtinsAbi.isHostModuleIdentity(moduleIdentity) };
-
-/** Returns the source name from one encoded `name=kind` function parameter entry. */
-paramNameOf := fn(entry: String): String { types.paramNameOf(entry) };
 
 /** Returns the kind from one encoded `name=kind` function parameter entry. */
 paramKindOf := fn(entry: String): String { types.paramKindOf(entry) };
@@ -2346,6 +2360,35 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
         }
     }
+    var aliasPass := 0;
+    loop aliasPass < 16 {
+        var aliasProgress := false;
+        loop decls as decl {
+            if decl.kind == DECL_KIND_ALIAS and decl.intValue >= 0 {
+                aAt := decl.intValue;
+                aAfterNm := source.skipName(aAt);
+                aOpPos := skipTrivia(source, aAfterNm, prefix);
+                if source.startsWithAt(aOpPos, ":=") {
+                    aTypePos := skipTrivia(source, aOpPos + 2, prefix);
+                    if source.wordAt(aTypePos, "alias") {
+                        aIdx := types.aliasIndexAt(aliases, aAt);
+                        if aIdx >= 0 and aliases[aIdx].target =!= "$symalias" {
+                            aRes := expr.resolveUnifiedAliasDecl(
+                                target, source, aAt, decl.name, aTypePos, 0, 0,
+                                moduleKey, moduleIdentity, prefix, true, mut locals, mut functions, mut functionParams, mut aliases
+                            );
+                            if aRes.done {
+                                parameterTotal = functionParams.length();
+                                aliasProgress = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if not aliasProgress { break; }
+        aliasPass = aliasPass + 1;
+    }
     loop decls as decl {
         if decl.kind == DECL_KIND_FUTURE_IMPL {
             implStart := decl.intValue;
@@ -2425,6 +2468,73 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if futMod.writable {
             contexts.markModuleMutGlobals(moduleKey);
         }
+    }
+    mut infLocals: List<Local> = locals;
+    var pushedInfFutureBag := "";
+    loop futureValues as future {
+        if not tokenInPipeBag(pushedInfFutureBag, future.name) {
+            existingInfIdx := localIndex(locals, future.name);
+            isShadowedInfLocal := existingInfIdx >= 0 and locals[existingInfIdx].depth >= 0;
+            isShadowedInfFn := findFunction(functions, future.name) >= 0;
+            if not isShadowedInfLocal and not isShadowedInfFn {
+                pushedInfFutureBag = appendPipeBag(pushedInfFutureBag, future.name);
+                effInfInit := if future.initState =!= INIT_STATE_INIT and (future.initState == INIT_STATE_UNINIT_ASSIGNED or rootAssignedNames.has(future.name)) {
+                    INIT_STATE_INIT
+                } else {
+                    future.initState
+                };
+                mut infLocals.pushBack((name = future.name, runtime = future.runtime, kind = future.kind,
+                mutable = future.mutable, writable = future.writable, depth = -1, constant = false, code = "",
+                intValue = 0, textValue = "", initState = effInfInit));
+            }
+        }
+    }
+    var infFnIdx := 0;
+    loop infFnIdx < functions.length() {
+        infFn := functions[infFnIdx];
+        if infFn.declAt >= 0 and not infFn.runtime.startsWithAt(0, "$gen:") and infFn.count > 0 {
+            hasInfParam := types.slicePipeRange(functionParams, infFn.first, infFn.count).indexOf("$InferParam", 0) >= 0;
+            if hasInfParam {
+                var infHPos := -1;
+                var infAliases := aliases;
+                loop decls as dInf {
+                    if dInf.intValue == infFn.declAt {
+                        if dInf.kind == DECL_KIND_FUTURE_FN {
+                            infHPos = parseDigits(dInf.textValue, 0, dInf.textValue.length());
+                            break;
+                        } else if dInf.kind == DECL_KIND_FUTURE_TYPE_OP {
+                            infHPos = parseDigits(dInf.textValue, 0, dInf.textValue.length());
+                            dotP := dInf.name.indexOf(".", 0);
+                            if dotP > 0 {
+                                oInf := resolveOwnedTypeOpTarget(source, infFn.declAt, prefix, aliases, moduleIdentity, dInf.name.slice(0, dotP));
+                                if oInf.ok { infAliases = types.withSelfAlias(aliases, oInf.selfTarget, 0); }
+                            }
+                            break;
+                        }
+                    }
+                }
+                if infHPos >= 0 {
+                    rawEncInf := types.slicePipeRange(functionParams, infFn.first, infFn.count);
+                    ctxInf := contexts.fnContextFor(infFn.runtime);
+                    fullEncInf := contexts.appendCtxToParams(rawEncInf, ctxInf);
+                    defInf := expr.resolveFnParamDefaults(target, source, prefix, infHPos, -1, fullEncInf, infFn.count, infLocals, functions, functionParams, infFn.name, infAliases, [], 0, true);
+                    var pUpd := 0;
+                    loop splitPipeEntries(defInf.resolvedParams, infFn.count) as resEnt {
+                        functionParams[infFn.first + pUpd] = resEnt;
+                        pUpd = pUpd + 1;
+                    }
+                    isStInf := not infFn.name.startsWithAt(0, "$typeop:");
+                    newSigInf := overloads.overloadSigKey(isStInf, "", defInf.resolvedParams, infFn.count);
+                    loop sym.findFunctions(functions, infFn.name) as othIdx {
+                        if functions[othIdx].declAt =!= infFn.declAt and overloads.fnSigKeyFor(functions[othIdx].runtime) == newSigInf {
+                            failAt(source, infFn.declAt, prefix, "duplicate function " + infFn.name);
+                        }
+                    }
+                    overloads.registerFnSig(infFn.runtime, newSigInf, "", defInf.resolvedParams);
+                }
+            }
+        }
+        infFnIdx = infFnIdx + 1;
     }
     }
     var maxFutureAt := -1;
@@ -2555,7 +2665,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             isSliceParam := types.isSliceKind(parameterKind);
             isDynParam := types.isDynKind(parameterKind);
             isBorrowView := isSliceParam or isDynParam;
-            isConstPtrParam := target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
+            isOptParam := paramIsOptional(entry);
+            isConstPtrParam := not isOptParam and target == TARGET_C and not isMutParam and parameterKind =!= "$InferParam" and types.cParamIsConstPtr(parameterKind);
             runtime := if (isMutParam and not isBorrowView and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
             else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
             else { "lite_" + pRuntime };
@@ -2623,6 +2734,36 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             mut locals.pushBack((name = "$comptimeActive", runtime = "", kind = VALUE_KIND_BOOL,
             mutable = false, writable = false, depth = 1, constant = true, code = "true",
             intValue = 1, textValue = "", initState = INIT_STATE_INIT));
+        }
+        monoDefRes := expr.resolveFnParamDefaults(target, source, prefix, -1, tpl.bodyStart, inst.substParams, tpl.paramCount, locals, functions, functionParams, monoSelfName, aliases, stmtCtxs, 0, false);
+        if monoDefRes.hasDefaults {
+            var mUpd := 0;
+            loop splitPipeEntries(monoDefRes.resolvedParams, tpl.paramCount) as resEnt {
+                functionParams[monoFirst + mUpd] = resEnt;
+                mLocIdx := localIndex(locals, paramNameOf(resEnt));
+                if mLocIdx >= 0 {
+                    rawMPK := paramKindOf(resEnt);
+                    mBaseK := if rawMPK.startsWithAt(0, "mut ") { rawMPK.slice(4, rawMPK.length()) } else { rawMPK };
+                    curL := locals[mLocIdx];
+                    locals[mLocIdx] = (name = curL.name, runtime = curL.runtime, kind = mBaseK,
+                    mutable = curL.mutable, writable = curL.writable, depth = curL.depth, constant = curL.constant,
+                    code = curL.code, intValue = curL.intValue, textValue = curL.textValue, initState = curL.initState);
+                }
+                mUpd = mUpd + 1;
+            }
+            var mStartIdx := items.length() - 1;
+            loop mStartIdx >= 0 {
+                if items[mStartIdx].kind == ITEM_KIND_FUNCTION_START and items[mStartIdx].runtime == inst.runtime {
+                    fsIt := items[mStartIdx];
+                    items[mStartIdx] = (kind = fsIt.kind, name = fsIt.name, runtime = fsIt.runtime,
+                    code = fsIt.code, intValue = fsIt.intValue, textValue = monoDefRes.resolvedParams);
+                    break;
+                }
+                mStartIdx = mStartIdx - 1;
+            }
+            loop monoDefRes.optItems as mOpt {
+                mut items.pushBack(mOpt);
+            }
         }
         fnOpenBrace := tpl.bodyStart - 1;
         fnAssignedBag := scanInnerBlockAssignedBag(target, source, fnOpenBrace, prefix, fnParamSeedBag);
@@ -4989,6 +5130,31 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             rejectDuplicateBlockDecl(source, nameStart, prefix, blockDecls, depth, name);
             mut blockDecls.pushBack((name = name, depth = depth));
             typePosition := skipTrivia(source, position + 2, prefix);
+            uTopRes := expr.resolveUnifiedAliasDecl(
+                target, source, nameStart, name, typePosition, depth, depth,
+                moduleKey, moduleIdentity, prefix, false, mut locals, mut functions, mut functionParams, mut aliases
+            );
+            parameterTotal = functionParams.length();
+            if uTopRes.done {
+                if depth == 0 and blockCount == 0 and publishedTypes.has(name) {
+                    if uTopRes.kind == "fn" {
+                        loop sym.findFunctions(functions, name) as pfi {
+                            pfn := functions[pfi];
+                            mut items.pushBack((kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = pfn.runtime,
+                            code = pfn.result, intValue = pfn.count, textValue = types.slicePipeRange(functionParams, pfn.first, pfn.count)));
+                        }
+                    } else if uTopRes.kind == "val" {
+                        vIdx := localIndex(locals, name);
+                        if vIdx >= 0 {
+                            vEnt := locals[vIdx];
+                            mut items.pushBack((kind = ITEM_KIND_PUBLIC_VALUE, name = name, runtime = vEnt.runtime,
+                            code = vEnt.kind, intValue = 0, textValue = ""));
+                        }
+                    }
+                }
+                position = uTopRes.next;
+                continue;
+            }
             gp := types.scanComptimeTypeParams(source, typePosition + 5, prefix);
             if not gp.ok {
                 failAt(source, gp.errPos, prefix, gp.errMsg);
@@ -5225,7 +5391,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         failAt(source, opStart, prefix, "cannot declare operation " + qualName + ": collides with enum backing value");
                     }
                     position = skipTrivia(source, afterOpDecl + 2, prefix);
-                    header := types.parseTypeOpHeader(source, position, prefix, aliases, name, opName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
+                    opHeaderPos := position;
+                    header := types.parseTypeOpHeader(source, opHeaderPos, prefix, aliases, name, opName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
                     if types.containsSliceKind(header.result) and not isCoreSliceHostModule(moduleIdentity) {
                         failAt(source, nameStart, prefix, "borrowed Slice<T> cannot escape via function return type");
                     }
@@ -5313,20 +5480,37 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     fnOpenBrace := position - 1;
                     functionRuntime := if wasPreRegisteredOp { functions[preOpIdx].runtime } else { moduleFunctionRuntime(target, moduleKey, qualName + ovSuffixOp) };
                     opBodyEnd := skipBraceBlock(source, position, prefix);
-                    comptimeEval.registerFnDef(functionRuntime, qualName, moduleKey, moduleIdentity, source, prefix, position, opBodyEnd - 1, header.params, header.count, header.result, false, aliases);
-                    overloads.registerFnSig(functionRuntime, opSigKey, "", header.params);
-                    if not wasPreRegisteredOp {
+                    scopedOpDefAliases := types.withSelfAlias(aliases, owner.selfTarget, 0);
+                    opPreLocals := upgradeRootUninitLocalsForFn(locals, rootAssignedNames, futureValues, functions, nameStart);
+                    opDefRes := expr.resolveFnParamDefaults(target, source, prefix, opHeaderPos, -1, header.params, header.count, opPreLocals, functions, functionParams, typeOpKey, scopedOpDefAliases, stmtCtxs, 0, false);
+                    effOpParams := opDefRes.resolvedParams;
+                    finalOpSigKey := overloads.overloadSigKey(not header.hasSelfRecv, "", effOpParams, header.count);
+                    loop sym.findFunctions(functions, typeOpKey) as eoi2 {
+                        if functions[eoi2].declAt =!= nameStart and overloads.fnSigKeyFor(functions[eoi2].runtime) == finalOpSigKey {
+                            failAt(source, nameStart, prefix, "duplicate type operation " + qualName);
+                        }
+                    }
+                    if wasPreRegisteredOp {
+                        preOp := functions[preOpIdx];
+                        var opU := 0;
+                        loop splitPipeEntries(effOpParams, header.count) as resEntOp {
+                            functionParams[preOp.first + opU] = resEntOp;
+                            opU = opU + 1;
+                        }
+                    } else {
                         mut functions.pushBack((name = typeOpKey, runtime = functionRuntime, result = header.result,
                         first = parameterTotal, count = header.count, declAt = nameStart));
                     }
+                    comptimeEval.registerFnDef(functionRuntime, qualName, moduleKey, moduleIdentity, source, prefix, position, opBodyEnd - 1, effOpParams, header.count, header.result, false, aliases);
+                    overloads.registerFnSig(functionRuntime, finalOpSigKey, "", effOpParams);
                     if isPubOp {
                         mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE_OP, name = typeOpKey, runtime = functionRuntime, code = header.result,
-                        intValue = header.count, textValue = header.params));
+                        intValue = header.count, textValue = effOpParams));
                         mut items.pushBack((kind = ITEM_KIND_PUBLIC_FUNCTION, name = qualName, runtime = functionRuntime, code = header.result,
-                        intValue = header.count, textValue = header.params));
+                        intValue = header.count, textValue = effOpParams));
                     }
                     softModule := if isPubOp {
-                        builtinsAbi.coreSoftBuiltin(moduleIdentity, qualName, header.params, header.result)
+                        builtinsAbi.coreSoftBuiltin(moduleIdentity, qualName, effOpParams, header.result)
                     } else {
                         ""
                     };
@@ -5335,7 +5519,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     skipAsUnneeded := neededFns =!= "*" and not skipAsSoft and not neededFnSet.has(functionRuntime + "(");
                     if skipAsSoft or skipAsUnneeded {
                         if not wasPreRegisteredOp {
-                            loop splitPipeEntries(header.params, header.count) as sp {
+                            loop splitPipeEntries(effOpParams, header.count) as sp {
                                 mut functionParams.pushBack(sp);
                                 parameterTotal = parameterTotal + 1;
                             }
@@ -5343,9 +5527,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         position = skipBraceBlock(source, position, prefix);
                         if skipAsSoft and currentLive and not currentStopped {
                             mut items.pushBack((kind = ITEM_KIND_FUNCTION_START, name = qualName, runtime = functionRuntime,
-                            code = header.result, intValue = header.count, textValue = header.params));
+                            code = header.result, intValue = header.count, textValue = effOpParams));
                             mut items.pushBack((kind = ITEM_KIND_SOFT_BUILTIN, name = qualName, runtime = functionRuntime,
-                            code = softModule, intValue = header.count, textValue = header.params));
+                            code = softModule, intValue = header.count, textValue = effOpParams));
                             mut items.pushBack((kind = ITEM_KIND_FUNCTION_END, name = "", runtime = functionRuntime,
                             code = "", intValue = 0, textValue = ""));
                         }
@@ -5354,10 +5538,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     }
                     if currentLive and not currentStopped {
                         mut items.pushBack((kind = ITEM_KIND_FUNCTION_START, name = qualName, runtime = functionRuntime,
-                        code = header.result, intValue = header.count, textValue = header.params));
+                        code = header.result, intValue = header.count, textValue = effOpParams));
                         if softModule =!= "" {
                             mut items.pushBack((kind = ITEM_KIND_SOFT_BUILTIN, name = qualName, runtime = functionRuntime,
-                            code = softModule, intValue = header.count, textValue = header.params));
+                            code = softModule, intValue = header.count, textValue = effOpParams));
                         }
                     }
                     fnTryId := nextStmtCtxId;
@@ -5367,6 +5551,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         fnTryKey = moduleKey + monoTryPrefix + "#fn#" + fnTryId.toText();
                         fnTransferStart = transferCount;
                         mut items.pushBack((kind = ITEM_KIND_TRANSFER_TRY, name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
+                    }
+                    if currentLive and not currentStopped {
+                        loop opDefRes.optItems as oOpt { mut items.pushBack(oOpt); }
                     }
                     (mut stmtCtxs).pushBack((id = 0, tag = "", kind = CTX_KIND_FN, phase = CTX_PHASE_BODY,
                     iifeDepth = 0, valKind = header.result, valVar = "", label = "",
@@ -5381,7 +5568,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         intValue = upg.intValue, textValue = upgText, initState = upg.initState));
                     }
                     var fnParamSeedBag := "";
-                    loop splitPipeEntries(header.params, header.count) as entry {
+                    loop splitPipeEntries(effOpParams, header.count) as entry {
                         parameterName := paramNameOf(entry);
                         rawParamKind := paramKindOf(entry);
                         isMutParam := rawParamKind.startsWithAt(0, "mut ");
@@ -5390,7 +5577,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         isSliceParam := types.isSliceKind(parameterKind);
                         isDynParam := types.isDynKind(parameterKind);
                         isBorrowView := isSliceParam or isDynParam;
-                        isConstPtrParam := target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
+                        isOptParam := paramIsOptional(entry);
+                        isConstPtrParam := not isOptParam and target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
                         runtime := if (isMutParam and not isBorrowView and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
                         else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
                         else { "lite_" + pRuntime };
@@ -5404,7 +5592,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             parameterTotal = parameterTotal + 1;
                         }
                     }
-                    opCtxKind := contexts.extractCtxKindFromParams(header.params);
+                    opCtxKind := contexts.extractCtxKindFromParams(effOpParams);
                     contexts.registerFnContext(functionRuntime, opCtxKind);
                     bindFunctionContextSlots(target, source, nameStart, prefix, opCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
                     mut locals.pushBack((name = "$self_fn_rt", runtime = functionRuntime, kind = "", mutable = false, writable = false, depth = 0, constant = false, code = "", intValue = 0, textValue = "", initState = INIT_STATE_INIT));
@@ -5475,7 +5663,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 name == "reserve" or name == "clear" or name == "pushBack" or name == "popBack" or
                 name == "swapRemove" or name == "get" or name == "set" or name == "$getIndex" or
                 name == "$setIndex" or name == "uncheckedGet" or name == "uncheckedSet"));
-                header := parseFunctionHeader(source, position, prefix, aliases, listIntrinsic);
+                fnHeaderPos := position;
+                header := parseFunctionHeader(source, fnHeaderPos, prefix, aliases, listIntrinsic);
                 if types.containsSliceKind(header.result) and not isCoreSliceHostModule(moduleIdentity) {
                     failAt(source, nameStart, prefix, "borrowed Slice<T> cannot escape via function return type");
                 }
@@ -5565,18 +5754,34 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 fnOpenBrace := position - 1;
                 functionRuntime := if wasPreRegistered { functions[preFnIdx].runtime } else { moduleFunctionRuntime(target, moduleKey, name + ovSuffixFn) };
                 fnBodyEnd := skipBraceBlock(source, position, prefix);
-                comptimeEval.registerFnDef(functionRuntime, name, moduleKey, moduleIdentity, source, prefix, position, fnBodyEnd - 1, header.params, header.count, header.result, false, aliases);
-                overloads.registerFnSig(functionRuntime, fnSigKey, "", header.params);
-                if not wasPreRegistered {
+                fnPreDefLocals := upgradeRootUninitLocalsForFn(locals, rootAssignedNames, futureValues, functions, nameStart);
+                fnDefRes := expr.resolveFnParamDefaults(target, source, prefix, fnHeaderPos, -1, header.params, header.count, fnPreDefLocals, functions, functionParams, name, aliases, stmtCtxs, 0, false);
+                effFnParams := fnDefRes.resolvedParams;
+                finalFnSigKey := overloads.overloadSigKey(true, "", effFnParams, header.count);
+                loop sym.findFunctions(functions, name) as efi2 {
+                    if functions[efi2].declAt =!= nameStart and overloads.fnSigKeyFor(functions[efi2].runtime) == finalFnSigKey {
+                        failAt(source, nameStart, prefix, "duplicate function " + name);
+                    }
+                }
+                if wasPreRegistered {
+                    preFn := functions[preFnIdx];
+                    var fUpd := 0;
+                    loop splitPipeEntries(effFnParams, header.count) as resEntFn {
+                        functionParams[preFn.first + fUpd] = resEntFn;
+                        fUpd = fUpd + 1;
+                    }
+                } else {
                     mut functions.pushBack((name = name, runtime = functionRuntime, result = header.result,
                     first = parameterTotal, count = header.count, declAt = nameStart));
                 }
+                comptimeEval.registerFnDef(functionRuntime, name, moduleKey, moduleIdentity, source, prefix, position, fnBodyEnd - 1, effFnParams, header.count, header.result, false, aliases);
+                overloads.registerFnSig(functionRuntime, finalFnSigKey, "", effFnParams);
                 if isPubFn {
                     mut items.pushBack((kind = ITEM_KIND_PUBLIC_FUNCTION, name = name, runtime = functionRuntime, code = header.result,
-                    intValue = header.count, textValue = header.params));
+                    intValue = header.count, textValue = effFnParams));
                 }
                 softModule := if isPubFn {
-                    builtinsAbi.coreSoftBuiltin(moduleIdentity, name, header.params, header.result)
+                    builtinsAbi.coreSoftBuiltin(moduleIdentity, name, effFnParams, header.result)
                 } else {
                     ""
                 };
@@ -5585,7 +5790,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 skipAsUnneeded := neededFns =!= "*" and not skipAsSoft and not neededFnSet.has(functionRuntime + "(");
                 if skipAsSoft or skipAsUnneeded {
                     if not wasPreRegistered {
-                        loop splitPipeEntries(header.params, header.count) as sp {
+                        loop splitPipeEntries(effFnParams, header.count) as sp {
                             mut functionParams.pushBack(sp);
                             parameterTotal = parameterTotal + 1;
                         }
@@ -5593,9 +5798,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     position = skipBraceBlock(source, position, prefix);
                     if skipAsSoft and currentLive and not currentStopped {
                         mut items.pushBack((kind = ITEM_KIND_FUNCTION_START, name = name, runtime = functionRuntime,
-                        code = header.result, intValue = header.count, textValue = header.params));
+                        code = header.result, intValue = header.count, textValue = effFnParams));
                         mut items.pushBack((kind = ITEM_KIND_SOFT_BUILTIN, name = name, runtime = functionRuntime,
-                        code = softModule, intValue = header.count, textValue = header.params));
+                        code = softModule, intValue = header.count, textValue = effFnParams));
                         mut items.pushBack((kind = ITEM_KIND_FUNCTION_END, name = "", runtime = functionRuntime,
                         code = "", intValue = 0, textValue = ""));
                     }
@@ -5604,10 +5809,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 }
                 if currentLive and not currentStopped {
                     mut items.pushBack((kind = ITEM_KIND_FUNCTION_START, name = name, runtime = functionRuntime,
-                    code = header.result, intValue = header.count, textValue = header.params));
+                    code = header.result, intValue = header.count, textValue = effFnParams));
                     if softModule =!= "" {
                         mut items.pushBack((kind = ITEM_KIND_SOFT_BUILTIN, name = name, runtime = functionRuntime,
-                        code = softModule, intValue = header.count, textValue = header.params));
+                        code = softModule, intValue = header.count, textValue = effFnParams));
                     }
                 }
                 fnTryId := nextStmtCtxId;
@@ -5617,6 +5822,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     fnTryKey = moduleKey + monoTryPrefix + "#fn#" + fnTryId.toText();
                     fnTransferStart = transferCount;
                     mut items.pushBack((kind = ITEM_KIND_TRANSFER_TRY, name = "", runtime = fnTryKey, code = "", intValue = 0, textValue = ""));
+                }
+                if currentLive and not currentStopped {
+                    loop fnDefRes.optItems as fOpt { mut items.pushBack(fOpt); }
                 }
                 (mut stmtCtxs).pushBack((id = 0, tag = "", kind = CTX_KIND_FN, phase = CTX_PHASE_BODY,
                 iifeDepth = 0, valKind = header.result, valVar = "", label = "",
@@ -5631,7 +5839,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     intValue = upg.intValue, textValue = upgText, initState = upg.initState));
                 }
                 var fnParamSeedBag := "";
-                loop splitPipeEntries(header.params, header.count) as entry {
+                loop splitPipeEntries(effFnParams, header.count) as entry {
                     parameterName := paramNameOf(entry);
                     rawParamKind := paramKindOf(entry);
                     isMutParam := rawParamKind.startsWithAt(0, "mut ");
@@ -5640,7 +5848,8 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     isSliceParam := types.isSliceKind(parameterKind);
                     isDynParam := types.isDynKind(parameterKind);
                     isBorrowView := isSliceParam or isDynParam;
-                    isConstPtrParam := target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
+                    isOptParam := paramIsOptional(entry);
+                    isConstPtrParam := not isOptParam and target == TARGET_C and not isMutParam and types.cParamIsConstPtr(parameterKind);
                     runtime := if (isMutParam and not isBorrowView and target == TARGET_C) or isConstPtrParam { "(*lite_" + pRuntime + ")" }
                     else if isMutParam and types.isRecordOrDistinctRecord(parameterKind) { "lite_" + pRuntime + ".v" }
                     else { "lite_" + pRuntime };
@@ -5654,7 +5863,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         parameterTotal = parameterTotal + 1;
                     }
                 }
-                fnCtxKind := contexts.extractCtxKindFromParams(header.params);
+                fnCtxKind := contexts.extractCtxKindFromParams(effFnParams);
                 contexts.registerFnContext(functionRuntime, fnCtxKind);
                 bindFunctionContextSlots(target, source, nameStart, prefix, fnCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
                 mut locals.pushBack((name = "$self_fn_rt", runtime = functionRuntime, kind = "", mutable = false, writable = false, depth = 0, constant = false, code = "", intValue = 0, textValue = "", initState = INIT_STATE_INIT));
@@ -5979,12 +6188,19 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 var chainValid := true;
                 loop scanPos < size and source.at(scanPos) == "." {
                     fStart := skipTrivia(source, scanPos + 1, prefix);
-                    if fStart >= size or not source.at(fStart).isNameStart() {
+                    var fEnd := fStart;
+                    var fName := "";
+                    if fStart < size and source.at(fStart) == "\"" and types.isRecordKind(curKind) {
+                        qF := parseText(target, source, fStart, prefix);
+                        fName = qF.textValue;
+                        fEnd = qF.next;
+                    } else if fStart < size and source.at(fStart).isNameStart() {
+                        fEnd = source.skipName(fStart);
+                        fName = source.slice(fStart, fEnd);
+                    } else {
                         chainValid = false;
                         break;
                     }
-                    fEnd := source.skipName(fStart);
-                    fName := source.slice(fStart, fEnd);
                     nextKind := if types.isRecordKind(curKind) { types.recordFieldKind(curKind, fName) }
                     else if types.isTupleKind(curKind) { types.tupleFieldKind(curKind, fName) }
                     else { "" };
@@ -6021,9 +6237,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         failAt(source, rhsStart, prefix, "cannot assign " + displayKind(rhsParsed.kind) + " to field of type " + displayKind(curKind));
                     }
                     f0 := fieldChain[0];
-                    f0Prop := if target == TARGET_C { types.cFieldName(f0) } else { f0 };
+                    f0RawProp := if types.isRecordKind(entry.kind) { types.recordComponentProp(entry.kind, f0) } else { f0 };
+                    f0Prop := if target == TARGET_C { types.cFieldName(f0RawProp) } else { f0RawProp };
                     stmtCode := if chainLen == 1 {
-                        lhsPath := "(" + entry.runtime + ")." + f0Prop;
+                        lhsPath := if target == TARGET_C { "(" + entry.runtime + ")." + f0Prop } else { types.tsRecordFieldAccess(entry.runtime, f0) };
                         rhsCode := if recCompOp.width > 0 {
                             compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
                         } else {
@@ -6043,13 +6260,15 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                                 "(" + entry.runtime + "." + f0Prop + " = " + rhsCode + ")"
                             }
                         } else {
-                            "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": " + rhsCode + " })"
+                            "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + types.tsRecordPropKey(f0) + ": " + rhsCode + " })"
                         }
                     } else {
                         f1 := fieldChain[1];
-                        f1Prop := if target == TARGET_C { types.cFieldName(f1) } else { f1 };
-                        subPath := "(" + entry.runtime + ")." + f0Prop;
-                        lhsPath := "(" + subPath + ")." + f1Prop;
+                        f0Kind := if types.isRecordKind(entry.kind) { types.recordFieldKind(entry.kind, f0) } else { types.tupleFieldKind(entry.kind, f0) };
+                        f1RawProp := if types.isRecordKind(f0Kind) { types.recordComponentProp(f0Kind, f1) } else { f1 };
+                        f1Prop := if target == TARGET_C { types.cFieldName(f1RawProp) } else { f1RawProp };
+                        subPath := if target == TARGET_C { "(" + entry.runtime + ")." + f0Prop } else { types.tsRecordFieldAccess(entry.runtime, f0) };
+                        lhsPath := if target == TARGET_C { "(" + subPath + ")." + f1Prop } else { types.tsRecordFieldAccess(subPath, f1) };
                         rhsCode := if recCompOp.width > 0 {
                             compoundAssignCode(target, source, opPos, prefix, curKind, lhsPath, recCompOp.baseOp, rhsParsed)
                         } else {
@@ -6069,7 +6288,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                                 "(" + entry.runtime + "." + f0Prop + "." + f1Prop + " = " + rhsCode + ")"
                             }
                         } else {
-                            "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + f0 + ": { ...(" + subPath + "), " + f1 + ": " + rhsCode + " } })"
+                            "(" + entry.runtime + " = { ...(" + entry.runtime + "), " + types.tsRecordPropKey(f0) + ": { ...(" + subPath + "), " + types.tsRecordPropKey(f1) + ": " + rhsCode + " } })"
                         }
                     };
                     locals = checkStatementTrace(target, source, nameStart, prefix, stmtCode, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
@@ -6324,6 +6543,7 @@ pub parseProgramWithExports := fn(target: String, source: String, prefix: String
 
 /** Parses one source without imported public symbols. */
 pub parseProgram := fn(target: String, source: String, prefix: String): Items {
+    types.resetAll();
     generics.resetAll();
     interfaces.resetAll();
     contexts.resetAll();

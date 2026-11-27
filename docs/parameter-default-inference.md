@@ -1,6 +1,6 @@
 # Parameter types inferred from defaults
 
-Status: **selected 2026-10-25 for ordinary value parameters; language design, not parser/type-checker/runtime verification**.
+Status: **implemented in Phase 17 across TS and C11 backends** (`compiler/tests/codegen/phase17-inferred-records-and-callables.test.lts`), covering inferred `name = expr` parameter types, written-order supplied argument evaluation, earlier-parameter reads, self/forward rejection, and C11 owned default cleanup.
 
 ## Selected rule
 
