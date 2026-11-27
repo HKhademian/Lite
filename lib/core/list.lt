@@ -29,12 +29,6 @@ pub List.setAt := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
 /** Returns a new list containing the half-open slice `values[start..end)`. */
 pub List.slice := fn<T>(values: Self<T>, start: Int, end: Int): List<T>;
 
-/** Returns a zero-copy borrowed read-only slice over `values[start..end)`. */
-pub List.$getSlice := fn<T>(values: Self<T>, start: Int, end: Int): Slice<T>;
-
-/** Returns a zero-copy borrowed mutable slice over `values[start..end)`. */
-pub List.$getMutSlice := fn<T>(values: mut Self<T>, start: Int, end: Int): Slice<T>;
-
 /** Returns a new list with the elements of `values` in reverse order. */
 pub List.reverse := fn<T>(values: Self<T>): List<T>;
 

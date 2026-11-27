@@ -1,0 +1,237 @@
+/** Phase 11 function/method overload signature canonicalization, side-table metadata, and specificity comparison. */
+
+tb := import "util/text-builder";
+contexts := import "./contexts";
+types := import "./frontend-types";
+generics := import "./generics";
+
+fnSigByRuntime: mut Map<String, String>;
+fnGenByRuntime: mut Map<String, String>;
+fnParamsByRuntime: mut Map<String, String>;
+
+/** Clears all registered overload signature metadata before a fresh compilation graph. */
+pub resetAll := fn(): Unit {
+    mut fnSigByRuntime.clear();
+    mut fnGenByRuntime.clear();
+    mut fnParamsByRuntime.clear();
+};
+
+/** Records canonical overload collision key, generic params, and encoded param list for `runtime`. */
+pub registerFnSig := fn(runtime: String, sigKey: String, genericParams: String, paramsEncoded: String): Unit {
+    if runtime == "" { return; }
+    mut fnSigByRuntime.set(runtime, sigKey);
+    mut fnGenByRuntime.set(runtime, genericParams);
+    mut fnParamsByRuntime.set(runtime, paramsEncoded);
+};
+
+/** Returns canonical overload collision key for `runtime`, or `""` if none. */
+pub fnSigKeyFor := fn(runtime: String): String {
+    fnSigByRuntime.getOr(runtime, "")
+};
+
+/** Returns registered `genericParams` string for `runtime`, or `""` if non-generic. */
+pub fnGenParamsFor := fn(runtime: String): String {
+    fnGenByRuntime.getOr(runtime, "")
+};
+
+/** Returns encoded parameter list for `runtime`, or `""` if empty/unknown. */
+pub fnParamsEncodedFor := fn(runtime: String): String {
+    fnParamsByRuntime.getOr(runtime, "")
+};
+
+/** Splits an encoded parameter list excluding any trailing `$ctx=...` entry (works for variadic `count < 0` too). */
+stripAndSplitParams := fn(paramsEncoded: String, paramCount: Int): List<String> {
+    if paramCount >= 0 {
+        return generics.splitPipeEntries(paramsEncoded, paramCount);
+    }
+    bare := contexts.stripCtxFromParams(paramsEncoded);
+    out: mut List<String> = [];
+    if bare == "" { return out; }
+    size := bare.length();
+    var start := 0;
+    loop start <= size {
+        bar := bare.indexOf("|", start);
+        end := if bar < 0 { size } else { bar };
+        mut out.pushBack(bare.slice(start, end));
+        if bar < 0 { break; }
+        start = bar + 1;
+    }
+    out
+};
+
+/**
+Builds the canonical overload signature key used to detect duplicate overloads.
+
+Excludes return type and trailing `context(...)` requirements (so overloads differing only in
+return type or context requirements collide), and normalizes generic parameter names by position.
+*/
+pub overloadSigKey := fn(isStatic: Bool, genericParams: String, paramsEncoded: String, paramCount: Int): String {
+    out: mut tb.TextBuilder;
+    mut out.append(if isStatic { "S|" } else { "I|" });
+    specs := if genericParams =!= "" { types.splitParamSpecs(genericParams) } else {
+        emptySpecs: List<(name: String, kind: String)> = [];
+        emptySpecs
+    };
+    normMap: mut Map<String, String>;
+    var gi := 0;
+    mut out.append("G[");
+    loop specs as sp {
+        if gi > 0 { mut out.append(","); }
+        gToken := "$G" + gi.toText();
+        mut normMap.set(sp.name, gToken);
+        normSpecKind := if sp.kind =!= "" and genericParams =!= "" {
+            types.substCanonicalKind(genericParams, sp.kind, normMap)
+        } else {
+            sp.kind
+        };
+        mut out.append(gToken);
+        mut out.append("=");
+        mut out.append(normSpecKind);
+        gi = gi + 1;
+    }
+    mut out.append("]|");
+    mut out.append(paramCount.toText());
+    mut out.append("|");
+    entries := stripAndSplitParams(paramsEncoded, paramCount);
+    var pi := 0;
+    loop entries as entry {
+        if pi > 0 { mut out.append("|"); }
+        pName := types.paramNameOf(entry);
+        rawPK := types.paramKindOf(entry);
+        pMut := rawPK.startsWithAt(0, "mut ");
+        basePK := if pMut { rawPK.slice(4, rawPK.length()) } else { rawPK };
+        normPK := if genericParams =!= "" { types.substCanonicalKind(genericParams, basePK, normMap) } else { basePK };
+        effLabel := if not isStatic and pi == 0 { "$self" } else { pName };
+        mut out.append(effLabel);
+        mut out.append("=");
+        if pMut { mut out.append("mut "); }
+        mut out.append(normPK);
+        pi = pi + 1;
+    }
+    out.build()
+};
+
+/** Counts structural type constructors outside generic parameter names (`Box<List<T>>` -> 2, bare `T` -> 0). */
+kindStructureCount := fn(genericParams: String, kind: String): Int {
+    if kind == "" { return 0; }
+    if types.isGenericParamName(genericParams, kind) { return 0; }
+    if not types.kindHasAnyGenericParam(genericParams, kind) { return 1000; }
+    if types.isListKind(kind) { return 1 + self(genericParams, types.listElementKind(kind)); }
+    if types.isSetKind(kind) { return 1 + self(genericParams, types.setElementKind(kind)); }
+    if types.isRcKind(kind) { return 1 + self(genericParams, types.rcElementKind(kind)); }
+    if types.isSliceKind(kind) { return 1 + self(genericParams, types.sliceElementKind(kind)); }
+    if types.isEnumKind(kind) { return 2; }
+    if types.isSoaKind(kind) { return 1 + self(genericParams, types.soaRecordKind(kind)); }
+    if types.isSimdKind(kind) { return 1 + self(genericParams, types.simdElementKind(kind)); }
+    if types.isSimdNativeKind(kind) { return 1 + self(genericParams, types.simdNativeElementKind(kind)); }
+    if types.isArrayKind(kind) { return 1 + self(genericParams, types.arrayElementKind(kind)); }
+    if types.isMapKind(kind) {
+        return 1 + self(genericParams, types.mapKeyKind(kind)) + self(genericParams, types.mapValueKind(kind));
+    }
+    if types.isTupleKind(kind) or types.isRecordKind(kind) { return 2; }
+    if types.isFnKind(kind) { return 2; }
+    1
+};
+
+/** Constraint descriptor for a bare generic parameter used during specificity ranking. */
+ReqSet := record {
+    isUnconstrained: Bool;
+    isIfaceSet: Bool;
+    ifaces: List<String>;
+    unionList: List<String>;
+};
+
+/** Extracts canonical interface requirement strings (`[]` if unconstrained or non-interface union constraint). */
+extractInterfaceReqSet := fn(genericParams: String, pName: String): ReqSet {
+    emptyL: List<String> = [];
+    if genericParams == "" {
+        return ReqSet { isUnconstrained = true, isIfaceSet = false, ifaces = emptyL, unionList = emptyL };
+    }
+    specs := types.splitParamSpecs(genericParams);
+    loop specs as sp {
+        if sp.name == pName {
+            if sp.kind == "" {
+                return ReqSet { isUnconstrained = true, isIfaceSet = false, ifaces = emptyL, unionList = emptyL };
+            }
+            if types.isTypeConstraintKind(sp.kind) {
+                cu := types.typeConstraintUnion(sp.kind);
+                if types.isInterfaceKind(cu) {
+                    return ReqSet { isUnconstrained = false, isIfaceSet = true, ifaces = [cu], unionList = emptyL };
+                }
+                if types.isAllConstraintKind(cu) {
+                    return ReqSet { isUnconstrained = false, isIfaceSet = true, ifaces = types.allConstraintMembers(cu), unionList = emptyL };
+                }
+                if types.isUnionKind(cu) {
+                    return ReqSet { isUnconstrained = false, isIfaceSet = false, ifaces = emptyL, unionList = types.unionMembers(cu) };
+                }
+                return ReqSet { isUnconstrained = false, isIfaceSet = false, ifaces = emptyL, unionList = [cu] };
+            }
+            return ReqSet { isUnconstrained = false, isIfaceSet = false, ifaces = emptyL, unionList = [sp.kind] };
+        }
+    }
+    ReqSet { isUnconstrained = true, isIfaceSet = false, ifaces = emptyL, unionList = emptyL }
+};
+
+/** True when every string in `sub` appears in `sup`. */
+isStringSubset := fn(sub: List<String>, sup: List<String>): Bool {
+    loop sub as s {
+        if not sup.contains(s) { return false; }
+    }
+    true
+};
+
+/** Compares specificity of two matched parameter patterns: `1` if A more specific, `-1` if B, `0` otherwise. */
+pub comparePatternSpecificity := fn(gpA: String, patA: String, gpB: String, patB: String): Int {
+    baseA := if patA.startsWithAt(0, "mut ") { patA.slice(4, patA.length()) } else { patA };
+    baseB := if patB.startsWithAt(0, "mut ") { patB.slice(4, patB.length()) } else { patB };
+    concA := gpA == "" or not types.kindHasAnyGenericParam(gpA, baseA);
+    concB := gpB == "" or not types.kindHasAnyGenericParam(gpB, baseB);
+    if concA and not concB { return 1; }
+    if concB and not concA { return -1; }
+    if concA and concB { return 0; }
+    bareA := types.isGenericParamName(gpA, baseA);
+    bareB := types.isGenericParamName(gpB, baseB);
+    if not bareA and bareB { return 1; }
+    if not bareB and bareA { return -1; }
+    if not bareA and not bareB {
+        sA := kindStructureCount(gpA, baseA);
+        sB := kindStructureCount(gpB, baseB);
+        if sA > sB { return 1; }
+        if sB > sA { return -1; }
+        return 0;
+    }
+    /* Both are bare generic parameters: compare constraint specificity. */
+    reqA := extractInterfaceReqSet(gpA, baseA);
+    reqB := extractInterfaceReqSet(gpB, baseB);
+    if not reqA.isUnconstrained and reqB.isUnconstrained { return 1; }
+    if reqA.isUnconstrained and not reqB.isUnconstrained { return -1; }
+    if reqA.isUnconstrained and reqB.isUnconstrained { return 0; }
+    if reqA.isIfaceSet and reqB.isIfaceSet {
+        if reqA.ifaces.length() > reqB.ifaces.length() and isStringSubset(reqB.ifaces, reqA.ifaces) { return 1; }
+        if reqB.ifaces.length() > reqA.ifaces.length() and isStringSubset(reqA.ifaces, reqB.ifaces) { return -1; }
+    }
+    if reqA.unionList.length() > 0 and reqB.unionList.length() > 0 {
+        if reqA.unionList.length() < reqB.unionList.length() and isStringSubset(reqA.unionList, reqB.unionList) { return 1; }
+        if reqB.unionList.length() < reqA.unionList.length() and isStringSubset(reqB.unionList, reqA.unionList) { return -1; }
+    }
+    0
+};
+
+/** True when candidate A strictly dominates candidate B across `(tier, matchedPatterns)`. */
+pub isMoreSpecificCandidate := fn(
+    tierA: Int, gpA: String, patsA: List<String>,
+    tierB: Int, gpB: String, patsB: List<String>
+): Bool {
+    if tierA < tierB { return true; }
+    if tierB < tierA { return false; }
+    var better := false;
+    n := if patsA.length() < patsB.length() { patsA.length() } else { patsB.length() };
+    var i := 0;
+    loop i < n {
+        cmp := comparePatternSpecificity(gpA, patsA[i], gpB, patsB[i]);
+        if cmp < 0 { return false; }
+        if cmp > 0 { better = true; }
+        i = i + 1;
+    }
+    better
+};

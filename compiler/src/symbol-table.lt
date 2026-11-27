@@ -47,6 +47,8 @@ aliasUndo: mut List<AliasUndo> = [];
 var indexedAliasLen := 0;
 
 fnByName: mut Map<String, Int>;
+fnTailByName: mut Map<String, Int>;
+fnOverloadNext: mut List<Int> = [];
 fnByRuntime: mut Map<String, Int>;
 fnIndexedNames: mut List<String> = [];
 var indexedFnLen := 0;
@@ -332,9 +334,27 @@ pub findAlias := fn(aliases: List<AliasDecl>, name: String): Int {
 pub invalidateFunctions := fn(): Unit {
     if indexedFnLen == 0 { return; }
     (mut fnByName).clear();
+    (mut fnTailByName).clear();
+    mut fnOverloadNext.clear();
     mut fnByRuntime.clear();
     mut fnIndexedNames.clear();
     indexedFnLen = 0;
+};
+
+/** Appends one function index `idx` (`name`, `runtime`) to the linked-list overload table. */
+pushFunctionSlot := fn(idx: Int, name: String, runtime: String): Unit {
+    mut fnOverloadNext.pushBack(-1);
+    prevTail := fnTailByName.getOr(name, -1);
+    if prevTail >= 0 {
+        fnOverloadNext[prevTail] = idx;
+    } else {
+        mut fnByName.set(name, idx);
+    }
+    mut fnTailByName.set(name, idx);
+    if runtime =!= "" and not fnByRuntime.has(runtime) {
+        mut fnByRuntime.set(runtime, idx);
+    }
+    (mut fnIndexedNames).pushBack(name);
 };
 
 /** Synchronizes the O(1) function index incrementally with `functions`. */
@@ -351,13 +371,7 @@ pub syncFunctions := fn(functions: List<FunctionInfo>): Unit {
         var i := indexedFnLen;
         loop i < n {
             entry := functions[i];
-            if not fnByName.has(entry.name) {
-                mut fnByName.set(entry.name, i);
-            }
-            if entry.runtime =!= "" and not fnByRuntime.has(entry.runtime) {
-                mut fnByRuntime.set(entry.runtime, i);
-            }
-            (mut fnIndexedNames).pushBack(entry.name);
+            pushFunctionSlot(i, entry.name, entry.runtime);
             i = i + 1;
         }
         indexedFnLen = n;
@@ -367,13 +381,7 @@ pub syncFunctions := fn(functions: List<FunctionInfo>): Unit {
     var j := 0;
     loop j < n {
         entry := functions[j];
-        if not fnByName.has(entry.name) {
-            mut fnByName.set(entry.name, j);
-        }
-        if entry.runtime =!= "" and not fnByRuntime.has(entry.runtime) {
-            mut fnByRuntime.set(entry.runtime, j);
-        }
-        (mut fnIndexedNames).pushBack(entry.name);
+        pushFunctionSlot(j, entry.name, entry.runtime);
         j = j + 1;
     }
     indexedFnLen = n;
@@ -383,6 +391,36 @@ pub syncFunctions := fn(functions: List<FunctionInfo>): Unit {
 pub findFunction := fn(functions: List<FunctionInfo>, name: String): Int {
     syncFunctions(functions);
     fnByName.getOr(name, -1)
+};
+
+/** Returns all function indices declared under `name` in declaration order. */
+pub findFunctions := fn(functions: List<FunctionInfo>, name: String): List<Int> {
+    out: mut List<Int> = [];
+    syncFunctions(functions);
+    var cur := fnByName.getOr(name, -1);
+    loop cur >= 0 {
+        mut out.pushBack(cur);
+        cur = fnOverloadNext[cur];
+    }
+    out
+};
+
+/** True when more than one overload is registered under `name`. */
+pub hasOverloads := fn(functions: List<FunctionInfo>, name: String): Bool {
+    syncFunctions(functions);
+    first := fnByName.getOr(name, -1);
+    first >= 0 and fnOverloadNext[first] >= 0
+};
+
+/** Finds the function index matching `(name, declAt)`, or -1 if none. */
+pub findFunctionAt := fn(functions: List<FunctionInfo>, name: String, declAt: Int): Int {
+    syncFunctions(functions);
+    var cur := fnByName.getOr(name, -1);
+    loop cur >= 0 {
+        if functions[cur].declAt == declAt { return cur; }
+        cur = fnOverloadNext[cur];
+    }
+    -1
 };
 
 /** O(1) lookup of the first declared function matching `runtime`, or -1. */

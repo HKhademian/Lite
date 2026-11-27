@@ -14,6 +14,7 @@ syntax := import "./frontend-syntax";
 types := import "./frontend-types";
 interfaces := import "./interfaces";
 contexts := import "./contexts";
+overloads := import "./overloads";
 generics := import "./generics";
 trace := import "./trace-safety";
 reach := import "./reachability";
@@ -1219,7 +1220,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
     mutable = false, writable = false, depth = fnLexDepth, constant = false, code = "",
     intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
     loop locals as outerEntry {
-        if outerEntry.name =!= "$self" and not outerEntry.name.startsWithAt(0, "$ctxborrow:") and outerEntry.depth >= -1 {
+        if outerEntry.name =!= "$self" and outerEntry.name =!= "$self_fn_rt" and not outerEntry.name.startsWithAt(0, "$ctxborrow:") and outerEntry.depth >= -1 {
             capturedInit := if outerEntry.initState == ir.INIT_STATE_UNINIT_ASSIGNED { ir.INIT_STATE_INIT }
             else if outerEntry.initState == ir.INIT_STATE_UNINIT and not outerEntry.mutable { ir.INIT_STATE_MAYBE }
             else { outerEntry.initState };
@@ -2059,7 +2060,12 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         paramSelfIdx := sym.localIndex(locals, "self");
         if paramSelfIdx < 0 or locals[paramSelfIdx].depth <= 0 {
             if currentName == "" { syntax.failAt(source, nameStart, prefix, "self is only available inside a function"); }
-            selfIndex := sym.findFunction(functions, currentName);
+            selfRtIdx := sym.localIndex(locals, "$self_fn_rt");
+            selfIndex := if selfRtIdx >= 0 and locals[selfRtIdx].runtime =!= "" {
+                sym.findFunctionByRuntime(functions, locals[selfRtIdx].runtime)
+            } else {
+                sym.findFunction(functions, currentName)
+            };
             if selfIndex >= 0 {
                 return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = nameStart.toText(), intValue = selfIndex, textValue = currentName, constant = false, next = next);
             }
@@ -2108,12 +2114,14 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         };
         return (kind = entry.kind, code = entry.runtime, intValue = entry.intValue, textValue = idText, constant = entry.constant, next = next);
     }
-    callableIndex := sym.findFunction(functions, name);
-    if callableIndex >= 0 {
+    fnCands := sym.findFunctions(functions, name);
+    if fnCands.length() > 0 {
+        callableIndex := fnCands[0];
         if currentName == "" and functions[callableIndex].declAt > nameStart {
             syntax.failAt(source, nameStart, prefix, "cannot access " + name + " before initialization");
         }
-        return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = nameStart.toText(), intValue = callableIndex, textValue = name, constant = false, next = next);
+        fnCode := if fnCands.length() > 1 { "$ovfn:\n" + name + "\n" + nameStart.toText() } else { nameStart.toText() };
+        return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = fnCode, intValue = callableIndex, textValue = name, constant = false, next = next);
     }
     if index >= 0 {
         entry := locals[index];
@@ -2348,8 +2356,14 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             );
         }
         if typeOwnerKey =!= "" {
-            opIdx := findTypeOp(functions, typeOwnerKey, memberName);
-            if opIdx >= 0 {
+            opCands := findAllTypeOps(functions, typeOwnerKey, memberName);
+            if opCands.length() > 1 {
+                dispType := if resolvedType =!= "" { types.displayKind(resolvedType) } else { name };
+                ovTopCode := ["$ovtop:", typeOwnerKey, memberName, resolvedType, aliasParamsCsv, aliasTplKind, nameStart.toText(), memberStart.toText()].join("\n");
+                return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = ovTopCode, intValue = opCands[0],
+                textValue = dispType + "." + memberName, constant = false, next = memberEnd);
+            } else if opCands.length() == 1 {
+                opIdx := opCands[0];
                 opRes := resolveTypeQualifiedOp(
                 source, memberStart, prefix, opIdx, memberName, typeOwnerKey,
                 resolvedType, aliasParamsCsv, aliasTplKind, functions, params, inferMode
@@ -4298,7 +4312,9 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             (syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) or
             syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) and
             (hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$setIndex", functions) or
-            hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$getIndex", functions)) {
+            hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$getIndex", functions) or
+            hasInterfaceIndexImpl(target, blockLocals[sym.localIndex(blockLocals, itemName)].kind, true) or
+            hasInterfaceIndexImpl(target, blockLocals[sym.localIndex(blockLocals, itemName)].kind, false)) {
                 isStatement = true;
                 entry := blockLocals[sym.localIndex(blockLocals, itemName)];
                 if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
@@ -4306,9 +4322,20 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 afterBrk := syntax.skipTrivia(source, bracketEndPos, prefix);
                 idxCompOp := syntax.compoundAssignOp(source, afterBrk);
                 opWidth := if idxCompOp.width > 0 { idxCompOp.width } else { 1 };
-                setHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$setIndex", functions, params, inferMode);
+                kStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
+                var setHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$setIndex", functions, params, inferMode);
+                var keyParsed := if setHook.found {
+                    parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, setHook.keyKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases)
+                } else {
+                    kp := parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, "", 0, ctxs, bodyDepth, inferMode, "", blockAliases);
+                    if not setHook.found and kp.kind =!= "" {
+                        setHook = resolveInterfaceIndexImpl(target, source, itemStart, prefix, entry.kind, kp.kind, true, functions, inferMode);
+                    }
+                    kp
+                };
+                if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, keyParsed); }
                 if not setHook.found {
-                    syntax.failAt(source, itemStart, prefix, "type " + types.displayKind(entry.kind) + " does not define $setIndex for index assignment");
+                    syntax.failAt(source, itemStart, prefix, "type " + types.displayKind(entry.kind) + " does not define $setIndex or IndexMut for index assignment");
                 }
                 canMutateHook := if types.isArrayKind(entry.kind) { entry.mutable or entry.writable } else { entry.writable };
                 if not canMutateHook {
@@ -4317,18 +4344,18 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 sliceBorrows.checkCanMutateBinding(blockLocals, entry.runtime, itemName, source, itemStart, prefix);
                 var getHookRuntime := "";
                 if idxCompOp.width > 0 {
-                    getHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$getIndex", functions, params, inferMode);
+                    var getHook := resolveIndexHookOp(target, source, itemStart, prefix, entry.kind, "$getIndex", functions, params, inferMode);
                     if not getHook.found {
-                        syntax.failAt(source, itemStart, prefix, "compound index assignment requires both $getIndex and $setIndex on " + types.displayKind(entry.kind));
+                        getHook = resolveInterfaceIndexImpl(target, source, itemStart, prefix, entry.kind, keyParsed.kind, false, functions, inferMode);
+                    }
+                    if not getHook.found {
+                        syntax.failAt(source, itemStart, prefix, "compound index assignment requires both Index and IndexMut on " + types.displayKind(entry.kind));
                     }
                     if not types.isCompatibleKind(getHook.keyKind, setHook.keyKind) or not types.isCompatibleKind(setHook.valKind, getHook.valKind) {
-                        syntax.failAt(source, itemStart, prefix, "incompatible $getIndex and $setIndex types for compound index assignment on " + types.displayKind(entry.kind));
+                        syntax.failAt(source, itemStart, prefix, "incompatible Index and IndexMut types for compound index assignment on " + types.displayKind(entry.kind));
                     }
                     getHookRuntime = getHook.runtime;
                 }
-                kStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
-                keyParsed := parseBinaryCtx(target, source, kStart, prefix, blockLocals, functions, params, currentName, setHook.keyKind, 0, ctxs, bodyDepth, inferMode, "", blockAliases);
-                if inferMode { blockMarkers = ctx.collectParsedMarkers(blockMarkers, keyParsed); }
                 if not types.isCompatibleKind(setHook.keyKind, keyParsed.kind) {
                     syntax.failAt(source, kStart, prefix, "index must be " + types.displayKind(setHook.keyKind) + ", got " + types.displayKind(keyParsed.kind));
                 }
@@ -8221,6 +8248,47 @@ pub hasIndexHook := fn(kind: String, opName: String, functions: List<FunctionInf
     sym.findFunction(functions, "$typeop:" + ownerKey + "." + opName) >= 0
 };
 
+/** True when `kind` implements `core/interface.Index` (or `IndexMut` when `isMut`). */
+pub hasInterfaceIndexImpl := fn(target: String, kind: String, isMut: Bool): Bool {
+    modKey := if target == ir.TARGET_TS { "lib$core$interface" } else { "lib_s_core_s_interface" };
+    reqKey := modKey + (if isMut { "#IndexMut" } else { "#Index" });
+    types.findMatchingImplsByKey(kind, reqKey).length() > 0
+};
+
+/** Resolves an `Index<K, V>` or `IndexMut<K, V>` impl method on `receiverKind` matching `keyKind` (or `"$Range"` for `core/interface.Range`). */
+pub resolveInterfaceIndexImpl := fn(target: String, source: String, errPos: Int, prefix: String,
+receiverKind: String, keyKind: String, isMut: Bool, functions: List<FunctionInfo>, inferMode: Bool): (found: Bool, runtime: String, keyKind: String, valKind: String, resultKind: String) {
+    emptyRes := (found = false, runtime = "", keyKind = "", valKind = "", resultKind = "");
+    modKey := if target == ir.TARGET_TS { "lib$core$interface" } else { "lib_s_core_s_interface" };
+    reqKey := modKey + (if isMut { "#IndexMut" } else { "#Index" });
+    cands := types.findMatchingImplsByKey(receiverKind, reqKey);
+    if cands.length() == 0 { return emptyRes; }
+    exactMatches: mut List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> = [];
+    compatMatches: mut List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> = [];
+    loop cands as c {
+        if keyKind == "$Range" {
+            if types.isRecordKind(c.arg0) and c.arg0.startsWithAt(0, "Record<" + modKey + "#") and types.recordDisplayName(c.arg0) == "Range" {
+                mut exactMatches.pushBack(c);
+            }
+        } else if c.arg0 == keyKind {
+            mut exactMatches.pushBack(c);
+        } else if keyKind =!= "" and types.isCompatibleKind(c.arg0, keyKind) {
+            mut compatMatches.pushBack(c);
+        }
+    }
+    matched := if exactMatches.length() > 0 { exactMatches } else { compatMatches };
+    if matched.length() == 0 { return emptyRes; }
+    if matched.length() > 1 and not inferMode {
+        syntax.failAt(source, errPos, prefix, "ambiguous " + (if isMut { "IndexMut" } else { "Index" }) + " implementation on " + types.displayKind(receiverKind));
+    }
+    best := matched[0];
+    imp := interfaces.getImpl(best.implIdx);
+    mName := if isMut { "setIndex" } else { "getIndex" };
+    fnRt := if inferMode { "$infer_idx" } else { resolveImplBindingRuntime(target, source, errPos, prefix, imp, best.bindingsEncoded, mName, functions) };
+    resK := if isMut { ir.VALUE_KIND_UNIT } else { best.arg1 };
+    (found = true, runtime = fnRt, keyKind = best.arg0, valKind = best.arg1, resultKind = resK)
+};
+
 /** Resolves a `$getIndex` or `$setIndex` operator hook on `receiverKind`, instantiating generics on demand when `not inferMode`. */
 pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix: String, receiverKind: String, opName: String, functions: List<FunctionInfo>, params: List<String>, inferMode: Bool): (found: Bool, runtime: String, keyKind: String, valKind: String, resultKind: String) {
     if types.isSliceKind(receiverKind) and (opName == "$getIndex" or opName == "$setIndex") {
@@ -8457,7 +8525,8 @@ pub emitHookIndexAssignCode := fn(target: String, source: String, opPos: Int, pr
             cKeyType := types.cValueType(keyKind);
             cValType := types.cValueType(valKind);
             kb := cBorrowExprWithPostDrop(keyKind, "lt_ck", keyByPtr);
-            curRead := getRuntime + "(" + "&(" + entry.runtime + ")" + ", " + kb.expr + ")";
+            recvArg := if types.cParamIsConstPtr(entry.kind) { "&(" + entry.runtime + ")" } else { entry.runtime };
+            curRead := getRuntime + "(" + recvArg + ", " + kb.expr + ")";
             nextVal := ctx.compoundAssignCode(target, source, opPos, prefix, valKind, "lt_cv", compBaseOp, valParsed);
             return "{ /*c-stmt*/ " + cKeyType + " lt_ck = " + keyCode + "; " + cValType + " lt_cv = " + curRead + "; " + setRuntime + "(&" + entry.runtime + ", " + (if keyByPtr { "&lt_ck" } else { "lt_ck" }) + ", " + nextVal + "); }";
         }
@@ -8793,7 +8862,14 @@ resolveImplBindingRuntime := fn(target: String, source: String, errPos: Int, pre
     if not mb.found {
         syntax.failAt(source, errPos, prefix, "internal error: missing impl method binding " + methodName);
     }
-    fnIdx := sym.findFunction(functions, mb.binding.fnKey);
+    findFnByKey := fn(fns: List<FunctionInfo>, key: String): Int {
+        if key.startsWithAt(0, "$rt:") {
+            sym.findFunctionByRuntime(fns, key.slice(4, key.length()))
+        } else {
+            sym.findFunction(fns, key)
+        }
+    };
+    fnIdx := findFnByKey(functions, mb.binding.fnKey);
     if fnIdx < 0 {
         syntax.failAt(source, errPos, prefix, "internal error: missing function entry " + mb.binding.fnKey);
     }
@@ -9322,6 +9398,533 @@ postDrops: mut List<String>): String {
         return "/*@T:" + ctxKind + "@*/(&(const " + types.cCtxTag(ctxKind) + "){ " + slotInits.join(", ") + " })";
     }
     "{ " + slotInits.join(", ") + " }"
+};
+
+/** Pre-scanned call-site argument metadata reused across overload candidates without mutating compiler state. */
+OverloadCallArg := record {
+    pos: Int;
+    rhsStart: Int;
+    label: String;
+    isMut: Bool;
+    isShorthand: Bool;
+    isContextual: Bool;
+    isUnsuffixedInt: Bool;
+    isUnsuffixedFloat: Bool;
+    natOk: Bool;
+    natKind: String;
+    next: Int;
+};
+
+/** Evaluates whether raw slice text is an unsuffixed integer literal (`42`, `-7`, `0xff`, `1_000`) or unsuffixed float literal (`3.14`). */
+classifyNumericLiteralText := fn(raw: String): (isInt: Bool, isFloat: Bool) {
+    t := raw.trim();
+    if t == "" { return (isInt = false, isFloat = false); }
+    if t.endsWith("i8") or t.endsWith("i16") or t.endsWith("i32") or t.endsWith("i64") or
+    t.endsWith("u8") or t.endsWith("u16") or t.endsWith("u32") or t.endsWith("u64") or
+    t.endsWith("f8") or t.endsWith("f16") or t.endsWith("f32") or t.endsWith("f64") {
+        return (isInt = false, isFloat = false);
+    }
+    var cur := 0;
+    n := t.length();
+    if t.at(cur) == "-" or t.at(cur) == "+" {
+        cur = cur + 1;
+        loop cur < n and (t.at(cur) == " " or t.at(cur) == "\t") { cur = cur + 1; }
+    }
+    if cur >= n or not t.at(cur).isDigit() {
+        return (isInt = false, isFloat = false);
+    }
+    var sawDot := false;
+    var i := cur;
+    loop i < n {
+        ch := t.at(i);
+        if ch == "." {
+            if i + 1 < n and t.at(i + 1) == "." { return (isInt = false, isFloat = false); }
+            sawDot = true;
+        } else if not ch.isNameContinue() {
+            return (isInt = false, isFloat = false);
+        }
+        i = i + 1;
+    }
+    if sawDot { (isInt = false, isFloat = true) } else { (isInt = true, isFloat = false) }
+};
+
+/** Result of scanning `<...>` comptime arguments in an overloaded call. */
+ScannedComptimeArgs := record {
+    ok: Bool;
+    closeGt: Int;
+    starts: List<Int>;
+    ends: List<Int>;
+};
+
+/** Splits top-level comma-separated `<...>` comptime argument ranges and finds the matching `>` offset. */
+scanOverloadComptimeArgs := fn(source: String, openLt: Int, prefix: String): ScannedComptimeArgs {
+    size := source.length();
+    starts: mut List<Int> = [];
+    ends: mut List<Int> = [];
+    var cur := syntax.skipTrivia(source, openLt + 1, prefix);
+    if cur >= size or source.at(cur) == ">" {
+        return ScannedComptimeArgs { ok = false, closeGt = openLt, starts = starts, ends = ends };
+    }
+    var depth := 0;
+    var itemStart := cur;
+    loop cur < size {
+        ch := source.at(cur);
+        if ch == "\"" {
+            cur = syntax.skipAliasString(source, cur);
+        } else if ch == "/" and source.startsWithAt(cur, "/*") {
+            cur = syntax.skipComment(source, cur, prefix);
+        } else if ch == "(" or ch == "[" or ch == "{" or ch == "<" {
+            depth = depth + 1;
+            cur = cur + 1;
+        } else if ch == ")" or ch == "]" or ch == "}" {
+            if depth > 0 { depth = depth - 1; }
+            cur = cur + 1;
+        } else if ch == ">" {
+            if depth == 0 {
+                mut starts.pushBack(itemStart);
+                mut ends.pushBack(cur);
+                return ScannedComptimeArgs { ok = true, closeGt = cur + 1, starts = starts, ends = ends };
+            }
+            depth = depth - 1;
+            cur = cur + 1;
+        } else if ch == "," and depth == 0 {
+            mut starts.pushBack(itemStart);
+            mut ends.pushBack(cur);
+            cur = syntax.skipTrivia(source, cur + 1, prefix);
+            itemStart = cur;
+        } else {
+            cur = cur + 1;
+        }
+    }
+    ScannedComptimeArgs { ok = false, closeGt = openLt, starts = starts, ends = ends }
+};
+
+/** Resolves overload selection (`choose candIdx` + `initBindings`) strictly before context resolution when multiple candidates share a callee name. */
+selectOverloadForCall := fn(
+    target: String, source: String, postPos: Int, errPos: Int, prefix: String, calleeDisplay: String,
+    candIndices: List<Int>, hasRecv: Bool, recvKind: String, recvExplicitMut: Bool,
+    isStaticTypeCall: Bool, typeOwnerKey: String, memberName: String, resolvedType: String, aliasParamsCsv: String, aliasTplKind: String, memberErrPos: Int,
+    locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
+    ctxs: List<ConstructCtx>, iifeDepth: Int, aliases: List<AliasDecl>
+): (chosenIdx: Int, initBindings: String, openParen: Int) {
+    size := source.length();
+    hasComptime := postPos < size and source.at(postPos) == "<";
+    var openParen := postPos;
+    var ctArgCount := 0;
+    var ctArgStarts: mut List<Int> = [];
+    var ctArgEnds: mut List<Int> = [];
+    if hasComptime {
+        scannedCt := scanOverloadComptimeArgs(source, postPos, prefix);
+        if not scannedCt.ok {
+            syntax.failAt(source, postPos, prefix, "expected > after type arguments in call to " + calleeDisplay);
+        }
+        ctArgStarts = scannedCt.starts;
+        ctArgEnds = scannedCt.ends;
+        ctArgCount = ctArgStarts.length();
+        openParen = syntax.skipTrivia(source, scannedCt.closeGt, prefix);
+        if openParen >= size or source.at(openParen) =!= "(" {
+            syntax.failAt(source, openParen, prefix, "expected ( after type arguments in call to " + calleeDisplay);
+        }
+    }
+    /* Step 1: pre-scan call arguments once. */
+    callArgs: mut List<OverloadCallArg> = [];
+    var scanCur := syntax.skipTrivia(source, openParen + 1, prefix);
+    loop scanCur < size and source.at(scanCur) =!= ")" {
+        argPos := scanCur;
+        var aLabel := "";
+        var aShorthand := false;
+        var aRhs := scanCur;
+        if syntax.isSingleEquals(source, scanCur) {
+            idStart := syntax.skipTrivia(source, scanCur + 1, prefix);
+            if idStart < size and source.at(idStart).isNameStart() {
+                idEnd := source.skipName(idStart);
+                aLabel = source.slice(idStart, idEnd);
+                aRhs = idStart;
+                aShorthand = true;
+            }
+        } else if scanCur < size and source.at(scanCur).isNameStart() {
+            lEnd := source.skipName(scanCur);
+            afterL := syntax.skipTrivia(source, lEnd, prefix);
+            if syntax.isSingleEquals(source, afterL) {
+                aLabel = source.slice(scanCur, lEnd);
+                aRhs = syntax.skipTrivia(source, afterL + 1, prefix);
+            }
+        }
+        lease := if not aShorthand {
+            tryParseGroupedMutLease(source, aRhs, prefix, false)
+        } else {
+            (matched = false, sawMut = false, mutStart = 0, nameStart = 0, nameEnd = 0, next = aRhs)
+        };
+        aMut := lease.matched;
+        balancedEnd := syntax.skipBalancedArgument(source, aRhs, prefix);
+        var aContextual := false;
+        var aNatOk := false;
+        var aNatKind := "";
+        var aUnsufInt := false;
+        var aUnsufFloat := false;
+        if aMut {
+            afterL := syntax.skipTrivia(source, lease.next, prefix);
+            isSubSlice := afterL < size and (source.at(afterL) == "[" or source.at(afterL) == ".");
+            if isSubSlice {
+                subProbe := parseBinaryCtx(target, source, aRhs, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, true, "", aliases);
+                if subProbe.kind =!= "" {
+                    aNatOk = true;
+                    aNatKind = subProbe.kind;
+                }
+            } else {
+                mName := source.slice(lease.nameStart, lease.nameEnd);
+                mLoc := sym.localIndex(locals, mName);
+                if mLoc >= 0 and locals[mLoc].depth >= -1 {
+                    aNatOk = true;
+                    aNatKind = locals[mLoc].kind;
+                }
+            }
+        } else {
+            firstCh := if aRhs < size { source.at(aRhs) } else { "" };
+            candBareOv := if firstCh =!= "" and firstCh.isNameStart() {
+                bEnd := source.skipName(aRhs);
+                bAfter := syntax.skipTrivia(source, bEnd, prefix);
+                if bAfter >= balancedEnd or source.at(bAfter) == "," or source.at(bAfter) == ")" {
+                    bName := source.slice(aRhs, bEnd);
+                    sym.localIndex(locals, bName) < 0 and sym.hasOverloads(functions, bName)
+                } else { false }
+            } else { false };
+            needsExp := firstCh == "." or firstCh == "{" or firstCh == "[" or source.wordAt(aRhs, "fn") or candBareOv;
+            if needsExp {
+                /* Wait: non-empty list literals [1, 2] CAN be probed safely with expected = ""! Only [], {}, ., fn, bare ov cannot. */
+                var safeNatural := false;
+                if firstCh == "[" {
+                    inB := syntax.skipTrivia(source, aRhs + 1, prefix);
+                    if inB < size and source.at(inB) =!= "]" { safeNatural = true; }
+                }
+                if safeNatural {
+                    natP := parseBinaryCtx(target, source, aRhs, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, true, "", aliases);
+                    if natP.kind =!= "" {
+                        aNatOk = true;
+                        aNatKind = natP.kind;
+                    } else {
+                        aContextual = true;
+                    }
+                } else {
+                    aContextual = true;
+                }
+            } else {
+                natP := parseBinaryCtx(target, source, aRhs, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, true, "", aliases);
+                if natP.kind =!= "" {
+                    aNatOk = true;
+                    aNatKind = natP.kind;
+                    if natP.constant {
+                        numCls := classifyNumericLiteralText(source.slice(aRhs, natP.next));
+                        aUnsufInt = numCls.isInt and natP.kind == ir.VALUE_KIND_INT;
+                        aUnsufFloat = numCls.isFloat and natP.kind == ir.VALUE_KIND_FLOAT;
+                    }
+                } else {
+                    aContextual = true;
+                }
+            }
+        }
+        mut callArgs.pushBack(OverloadCallArg {
+            pos = argPos, rhsStart = aRhs, label = aLabel, isMut = aMut,
+            isShorthand = aShorthand, isContextual = aContextual,
+            isUnsuffixedInt = aUnsufInt, isUnsuffixedFloat = aUnsufFloat,
+            natOk = aNatOk, natKind = aNatKind, next = balancedEnd
+        });
+        scanCur = balancedEnd;
+        if scanCur < size and source.at(scanCur) == "," {
+            scanCur = syntax.skipTrivia(source, scanCur + 1, prefix);
+            if scanCur < size and source.at(scanCur) == ")" { break; }
+        } else {
+            break;
+        }
+    }
+    entryCount := callArgs.length();
+
+    /* Step 2: evaluate viability and specificity tier for every candidate index. */
+    viableIdxs: mut List<Int> = [];
+    viableBindings: mut List<String> = [];
+    viableTiers: mut List<Int> = [];
+    viableGenParams: mut List<String> = [];
+    viablePatsCsv: mut List<String> = [];
+    paramOffset := if hasRecv { 1 } else { 0 };
+
+    loop candIndices as candIdx {
+        info := functions[candIdx];
+        if info.count < 0 { continue; }
+        if isStaticTypeCall and hasRecv { continue; }
+        if hasRecv and (isStaticTypeOp(info) or info.count < 1) { continue; }
+        var preBindEnc := "";
+        genBindings: mut Map<String, String>;
+        isGen := info.runtime.startsWithAt(0, "$gen:");
+        var gpStr := "";
+        if isGen {
+            tplKey := info.runtime.slice(5, info.runtime.length());
+            tplIdx := generics.findTemplate(tplKey);
+            if tplIdx < 0 { continue; }
+            gpStr = generics.getTemplate(tplIdx).genericParams;
+        }
+        if isStaticTypeCall {
+            stRes := resolveTypeQualifiedOp(source, memberErrPos, prefix, candIdx, memberName, typeOwnerKey, resolvedType, aliasParamsCsv, aliasTplKind, functions, params, true);
+            if not stRes.ok { continue; }
+            preBindEnc = stRes.initBindings;
+            if preBindEnc =!= "" and gpStr =!= "" {
+                loop generics.decodeBindings(preBindEnc) as pb {
+                    if pb.kind =!= "" { mut genBindings.set(pb.name, pb.kind); }
+                }
+            }
+        }
+        if hasRecv {
+            rawRecv := types.paramKindOf(params[info.first]);
+            candRecvMut := rawRecv.startsWithAt(0, "mut ");
+            if candRecvMut =!= recvExplicitMut { continue; }
+            baseRecv := if candRecvMut { rawRecv.slice(4, rawRecv.length()) } else { rawRecv };
+            if isGen {
+                uRecvErr := generics.unifyKindMut(gpStr, baseRecv, recvKind, mut genBindings);
+                if uRecvErr =!= "" { continue; }
+                cRecvErr := findGenericConstraintError(gpStr, genBindings, "");
+                if cRecvErr =!= "" { continue; }
+                preBindEnc = generics.encodePartialBindings(gpStr, genBindings);
+            } else {
+                if not types.isCompatibleKind(baseRecv, recvKind) { continue; }
+            }
+        }
+        if hasComptime {
+            if not isGen { continue; }
+            allSpecs := types.splitParamSpecs(gpStr);
+            remSpecs: mut List<(name: String, kind: String)> = [];
+            loop allSpecs as sp {
+                if not genBindings.has(sp.name) { mut remSpecs.pushBack(sp); }
+            }
+            if ctArgCount =!= remSpecs.length() { continue; }
+            var ctOk := true;
+            var ci := 0;
+            loop ci < ctArgCount {
+                sp := remSpecs[ci];
+                rawCt := source.slice(ctArgStarts[ci], ctArgEnds[ci]).trim();
+                if rawCt == "" { ctOk = false; break; }
+                if types.isTypeParamKind(sp.kind) {
+                    cRes := types.canResolveTypeAt(rawCt, 0, prefix, aliases, "", [], 32);
+                    if not cRes.ok or syntax.skipTrivia(rawCt, cRes.next, prefix) < rawCt.length() { ctOk = false; break; }
+                    mut genBindings.set(sp.name, cRes.kind);
+                } else {
+                    vRes := types.parseComptimeValueArg(rawCt, 0, prefix, aliases, "", sp.kind);
+                    if not vRes.ok or syntax.skipTrivia(rawCt, vRes.next, prefix) < rawCt.length() { ctOk = false; break; }
+                    mut genBindings.set(sp.name, vRes.token);
+                }
+                ci = ci + 1;
+            }
+            if not ctOk { continue; }
+            if findGenericConstraintError(gpStr, genBindings, "") =!= "" { continue; }
+            preBindEnc = generics.encodePartialBindings(gpStr, genBindings);
+        }
+        userCount := info.count - paramOffset;
+        if entryCount =!= userCount { continue; }
+        /* Route call arguments to candidate parameter slots (positional, named, =shorthand). */
+        slotMatched: mut List<Bool> = [];
+        slotToArg: mut List<Int> = [];
+        var si := 0;
+        loop si < userCount {
+            mut slotMatched.pushBack(false);
+            mut slotToArg.pushBack(-1);
+            si = si + 1;
+        }
+        var routingOk := true;
+        var ai := 0;
+        loop ai < entryCount {
+            ca := callArgs[ai];
+            if ca.label =!= "" {
+                foundSlot := ctx.findParamSlot(params, info.first + paramOffset, userCount, ca.label);
+                if foundSlot < 0 or slotMatched[foundSlot] { routingOk = false; break; }
+                slotMatched[foundSlot] = true;
+                slotToArg[foundSlot] = ai;
+            } else {
+                var firstFree := -1;
+                var fi := 0;
+                loop fi < slotMatched.length() {
+                    if not slotMatched[fi] { firstFree = fi; break; }
+                    fi = fi + 1;
+                }
+                if firstFree < 0 { routingOk = false; break; }
+                slotMatched[firstFree] = true;
+                slotToArg[firstFree] = ai;
+            }
+            ai = ai + 1;
+        }
+        if not routingOk { continue; }
+
+        /* Validate parameter mutability and unify/match types per slot. */
+        var candViable := true;
+        var candTier := if isGen { 4 } else { 0 };
+        candPats: mut List<String> = [];
+        if isGen {
+            /* Two-pass for generics so bound non-contextual args constrain generic parameters before contextual args. */
+            var spIdx := 0;
+            loop spIdx < userCount {
+                ca := callArgs[slotToArg[spIdx]];
+                rawPK := types.paramKindOf(params[info.first + paramOffset + spIdx]);
+                pMut := rawPK.startsWithAt(0, "mut ");
+                if ca.isMut =!= pMut { candViable = false; break; }
+                pBase := if pMut { rawPK.slice(4, rawPK.length()) } else { rawPK };
+                mut candPats.pushBack(rawPK);
+                if not ca.isContextual and ca.natOk and types.kindHasAnyGenericParam(gpStr, pBase) {
+                    uErr := generics.unifyKindMut(gpStr, pBase, ca.natKind, mut genBindings);
+                    if uErr =!= "" { candViable = false; break; }
+                }
+                spIdx = spIdx + 1;
+            }
+            if not candViable { continue; }
+            if findGenericConstraintError(gpStr, genBindings, "") =!= "" { continue; }
+            var spIdx2 := 0;
+            loop spIdx2 < userCount {
+                ca := callArgs[slotToArg[spIdx2]];
+                rawPK := types.paramKindOf(params[info.first + paramOffset + spIdx2]);
+                pMut := rawPK.startsWithAt(0, "mut ");
+                pBase := if pMut { rawPK.slice(4, rawPK.length()) } else { rawPK };
+                subP := generics.substKind(gpStr, pBase, genBindings);
+                var effArgK := ca.natKind;
+                if ca.isContextual {
+                    if types.kindHasAnyGenericParam(gpStr, subP) { candViable = false; break; }
+                    pExp := parseBinaryCtx(target, source, ca.rhsStart, prefix, locals, functions, params, currentName, subP, 0, ctxs, iifeDepth, true, "", aliases);
+                    if pExp.kind == "" { candViable = false; break; }
+                    effArgK = pExp.kind;
+                } else if not ca.natOk {
+                    candViable = false;
+                    break;
+                }
+                if types.kindHasAnyGenericParam(gpStr, pBase) {
+                    if not types.isCompatibleKind(subP, effArgK) {
+                        if types.isDynKind(subP) and types.findImplForConcrete(effArgK, types.dynInterfaceKind(subP)).found {
+                            /* Allowed via dyn */
+                        } else {
+                            candViable = false;
+                            break;
+                        }
+                    }
+                    /* Promote from unconstrained (4) to constrained/structured (2) if any generic slot is structured or constrained. */
+                    if not types.isGenericParamName(gpStr, pBase) {
+                        if candTier > 2 { candTier = 2; }
+                    } else if types.typeParamConstraintKind(gpStr, pBase) =!= "" {
+                        if candTier > 2 { candTier = 2; }
+                    }
+                } else {
+                    if types.isDynKind(subP) and not types.isDynKind(effArgK) {
+                        if not types.findImplForConcrete(effArgK, types.dynInterfaceKind(subP)).found {
+                            candViable = false;
+                            break;
+                        }
+                    } else if ca.isUnsuffixedInt and numeric.isIntKind(subP) and effArgK =!= subP {
+                        pLit := parseBinaryCtx(target, source, ca.rhsStart, prefix, locals, functions, params, currentName, subP, 0, ctxs, iifeDepth, true, "", aliases);
+                        if pLit.kind == "" or not types.isCompatibleKind(subP, pLit.kind) { candViable = false; break; }
+                    } else if ca.isUnsuffixedFloat and numeric.isFloatKind(subP) and effArgK =!= subP {
+                        pLit := parseBinaryCtx(target, source, ca.rhsStart, prefix, locals, functions, params, currentName, subP, 0, ctxs, iifeDepth, true, "", aliases);
+                        if pLit.kind == "" or not types.isCompatibleKind(subP, pLit.kind) { candViable = false; break; }
+                    } else if not types.isCompatibleKind(subP, effArgK) {
+                        candViable = false;
+                        break;
+                    }
+                }
+                spIdx2 = spIdx2 + 1;
+            }
+        } else {
+            var spIdx := 0;
+            loop spIdx < userCount {
+                ca := callArgs[slotToArg[spIdx]];
+                rawPK := types.paramKindOf(params[info.first + paramOffset + spIdx]);
+                pMut := rawPK.startsWithAt(0, "mut ");
+                if ca.isMut =!= pMut { candViable = false; break; }
+                pBase := if pMut { rawPK.slice(4, rawPK.length()) } else { rawPK };
+                mut candPats.pushBack(rawPK);
+                if ca.isContextual {
+                    pExp := parseBinaryCtx(target, source, ca.rhsStart, prefix, locals, functions, params, currentName, pBase, 0, ctxs, iifeDepth, true, "", aliases);
+                    if pExp.kind == "" { candViable = false; break; }
+                    if types.isDynKind(pBase) and not types.isDynKind(pExp.kind) {
+                        if not types.findImplForConcrete(pExp.kind, types.dynInterfaceKind(pBase)).found { candViable = false; break; }
+                        if candTier < 3 { candTier = 3; }
+                    } else if not types.isCompatibleKind(pBase, pExp.kind) {
+                        candViable = false;
+                        break;
+                    } else if candTier < 1 {
+                        candTier = 1;
+                    }
+                } else if not ca.natOk {
+                    candViable = false;
+                    break;
+                } else if ca.natKind == pBase {
+                    /* Exact match keeps Tier 0. */
+                } else if ca.isUnsuffixedInt and numeric.isIntKind(pBase) {
+                    pLit := parseBinaryCtx(target, source, ca.rhsStart, prefix, locals, functions, params, currentName, pBase, 0, ctxs, iifeDepth, true, "", aliases);
+                    if pLit.kind == "" or not types.isCompatibleKind(pBase, pLit.kind) { candViable = false; break; }
+                    if candTier < 1 { candTier = 1; }
+                } else if ca.isUnsuffixedFloat and numeric.isFloatKind(pBase) {
+                    pLit := parseBinaryCtx(target, source, ca.rhsStart, prefix, locals, functions, params, currentName, pBase, 0, ctxs, iifeDepth, true, "", aliases);
+                    if pLit.kind == "" or not types.isCompatibleKind(pBase, pLit.kind) { candViable = false; break; }
+                    if candTier < 1 { candTier = 1; }
+                } else if types.isCompatibleKind(pBase, ca.natKind) {
+                    /* Implicit widening (e.g. Int32 -> Int): Tier 1 */
+                    if candTier < 1 { candTier = 1; }
+                } else if types.isDynKind(pBase) and not types.isDynKind(ca.natKind) and types.findImplForConcrete(ca.natKind, types.dynInterfaceKind(pBase)).found {
+                    if candTier < 3 { candTier = 3; }
+                } else {
+                    candViable = false;
+                    break;
+                }
+                spIdx = spIdx + 1;
+            }
+        }
+        if not candViable { continue; }
+        /* For zero-arg generic vs non-generic, treat non-generic as Tier 0, unconstrained generic as Tier 4, constrained as Tier 2. */
+        if isGen and userCount == 0 and hasComptime { candTier = 0; }
+        mut viableIdxs.pushBack(candIdx);
+        mut viableBindings.pushBack(preBindEnc);
+        mut viableTiers.pushBack(candTier);
+        mut viableGenParams.pushBack(gpStr);
+        mut viablePatsCsv.pushBack(candPats.join("\n"));
+    }
+
+    vc := viableIdxs.length();
+    if vc == 0 {
+        argTypesDisp: mut List<String> = [];
+        loop callArgs as ca {
+            d := if ca.isMut { "mut " } else { "" };
+            mut argTypesDisp.pushBack(d + (if ca.natOk { types.displayKind(ca.natKind) } else { "_" }));
+        }
+        syntax.failAt(source, errPos, prefix, "no matching overload for " + calleeDisplay + " with argument types (" + argTypesDisp.join(", ") + ")");
+    }
+    if vc == 1 {
+        return (chosenIdx = viableIdxs[0], initBindings = viableBindings[0], openParen = openParen);
+    }
+
+    /* Step 3: find maximal (undominated) candidates. */
+    bestMask: mut List<Bool> = [];
+    var bi := 0;
+    loop bi < vc { mut bestMask.pushBack(true); bi = bi + 1; }
+    var i := 0;
+    loop i < vc {
+        var j := 0;
+        loop j < vc {
+            if i =!= j and bestMask[i] and bestMask[j] {
+                if overloads.isMoreSpecificCandidate(
+                    viableTiers[j], viableGenParams[j], viablePatsCsv[j].split("\n"),
+                    viableTiers[i], viableGenParams[i], viablePatsCsv[i].split("\n")
+                ) {
+                    bestMask[i] = false;
+                    break;
+                }
+            }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+    winners: mut List<Int> = [];
+    var wi := 0;
+    loop wi < vc {
+        if bestMask[wi] { mut winners.pushBack(wi); }
+        wi = wi + 1;
+    }
+    if winners.length() =!= 1 {
+        syntax.failAt(source, errPos, prefix, "ambiguous call to overloaded " + calleeDisplay + ": matches multiple overloads");
+    }
+    w := winners[0];
+    (chosenIdx = viableIdxs[w], initBindings = viableBindings[w], openParen = openParen)
 };
 
 /** Parses user, type-operation, and indirect function calls with positional, named, and `=name` shorthand arguments, plus optional prepended receiver, generic unification/monomorphization, and TS `mut Record` live accessor boxes. */
@@ -11768,6 +12371,15 @@ findTypeOp := fn(functions: List<FunctionInfo>, ownerKey: String, opName: String
     sym.findFunction(functions, "$statictypeop:" + ownerKey + "." + opName)
 };
 
+/** Returns all instance and static type-operation candidate indices registered for `ownerKey.opName`. */
+findAllTypeOps := fn(functions: List<FunctionInfo>, ownerKey: String, opName: String): List<Int> {
+    out: mut List<Int> = sym.findFunctions(functions, "$typeop:" + ownerKey + "." + opName);
+    loop sym.findFunctions(functions, "$statictypeop:" + ownerKey + "." + opName) as si {
+        mut out.pushBack(si);
+    }
+    out
+};
+
 /** True when a type-attached operation is static/type-level (declared without an explicit `Self` receiver first parameter). */
 isStaticTypeOp := fn(opInfo: FunctionInfo): Bool {
     opInfo.name.startsWithAt(0, "$statictypeop:")
@@ -12093,7 +12705,11 @@ parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mN
             return parseDynMethodDotCall(target, source, labelStart, afterLabel, recvParsed, recvIdx, label, true, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
         }
         ownerKey := types.typeOpOwnerKey(curKind);
-        var opIdx := if ownerKey =!= "" { findTypeOp(functions, ownerKey, label) } else { -1 };
+        opCands := if ownerKey =!= "" { findAllTypeOps(functions, ownerKey, label) } else {
+            emptyOps: List<Int> = [];
+            emptyOps
+        };
+        var opIdx := if opCands.length() > 0 { opCands[0] } else { -1 };
         if opIdx < 0 {
             emptyIfaces: List<String> = [];
             im := types.findImplMethodForConcrete(curKind, label, emptyIfaces);
@@ -12101,7 +12717,11 @@ parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mN
                 syntax.failAt(source, labelStart, prefix, "ambiguous method " + label + " on " + types.displayKind(curKind) + "; multiple interface impls provide it");
             }
             if im.found {
-                opIdx = sym.findFunction(functions, im.fnKey);
+                opIdx = if im.fnKey.startsWithAt(0, "$rt:") {
+                    sym.findFunctionByRuntime(functions, im.fnKey.slice(4, im.fnKey.length()))
+                } else {
+                    sym.findFunction(functions, im.fnKey)
+                };
             }
         }
         if opIdx < 0 {
@@ -12109,6 +12729,15 @@ parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mN
         }
         if afterLabel >= size or source.at(afterLabel) =!= "(" {
             syntax.failAt(source, labelStart, prefix, "type operation " + types.displayKind(curKind) + "." + label + " must be called with (...)");
+        }
+        if opCands.length() > 1 {
+            selOp := selectOverloadForCall(
+                target, source, afterLabel, labelStart, prefix, types.displayKind(curKind) + "." + label,
+                opCands, true, curKind, true,
+                false, ownerKey, label, curKind, "", "", labelStart,
+                locals, functions, params, currentName, ctxs, iifeDepth, aliases
+            );
+            opIdx = selOp.chosenIdx;
         }
         sliceBorrows.checkCanMutateBinding(locals, entry.runtime, recvName, source, mNameStart, prefix);
         recvParsed := (kind = curKind, code = curCode, intValue = entry.intValue, textValue = entry.textValue, constant = false, next = pos);
@@ -12185,9 +12814,10 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 label := source.slice(labelStart, labelEnd);
                 if left.kind == ir.VALUE_KIND_MODULE {
                     qualified := left.textValue + "." + label;
-                    functionIndex := sym.findFunction(functions, qualified);
-                    if functionIndex >= 0 {
-                        left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = exprStart.toText(), intValue = functionIndex, textValue = qualified,
+                    fnCands := sym.findFunctions(functions, qualified);
+                    if fnCands.length() > 0 {
+                        modFnCode := if fnCands.length() > 1 { "$ovfn:\n" + qualified + "\n" + exprStart.toText() } else { exprStart.toText() };
+                        left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = modFnCode, intValue = fnCands[0], textValue = qualified,
                         constant = false, next = labelEnd);
                     } else {
                         afterMemberLabel := syntax.skipTrivia(source, labelEnd, prefix);
@@ -12284,8 +12914,17 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                     }
                                 }
                                 if not handledModMember {
-                                    modOpIdx := if modTypeOwnerKey =!= "" { findTypeOp(functions, modTypeOwnerKey, caseName) } else { -1 };
-                                    if modOpIdx >= 0 {
+                                    modOpCands := if modTypeOwnerKey =!= "" { findAllTypeOps(functions, modTypeOwnerKey, caseName) } else {
+                                        emptyModOps: List<Int> = [];
+                                        emptyModOps
+                                    };
+                                    if modOpCands.length() > 1 {
+                                        ovModTopCode := ["$ovtop:", modTypeOwnerKey, caseName, modTypeKind, modAliasParamsCsv, modAliasTplKind, exprStart.toText(), caseStart.toText()].join("\n");
+                                        left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = ovModTopCode, intValue = modOpCands[0],
+                                        textValue = (if modTypeKind =!= "" { types.displayKind(modTypeKind) } else { qualified }) + "." + caseName, constant = false, next = caseEnd);
+                                        handledModMember = true;
+                                    } else if modOpCands.length() == 1 {
+                                        modOpIdx := modOpCands[0];
                                         modOpRes := resolveTypeQualifiedOp(
                                         source, caseStart, prefix, modOpIdx, caseName, modTypeOwnerKey,
                                         modTypeKind, modAliasParamsCsv, modAliasTplKind, functions, params, inferMode
@@ -12437,7 +13076,11 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     left = parseDynMethodDotCall(target, source, labelStart, afterOpLabel, left, curRecvLocalIdx, label, false, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else {
                     ownerKey := types.typeOpOwnerKey(left.kind);
-                    var opIdx := if ownerKey =!= "" { findTypeOp(functions, ownerKey, label) } else { -1 };
+                    opCands := if ownerKey =!= "" { findAllTypeOps(functions, ownerKey, label) } else {
+                        emptyRoOps: List<Int> = [];
+                        emptyRoOps
+                    };
+                    var opIdx := if opCands.length() > 0 { opCands[0] } else { -1 };
                     afterOpLabel := syntax.skipTrivia(source, labelEnd, prefix);
                     if opIdx < 0 and not (types.isSoaKind(left.kind) and (afterOpLabel >= sourceLen or source.at(afterOpLabel) =!= "(")) {
                         emptyIfaces: List<String> = [];
@@ -12446,10 +13089,23 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                             syntax.failAt(source, labelStart, prefix, "ambiguous method " + label + " on " + types.displayKind(left.kind) + "; multiple interface impls provide it");
                         }
                         if im.found {
-                            opIdx = sym.findFunction(functions, im.fnKey);
+                            opIdx = if im.fnKey.startsWithAt(0, "$rt:") {
+                                sym.findFunctionByRuntime(functions, im.fnKey.slice(4, im.fnKey.length()))
+                            } else {
+                                sym.findFunction(functions, im.fnKey)
+                            };
                         }
                     }
                     if opIdx >= 0 and afterOpLabel < sourceLen and source.at(afterOpLabel) == "(" {
+                        if opCands.length() > 1 {
+                            selOp := selectOverloadForCall(
+                                target, source, afterOpLabel, labelStart, prefix, types.displayKind(left.kind) + "." + label,
+                                opCands, true, left.kind, false,
+                                false, ownerKey, label, left.kind, "", "", labelStart,
+                                locals, functions, params, currentName, ctxs, iifeDepth, aliases
+                            );
+                            opIdx = selOp.chosenIdx;
+                        }
                         left = parseTypeOpDotCall(target, source, labelStart, afterOpLabel, left, curRecvLocalIdx, opIdx, label, false, "", expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                     } else if types.isSoaKind(left.kind) and (afterOpLabel >= sourceLen or source.at(afterOpLabel) =!= "(") {
                         col := soaColInfo(left.kind, label);
@@ -12491,14 +13147,29 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
             }
         } else if postPosition < source.length() and source.at(postPosition) == "[" {
             isSliceBrk := isBracketRangeSlice(source, postPosition, prefix);
-            getHook := if not isSliceBrk {
+            var getHook := if not isSliceBrk {
                 resolveIndexHookOp(target, source, postPosition, prefix, left.kind, "$getIndex", functions, params, inferMode)
             } else {
                 (found = false, runtime = "", keyKind = "", valKind = "", resultKind = "")
             };
+            var preParsedKey := (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = postPosition + 1);
+            var hasPreParsedKey := false;
+            if not getHook.found and not isSliceBrk and hasInterfaceIndexImpl(target, left.kind, false) {
+                idxSt := syntax.skipTrivia(source, postPosition + 1, prefix);
+                preParsedKey = parseBinaryCtx(target, source, idxSt, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
+                hasPreParsedKey = true;
+                getHook = resolveInterfaceIndexImpl(target, source, postPosition, prefix, left.kind, preParsedKey.kind, false, functions, inferMode);
+                if not getHook.found {
+                    syntax.failAt(source, idxSt, prefix, "type " + types.displayKind(left.kind) + " does not implement Index for key type " + types.displayKind(preParsedKey.kind));
+                }
+            }
             if getHook.found {
                 indexStart := syntax.skipTrivia(source, postPosition + 1, prefix);
-                key := parseBinaryCtx(target, source, indexStart, prefix, locals, functions, params, currentName, getHook.keyKind, 0, ctxs, iifeDepth, inferMode, "", aliases);
+                key := if hasPreParsedKey {
+                    preParsedKey
+                } else {
+                    parseBinaryCtx(target, source, indexStart, prefix, locals, functions, params, currentName, getHook.keyKind, 0, ctxs, iifeDepth, inferMode, "", aliases)
+                };
                 if not types.isCompatibleKind(getHook.keyKind, key.kind) {
                     syntax.failAt(source, indexStart, prefix, "index must be " + types.displayKind(getHook.keyKind) + ", got " + types.displayKind(key.kind));
                 }
@@ -12531,8 +13202,10 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", left), key) } else { "" });
             } else {
                 isStrSlice := left.kind == ir.VALUE_KIND_STRING;
-                if not types.isListKind(left.kind) and not types.isArrayKind(left.kind) and not types.isSliceKind(left.kind) and not isStrSlice {
-                    syntax.failAt(source, postPosition, prefix, "type " + types.displayKind(left.kind) + " does not define $getIndex for indexing");
+                isBuiltinSliceTarget := types.isListKind(left.kind) or types.isArrayKind(left.kind) or types.isSliceKind(left.kind) or isStrSlice;
+                hasUserRangeIndex := not isBuiltinSliceTarget and isSliceBrk and hasInterfaceIndexImpl(target, left.kind, false);
+                if not isBuiltinSliceTarget and not hasUserRangeIndex {
+                    syntax.failAt(source, postPosition, prefix, "type " + types.displayKind(left.kind) + " does not define $getIndex or Index for indexing");
                 }
                 initSliceMarkers := if inferMode { ctx.collectParsedMarkers("", left) } else { "" };
                 bounds := parseBracketSliceBounds(target, source, postPosition, initSliceMarkers, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
@@ -12540,7 +13213,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     if isStrSlice {
                         syntax.failAt(source, postPosition, prefix, "string indexing requires a range slice (use String.at for single code points)");
                     }
-                    syntax.failAt(source, postPosition, prefix, "type " + types.displayKind(left.kind) + " does not define $getIndex for indexing");
+                    syntax.failAt(source, postPosition, prefix, "type " + types.displayKind(left.kind) + " does not define $getIndex or Index for indexing");
                 }
                 if isStrSlice {
                     sliceCode := if bounds.hasEnd {
@@ -12552,6 +13225,33 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     };
                     left = ctx.withMarkers((kind = ir.VALUE_KIND_STRING, code = sliceCode,
                     intValue = 0, textValue = "", constant = false, next = bounds.closeNext), bounds.markers);
+                } else if hasUserRangeIndex {
+                    if not bounds.hasEnd {
+                        syntax.failAt(source, postPosition, prefix, "range indexing on " + types.displayKind(left.kind) + " requires an end bound ([start..end])");
+                    }
+                    rangeIdx := resolveInterfaceIndexImpl(target, source, postPosition, prefix, left.kind, "$Range", false, functions, inferMode);
+                    if not rangeIdx.found {
+                        syntax.failAt(source, postPosition, prefix, "type " + types.displayKind(left.kind) + " does not implement Index<Range, ...> for range indexing");
+                    }
+                    rangeKind := rangeIdx.keyKind;
+                    rangeExpr := if target == ir.TARGET_C {
+                        "/*@T:" + rangeKind + "@*/((" + types.cStructTag(rangeKind) + "){ .f_start = " + bounds.startCode + ", .f_end = " + bounds.endCode + " })"
+                    } else {
+                        "({ start: " + bounds.startCode + ", end: " + bounds.endCode + " })"
+                    };
+                    emptyRangeMutRts: List<String> = [];
+                    rngClosureHazard := localsHasLocalClosure(locals);
+                    recvCode := ctx.readOnlyArgWithSnapshot(target, left.kind, left.kind, left.code, readOnlyArgNeedsSnapshot(left.code, locals, emptyRangeMutRts, rngClosureHazard));
+                    var rngCode := emitHookIndexReadCode(target, bounds.indexStart, left.kind, recvCode, rangeIdx.runtime, rangeExpr);
+                    if target == ir.TARGET_C {
+                        rngDrops: mut List<String> = [];
+                        rb := cBorrowExprWithPostDrop(left.kind, recvCode, types.cParamIsConstPtr(left.kind));
+                        if rb.drop =!= "" { mut rngDrops.pushBack(rb.drop); }
+                        kb := cBorrowExprWithPostDrop(rangeKind, rangeExpr, types.cParamIsConstPtr(rangeKind));
+                        if kb.drop =!= "" { mut rngDrops.pushBack(kb.drop); }
+                        rngCode = cWrapExprWithPostDrops(rangeIdx.valKind, emitHookIndexReadCode(target, bounds.indexStart, left.kind, rb.expr, rangeIdx.runtime, kb.expr), rngDrops);
+                    }
+                    left = ctx.withMarkers((kind = rangeIdx.valKind, code = rngCode, intValue = 0, textValue = "", constant = false, next = bounds.closeNext), bounds.markers);
                 } else {
                     if types.isBitPackedArrayKind(left.kind) {
                         syntax.failAt(source, postPosition, prefix, "slices over bit-packed array " + types.displayKind(left.kind) + " are not supported yet; convert with .toList() first");
@@ -12584,16 +13284,85 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
             var callRuntime := left.code;
             var calleeDisplay := types.displayKind(left.kind);
             var errPos := postPosition;
+            var userCallOpenPos := postPosition;
             var preGenBindings := "";
             if isModuleFn {
-                info := functions[left.intValue];
                 calleeDisplay = left.textValue;
-                codeSep := left.code.indexOf("|", 0);
-                posText := if codeSep < 0 { left.code } else { left.code.slice(0, codeSep) };
-                if codeSep >= 0 {
-                    preGenBindings = left.code.slice(codeSep + 1, left.code.length());
+                var effFnIdx := left.intValue;
+                var ovPreResolved := false;
+                if left.code.startsWithAt(0, "$ovfn:") or left.code.startsWithAt(0, "$ovtop:") {
+                    isOvTop := left.code.startsWithAt(0, "$ovtop:");
+                    ovParts := left.code.split("\n");
+                    var ovCands: List<Int> = [];
+                    var ovOwner := "";
+                    var ovMember := "";
+                    var ovResType := "";
+                    var ovAliasCsv := "";
+                    var ovAliasTpl := "";
+                    var ovMemberErrPos := errPos;
+                    if isOvTop {
+                        ovOwner = ovParts[1];
+                        ovMember = ovParts[2];
+                        ovResType = ovParts[3];
+                        ovAliasCsv = ovParts[4];
+                        ovAliasTpl = ovParts[5];
+                        errPos = syntax.parseDigits(ovParts[6], 0, ovParts[6].length());
+                        ovMemberErrPos = syntax.parseDigits(ovParts[7], 0, ovParts[7].length());
+                        ovCands = findAllTypeOps(functions, ovOwner, ovMember);
+                    } else {
+                        ovFnKey := ovParts[1];
+                        errPos = syntax.parseDigits(ovParts[2], 0, ovParts[2].length());
+                        ovCands = sym.findFunctions(functions, ovFnKey);
+                    }
+                    hasCallSite := postPosition < source.length() and (source.at(postPosition) == "(" or source.at(postPosition) == "<");
+                    if hasCallSite {
+                        sel := selectOverloadForCall(
+                            target, source, postPosition, errPos, prefix, calleeDisplay,
+                            ovCands, false, "", false,
+                            isOvTop, ovOwner, ovMember, ovResType, ovAliasCsv, ovAliasTpl, ovMemberErrPos,
+                            locals, functions, params, currentName, ctxs, iifeDepth, aliases
+                        );
+                        effFnIdx = sel.chosenIdx;
+                        preGenBindings = sel.initBindings;
+                        userCallOpenPos = sel.openParen;
+                        ovPreResolved = sel.openParen =!= postPosition;
+                    } else {
+                        if not types.isFnKind(expected) {
+                            syntax.failAt(source, errPos, prefix, "ambiguous reference to overloaded " + (if isOvTop { "type operation " } else { "function " }) + calleeDisplay + "; provide an explicit function type annotation");
+                        }
+                        exactMatches: mut List<Int> = [];
+                        compatMatches: mut List<Int> = [];
+                        loop ovCands as ci {
+                            cInfo := functions[ci];
+                            if cInfo.count < 0 or cInfo.runtime.startsWithAt(0, "$gen:") or cInfo.runtime.startsWithAt(0, "lite$") {
+                                continue;
+                            }
+                            cCtx := contexts.fnContextFor(cInfo.runtime);
+                            cFnKind := types.fnCanonicalKindWithCtx(params, cInfo.first, cInfo.count, cInfo.result, cCtx);
+                            if cFnKind == expected {
+                                mut exactMatches.pushBack(ci);
+                            } else if types.isCompatibleKind(expected, cFnKind) {
+                                mut compatMatches.pushBack(ci);
+                            }
+                        }
+                        finalMatches := if exactMatches.length() > 0 { exactMatches } else { compatMatches };
+                        if finalMatches.length() == 0 {
+                            syntax.failAt(source, errPos, prefix, "no overload of " + calleeDisplay + " matches expected type " + types.displayKind(expected));
+                        }
+                        if finalMatches.length() > 1 {
+                            syntax.failAt(source, errPos, prefix, "ambiguous reference to overloaded function " + calleeDisplay + " for type " + types.displayKind(expected));
+                        }
+                        effFnIdx = finalMatches[0];
+                    }
+                } else {
+                    codeSep := left.code.indexOf("|", 0);
+                    posText := if codeSep < 0 { left.code } else { left.code.slice(0, codeSep) };
+                    if codeSep >= 0 {
+                        preGenBindings = left.code.slice(codeSep + 1, left.code.length());
+                    }
+                    errPos = if posText =!= "" { syntax.parseDigits(posText, 0, posText.length()) } else { exprStart };
                 }
-                errPos = if posText =!= "" { syntax.parseDigits(posText, 0, posText.length()) } else { exprStart };
+                info := functions[effFnIdx];
                 var listOpName := "";
                 var listOpDisplay := "";
                 var mapOpName := "";
@@ -12653,6 +13422,12 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         if inferMode { ctx.collectParsedMarkers(ctx.collectParsedMarkers("", aArg), bArg) } else { "" });
                 } else if info.count < 0 {
                     syntax.failAt(source, errPos, prefix, "host output functions are standalone statements");
+                } else if ovPreResolved {
+                    handleUserCall = true;
+                    callFirst = info.first;
+                    callCount = info.count;
+                    callResult = info.result;
+                    callRuntime = info.runtime;
                 } else if info.runtime.startsWithAt(0, "$gen:") and postPosition < source.length() and source.at(postPosition) == "<" {
                     tplKey := info.runtime.slice(5, info.runtime.length());
                     tpl := generics.getTemplate(generics.findTemplate(tplKey));
@@ -12883,10 +13658,10 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
             if handleUserCall {
                 effCallCtxKind := if isModuleFn { contexts.fnContextFor(callRuntime) } else { types.fnContextKind(left.kind) };
                 if preGenBindings =!= "" {
-                    left = parseUserOrIndirectCallWithRecv(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
+                    left = parseUserOrIndirectCallWithRecv(target, source, userCallOpenPos, errPos, isModuleFn, calleeDisplay, callRuntime,
                     callParams, callFirst, callCount, callResult, effCallCtxKind, false, "", "", "", "", "", "", preGenBindings, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else {
-                    left = parseUserOrIndirectCall(target, source, postPosition, errPos, isModuleFn, calleeDisplay, callRuntime,
+                    left = parseUserOrIndirectCall(target, source, userCallOpenPos, errPos, isModuleFn, calleeDisplay, callRuntime,
                     callParams, callFirst, callCount, callResult, effCallCtxKind, expected, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 }
             }

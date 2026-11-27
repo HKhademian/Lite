@@ -406,7 +406,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
             if memStart >= size or not source.at(memStart).isNameStart() { return (kind = "", next = start); }
             memEnd := source.skipName(memStart);
             qualified := name + "." + source.slice(memStart, memEnd);
-            qFnIdx := sym.findFunction(functions, qualified);
+            qFnIdx := if sym.hasOverloads(functions, qualified) { -1 } else { sym.findFunction(functions, qualified) };
             if qFnIdx >= 0 {
                 curFnIdx = qFnIdx;
                 leftKind = "$fn";
@@ -471,7 +471,7 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
                 leftKind = futureValues[futAnyIdx].kind;
                 leftNext = afterName;
             } else {
-                fnIdx := sym.findFunction(functions, name);
+                fnIdx := if sym.hasOverloads(functions, name) { -1 } else { sym.findFunction(functions, name) };
                 if fnIdx >= 0 {
                     curFnIdx = fnIdx;
                     leftKind = "$fn";
@@ -1351,7 +1351,7 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                                 valStart := syntax.skipTrivia(source, afterOp + 2, prefix);
                                 if source.wordAt(valStart, "fn") {
                                     qualName := source.slice(declStart, declEnd) + "." + source.slice(opStart, opEnd);
-                                    mut decls.pushBack((kind = ir.DECL_KIND_PUB_TYPE_OP, name = qualName, runtime = "", code = "", intValue = 0, textValue = ""));
+                                    mut decls.pushBack((kind = ir.DECL_KIND_PUB_TYPE_OP, name = qualName, runtime = "", code = "", intValue = declStart, textValue = ""));
                                 }
                             }
                         }
@@ -1359,7 +1359,7 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                         valStart := syntax.skipTrivia(source, operator + 2, prefix);
                         declName := source.slice(declStart, declEnd);
                         if source.wordAt(valStart, "fn") {
-                            mut decls.pushBack((kind = ir.DECL_KIND_PUB_FN, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
+                            mut decls.pushBack((kind = ir.DECL_KIND_PUB_FN, name = declName, runtime = "", code = "", intValue = declStart, textValue = ""));
                         } else if source.wordAt(valStart, "alias") or source.wordAt(valStart, "distinct") or source.wordAt(valStart, "record") or source.wordAt(valStart, "enum") or source.wordAt(valStart, "interface") {
                             mut decls.pushBack((kind = ir.DECL_KIND_PUB_TYPE, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
                         } else {

@@ -1,0 +1,371 @@
+/* Phase 11 verification: function & method overloading (direct/type-op/mut/labels/specificity/generics/contexts/first-class values/bodyless impl), Index/IndexMut/Range slice hook migration, TS/C11 -Werror/ASan/UBSan parity, and complete rejection matrix. */
+
+test := import "core/test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+emptyEnv := fn(): List<String> {
+    m: List<String> = [];
+    m
+};
+
+emptyBytes := fn(): List<Int> {
+    xs: List<Int> = [];
+    xs
+};
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccProbe := compilerTest.probeCc();
+
+/* 1. Multi-module + comprehensive Phase 11 feature matrix */
+p11Tmp := fs.makeTempDir("lite-p11-");
+test.check("makeTempDir p11", p11Tmp.ok);
+
+modOvPath := path.join(p11Tmp.path, "mod_ov.lt");
+_wModOv := fs.writeText(modOvPath, [
+    "pub extOver := fn(x: Int): String { \"pub-int:\" + x.toText() };",
+    "extOver := fn(s: String): String { \"priv-str:\" + s };",
+    "pub extOver := fn(a: Int, b: Int): String { \"pub-pair:\" + (a + b).toText() };",
+    "pub useLocal := fn(): String { extOver(\"ok\") };",
+    "",
+    "pub Counter := record { n: Int; };",
+    "pub Counter.make := fn(n: Int): Counter { Counter { n = n } };",
+    "pub Counter.make := fn(label: String): Counter { Counter { n = label.length() } };",
+    "pub Counter.bump := fn(self: Self, delta: Int): Int { self.n + delta };",
+    "pub Counter.bump := fn(self: mut Self, delta: Int): Int {",
+    "    self.n = self.n + delta;",
+    "    self.n",
+    "};",
+    "pub Counter.bump := fn(self: mut Self, a: Int, b: Int): Int {",
+    "    self.n = self.n + a + b;",
+    "    self.n",
+    "};",
+    "pub Counter.calc := fn(x: Int): Int { x + 10 };",
+    "pub Counter.calc := fn(x: Int, y: Int): Int { x + y };"
+].join("\n"));
+
+mainSrc := [
+    "io := import \"core/io\";",
+    "iface := import \"core/interface\";",
+    "ov := import \"./mod_ov\";",
+    "",
+    "/* Free function overloads: arity, types, labels, mutability */",
+    "fmt := fn(x: Int): String { \"i:\" + x.toText() };",
+    "fmt := fn(s: String): String { \"s:\" + s };",
+    "fmt := fn(a: Int, b: Int): String { \"ii:\" + (a + b).toText() };",
+    "",
+    "connect := fn(host: String): String { \"host=\" + host };",
+    "connect := fn(port: Int): String { \"port=\" + port.toText() };",
+    "",
+    "byLabel := fn(a: Int): String { \"a=\" + a.toText() };",
+    "byLabel := fn(b: Int): String { \"b=\" + b.toText() };",
+    "",
+    "touch := fn(xs: List<Int>): String { \"ro:\" + xs.length().toText() };",
+    "touch := fn(xs: mut List<Int>): String {",
+    "    mut xs.pushBack(99);",
+    "    \"mut:\" + xs.length().toText()",
+    "};",
+    "",
+    "/* Specificity tiers: concrete > multi-bound generic > single-bound generic > dyn > unconstrained generic; List<T> > T; numeric literals */",
+    "TagA := interface { tagA: fn(self: Self): String; };",
+    "TagB := interface { tagB: fn(self: Self): String; };",
+    "ItemA := record { v: Int; };",
+    "impl TagA for ItemA { tagA := fn(self: Self): String { \"A\" + self.v.toText() }; };",
+    "ItemAB := record { v: Int; };",
+    "impl TagA for ItemAB { tagA := fn(self: Self): String { \"AB\" + self.v.toText() }; };",
+    "impl TagB for ItemAB { tagB := fn(self: Self): String { \"B\" + self.v.toText() }; };",
+    "ItemPlain := record { v: Int; };",
+    "",
+    "rank := fn<T>(x: T): String { \"unconstrained\" };",
+    "rank := fn<T: Type<TagA>>(x: T): String { \"tagA:\" + x.tagA() };",
+    "rank := fn<T: Type<TagA, TagB>>(x: T): String { \"tagAB:\" + x.tagB() };",
+    "rank := fn(x: ItemA): String { \"concrete-A:\" + x.v.toText() };",
+    "",
+    "rankDyn := fn(x: dyn TagA): String { \"dyn:\" + x.tagA() };",
+    "rankDyn := fn<T: Type<TagA>>(x: T): String { \"gen:\" + x.tagA() };",
+    "",
+    "describeBox := fn<T>(x: T): String { \"single\" };",
+    "describeBox := fn<T>(xs: List<T>): String { \"list:\" + xs.length().toText() };",
+    "",
+    "pickNum := fn(x: Int): String { \"Int:\" + x.toText() };",
+    "pickNum := fn(x: Int32): String { \"Int32:\" + cast<Int>(x).toText() };",
+    "onlyI32 := fn(x: Int32): String { \"only32:\" + cast<Int>(x).toText() };",
+    "onlyI32 := fn(x: String): String { \"str:\" + x };",
+    "",
+    "/* Overloading + Phase 10 context(...) + generic context inference */",
+    "BufLog := record { lines: List<String>; };",
+    "impl iface.Logger for BufLog {",
+    "    log := fn(self: mut Self, level: String, msg: String): Unit {",
+    "        mut self.lines.pushBack(level + \":\" + msg);",
+    "    };",
+    "};",
+    "context factor: Int = 3;",
+    "emitVal := fn(x: Int) context(factor: Int): String { \"ctx-int:\" + (x * factor).toText() };",
+    "emitVal := fn<L: Type<iface.Logger>>(s: String) context(mut log: L): String {",
+    "    mut log.log(\"INFO\", s);",
+    "    \"ctx-log:\" + s",
+    "};",
+    "",
+    "/* First-class overloaded function & type-op values */",
+    "dbl := fn(x: Int): Int { x * 2 };",
+    "dbl := fn(s: String): String { s + s };",
+    "",
+    "/* Bodyless impl picking matching overloaded type op */",
+    "Step := interface {",
+    "    bump: fn(self: Self, delta: Int): Int;",
+    "};",
+    "Meter := record { n: Int; };",
+    "Meter.bump := fn(self: Self, delta: Int): Int { self.n + delta };",
+    "Meter.bump := fn(self: Self, tag: String): String { tag + \":\" + self.n.toText() };",
+    "impl Step for Meter;",
+    "",
+    "/* Overloaded Index<K, V> (Int, String, Range) and IndexMut<Int, Int> on user type */",
+    "SparseVec := record { items: List<Int>; };",
+    "impl iface.Index<Int, Int> for SparseVec {",
+    "    getIndex := fn(self: Self, index: Int): Int { self.items[index] };",
+    "};",
+    "impl iface.Index<String, Int> for SparseVec {",
+    "    getIndex := fn(self: Self, key: String): Int {",
+    "        if key == \"sum\" {",
+    "            var total := 0;",
+    "            loop self.items as v { total = total + v; }",
+    "            return total;",
+    "        }",
+    "        self.items.length()",
+    "    };",
+    "};",
+    "impl iface.Index<iface.Range, List<Int>> for SparseVec {",
+    "    getIndex := fn(self: Self, r: iface.Range): List<Int> {",
+    "        out: mut List<Int> = [];",
+    "        var i := r.start;",
+    "        loop i < r.end {",
+    "            mut out.pushBack(self.items[i]);",
+    "            i = i + 1;",
+    "        }",
+    "        out",
+    "    };",
+    "};",
+    "impl iface.IndexMut<Int, Int> for SparseVec {",
+    "    setIndex := fn(self: mut Self, index: Int, value: Int): Unit {",
+    "        mut self.items.setAt(index, value);",
+    "    };",
+    "};",
+    "",
+    "readAt := fn<C: Type<iface.Index<Int, Int>>>(c: C, idx: Int): Int { c[idx] };",
+    "",
+    "main := fn(): Unit {",
+    "    io.outputLine(ov.extOver(7) + \"|\" + ov.extOver(3, 4) + \"|\" + ov.useLocal());",
+    "    c1 := ov.Counter.make(5);",
+    "    var mut c2 := ov.Counter.make(\"hello\");",
+    "    r1 := c1.bump(2);",
+    "    r2 := mut c2.bump(10);",
+    "    r3 := mut c2.bump(1, 2);",
+    "    io.outputLine(r1.toText() + \",\" + r2.toText() + \",\" + r3.toText());",
+    "",
+    "    host := \"lite\";",
+    "    io.outputLine(fmt(1) + \",\" + fmt(\"x\") + \",\" + fmt(2, 5));",
+    "    io.outputLine(connect(=host) + \",\" + connect(port = 8080) + \",\" + byLabel(a = 1) + \",\" + byLabel(b = 2));",
+    "",
+    "    nums: mut List<Int> = [10, 20];",
+    "    io.outputLine(touch(nums) + \",\" + touch(mut nums));",
+    "",
+    "    a := ItemA { v = 4 };",
+    "    ab := ItemAB { v = 9 };",
+    "    p := ItemPlain { v = 1 };",
+    "    io.outputLine(rank(a) + \"|\" + rank(ab) + \"|\" + rank(p));",
+    "    io.outputLine(rankDyn(a) + \"|\" + rankDyn(ab));",
+    "    io.outputLine(describeBox(5) + \"|\" + describeBox(nums));",
+    "    io.outputLine(pickNum(42) + \"|\" + pickNum(cast<Int32>(42)) + \"|\" + onlyI32(12) + \"|\" + onlyI32(\"hi\"));",
+    "",
+    "    var mut logger := BufLog { lines = [] };",
+    "    context (mut log = logger) {",
+    "        io.outputLine(emitVal(4) + \"|\" + emitVal(\"boot\"));",
+    "    }",
+    "    io.outputLine(logger.lines.join(\",\"));",
+    "",
+    "    fnInt: fn(x: Int): Int = dbl;",
+    "    fnStr: fn(s: String): String = dbl;",
+    "    fnCalc: fn(x: Int): Int = ov.Counter.calc;",
+    "    io.outputLine(fnInt(6).toText() + \"|\" + fnStr(\"ha\") + \"|\" + fnCalc(5).toText());",
+    "",
+    "    m := Meter { n = 30 };",
+    "    stepView: dyn Step = m;",
+    "    io.outputLine(m.bump(5).toText() + \"|\" + m.bump(\"m\") + \"|\" + stepView.bump(7).toText());",
+    "",
+    "    var mut sv := SparseVec { items = [10, 20, 30, 40] };",
+    "    sv[1] = 25;",
+    "    sv[1] += 5;",
+    "    sub := sv[1..3];",
+    "    subInc := sv[1..=2];",
+    "    io.outputLine(sv[0].toText() + \",\" + sv[1].toText() + \",\" + sv[\"sum\"].toText() + \",sub=\" + sub.length().toText() + \":\" + sub[0].toText() + \":\" + sub[1].toText() + \",inc=\" + subInc.length().toText());",
+    "",
+    "    arr: [Int; 3] = [100, 200, 300];",
+    "    io.outputLine(readAt(sv, 2).toText() + \",\" + readAt(nums, 0).toText() + \",\" + readAt(arr, 1).toText());",
+    "",
+    "    rVal := if true {",
+    "        var mut sNums := mut nums[1..3];",
+    "        (left, right) := mut sNums.splitAt(1);",
+    "        left[0] = 77;",
+    "        right[0]",
+    "    } else { 0 };",
+    "    arrSl := arr[0..2];",
+    "    io.outputLine(nums[1].toText() + \",\" + rVal.toText() + \",\" + arrSl[1].toText());",
+    "};",
+    "main();"
+].join("\n");
+
+mainPath := path.join(p11Tmp.path, "main.lts");
+_wMain := fs.writeText(mainPath, mainSrc);
+
+tsCompile := compilerTest.compileFile(tsComp, p11Tmp.path, [mainPath]);
+test.checkInt("phase11 full TS compile: " + tsCompile.stderr, 0, tsCompile.status);
+tsRun := compilerTest.checkAndRunTs(root, tsCompile.stdout);
+test.checkInt("phase11 full TS check+run: " + tsRun.stderr, 0, tsRun.status);
+
+expectedOut := [
+    "pub-int:7|pub-pair:7|priv-str:ok",
+    "7,15,18",
+    "i:1,s:x,ii:7",
+    "host=lite,port=8080,a=1,b=2",
+    "ro:2,mut:3",
+    "concrete-A:4|tagAB:B9|unconstrained",
+    "gen:A4|gen:AB9",
+    "single|list:3",
+    "Int:42|Int32:42|only32:12|str:hi",
+    "ctx-int:12|ctx-log:boot",
+    "INFO:boot",
+    "12|haha|15",
+    "35|m:30|37",
+    "10,30,110,sub=2:30:30,inc=2",
+    "30,10,200",
+    "77,99,200"
+].join("\n") + "\n";
+test.checkText("phase11 full TS stdout", expectedOut, tsRun.stdout);
+
+if ccProbe.available {
+    cCompile := compilerTest.compileFile(cComp, p11Tmp.path, [mainPath]);
+    test.checkInt("phase11 full C compile: " + cCompile.stderr, 0, cCompile.status);
+    cRun := compilerTest.compileAndRunC(cCompile.stdout, ccProbe.cc, "");
+    test.checkInt("phase11 full C11 -Werror exit 0: " + cRun.stderr, 0, cRun.status);
+    test.checkText("phase11 full C11 stdout == TS stdout", tsRun.stdout, cRun.stdout);
+
+    sanTmp := fs.makeTempDir("lite-p11-san-");
+    test.check("makeTempDir san", sanTmp.ok);
+    sanCPath := path.join(sanTmp.path, "p11.c");
+    sanExe := path.join(sanTmp.path, "p11");
+    _ws := fs.writeText(sanCPath, cCompile.stdout);
+    sanCcOut := path.join(sanTmp.path, "cc.out");
+    sanCcErr := path.join(sanTmp.path, "cc.err");
+    sanCc := proc.runBytes(ccProbe.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined", "-fno-omit-frame-pointer", sanCPath, "-o", sanExe, "-lm"], sanTmp.path, emptyEnv(), 30000, emptyBytes(), sanCcOut, sanCcErr);
+    test.check("phase11 san cc: " + fs.readText(sanCcErr).text, sanCc.status == 0);
+    sanOut := path.join(sanTmp.path, "run.out");
+    sanErr := path.join(sanTmp.path, "run.err");
+    sanRun := proc.runBytes(sanExe, emptyEnv(), sanTmp.path, emptyEnv(), 15000, emptyBytes(), sanOut, sanErr);
+    test.checkInt("phase11 ASan/UBSan exit 0: " + fs.readText(sanErr).text, 0, sanRun.status);
+    test.checkText("phase11 ASan/UBSan stdout == TS stdout", tsRun.stdout, fs.readText(sanOut).text);
+    _rmSan := fs.remove(sanTmp.path);
+}
+
+/* Selective pub visibility: non-pub extOver must remain invisible outside mod_ov */
+privOvPath := path.join(p11Tmp.path, "bad-priv-ov.lts");
+_wPriv := fs.writeText(privOvPath, [
+    "ov := import \"./mod_ov\";",
+    "main := fn(): String { ov.extOver(\"nope\") };"
+].join("\n"));
+privOvRes := compilerTest.compileFile(tsComp, p11Tmp.path, [privOvPath]);
+test.check("reject calling non-pub module overload: " + privOvRes.stderr,
+    privOvRes.status =!= 0);
+_rmP11 := fs.remove(p11Tmp.path);
+
+/* 2. Compile-time rejection matrix */
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate identical function",
+    "f := fn(x: Int): Int { x };\nf := fn(x: Int): Int { x + 1 };",
+    "duplicate function");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject return-type-only overload",
+    "f := fn(x: Int): Int { x };\nf := fn(x: Int): String { x.toText() };",
+    "duplicate function");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject context-only overload",
+    "f := fn(x: Int) context(a: Int): Int { x + a };\nf := fn(x: Int) context(b: String): Int { x };",
+    "duplicate function");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject alpha-equivalent generic duplicate",
+    "f := fn<T>(x: T): Int { 1 };\nf := fn<U>(x: U): Int { 2 };",
+    "duplicate function");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate type op",
+    "P := record { v: Int; };\nP.get := fn(self: Self, i: Int): Int { self.v + i };\nP.get := fn(self: Self, i: Int): Int { self.v + i + 1 };",
+    "duplicate type operation P.get");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject ambiguous positional label-only call",
+    "f := fn(a: Int): Int { a };\nf := fn(b: Int): Int { b + 1 };\nmain := fn(): Int { f(1) };",
+    "ambiguous call to overloaded f");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject ambiguous generic interface bounds",
+    [
+        "IA := interface { a: fn(self: Self): Int; };",
+        "IB := interface { b: fn(self: Self): Int; };",
+        "R := record { v: Int; };",
+        "impl IA for R { a := fn(self: Self): Int { self.v }; };",
+        "impl IB for R { b := fn(self: Self): Int { self.v }; };",
+        "pick := fn<T: Type<IA>>(x: T): Int { x.a() };",
+        "pick := fn<T: Type<IB>>(x: T): Int { x.b() };",
+        "main := fn(): Int { pick(R { v = 1 }) };"
+    ].join("\n"),
+    "ambiguous call to overloaded pick");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject no matching overload",
+    "f := fn(x: Int): Int { x };\nf := fn(s: String): Int { s.length() };\nmain := fn(): Int { f(true) };",
+    "no matching overload for f");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject unannotated bare overloaded fn reference",
+    "f := fn(x: Int): Int { x };\nf := fn(s: String): Int { s.length() };\nmain := fn(): Int { g := f; 1 };",
+    "ambiguous reference to overloaded function f");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mismatched expected type for overloaded fn value",
+    "f := fn(x: Int): Int { x };\nf := fn(s: String): Int { s.length() };\nmain := fn(): Int { g: fn(b: Bool): Int = f; g(true) };",
+    "no overload of f matches expected type");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject selection-before-context missing context without fallback",
+    "g := fn(x: Int) context(c: Int): Int { x + c };\ng := fn<T>(x: T): Int { 0 };\nmain := fn(): Int { g(5) };",
+    "missing context c");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject retired $getSlice compiler hook",
+    "S := record { v: Int; };\nS.$getSlice := fn(self: Self, s: Int, e: Int): Int { s + e };",
+    "unknown compiler hook");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject retired $getMutSlice compiler hook",
+    "S := record { v: Int; };\nS.$getMutSlice := fn(self: mut Self, s: Int, e: Int): Int { s + e };",
+    "unknown compiler hook");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject write to type with only read-only Index",
+    [
+        "iface := import \"core/interface\";",
+        "Ro := record { items: List<Int>; };",
+        "impl iface.Index<Int, Int> for Ro { getIndex := fn(self: Self, i: Int): Int { self.items[i] }; };",
+        "main := fn(): Unit { var mut r := Ro { items = [1, 2] }; r[0] = 9; };"
+    ].join("\n"),
+    "IndexMut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject unsupported Index key type",
+    [
+        "iface := import \"core/interface\";",
+        "Ro := record { items: List<Int>; };",
+        "impl iface.Index<Int, Int> for Ro { getIndex := fn(self: Self, i: Int): Int { self.items[i] }; };",
+        "main := fn(): Int { r := Ro { items = [1, 2] }; r[\"bad\"] };"
+    ].join("\n"),
+    "Index");
+
+test.done("phase11-overloading-and-index");

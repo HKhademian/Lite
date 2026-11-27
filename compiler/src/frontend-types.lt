@@ -3654,6 +3654,54 @@ pub findImplForConcrete := fn(actualKind: String, ifaceKind: String): (found: Bo
     (found = false, implIdx = -1, bindingsEncoded = "")
 };
 
+/** Finds all visible 2-arg interface `impl`s (such as `Index<K, V>` / `IndexMut<K, V>`) matching `actualKind` and `reqKey`. */
+pub findMatchingImplsByKey := fn(actualKind: String, reqKey: String): List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> {
+    out: mut List<(implIdx: Int, bindingsEncoded: String, arg0: String, arg1: String)> = [];
+    if actualKind == "" or reqKey == "" { return out; }
+    owner := typeOpOwnerKey(actualKind);
+    if owner == "" { return out; }
+    candidates := interfaces.implIndicesForOwner(owner);
+    loop candidates as ci {
+        imp := interfaces.getImpl(ci);
+        if not imp.isPub and activeImplModuleKey =!= "" and imp.declModule =!= activeImplModuleKey { continue; }
+        if imp.ifaceKey =!= reqKey { continue; }
+        bindings: mut Map<String, String>;
+        if not unifyImplPatternMut(imp.genericParams, imp.targetPattern, actualKind, mut bindings) { continue; }
+        var allBound := true;
+        loop splitParamSpecs(imp.genericParams) as sp {
+            if not bindings.has(sp.name) { allBound = false; break; }
+        }
+        if not allBound { continue; }
+        var constraintsOk := true;
+        loop splitParamSpecs(imp.genericParams) as sp {
+            if isTypeConstraintKind(sp.kind) {
+                cKind := substCanonicalKind(imp.genericParams, typeConstraintUnion(sp.kind), bindings);
+                boundK := bindings.getOr(sp.name, "");
+                loop allConstraintMembers(cKind) as reqM {
+                    if isInterfaceKind(reqM) {
+                        if not findImplForConcrete(boundK, reqM).found { constraintsOk = false; break; }
+                    } else if not unionMembers(reqM).contains(boundK) {
+                        constraintsOk = false; break;
+                    }
+                }
+                if not constraintsOk { break; }
+            }
+        }
+        if not constraintsOk { continue; }
+        impArgs := if imp.ifaceArgsCsv == "" {
+            empty: List<String> = [];
+            empty
+        } else {
+            splitTopLevelKinds(imp.ifaceArgsCsv)
+        };
+        if impArgs.length() =!= 2 { continue; }
+        arg0 := if imp.genericParams =!= "" { substCanonicalKind(imp.genericParams, impArgs[0], bindings) } else { impArgs[0] };
+        arg1 := if imp.genericParams =!= "" { substCanonicalKind(imp.genericParams, impArgs[1], bindings) } else { impArgs[1] };
+        mut out.pushBack((implIdx = ci, bindingsEncoded = encodeImplBindings(imp.genericParams, bindings), arg0 = arg0, arg1 = arg1));
+    }
+    out
+};
+
 /** True when concrete `actualKind` satisfies closed-union, single-interface, or multi-bound `All<...>` constraint `constraintKind`. */
 pub typeSatisfiesConstraint := fn(actualKind: String, constraintKind: String): Bool {
     if actualKind == "" or constraintKind == "" { return false; }

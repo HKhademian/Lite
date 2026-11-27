@@ -20,3 +20,29 @@ pub Index := interface<K: Type, V: Type> {
 pub IndexMut := interface<K: Type, V: Type> {
     setIndex: fn(self: mut Self, key: K, value: V): Unit;
 };
+
+/** Half-open integer index range `[start..end)` passed to `Index<Range, R>` containers. */
+pub Range := record {
+    start: Int;
+    end: Int;
+};
+
+/** Built-in indexed read conformance for `List<T>` (`fn<C: Type<Index<Int, T>>>`). */
+pub impl<T: Type> Index<Int, T> for List<T> {
+    getIndex := fn(self: Self, key: Int): T { self[key] };
+};
+
+/** Built-in indexed write conformance for `List<T>` (`fn<C: Type<IndexMut<Int, T>>>`). */
+pub impl<T: Type> IndexMut<Int, T> for List<T> {
+    setIndex := fn(self: mut Self, key: Int, value: T): Unit { self[key] = value; };
+};
+
+/** Built-in indexed read conformance for fixed arrays `[T; N]` (`fn<C: Type<Index<Int, T>>>`). */
+pub impl<T: Type, N: Int> Index<Int, T> for [T; N] {
+    getIndex := fn(self: Self, key: Int): T { self[key] };
+};
+
+/** Built-in indexed write conformance for fixed arrays `[T; N]` (`fn<C: Type<IndexMut<Int, T>>>`). */
+pub impl<T: Type, N: Int> IndexMut<Int, T> for [T; N] {
+    setIndex := fn(self: mut Self, key: Int, value: T): Unit { self[key] = value; };
+};

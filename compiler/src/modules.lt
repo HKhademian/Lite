@@ -4,6 +4,7 @@ tb := import "util/text-builder";
 frontend := import "./frontend";
 interfaces := import "./interfaces";
 contexts := import "./contexts";
+overloads := import "./overloads";
 generics := import "./generics";
 hostFs := import "./host-fs";
 /* Initial source graph traversal for the generated TypeScript compiler. */
@@ -267,30 +268,40 @@ modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.It
     }
     result
 }
-/** Appends an import interface, rejecting alias and public-name collisions. */
+/** Appends an import interface, rejecting alias, value, and duplicate-runtime collisions while allowing overloaded functions. */
 appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, prefix: String): frontend.Items {
     var result: mut frontend.Items = existing;
     seenValueOrAlias: mut Set<String>;
+    seenFnNames: mut Set<String>;
+    seenFnRuntimes: mut Set<String>;
     seenTypes: mut Set<String>;
     loop existing as previous {
-        if previous.kind == frontend.ITEM_KIND_MODULE_ALIAS or
-        previous.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or previous.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
+        if previous.kind == frontend.ITEM_KIND_MODULE_ALIAS or previous.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
             mut seenValueOrAlias.add(previous.name);
+        } else if previous.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION {
+            mut seenFnNames.add(previous.name);
+            mut seenFnRuntimes.add(previous.name + "|" + previous.runtime);
         } else if previous.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
             mut seenTypes.add(previous.name);
         }
     }
     loop incoming as item {
         if item.kind == frontend.ITEM_KIND_MODULE_ALIAS {
-            if seenValueOrAlias.has(item.name) {
+            if seenValueOrAlias.has(item.name) or seenFnNames.has(item.name) {
                 diagLib.fail(prefix, "duplicate module alias " + item.name);
             }
             (mut seenValueOrAlias).add(item.name);
-        } else if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
-            if seenValueOrAlias.has(item.name) {
+        } else if item.kind == frontend.ITEM_KIND_PUBLIC_VALUE {
+            if seenValueOrAlias.has(item.name) or seenFnNames.has(item.name) {
                 diagLib.fail(prefix, "duplicate imported public name " + item.name);
             }
             (mut seenValueOrAlias).add(item.name);
+        } else if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION {
+            if seenValueOrAlias.has(item.name) or seenFnRuntimes.has(item.name + "|" + item.runtime) {
+                diagLib.fail(prefix, "duplicate imported public name " + item.name);
+            }
+            (mut seenFnNames).add(item.name);
+            (mut seenFnRuntimes).add(item.name + "|" + item.runtime);
         } else if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
             if seenTypes.has(item.name) {
                 diagLib.fail(prefix, "duplicate imported public type " + item.name);
@@ -302,12 +313,14 @@ appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, pr
     result
 }
 
-/** Collects all `PublicTypeOp` declarations across already-processed modules in `graph` (excluding `skipModPath`), deduplicated by canonical key. */
+/** Collects all `PublicTypeOp` declarations across already-processed modules in `graph` (excluding `skipModPath`), deduplicated by canonical key+runtime. */
 appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, skipModPath: String): frontend.Items {
     var result: mut frontend.Items = existing;
     seenOps: mut Set<String>;
     loop existing as prev {
-        if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or prev.kind == frontend.ITEM_KIND_PUBLIC_IMPL { mut seenOps.add(prev.kind + "|" + prev.name); }
+        if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or prev.kind == frontend.ITEM_KIND_PUBLIC_IMPL {
+            mut seenOps.add(prev.kind + "|" + prev.name + "|" + prev.runtime);
+        }
     }
     var insideSkip := false;
     loop graph as item {
@@ -315,9 +328,12 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
             insideSkip = skipModPath =!= "" and item.name == skipModPath;
         } else if item.kind == frontend.ITEM_KIND_MODULE_END {
             insideSkip = false;
-        } else if not insideSkip and (item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_IMPL) and not seenOps.has(item.kind + "|" + item.name) {
-            mut seenOps.add(item.kind + "|" + item.name);
-            mut result.pushBack(item);
+        } else if not insideSkip and (item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_IMPL) {
+            opDedupKey := item.kind + "|" + item.name + "|" + item.runtime;
+            if not seenOps.has(opDedupKey) {
+                mut seenOps.add(opDedupKey);
+                mut result.pushBack(item);
+            }
         }
     }
     result
@@ -688,7 +704,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
     isRoot := not hasVisited;
-    if isRoot { generics.resetAll(); interfaces.resetAll(); contexts.resetAll(); }
+    if isRoot { generics.resetAll(); interfaces.resetAll(); contexts.resetAll(); overloads.resetAll(); }
     normPath := normalizeSlashes(path);
     rootDir := if isRoot { dirnameOfPath(normPath) } else { rootDirForGraph(initialGraph) };
     logical := logicalModuleName(rootDir, path, display);

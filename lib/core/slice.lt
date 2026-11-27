@@ -20,12 +20,6 @@ pub Slice.uncheckedGet := fn<T>(values: Self<T>, index: Int): T;
 /** Replaces the element at zero-based `index` in mutable `values`, skipping bounds checks when `-fno-check-unchecked` is active. */
 pub Slice.uncheckedSet := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
 
-/** Returns a zero-copy read-only sub-slice `values[start..end)`. */
-pub Slice.$getSlice := fn<T>(values: Self<T>, start: Int, end: Int): Slice<T>;
-
-/** Returns a zero-copy mutable sub-slice `values[start..end)`. */
-pub Slice.$getMutSlice := fn<T>(values: mut Self<T>, start: Int, end: Int): Slice<T>;
-
 /** Splits borrowed slice `values` into two contiguous halves `(values[0..mid), values[mid..len))`. */
 pub Slice.splitAt := fn<T>(values: Self<T>, mid: Int): (left: Slice<T>, right: Slice<T>);
 
