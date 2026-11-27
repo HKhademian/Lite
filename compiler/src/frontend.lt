@@ -1179,11 +1179,17 @@ aliases: List<AliasDecl>, moduleKey: String, name: String): (def: interfaces.Int
     } else {
         "Iface<" + ifaceKey + ">"
     };
+    selfIfaceKind := if gp.hasParams {
+        "Iface<" + ifaceKey + ";" + types.splitCommaNames(genericParams).join(",") + ">"
+    } else {
+        "Iface<" + ifaceKey + ">"
+    };
     var cursor := skipTrivia(source, gp.next, prefix);
     cursor = expectSymbol(source, cursor, "{", prefix);
-    scopedAliases := types.withSelfAlias(aliases, "$Kind:Self", 0);
+    mut scopedAliases: List<AliasDecl> = types.withSelfAlias(aliases, "$Kind:Self", 0);
+    mut assocTypes: List<interfaces.InterfaceAssocType> = [];
     mut methods: List<interfaces.InterfaceMethod> = [];
-    mut seenMethodNames: Set<String>;
+    mut seenMemberNames: Set<String>;
     var isObjectSafe := true;
     var unsafeReason := "";
     loop true {
@@ -1199,19 +1205,81 @@ aliases: List<AliasDecl>, moduleKey: String, name: String): (def: interfaces.Int
             break;
         }
         if not source.at(cursor).isNameStart() {
-            failAt(source, cursor, prefix, "expected method name in interface " + name);
+            failAt(source, cursor, prefix, "expected method or associated type name in interface " + name);
         }
         mStart := cursor;
         mEnd := source.skipName(mStart);
         mName := source.slice(mStart, mEnd);
         if isReservedWord(mName) { unsupportedFeature(source, mStart, mName, prefix); }
-        if seenMethodNames.has(mName) {
-            failAt(source, mStart, prefix, "duplicate method " + mName + " in interface " + name);
+        if seenMemberNames.has(mName) {
+            failAt(source, mStart, prefix, "duplicate member " + mName + " in interface " + name);
         }
-        mut seenMethodNames.add(mName);
+        mut seenMemberNames.add(mName);
         cursor = skipTrivia(source, mEnd, prefix);
-        cursor = expectSymbol(source, cursor, ":", prefix);
-        cursor = skipTrivia(source, cursor, prefix);
+        usedAssignOp := source.startsWithAt(cursor, ":=");
+        if usedAssignOp {
+            cursor = skipTrivia(source, cursor + 2, prefix);
+        } else {
+            cursor = expectSymbol(source, cursor, ":", prefix);
+            cursor = skipTrivia(source, cursor, prefix);
+        }
+        if source.wordAt(cursor, "Type") {
+            if usedAssignOp {
+                failAt(source, cursor, prefix, "associated type " + name + "." + mName + " must use ':', not ':='");
+            }
+            cursor = skipTrivia(source, cursor + 4, prefix);
+            var boundKind := "";
+            if cursor < size and source.at(cursor) == "<" {
+                cursor = skipTrivia(source, cursor + 1, prefix);
+                mut bMembers: List<String> = [];
+                loop true {
+                    if cursor >= size or source.at(cursor) == ">" {
+                        failAt(source, cursor, prefix, "expected constraint inside Type<...> for " + name + "." + mName);
+                    }
+                    bParsed := types.parseTypeWithSeen(source, cursor, true, source, cursor, prefix, scopedAliases, "constraint", genericParams, []);
+                    mut bMembers.pushBack(bParsed.kind);
+                    cursor = skipTrivia(source, bParsed.next, prefix);
+                    if cursor < size and source.at(cursor) == "," {
+                        cursor = skipTrivia(source, cursor + 1, prefix);
+                        if cursor < size and source.at(cursor) == ">" { break; }
+                    } else {
+                        break;
+                    }
+                }
+                cursor = expectSymbol(source, cursor, ">", prefix);
+                cursor = skipTrivia(source, cursor, prefix);
+                boundKind = if bMembers.length() == 1 { bMembers[0] } else { "All<" + bMembers.join(",") + ">" };
+            }
+            var defaultKind := "";
+            if cursor < size and isSingleEquals(source, cursor) {
+                defPos := skipTrivia(source, cursor + 1, prefix);
+                defParsed := types.parseFunctionType(source, defPos, prefix, scopedAliases, genericParams);
+                if boundKind =!= "" and not types.kindHasAnyGenericParam(genericParams + ",Self", defParsed.kind) and
+                not types.kindHasAnyGenericParam(genericParams + ",Self", boundKind) {
+                    if not types.typeSatisfiesConstraint(defParsed.kind, boundKind) {
+                        failAt(source, defPos, prefix, "default type for " + name + "." + mName + " does not satisfy bound " + displayKind(boundKind));
+                    }
+                }
+                defaultKind = defParsed.kind;
+                cursor = skipTrivia(source, defParsed.next, prefix);
+            }
+            if cursor < size and source.at(cursor) == ";" {
+                cursor = skipTrivia(source, cursor + 1, prefix);
+            }
+            mut assocTypes.pushBack(interfaces.InterfaceAssocType {
+                name = mName,
+                bound = boundKind,
+                defaultKind = defaultKind
+            });
+            mut scopedAliases.pushBack((name = "$self_assoc:" + mName,
+            target = "$Kind:$Assoc<Self;" + selfIfaceKind + ";" + mName + ">",
+            at = mStart, end = cursor, depth = 0));
+            if isObjectSafe {
+                isObjectSafe = false;
+                unsafeReason = "interface declares associated type " + mName;
+            }
+            continue;
+        }
         if not source.wordAt(cursor, "fn") {
             failAt(source, cursor, prefix, "expected fn signature for interface method " + name + "." + mName);
         }
@@ -1302,14 +1370,30 @@ aliases: List<AliasDecl>, moduleKey: String, name: String): (def: interfaces.Int
             isObjectSafe = false;
             unsafeReason = "method " + mName + " returns Self";
         }
+        cursor = skipTrivia(source, resParsed.next, prefix);
+        var hasDefault := false;
+        var defaultBody := "";
+        var defaultPrefix := "";
+        if cursor < size and source.at(cursor) == "{" {
+            bodyEndPos := skipBraceBlock(source, cursor + 1, prefix);
+            defaultBody = source.slice(cursor, bodyEndPos);
+            hasDefault = true;
+            defaultPrefix = prefix;
+            cursor = skipTrivia(source, bodyEndPos, prefix);
+        } else if usedAssignOp {
+            failAt(source, mStart, prefix, "interface method " + name + "." + mName + " with := must provide a default { ... } body");
+        }
         mut methods.pushBack(interfaces.InterfaceMethod {
             name = mName,
+            recvName = if pNames.length() > 0 { pNames[0] } else { "self" },
             recvMut = recvMut,
             params = nonRecvParams.join("|"),
             paramCount = pCount - 1,
-            result = resParsed.kind
+            result = resParsed.kind,
+            hasDefault = hasDefault,
+            defaultBody = defaultBody,
+            defaultPrefix = defaultPrefix
         });
-        cursor = skipTrivia(source, resParsed.next, prefix);
         if cursor < size and source.at(cursor) == ";" {
             cursor = skipTrivia(source, cursor + 1, prefix);
         }
@@ -1319,6 +1403,7 @@ aliases: List<AliasDecl>, moduleKey: String, name: String): (def: interfaces.Int
         name = name,
         moduleKey = moduleKey,
         genericParams = genericParams,
+        assocTypes = assocTypes,
         methods = methods,
         isObjectSafe = isObjectSafe,
         unsafeReason = unsafeReason,
@@ -1393,6 +1478,77 @@ reqMethod: interfaces.InterfaceMethod, actualParams: String, actualParamCount: I
     }
 };
 
+/** Validates one `impl` associated type binding against any `<Bound>` declared on the interface. */
+validateImplAssocBound := fn(source: String, errPos: Int, prefix: String, ifaceDef: interfaces.InterfaceDef, ifaceParsedKind: String,
+targetKind: String, implGenericParams: String, assoc: interfaces.InterfaceAssocType, actKind: String): Unit {
+    if assoc.bound == "" { return; }
+    args := types.ifaceArgsOf(ifaceParsedKind);
+    pSpecs := types.splitParamSpecs(ifaceDef.genericParams);
+    mut subMap: Map<String, String>;
+    var bi := 0;
+    loop bi < pSpecs.length() and bi < args.length() {
+        mut subMap.set(pSpecs[bi].name, args[bi]);
+        bi = bi + 1;
+    }
+    mut subMap.set("Self", targetKind);
+    effGP := if ifaceDef.genericParams =!= "" { ifaceDef.genericParams + ",Self:Type" } else { "Self:Type" };
+    effBound := types.substCanonicalKind(effGP, assoc.bound, subMap);
+    if implGenericParams =!= "" and types.isGenericParamName(implGenericParams, actKind) {
+        outerC := types.typeParamConstraintKind(implGenericParams, actKind);
+        if outerC == "" or not types.constraintIsSubset(outerC, effBound) {
+            failAt(source, errPos, prefix, "associated type " + assoc.name + " (" + displayKind(actKind) + ") does not satisfy bound " + displayKind(effBound));
+        }
+    } else if not types.kindHasAnyGenericParam(implGenericParams, actKind) and not types.kindHasAnyGenericParam(implGenericParams, effBound) {
+        if not types.typeSatisfiesConstraint(actKind, effBound) {
+            failAt(source, errPos, prefix, "associated type " + assoc.name + " (" + displayKind(actKind) + ") does not satisfy bound " + displayKind(effBound));
+        }
+    }
+};
+
+/** Substitutes `ifaceDef.genericParams` and `Self -> targetKind` into an associated type's `= Default` kind. */
+substAssocDefaultForTarget := fn(ifaceDef: interfaces.InterfaceDef, ifaceParsedKind: String, targetKind: String, rawDefault: String, assocMap: Map<String, String>): String {
+    args := types.ifaceArgsOf(ifaceParsedKind);
+    pSpecs := types.splitParamSpecs(ifaceDef.genericParams);
+    mut subMap: Map<String, String>;
+    var bi := 0;
+    loop bi < pSpecs.length() and bi < args.length() {
+        mut subMap.set(pSpecs[bi].name, args[bi]);
+        bi = bi + 1;
+    }
+    mut subMap.set("Self", targetKind);
+    loop assocMap as kv {
+        mut subMap.set("$assoc:" + kv.key, kv.value);
+    }
+    effGP := if ifaceDef.genericParams =!= "" { ifaceDef.genericParams + ",Self:Type" } else { "Self:Type" };
+    types.substCanonicalKind(effGP, rawDefault, subMap)
+};
+
+/** Appends a synthesized default method body for `req` omitted by `impl` (`inline` or bodyless). */
+appendSynthesizedDefaultMethod := fn(req: interfaces.InterfaceMethod, implKey: String, targetKind: String, implGenericParams: String,
+implStart: Int, bindings: mut List<interfaces.ImplMethodBinding>,
+mNames: mut List<String>, mFnKeys: mut List<String>, mRuntimes: mut List<String>, mParams: mut List<String>, mCounts: mut List<Int>,
+mResults: mut List<String>, mGenerics: mut List<String>, mDeclAts: mut List<Int>, mBodyStarts: mut List<Int>, mBodyEnds: mut List<Int>,
+mSources: mut List<String>, mPrefixes: mut List<String>, mIsDefaults: mut List<Bool>): Unit {
+    fnKey := "$implop:" + implKey + "." + req.name;
+    recvN := if req.recvName =!= "" { req.recvName } else { "self" };
+    recvEntry := recvN + "=" + (if req.recvMut { "mut " } else { "" }) + targetKind;
+    fullParams := if req.paramCount > 0 and req.params =!= "" { recvEntry + "|" + req.params } else { recvEntry };
+    mut mNames.pushBack(req.name);
+    mut mFnKeys.pushBack(fnKey);
+    mut mRuntimes.pushBack("");
+    mut mParams.pushBack(fullParams);
+    mut mCounts.pushBack(req.paramCount + 1);
+    mut mResults.pushBack(req.result);
+    mut mGenerics.pushBack(implGenericParams);
+    mut mDeclAts.pushBack(implStart);
+    mut mBodyStarts.pushBack(1);
+    mut mBodyEnds.pushBack(req.defaultBody.length());
+    mut mSources.pushBack(req.defaultBody);
+    mut mPrefixes.pushBack(req.defaultPrefix);
+    mut mIsDefaults.pushBack(true);
+    mut bindings.pushBack(interfaces.ImplMethodBinding { name = req.name, fnKey = fnKey, recvMut = req.recvMut });
+};
+
 /** Validated `impl` declaration header and pre-scanned method metadata. */
 ParsedImplHeader := record {
     isInline: Bool;
@@ -1413,14 +1569,15 @@ ParsedImplHeader := record {
     methodDeclAts: List<Int>;
     methodBodyStarts: List<Int>;
     methodBodyEnds: List<Int>;
+    methodSources: List<String>;
+    methodPrefixes: List<String>;
+    methodIsDefault: List<Bool>;
 };
 
 /** Parses `[pub] impl[<Params>] Iface[<Args>] for Target[<Args>];` or `{ ... }`, returning updated position and body-compilation info. */
 parseImplHeaderAndValidate := fn(source: String, implStart: Int, afterImplKw: Int, prefix: String,
 aliases: List<AliasDecl>, moduleKey: String, moduleIdentity: String, isPub: Bool,
 functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
-    emptyDef := interfaces.ImplDef { key = "", ifaceKey = "", ifaceArgsCsv = "", targetOwnerKey = "", targetPattern = "",
-    genericParams = "", methods = [], isPub = false, declModule = "" };
     size := source.length();
     gp := types.scanComptimeTypeParams(source, afterImplKw, prefix);
     if not gp.ok {
@@ -1469,14 +1626,44 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
     if interfaces.hasDuplicateImpl(ifaceDef.key, ifaceArgsCsv, targetOwnerKey, targetKind, implKey) {
         failAt(source, implStart, prefix, "duplicate impl of " + displayKind(ifaceParsed.kind) + " for " + displayKind(targetKind));
     }
-    reqMethods := types.instantiatedInterfaceMethods(ifaceParsed.kind);
     delimPos := skipTrivia(source, targetParsed.next, prefix);
+    mut mNames: List<String> = [];
+    mut mFnKeys: List<String> = [];
+    mut mRuntimes: List<String> = [];
+    mut mParams: List<String> = [];
+    mut mCounts: List<Int> = [];
+    mut mResults: List<String> = [];
+    mut mGenerics: List<String> = [];
+    mut mDeclAts: List<Int> = [];
+    mut mBodyStarts: List<Int> = [];
+    mut mBodyEnds: List<Int> = [];
+    mut mSources: List<String> = [];
+    mut mPrefixes: List<String> = [];
+    mut mIsDefaults: List<Bool> = [];
+    mut assocBindings: List<interfaces.ImplAssocBinding> = [];
+    mut assocMap: Map<String, String>;
+    mut bindings: List<interfaces.ImplMethodBinding> = [];
     if delimPos < size and source.at(delimPos) == ";" {
-        mut bindings: List<interfaces.ImplMethodBinding> = [];
+        loop ifaceDef.assocTypes as at {
+            if at.defaultKind == "" {
+                failAt(source, implStart, prefix, "impl of " + ifaceDef.name + " for " + displayKind(targetKind) + " is missing required associated type " + at.name + "; use inline impl { ... }");
+            }
+            defK := substAssocDefaultForTarget(ifaceDef, ifaceParsed.kind, targetKind, at.defaultKind, assocMap);
+            validateImplAssocBound(source, implStart, prefix, ifaceDef, ifaceParsed.kind, targetKind, implGenericParams, at, defK);
+            mut assocMap.set(at.name, defK);
+            mut assocBindings.pushBack(interfaces.ImplAssocBinding { name = at.name, kind = defK });
+        }
+        reqMethods := types.instantiatedInterfaceMethodsForTarget(ifaceParsed.kind, targetKind, assocMap);
         loop reqMethods as req {
             opKey := "$typeop:" + targetOwnerKey + "." + req.name;
             opCands := sym.findFunctions(functions, opKey);
             if opCands.length() == 0 {
+                if req.hasDefault {
+                    appendSynthesizedDefaultMethod(req, implKey, targetKind, implGenericParams, implStart, mut bindings,
+                    mut mNames, mut mFnKeys, mut mRuntimes, mut mParams, mut mCounts, mut mResults, mut mGenerics,
+                    mut mDeclAts, mut mBodyStarts, mut mBodyEnds, mut mSources, mut mPrefixes, mut mIsDefaults);
+                    continue;
+                }
                 failAt(source, implStart, prefix, "type " + displayKind(targetKind) + " is missing required operation " + req.name + " for " + ifaceDef.name);
             }
             var chosenIdx := opCands[0];
@@ -1566,20 +1753,20 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
             targetOwnerKey = targetOwnerKey,
             targetPattern = targetKind,
             genericParams = implGenericParams,
+            assocBindings = assocBindings,
             methods = bindings,
             isPub = isPub,
             declModule = moduleKey
         };
         afterSemi := skipTrivia(source, delimPos + 1, prefix);
-        emptyStrs: List<String> = [];
-        emptyInts: List<Int> = [];
         return ParsedImplHeader {
             isInline = false, afterEnd = afterSemi, bodyFirstPos = afterSemi, braceEndPos = -1,
             implDef = def, implKey = implKey, implGenericParams = implGenericParams, targetKind = targetKind,
-            methodNames = emptyStrs, methodFnKeys = emptyStrs, methodRuntimes = emptyStrs,
-            methodParams = emptyStrs, methodParamCounts = emptyInts, methodResults = emptyStrs,
-            methodGenerics = emptyStrs, methodDeclAts = emptyInts,
-            methodBodyStarts = emptyInts, methodBodyEnds = emptyInts
+            methodNames = mNames, methodFnKeys = mFnKeys, methodRuntimes = mRuntimes,
+            methodParams = mParams, methodParamCounts = mCounts, methodResults = mResults,
+            methodGenerics = mGenerics, methodDeclAts = mDeclAts,
+            methodBodyStarts = mBodyStarts, methodBodyEnds = mBodyEnds,
+            methodSources = mSources, methodPrefixes = mPrefixes, methodIsDefault = mIsDefaults
         };
     }
     if delimPos >= size or source.at(delimPos) =!= "{" {
@@ -1587,18 +1774,78 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
     }
     braceEndPos := scanBraceEnd(source, delimPos, prefix);
     firstInside := skipTrivia(source, delimPos + 1, prefix);
-    scopedAliases := types.withSelfAlias(aliasesWithImplParams(aliases, implGenericParams, 99), "$Kind:" + targetKind, 0);
-    mut mNames: List<String> = [];
-    mut mFnKeys: List<String> = [];
-    mut mRuntimes: List<String> = [];
-    mut mParams: List<String> = [];
-    mut mCounts: List<Int> = [];
-    mut mResults: List<String> = [];
-    mut mGenerics: List<String> = [];
-    mut mDeclAts: List<Int> = [];
-    mut mBodyStarts: List<Int> = [];
-    mut mBodyEnds: List<Int> = [];
-    mut bindings: List<interfaces.ImplMethodBinding> = [];
+    mut scopedAliases: List<AliasDecl> = types.withSelfAlias(aliasesWithImplParams(aliases, implGenericParams, 99), "$Kind:" + targetKind, 0);
+    /* Pass 1: collect associated type bindings so explicit method signatures see Self.Assoc */
+    mut seenAssocNames: Set<String>;
+    var pass1 := firstInside;
+    loop pass1 < braceEndPos - 1 {
+        loop pass1 < braceEndPos - 1 and source.at(pass1) == ";" {
+            pass1 = skipTrivia(source, pass1 + 1, prefix);
+        }
+        if pass1 >= braceEndPos - 1 or source.at(pass1) == "}" { break; }
+        if not source.at(pass1).isNameStart() {
+            failAt(source, pass1, prefix, "expected member declaration inside impl block");
+        }
+        memStart := pass1;
+        memEnd := source.skipName(memStart);
+        memName := source.slice(memStart, memEnd);
+        afterMemName := skipTrivia(source, memEnd, prefix);
+        if not source.startsWithAt(afterMemName, ":=") {
+            failAt(source, afterMemName, prefix, "expected := inside impl block after " + memName);
+        }
+        afterEq := skipTrivia(source, afterMemName + 2, prefix);
+        assocHit := interfaces.findAssocInInterface(ifaceDef, memName);
+        if assocHit.found {
+            if seenAssocNames.has(memName) {
+                failAt(source, memStart, prefix, "duplicate associated type " + memName + " in impl of " + ifaceDef.name);
+            }
+            mut seenAssocNames.add(memName);
+            rhsPos := if source.wordAt(afterEq, "alias") { skipTrivia(source, afterEq + 5, prefix) } else { afterEq };
+            aParsed := types.parseTypeWithSeen(source, rhsPos, true, source, rhsPos, prefix, scopedAliases, "alias", implGenericParams, []);
+            validateImplAssocBound(source, rhsPos, prefix, ifaceDef, ifaceParsed.kind, targetKind, implGenericParams, assocHit.assoc, aParsed.kind);
+            mut assocMap.set(memName, aParsed.kind);
+            mut assocBindings.pushBack(interfaces.ImplAssocBinding { name = memName, kind = aParsed.kind });
+            mut scopedAliases.pushBack((name = "$self_assoc:" + memName, target = "$Kind:" + aParsed.kind, at = memStart, end = aParsed.next, depth = 0));
+            afterT := skipTrivia(source, aParsed.next, prefix);
+            pass1 = expectSymbol(source, afterT, ";", prefix);
+            pass1 = skipTrivia(source, pass1, prefix);
+        } else {
+            if not source.wordAt(afterEq, "fn") {
+                failAt(source, afterEq, prefix, "associated type " + memName + " is not declared in interface " + ifaceDef.name);
+            }
+            var sk := skipTrivia(source, afterEq + 2, prefix);
+            var pd := 0;
+            var bd := 0;
+            loop sk < braceEndPos {
+                sc := source.at(sk);
+                if sc == "\"" { sk = skipAliasString(source, sk); continue; }
+                if sc == "(" { pd = pd + 1; }
+                else if sc == ")" and pd > 0 { pd = pd - 1; }
+                else if sc == "[" { bd = bd + 1; }
+                else if sc == "]" and bd > 0 { bd = bd - 1; }
+                else if sc == "{" and pd == 0 and bd == 0 { break; }
+                sk = sk + 1;
+            }
+            if sk >= braceEndPos or source.at(sk) =!= "{" {
+                failAt(source, sk, prefix, "impl method " + memName + " must have a function body");
+            }
+            pass1 = skipTrivia(source, skipBraceBlock(source, sk + 1, prefix), prefix);
+        }
+    }
+    loop ifaceDef.assocTypes as at {
+        if not seenAssocNames.has(at.name) {
+            if at.defaultKind == "" {
+                failAt(source, implStart, prefix, "impl of " + ifaceDef.name + " for " + displayKind(targetKind) + " is missing required associated type " + at.name);
+            }
+            defK := substAssocDefaultForTarget(ifaceDef, ifaceParsed.kind, targetKind, at.defaultKind, assocMap);
+            validateImplAssocBound(source, implStart, prefix, ifaceDef, ifaceParsed.kind, targetKind, implGenericParams, at, defK);
+            mut assocMap.set(at.name, defK);
+            mut assocBindings.pushBack(interfaces.ImplAssocBinding { name = at.name, kind = defK });
+            mut scopedAliases.pushBack((name = "$self_assoc:" + at.name, target = "$Kind:" + defK, at = -1, end = 0, depth = 0));
+        }
+    }
+    reqMethods := types.instantiatedInterfaceMethodsForTarget(ifaceParsed.kind, targetKind, assocMap);
+    /* Pass 2: validate explicit methods against instantiated requirements */
     var scan := firstInside;
     loop scan < braceEndPos - 1 {
         loop scan < braceEndPos - 1 and source.at(scan) == ";" {
@@ -1611,6 +1858,16 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
         mStart := scan;
         mEnd := source.skipName(mStart);
         mName := source.slice(mStart, mEnd);
+        afterMName := skipTrivia(source, mEnd, prefix);
+        afterColonEq := skipTrivia(source, afterMName + 2, prefix);
+        if interfaces.findAssocInInterface(ifaceDef, mName).found {
+            rhsPos := if source.wordAt(afterColonEq, "alias") { skipTrivia(source, afterColonEq + 5, prefix) } else { afterColonEq };
+            aSkip := types.parseTypeWithSeen(source, rhsPos, true, source, rhsPos, prefix, scopedAliases, "alias", implGenericParams, []);
+            afterT := skipTrivia(source, aSkip.next, prefix);
+            scan = expectSymbol(source, afterT, ";", prefix);
+            scan = skipTrivia(source, scan, prefix);
+            continue;
+        }
         if mNames.contains(mName) {
             failAt(source, mStart, prefix, "duplicate method " + mName + " in impl of " + ifaceDef.name);
         }
@@ -1626,22 +1883,11 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
         if reqIdx < 0 {
             failAt(source, mStart, prefix, "method " + mName + " is not declared in interface " + ifaceDef.name);
         }
-        afterMName := skipTrivia(source, mEnd, prefix);
-        if not source.startsWithAt(afterMName, ":=") {
-            failAt(source, afterMName, prefix, "expected := fn(...) for impl method " + mName);
-        }
-        afterColonEq := skipTrivia(source, afterMName + 2, prefix);
-        if not source.wordAt(afterColonEq, "fn") {
-            failAt(source, afterColonEq, prefix, "expected fn after := for impl method " + mName);
-        }
         mHdr := types.parseTypeOpHeader(source, skipTrivia(source, afterColonEq + 2, prefix), prefix, scopedAliases,
         ifaceDef.name, mName, "$Kind:" + targetKind, targetOwnerKey, false);
         req := reqMethods[reqIdx];
         verifyImplMethodSignature(source, mStart, prefix, ifaceDef.name, targetKind, req, mHdr.params, mHdr.count, mHdr.result);
         afterHdr := skipTrivia(source, mHdr.next, prefix);
-        if afterHdr >= braceEndPos or source.at(afterHdr) =!= "{" {
-            failAt(source, afterHdr, prefix, "impl method " + mName + " must have a function body");
-        }
         mBodyEnd := skipBraceBlock(source, afterHdr + 1, prefix);
         var effGeneric := implGenericParams;
         if mHdr.genericType =!= "" {
@@ -1663,12 +1909,21 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
         mut mDeclAts.pushBack(mStart);
         mut mBodyStarts.pushBack(afterHdr + 1);
         mut mBodyEnds.pushBack(mBodyEnd);
+        mut mSources.pushBack(source);
+        mut mPrefixes.pushBack(prefix);
+        mut mIsDefaults.pushBack(false);
         mut bindings.pushBack(interfaces.ImplMethodBinding { name = mName, fnKey = fnKey, recvMut = req.recvMut });
         scan = skipTrivia(source, mBodyEnd, prefix);
     }
     loop reqMethods as req {
         if not mNames.contains(req.name) {
-            failAt(source, implStart, prefix, "impl of " + ifaceDef.name + " for " + displayKind(targetKind) + " is missing required method " + req.name);
+            if req.hasDefault {
+                appendSynthesizedDefaultMethod(req, implKey, targetKind, implGenericParams, implStart, mut bindings,
+                mut mNames, mut mFnKeys, mut mRuntimes, mut mParams, mut mCounts, mut mResults, mut mGenerics,
+                mut mDeclAts, mut mBodyStarts, mut mBodyEnds, mut mSources, mut mPrefixes, mut mIsDefaults);
+            } else {
+                failAt(source, implStart, prefix, "impl of " + ifaceDef.name + " for " + displayKind(targetKind) + " is missing required method " + req.name);
+            }
         }
     }
     def := interfaces.ImplDef {
@@ -1678,6 +1933,7 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
         targetOwnerKey = targetOwnerKey,
         targetPattern = targetKind,
         genericParams = implGenericParams,
+        assocBindings = assocBindings,
         methods = bindings,
         isPub = isPub,
         declModule = moduleKey
@@ -1702,7 +1958,10 @@ functions: List<FunctionInfo>, functionParams: List<String>): ParsedImplHeader {
         methodGenerics = mGenerics,
         methodDeclAts = mDeclAts,
         methodBodyStarts = mBodyStarts,
-        methodBodyEnds = mBodyEnds
+        methodBodyEnds = mBodyEnds,
+        methodSources = mSources,
+        methodPrefixes = mPrefixes,
+        methodIsDefault = mIsDefaults
     }
 };
 
@@ -1793,6 +2052,45 @@ ctxParamName: String, fnParamSeedBag: String, locals: mut List<Local>, blockDecl
         mutable = cs.isMut and not isBorrowView, writable = cs.isMut, depth = 1, constant = false,
         code = slotRuntime, intValue = 0, textValue = provText, initState = INIT_STATE_INIT));
     }
+};
+
+/** Registers a C11 `NULL`-context ambient fallback initializer for `fnRuntime` when every slot in `ctxKind` has a compatible ambient default. */
+registerFnAmbientDefaultInit := fn(target: String, source: String, errPos: Int, prefix: String, fnRuntime: String, ctxKind: String, locals: List<Local>, functions: List<FunctionInfo>): Unit {
+    if target =!= TARGET_C or ctxKind == "" { return; }
+    defInit := expr.tryBuildAmbientCtxDefaultInit(source, errPos, prefix, ctxKind, locals, functions);
+    if defInit =!= "" {
+        contexts.registerFnCtxDefaultInit(fnRuntime, defInit);
+    }
+};
+
+/** Returns true when `needle` appears as a distinct token prefix in `code` or `textValue` of any item in `items[startIdx..endIdx)`. */
+itemSpanUsesSlot := fn(items: Items, startIdx: Int, endIdx: Int, needle: String): Bool {
+    hasInText := fn(s: String, sub: String): Bool {
+        subLen := sub.length();
+        sLen := s.length();
+        var at := 0;
+        var found := false;
+        loop at < sLen {
+            hit := s.indexOf(sub, at);
+            if hit < 0 { break; }
+            after := hit + subLen;
+            if after >= sLen or not s.at(after).isNameContinue() {
+                found = true;
+                break;
+            }
+            at = hit + 1;
+        }
+        found
+    };
+    var idx := startIdx;
+    loop idx < endIdx {
+        it := items[idx];
+        if hasInText(it.code, needle) or hasInText(it.textValue, needle) {
+            return true;
+        }
+        idx = idx + 1;
+    }
+    false
 };
 
 /** Checks trace initialization safety, escaping callable safety (when `checkEscape`), and propagates outer callable updates. */
@@ -2396,7 +2694,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             isPubPreImpl := publishedTypeOps.has("$pubimpl@" + implStart.toText());
             impParsed := parseImplHeaderAndValidate(source, implStart, afterImplKw, prefix, aliases, moduleKey, moduleIdentity, isPubPreImpl, functions, functionParams);
             interfaces.registerImpl(impParsed.implDef);
-            if impParsed.isInline {
+            if impParsed.methodNames.length() > 0 {
                 var mi := 0;
                 loop mi < impParsed.methodNames.length() {
                     mFnKey := impParsed.methodFnKeys[mi];
@@ -2406,6 +2704,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     mResult := impParsed.methodResults[mi];
                     mGen := impParsed.methodGenerics[mi];
                     mDeclAt := impParsed.methodDeclAts[mi];
+                    mSrc := impParsed.methodSources[mi];
+                    mPref := impParsed.methodPrefixes[mi];
+                    mIsDef := impParsed.methodIsDefault[mi];
                     var mRuntime := "";
                     if mGen =!= "" {
                         tplKey := moduleKey + "#" + mFnKey;
@@ -2413,7 +2714,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         generics.registerTemplate((
                             key = tplKey, qualName = "impl$" + mDeclAt.toText() + "$" + mName, typeOpKey = mFnKey,
                             moduleKey = moduleKey, moduleIdentity = moduleIdentity,
-                            prefix = prefix, source = source,
+                            prefix = mPref, source = mSrc,
                             bodyStart = impParsed.methodBodyStarts[mi], bodyEnd = impParsed.methodBodyEnds[mi], declAt = mDeclAt,
                             genericParams = mGen, params = mParams,
                             paramCount = mCount, result = mResult,
@@ -2421,6 +2722,19 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         ));
                     } else {
                         mRuntime = moduleFunctionRuntime(target, moduleKey, "impl$" + mDeclAt.toText() + "$" + mName);
+                        if mIsDef {
+                            tplKey := moduleKey + "#" + mFnKey;
+                            generics.registerTemplate((
+                                key = tplKey, qualName = "impl$" + mDeclAt.toText() + "$" + mName, typeOpKey = mFnKey,
+                                moduleKey = moduleKey, moduleIdentity = moduleIdentity,
+                                prefix = mPref, source = mSrc,
+                                bodyStart = impParsed.methodBodyStarts[mi], bodyEnd = impParsed.methodBodyEnds[mi], declAt = mDeclAt,
+                                genericParams = "", params = mParams,
+                                paramCount = mCount, result = mResult,
+                                selfTarget = "$Kind:" + impParsed.targetKind, isPub = isPubPreImpl
+                            ));
+                            generics.requestFixedInstance(tplKey, mRuntime, mParams, mResult);
+                        }
                     }
                     contexts.registerFnContext(mRuntime, contexts.extractCtxKindFromParams(mParams));
                     if findFunction(functions, mFnKey) < 0 {
@@ -2543,6 +2857,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     var currentName := "";
     var currentFnRuntime := "";
     var currentResult := "";
+    var currentFnDeclAt := -1;
+    var currentFnItemStart := 0;
+    var currentFnCtxKind := "";
     var currentReturned := false;
     var currentStopped := false;
     var branchesReturned := true;
@@ -2570,6 +2887,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     var lastEmittedLocLine := 0;
     var inImplBlock := false;
     var implSelfTarget := "";
+    var implAssocBindings: List<interfaces.ImplAssocBinding> = [];
     var implMethodNextIdx := 0;
     var implMethodFnKeys: List<String> = [];
     var implMethodBodyStarts: List<Int> = [];
@@ -2677,10 +2995,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             intValue = 0, textValue = if isBorrowView { "borrow_param:" } else { "" }, initState = INIT_STATE_INIT));
         }
         bindFunctionContextSlots(target, source, tpl.declAt, prefix, monoCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
+        registerFnAmbientDefaultInit(target, source, tpl.declAt, prefix, inst.runtime, monoCtxKind, locals, functions);
         mut locals.pushBack((name = "$self_fn_rt", runtime = inst.runtime, kind = "", mutable = false, writable = false, depth = 0, constant = false, code = "", intValue = 0, textValue = "", initState = INIT_STATE_INIT));
         currentName = monoSelfName;
         currentFnRuntime = inst.runtime;
         currentResult = inst.substResult;
+        currentFnDeclAt = tpl.declAt;
+        currentFnItemStart = items.length();
+        currentFnCtxKind = monoCtxKind;
         mut savedStates.pushBack((returned = false, stopped = false,
         branchesReturned = true, branchesStopped = true, hasElse = false, loopForever = false, live = true,
         preLocalsLen = fnPreLocalsLen, liveBranchCount = 0));
@@ -2695,6 +3017,31 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 tpl.selfTarget
             };
             aliases = types.withSelfAlias(aliases, effSelfTarget, 1);
+            if tpl.typeOpKey.startsWithAt(0, "$implop:") {
+                var dotPos := -1;
+                var scanDot := 8;
+                loop true {
+                    nxtDot := tpl.typeOpKey.indexOf(".", scanDot);
+                    if nxtDot < 0 { break; }
+                    dotPos = nxtDot;
+                    scanDot = nxtDot + 1;
+                }
+                if dotPos > 8 {
+                    impKey := tpl.typeOpKey.slice(8, dotPos);
+                    impFound := interfaces.findImplByKey(impKey);
+                    if impFound.found and impFound.def.assocBindings.length() > 0 {
+                        bMap := types.decodeImplBindings(inst.bindingsEncoded);
+                        loop impFound.def.assocBindings as ab {
+                            effAbK := if impFound.def.genericParams =!= "" and inst.bindingsEncoded =!= "" {
+                                types.substCanonicalKind(impFound.def.genericParams, ab.kind, bMap)
+                            } else {
+                                ab.kind
+                            };
+                            mut aliases.pushBack((name = "$self_assoc:" + ab.name, target = "$Kind:" + effAbK, at = tpl.declAt, end = tpl.declAt, depth = 1));
+                        }
+                    }
+                }
+            }
         }
         loop generics.decodeBindings(inst.bindingsEncoded) as b {
             if types.isComptimeValueToken(b.kind) {
@@ -2789,6 +3136,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if inImplBlock and blockCount == 0 {
                 inImplBlock = false;
                 implSelfTarget = "";
+                implAssocBindings = [];
                 implMethodNextIdx = 0;
                 implMethodFnKeys = [];
                 implMethodBodyStarts = [];
@@ -3112,12 +3460,26 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     }
                     fnTryKey = "";
                 }
+                if currentFnCtxKind =!= "" {
+                    itemEnd := items.length();
+                    loop contexts.parseCtxKindSlots(currentFnCtxKind) as ucs {
+                        if not ucs.name.startsWithAt(0, "_") {
+                            slotNeedle := if target == TARGET_C { "lite_ctx->slot_" + ir.safeTargetIdent(TARGET_C, ucs.name) } else { "lite$ctx." + ucs.name };
+                            if not itemSpanUsesSlot(items, currentFnItemStart, itemEnd, slotNeedle) {
+                                failAt(source, if currentFnDeclAt >= 0 { currentFnDeclAt } else { position }, prefix, "unused context slot '" + ucs.name + "' in function " + currentName + " (prefix with '_' to ignore)");
+                            }
+                        }
+                    }
+                }
                 functionRuntime := if currentFnRuntime =!= "" { currentFnRuntime } else { moduleFunctionRuntime(target, moduleKey, currentName) };
                 if currentLive { mut items.pushBack((kind = ITEM_KIND_FUNCTION_END, name = "", runtime = functionRuntime,
                     code = "", intValue = 0, textValue = "")); }
                 currentName = "";
                 currentFnRuntime = "";
                 currentResult = "";
+                currentFnDeclAt = -1;
+                currentFnItemStart = 0;
+                currentFnCtxKind = "";
                 currentReturned = false;
             } else if blockKind == BLOCK_KIND_LOOP {
                 loopId := mut loopIds.popBack();
@@ -3537,6 +3899,35 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if not ch.isNameStart() {
                 failAt(source, position, prefix, "expected method declaration or } inside impl block");
             }
+            peekEnd := source.skipName(position);
+            peekName := source.slice(position, peekEnd);
+            var isImplAssoc := false;
+            loop implAssocBindings as iab {
+                if iab.name == peekName { isImplAssoc = true; break; }
+            }
+            if isImplAssoc {
+                var sk := skipTrivia(source, peekEnd, prefix);
+                var pDepth := 0;
+                var bDepth := 0;
+                var brDepth := 0;
+                loop sk < size {
+                    sc := source.at(sk);
+                    if sc == "\"" { sk = skipAliasString(source, sk); continue; }
+                    if sc == "(" { pDepth = pDepth + 1; }
+                    else if sc == ")" and pDepth > 0 { pDepth = pDepth - 1; }
+                    else if sc == "[" { bDepth = bDepth + 1; }
+                    else if sc == "]" and bDepth > 0 { bDepth = bDepth - 1; }
+                    else if sc == "{" { brDepth = brDepth + 1; }
+                    else if sc == "}" and brDepth > 0 { brDepth = brDepth - 1; }
+                    else if sc == ";" and pDepth == 0 and bDepth == 0 and brDepth == 0 {
+                        sk = sk + 1;
+                        break;
+                    }
+                    sk = sk + 1;
+                }
+                position = skipTrivia(source, sk, prefix);
+                continue;
+            }
             if implMethodNextIdx >= implMethodFnKeys.length() {
                 failAt(source, position, prefix, "unexpected extra statement inside impl block");
             }
@@ -3622,10 +4013,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 pi = pi + 1;
             }
             bindFunctionContextSlots(target, source, fInfo.declAt, prefix, mCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
+            registerFnAmbientDefaultInit(target, source, fInfo.declAt, prefix, fInfo.runtime, mCtxKind, locals, functions);
             mut locals.pushBack((name = "$self_fn_rt", runtime = fInfo.runtime, kind = "", mutable = false, writable = false, depth = 0, constant = false, code = "", intValue = 0, textValue = "", initState = INIT_STATE_INIT));
             currentName = mFnKey;
             currentFnRuntime = fInfo.runtime;
             currentResult = fInfo.result;
+            currentFnDeclAt = fInfo.declAt;
+            currentFnItemStart = items.length();
+            currentFnCtxKind = mCtxKind;
             mut savedStates.pushBack((returned = currentReturned, stopped = currentStopped,
             branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
             preLocalsLen = fnPreLocalsLen, liveBranchCount = liveBranchCount));
@@ -3641,6 +4036,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             blockCount = 1;
             depth = depth + 1;
             aliases = types.withSelfAlias(aliases, implSelfTarget, depth);
+            loop implAssocBindings as iab {
+                mut aliases.pushBack((name = "$self_assoc:" + iab.name, target = "$Kind:" + iab.kind, at = -1, end = 0, depth = depth));
+            }
             if hasInnerAlias {
                 aliases = collectBlockTypeAliases(source, fnOpenBrace, prefix, depth, aliases);
             }
@@ -3725,7 +4123,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             interfaces.registerImpl(impParsed.implDef);
             if not foundPre {
-                if impParsed.isInline {
+                if impParsed.methodNames.length() > 0 {
                     var mi := 0;
                     loop mi < impParsed.methodNames.length() {
                         mFnKey := impParsed.methodFnKeys[mi];
@@ -3735,6 +4133,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         mResult := impParsed.methodResults[mi];
                         mGen := impParsed.methodGenerics[mi];
                         mDeclAt := impParsed.methodDeclAts[mi];
+                        mSrc := impParsed.methodSources[mi];
+                        mPref := impParsed.methodPrefixes[mi];
+                        mIsDef := impParsed.methodIsDefault[mi];
                         var mRuntime := "";
                         if mGen =!= "" {
                             tplKey := moduleKey + "#" + mFnKey;
@@ -3742,7 +4143,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             generics.registerTemplate((
                                 key = tplKey, qualName = "impl$" + mDeclAt.toText() + "$" + mName, typeOpKey = mFnKey,
                                 moduleKey = moduleKey, moduleIdentity = moduleIdentity,
-                                prefix = prefix, source = source,
+                                prefix = mPref, source = mSrc,
                                 bodyStart = impParsed.methodBodyStarts[mi], bodyEnd = impParsed.methodBodyEnds[mi], declAt = mDeclAt,
                                 genericParams = mGen, params = mParams,
                                 paramCount = mCount, result = mResult,
@@ -3750,6 +4151,19 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             ));
                         } else {
                             mRuntime = moduleFunctionRuntime(target, moduleKey, "impl$" + mDeclAt.toText() + "$" + mName);
+                            if mIsDef {
+                                tplKey := moduleKey + "#" + mFnKey;
+                                generics.registerTemplate((
+                                    key = tplKey, qualName = "impl$" + mDeclAt.toText() + "$" + mName, typeOpKey = mFnKey,
+                                    moduleKey = moduleKey, moduleIdentity = moduleIdentity,
+                                    prefix = mPref, source = mSrc,
+                                    bodyStart = impParsed.methodBodyStarts[mi], bodyEnd = impParsed.methodBodyEnds[mi], declAt = mDeclAt,
+                                    genericParams = "", params = mParams,
+                                    paramCount = mCount, result = mResult,
+                                    selfTarget = "$Kind:" + impParsed.targetKind, isPub = isPubImpl
+                                ));
+                                generics.requestFixedInstance(tplKey, mRuntime, mParams, mResult);
+                            }
                         }
                         contexts.registerFnContext(mRuntime, contexts.extractCtxKindFromParams(mParams));
                         if findFunction(functions, mFnKey) < 0 {
@@ -3778,10 +4192,23 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
             inImplBlock = true;
             implSelfTarget = "$Kind:" + impParsed.targetKind;
+            implAssocBindings = impParsed.implDef.assocBindings;
             implMethodNextIdx = 0;
-            implMethodFnKeys = impParsed.methodFnKeys;
-            implMethodBodyStarts = impParsed.methodBodyStarts;
-            implMethodBodyEnds = impParsed.methodBodyEnds;
+            mut expFnKeys: List<String> = [];
+            mut expBodyStarts: List<Int> = [];
+            mut expBodyEnds: List<Int> = [];
+            var emi := 0;
+            loop emi < impParsed.methodNames.length() {
+                if not impParsed.methodIsDefault[emi] {
+                    mut expFnKeys.pushBack(impParsed.methodFnKeys[emi]);
+                    mut expBodyStarts.pushBack(impParsed.methodBodyStarts[emi]);
+                    mut expBodyEnds.pushBack(impParsed.methodBodyEnds[emi]);
+                }
+                emi = emi + 1;
+            }
+            implMethodFnKeys = expFnKeys;
+            implMethodBodyStarts = expBodyStarts;
+            implMethodBodyEnds = expBodyEnds;
             position = impParsed.bodyFirstPos;
             continue;
         }
@@ -5595,10 +6022,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     opCtxKind := contexts.extractCtxKindFromParams(effOpParams);
                     contexts.registerFnContext(functionRuntime, opCtxKind);
                     bindFunctionContextSlots(target, source, nameStart, prefix, opCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
+                    registerFnAmbientDefaultInit(target, source, nameStart, prefix, functionRuntime, opCtxKind, locals, functions);
                     mut locals.pushBack((name = "$self_fn_rt", runtime = functionRuntime, kind = "", mutable = false, writable = false, depth = 0, constant = false, code = "", intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                     currentName = typeOpKey;
                     currentFnRuntime = functionRuntime;
                     currentResult = header.result;
+                    currentFnDeclAt = nameStart;
+                    currentFnItemStart = items.length();
+                    currentFnCtxKind = opCtxKind;
                     mut savedStates.pushBack((returned = currentReturned, stopped = currentStopped,
                     branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
                     preLocalsLen = fnPreLocalsLen, liveBranchCount = liveBranchCount));
@@ -5866,10 +6297,14 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 fnCtxKind := contexts.extractCtxKindFromParams(effFnParams);
                 contexts.registerFnContext(functionRuntime, fnCtxKind);
                 bindFunctionContextSlots(target, source, nameStart, prefix, fnCtxKind, if target == TARGET_C { "lite_ctx" } else { "lite$ctx" }, fnParamSeedBag, mut locals, mut blockDecls);
+                registerFnAmbientDefaultInit(target, source, nameStart, prefix, functionRuntime, fnCtxKind, locals, functions);
                 mut locals.pushBack((name = "$self_fn_rt", runtime = functionRuntime, kind = "", mutable = false, writable = false, depth = 0, constant = false, code = "", intValue = 0, textValue = "", initState = INIT_STATE_INIT));
                 currentName = name;
                 currentFnRuntime = functionRuntime;
                 currentResult = header.result;
+                currentFnDeclAt = nameStart;
+                currentFnItemStart = items.length();
+                currentFnCtxKind = fnCtxKind;
                 mut savedStates.pushBack((returned = currentReturned, stopped = currentStopped,
                 branchesReturned = branchesReturned, branchesStopped = branchesStopped, hasElse = hasElse, loopForever = loopForever, live = currentLive,
                 preLocalsLen = fnPreLocalsLen, liveBranchCount = liveBranchCount));

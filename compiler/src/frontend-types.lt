@@ -3190,6 +3190,10 @@ pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
     if isResultKind(kind) {
         return self(genericParams, resultOkKind(kind)) or self(genericParams, resultErrKind(kind));
     }
+    if isAssocKind(kind) {
+        ap := parseAssocKind(kind);
+        return self(genericParams, ap.owner) or self(genericParams, ap.ifaceKind);
+    }
     args := nominalTypeArgs(kind);
     loop args as a {
         if self(genericParams, a) { return true; }
@@ -3260,6 +3264,20 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
     }
     if isDynKind(pattern) {
         return "Dyn<" + self(genericParams, dynInterfaceKind(pattern), bindings) + ">";
+    }
+    if isAssocKind(pattern) {
+        ap := parseAssocKind(pattern);
+        if ap.owner == "Self" and bindings.has("$assoc:" + ap.assocName) {
+            return bindings.getOr("$assoc:" + ap.assocName, pattern);
+        }
+        subOwner := self(genericParams, ap.owner, bindings);
+        subIface := self(genericParams, ap.ifaceKind, bindings);
+        if not kindHasAnyGenericParam(genericParams, subOwner) and not kindHasAnyGenericParam(genericParams, subIface) and
+        subOwner =!= "Self" and not kindHasAnyGenericParam("Self", subOwner) {
+            resolved := resolveAssocKind(subOwner, subIface, ap.assocName);
+            if resolved =!= "" { return resolved; }
+        }
+        return "$Assoc<" + subOwner + ";" + subIface + ";" + ap.assocName + ">";
     }
     if isInterfaceKind(pattern) {
         iKey := ifaceKeyOf(pattern);
@@ -3456,6 +3474,13 @@ packedRecordFieldUnsafe := fn(kind: String): Bool {
 
 /** Validates map-key, set-element, nested-list, tuple, record-field, and distinct constraints on a canonical kind, returning `""` if valid. */
 pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): String {
+    if isAssocKind(kind) {
+        if kindHasAnyGenericParam(allowGenericParams, kind) { return ""; }
+        ap := parseAssocKind(kind);
+        resolved := resolveAssocKind(ap.owner, ap.ifaceKind, ap.assocName);
+        if resolved == "" { return "unresolved associated type " + displayKind(kind); }
+        return self(resolved, allowGenericParams);
+    }
     if isListKind(kind) {
         elem := listElementKind(kind);
         bErr := borrowedStorageError(elem);
@@ -3468,7 +3493,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         elem := setElementKind(kind);
         bErr := borrowedStorageError(elem);
         if bErr =!= "" { return bErr; }
-        if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isMapKeyKind(elem) {
+        if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not (isAssocKind(elem) and kindHasAnyGenericParam(allowGenericParams, elem)) and not isMapKeyKind(elem) {
             return "unsupported set element type " + displayKind(elem);
         }
         return self(elem, allowGenericParams);
@@ -3495,7 +3520,8 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         elem := simdElementKind(kind);
         bErr := borrowedStorageError(elem);
         if bErr =!= "" { return bErr; }
-        if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isSimdElemKind(elem) {
+        isGenSimd := isGenericParamName(allowGenericParams, distinctBaseKind(elem)) or (isAssocKind(elem) and kindHasAnyGenericParam(allowGenericParams, elem));
+        if not isGenSimd and not isSimdElemKind(elem) {
             return "unsupported Simd lane type " + displayKind(elem);
         }
         lanesText := simdLaneCountText(kind);
@@ -3504,7 +3530,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
             if lanes =!= 2 and lanes =!= 4 and lanes =!= 8 and lanes =!= 16 and lanes =!= 32 and lanes =!= 64 {
                 return "Simd lane count must be a power of two (2..64), got " + lanesText;
             }
-            if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isValidSimdLaneCount(elem, lanes) {
+            if not isGenSimd and not isValidSimdLaneCount(elem, lanes) {
                 return "unsupported Simd shape " + displayKind(kind) + " (total width must be <= 64 bytes)";
             }
         }
@@ -3512,7 +3538,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     }
     if isSimdNativeKind(kind) {
         elem := simdNativeElementKind(kind);
-        if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isSimdElemKind(elem) {
+        if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not (isAssocKind(elem) and kindHasAnyGenericParam(allowGenericParams, elem)) and not isSimdElemKind(elem) {
             return "unsupported Simd lane type " + displayKind(elem);
         }
         return self(elem, allowGenericParams);
@@ -3521,7 +3547,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         rec := soaRecordKind(kind);
         bErr := borrowedStorageError(rec);
         if bErr =!= "" { return bErr; }
-        if not isGenericParamName(allowGenericParams, distinctBaseKind(rec)) {
+        if not isGenericParamName(allowGenericParams, distinctBaseKind(rec)) and not (isAssocKind(rec) and kindHasAnyGenericParam(allowGenericParams, rec)) {
             if not isRecordKind(rec) or recordComponentCount(rec) == 0 {
                 return "SoA<R> requires a non-empty record type, got " + displayKind(rec);
             }
@@ -3535,7 +3561,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         k := mapKeyKind(kind);
         kBErr := borrowedStorageError(k);
         if kBErr =!= "" { return kBErr; }
-        if not isGenericParamName(allowGenericParams, distinctBaseKind(k)) and not isMapKeyKind(k) {
+        if not isGenericParamName(allowGenericParams, distinctBaseKind(k)) and not (isAssocKind(k) and kindHasAnyGenericParam(allowGenericParams, k)) and not isMapKeyKind(k) {
             return "unsupported map key type " + displayKind(k);
         }
         v := mapValueKind(kind);
@@ -4021,6 +4047,18 @@ unifyImplPatternMut := fn(genericParams: String, pattern: String, actual: String
         self(genericParams, resultOkKind(pattern), resultOkKind(actual), mut bindings) and
         self(genericParams, resultErrKind(pattern), resultErrKind(actual), mut bindings);
     }
+    if isAssocKind(pattern) {
+        pp := parseAssocKind(pattern);
+        if isAssocKind(actual) {
+            ap := parseAssocKind(actual);
+            return pp.assocName == ap.assocName and self(genericParams, pp.owner, ap.owner, mut bindings) and self(genericParams, pp.ifaceKind, ap.ifaceKind, mut bindings);
+        }
+        if not kindHasAnyGenericParam(genericParams, pattern) {
+            resP := resolveAssocKind(pp.owner, pp.ifaceKind, pp.assocName);
+            if resP =!= "" { return isCompatibleKind(resP, actual); }
+        }
+        return false;
+    }
     pArgs := nominalTypeArgs(pattern);
     if pArgs.length() > 0 {
         pOwner := typeOpOwnerKey(pattern);
@@ -4035,6 +4073,165 @@ unifyImplPatternMut := fn(genericParams: String, pattern: String, actual: String
         return true;
     }
     pattern == actual
+};
+
+/** True when `kind` is an encoded associated-type reference `$Assoc<Owner;IfaceKind;Name>`. */
+pub isAssocKind := fn(kind: String): Bool {
+    kind.startsWithAt(0, "$Assoc<") and kind.endsWith(">")
+};
+
+/** Splits an encoded `$Assoc<Owner;IfaceKind;Name>` at depth-0 `;` delimiters. */
+pub parseAssocKind := fn(kind: String): (owner: String, ifaceKind: String, assocName: String) {
+    if not isAssocKind(kind) { return (owner = "", ifaceKind = "", assocName = ""); }
+    inner := kind.slice(7, kind.length() - 1);
+    var depth := 0;
+    var semi1 := -1;
+    var semi2 := -1;
+    var i := 0;
+    n := inner.length();
+    loop i < n {
+        ch := inner.at(i);
+        if ch == "<" or ch == "(" or ch == "[" { depth = depth + 1; }
+        else if ch == ">" or ch == ")" or ch == "]" { if depth > 0 { depth = depth - 1; } }
+        else if ch == ";" and depth == 0 {
+            if semi1 < 0 { semi1 = i; }
+            else if semi2 < 0 { semi2 = i; break; }
+        }
+        i = i + 1;
+    }
+    if semi1 <= 0 or semi2 <= semi1 { return (owner = "", ifaceKind = "", assocName = ""); }
+    (owner = inner.slice(0, semi1), ifaceKind = inner.slice(semi1 + 1, semi2), assocName = inner.slice(semi2 + 1, n))
+};
+
+/** Resolves `assocName` for concrete `ownerKind` implementing `ifaceKind`, falling back to any interface default. */
+pub resolveAssocKind := fn(ownerKind: String, ifaceKind: String, assocName: String): String {
+    if ownerKind == "" or not isInterfaceKind(ifaceKind) or assocName == "" { return ""; }
+    impHit := findImplForConcrete(ownerKind, ifaceKind);
+    if impHit.found {
+        imp := interfaces.getImpl(impHit.implIdx);
+        ab := interfaces.findAssocInImpl(imp, assocName);
+        if ab.found {
+            if imp.genericParams =!= "" and impHit.bindingsEncoded =!= "" {
+                return substCanonicalKind(imp.genericParams, ab.kind, decodeImplBindings(impHit.bindingsEncoded));
+            }
+            return ab.kind;
+        }
+    }
+    iIdx := interfaces.findInterface(ifaceKeyOf(ifaceKind));
+    if iIdx >= 0 {
+        def := interfaces.getInterface(iIdx);
+        aHit := interfaces.findAssocInInterface(def, assocName);
+        if aHit.found and aHit.assoc.defaultKind =!= "" {
+            args := ifaceArgsOf(ifaceKind);
+            paramSpecs := splitParamSpecs(def.genericParams);
+            mut bindings: Map<String, String>;
+            var bi := 0;
+            loop bi < paramSpecs.length() and bi < args.length() {
+                mut bindings.set(paramSpecs[bi].name, args[bi]);
+                bi = bi + 1;
+            }
+            mut bindings.set("Self", ownerKind);
+            effParams := if def.genericParams =!= "" { def.genericParams + ",Self:Type" } else { "Self:Type" };
+            return substCanonicalKind(effParams, aHit.assoc.defaultKind, bindings);
+        }
+    }
+    ""
+};
+
+/** Searches visible `impl`s of concrete `ownerKind` for an associated type `assocName`. */
+pub tryResolveConcreteAssoc := fn(ownerKind: String, assocName: String): (found: Bool, ambiguous: Bool, kind: String) {
+    emptyRet := (found = false, ambiguous = false, kind = "");
+    if ownerKind == "" or assocName == "" { return emptyRet; }
+    owner := typeOpOwnerKey(ownerKind);
+    if owner == "" { return emptyRet; }
+    candidates := interfaces.implIndicesForOwner(owner);
+    mut distinctKinds: List<String> = [];
+    loop candidates as ci {
+        imp := interfaces.getImpl(ci);
+        if not imp.isPub and activeImplModuleKey =!= "" and imp.declModule =!= activeImplModuleKey { continue; }
+        mut bindings: Map<String, String>;
+        if not unifyImplPatternMut(imp.genericParams, imp.targetPattern, ownerKind, mut bindings) { continue; }
+        var allBound := true;
+        loop splitParamSpecs(imp.genericParams) as sp {
+            if not bindings.has(sp.name) { allBound = false; break; }
+        }
+        if not allBound { continue; }
+        var boundsOk := true;
+        loop splitParamSpecs(imp.genericParams) as sp {
+            if isTypeConstraintKind(sp.kind) {
+                cKind := substCanonicalKind(imp.genericParams, typeConstraintUnion(sp.kind), bindings);
+                if not typeSatisfiesConstraint(bindings.getOr(sp.name, ""), cKind) {
+                    boundsOk = false;
+                    break;
+                }
+            }
+        }
+        if not boundsOk { continue; }
+        impArgs := if imp.ifaceArgsCsv == "" {
+            empty: List<String> = [];
+            empty
+        } else {
+            splitTopLevelKinds(imp.ifaceArgsCsv)
+        };
+        mut subArgs: List<String> = [];
+        loop impArgs as ia {
+            mut subArgs.pushBack(if imp.genericParams =!= "" { substCanonicalKind(imp.genericParams, ia, bindings) } else { ia });
+        }
+        instIface := buildInterfaceKind(imp.ifaceKey, subArgs);
+        var resolved := "";
+        ab := interfaces.findAssocInImpl(imp, assocName);
+        if ab.found {
+            resolved = if imp.genericParams =!= "" { substCanonicalKind(imp.genericParams, ab.kind, bindings) } else { ab.kind };
+        } else {
+            iIdx := interfaces.findInterface(imp.ifaceKey);
+            if iIdx >= 0 {
+                def := interfaces.getInterface(iIdx);
+                aHit := interfaces.findAssocInInterface(def, assocName);
+                if aHit.found and aHit.assoc.defaultKind =!= "" {
+                    pSpecs := splitParamSpecs(def.genericParams);
+                    mut dBind: Map<String, String>;
+                    var bi := 0;
+                    loop bi < pSpecs.length() and bi < subArgs.length() {
+                        mut dBind.set(pSpecs[bi].name, subArgs[bi]);
+                        bi = bi + 1;
+                    }
+                    mut dBind.set("Self", ownerKind);
+                    effP := if def.genericParams =!= "" { def.genericParams + ",Self:Type" } else { "Self:Type" };
+                    resolved = substCanonicalKind(effP, aHit.assoc.defaultKind, dBind);
+                }
+            }
+        }
+        if resolved =!= "" and not distinctKinds.contains(resolved) {
+            mut distinctKinds.pushBack(resolved);
+        }
+    }
+    if distinctKinds.length() == 0 { return emptyRet; }
+    if distinctKinds.length() > 1 { return (found = false, ambiguous = true, kind = ""); }
+    (found = true, ambiguous = false, kind = distinctKinds[0])
+};
+
+/** Resolves `genericParam.assocName` via `genericParam`'s interface bounds in `genericType`. */
+findGenericParamAssocIface := fn(genericType: String, paramName: String, assocName: String): (ok: Bool, ifaceKind: String, errMsg: String) {
+    cKind := typeParamConstraintKind(genericType, paramName);
+    if cKind == "" {
+        return (ok = false, ifaceKind = "", errMsg = "type parameter " + paramName + " has no interface bound declaring associated type " + assocName);
+    }
+    mut matches: List<String> = [];
+    loop allConstraintMembers(cKind) as req {
+        if isInterfaceKind(req) {
+            iIdx := interfaces.findInterface(ifaceKeyOf(req));
+            if iIdx >= 0 and interfaces.findAssocInInterface(interfaces.getInterface(iIdx), assocName).found {
+                if not matches.contains(req) { mut matches.pushBack(req); }
+            }
+        }
+    }
+    if matches.length() == 0 {
+        return (ok = false, ifaceKind = "", errMsg = "type parameter " + paramName + " has no associated type " + assocName + " in its interface bounds");
+    }
+    if matches.length() > 1 {
+        return (ok = false, ifaceKind = "", errMsg = "ambiguous associated type " + paramName + "." + assocName + "; multiple interface bounds declare " + assocName);
+    }
+    (ok = true, ifaceKind = matches[0], errMsg = "")
 };
 
 /** Substitutes `InterfaceDef.genericParams` (from `ifaceKind`) and `"Self"` into an `InterfaceMethod`'s non-self params & result. */
@@ -4079,12 +4276,65 @@ pub instantiatedInterfaceMethods := fn(ifaceKind: String): List<interfaces.Inter
             }
             mut out.pushBack(interfaces.InterfaceMethod {
                 name = m.name,
+                recvName = m.recvName,
                 recvMut = m.recvMut,
                 params = newPList.join("|"),
                 paramCount = m.paramCount,
-                result = newRes
+                result = newRes,
+                hasDefault = m.hasDefault,
+                defaultBody = m.defaultBody,
+                defaultPrefix = m.defaultPrefix
             });
         }
+    }
+    out
+};
+
+/** Instantiates interface methods for a concrete/generic `impl` target by substituting `Self` and `Self.Assoc`. */
+pub instantiatedInterfaceMethodsForTarget := fn(ifaceKind: String, targetKind: String, assocMap: Map<String, String>): List<interfaces.InterfaceMethod> {
+    baseMethods := instantiatedInterfaceMethods(ifaceKind);
+    iIdx := if isInterfaceKind(ifaceKind) { interfaces.findInterface(ifaceKeyOf(ifaceKind)) } else { -1 };
+    defGP := if iIdx >= 0 { interfaces.getInterface(iIdx).genericParams } else { "" };
+    effGP := if defGP =!= "" { defGP + ",Self:Type" } else { "Self:Type" };
+    mut bindings: Map<String, String>;
+    mut bindings.set("Self", targetKind);
+    loop assocMap as kv {
+        mut bindings.set("$assoc:" + kv.key, kv.value);
+    }
+    mut out: List<interfaces.InterfaceMethod> = [];
+    loop baseMethods as m {
+        newRes := substCanonicalKind(effGP, m.result, bindings);
+        mut newPList: List<String> = [];
+        if m.paramCount > 0 {
+            var pStart := 0;
+            pLen := m.params.length();
+            loop pStart <= pLen {
+                bar := m.params.indexOf("|", pStart);
+                pEnd := if bar < 0 { pLen } else { bar };
+                entry := m.params.slice(pStart, pEnd);
+                eq := entry.indexOf("=", 0);
+                if eq > 0 {
+                    pName := entry.slice(0, eq);
+                    rawPK := entry.slice(eq + 1, entry.length());
+                    pAccess := if rawPK.startsWithAt(0, "mut ") { "mut " } else { "" };
+                    pKind := if pAccess =!= "" { rawPK.slice(4, rawPK.length()) } else { rawPK };
+                    mut newPList.pushBack(pName + "=" + pAccess + substCanonicalKind(effGP, pKind, bindings));
+                }
+                if bar < 0 { break; }
+                pStart = bar + 1;
+            }
+        }
+        mut out.pushBack(interfaces.InterfaceMethod {
+            name = m.name,
+            recvName = m.recvName,
+            recvMut = m.recvMut,
+            params = newPList.join("|"),
+            paramCount = m.paramCount,
+            result = newRes,
+            hasDefault = m.hasDefault,
+            defaultBody = m.defaultBody,
+            defaultPrefix = m.defaultPrefix
+        });
     }
     out
 };
@@ -4747,6 +4997,10 @@ pub displayKind := fn(kind: String): String {
         return iName + "<" + dArgs.join(", ") + ">";
     }
     if isDynKind(kind) { return "dyn " + self(dynInterfaceKind(kind)); }
+    if isAssocKind(kind) {
+        ap := parseAssocKind(kind);
+        return self(ap.owner) + "." + ap.assocName;
+    }
     if isAllConstraintKind(kind) {
         mut dParts: List<String> = [];
         loop allConstraintMembers(kind) as am { mut dParts.pushBack(self(am)); }
@@ -5363,8 +5617,8 @@ startsTypeTokenAt := fn(source: String, pos: Int, prefix: String): Bool {
     not syntax.isReservedWord(w) or w == "fn" or w == "dyn"
 };
 
-/** Internal helper parsing one atomic source or alias type (excluding top-level `|` type unions). */
-parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
+/** Internal helper parsing one base atomic source or alias type (before `.Assoc` projections). */
+parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
     size := source.length();
     start := syntax.skipTrivia(source, position, prefix);
     if not useLocalErr and start < size and source.startsWithAt(start, "Union<") {
@@ -5380,6 +5634,15 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             rKind := source.slice(start, end);
             if isResultKind(rKind) {
                 return (kind = rKind, next = end);
+            }
+        }
+    }
+    if not useLocalErr and start < size and source.startsWithAt(start, "$Assoc<") {
+        end := skipKindToken(source, start);
+        if end > start + 8 and source.at(end - 1) == ">" {
+            aKind := source.slice(start, end);
+            if isAssocKind(aKind) {
+                return (kind = aKind, next = end);
             }
         }
     }
@@ -5820,13 +6083,34 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     }
     nameStart := if useLocalErr { start } else { errPos };
     parsedName := typeNameAt(source, start, prefix);
-    after := parsedName.next;
+    var after := parsedName.next;
     var name := parsedName.name;
     dotPos := name.indexOf(".", 0);
     if dotPos > 0 {
-        modAliasIdx := findAlias(aliases, "$modalias:" + name.slice(0, dotPos));
+        headName := name.slice(0, dotPos);
+        memName := name.slice(dotPos + 1, name.length());
+        modAliasIdx := findAlias(aliases, "$modalias:" + headName);
         if modAliasIdx >= 0 {
-            name = aliases[modAliasIdx].target + name.slice(dotPos, name.length());
+            name = aliases[modAliasIdx].target + "." + memName;
+        } else if findAlias(aliases, name) < 0 {
+            if headName == "Self" {
+                selfAssocIdx := findAlias(aliases, "$self_assoc:" + memName);
+                if selfAssocIdx >= 0 and aliases[selfAssocIdx].target.startsWithAt(0, "$Kind:") {
+                    return (kind = aliases[selfAssocIdx].target.slice(6, aliases[selfAssocIdx].target.length()), next = after);
+                }
+                syntax.failAt(errSource, nameStart, prefix, "unknown associated type Self." + memName);
+                return (kind = "", next = after);
+            }
+            if isGenericParamName(genericType, headName) {
+                gHit := findGenericParamAssocIface(genericType, headName, memName);
+                if not gHit.ok {
+                    syntax.failAt(errSource, nameStart, prefix, gHit.errMsg);
+                    return (kind = "", next = after);
+                }
+                return (kind = "$Assoc<" + headName + ";" + gHit.ifaceKind + ";" + memName + ">", next = after);
+            }
+            name = headName;
+            after = source.skipName(start);
         }
     }
     afterName := syntax.skipTrivia(source, after, prefix);
@@ -6271,6 +6555,37 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         syntax.failAt(errSource, nameStart, prefix, "unsupported " + context + " type " + name);
     }
     (kind = "", next = after)
+};
+
+/** Parses one atomic type (including trailing `.Assoc` projections on concrete, generic, or `Box<T>` types). */
+parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int) {
+    base := parseTypeBaseAtomWithSeen(errSource, errPos, useLocalErr, source, position, prefix, aliases, context, genericType, seen);
+    var resKind := base.kind;
+    var resNext := base.next;
+    size := source.length();
+    isExprOrPatCtx := context == "type expression" or context == "enum pattern" or context == "pattern type";
+    var cursor := syntax.skipTrivia(source, resNext, prefix);
+    loop cursor < size and source.at(cursor) == "." {
+        assocStart := syntax.skipTrivia(source, cursor + 1, prefix);
+        if assocStart >= size or not source.at(assocStart).isNameStart() {
+            if isExprOrPatCtx { break; }
+            syntax.failAt(errSource, assocStart, prefix, "expected associated type name after .");
+        }
+        assocEnd := source.skipName(assocStart);
+        assocName := source.slice(assocStart, assocEnd);
+        resolved := tryResolveConcreteAssoc(resKind, assocName);
+        if resolved.ambiguous {
+            syntax.failAt(errSource, assocStart, prefix, "ambiguous associated type " + displayKind(resKind) + "." + assocName);
+        }
+        if not resolved.found {
+            if isExprOrPatCtx { break; }
+            syntax.failAt(errSource, assocStart, prefix, "type " + displayKind(resKind) + " has no associated type " + assocName);
+        }
+        resKind = resolved.kind;
+        resNext = assocEnd;
+        cursor = syntax.skipTrivia(source, resNext, prefix);
+    }
+    (kind = resKind, next = resNext)
 };
 
 /** Parses one source or alias type (including `|` unions, optional leading `|`, `!` fallibles, and attached `T!`) with cycle tracking `seen`. */
@@ -7586,8 +7901,8 @@ canResolveArrayExtent := fn(source: String, extentStart: Int, closeSym: String, 
     (ok = true, extText = extText, next = afterExtent + 1)
 };
 
-/** Non-failing counterpart to `parseTypeWithSeen` used by root pre-registration and expression kind inference. */
-canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String, seen: List<String>, depthLeft: Int, allowUnion: Bool): (ok: Bool, kind: String, next: Int) {
+/** Non-failing base atom counterpart to `parseTypeBaseAtomWithSeen`. */
+canResolveTypeBaseAtomAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String, seen: List<String>, depthLeft: Int, allowUnion: Bool): (ok: Bool, kind: String, next: Int) {
     if depthLeft <= 0 { return (ok = false, kind = "", next = position); }
     size := source.length();
     start := syntax.skipTrivia(source, position, prefix);
@@ -7994,13 +8309,26 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         memCheckStart := syntax.skipTrivia(source, dotCheck + 1, prefix);
         if memCheckStart < size and source.at(memCheckStart).isNameStart() {
             memCheckEnd := source.skipName(memCheckStart);
+            memWord := source.slice(memCheckStart, memCheckEnd);
             rawModPart := name;
             modAliasIdx := findAlias(aliases, "$modalias:" + rawModPart);
             effModPart := if modAliasIdx >= 0 { aliases[modAliasIdx].target } else { rawModPart };
-            qualCandidate := effModPart + "." + source.slice(memCheckStart, memCheckEnd);
+            qualCandidate := effModPart + "." + memWord;
             if findAlias(aliases, qualCandidate) >= 0 {
                 name = qualCandidate;
                 afterName = memCheckEnd;
+            } else if name == "Self" {
+                selfAssocIdx := findAlias(aliases, "$self_assoc:" + memWord);
+                if selfAssocIdx >= 0 and aliases[selfAssocIdx].target.startsWithAt(0, "$Kind:") {
+                    return (ok = true, kind = aliases[selfAssocIdx].target.slice(6, aliases[selfAssocIdx].target.length()), next = memCheckEnd);
+                }
+                return (ok = false, kind = "", next = memCheckStart);
+            } else if isGenericParamName(genericType, name) {
+                gHit := findGenericParamAssocIface(genericType, name, memWord);
+                if gHit.ok {
+                    return (ok = true, kind = "$Assoc<" + name + ";" + gHit.ifaceKind + ";" + memWord + ">", next = memCheckEnd);
+                }
+                return (ok = false, kind = "", next = memCheckStart);
             }
         }
     }
@@ -8409,6 +8737,28 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         return (ok = false, kind = "", next = afterName);
     }
     (ok = true, kind = resolved.kind, next = afterName)
+};
+
+/** Non-failing counterpart to `parseTypeAtomWithSeen`, consuming trailing `.Assoc` projections only when unambiguously resolved. */
+canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>, genericType: String, seen: List<String>, depthLeft: Int, allowUnion: Bool): (ok: Bool, kind: String, next: Int) {
+    base := canResolveTypeBaseAtomAt(source, position, prefix, aliases, genericType, seen, depthLeft, allowUnion);
+    if not base.ok { return base; }
+    var resKind := base.kind;
+    var resNext := base.next;
+    size := source.length();
+    var cursor := syntax.skipTrivia(source, resNext, prefix);
+    loop cursor < size and source.at(cursor) == "." {
+        assocStart := syntax.skipTrivia(source, cursor + 1, prefix);
+        if assocStart >= size or not source.at(assocStart).isNameStart() { break; }
+        assocEnd := source.skipName(assocStart);
+        assocName := source.slice(assocStart, assocEnd);
+        resolved := tryResolveConcreteAssoc(resKind, assocName);
+        if not resolved.found or resolved.ambiguous { break; }
+        resKind = resolved.kind;
+        resNext = assocEnd;
+        cursor = syntax.skipTrivia(source, resNext, prefix);
+    }
+    (ok = true, kind = resKind, next = resNext)
 };
 
 /** Non-failing type resolver permitting closed union `A | B` expressions (used inside `Type<...>` bounds). */

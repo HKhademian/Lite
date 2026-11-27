@@ -198,13 +198,13 @@ compilerTest.assertCompileErrorContains(root, tsComp, "reject slicing non-addres
 "s := [1, 2, 3][0..2];\n",
 "slice requires an addressable List, fixed Array, or Slice binding");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject slicing bit-packed Bool array",
-"flags: [Bool; 4] = [true, false, true, false];\ns := flags[0..2];\n",
-"not supported yet; convert with .toList() first");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject escaping bit-packed Bool slice",
+"f := fn(): Slice<Bool> { flags: [Bool; 4] = [true, false, true, false]; flags[0..2] };\n",
+"cannot escape");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject slicing bit-packed Int4 array",
-"nibs: [Int4; 4] = [1, 2, 3, 4];\ns := nibs[0..2];\n",
-"not supported yet; convert with .toList() first");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mutating Int4 array while sliced",
+"mut nibs: [Int4; 4] = [1, 2, 3, 4];\ns := nibs[0..2];\nnibs[0] = 0;\n",
+"while borrowed by slice s");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject String.bytes() on temporary expression",
 "var a := \"foo\";\nb := \"bar\";\ns := (a + b).bytes();\n",

@@ -21,6 +21,7 @@ pub AmbientContext := record {
 };
 
 mut fnCtxByRuntime: Map<String, String>;
+mut fnCtxDefaultInitByRuntime: Map<String, String>;
 mut ambientContexts: List<AmbientContext> = [];
 mut ambientByModule: Map<String, List<AmbientContext>>;
 mut modulesWithMutGlobals: List<String> = [];
@@ -30,6 +31,7 @@ mut blockInitFlags: Map<String, String>;
 /** Resets all context registries before a fresh compilation graph. */
 pub resetAll := fn(): Unit {
     mut fnCtxByRuntime.clear();
+    mut fnCtxDefaultInitByRuntime.clear();
     mut ambientContexts.clear();
     mut ambientByModule.clear();
     mut modulesWithMutGlobals.clear();
@@ -134,6 +136,21 @@ pub registerFnContext := fn(runtime: String, ctxKind: String): Unit {
 /** Returns canonical `Ctx<...>` requirement for `runtime`, or `""` if none. */
 pub fnContextFor := fn(runtime: String): String {
     fnCtxByRuntime.getOr(runtime, "")
+};
+
+/** Registers a C11 `NULL`-context ambient initializer `/*@T:...*/` expression for `runtime`. */
+pub registerFnCtxDefaultInit := fn(runtime: String, cInit: String): Unit {
+    if runtime == "" { return; }
+    if cInit == "" {
+        _rm := mut fnCtxDefaultInitByRuntime.remove(runtime);
+    } else {
+        mut fnCtxDefaultInitByRuntime.set(runtime, cInit);
+    }
+};
+
+/** Returns the C11 `NULL`-context ambient initializer for `runtime`, or `""` if unavailable. */
+pub fnCtxDefaultInitFor := fn(runtime: String): String {
+    fnCtxDefaultInitByRuntime.getOr(runtime, "")
 };
 
 /** Registers one ambient context default in the active module scope. */

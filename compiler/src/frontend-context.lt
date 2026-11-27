@@ -406,6 +406,7 @@ pub isCFreshOwnedExpr := fn(code: String): Bool {
     c.startsWithAt(0, "lt_list_") or c.startsWithAt(0, "lt_map_") or
     c.startsWithAt(0, "lt_set_") or c.startsWithAt(0, "lt_arr_") or
     c.startsWithAt(0, "lt_rc_") or c.startsWithAt(0, "(lt_rc_") or
+    (c.startsWithAt(0, "lt_slice_") and c.contains("_to_list(")) or
     c.startsWithAt(0, "lt_s_") or c.startsWithAt(0, "lt_c_") {
         return true;
     }

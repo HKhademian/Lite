@@ -1205,17 +1205,44 @@ evalCheckedIntBin := fn(op: String, lVal: Int, rVal: Int, kind: String, budget: 
     CtOutcome { ok = true, valId = vid, flow = FLOW_NONE, error = "" }
 };
 
-/** Evaluates Float arithmetic (`+ - * / **`). */
+/** Evaluates Float arithmetic (`+ - * / **`), returning FLOW_PANIC if non-finite without tripping compiler runtime panics. */
 evalFloatBin := fn(op: String, lVal: Float, rVal: Float, kind: String, budget: mut EvalBudget): CtOutcome {
-    res := if op == "+" { lVal + rVal }
-    else if op == "-" { lVal - rVal }
-    else if op == "*" { lVal * rVal }
-    else if op == "/" {
+    dblMax := 1.7976931348623157e308;
+    absF := fn(x: Float): Float { if x < 0.0 { 0.0 - x } else { x } };
+    al := absF(lVal);
+    ar := absF(rVal);
+    var overflows := false;
+    if op == "+" {
+        if (lVal > 0.0 and rVal > 0.0 and lVal > dblMax - rVal) or (lVal < 0.0 and rVal < 0.0 and lVal < (0.0 - dblMax) - rVal) {
+            overflows = true;
+        }
+    } else if op == "-" {
+        if (lVal > 0.0 and rVal < 0.0 and lVal > dblMax + rVal) or (lVal < 0.0 and rVal > 0.0 and lVal < (0.0 - dblMax) + rVal) {
+            overflows = true;
+        }
+    } else if op == "*" {
+        if ar > 1.0 and al > dblMax / ar { overflows = true; }
+    } else if op == "/" {
         if rVal == 0.0 {
             return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "float division by zero in compile-time evaluation" };
         }
-        lVal / rVal
-    } else { lVal ** rVal };
+        if ar < 1.0 and al > dblMax * ar { overflows = true; }
+    } else {
+        if (lVal == 0.0 and rVal < 0.0) or
+        (lVal < 0.0 and ar <= 4503599627370496.0 and cast<Float>(Int.trunc(rVal)) =!= rVal) or
+        (al > 1.0e154 and ar >= 2.0) or (al >= 10.0 and rVal > 308.0) or (al > 1.0 and rVal > 1024.0) or
+        (al > 0.0 and al <= 0.1 and rVal < -308.0) or (al > 0.0 and al < 1.0 and rVal < -1024.0) {
+            overflows = true;
+        }
+    }
+    if overflows {
+        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "non-finite floating value in compile-time evaluation" };
+    }
+    res := if op == "+" { lVal + rVal }
+    else if op == "-" { lVal - rVal }
+    else if op == "*" { lVal * rVal }
+    else if op == "/" { lVal / rVal }
+    else { lVal ** rVal };
     vid := makeFloatVal(res, kind, mut budget);
     CtOutcome { ok = true, valId = vid, flow = FLOW_NONE, error = "" }
 };

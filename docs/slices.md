@@ -1,6 +1,6 @@
 # Borrowed contiguous slices
 
-Status: **baseline implemented in Phase 7 (2026-11-26) and updated in Phase 11 (2026-11-27): non-escaping `Slice<T>` views over addressable `List<T>`, byte-aligned `[T; N]`, and nested `Slice<T>`, plus read-only `String.bytes()`, `(left, right) := mut s.splitAt(mid)`, `.toList()`, and compile-time borrow/escape enforcement**. Slices over bit-packed fixed arrays (`Bool`, `Int1..4`, `UInt1..4`) remain deferred; convert with `.toList()` first. Provisional `$getSlice` / `$getMutSlice` hooks were retired in Phase 11 in favor of [core/interface](lite://module/core/interface) `Index` / `Range`.
+Status: **baseline implemented in Phase 7 (2026-11-26) and updated in Phase 11 & Phase 18 (2026-11-27): non-escaping `Slice<T>` views over addressable `List<T>`, byte-aligned and bit-packed `[T; N]` (`Bool`, `Int1..4`, `UInt1..4`), and nested `Slice<T>`, plus read-only `String.bytes()`, `(left, right) := mut s.splitAt(mid)` (including non-byte-aligned bit splits), `.toList()`, and compile-time borrow/escape enforcement**. Provisional `$getSlice` / `$getMutSlice` hooks were retired in Phase 11 in favor of [core/interface](lite://module/core/interface) `Index` / `Range`.
 
 ## A view, not another element allocation
 

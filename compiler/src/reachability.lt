@@ -7,6 +7,7 @@ ir := import "./frontend-ir";
 optCfg := import "./opt-config";
 syntax := import "./frontend-syntax";
 types := import "./frontend-types";
+contexts := import "./contexts";
 trace := import "./trace-safety";
 
 /** One parsed item entry matching `frontend-ir.Item`. */
@@ -332,6 +333,10 @@ pub closeReachableGraph := fn(graph: Items, reachable: mut TokenBuckets, scanned
         fHit := fnStarts.get(tok);
         if fHit.found {
             mut scanned.add(tok);
+            fnDefInit := contexts.fnCtxDefaultInitFor(graph[fHit.value - 1].runtime);
+            if fnDefInit =!= "" {
+                codeReachableTokensQueue(fnDefInit, mut reachable, mut queue);
+            }
             fEnd := fnEnds.get(tok).value;
             var j := fHit.value;
             loop j < fEnd {
@@ -2202,6 +2207,10 @@ pub filterReachableItemsWithConfig := fn(items: Items, target: String, cfg: optC
         fHit := fnStarts.get(tok);
         if fHit.found {
             mut scanned.add(tok);
+            fnDefInit := contexts.fnCtxDefaultInitFor(pruned[fHit.value - 1].runtime);
+            if fnDefInit =!= "" {
+                codeReachableTokensQueue(fnDefInit, mut reachable, mut queue);
+            }
             fEnd := fnEnds.get(tok).value;
             var j := fHit.value;
             loop j < fEnd {

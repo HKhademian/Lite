@@ -1,6 +1,6 @@
 # Composition and interfaces
 
-Status: **Phase 9 shipped — explicit nominal interfaces (`interface`), conformance (`impl`), monomorphized generic bounds (`Type<Iface>`), borrowed dynamic dispatch (`dyn Interface` / `mut dyn Interface`), and [core/interface](lite://module/core/interface) implemented across TS and C11; associated types, default method bodies, and delegation remain open.**
+Status: **Phase 9 shipped and extended in Phase 18 — explicit nominal interfaces (`interface`), conformance (`impl`), associated types (`Type[<Bound>] [= Default]`, `Self.Assoc`, `T.Assoc`), default method bodies, monomorphized generic bounds (`Type<Iface>`), borrowed dynamic dispatch (`dyn Interface` / `mut dyn Interface`), and [core/interface](lite://module/core/interface) implemented across TS and C11; explicit delegation remains open.**
 
 ## Purpose
 

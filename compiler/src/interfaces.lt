@@ -2,13 +2,30 @@
 
 tb := import "util/text-builder";
 
+/** One associated type declaration in an interface (`Name: Type[<Bound>] [= Default]`). */
+pub InterfaceAssocType := record {
+    name: String;
+    bound: String;
+    defaultKind: String;
+};
+
+/** One associated type binding supplied by an `impl` (`Name := alias Type;` or `Name := Type;`). */
+pub ImplAssocBinding := record {
+    name: String;
+    kind: String;
+};
+
 /** One required method signature in an interface definition (`params` encodes non-receiver params as `|`). */
 pub InterfaceMethod := record {
     name: String;
+    recvName: String;
     recvMut: Bool;
     params: String;
     paramCount: Int;
     result: String;
+    hasDefault: Bool;
+    defaultBody: String;
+    defaultPrefix: String;
 };
 
 /** One parsed interface declaration registered by canonical `key` (`moduleKey#Name`). */
@@ -17,6 +34,7 @@ pub InterfaceDef := record {
     name: String;
     moduleKey: String;
     genericParams: String;
+    assocTypes: List<InterfaceAssocType>;
     methods: List<InterfaceMethod>;
     isObjectSafe: Bool;
     unsafeReason: String;
@@ -38,6 +56,7 @@ pub ImplDef := record {
     targetOwnerKey: String;
     targetPattern: String;
     genericParams: String;
+    assocBindings: List<ImplAssocBinding>;
     methods: List<ImplMethodBinding>;
     isPub: Bool;
     declModule: String;
@@ -134,6 +153,37 @@ pub findBindingInImpl := fn(def: ImplDef, methodName: String): (found: Bool, bin
     (found = false, binding = ImplMethodBinding { name = "", fnKey = "", recvMut = false })
 };
 
+/** Looks up a registered conformance `ImplDef` by its unique `key`. */
+pub findImplByKey := fn(key: String): (found: Bool, def: ImplDef) {
+    emptyDef := ImplDef {
+        key = "", ifaceKey = "", ifaceArgsCsv = "", targetOwnerKey = "",
+        targetPattern = "", genericParams = "", assocBindings = [], methods = [], isPub = false, declModule = ""
+    };
+    idx := implByKey.getOr(key, -1);
+    if idx < 0 { return (found = false, def = emptyDef); }
+    (found = true, def = implDefs[idx])
+};
+
+/** Looks up an associated type declaration named `name` inside `def`. */
+pub findAssocInInterface := fn(def: InterfaceDef, name: String): (found: Bool, assoc: InterfaceAssocType) {
+    loop def.assocTypes as a {
+        if a.name == name {
+            return (found = true, assoc = a);
+        }
+    }
+    (found = false, assoc = InterfaceAssocType { name = "", bound = "", defaultKind = "" })
+};
+
+/** Looks up an associated type binding named `name` inside `def`. */
+pub findAssocInImpl := fn(def: ImplDef, name: String): (found: Bool, kind: String) {
+    loop def.assocBindings as a {
+        if a.name == name {
+            return (found = true, kind = a.kind);
+        }
+    }
+    (found = false, kind = "")
+};
+
 /** Parses decimal integer from `text[start..end)`. */
 parseDec := fn(text: String, start: Int, end: Int): Int {
     var acc := 0;
@@ -192,8 +242,16 @@ pub encodeInterfaceMeta := fn(def: InterfaceDef): String {
             if m.recvMut { "1" } else { "0" },
             m.params,
             m.paramCount.toText(),
-            m.result
+            m.result,
+            m.recvName,
+            if m.hasDefault { "1" } else { "0" },
+            m.defaultBody,
+            m.defaultPrefix
         ]));
+    }
+    mut aParts: List<String> = [];
+    loop def.assocTypes as a {
+        mut aParts.pushBack(encodeParts([a.name, a.bound, a.defaultKind]));
     }
     "@ifacedef:" + encodeParts([
         def.key,
@@ -203,7 +261,8 @@ pub encodeInterfaceMeta := fn(def: InterfaceDef): String {
         if def.isObjectSafe { "1" } else { "0" },
         def.unsafeReason,
         def.declAt.toText(),
-        encodeParts(mParts)
+        encodeParts(mParts),
+        encodeParts(aParts)
     ])
 };
 
@@ -211,7 +270,7 @@ pub encodeInterfaceMeta := fn(def: InterfaceDef): String {
 pub decodeInterfaceMeta := fn(raw: String): (ok: Bool, def: InterfaceDef) {
     emptyDef := InterfaceDef {
         key = "", name = "", moduleKey = "", genericParams = "",
-        methods = [], isObjectSafe = false, unsafeReason = "", declAt = -1
+        assocTypes = [], methods = [], isObjectSafe = false, unsafeReason = "", declAt = -1
     };
     if not raw.startsWithAt(0, "@ifacedef:") { return (ok = false, def = emptyDef); }
     top := decodeParts(raw.slice(10, raw.length()));
@@ -223,17 +282,35 @@ pub decodeInterfaceMeta := fn(raw: String): (ok: Bool, def: InterfaceDef) {
         if mp.length() < 5 { continue; }
         mut methods.pushBack(InterfaceMethod {
             name = mp[0],
+            recvName = if mp.length() >= 9 and mp[5] =!= "" { mp[5] } else { "self" },
             recvMut = mp[1] == "1",
             params = mp[2],
             paramCount = parseDec(mp[3], 0, mp[3].length()),
-            result = mp[4]
+            result = mp[4],
+            hasDefault = mp.length() >= 9 and mp[6] == "1",
+            defaultBody = if mp.length() >= 9 { mp[7] } else { "" },
+            defaultPrefix = if mp.length() >= 9 { mp[8] } else { "" }
         });
+    }
+    mut assocTypes: List<InterfaceAssocType> = [];
+    if top.length() >= 9 {
+        rawAssocs := decodeParts(top[8]);
+        loop rawAssocs as ra {
+            ap := decodeParts(ra);
+            if ap.length() < 3 { continue; }
+            mut assocTypes.pushBack(InterfaceAssocType {
+                name = ap[0],
+                bound = ap[1],
+                defaultKind = ap[2]
+            });
+        }
     }
     (ok = true, def = InterfaceDef {
         key = top[0],
         name = top[1],
         moduleKey = top[2],
         genericParams = top[3],
+        assocTypes = assocTypes,
         methods = methods,
         isObjectSafe = top[4] == "1",
         unsafeReason = top[5],
@@ -251,6 +328,10 @@ pub encodeImplMeta := fn(def: ImplDef): String {
             if m.recvMut { "1" } else { "0" }
         ]));
     }
+    mut aParts: List<String> = [];
+    loop def.assocBindings as a {
+        mut aParts.pushBack(encodeParts([a.name, a.kind]));
+    }
     "@impldef:" + encodeParts([
         def.key,
         def.ifaceKey,
@@ -260,7 +341,8 @@ pub encodeImplMeta := fn(def: ImplDef): String {
         def.genericParams,
         if def.isPub { "1" } else { "0" },
         def.declModule,
-        encodeParts(mParts)
+        encodeParts(mParts),
+        encodeParts(aParts)
     ])
 };
 
@@ -268,7 +350,7 @@ pub encodeImplMeta := fn(def: ImplDef): String {
 pub decodeImplMeta := fn(raw: String): (ok: Bool, def: ImplDef) {
     emptyDef := ImplDef {
         key = "", ifaceKey = "", ifaceArgsCsv = "", targetOwnerKey = "",
-        targetPattern = "", genericParams = "", methods = [], isPub = false, declModule = ""
+        targetPattern = "", genericParams = "", assocBindings = [], methods = [], isPub = false, declModule = ""
     };
     if not raw.startsWithAt(0, "@impldef:") { return (ok = false, def = emptyDef); }
     top := decodeParts(raw.slice(9, raw.length()));
@@ -284,6 +366,18 @@ pub decodeImplMeta := fn(raw: String): (ok: Bool, def: ImplDef) {
             recvMut = mp[2] == "1"
         });
     }
+    mut assocBindings: List<ImplAssocBinding> = [];
+    if top.length() >= 10 {
+        rawAssocs := decodeParts(top[9]);
+        loop rawAssocs as ra {
+            ap := decodeParts(ra);
+            if ap.length() < 2 { continue; }
+            mut assocBindings.pushBack(ImplAssocBinding {
+                name = ap[0],
+                kind = ap[1]
+            });
+        }
+    }
     (ok = true, def = ImplDef {
         key = top[0],
         ifaceKey = top[1],
@@ -291,6 +385,7 @@ pub decodeImplMeta := fn(raw: String): (ok: Bool, def: ImplDef) {
         targetOwnerKey = top[3],
         targetPattern = top[4],
         genericParams = top[5],
+        assocBindings = assocBindings,
         methods = methods,
         isPub = top[6] == "1",
         declModule = top[7]

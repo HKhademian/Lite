@@ -438,6 +438,26 @@ pub requestInstance := fn(target: String, templateKey: String, bindingsEncoded: 
     instRuntime
 };
 
+/** Enqueues (or reuses) a fixed zero-binding monomorphization/default instance with exact target `runtime`. */
+pub requestFixedInstance := fn(templateKey: String, runtime: String, substParams: String, substResult: String): Unit {
+    cacheKey := templateKey + "|" + runtime;
+    if instanceByKey.has(cacheKey) { return; }
+    tplIdx := findTemplate(templateKey);
+    if tplIdx < 0 { return; }
+    tpl := templates[tplIdx];
+    idx := instances.length();
+    mut instances.pushBack((
+        templateKey = templateKey,
+        bindingsEncoded = "",
+        substParams = substParams,
+        substResult = substResult,
+        runtime = runtime,
+        moduleKey = tpl.moduleKey,
+        compiled = false
+    ));
+    mut instanceByKey.set(cacheKey, idx);
+};
+
 /** Returns the index of the next uncompiled `GenericInstance`, or -1 when the queue is drained. */
 pub nextUncompiledInstanceIndex := fn(): Int {
     var i := 0;
