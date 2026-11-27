@@ -1,7 +1,7 @@
 {
-  "note": "Phase 9 (interfaces, explicit impl conformance, generic Type<Iface> bounds, dyn Iface fat-pointer dispatch, core/interface module, and TS/C11 codegen). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
+  "note": "Phase 10 (lexical contexts, package $context.lt defaults, context(...) requirements & order normalization, context (...) { ... } overrides, borrow/exclusivity checks, static generic inference, indirect/closure context preservation, and single const lt_ctx_* projection ABI). All 69 TS and C corpus artifact hashes and 25 rejection cases verified.",
   "recorded": "2026-11-27",
-  "sourceSha256": "103124ed1f78fe16b837c4bc5b686ebe9d466eba048c049866e968502227246d",
+  "sourceSha256": "a320671052dded9c48fb8473db2ed8e2053b669abb70f6d78683de45cd248290",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
