@@ -1,0 +1,298 @@
+/** Nominal interface definitions, explicit conformance (`impl`) registry, and cross-module metadata codecs. */
+
+tb := import "util/text-builder";
+
+/** One required method signature in an interface definition (`params` encodes non-receiver params as `|`). */
+pub InterfaceMethod := record {
+    name: String;
+    recvMut: Bool;
+    params: String;
+    paramCount: Int;
+    result: String;
+};
+
+/** One parsed interface declaration registered by canonical `key` (`moduleKey#Name`). */
+pub InterfaceDef := record {
+    key: String;
+    name: String;
+    moduleKey: String;
+    genericParams: String;
+    methods: List<InterfaceMethod>;
+    isObjectSafe: Bool;
+    unsafeReason: String;
+    declAt: Int;
+};
+
+/** One method mapping inside a concrete or generic conformance (`impl`). */
+pub ImplMethodBinding := record {
+    name: String;
+    fnKey: String;
+    recvMut: Bool;
+};
+
+/** One conformance declaration mapping `(ifaceKey, ifaceArgs)` onto `targetPattern`. */
+pub ImplDef := record {
+    key: String;
+    ifaceKey: String;
+    ifaceArgsCsv: String;
+    targetOwnerKey: String;
+    targetPattern: String;
+    genericParams: String;
+    methods: List<ImplMethodBinding>;
+    isPub: Bool;
+    declModule: String;
+};
+
+interfaceDefs: mut List<InterfaceDef> = [];
+interfaceByKey: mut Map<String, Int>;
+
+implDefs: mut List<ImplDef> = [];
+implByKey: mut Map<String, Int>;
+implIdxsByOwner: mut Map<String, List<Int>>;
+
+/** Resets all interface and conformance registries before a fresh compilation. */
+pub resetAll := fn(): Unit {
+    mut interfaceDefs.clear();
+    mut interfaceByKey.clear();
+    mut implDefs.clear();
+    mut implByKey.clear();
+    mut implIdxsByOwner.clear();
+};
+
+/** Registers or refreshes one `InterfaceDef` keyed by `def.key`. */
+pub registerInterface := fn(def: InterfaceDef): Unit {
+    existing := interfaceByKey.getOr(def.key, -1);
+    if existing >= 0 {
+        interfaceDefs[existing] = def;
+        return;
+    }
+    idx := interfaceDefs.length();
+    mut interfaceDefs.pushBack(def);
+    mut interfaceByKey.set(def.key, idx);
+};
+
+/** Returns the index of the registered interface for `key`, or -1. */
+pub findInterface := fn(key: String): Int {
+    interfaceByKey.getOr(key, -1)
+};
+
+/** Returns the `InterfaceDef` at `idx`. */
+pub getInterface := fn(idx: Int): InterfaceDef {
+    interfaceDefs[idx]
+};
+
+/** Returns the number of registered `ImplDef` records. */
+pub implCount := fn(): Int {
+    implDefs.length()
+};
+
+/** Returns the `ImplDef` at `idx`. */
+pub getImpl := fn(idx: Int): ImplDef {
+    implDefs[idx]
+};
+
+/** Returns registered `ImplDef` indices matching `targetOwnerKey` (plus `"*"` wildcard owner targets). */
+pub implIndicesForOwner := fn(ownerKey: String): List<Int> {
+    out: mut List<Int> = [];
+    exact := implIdxsByOwner.getOr(ownerKey, []);
+    loop exact as idx { mut out.pushBack(idx); }
+    wild := implIdxsByOwner.getOr("*", []);
+    loop wild as idx { mut out.pushBack(idx); }
+    out
+};
+
+/** True when a conformance already exists with the same `(ifaceKey, ifaceArgsCsv, targetOwnerKey, targetPattern)` and a different `key`. */
+pub hasDuplicateImpl := fn(ifaceKey: String, ifaceArgsCsv: String, targetOwnerKey: String, targetPattern: String, excludeKey: String): Bool {
+    loop implDefs as d {
+        if d.key =!= excludeKey and d.ifaceKey == ifaceKey and d.ifaceArgsCsv == ifaceArgsCsv and
+        d.targetOwnerKey == targetOwnerKey and d.targetPattern == targetPattern {
+            return true;
+        }
+    }
+    false
+};
+
+/** Registers one conformance `ImplDef` if its key has not already been registered. */
+pub registerImpl := fn(def: ImplDef): Unit {
+    if implByKey.has(def.key) { return; }
+    idx := implDefs.length();
+    mut implDefs.pushBack(def);
+    mut implByKey.set(def.key, idx);
+    ownerBucket := if def.targetOwnerKey =!= "" { def.targetOwnerKey } else { "*" };
+    var bucket: mut List<Int> = implIdxsByOwner.getOr(ownerBucket, []);
+    mut bucket.pushBack(idx);
+    mut implIdxsByOwner.set(ownerBucket, bucket);
+};
+
+/** Finds the method binding named `methodName` in `def`, returning `found = false` when absent. */
+pub findBindingInImpl := fn(def: ImplDef, methodName: String): (found: Bool, binding: ImplMethodBinding) {
+    loop def.methods as m {
+        if m.name == methodName {
+            return (found = true, binding = m);
+        }
+    }
+    (found = false, binding = ImplMethodBinding { name = "", fnKey = "", recvMut = false })
+};
+
+/** Parses decimal integer from `text[start..end)`. */
+parseDec := fn(text: String, start: Int, end: Int): Int {
+    var acc := 0;
+    var i := start;
+    loop i < end {
+        ch := text.at(i);
+        d := ch.codePointAt(0) - 48;
+        if d < 0 or d > 9 { return -1; }
+        acc = acc * 10 + d;
+        i = i + 1;
+    }
+    acc
+};
+
+/** Encodes `parts` using unambiguous `<count>;<len>:<bytes>...` framing. */
+encodeParts := fn(parts: List<String>): String {
+    buf: mut tb.TextBuilder;
+    mut buf.append(parts.length().toText());
+    mut buf.append(";");
+    loop parts as p {
+        mut buf.append(p.length().toText());
+        mut buf.append(":");
+        mut buf.append(p);
+    }
+    buf.build()
+};
+
+/** Decodes `<count>;<len>:<bytes>...` produced by `encodeParts`. */
+decodeParts := fn(raw: String): List<String> {
+    out: mut List<String> = [];
+    len := raw.length();
+    semi := raw.indexOf(";", 0);
+    if semi <= 0 { return out; }
+    cnt := parseDec(raw, 0, semi);
+    if cnt <= 0 { return out; }
+    var cur := semi + 1;
+    var i := 0;
+    loop i < cnt and cur < len {
+        colon := raw.indexOf(":", cur);
+        if colon <= cur { break; }
+        pLen := parseDec(raw, cur, colon);
+        if pLen < 0 or colon + 1 + pLen > len { break; }
+        mut out.pushBack(raw.slice(colon + 1, colon + 1 + pLen));
+        cur = colon + 1 + pLen;
+        i = i + 1;
+    }
+    out
+};
+
+/** Encodes `InterfaceDef` into an opaque string prefixed with `"@ifacedef:"`. */
+pub encodeInterfaceMeta := fn(def: InterfaceDef): String {
+    mParts: mut List<String> = [];
+    loop def.methods as m {
+        mut mParts.pushBack(encodeParts([
+            m.name,
+            if m.recvMut { "1" } else { "0" },
+            m.params,
+            m.paramCount.toText(),
+            m.result
+        ]));
+    }
+    "@ifacedef:" + encodeParts([
+        def.key,
+        def.name,
+        def.moduleKey,
+        def.genericParams,
+        if def.isObjectSafe { "1" } else { "0" },
+        def.unsafeReason,
+        def.declAt.toText(),
+        encodeParts(mParts)
+    ])
+};
+
+/** Decodes `"@ifacedef:..."` produced by `encodeInterfaceMeta`. */
+pub decodeInterfaceMeta := fn(raw: String): (ok: Bool, def: InterfaceDef) {
+    emptyDef := InterfaceDef {
+        key = "", name = "", moduleKey = "", genericParams = "",
+        methods = [], isObjectSafe = false, unsafeReason = "", declAt = -1
+    };
+    if not raw.startsWithAt(0, "@ifacedef:") { return (ok = false, def = emptyDef); }
+    top := decodeParts(raw.slice(10, raw.length()));
+    if top.length() < 8 { return (ok = false, def = emptyDef); }
+    rawMethods := decodeParts(top[7]);
+    methods: mut List<InterfaceMethod> = [];
+    loop rawMethods as rm {
+        mp := decodeParts(rm);
+        if mp.length() < 5 { continue; }
+        mut methods.pushBack(InterfaceMethod {
+            name = mp[0],
+            recvMut = mp[1] == "1",
+            params = mp[2],
+            paramCount = parseDec(mp[3], 0, mp[3].length()),
+            result = mp[4]
+        });
+    }
+    (ok = true, def = InterfaceDef {
+        key = top[0],
+        name = top[1],
+        moduleKey = top[2],
+        genericParams = top[3],
+        methods = methods,
+        isObjectSafe = top[4] == "1",
+        unsafeReason = top[5],
+        declAt = parseDec(top[6], 0, top[6].length())
+    })
+};
+
+/** Encodes `ImplDef` into `"@impldef:..."` for `ITEM_KIND_PUBLIC_IMPL`. */
+pub encodeImplMeta := fn(def: ImplDef): String {
+    mParts: mut List<String> = [];
+    loop def.methods as m {
+        mut mParts.pushBack(encodeParts([
+            m.name,
+            m.fnKey,
+            if m.recvMut { "1" } else { "0" }
+        ]));
+    }
+    "@impldef:" + encodeParts([
+        def.key,
+        def.ifaceKey,
+        def.ifaceArgsCsv,
+        def.targetOwnerKey,
+        def.targetPattern,
+        def.genericParams,
+        if def.isPub { "1" } else { "0" },
+        def.declModule,
+        encodeParts(mParts)
+    ])
+};
+
+/** Decodes `"@impldef:..."` produced by `encodeImplMeta`. */
+pub decodeImplMeta := fn(raw: String): (ok: Bool, def: ImplDef) {
+    emptyDef := ImplDef {
+        key = "", ifaceKey = "", ifaceArgsCsv = "", targetOwnerKey = "",
+        targetPattern = "", genericParams = "", methods = [], isPub = false, declModule = ""
+    };
+    if not raw.startsWithAt(0, "@impldef:") { return (ok = false, def = emptyDef); }
+    top := decodeParts(raw.slice(9, raw.length()));
+    if top.length() < 9 { return (ok = false, def = emptyDef); }
+    rawMethods := decodeParts(top[8]);
+    methods: mut List<ImplMethodBinding> = [];
+    loop rawMethods as rm {
+        mp := decodeParts(rm);
+        if mp.length() < 3 { continue; }
+        mut methods.pushBack(ImplMethodBinding {
+            name = mp[0],
+            fnKey = mp[1],
+            recvMut = mp[2] == "1"
+        });
+    }
+    (ok = true, def = ImplDef {
+        key = top[0],
+        ifaceKey = top[1],
+        ifaceArgsCsv = top[2],
+        targetOwnerKey = top[3],
+        targetPattern = top[4],
+        genericParams = top[5],
+        methods = methods,
+        isPub = top[6] == "1",
+        declModule = top[7]
+    })
+};

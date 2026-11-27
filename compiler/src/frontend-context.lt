@@ -153,6 +153,7 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
         if types.isRcKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare Rc values"); }
         if types.isSoaKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare SoA values"); }
         if types.isFnKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare function values"); }
+        if types.isDynKind(baseKind) { syntax.failAt(source, at, prefix, "cannot compare dyn interface values"); }
         if types.isSimdKind(baseKind) {
             cmpCode := if target == ir.TARGET_C {
                 sTag := types.cSimdTag(baseKind);
@@ -212,6 +213,9 @@ pub compareParsed := fn(target: String, source: String, at: Int, operator: Strin
     }
     if types.isFnKind(left.kind) {
         syntax.failAt(source, at, prefix, "cannot compare function values");
+    }
+    if types.isDynKind(left.kind) {
+        syntax.failAt(source, at, prefix, "cannot compare dyn interface values");
     }
     if operator =!= "==" and operator =!= "=!=" {
         syntax.failAt(source, at, prefix, "operator " + operator + " requires Int operands");
@@ -2044,7 +2048,7 @@ pub storageKind := fn(kind: String): String {
     match {
         types.isListKind(kind) or types.isArrayKind(kind) { "List" }
         types.isTupleKind(kind) { "Tuple" }
-        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) { "Record" }
+        types.isRecordKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isDynKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) { "Record" }
         types.isFnKind(kind) { "Fn" }
         numeric.isIntKind(kind) { ir.VALUE_KIND_INT }
         numeric.isFloatKind(kind) { ir.VALUE_KIND_FLOAT }
@@ -2054,7 +2058,7 @@ pub storageKind := fn(kind: String): String {
 
 /** Returns the text payload for a storage item with explicit declared kind `kind`, falling back to `fallback`. */
 pub storageTextPayload := fn(kind: String, fallback: String): String {
-    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
+    if types.isListKind(kind) or types.isArrayKind(kind) or types.isFnKind(kind) or types.isRecordKind(kind) or types.isTupleKind(kind) or types.isEnumKind(kind) or types.isDistinctKind(kind) or types.isMapKind(kind) or types.isSetKind(kind) or types.isRcKind(kind) or types.isSliceKind(kind) or types.isDynKind(kind) or types.isSimdKind(kind) or types.isSoaKind(kind) or numeric.isNarrowNumericKind(kind) { kind } else { fallback }
 };
 
 /** Returns the text payload stored with one local item: the canonical List/Array/Fn kind for List/Array/Fn items, otherwise the parsed literal text. */

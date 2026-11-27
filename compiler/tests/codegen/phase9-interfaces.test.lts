@@ -1,0 +1,382 @@
+/* Phase 9 verification: explicit nominal interfaces, conformance (impl), generic protocol bounds (Type<Iface> / multi-bound), borrowed zero-alloc dyn/mut dyn dispatch, TS/C11 -Werror/ASan/UBSan parity, zero-vtable static generic inspection, multi-module coherence, and complete rejection matrix. */
+
+test := import "core/test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+emptyEnv := fn(): List<String> {
+    m: List<String> = [];
+    m
+};
+
+emptyBytes := fn(): List<Int> {
+    xs: List<Int> = [];
+    xs
+};
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccProbe := compilerTest.probeCc();
+
+/* 1. Core feature matrix: core/interface, bodyless & inline impl, generic impl<T>, static bounds & multi-bounds, dyn & mut dyn, rvalue post-drop, NLL scoping */
+fullSrc := [
+    "io := import \"core/io\";",
+    "iface := import \"core/interface\";",
+    "",
+    "Show := interface { show: fn(self: Self): String; };",
+    "Tick := interface { inc: fn(self: mut Self, delta: Int): Unit; val: fn(self: Self): Int; };",
+    "PairWith := interface<U: Type> { pair: fn(self: Self, other: U): String; };",
+    "",
+    "Counter := record { name: String; count: Int; };",
+    "Counter.show := fn(self: Self): String { self.name + \":\" + self.count.toText() };",
+    "impl Show for Counter;",
+    "",
+    "impl Tick for Counter {",
+    "    inc := fn(self: mut Self, delta: Int): Unit {",
+    "        self.count = self.count + delta;",
+    "    };",
+    "    val := fn(self: Self): Int { self.count };",
+    "};",
+    "",
+    "impl PairWith<Int> for Counter {",
+    "    pair := fn(self: Self, other: Int): String {",
+    "        self.name + \"=\" + other.toText()",
+    "    };",
+    "};",
+    "",
+    "/* Generic interface impl<T> + generic forward visibility */",
+    "Boxed := record<T: Type> { item: T; };",
+    "impl<T: Type<Show>> Show for Boxed<T> {",
+    "    show := fn(self: Self): String { \"Box[\" + self.item.show() + \"]\" };",
+    "};",
+    "",
+    "/* core/interface implementations: BumpAlloc, MemLogger, VecPair */",
+    "BumpAlloc := record { used: Int; cap: Int; };",
+    "impl iface.Allocator for BumpAlloc {",
+    "    alloc := fn(self: mut Self, bytes: Int): List<UInt8> {",
+    "        out: mut List<UInt8> = [];",
+    "        var i := 0;",
+    "        loop i < bytes {",
+    "            mut out.pushBack(cast<UInt8>(i));",
+    "            i += 1;",
+    "        }",
+    "        self.used = self.used + bytes;",
+    "        out",
+    "    };",
+    "    reset := fn(self: mut Self): Unit {",
+    "        self.used = 0;",
+    "    };",
+    "};",
+    "",
+    "MemLogger := record { entries: List<String>; };",
+    "impl iface.Logger for MemLogger {",
+    "    log := fn(self: mut Self, level: String, msg: String): Unit {",
+    "        mut self.entries.pushBack(level + \":\" + msg);",
+    "    };",
+    "};",
+    "",
+    "IntVec := record { data: List<Int>; };",
+    "impl iface.Index<Int, Int> for IntVec {",
+    "    getIndex := fn(self: Self, key: Int): Int { self.data[key] };",
+    "};",
+    "impl iface.IndexMut<Int, Int> for IntVec {",
+    "    setIndex := fn(self: mut Self, key: Int, value: Int): Unit {",
+    "        mut self.data.setAt(key, value);",
+    "    };",
+    "};",
+    "",
+    "/* Static monomorphized generics + multi-bounds + parameterized interface bounds */",
+    "renderTwice := fn<T: Type<Show>>(x: T): String {",
+    "    x.show() + \"|\" + x.show()",
+    "};",
+    "",
+    "bumpAndRender := fn<T: Type<Show, Tick>>(x: mut T, d: Int): String {",
+    "    mut x.inc(d);",
+    "    x.show() + \"#\" + x.val().toText()",
+    "};",
+    "",
+    "readAt := fn<K: Type, V: Type, C: Type<iface.Index<K, V>>>(c: C, k: K): V {",
+    "    c.getIndex(k)",
+    "};",
+    "",
+    "/* Dynamic zero-alloc dispatch */",
+    "dynShow := fn(s: dyn Show): String { s.show() };",
+    "dynBump := fn(t: mut dyn Tick, n: Int): Int {",
+    "    mut t.inc(n);",
+    "    t.val()",
+    "};",
+    "dynLogAlloc := fn(alloc: mut dyn iface.Allocator, log: mut dyn iface.Logger): Int {",
+    "    buf := mut alloc.alloc(4);",
+    "    mut log.log(\"info\", \"n=\" + buf.length().toText());",
+    "    mut alloc.reset();",
+    "    buf2 := mut alloc.alloc(2);",
+    "    mut log.log(\"dbg\", \"m=\" + buf2.length().toText());",
+    "    buf2.length()",
+    "};",
+    "",
+    "/* Forward impl declared AFTER first use */",
+    "useForward := fn(): String {",
+    "    f := Fwd { v = 7 };",
+    "    renderTwice(f) + \"/\" + dynShow(f)",
+    "};",
+    "Fwd := record { v: Int; };",
+    "impl Show for Fwd {",
+    "    show := fn(self: Self): String { \"fwd:\" + self.v.toText() };",
+    "};",
+    "",
+    "main := fn(): Unit {",
+    "    var mut c := Counter { name = \"hits\", count = 3 };",
+    "    box := Boxed<Counter> { item = c };",
+    "    io.outputLine(\"static:\", c.show(), renderTwice(c), box.show(), renderTwice(box), c.pair(9));",
+    "    sMulti := bumpAndRender(mut c, 4);",
+    "    io.outputLine(\"multi:\", sMulti, c.count);",
+    "",
+    "    /* Local dyn borrow scoped to { ... } block, releasing c afterward */",
+    "    {",
+    "        d1: dyn Show = c;",
+    "        io.outputLine(\"dyn1:\", d1.show(), dynShow(c), dynShow(box));",
+    "    }",
+    "    vDyn := dynBump(mut c, 5);",
+    "    io.outputLine(\"dynBump:\", vDyn, c.count);",
+    "",
+    "    /* Local mut dyn binding & reassignment scoped to { ... } blocks */",
+    "    var mut c2 := Counter { name = \"alt\", count = 10 };",
+    "    {",
+    "        dm: mut dyn Tick = mut c;",
+    "        mut dm.inc(2);",
+    "        io.outputLine(\"dm1:\", dm.val());",
+    "    }",
+    "    io.outputLine(\"afterDm:\", c.count);",
+    "    {",
+    "        var dSwap: dyn Show = c;",
+    "        sA := dSwap.show();",
+    "        dSwap = c2;",
+    "        io.outputLine(\"swap:\", sA, dSwap.show());",
+    "    }",
+    "",
+    "    /* Borrowed temporary owning rvalue coerced directly at call site (post-drop safe) */",
+    "    rvalOut := dynShow(Boxed<Counter> { item = Counter { name = \"tmp\", count = 42 } });",
+    "    io.outputLine(\"rval:\", rvalOut);",
+    "",
+    "    /* core/interface Allocator, Logger, Index, IndexMut */",
+    "    var mut bump := BumpAlloc { used = 0, cap = 64 };",
+    "    var mut logger := MemLogger { entries = [] };",
+    "    n2 := dynLogAlloc(mut bump, mut logger);",
+    "    io.outputLine(\"allocLog:\", n2, bump.used, logger.entries.length(), logger.entries[0], logger.entries[1]);",
+    "",
+    "    var mut vec := IntVec { data = [10, 20, 30] };",
+    "    v1 := readAt<Int, Int, IntVec>(vec, 1);",
+    "    mut vec.setIndex(1, 99);",
+    "    io.outputLine(\"index:\", v1, vec.getIndex(1), useForward());",
+    "};",
+    "main();"
+].join("\n");
+
+tsFull := compilerTest.compileCheckRunTs(root, tsComp, fullSrc, "phase9-full-ts.lts");
+test.checkInt("phase9 full TS exit 0: " + tsFull.stderr, 0, tsFull.status);
+if ccProbe.available {
+    cEmitFull := compilerTest.compileStdinWithOpts(root, cComp, root, fullSrc, "phase9-full-c.lts", "", []);
+    test.checkInt("phase9 full C emit: " + cEmitFull.stderr, 0, cEmitFull.status);
+    cFullCode := cEmitFull.stdout;
+    test.check("C emits lt_dyn_ and lt_vt_ structs", cFullCode.contains("lt_dyn_") and cFullCode.contains("lt_vt_"));
+
+    /* Check sizeof(lt_dyn_*) == 16 via _Static_assert in injected C */
+    firstDynIdx := cFullCode.indexOf("lt_dyn_", 0);
+    dynTagEnd := if firstDynIdx >= 0 { cFullCode.indexOf(" ", firstDynIdx) } else { -1 };
+    semiEnd := if firstDynIdx >= 0 { cFullCode.indexOf(";", firstDynIdx) } else { -1 };
+    firstDynTag := if firstDynIdx >= 0 and semiEnd > firstDynIdx {
+        /* Scan typedef struct lt_dyn_xxxx { ... } lt_dyn_xxxx; */
+        spc := dynTagEnd;
+        nameEnd := if spc >= 0 and spc < semiEnd { spc } else { semiEnd };
+        cFullCode.slice(firstDynIdx, nameEnd)
+    } else { "" };
+    mainPos := cFullCode.indexOf("int main(", 0);
+    mainBrace := if mainPos >= 0 { cFullCode.indexOf("{", mainPos) } else { -1 };
+    injectedC := if firstDynTag =!= "" and mainBrace > 0 {
+        cFullCode.slice(0, mainBrace + 1) + "\n    _Static_assert(sizeof(" + firstDynTag + ") == 16, \"dyn fat pointer must be 16 bytes\");\n" + cFullCode.slice(mainBrace + 1, cFullCode.length())
+    } else { cFullCode };
+    cRunFull := compilerTest.compileAndRunC(injectedC, ccProbe.cc, "");
+    test.checkInt("phase9 full C11 -Werror + sizeof==16 exit 0: " + cRunFull.stderr, 0, cRunFull.status);
+    test.checkText("phase9 C11 stdout == TS stdout", tsFull.stdout, cRunFull.stdout);
+
+    /* Sanitized ASan/UBSan run directly */
+    sanTmp := fs.makeTempDir("lite-p9-san-");
+    test.check("makeTempDir san", sanTmp.ok);
+    sanCPath := path.join(sanTmp.path, "p9.c");
+    sanExe := path.join(sanTmp.path, "p9");
+    _wc := fs.writeText(sanCPath, injectedC);
+    sanCcOut := path.join(sanTmp.path, "cc.out");
+    sanCcErr := path.join(sanTmp.path, "cc.err");
+    sanCc := proc.runBytes(ccProbe.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined", "-fno-omit-frame-pointer", sanCPath, "-o", sanExe, "-lm"], sanTmp.path, emptyEnv(), 30000, emptyBytes(), sanCcOut, sanCcErr);
+    test.check("phase9 san cc: " + fs.readText(sanCcErr).text, sanCc.status == 0);
+    sanOut := path.join(sanTmp.path, "run.out");
+    sanErr := path.join(sanTmp.path, "run.err");
+    sanRun := proc.runBytes(sanExe, emptyEnv(), sanTmp.path, emptyEnv(), 15000, emptyBytes(), sanOut, sanErr);
+    test.checkInt("phase9 ASan/UBSan exit 0: " + fs.readText(sanErr).text, 0, sanRun.status);
+    test.checkText("phase9 ASan/UBSan stdout == TS stdout", tsFull.stdout, fs.readText(sanOut).text);
+    _rmSan := fs.remove(sanTmp.path);
+}
+
+/* 2. Zero-vtable inspection: pure static-generic program produces zero lt_vt_ / lt_dyn_ in C11 */
+staticOnlySrc := [
+    "io := import \"core/io\";",
+    "HashLike := interface { hashVal: fn(self: Self): Int; };",
+    "Item := record { id: Int; };",
+    "impl HashLike for Item { hashVal := fn(self: Self): Int { self.id * 31 }; };",
+    "compute := fn<T: Type<HashLike>>(x: T): Int { x.hashVal() + 1 };",
+    "it := Item { id = 5 };",
+    "io.outputLine(compute(it));"
+].join("\n");
+staticTs := compilerTest.compileCheckRunTs(root, tsComp, staticOnlySrc, "phase9-static-ts.lts");
+test.checkText("static generic TS output", "156\n", staticTs.stdout);
+if ccProbe.available {
+    staticCEmit := compilerTest.compileStdin(root, cComp, staticOnlySrc, "phase9-static-c.lts");
+    test.checkInt("static generic C emit", 0, staticCEmit.status);
+    test.check("zero-overhead static generic C has no lt_vt_", not staticCEmit.stdout.contains("lt_vt_"));
+    test.check("zero-overhead static generic C has no lt_dyn_", not staticCEmit.stdout.contains("lt_dyn_"));
+    staticCRun := compilerTest.compileAndRunC(staticCEmit.stdout, ccProbe.cc, "");
+    test.checkText("static generic C output", "156\n", staticCRun.stdout);
+}
+
+/* 3. Multi-module pub interface + pub impl coherence across 3 files */
+modTmp := fs.makeTempDir("lite-p9-mods-");
+test.check("makeTempDir mods", modTmp.ok);
+_wA := fs.writeText(path.join(modTmp.path, "point.lt"), [
+    "pub Point := record { x: Int; y: Int; };"
+].join("\n"));
+_wB := fs.writeText(path.join(modTmp.path, "render.lt"), [
+    "pt := import \"./point\";",
+    "pub Renderable := interface {",
+    "    render: fn(self: Self): String;",
+    "};",
+    "pub impl Renderable for pt.Point {",
+    "    render := fn(self: Self): String { \"(\" + self.x.toText() + \",\" + self.y.toText() + \")\" };",
+    "};",
+    "pub drawDyn := fn(r: dyn Renderable): String { \"draw:\" + r.render() };",
+    "pub drawStatic := fn<T: Type<Renderable>>(r: T): String { \"st:\" + r.render() };"
+].join("\n"));
+mainModSrc := [
+    "io := import \"core/io\";",
+    "pt := import \"./point\";",
+    "rd := import \"./render\";",
+    "main := fn(): Unit {",
+    "    p := pt.Point { x = 3, y = 4 };",
+    "    d: dyn rd.Renderable = p;",
+    "    io.outputLine(p.render(), d.render(), rd.drawDyn(p), rd.drawStatic(p));",
+    "};",
+    "main();"
+].join("\n");
+modMainPath := path.join(modTmp.path, "main.lts");
+_wMain := fs.writeText(modMainPath, mainModSrc);
+modTsCompile := compilerTest.compileFile(tsComp, modTmp.path, [modMainPath]);
+test.checkInt("multi-module TS compile: " + modTsCompile.stderr, 0, modTsCompile.status);
+modTsRun := compilerTest.checkAndRunTs(root, modTsCompile.stdout);
+test.checkText("multi-module TS stdout", "(3,4) (3,4) draw:(3,4) st:(3,4)\n", modTsRun.stdout);
+if ccProbe.available {
+    modCCompile := compilerTest.compileFile(cComp, modTmp.path, [modMainPath]);
+    test.checkInt("multi-module C compile: " + modCCompile.stderr, 0, modCCompile.status);
+    modCRun := compilerTest.compileAndRunC(modCCompile.stdout, ccProbe.cc, "");
+    test.checkText("multi-module C stdout", "(3,4) (3,4) draw:(3,4) st:(3,4)\n", modCRun.stdout);
+}
+
+/* 4. Multi-module orphan impl rejection */
+orphanPath := path.join(modTmp.path, "orphan.lts");
+_wOrphan := fs.writeText(orphanPath, [
+    "iface := import \"core/interface\";",
+    "pt := import \"./point\";",
+    "impl iface.Logger for pt.Point {",
+    "    log := fn(self: mut Self, level: String, msg: String): Unit { };",
+    "};"
+].join("\n"));
+orphanRes := compilerTest.compileFile(tsComp, modTmp.path, ["--root", root, orphanPath]);
+test.check("reject orphan impl", orphanRes.status =!= 0 and orphanRes.stderr.contains("orphan impl"));
+_rmMods := fs.remove(modTmp.path);
+
+/* 5. Compile-time rejection matrix */
+compilerTest.assertCompileErrorContains(root, tsComp, "reject missing method in inline impl",
+    "I := interface { a: fn(self: Self): Int; b: fn(self: Self): Int; };\nR := record { x: Int; };\nimpl I for R { a := fn(self: Self): Int { self.x }; };",
+    "missing required method b");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject missing op in bodyless impl",
+    "I := interface { a: fn(self: Self): Int; };\nR := record { x: Int; };\nimpl I for R;",
+    "missing required operation a");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mutability mismatch in impl",
+    "I := interface { bump: fn(self: mut Self): Unit; };\nR := record { x: Int; };\nimpl I for R { bump := fn(self: Self): Unit { }; };",
+    "receiver mutability mismatch");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject return type mismatch in impl",
+    "I := interface { f: fn(self: Self): Int; };\nR := record { x: Int; };\nimpl I for R { f := fn(self: Self): String { \"x\" }; };",
+    "return type mismatch");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate impl",
+    "I := interface { f: fn(self: Self): Int; };\nR := record { x: Int; };\nimpl I for R { f := fn(self: Self): Int { 1 }; };\nimpl I for R { f := fn(self: Self): Int { 2 }; };",
+    "duplicate impl");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject non-object-safe dyn (Self return)",
+    "Clone := interface { copy: fn(self: Self): Self; };\nf := fn(c: dyn Clone): Unit { };",
+    "not object-safe");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject non-object-safe dyn (Self non-recv param)",
+    "Eq := interface { eq: fn(self: Self, other: Self): Bool; };\nf := fn(e: dyn Eq): Unit { };",
+    "not object-safe");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject bare interface value type",
+    "Show := interface { show: fn(self: Self): String; };\nf := fn(s: Show): Unit { };",
+    "dyn Show");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject dyn escape in fn return",
+    "Show := interface { show: fn(self: Self): String; };\nf := fn(s: dyn Show): dyn Show { s };",
+    "cannot escape via function return type");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject dyn stored in record field",
+    "Show := interface { show: fn(self: Self): String; };\nBad := record { s: dyn Show; };",
+    "cannot be stored in owning container");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject dyn stored in List",
+    "Show := interface { show: fn(self: Self): String; };\nf := fn(xs: List<dyn Show>): Unit { };",
+    "cannot be stored in owning container");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject dyn captured by closure",
+    "Show := interface { show: fn(self: Self): String; };\nf := fn(s: dyn Show): Int { g := fn(): String { s.show() }; 1 };",
+    "cannot be captured by closure");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mut method on read-only dyn",
+    "Tick := interface { inc: fn(self: mut Self): Unit; };\nf := fn(d: dyn Tick): Unit { mut d.inc(); };",
+    "read-only dyn binding");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mut method on mut dyn without call-site mut",
+    "Tick := interface { inc: fn(self: mut Self): Unit; };\nf := fn(d: mut dyn Tick): Unit { d.inc(); };",
+    "requires mut at call site");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject NLL mutation while dyn borrow is active",
+    "io := import \"core/io\";\nShow := interface { show: fn(self: Self): String; };\nR := record { x: Int; };\nimpl Show for R { show := fn(self: Self): String { self.x.toText() }; };\nmain := fn(): Unit {\n    var mut r := R { x = 1 };\n    d: dyn Show = r;\n    r.x = 2;\n    io.outputLine(d.show());\n};",
+    "while borrowed by dyn d");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject ambiguous impl dot call",
+    "A := interface { ping: fn(self: Self): Int; };\nB := interface { ping: fn(self: Self): Int; };\nR := record { x: Int; };\nimpl A for R { ping := fn(self: Self): Int { 1 }; };\nimpl B for R { ping := fn(self: Self): Int { 2 }; };\nf := fn(r: R): Int { r.ping() };",
+    "ambiguous method ping");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject == on dyn values",
+    "Show := interface { show: fn(self: Self): String; };\nf := fn(a: dyn Show, b: dyn Show): Bool { a == b };",
+    "cannot compare dyn interface values");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject unsatisfied generic interface bound",
+    "Show := interface { show: fn(self: Self): String; };\nR := record { x: Int; };\nf := fn<T: Type<Show>>(x: T): String { x.show() };\ng := fn(): String { r := R { x = 1 }; f(r) };",
+    "does not satisfy constraint");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject temporary owning rvalue in local dyn binding",
+    "Show := interface { show: fn(self: Self): String; };\nBox := record { xs: List<Int>; };\nimpl Show for Box { show := fn(self: Self): String { self.xs.length().toText() }; };\nf := fn(): String { d: dyn Show = Box { xs = [1, 2] }; d.show() };",
+    "cannot borrow temporary value into dyn binding");
+
+test.done("phase9-interfaces");

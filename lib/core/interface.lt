@@ -1,0 +1,22 @@
+/* Core open nominal interface contracts for allocation, logging, and indexed access. */
+
+/** Explicit byte-buffer allocator interface with reset capability. */
+pub Allocator := interface {
+    alloc: fn(self: mut Self, bytes: Int): List<UInt8>;
+    reset: fn(self: mut Self): Unit;
+};
+
+/** Structured message logger interface. */
+pub Logger := interface {
+    log: fn(self: mut Self, level: String, msg: String): Unit;
+};
+
+/** Read-only key-to-value indexed lookup contract (`container[key]`). */
+pub Index := interface<K: Type, V: Type> {
+    getIndex: fn(self: Self, key: K): V;
+};
+
+/** Mutable key-to-value indexed update contract (`container[key] = value`). */
+pub IndexMut := interface<K: Type, V: Type> {
+    setIndex: fn(self: mut Self, key: K, value: V): Unit;
+};

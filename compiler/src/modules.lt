@@ -2,6 +2,7 @@ diagLib := import "core/diag";
 collections := import "util/collections";
 tb := import "util/text-builder";
 frontend := import "./frontend";
+interfaces := import "./interfaces";
 generics := import "./generics";
 hostFs := import "./host-fs";
 /* Initial source graph traversal for the generated TypeScript compiler. */
@@ -305,7 +306,7 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
     var result: mut frontend.Items = existing;
     seenOps: mut Set<String>;
     loop existing as prev {
-        if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP { mut seenOps.add(prev.name); }
+        if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or prev.kind == frontend.ITEM_KIND_PUBLIC_IMPL { mut seenOps.add(prev.kind + "|" + prev.name); }
     }
     var insideSkip := false;
     loop graph as item {
@@ -313,8 +314,8 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
             insideSkip = skipModPath =!= "" and item.name == skipModPath;
         } else if item.kind == frontend.ITEM_KIND_MODULE_END {
             insideSkip = false;
-        } else if not insideSkip and item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and not seenOps.has(item.name) {
-            mut seenOps.add(item.name);
+        } else if not insideSkip and (item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_IMPL) and not seenOps.has(item.kind + "|" + item.name) {
+            mut seenOps.add(item.kind + "|" + item.name);
             mut result.pushBack(item);
         }
     }
@@ -431,7 +432,7 @@ scanTopLevelTokens := fn(items: frontend.Items, seed: mut frontend.TokenBuckets)
             if blockDepth > 0 { blockDepth = blockDepth - 1; }
         } else if not isPureDecl and item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE_OP and
-        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_SOURCE_LOC and item.kind =!= frontend.ITEM_KIND_COMMENT {
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_PUBLIC_IMPL and item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_SOURCE_LOC and item.kind =!= frontend.ITEM_KIND_COMMENT {
             scanItemTokens(item, mut seed);
         }
     }
@@ -686,7 +687,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
     isRoot := not hasVisited;
-    if isRoot { generics.resetAll(); }
+    if isRoot { generics.resetAll(); interfaces.resetAll(); }
     normPath := normalizeSlashes(path);
     rootDir := if isRoot { dirnameOfPath(normPath) } else { rootDirForGraph(initialGraph) };
     logical := logicalModuleName(rootDir, path, display);

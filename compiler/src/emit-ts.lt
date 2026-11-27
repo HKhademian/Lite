@@ -4122,7 +4122,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         if tsSourceMapMode =!= optCfg.SourceMapMode.None and pendingLocLine > 0 and
         item.kind =!= frontend.ITEM_KIND_IMPORT and item.kind =!= frontend.ITEM_KIND_PUBLIC_FUNCTION and
         item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE_OP and
-        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and
+        item.kind =!= frontend.ITEM_KIND_PUBLIC_VALUE and item.kind =!= frontend.ITEM_KIND_PUBLIC_TYPE and item.kind =!= frontend.ITEM_KIND_PUBLIC_IMPL and
         item.kind =!= frontend.ITEM_KIND_NOOP and item.kind =!= frontend.ITEM_KIND_END_IF and
         item.kind =!= frontend.ITEM_KIND_ELSE and item.kind =!= frontend.ITEM_KIND_ELSE_IF and
         item.kind =!= frontend.ITEM_KIND_END_LOOP and item.kind =!= frontend.ITEM_KIND_END_SCOPE and
@@ -4328,7 +4328,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
             count = 0;
         } else if item.kind == frontend.ITEM_KIND_MAIN_STOP {
             mainStopped = true;
-        } else if item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_NOOP {
+        } else if item.kind == frontend.ITEM_KIND_IMPORT or item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or item.kind == frontend.ITEM_KIND_PUBLIC_IMPL or item.kind == frontend.ITEM_KIND_NOOP {
         } else {
             if count > 0 { mut lineBuf.append(" + \" \" + "); }
             mut lineBuf.append(reportArgumentCode(item));

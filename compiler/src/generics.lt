@@ -258,6 +258,12 @@ mangleOneKind := fn(kind: String): String {
     if types.isSoaKind(kind) {
         return "O_" + self(types.soaRecordKind(kind)) + "_E";
     }
+    if types.isDynKind(kind) {
+        return "Y_" + hashHex32(types.dynInterfaceKind(kind)) + "_E";
+    }
+    if types.isInterfaceKind(kind) {
+        return "I_" + hashHex32(kind) + "_E";
+    }
     if types.isMapKind(kind) {
         return "M_" + self(types.mapKeyKind(kind)) + "_" + self(types.mapValueKind(kind)) + "_E";
     }
@@ -419,6 +425,15 @@ pub kindHasUnboundGeneric := fn(genericParams: String, kind: String, bindings: M
     }
     if types.isSoaKind(kind) {
         return self(genericParams, types.soaRecordKind(kind), bindings);
+    }
+    if types.isDynKind(kind) {
+        return self(genericParams, types.dynInterfaceKind(kind), bindings);
+    }
+    if types.isInterfaceKind(kind) {
+        loop types.ifaceArgsOf(kind) as ia {
+            if self(genericParams, ia, bindings) { return true; }
+        }
+        return false;
     }
     if types.isMapKind(kind) {
         return self(genericParams, types.mapKeyKind(kind), bindings) or self(genericParams, types.mapValueKind(kind), bindings);
@@ -592,6 +607,32 @@ pub unifyKindMut := fn(genericParams: String, pattern: String, actual: String, b
             return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
         }
         return self(genericParams, types.soaRecordKind(pattern), types.soaRecordKind(actual), mut bindings);
+    }
+    if types.isDynKind(pattern) {
+        if not types.isDynKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        return self(genericParams, types.dynInterfaceKind(pattern), types.dynInterfaceKind(actual), mut bindings);
+    }
+    if types.isInterfaceKind(pattern) {
+        if not types.isInterfaceKind(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        if types.ifaceKeyOf(pattern) =!= types.ifaceKeyOf(actual) {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        pIArgs := types.ifaceArgsOf(pattern);
+        aIArgs := types.ifaceArgsOf(actual);
+        if pIArgs.length() =!= aIArgs.length() {
+            return "expected " + types.displayKind(substKind(genericParams, pattern, bindings)) + ", got " + types.displayKind(actual);
+        }
+        var ii := 0;
+        loop ii < pIArgs.length() {
+            iErr := self(genericParams, pIArgs[ii], aIArgs[ii], mut bindings);
+            if iErr =!= "" { return iErr; }
+            ii = ii + 1;
+        }
+        return "";
     }
     if types.isMapKind(pattern) {
         if not types.isMapKind(actual) {

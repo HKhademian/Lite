@@ -833,7 +833,7 @@ pub scanBlockFastFlags := fn(source: String, open: Int, prefix: String): (hasFn:
         (cursor == 0 or not source.at(cursor - 1).isNameContinue()) {
             hasFn = true;
             cursor = cursor + 2;
-        } else if (ch == "r" or ch == "e" or ch == "a" or ch == "d") and
+        } else if (ch == "r" or ch == "e" or ch == "a" or ch == "d" or ch == "i") and
         (cursor == 0 or not source.at(cursor - 1).isNameContinue()) {
             if ch == "a" and source.wordAt(cursor, "alias") {
                 hasAnyAliasKw = true;
@@ -851,6 +851,10 @@ pub scanBlockFastFlags := fn(source: String, open: Int, prefix: String): (hasFn:
                 hasAnyAliasKw = true;
                 if depth == 1 { hasAliasKw = true; }
                 cursor = cursor + 4;
+            } else if ch == "i" and source.wordAt(cursor, "interface") {
+                hasAnyAliasKw = true;
+                if depth == 1 { hasAliasKw = true; }
+                cursor = cursor + 9;
             } else {
                 cursor = cursor + 1;
             }

@@ -6,6 +6,7 @@ textLib := import "core/text";
 numeric := import "./numeric-literals";
 tsLiteral := import "./ts-literals";
 ir := import "./frontend-ir";
+interfaces := import "./interfaces";
 sym := import "./symbol-table";
 syntax := import "./frontend-syntax";
 tb := import "util/text-builder";
@@ -698,10 +699,10 @@ pub distinctBaseKind := fn(kind: String): String {
     cur
 };
 
-/** True when `kind` (or its distinct base representation) is a mutable List, Array, Map, Set, Rc, Slice, SoA, or nominal record. */
+/** True when `kind` (or its distinct base representation) is a mutable List, Array, Map, Set, Rc, Slice, SoA, dyn Interface, or nominal record. */
 pub isMutContainerKind := fn(kind: String): Bool {
     base := distinctBaseKind(kind);
-    isListKind(base) or isArrayKind(base) or isMapKind(base) or isSetKind(base) or isRcKind(base) or isSliceKind(base) or isSoaKind(base) or isRecordKind(base)
+    isListKind(base) or isArrayKind(base) or isMapKind(base) or isSetKind(base) or isRcKind(base) or isSliceKind(base) or isSoaKind(base) or isDynKind(base) or isRecordKind(base)
 };
 
 /** True when `kind` is a nominal record or distinct type whose base representation is a nominal record. */
@@ -920,6 +921,161 @@ pub containsSliceKind := fn(kind: String): Bool {
     false
 };
 
+/** Active module key for interface conformance visibility checks (`""` allows global/all public lookup). */
+var activeImplModuleKey := "";
+
+/** Sets the active module key used for private-vs-public `impl` conformance lookup. */
+pub setActiveImplModuleKey := fn(moduleKey: String): Unit {
+    activeImplModuleKey = moduleKey;
+};
+
+/** True when `kind` is a canonical interface reference `Iface<key>` or `Iface<key;Arg1,...>`. */
+pub isInterfaceKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 7 and kind.startsWithAt(0, "Iface<") and kind.at(size - 1) == ">" and skipKindToken(kind, 0) == size
+};
+
+/** Returns the canonical `moduleKey#Name` of an `Iface<...>` kind. */
+pub ifaceKeyOf := fn(kind: String): String {
+    if not isInterfaceKind(kind) { return ""; }
+    inner := kind.slice(6, kind.length() - 1);
+    semi := inner.indexOf(";", 0);
+    if semi < 0 { inner } else { inner.slice(0, semi) }
+};
+
+/** Returns instantiated type argument kinds of `Iface<key;Arg1,...>`, or `[]`. */
+pub ifaceArgsOf := fn(kind: String): List<String> {
+    if not isInterfaceKind(kind) {
+        empty: List<String> = [];
+        return empty;
+    }
+    inner := kind.slice(6, kind.length() - 1);
+    semi := inner.indexOf(";", 0);
+    if semi < 0 {
+        empty: List<String> = [];
+        return empty;
+    }
+    splitTopLevelKinds(inner.slice(semi + 1, inner.length()))
+};
+
+/** Builds canonical `Iface<key>` or `Iface<key;Arg1,...>`. */
+pub buildInterfaceKind := fn(key: String, args: List<String>): String {
+    if args.length() == 0 { "Iface<" + key + ">" } else { "Iface<" + key + ";" + args.join(",") + ">" }
+};
+
+/** True when `kind` is a canonical dynamic borrowed interface view `Dyn<Iface<...>>`. */
+pub isDynKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 11 and kind.startsWithAt(0, "Dyn<") and kind.at(size - 1) == ">" and skipKindToken(kind, 0) == size and isInterfaceKind(kind.slice(4, size - 1))
+};
+
+/** Extracts the inner `Iface<...>` from canonical `Dyn<Iface<...>>`. */
+pub dynInterfaceKind := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if not isDynKind(kind) { return ""; }
+    kind.slice(4, kind.length() - 1)
+};
+
+/** Maps a `Dyn<Iface<...>>` kind to its C11 16-byte fat-pointer struct typedef `lt_dyn_<hash>`. */
+pub cDynTag := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if not isDynKind(kind) { return ""; }
+    "lt_dyn_" + cStructHash(dynInterfaceKind(kind))
+};
+
+/** Maps a `Dyn<Iface<...>>` kind to its C11 vtable struct typedef `lt_vt_<hash>`. */
+pub cVtableTag := fn(kind: String): String {
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if not isDynKind(kind) { return ""; }
+    "lt_vt_" + cStructHash(dynInterfaceKind(kind))
+};
+
+/** Returns unique C11 vtable instance identifier `lt_vtbl_<hash>` for `(dynKind, concreteKind, implKey)`. */
+pub cVtableInstanceSym := fn(dynKind: String, concreteKind: String, implKey: String): String {
+    "lt_vtbl_" + cStructHash(dynKind + "|" + concreteKind + "|" + implKey)
+};
+
+/** True when `kind` is or transitively contains a borrowed `Dyn<Iface<...>>` type. */
+pub containsDynKind := fn(kind: String): Bool {
+    if kind.indexOf("Dyn<", 0) < 0 { return false; }
+    if isDynKind(kind) { return true; }
+    if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
+    if isListKind(kind) { return self(listElementKind(kind)); }
+    if isArrayKind(kind) { return self(arrayElementKind(kind)); }
+    if isMapKind(kind) { return self(mapKeyKind(kind)) or self(mapValueKind(kind)); }
+    if isSetKind(kind) { return self(setElementKind(kind)); }
+    if isRcKind(kind) { return self(rcElementKind(kind)); }
+    if isSliceKind(kind) { return self(sliceElementKind(kind)); }
+    if isSimdKind(kind) { return self(simdElementKind(kind)); }
+    if isSimdNativeKind(kind) { return self(simdNativeElementKind(kind)); }
+    if isSoaKind(kind) { return self(soaRecordKind(kind)); }
+    if isTupleKind(kind) {
+        var i := 0;
+        n := tupleComponentCount(kind);
+        loop i < n {
+            if self(tupleComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    if isRecordKind(kind) {
+        var i := 0;
+        n := recordComponentCount(kind);
+        loop i < n {
+            if self(recordComponent(kind, i).kind) { return true; }
+            i = i + 1;
+        }
+        return false;
+    }
+    if isPayloadEnumKind(kind) {
+        var ci := 0;
+        cc := enumCaseCount(kind);
+        loop ci < cc {
+            loop enumCasePayloads(kind, ci) as pk {
+                if self(pk) { return true; }
+            }
+            ci = ci + 1;
+        }
+        return false;
+    }
+    if isFnKind(kind) {
+        var pi := 0;
+        pc := fnParamCount(kind);
+        loop pi < pc {
+            if self(fnParamComponent(kind, pi).kind) { return true; }
+            pi = pi + 1;
+        }
+        return self(fnResultKind(kind));
+    }
+    false
+};
+
+/** Returns a diagnostic message when `kind` contains borrowed `Slice<T>` or `dyn Interface` forbidden in owning containers, or `""`. */
+pub borrowedStorageError := fn(kind: String): String {
+    if containsSliceKind(kind) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+    if containsDynKind(kind) { return "borrowed dyn Interface cannot be stored in owning container or type definition"; }
+    ""
+};
+
+/** True when `kind` is a multi-bound `Type<...>` conjunction `All<B1,B2,...>`. */
+pub isAllConstraintKind := fn(kind: String): Bool {
+    size := kind.length();
+    size > 5 and kind.startsWithAt(0, "All<") and kind.at(size - 1) == ">" and skipKindToken(kind, 0) == size
+};
+
+/** Splits an `All<...>` conjunction (or singleton) into its constraint members. */
+pub allConstraintMembers := fn(kind: String): List<String> {
+    if kind == "" {
+        empty: List<String> = [];
+        return empty;
+    }
+    if isAllConstraintKind(kind) {
+        return splitTopLevelKinds(kind.slice(4, kind.length() - 1));
+    }
+    single: List<String> = [kind];
+    single
+};
+
 /** True when `elemKind` is stored in bit-packed sub-byte lanes (`Bool`, `Int1..Int4`, `UInt1..UInt4`). */
 pub isBitPackedElemKind := fn(elemKind: String): Bool {
     base := distinctBaseKind(elemKind);
@@ -1035,40 +1191,77 @@ splitTopLevelCommaRaw := fn(raw: String, prefix: String): List<String> {
     out
 };
 
-/** True when concrete canonical `actualKind` is a direct member of closed constraint `constraintKind`. */
-pub typeSatisfiesConstraint := fn(actualKind: String, constraintKind: String): Bool {
-    if actualKind == "" or constraintKind == "" { return false; }
-    unionMembers(constraintKind).contains(actualKind)
-};
-
 /** True when every member allowed by `subConstraint` is also allowed by `superConstraint`. */
 pub constraintIsSubset := fn(subConstraint: String, superConstraint: String): Bool {
     if subConstraint == "" or superConstraint == "" { return false; }
-    supMembers := unionMembers(superConstraint);
-    loop unionMembers(subConstraint) as m {
-        if not supMembers.contains(m) { return false; }
+    subItems := allConstraintMembers(subConstraint);
+    supItems := allConstraintMembers(superConstraint);
+    var supUnion := "";
+    supIfaces: mut List<String> = [];
+    loop supItems as si {
+        if isInterfaceKind(si) {
+            mut supIfaces.pushBack(si);
+        } else {
+            supUnion = si;
+        }
+    }
+    /* Every required interface in superConstraint must appear in subConstraint. */
+    loop supIfaces as reqI {
+        if not subItems.contains(reqI) { return false; }
+    }
+    /* If superConstraint also restricts closed union members, subConstraint's closed union must be a subset. */
+    if supUnion =!= "" {
+        var subUnion := "";
+        loop subItems as si2 {
+            if not isInterfaceKind(si2) { subUnion = si2; }
+        }
+        if subUnion == "" { return false; }
+        supMembers := unionMembers(supUnion);
+        loop unionMembers(subUnion) as m {
+            if not supMembers.contains(m) { return false; }
+        }
     }
     true
 };
 
-/** Computes the closed-set intersection of multiple `Type<A, B, ...>` constraint bounds, returning `ok = false` when empty. */
+/** Computes the intersection of multiple `Type<A, B, ...>` constraint bounds (closed unions and/or interfaces), returning `ok = false` when empty. */
 pub intersectConstraintBounds := fn(boundKinds: List<String>): (ok: Bool, kind: String) {
     if boundKinds.length() == 0 { return (ok = false, kind = ""); }
-    var current := unionMembers(boundKinds[0]);
-    var i := 1;
-    loop i < boundKinds.length() {
-        nextMembers := unionMembers(boundKinds[i]);
-        filtered: mut List<String> = [];
-        loop current as m {
-            if nextMembers.contains(m) {
-                mut filtered.pushBack(m);
+    unionBounds: mut List<String> = [];
+    ifaceBounds: mut List<String> = [];
+    loop boundKinds as bk {
+        loop allConstraintMembers(bk) as part {
+            if isInterfaceKind(part) {
+                if not ifaceBounds.contains(part) { mut ifaceBounds.pushBack(part); }
+            } else {
+                mut unionBounds.pushBack(part);
             }
         }
-        current = filtered;
-        i = i + 1;
     }
-    if current.length() == 0 { return (ok = false, kind = ""); }
-    (ok = true, kind = buildUnionKind(current))
+    var intersectedUnion := "";
+    if unionBounds.length() > 0 {
+        var current := unionMembers(unionBounds[0]);
+        var i := 1;
+        loop i < unionBounds.length() {
+            nextMembers := unionMembers(unionBounds[i]);
+            filtered: mut List<String> = [];
+            loop current as m {
+                if nextMembers.contains(m) {
+                    mut filtered.pushBack(m);
+                }
+            }
+            current = filtered;
+            i = i + 1;
+        }
+        if current.length() == 0 { return (ok = false, kind = ""); }
+        intersectedUnion = buildUnionKind(current);
+    }
+    allParts: mut List<String> = [];
+    if intersectedUnion =!= "" { mut allParts.pushBack(intersectedUnion); }
+    loop ifaceBounds as ib { mut allParts.pushBack(ib); }
+    if allParts.length() == 0 { return (ok = false, kind = ""); }
+    if allParts.length() == 1 { return (ok = true, kind = allParts[0]); }
+    (ok = true, kind = "All<" + allParts.join(",") + ">")
 };
 
 /** Parses `genericParams` CSV (e.g. `"T,T2=Type<...>,N=Int,C=Enum<...>"`) into `(name, kind)` pairs. */
@@ -1608,6 +1801,7 @@ cIsSupportedElem := fn(kind: String): Bool {
     else if isSetKind(kind) { ok = isMapKeyKind(setElementKind(kind)); }
     else if isRcKind(kind) { ok = self(rcElementKind(kind)); }
     else if isSliceKind(kind) { ok = cListTag(sliceElementKind(kind)) =!= ""; }
+    else if isDynKind(kind) { ok = true; }
     else if isSimdKind(kind) { ok = isValidSimdLaneCount(simdElementKind(kind), simdLaneCount(kind)); }
     else if isSoaKind(kind) {
         rk := soaRecordKind(kind);
@@ -2005,6 +2199,7 @@ pub cValueType := fn(kind: String): String {
     else if cSetTag(kind) =!= "" { cSetTag(kind) }
     else if cRcTag(kind) =!= "" { cRcTag(kind) }
     else if cSliceTag(kind) =!= "" { cSliceTag(kind) }
+    else if cDynTag(kind) =!= "" { cDynTag(kind) }
     else if cSimdTag(kind) =!= "" { cSimdTag(kind) }
     else if cSoaTag(kind) =!= "" { cSoaTag(kind) }
     else if cStructTag(kind) =!= "" { cStructTag(kind) }
@@ -2422,6 +2617,19 @@ pub kindHasAnyGenericParam := fn(genericParams: String, kind: String): Bool {
     }
     if isSimdNativeKind(kind) { return self(genericParams, simdNativeElementKind(kind)); }
     if isSoaKind(kind) { return self(genericParams, soaRecordKind(kind)); }
+    if isDynKind(kind) { return self(genericParams, dynInterfaceKind(kind)); }
+    if isInterfaceKind(kind) {
+        loop ifaceArgsOf(kind) as ia {
+            if self(genericParams, ia) { return true; }
+        }
+        return false;
+    }
+    if isAllConstraintKind(kind) {
+        loop allConstraintMembers(kind) as am {
+            if self(genericParams, am) { return true; }
+        }
+        return false;
+    }
     if isMapKind(kind) { return self(genericParams, mapKeyKind(kind)) or self(genericParams, mapValueKind(kind)); }
     if isArrayKind(kind) {
         return self(genericParams, arrayElementKind(kind)) or valueParamKind(genericParams, arrayExtentText(kind)) =!= "";
@@ -2511,6 +2719,26 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
     }
     if isSoaKind(pattern) {
         return "SoA<" + self(genericParams, soaRecordKind(pattern), bindings) + ">";
+    }
+    if isDynKind(pattern) {
+        return "Dyn<" + self(genericParams, dynInterfaceKind(pattern), bindings) + ">";
+    }
+    if isInterfaceKind(pattern) {
+        iKey := ifaceKeyOf(pattern);
+        oldArgs := ifaceArgsOf(pattern);
+        if oldArgs.length() == 0 { return pattern; }
+        newArgs: mut List<String> = [];
+        loop oldArgs as oa {
+            mut newArgs.pushBack(self(genericParams, oa, bindings));
+        }
+        return buildInterfaceKind(iKey, newArgs);
+    }
+    if isAllConstraintKind(pattern) {
+        newMembers: mut List<String> = [];
+        loop allConstraintMembers(pattern) as am {
+            mut newMembers.pushBack(self(genericParams, am, bindings));
+        }
+        return "All<" + newMembers.join(",") + ">";
     }
     if isMapKind(pattern) {
         return "Map<" + self(genericParams, mapKeyKind(pattern), bindings) + "," +
@@ -2625,7 +2853,7 @@ pub substCanonicalKind := fn(genericParams: String, pattern: String, bindings: M
 /** True when `kind` contains strings, heap containers, handles, or closures forbidden inside `@packed` structs. */
 packedRecordFieldUnsafe := fn(kind: String): Bool {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
-    if kind == ir.VALUE_KIND_STRING or cTypeNeedsDrop(kind) or isSimdKind(kind) or isSimdNativeKind(kind) { return true; }
+    if kind == ir.VALUE_KIND_STRING or cTypeNeedsDrop(kind) or isSimdKind(kind) or isSimdNativeKind(kind) or isDynKind(kind) { return true; }
     if isArrayKind(kind) { return self(arrayElementKind(kind)); }
     if isTupleKind(kind) {
         var i := 0;
@@ -2663,14 +2891,16 @@ packedRecordFieldUnsafe := fn(kind: String): Bool {
 pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): String {
     if isListKind(kind) {
         elem := listElementKind(kind);
-        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        bErr := borrowedStorageError(elem);
+        if bErr =!= "" { return bErr; }
         if isListKind(elem) { return "nested list types are not supported"; }
         if elem == ir.VALUE_KIND_UNIT { return "unsupported list element type Unit"; }
         return self(elem, allowGenericParams);
     }
     if isSetKind(kind) {
         elem := setElementKind(kind);
-        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        bErr := borrowedStorageError(elem);
+        if bErr =!= "" { return bErr; }
         if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isMapKeyKind(elem) {
             return "unsupported set element type " + displayKind(elem);
         }
@@ -2678,7 +2908,8 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     }
     if isRcKind(kind) {
         elem := rcElementKind(kind);
-        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        bErr := borrowedStorageError(elem);
+        if bErr =!= "" { return bErr; }
         if elem == ir.VALUE_KIND_UNIT or elem == ir.VALUE_KIND_NEVER {
             return "unsupported Rc element type " + displayKind(elem);
         }
@@ -2689,12 +2920,14 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         if elem == ir.VALUE_KIND_UNIT or elem == ir.VALUE_KIND_NEVER {
             return "unsupported Slice element type " + displayKind(elem);
         }
-        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        bErr := borrowedStorageError(elem);
+        if bErr =!= "" { return bErr; }
         return self(elem, allowGenericParams);
     }
     if isSimdKind(kind) {
         elem := simdElementKind(kind);
-        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        bErr := borrowedStorageError(elem);
+        if bErr =!= "" { return bErr; }
         if not isGenericParamName(allowGenericParams, distinctBaseKind(elem)) and not isSimdElemKind(elem) {
             return "unsupported Simd lane type " + displayKind(elem);
         }
@@ -2719,7 +2952,8 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     }
     if isSoaKind(kind) {
         rec := soaRecordKind(kind);
-        if containsSliceKind(rec) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        bErr := borrowedStorageError(rec);
+        if bErr =!= "" { return bErr; }
         if not isGenericParamName(allowGenericParams, distinctBaseKind(rec)) {
             if not isRecordKind(rec) or recordComponentCount(rec) == 0 {
                 return "SoA<R> requires a non-empty record type, got " + displayKind(rec);
@@ -2732,12 +2966,14 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     }
     if isMapKind(kind) {
         k := mapKeyKind(kind);
-        if containsSliceKind(k) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        kBErr := borrowedStorageError(k);
+        if kBErr =!= "" { return kBErr; }
         if not isGenericParamName(allowGenericParams, distinctBaseKind(k)) and not isMapKeyKind(k) {
             return "unsupported map key type " + displayKind(k);
         }
         v := mapValueKind(kind);
-        if containsSliceKind(v) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        vBErr := borrowedStorageError(v);
+        if vBErr =!= "" { return vBErr; }
         if v == ir.VALUE_KIND_UNIT or v == ir.VALUE_KIND_NEVER {
             return "unsupported map value type " + displayKind(v);
         }
@@ -2747,7 +2983,8 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     }
     if isArrayKind(kind) {
         elem := arrayElementKind(kind);
-        if containsSliceKind(elem) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        bErr := borrowedStorageError(elem);
+        if bErr =!= "" { return bErr; }
         if elem == ir.VALUE_KIND_UNIT { return "unsupported array element type Unit"; }
         extText := arrayExtentText(kind);
         if extText =!= "*" and valueParamKind(allowGenericParams, extText) =!= ir.VALUE_KIND_INT {
@@ -2765,6 +3002,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
             if isTupleKind(ck) { return "nested tuple types are not supported"; }
             if isListKind(ck) { return "list types inside tuples are not supported"; }
             if ck == ir.VALUE_KIND_UNIT { return "unsupported tuple component type Unit"; }
+            if containsDynKind(ck) { return "borrowed dyn Interface cannot be stored in owning container or type definition"; }
             err := self(ck, allowGenericParams);
             if err =!= "" { return err; }
             i = i + 1;
@@ -2780,6 +3018,7 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
             i = i + 1;
         }
         rk := fnResultKind(kind);
+        if containsDynKind(rk) { return "borrowed dyn Interface cannot escape via function return type"; }
         if rk =!= ir.VALUE_KIND_UNIT and rk =!= ir.VALUE_KIND_NEVER {
             return self(rk, allowGenericParams);
         }
@@ -2794,7 +3033,8 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
         loop fi < fc {
             fk := recordComponent(kind, fi).kind;
             if fk == ir.VALUE_KIND_UNIT { return "unsupported record field type Unit"; }
-            if containsSliceKind(fk) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+            bErr := borrowedStorageError(fk);
+            if bErr =!= "" { return bErr; }
             err := self(fk, allowGenericParams);
             if err =!= "" { return err; }
             fi = fi + 1;
@@ -2804,12 +3044,24 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
     if isUnionKind(kind) {
         return "type set union " + displayKind(kind) + " can only be used inside Type<...> constraints";
     }
+    if isInterfaceKind(kind) {
+        return "interface " + displayKind(kind) + " cannot be used directly as a value type; use T: Type<" + displayKind(kind) + "> for static dispatch or dyn " + displayKind(kind) + " for dynamic dispatch";
+    }
+    if isDynKind(kind) {
+        inner := dynInterfaceKind(kind);
+        loop ifaceArgsOf(inner) as ia {
+            err := self(ia, allowGenericParams);
+            if err =!= "" { return err; }
+        }
+        return "";
+    }
     if isDistinctKind(kind) {
         uk := distinctUnderlyingKind(kind);
         if uk == ir.VALUE_KIND_UNIT or uk == ir.VALUE_KIND_NEVER {
             return "unsupported distinct underlying type " + displayKind(uk);
         }
-        if containsSliceKind(uk) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+        bErr := borrowedStorageError(uk);
+        if bErr =!= "" { return bErr; }
         return self(uk, allowGenericParams);
     }
     if isPayloadEnumKind(kind) {
@@ -2820,7 +3072,8 @@ pub validateCanonicalKind := fn(kind: String, allowGenericParams: String): Strin
                 if pk == ir.VALUE_KIND_UNIT or pk == ir.VALUE_KIND_NEVER {
                     return "unsupported enum payload type " + displayKind(pk);
                 }
-                if containsSliceKind(pk) { return "borrowed Slice<T> cannot be stored in owning container or type definition"; }
+                bErr := borrowedStorageError(pk);
+                if bErr =!= "" { return bErr; }
                 err := self(pk, allowGenericParams);
                 if err =!= "" { return err; }
             }
@@ -2980,6 +3233,349 @@ pub isCompatibleKind := fn(expectedKind: String, actualKind: String): Bool {
     (isArrayKind(expectedKind) and arrayExtent(expectedKind) == -1 and isArrayKind(actualKind) and self(arrayElementKind(expectedKind), arrayElementKind(actualKind)))
 };
 
+/** Encodes a `Map<String, String>` binding table into `name=kind|...` in `paramCsv` order. */
+encodeImplBindings := fn(paramCsv: String, bindings: Map<String, String>): String {
+    parts: mut List<String> = [];
+    loop splitParamSpecs(paramCsv) as sp {
+        mut parts.pushBack(sp.name + "=" + bindings.getOr(sp.name, ""));
+    }
+    parts.join("|")
+};
+
+/** Decodes `"name=kind|..."` into a lookup map. */
+pub decodeImplBindings := fn(encoded: String): Map<String, String> {
+    out: mut Map<String, String>;
+    if encoded == "" { return out; }
+    var start := 0;
+    size := encoded.length();
+    loop start <= size {
+        bar := encoded.indexOf("|", start);
+        end := if bar < 0 { size } else { bar };
+        entry := encoded.slice(start, end);
+        eq := entry.indexOf("=", 0);
+        if eq > 0 {
+            mut out.set(entry.slice(0, eq), entry.slice(eq + 1, entry.length()));
+        }
+        if bar < 0 { break; }
+        start = bar + 1;
+    }
+    out
+};
+
+/** Unifies generic `impl` target `pattern` against concrete `actual`, mutating `bindings`. */
+unifyImplPatternMut := fn(genericParams: String, pattern: String, actual: String, bindings: mut Map<String, String>): Bool {
+    if actual == ir.VALUE_KIND_NEVER { return false; }
+    if isGenericParamName(genericParams, pattern) or valueParamKind(genericParams, pattern) =!= "" {
+        if valueParamKind(genericParams, pattern) =!= "" {
+            if not isComptimeValueToken(actual) { return false; }
+            if bindings.has(pattern) { return bindings.getOr(pattern, "") == actual; }
+            (mut bindings).set(pattern, actual);
+            return true;
+        }
+        if bindings.has(pattern) {
+            return isCompatibleKind(bindings.getOr(pattern, ""), actual);
+        }
+        (mut bindings).set(pattern, actual);
+        return true;
+    }
+    if isListKind(pattern) {
+        return isListKind(actual) and self(genericParams, listElementKind(pattern), listElementKind(actual), mut bindings);
+    }
+    if isSetKind(pattern) {
+        return isSetKind(actual) and self(genericParams, setElementKind(pattern), setElementKind(actual), mut bindings);
+    }
+    if isRcKind(pattern) {
+        return isRcKind(actual) and self(genericParams, rcElementKind(pattern), rcElementKind(actual), mut bindings);
+    }
+    if isSliceKind(pattern) {
+        return isSliceKind(actual) and self(genericParams, sliceElementKind(pattern), sliceElementKind(actual), mut bindings);
+    }
+    if isSimdKind(pattern) {
+        if not isSimdKind(actual) { return false; }
+        pLanesText := simdLaneCountText(pattern);
+        aLanes := simdLaneCount(actual);
+        if valueParamKind(genericParams, pLanesText) == ir.VALUE_KIND_INT {
+            laneTok := comptimeIntToken(aLanes);
+            if bindings.has(pLanesText) {
+                if bindings.getOr(pLanesText, "") =!= laneTok { return false; }
+            } else {
+                (mut bindings).set(pLanesText, laneTok);
+            }
+        } else if simdLaneCount(pattern) =!= aLanes {
+            return false;
+        }
+        return self(genericParams, simdElementKind(pattern), simdElementKind(actual), mut bindings);
+    }
+    if isSoaKind(pattern) {
+        return isSoaKind(actual) and self(genericParams, soaRecordKind(pattern), soaRecordKind(actual), mut bindings);
+    }
+    if isMapKind(pattern) {
+        return isMapKind(actual) and self(genericParams, mapKeyKind(pattern), mapKeyKind(actual), mut bindings) and self(genericParams, mapValueKind(pattern), mapValueKind(actual), mut bindings);
+    }
+    if isArrayKind(pattern) {
+        if not isArrayKind(actual) { return false; }
+        pExtText := arrayExtentText(pattern);
+        if pExtText == "*" {
+            /* wildcard extent */
+        } else if valueParamKind(genericParams, pExtText) == ir.VALUE_KIND_INT {
+            aExt := arrayExtent(actual);
+            if aExt <= 0 { return false; }
+            extTok := comptimeIntToken(aExt);
+            if bindings.has(pExtText) {
+                if bindings.getOr(pExtText, "") =!= extTok { return false; }
+            } else {
+                (mut bindings).set(pExtText, extTok);
+            }
+        } else if arrayExtent(pattern) =!= arrayExtent(actual) {
+            return false;
+        }
+        return self(genericParams, arrayElementKind(pattern), arrayElementKind(actual), mut bindings);
+    }
+    if isTupleKind(pattern) {
+        if not isTupleKind(actual) or tupleComponentCount(pattern) =!= tupleComponentCount(actual) { return false; }
+        n := tupleComponentCount(pattern);
+        var i := 0;
+        loop i < n {
+            pc := tupleComponent(pattern, i);
+            ac := tupleComponent(actual, i);
+            if pc.label =!= ac.label { return false; }
+            if not self(genericParams, pc.kind, ac.kind, mut bindings) { return false; }
+            i = i + 1;
+        }
+        return true;
+    }
+    if isFnKind(pattern) {
+        if not isFnKind(actual) or fnParamCount(pattern) =!= fnParamCount(actual) { return false; }
+        n := fnParamCount(pattern);
+        var i := 0;
+        loop i < n {
+            if not self(genericParams, fnParamComponent(pattern, i).kind, fnParamComponent(actual, i).kind, mut bindings) { return false; }
+            i = i + 1;
+        }
+        return self(genericParams, fnResultKind(pattern), fnResultKind(actual), mut bindings);
+    }
+    pArgs := nominalTypeArgs(pattern);
+    if pArgs.length() > 0 {
+        pOwner := typeOpOwnerKey(pattern);
+        aOwner := typeOpOwnerKey(actual);
+        aArgs := nominalTypeArgs(actual);
+        if pOwner =!= aOwner or pArgs.length() =!= aArgs.length() { return false; }
+        var ai := 0;
+        loop ai < pArgs.length() {
+            if not self(genericParams, pArgs[ai], aArgs[ai], mut bindings) { return false; }
+            ai = ai + 1;
+        }
+        return true;
+    }
+    pattern == actual
+};
+
+/** Substitutes `InterfaceDef.genericParams` (from `ifaceKind`) and `"Self"` into an `InterfaceMethod`'s non-self params & result. */
+pub instantiatedInterfaceMethods := fn(ifaceKind: String): List<interfaces.InterfaceMethod> {
+    out: mut List<interfaces.InterfaceMethod> = [];
+    if not isInterfaceKind(ifaceKind) { return out; }
+    iIdx := interfaces.findInterface(ifaceKeyOf(ifaceKind));
+    if iIdx < 0 { return out; }
+    def := interfaces.getInterface(iIdx);
+    args := ifaceArgsOf(ifaceKind);
+    paramSpecs := splitParamSpecs(def.genericParams);
+    bindings: mut Map<String, String>;
+    var bi := 0;
+    loop bi < paramSpecs.length() and bi < args.length() {
+        mut bindings.set(paramSpecs[bi].name, args[bi]);
+        bi = bi + 1;
+    }
+    loop def.methods as m {
+        if def.genericParams == "" {
+            mut out.pushBack(m);
+        } else {
+            newRes := substCanonicalKind(def.genericParams, m.result, bindings);
+            newPList: mut List<String> = [];
+            if m.paramCount > 0 {
+                var pStart := 0;
+                pLen := m.params.length();
+                loop pStart <= pLen {
+                    bar := m.params.indexOf("|", pStart);
+                    pEnd := if bar < 0 { pLen } else { bar };
+                    entry := m.params.slice(pStart, pEnd);
+                    eq := entry.indexOf("=", 0);
+                    if eq > 0 {
+                        pName := entry.slice(0, eq);
+                        rawPK := entry.slice(eq + 1, entry.length());
+                        pAccess := if rawPK.startsWithAt(0, "mut ") { "mut " } else { "" };
+                        pKind := if pAccess =!= "" { rawPK.slice(4, rawPK.length()) } else { rawPK };
+                        mut newPList.pushBack(pName + "=" + pAccess + substCanonicalKind(def.genericParams, pKind, bindings));
+                    }
+                    if bar < 0 { break; }
+                    pStart = bar + 1;
+                }
+            }
+            mut out.pushBack(interfaces.InterfaceMethod {
+                name = m.name,
+                recvMut = m.recvMut,
+                params = newPList.join("|"),
+                paramCount = m.paramCount,
+                result = newRes
+            });
+        }
+    }
+    out
+};
+
+/** Finds a visible `impl` binding `actualKind` to `ifaceKind`, returning bound generic arguments when matched. */
+pub findImplForConcrete := fn(actualKind: String, ifaceKind: String): (found: Bool, implIdx: Int, bindingsEncoded: String) {
+    if actualKind == "" or not isInterfaceKind(ifaceKind) {
+        return (found = false, implIdx = -1, bindingsEncoded = "");
+    }
+    reqKey := ifaceKeyOf(ifaceKind);
+    reqArgs := ifaceArgsOf(ifaceKind);
+    owner := typeOpOwnerKey(actualKind);
+    candidates := interfaces.implIndicesForOwner(owner);
+    loop candidates as ci {
+        imp := interfaces.getImpl(ci);
+        if not imp.isPub and activeImplModuleKey =!= "" and imp.declModule =!= activeImplModuleKey { continue; }
+        if imp.ifaceKey =!= reqKey { continue; }
+        bindings: mut Map<String, String>;
+        if not unifyImplPatternMut(imp.genericParams, imp.targetPattern, actualKind, mut bindings) { continue; }
+        var allBound := true;
+        var constraintsOk := true;
+        loop splitParamSpecs(imp.genericParams) as sp {
+            if not bindings.has(sp.name) {
+                allBound = false;
+                break;
+            }
+        }
+        if not allBound { continue; }
+        /* Validate any conditional conformance bounds on imp.genericParams (excluding recursion via simple union/interface check). */
+        loop splitParamSpecs(imp.genericParams) as sp {
+            if isTypeConstraintKind(sp.kind) {
+                cKind := substCanonicalKind(imp.genericParams, typeConstraintUnion(sp.kind), bindings);
+                boundK := bindings.getOr(sp.name, "");
+                /* Defer to constraint check after args check below via recursive self-safe helper if needed */
+                if not isAllConstraintKind(cKind) and not isInterfaceKind(cKind) {
+                    if not unionMembers(cKind).contains(boundK) { constraintsOk = false; break; }
+                }
+            }
+        }
+        if not constraintsOk { continue; }
+        impArgs := if imp.ifaceArgsCsv == "" {
+            empty: List<String> = [];
+            empty
+        } else {
+            splitTopLevelKinds(imp.ifaceArgsCsv)
+        };
+        if impArgs.length() =!= reqArgs.length() { continue; }
+        var argsMatch := true;
+        var ai := 0;
+        loop ai < impArgs.length() {
+            subArg := if imp.genericParams =!= "" { substCanonicalKind(imp.genericParams, impArgs[ai], bindings) } else { impArgs[ai] };
+            if subArg =!= reqArgs[ai] {
+                argsMatch = false;
+                break;
+            }
+            ai = ai + 1;
+        }
+        if not argsMatch { continue; }
+        /* Check interface bounds on imp.genericParams (if any conditional impl<T: Type<I>>). */
+        var ifaceBoundsOk := true;
+        loop splitParamSpecs(imp.genericParams) as sp {
+            if isTypeConstraintKind(sp.kind) {
+                cKind := substCanonicalKind(imp.genericParams, typeConstraintUnion(sp.kind), bindings);
+                boundK := bindings.getOr(sp.name, "");
+                loop allConstraintMembers(cKind) as reqM {
+                    if isInterfaceKind(reqM) {
+                        if not self(boundK, reqM).found { ifaceBoundsOk = false; break; }
+                    } else if not unionMembers(reqM).contains(boundK) {
+                        ifaceBoundsOk = false;
+                        break;
+                    }
+                }
+                if not ifaceBoundsOk { break; }
+            }
+        }
+        if not ifaceBoundsOk { continue; }
+        return (found = true, implIdx = ci, bindingsEncoded = encodeImplBindings(imp.genericParams, bindings));
+    }
+    (found = false, implIdx = -1, bindingsEncoded = "")
+};
+
+/** True when concrete `actualKind` satisfies closed-union, single-interface, or multi-bound `All<...>` constraint `constraintKind`. */
+pub typeSatisfiesConstraint := fn(actualKind: String, constraintKind: String): Bool {
+    if actualKind == "" or constraintKind == "" { return false; }
+    loop allConstraintMembers(constraintKind) as req {
+        if isInterfaceKind(req) {
+            if not findImplForConcrete(actualKind, req).found { return false; }
+        } else {
+            if not unionMembers(req).contains(actualKind) { return false; }
+        }
+    }
+    true
+};
+
+/** Finds a unique visible conformance method `methodName` on concrete `actualKind` (among all impls or restricted to `allowedIfaceKinds` when non-empty). */
+pub findImplMethodForConcrete := fn(actualKind: String, methodName: String, allowedIfaceKinds: List<String>): (found: Bool, ambiguous: Bool, ifaceName: String, fnKey: String, implIdx: Int, bindingsEncoded: String, recvMut: Bool) {
+    emptyRet := (found = false, ambiguous = false, ifaceName = "", fnKey = "", implIdx = -1, bindingsEncoded = "", recvMut = false);
+    if actualKind == "" or methodName == "" { return emptyRet; }
+    owner := typeOpOwnerKey(actualKind);
+    candidates := interfaces.implIndicesForOwner(owner);
+    var matchCount := 0;
+    var bestIface := "";
+    var bestFnKey := "";
+    var bestImplIdx := -1;
+    var bestBindings := "";
+    var bestRecvMut := false;
+    loop candidates as ci {
+        imp := interfaces.getImpl(ci);
+        if not imp.isPub and activeImplModuleKey =!= "" and imp.declModule =!= activeImplModuleKey { continue; }
+        bindings: mut Map<String, String>;
+        if not unifyImplPatternMut(imp.genericParams, imp.targetPattern, actualKind, mut bindings) { continue; }
+        var allBound := true;
+        loop splitParamSpecs(imp.genericParams) as sp {
+            if not bindings.has(sp.name) { allBound = false; break; }
+        }
+        if not allBound { continue; }
+        impArgs := if imp.ifaceArgsCsv == "" {
+            empty: List<String> = [];
+            empty
+        } else {
+            splitTopLevelKinds(imp.ifaceArgsCsv)
+        };
+        subArgs: mut List<String> = [];
+        loop impArgs as ia {
+            mut subArgs.pushBack(if imp.genericParams =!= "" { substCanonicalKind(imp.genericParams, ia, bindings) } else { ia });
+        }
+        instIface := buildInterfaceKind(imp.ifaceKey, subArgs);
+        if allowedIfaceKinds.length() > 0 and not allowedIfaceKinds.contains(instIface) { continue; }
+        var boundsOk := true;
+        loop splitParamSpecs(imp.genericParams) as sp {
+            if isTypeConstraintKind(sp.kind) {
+                cKind := substCanonicalKind(imp.genericParams, typeConstraintUnion(sp.kind), bindings);
+                if not typeSatisfiesConstraint(bindings.getOr(sp.name, ""), cKind) {
+                    boundsOk = false;
+                    break;
+                }
+            }
+        }
+        if not boundsOk { continue; }
+        mb := interfaces.findBindingInImpl(imp, methodName);
+        if not mb.found { continue; }
+        if matchCount == 0 or mb.binding.fnKey =!= bestFnKey {
+            matchCount = matchCount + 1;
+            iIdx := interfaces.findInterface(imp.ifaceKey);
+            bestIface = if iIdx >= 0 { interfaces.getInterface(iIdx).name } else { imp.ifaceKey };
+            bestFnKey = mb.binding.fnKey;
+            bestImplIdx = ci;
+            bestBindings = encodeImplBindings(imp.genericParams, bindings);
+            bestRecvMut = mb.binding.recvMut;
+        }
+    }
+    if matchCount == 0 { return emptyRet; }
+    if matchCount > 1 {
+        return (found = false, ambiguous = true, ifaceName = bestIface, fnKey = "", implIdx = -1, bindingsEncoded = "", recvMut = false);
+    }
+    (found = true, ambiguous = false, ifaceName = bestIface, fnKey = bestFnKey, implIdx = bestImplIdx, bindingsEncoded = bestBindings, recvMut = bestRecvMut)
+};
+
 /** Maps a restricted Lite scalar, flat named-tuple, fixed-array, List or callable kind to its TypeScript type. */
 pub tsFunctionType := fn(kind: String): String {
     if isDistinctKind(kind) { return self(distinctBaseKind(kind)); }
@@ -3018,6 +3614,38 @@ pub tsFunctionType := fn(kind: String): String {
     else if isSetKind(kind) { out = "Set<" + self(setElementKind(kind)) + ">"; }
     else if isRcKind(kind) { out = "{ box: { count: number; value: " + self(rcElementKind(kind)) + " } | null }"; }
     else if isSliceKind(kind) { out = "{ readonly data: " + self(sliceElementKind(kind)) + "[]; readonly off: number; readonly len: number }"; }
+    else if isDynKind(kind) {
+        ifaceK := dynInterfaceKind(kind);
+        methods := instantiatedInterfaceMethods(ifaceK);
+        vtFields: mut List<String> = [];
+        loop methods as m {
+            pParts: mut List<String> = ["lite$ds: { v: unknown }"];
+            if m.paramCount > 0 {
+                var pStart := 0;
+                pLen := m.params.length();
+                var pIdx := 0;
+                loop pStart <= pLen {
+                    bar := m.params.indexOf("|", pStart);
+                    pEnd := if bar < 0 { pLen } else { bar };
+                    entry := m.params.slice(pStart, pEnd);
+                    eq := entry.indexOf("=", 0);
+                    if eq > 0 {
+                        rawPK := entry.slice(eq + 1, entry.length());
+                        pMut := rawPK.startsWithAt(0, "mut ");
+                        pKind := if pMut { rawPK.slice(4, rawPK.length()) } else { rawPK };
+                        pTs := if pMut and isRecordOrDistinctRecord(pKind) { "{ v: " + self(pKind) + " }" } else { self(pKind) };
+                        mut pParts.pushBack("a" + pIdx.toText() + ": " + pTs);
+                        pIdx = pIdx + 1;
+                    }
+                    if bar < 0 { break; }
+                    pStart = bar + 1;
+                }
+            }
+            mut vtFields.pushBack("readonly " + m.name + ": (" + pParts.join(", ") + ") => " + self(m.result));
+        }
+        vtType := if vtFields.length() == 0 { "{}" } else { "{ " + vtFields.join("; ") + " }" };
+        out = "{ readonly data: { v: unknown }; readonly vt: " + vtType + " }";
+    }
     else if isSimdKind(kind) { out = self(simdElementKind(kind)) + "[]"; }
     else if isSoaKind(kind) {
         recK := soaRecordKind(kind);
@@ -3131,6 +3759,9 @@ pub tsDisplayValueCode := fn(kind: String, code: String): String {
     if isSliceKind(kind) {
         elemKind := sliceElementKind(kind);
         return "((s: " + tsFunctionType(kind) + "): string => \"[\" + s.data.slice(s.off, s.off + s.len).map((value: " + tsFunctionType(elemKind) + ") => " + self(elemKind, "value") + ").join(\", \") + \"]\")(" + code + ")";
+    }
+    if isDynKind(kind) {
+        return tsLiteral.textLiteralCode("dyn " + displayKind(dynInterfaceKind(kind)));
     }
     if isSimdKind(kind) {
         elemKind := simdElementKind(kind);
@@ -3278,6 +3909,25 @@ pub displayKind := fn(kind: String): String {
     if isSetKind(kind) { return "Set<" + self(setElementKind(kind)) + ">"; }
     if isRcKind(kind) { return "Rc<" + self(rcElementKind(kind)) + ">"; }
     if isSliceKind(kind) { return "Slice<" + self(sliceElementKind(kind)) + ">"; }
+    if isInterfaceKind(kind) {
+        iKey := ifaceKeyOf(kind);
+        iIdx := interfaces.findInterface(iKey);
+        iName := if iIdx >= 0 { interfaces.getInterface(iIdx).name } else {
+            hashPos := iKey.indexOf("#", 0);
+            if hashPos >= 0 { iKey.slice(hashPos + 1, iKey.length()) } else { iKey }
+        };
+        args := ifaceArgsOf(kind);
+        if args.length() == 0 { return iName; }
+        dArgs: mut List<String> = [];
+        loop args as a { mut dArgs.pushBack(self(a)); }
+        return iName + "<" + dArgs.join(", ") + ">";
+    }
+    if isDynKind(kind) { return "dyn " + self(dynInterfaceKind(kind)); }
+    if isAllConstraintKind(kind) {
+        dParts: mut List<String> = [];
+        loop allConstraintMembers(kind) as am { mut dParts.pushBack(self(am)); }
+        return dParts.join(", ");
+    }
     if isSimdKind(kind) { return "Simd<" + self(simdElementKind(kind)) + ", " + simdLaneCountText(kind) + ">"; }
     if isSimdNativeKind(kind) { return "SimdNative<" + self(simdNativeElementKind(kind)) + ">"; }
     if isSoaKind(kind) { return "SoA<" + self(soaRecordKind(kind)) + ">"; }
@@ -3847,6 +4497,12 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             return (kind = source.slice(start, end), next = end);
         }
     }
+    if not useLocalErr and start < size and (source.startsWithAt(start, "Iface<") or source.startsWithAt(start, "Dyn<")) {
+        end := skipKindToken(source, start);
+        if end > start + 4 and source.at(end - 1) == ">" {
+            return (kind = source.slice(start, end), next = end);
+        }
+    }
     if not useLocalErr and start < size and source.startsWithAt(start, "@recraw:") {
         hdr := decodeLengthPrefixedAt(source, start + 8);
         var cur := hdr.next;
@@ -3869,8 +4525,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             if resolvedField.kind == ir.VALUE_KIND_UNIT {
                 syntax.failAt(errSource, errPos, prefix, "unsupported record field type Unit");
             }
-            if containsSliceKind(resolvedField.kind) {
-                syntax.failAt(errSource, errPos, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+            bErr := borrowedStorageError(resolvedField.kind);
+            if bErr =!= "" {
+                syntax.failAt(errSource, errPos, prefix, bErr);
             }
             (mut parts).pushBack(fName.text + ":" + resolvedField.kind);
             idx = idx + 1;
@@ -3979,6 +4636,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             if componentKind == ir.VALUE_KIND_UNIT {
                 syntax.failAt(errSource, diagPos, prefix, "unsupported tuple component type Unit");
             }
+            if containsDynKind(componentKind) {
+                syntax.failAt(errSource, diagPos, prefix, "borrowed dyn Interface cannot be stored in owning container or type definition");
+            }
             if count > 0 { mut kindTextBuf.append(","); }
             mut kindTextBuf.append(label);
             mut kindTextBuf.append(":");
@@ -4009,8 +4669,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if inner.kind == ir.VALUE_KIND_UNIT {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported array element type Unit");
         }
-        if containsSliceKind(inner.kind) {
-            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        bErr := borrowedStorageError(inner.kind);
+        if bErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, bErr);
         }
         afterElem := syntax.skipTrivia(source, inner.next, prefix);
         if afterElem >= size or source.at(afterElem) =!= ";" {
@@ -4075,8 +4736,29 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 syntax.failAt(errSource, if useLocalErr { afterClose } else { errPos }, prefix, "expected : after function parameter types");
             }
             retType := self(errSource, errPos, useLocalErr, source, afterClose + 1, prefix, aliases, "function", genericType, seen);
+            if containsDynKind(retType.kind) {
+                syntax.failAt(errSource, if useLocalErr { afterClose + 1 } else { errPos }, prefix, "borrowed dyn Interface cannot escape via function return type");
+            }
             return (kind = encodedBuf.build() + "):" + retType.kind, next = retType.next);
         }
+    }
+    if source.wordAt(start, "dyn") and findAlias(aliases, "dyn") < 0 and not isGenericParamName(genericType, "dyn") {
+        ifaceStart := syntax.skipTrivia(source, start + 3, prefix);
+        if ifaceStart >= size or not source.at(ifaceStart).isNameStart() {
+            syntax.failAt(errSource, if useLocalErr { ifaceStart } else { errPos }, prefix, "expected interface type after dyn");
+        }
+        ifaceParsed := self(errSource, errPos, useLocalErr, source, ifaceStart, prefix, aliases, "dyn", genericType, seen);
+        if not isInterfaceKind(ifaceParsed.kind) {
+            syntax.failAt(errSource, if useLocalErr { ifaceStart } else { errPos }, prefix, "dyn requires an interface type, got " + displayKind(ifaceParsed.kind));
+        }
+        iIdx := interfaces.findInterface(ifaceKeyOf(ifaceParsed.kind));
+        if iIdx >= 0 {
+            def := interfaces.getInterface(iIdx);
+            if not def.isObjectSafe {
+                syntax.failAt(errSource, if useLocalErr { ifaceStart } else { errPos }, prefix, "interface " + def.name + " is not object-safe for dyn dispatch: " + def.unsafeReason);
+            }
+        }
+        return (kind = "Dyn<" + ifaceParsed.kind + ">", next = ifaceParsed.next);
     }
     nameStart := if useLocalErr { start } else { errPos };
     parsedName := typeNameAt(source, start, prefix);
@@ -4103,8 +4785,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if isListKind(inner.kind) {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "nested list types are not supported");
         }
-        if containsSliceKind(inner.kind) {
-            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        bErr := borrowedStorageError(inner.kind);
+        if bErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, bErr);
         }
         close := syntax.skipTrivia(source, inner.next, prefix);
         if close >= size or source.at(close) =!= ">" {
@@ -4121,8 +4804,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if inner.kind == ir.VALUE_KIND_UNIT {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "unsupported array element type Unit");
         }
-        if containsSliceKind(inner.kind) {
-            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        bErr := borrowedStorageError(inner.kind);
+        if bErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, bErr);
         }
         afterElem := syntax.skipTrivia(source, inner.next, prefix);
         if afterElem < size and source.at(afterElem) == ">" {
@@ -4141,8 +4825,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "expected a map key type");
         }
         keyParsed := self(errSource, errPos, useLocalErr, source, keyStart, prefix, aliases, "map key", genericType, seen);
-        if containsSliceKind(keyParsed.kind) {
-            syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        kbErr := borrowedStorageError(keyParsed.kind);
+        if kbErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, kbErr);
         }
         if not isGenericParamName(genericType, distinctBaseKind(keyParsed.kind)) and not isMapKeyKind(keyParsed.kind) {
             syntax.failAt(errSource, if useLocalErr { keyStart } else { errPos }, prefix, "unsupported map key type " + displayKind(keyParsed.kind));
@@ -4159,8 +4844,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if valParsed.kind == ir.VALUE_KIND_UNIT or valParsed.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, if useLocalErr { valStart } else { errPos }, prefix, "unsupported map value type " + displayKind(valParsed.kind));
         }
-        if containsSliceKind(valParsed.kind) {
-            syntax.failAt(errSource, if useLocalErr { valStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        vbErr := borrowedStorageError(valParsed.kind);
+        if vbErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { valStart } else { errPos }, prefix, vbErr);
         }
         close := syntax.skipTrivia(source, valParsed.next, prefix);
         if close >= size or source.at(close) =!= ">" {
@@ -4174,8 +4860,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected a set element type");
         }
         elemParsed := self(errSource, errPos, useLocalErr, source, elemStart, prefix, aliases, "set element", genericType, seen);
-        if containsSliceKind(elemParsed.kind) {
-            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        sbErr := borrowedStorageError(elemParsed.kind);
+        if sbErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, sbErr);
         }
         if not isGenericParamName(genericType, distinctBaseKind(elemParsed.kind)) and not isMapKeyKind(elemParsed.kind) {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported set element type " + displayKind(elemParsed.kind));
@@ -4195,8 +4882,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if elemParsed.kind == ir.VALUE_KIND_UNIT or elemParsed.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported Rc element type " + displayKind(elemParsed.kind));
         }
-        if containsSliceKind(elemParsed.kind) {
-            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        rbErr := borrowedStorageError(elemParsed.kind);
+        if rbErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, rbErr);
         }
         close := syntax.skipTrivia(source, elemParsed.next, prefix);
         if close >= size or source.at(close) =!= ">" {
@@ -4213,8 +4901,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if elemParsed.kind == ir.VALUE_KIND_UNIT or elemParsed.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "unsupported Slice element type " + displayKind(elemParsed.kind));
         }
-        if containsSliceKind(elemParsed.kind) {
-            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        slbErr := borrowedStorageError(elemParsed.kind);
+        if slbErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, slbErr);
         }
         close := syntax.skipTrivia(source, elemParsed.next, prefix);
         if close >= size or source.at(close) =!= ">" {
@@ -4228,8 +4917,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "expected a Simd element type");
         }
         inner := self(errSource, errPos, useLocalErr, source, innerStart, prefix, aliases, "Simd element", genericType, seen);
-        if containsSliceKind(inner.kind) {
-            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        smbErr := borrowedStorageError(inner.kind);
+        if smbErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, smbErr);
         }
         if not isGenericParamName(genericType, distinctBaseKind(inner.kind)) and not isSimdElemKind(inner.kind) {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "unsupported Simd lane type " + displayKind(inner.kind));
@@ -4282,8 +4972,9 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             syntax.failAt(errSource, if useLocalErr { recStart } else { errPos }, prefix, "expected a record type in SoA<R>");
         }
         recParsed := self(errSource, errPos, useLocalErr, source, recStart, prefix, aliases, "SoA record", genericType, seen);
-        if containsSliceKind(recParsed.kind) {
-            syntax.failAt(errSource, if useLocalErr { recStart } else { errPos }, prefix, "borrowed Slice<T> cannot be stored in owning container or type definition");
+        bErr := borrowedStorageError(recParsed.kind);
+        if bErr =!= "" {
+            syntax.failAt(errSource, if useLocalErr { recStart } else { errPos }, prefix, bErr);
         }
         if not isGenericParamName(genericType, distinctBaseKind(recParsed.kind)) {
             if not isRecordKind(recParsed.kind) or recordComponentCount(recParsed.kind) == 0 {
@@ -4467,9 +5158,19 @@ parseTypeAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
                 bi = bi + 1;
             }
             instKind := substCanonicalKind(resolvedTplParamsCsv, templateKind, bindings);
-            valErr := validateCanonicalKind(instKind, genericType);
-            if valErr =!= "" {
-                syntax.failAt(errSource, nameStart, prefix, valErr);
+            if isInterfaceKind(instKind) {
+                if context =!= "alias" and context =!= "constraint" and context =!= "dyn" and context =!= "impl" {
+                    syntax.failAt(errSource, nameStart, prefix, "interface " + displayKind(instKind) + " cannot be used directly as a value type; use T: Type<" + displayKind(instKind) + "> for static dispatch or dyn " + displayKind(instKind) + " for dynamic dispatch");
+                }
+                loop ifaceArgsOf(instKind) as ia {
+                    iaErr := validateCanonicalKind(ia, genericType);
+                    if iaErr =!= "" { syntax.failAt(errSource, nameStart, prefix, iaErr); }
+                }
+            } else {
+                valErr := validateCanonicalKind(instKind, genericType);
+                if valErr =!= "" {
+                    syntax.failAt(errSource, nameStart, prefix, valErr);
+                }
             }
             return (kind = instKind, next = afterClose);
         }
@@ -4534,6 +5235,9 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
         if first.kind == ir.VALUE_KIND_UNIT or first.kind == ir.VALUE_KIND_NEVER {
             syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "unsupported type set member " + displayKind(first.kind));
         }
+        if isInterfaceKind(first.kind) {
+            syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "interface " + displayKind(first.kind) + " cannot appear in closed | type union; use comma-separated bounds Type<A, B>");
+        }
         if genericType =!= "" and kindHasAnyGenericParam(genericType, first.kind) {
             syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "type set union members must be concrete types");
         }
@@ -4543,6 +5247,9 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
             atom := parseTypeAtomWithSeen(errSource, errPos, useLocalErr, source, nextStart, prefix, aliases, context, genericType, seen);
             if atom.kind == ir.VALUE_KIND_UNIT or atom.kind == ir.VALUE_KIND_NEVER {
                 syntax.failAt(errSource, if useLocalErr { nextStart } else { errPos }, prefix, "unsupported type set member " + displayKind(atom.kind));
+            }
+            if isInterfaceKind(atom.kind) {
+                syntax.failAt(errSource, if useLocalErr { nextStart } else { errPos }, prefix, "interface " + displayKind(atom.kind) + " cannot appear in closed | type union; use comma-separated bounds Type<A, B>");
             }
             if genericType =!= "" and kindHasAnyGenericParam(genericType, atom.kind) {
                 syntax.failAt(errSource, if useLocalErr { nextStart } else { errPos }, prefix, "type set union members must be concrete types");
@@ -4554,6 +5261,9 @@ pub parseTypeWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool, s
     }
     if isUnionKind(first.kind) and context =!= "alias" and context =!= "constraint" {
         syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "type set union " + displayKind(first.kind) + " can only be used inside Type<...> constraints");
+    }
+    if isInterfaceKind(first.kind) and context =!= "alias" and context =!= "constraint" and context =!= "dyn" and context =!= "impl" {
+        syntax.failAt(errSource, if useLocalErr { position } else { errPos }, prefix, "interface " + displayKind(first.kind) + " cannot be used directly as a value type; use T: Type<" + displayKind(first.kind) + "> for static dispatch or dyn " + displayKind(first.kind) + " for dynamic dispatch");
     }
     first
 };
@@ -4574,13 +5284,14 @@ pub resolveComptimeParamSpecs := fn(source: String, position: Int, prefix: Strin
     out: mut List<String> = [];
     emptySeen: List<String> = [];
     loop splitParamSpecs(rawParamsCsv) as spec {
+        alreadyCsv := out.join(",");
         if spec.kind == "" {
             mut out.pushBack(spec.name);
         } else if isTypeConstraintKind(spec.kind) {
             rawBounds := typeConstraintUnion(spec.kind);
             boundKinds: mut List<String> = [];
             loop splitTopLevelCommaRaw(rawBounds, prefix) as rb {
-                bParsed := parseTypeWithSeen(source, position, false, rb, 0, prefix, aliases, "constraint", "", emptySeen);
+                bParsed := parseTypeWithSeen(source, position, false, rb, 0, prefix, aliases, "constraint", alreadyCsv, emptySeen);
                 if syntax.skipTrivia(rb, bParsed.next, prefix) < rb.length() {
                     syntax.failAt(source, position, prefix, "unexpected text after type constraint");
                 }
@@ -5039,6 +5750,15 @@ collectSingleTypeTarget := fn(source: String, position: Int, prefix: String): (t
         }
         parsedName := typeNameAt(source, start, prefix);
         (text = source.slice(start, parsedName.next), next = parsedName.next)
+    } else if source.wordAt(start, "dyn") {
+        afterDyn := syntax.skipTrivia(source, start + 3, prefix);
+        if afterDyn < size and source.at(afterDyn).isNameStart() {
+            inner := self(source, afterDyn, prefix);
+            (text = source.slice(start, inner.next), next = inner.next)
+        } else {
+            parsedName := typeNameAt(source, start, prefix);
+            (text = source.slice(start, parsedName.next), next = parsedName.next)
+        }
     } else {
         parsedName := typeNameAt(source, start, prefix);
         after := parsedName.next;
@@ -5739,6 +6459,21 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
         return (ok = true, kind = "fn(" + paramParts.join(",") + "):" + retType.kind, next = retType.next);
     }
     if not ch.isNameStart() { return (ok = false, kind = "", next = start); }
+    if source.wordAt(start, "dyn") and findAlias(aliases, "dyn") < 0 and not isGenericParamName(genericType, "dyn") {
+        ifaceStart := syntax.skipTrivia(source, start + 3, prefix);
+        if ifaceStart >= size or not source.at(ifaceStart).isNameStart() {
+            return (ok = false, kind = "", next = ifaceStart);
+        }
+        ifaceRes := self(source, ifaceStart, prefix, aliases, genericType, seen, depthLeft - 1, true);
+        if not ifaceRes.ok or not isInterfaceKind(ifaceRes.kind) {
+            return (ok = false, kind = "", next = ifaceStart);
+        }
+        iIdx := interfaces.findInterface(ifaceKeyOf(ifaceRes.kind));
+        if iIdx >= 0 and not interfaces.getInterface(iIdx).isObjectSafe {
+            return (ok = false, kind = "", next = ifaceStart);
+        }
+        return (ok = true, kind = "Dyn<" + ifaceRes.kind + ">", next = ifaceRes.next);
+    }
     var afterName := source.skipName(start);
     var name := source.slice(start, afterName);
     dotCheck := syntax.skipTrivia(source, afterName, prefix);
@@ -5855,7 +6590,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = afterSl);
         }
         elemRes := self(source, afterSl + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
-        if not elemRes.ok or elemRes.kind == ir.VALUE_KIND_UNIT or elemRes.kind == ir.VALUE_KIND_NEVER or containsSliceKind(elemRes.kind) {
+        if not elemRes.ok or elemRes.kind == ir.VALUE_KIND_UNIT or elemRes.kind == ir.VALUE_KIND_NEVER or containsSliceKind(elemRes.kind) or containsDynKind(elemRes.kind) {
             return (ok = false, kind = "", next = afterSl + 1);
         }
         close := syntax.skipTrivia(source, elemRes.next, prefix);
@@ -5946,7 +6681,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             return (ok = false, kind = "", next = afterSoa);
         }
         recRes := self(source, afterSoa + 1, prefix, aliases, genericType, seen, depthLeft - 1, false);
-        if not recRes.ok or containsSliceKind(recRes.kind) {
+        if not recRes.ok or containsSliceKind(recRes.kind) or containsDynKind(recRes.kind) {
             return (ok = false, kind = "", next = afterSoa + 1);
         }
         if not isGenericParamName(genericType, distinctBaseKind(recRes.kind)) {
@@ -5981,7 +6716,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
     }
     if (aliasItem.target).startsWithAt(0, "$Kind:") {
         kindVal := (aliasItem.target).slice(6, (aliasItem.target).length());
-        if isUnionKind(kindVal) and not allowUnion {
+        if (isUnionKind(kindVal) or isInterfaceKind(kindVal)) and not allowUnion {
             return (ok = false, kind = "", next = afterName);
         }
         return (ok = true, kind = kindVal, next = afterName);
@@ -6115,11 +6850,22 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
             bi = bi + 1;
         }
         instKind := substCanonicalKind(resolvedTplParamsCsv, templateKind, bindings);
-        if validateCanonicalKind(instKind, genericType) =!= "" {
-            return (ok = false, kind = "", next = afterClose);
-        }
-        if isUnionKind(instKind) and not allowUnion {
-            return (ok = false, kind = "", next = afterClose);
+        if isInterfaceKind(instKind) {
+            if not allowUnion {
+                return (ok = false, kind = "", next = afterClose);
+            }
+            loop ifaceArgsOf(instKind) as ia {
+                if validateCanonicalKind(ia, genericType) =!= "" {
+                    return (ok = false, kind = "", next = afterClose);
+                }
+            }
+        } else {
+            if validateCanonicalKind(instKind, genericType) =!= "" {
+                return (ok = false, kind = "", next = afterClose);
+            }
+            if isUnionKind(instKind) and not allowUnion {
+                return (ok = false, kind = "", next = afterClose);
+            }
         }
         return (ok = true, kind = instKind, next = afterClose);
     }
@@ -6154,7 +6900,7 @@ canResolveTypeAtomAt := fn(source: String, position: Int, prefix: String, aliase
     if trailing < (aliasItem.target).length() {
         return (ok = false, kind = "", next = afterName);
     }
-    if isUnionKind(resolvedAliasKind) and not allowUnion {
+    if (isUnionKind(resolvedAliasKind) or isInterfaceKind(resolvedAliasKind)) and not allowUnion {
         return (ok = false, kind = "", next = afterName);
     }
     (ok = true, kind = resolvedAliasKind, next = afterName)
@@ -6169,14 +6915,14 @@ pub canResolveConstraintTypeAt := fn(source: String, position: Int, prefix: Stri
     if cursor >= size or source.at(cursor) =!= "|" or source.startsWithAt(cursor, "||") {
         return atom0;
     }
-    if atom0.kind == ir.VALUE_KIND_UNIT or atom0.kind == ir.VALUE_KIND_NEVER {
+    if atom0.kind == ir.VALUE_KIND_UNIT or atom0.kind == ir.VALUE_KIND_NEVER or isInterfaceKind(atom0.kind) {
         return (ok = false, kind = "", next = cursor);
     }
     members: mut List<String> = [atom0.kind];
     loop cursor < size and source.at(cursor) == "|" and not source.startsWithAt(cursor, "||") {
         nextPos := syntax.skipTrivia(source, cursor + 1, prefix);
         elem := canResolveTypeAtomAt(source, nextPos, prefix, aliases, genericType, seen, depthLeft, true);
-        if not elem.ok or elem.kind == ir.VALUE_KIND_UNIT or elem.kind == ir.VALUE_KIND_NEVER {
+        if not elem.ok or elem.kind == ir.VALUE_KIND_UNIT or elem.kind == ir.VALUE_KIND_NEVER or isInterfaceKind(elem.kind) {
             return (ok = false, kind = "", next = cursor);
         }
         mut members.pushBack(elem.kind);
@@ -6196,13 +6942,14 @@ pub canResolveComptimeParamSpecs := fn(prefix: String, aliases: List<AliasDecl>,
     out: mut List<String> = [];
     emptySeen: List<String> = [];
     loop splitParamSpecs(rawParamsCsv) as spec {
+        alreadyCsv := out.join(",");
         if spec.kind == "" {
             mut out.pushBack(spec.name);
         } else if isTypeConstraintKind(spec.kind) {
             rawBounds := typeConstraintUnion(spec.kind);
             boundKinds: mut List<String> = [];
             loop splitTopLevelCommaRaw(rawBounds, prefix) as rb {
-                bParsed := canResolveConstraintTypeAt(rb, 0, prefix, aliases, "", emptySeen, 32);
+                bParsed := canResolveConstraintTypeAt(rb, 0, prefix, aliases, alreadyCsv, emptySeen, 32);
                 if not bParsed.ok or syntax.skipTrivia(rb, bParsed.next, prefix) < rb.length() {
                     return (ok = false, csv = "");
                 }

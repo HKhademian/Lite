@@ -1,6 +1,6 @@
 # Composition and interfaces
 
-Status: **composition-first goal and record declaration surface established; interface and implementation details proposed**.
+Status: **Phase 9 shipped — explicit nominal interfaces (`interface`), conformance (`impl`), monomorphized generic bounds (`Type<Iface>`), borrowed dynamic dispatch (`dyn Interface` / `mut dyn Interface`), and [core/interface](lite://module/core/interface) implemented across TS and C11; associated types, default method bodies, and delegation remain open.**
 
 ## Purpose
 

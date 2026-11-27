@@ -9,7 +9,7 @@ Local := alias (name: String, runtime: String, kind: String, mutable: Bool, writ
 /** Returns `true` when `locals[idx]` is currently in scope and is the latest entry for its `runtime`. */
 isLatestActiveSliceLocal := fn(locals: List<Local>, idx: Int): Bool {
     loc := locals[idx];
-    if loc.depth < 0 or not types.isSliceKind(loc.kind) { return false; }
+    if loc.depth < 0 or (not types.isSliceKind(loc.kind) and not types.isDynKind(loc.kind)) { return false; }
     var j := locals.length() - 1;
     loop j > idx {
         if locals[j].runtime == loc.runtime { return false; }
@@ -159,6 +159,24 @@ pub areDisjointSplitProvenances := fn(provA: String, provB: String): Bool {
 
 /** Converts RHS slice provenance into stored `Local.textValue` borrow provenance (`borrow_ro:...`, `borrow_mut:...`, `borrow_split:...`), or `""` if non-slice. */
 pub borrowTagForBinding := fn(targetKind: String, targetWritable: Bool, rhsProvenance: String): (ok: Bool, textValue: String, error: String) {
+    if types.isDynKind(targetKind) {
+        pKind := provenanceKind(rhsProvenance);
+        payload := stripProvenanceKind(rhsProvenance);
+        if targetWritable {
+            if pKind =!= "mut_dyn" and pKind =!= "borrow_mut" {
+                return (ok = false, textValue = "", error = "mut dyn Interface binding requires explicit mut source");
+            }
+            return (ok = true, textValue = "borrow_mut:" + payload, error = "");
+        }
+        if pKind == "mut_dyn" or pKind == "ro_dyn" or pKind == "ro_slice" or pKind == "mut_slice" {
+            return (ok = true, textValue = "borrow_ro:" + payload, error = "");
+        }
+        if pKind == "dyn_rval" {
+            return (ok = true, textValue = "", error = "");
+        }
+        if rhsProvenance.startsWithAt(0, "borrow_") { return (ok = true, textValue = rhsProvenance, error = ""); }
+        return (ok = true, textValue = "", error = "");
+    }
     if not types.isSliceKind(targetKind) {
         return (ok = true, textValue = rhsProvenance, error = "");
     }
@@ -224,12 +242,13 @@ firstOwnerName := fn(provenance: String): String {
 
 /** Fails if assigning `rhsProvenance` to a local at `targetDepth` would let a borrowed slice outlive an inner owner. */
 pub checkSliceAssignDepth := fn(targetKind: String, targetDepth: Int, rhsProvenance: String, source: String, pos: Int, prefix: String): Unit {
-    if not types.isSliceKind(targetKind) { return; }
+    if not types.isSliceKind(targetKind) and not types.isDynKind(targetKind) { return; }
     ownerDepth := maxBorrowOwnerDepth(rhsProvenance);
     if ownerDepth > targetDepth {
         ownerName := firstOwnerName(rhsProvenance);
         label := if ownerName =!= "" { ownerName } else { "inner owner" };
-        syntax.failAt(source, pos, prefix, "borrowed slice cannot escape narrower scope of " + label);
+        noun := if types.isDynKind(targetKind) { "borrowed dyn Interface" } else { "borrowed slice" };
+        syntax.failAt(source, pos, prefix, noun + " cannot escape narrower scope of " + label);
     }
 };
 
@@ -241,12 +260,13 @@ pub checkCanReadBinding := fn(locals: List<Local>, targetRuntime: String, target
     loop i < n {
         if isLatestActiveSliceLocal(locals, i) {
             b := locals[i];
+            bLabel := (if types.isDynKind(b.kind) { "dyn " } else { "slice " }) + b.name;
             bKind := provenanceKind(b.textValue);
             payload := stripProvenanceKind(b.textValue);
             if bKind == "borrow_mut" {
                 hit := findOwnerInPayload(payload, 0, targetRuntime);
                 if hit.found {
-                    syntax.failAt(source, pos, prefix, "cannot read " + targetName + " while mutably borrowed by slice " + b.name);
+                    syntax.failAt(source, pos, prefix, "cannot read " + targetName + " while mutably borrowed by " + bLabel);
                 }
             } else if bKind == "borrow_split" {
                 directHit := findOwnerInPayload(payload, 0, targetRuntime);
@@ -255,7 +275,7 @@ pub checkCanReadBinding := fn(locals: List<Local>, targetRuntime: String, target
                     if parentHit.found {
                         syntax.failAt(source, pos, prefix, "cannot access slice " + targetName + " while split into active child borrow " + b.name);
                     }
-                    syntax.failAt(source, pos, prefix, "cannot read " + targetName + " while mutably borrowed by slice " + b.name);
+                    syntax.failAt(source, pos, prefix, "cannot read " + targetName + " while mutably borrowed by " + bLabel);
                 }
             }
         }
@@ -271,6 +291,7 @@ pub checkCanMutateBinding := fn(locals: List<Local>, targetRuntime: String, targ
     loop i < n {
         if isLatestActiveSliceLocal(locals, i) {
             b := locals[i];
+            bLabel := (if types.isDynKind(b.kind) { "dyn " } else { "slice " }) + b.name;
             bKind := provenanceKind(b.textValue);
             payload := stripProvenanceKind(b.textValue);
             if bKind == "borrow_split" {
@@ -281,12 +302,12 @@ pub checkCanMutateBinding := fn(locals: List<Local>, targetRuntime: String, targ
                     if findOwnerInPayload(headOnly, 0, targetRuntime).found {
                         syntax.failAt(source, pos, prefix, "cannot access slice " + targetName + " while split into active child borrow " + b.name);
                     }
-                    syntax.failAt(source, pos, prefix, "cannot mutate " + targetName + " while borrowed by slice " + b.name);
+                    syntax.failAt(source, pos, prefix, "cannot mutate " + targetName + " while borrowed by " + bLabel);
                 }
             } else if bKind == "borrow_ro" or bKind == "borrow_mut" {
                 hit := findOwnerInPayload(payload, 0, targetRuntime);
                 if hit.found {
-                    syntax.failAt(source, pos, prefix, "cannot mutate " + targetName + " while borrowed by slice " + b.name);
+                    syntax.failAt(source, pos, prefix, "cannot mutate " + targetName + " while borrowed by " + bLabel);
                 }
             }
         }
