@@ -3092,8 +3092,8 @@ pre.code-block:has(+ .lite-snip-bar) {
   flex-wrap: wrap;
   gap: 0.25rem;
   margin-bottom: 1rem;
-  padding: 0.35rem 0.65rem;
-  background: var(--surface);
+  padding: 0.25rem 0.65rem;
+  background: var(--surface-elevated);
   border: 1px solid var(--border);
   border-top: none;
   border-radius: 0 0 var(--radius) var(--radius);
@@ -3101,6 +3101,7 @@ pre.code-block:has(+ .lite-snip-bar) {
 .lite-snip-bar > .lite-snip-run { margin-inline-end: auto; }
 :is(.lite-snip-bar, .md-snippet-card):has(+ .lite-inline-out:not([hidden])) {
   margin-bottom: 0;
+  border-bottom: 0;
 }
 .lite-snip-bar:has(+ .lite-inline-out:not([hidden])) {
   border-radius: 0;
@@ -3126,7 +3127,7 @@ pre.code-block:has(+ .lite-snip-bar) {
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.2;
-  min-block-size: 2.25rem;
+  min-block-size: 1.75rem;
   padding: 0.25rem 0.6rem;
   border-radius: 8px;
   text-decoration: none;
@@ -3134,7 +3135,7 @@ pre.code-block:has(+ .lite-snip-bar) {
 }
 .lite-snip-btn:hover {
   color: var(--ink);
-  background: var(--surface-elevated);
+  background: var(--surface);
   text-decoration: none;
 }
 .lite-snip-btn:focus-visible {
@@ -3163,11 +3164,12 @@ pre.code-block:has(+ .lite-snip-bar) {
 }
 .lite-snip-btn.lite-snip-play:hover { background: var(--accent-soft); }
 @media (max-width: 640px), (pointer: coarse) {
-  .lite-snip-btn { min-block-size: 2.75rem; }
+  .lite-snip-btn { min-block-size: 2rem; }
 }
 .lite-inline-out {
   margin: 0 0 1.1rem;
   border: 1px solid var(--border);
+  border-top-color: var(--border-strong);
   border-radius: 0 0 var(--radius) var(--radius);
   background: var(--surface-elevated);
   overflow: hidden;
@@ -3178,7 +3180,9 @@ pre.code-block:has(+ .lite-snip-bar) {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding: 0.3rem 0.65rem 0 1rem;
+  padding: 0.25rem 0.65rem 0.25rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   font-size: 0.8rem;
   color: var(--ink-muted);
 }
@@ -3207,7 +3211,7 @@ pre.code-block:has(+ .lite-snip-bar) {
 }
 pre.lite-inline-out-pre {
   margin: 0;
-  padding: 0.15rem 1rem 0.8rem;
+  padding: 0.6rem 1rem 0.75rem;
   border: 0;
   border-radius: 0;
   background: transparent;
