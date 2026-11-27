@@ -236,7 +236,7 @@ finishFinallyC := fn(tryCode: String, finParsed: Parsed, normalKind: String, lef
     intValue = 0, textValue = "", constant = false, next = finParsed.next)
 };
 
-/** Attempts to parse an optionally parenthesized `mut` binding lease (`mut x`, `(mut x)`, `(((((mut x)))))`, `mut (x)`, `(((mut ((x)))))`). */
+/** Attempts to parse an optionally parenthesized `mut` binding lease (`mut x`, `mut .item`, `(mut x)`, `(((((mut x)))))`, `mut (x)`). */
 tryParseGroupedMutLease := fn(source: String, start: Int, prefix: String, requireOuterParen: Bool): (matched: Bool, sawMut: Bool, mutStart: Int, nameStart: Int, nameEnd: Int, next: Int) {
     sourceSize := source.length();
     var cur := start;
@@ -258,10 +258,19 @@ tryParseGroupedMutLease := fn(source: String, start: Int, prefix: String, requir
         recvOpen += 1;
         nameCur = syntax.skipTrivia(source, nameCur + 1, prefix);
     }
-    if nameCur >= sourceSize or not source.at(nameCur).isNameStart() {
+    var mNameEnd := nameCur;
+    if nameCur < sourceSize and source.at(nameCur) == "." {
+        dotItemStart := syntax.skipTrivia(source, nameCur + 1, prefix);
+        if dotItemStart < sourceSize and source.wordAt(dotItemStart, "item") {
+            mNameEnd = dotItemStart + 4;
+        } else {
+            return (matched = false, sawMut = true, mutStart = mutStart, nameStart = nameCur, nameEnd = nameCur, next = start);
+        }
+    } else if nameCur < sourceSize and source.at(nameCur).isNameStart() {
+        mNameEnd = source.skipName(nameCur);
+    } else {
         return (matched = false, sawMut = true, mutStart = mutStart, nameStart = nameCur, nameEnd = nameCur, next = start);
     }
-    mNameEnd := source.skipName(nameCur);
     var closeCur := syntax.skipTrivia(source, mNameEnd, prefix);
     needClose := recvOpen + openCount;
     var closed := 0;
@@ -273,6 +282,34 @@ tryParseGroupedMutLease := fn(source: String, start: Int, prefix: String, requir
         closeCur = syntax.skipTrivia(source, closeCur + 1, prefix);
     }
     (matched = true, sawMut = true, mutStart = mutStart, nameStart = nameCur, nameEnd = mNameEnd, next = closeCur)
+};
+
+/** Resolves an identifier or `.item` lease target in `mut <target>` to its local entry index and display name. */
+resolveMutLeaseLocal := fn(locals: List<Local>, ctxs: List<ConstructCtx>, rawName: String, source: String, nameStart: Int, prefix: String): (idx: Int, displayName: String) {
+    if rawName.startsWithAt(0, ".") {
+        loopIdx := ctx.findLeadingDotLoopIdx(ctxs, true);
+        if loopIdx == ir.DOT_LOOP_IN_FINALLY {
+            syntax.failAt(source, nameStart, prefix, "loop metadata is not available in finally");
+        } else if loopIdx < 0 {
+            syntax.failAt(source, nameStart, prefix, ".item outside loop");
+        }
+        lCtx := ctxs[loopIdx];
+        if lCtx.phase == ir.CTX_PHASE_THEN {
+            syntax.failAt(source, nameStart, prefix, "cannot mutate .item in loop then block");
+        }
+        if lCtx.phase == ir.CTX_PHASE_HEADER {
+            syntax.failAt(source, nameStart, prefix, ".item is not available in loop header");
+        }
+        itemLocIdx := sym.localIndex(locals, "$loop_item_" + lCtx.id.toText());
+        if itemLocIdx < 0 or not locals[itemLocIdx].writable {
+            syntax.failAt(source, nameStart, prefix, "cannot mutate .item in a read-only loop; use loop mut");
+        }
+        return (idx = itemLocIdx, displayName = ".item");
+    }
+    if syntax.isReservedWord(rawName) { syntax.unsupportedFeature(source, nameStart, rawName, prefix); }
+    locIdx := sym.localIndex(locals, rawName);
+    if locIdx < 0 { syntax.failAt(source, nameStart, prefix, "unknown value " + rawName); }
+    (idx = locIdx, displayName = rawName)
 };
 
 /** Parses `()`, a parenthesized expression, or a named/positional flat tuple literal starting at `start`. */
@@ -2484,7 +2521,7 @@ parseEnumCaseConstruct := fn(target: String, source: String, enumKind: String, c
     ctx.withMarkers((kind = enumKind, code = emitPayloadEnumValue(target, enumKind, caseIdx, argCodes), intValue = caseIdx, textValue = "", constant = false, next = cursor + 1), markers)
 };
 
-/** Resolves leading-dot enum case shorthand (`.Case`) or loop metadata expressions (`.count`, `.value`, `.item`, `.index`). */
+/** Resolves leading-dot enum cases (`.Case`), contextual static calls (`.create(...)`), or loop metadata (`.count`, `.value`, `.item`, `.index`). */
 resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: String, expected: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     fieldStart := syntax.skipTrivia(source, start + 1, prefix);
     size := source.length();
@@ -2493,20 +2530,93 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
     }
     fieldEnd := source.skipName(fieldStart);
     fieldName := source.slice(fieldStart, fieldEnd);
+    afterField := syntax.skipTrivia(source, fieldEnd, prefix);
+    isCallOrGen := afterField < size and (source.at(afterField) == "(" or source.at(afterField) == "<");
     allowThroughCond := fieldName == "item" or fieldName == "index" or fieldName == "count";
     loopIdx := ctx.findLeadingDotLoopIdx(ctxs, allowThroughCond);
     normExp := normalizeExpectedValueKind(expected);
-    if types.isEnumKind(normExp) {
+    hasExpectedType := normExp =!= "" and not normExp.startsWithAt(0, "__loopVal:");
+    if hasExpectedType {
+        ownerKey := types.typeOpOwnerKey(normExp);
+        isEnumCase := types.isEnumKind(normExp) and types.enumCaseIndex(normExp, fieldName) >= 0;
+        mut staticCands: List<Int> = [];
+        var hasInstOp := false;
+        if ownerKey =!= "" {
+            loop findAllTypeOps(functions, ownerKey, fieldName) as ci {
+                if isStaticTypeOp(functions[ci]) {
+                    mut staticCands.pushBack(ci);
+                } else {
+                    hasInstOp = true;
+                }
+            }
+        }
+        isNumStatic := ownerKey =!= "" and isNumericHardBuiltin(ownerKey, fieldName, true);
         isLoopMetaName := fieldName == "count" or fieldName == "value" or fieldName == "item" or fieldName == "index" or fieldName == "collected";
-        if loopIdx >= 0 and isLoopMetaName {
+        hasLoopMeta := loopIdx >= 0 and isLoopMetaName;
+        if isEnumCase and hasLoopMeta {
             syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + "; qualify as " +
             types.enumDisplayName(normExp) + "." + fieldName + " or @tag." + fieldName);
         }
-        caseIdx := types.enumCaseIndex(normExp, fieldName);
-        if caseIdx < 0 {
+        if (staticCands.length() > 0 or isNumStatic) and hasLoopMeta {
+            syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + "; qualify as " +
+            types.displayKind(normExp) + "." + fieldName + " or @tag." + fieldName);
+        }
+        if isEnumCase and (staticCands.length() > 0 or isNumStatic) {
+            syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + " on " + types.displayKind(normExp) + "; both an enum case and a static operation exist");
+        }
+        if isEnumCase {
+            caseIdx := types.enumCaseIndex(normExp, fieldName);
+            return parseEnumCaseConstruct(target, source, normExp, fieldName, caseIdx, fieldEnd, fieldStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+        }
+        if isNumStatic {
+            if afterField >= size or source.at(afterField) =!= "(" {
+                syntax.failAt(source, fieldStart, prefix, "contextual static operation ." + fieldName + " on " + types.displayKind(normExp) + " must be called with (...)");
+            }
+            return parseNumericHardBuiltin(
+                target, source, fieldStart, prefix, normExp, fieldName, false,
+                ctx.intParsed("", 0, false, start),
+                locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases
+            );
+        }
+        if staticCands.length() > 0 {
+            if not isCallOrGen {
+                syntax.failAt(source, fieldStart, prefix, "contextual static operation ." + fieldName + " on " + types.displayKind(normExp) + " must be called with (...)");
+            }
+            if staticCands.length() > 1 {
+                ovStaticCode := ["$ovstatictop:", ownerKey, fieldName, normExp, "", "", start.toText(), fieldStart.toText()].join("\n");
+                return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = ovStaticCode, intValue = staticCands[0],
+                textValue = types.displayKind(normExp) + "." + fieldName, constant = false, next = fieldEnd);
+            }
+            opIdx := staticCands[0];
+            opRes := resolveTypeQualifiedOp(
+                source, fieldStart, prefix, opIdx, fieldName, ownerKey,
+                normExp, "", "", functions, params, inferMode
+            );
+            if not opRes.ok {
+                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
+            }
+            opCode := start.toText() + (if opRes.initBindings =!= "" { "|" + opRes.initBindings } else { "" });
+            return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = opCode, intValue = opIdx,
+            textValue = types.displayKind(normExp) + "." + fieldName, constant = false, next = fieldEnd);
+        }
+        if types.isEnumKind(normExp) {
+            if hasLoopMeta {
+                syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + "; qualify as " +
+                types.enumDisplayName(normExp) + "." + fieldName + " or @tag." + fieldName);
+            }
             syntax.failAt(source, fieldStart, prefix, "enum " + types.enumDisplayName(normExp) + " has no case " + fieldName);
         }
-        return parseEnumCaseConstruct(target, source, normExp, fieldName, caseIdx, fieldEnd, fieldStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+        if loopIdx < 0 {
+            if hasInstOp {
+                syntax.failAt(source, fieldStart, prefix, "operation " + types.displayKind(normExp) + "." + fieldName + " is an instance operation and cannot be called with leading-dot shorthand");
+            }
+            if isCallOrGen {
+                syntax.failAt(source, fieldStart, prefix, "type " + types.displayKind(normExp) + " has no static operation " + fieldName);
+            }
+        }
+    }
+    if not hasExpectedType and loopIdx < 0 and isCallOrGen {
+        syntax.failAt(source, fieldStart, prefix, "leading-dot static call ." + fieldName + "(...) requires an expected type");
     }
     if loopIdx == ir.DOT_LOOP_IN_CONDITIONAL {
         syntax.failAt(source, start, prefix, "leading-dot ." + fieldName + " is not available inside a conditional; use an explicit loop @tag");
@@ -3006,14 +3116,47 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 syntax.failAt(source, afterPeek, prefix, "expected {, if, match, loop or . after block tag @" + tagPeek.tag);
             }
-        } else if chAtCursor.isNameStart() {
+        } else if chAtCursor.isNameStart() or (chAtCursor == "." and blockSourceSize > cursor + 1 and source.wordAt(syntax.skipTrivia(source, cursor + 1, prefix), "item")) {
+            var isDotItemStmt := false;
+            var dotItemStart := cursor;
+            if chAtCursor == "." {
+                dotItemStart = syntax.skipTrivia(source, cursor + 1, prefix);
+                dotAfter := syntax.skipTrivia(source, dotItemStart + 4, prefix);
+                if syntax.isSingleEquals(source, dotAfter) or syntax.compoundAssignOp(source, dotAfter).width > 0 {
+                    isDotItemStmt = true;
+                } else if dotAfter < blockSourceSize and source.at(dotAfter) == "[" {
+                    dotBrkEnd := syntax.scanBracketEnd(source, dotAfter, prefix);
+                    if dotBrkEnd >= 0 {
+                        dotAfterBrk := syntax.skipTrivia(source, dotBrkEnd, prefix);
+                        if syntax.isSingleEquals(source, dotAfterBrk) or syntax.compoundAssignOp(source, dotAfterBrk).width > 0 {
+                            isDotItemStmt = true;
+                        }
+                    }
+                } else if dotAfter < blockSourceSize and source.at(dotAfter) == "." {
+                    var scanDot := dotAfter;
+                    var dotDepth := 0;
+                    loop scanDot < blockSourceSize and source.at(scanDot) == "." and dotDepth < 2 {
+                        dfStart := syntax.skipTrivia(source, scanDot + 1, prefix);
+                        if dfStart >= blockSourceSize or not source.at(dfStart).isNameStart() { break; }
+                        dfEnd := source.skipName(dfStart);
+                        scanDot = syntax.skipTrivia(source, dfEnd, prefix);
+                        dotDepth += 1;
+                    }
+                    if dotDepth >= 1 and scanDot < blockSourceSize and (syntax.isSingleEquals(source, scanDot) or syntax.compoundAssignOp(source, scanDot).width > 0) {
+                        isDotItemStmt = true;
+                    }
+                }
+            }
+            if chAtCursor == "." and not isDotItemStmt {
+                /* Fall through to expression/tail parser below for `.item`, `.item.x`, `.item.method()`, etc. */
+            } else {
             itemStart := cursor;
-            itemEnd := source.skipName(itemStart);
-            itemName := source.slice(itemStart, itemEnd);
+            itemEnd := if isDotItemStmt { dotItemStart + 4 } else { source.skipName(itemStart) };
+            itemName := if isDotItemStmt { ".item" } else { source.slice(itemStart, itemEnd) };
             afterItemName := syntax.skipTrivia(source, itemEnd, prefix);
             var blockOutputName := "";
             var blockOutputOpen := afterItemName;
-            blockModIdx := sym.localIndex(blockLocals, itemName);
+            blockModIdx := if isDotItemStmt { -1 } else { sym.localIndex(blockLocals, itemName) };
             if blockModIdx >= 0 and blockLocals[blockModIdx].kind == ir.VALUE_KIND_MODULE and
             afterItemName < blockSourceSize and source.at(afterItemName) == "." {
                 memberStart := syntax.skipTrivia(source, afterItemName + 1, prefix);
@@ -4342,16 +4485,27 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 blockConstant = false;
                 cursor = statementNext;
-            } else if afterItemName < blockSourceSize and source.at(afterItemName) == "[" and sym.localIndex(blockLocals, itemName) >= 0 and
-            syntax.scanBracketEnd(source, afterItemName, prefix) >= 0 and
-            (syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) or
-            syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) and
-            (hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$setIndex", functions) or
-            hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$getIndex", functions) or
-            hasInterfaceIndexImpl(target, blockLocals[sym.localIndex(blockLocals, itemName)].kind, true) or
-            hasInterfaceIndexImpl(target, blockLocals[sym.localIndex(blockLocals, itemName)].kind, false)) {
+            } else if afterItemName < blockSourceSize and source.at(afterItemName) == "[" and
+            (if isDotItemStmt {
+                syntax.scanBracketEnd(source, afterItemName, prefix) >= 0 and
+                (syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) or
+                syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0)
+            } else {
+                sym.localIndex(blockLocals, itemName) >= 0 and
+                syntax.scanBracketEnd(source, afterItemName, prefix) >= 0 and
+                (syntax.isSingleEquals(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)) or
+                syntax.compoundAssignOp(source, syntax.skipTrivia(source, syntax.scanBracketEnd(source, afterItemName, prefix), prefix)).width > 0) and
+                (hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$setIndex", functions) or
+                hasIndexHook(blockLocals[sym.localIndex(blockLocals, itemName)].kind, "$getIndex", functions) or
+                hasInterfaceIndexImpl(target, blockLocals[sym.localIndex(blockLocals, itemName)].kind, true) or
+                hasInterfaceIndexImpl(target, blockLocals[sym.localIndex(blockLocals, itemName)].kind, false))
+            }) {
                 isStatement = true;
-                entry := blockLocals[sym.localIndex(blockLocals, itemName)];
+                entry := if isDotItemStmt {
+                    blockLocals[resolveMutLeaseLocal(blockLocals, ctxs, ".item", source, itemStart, prefix).idx]
+                } else {
+                    blockLocals[sym.localIndex(blockLocals, itemName)]
+                };
                 if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
                 bracketEndPos := syntax.scanBracketEnd(source, afterItemName, prefix);
                 afterBrk := syntax.skipTrivia(source, bracketEndPos, prefix);
@@ -4422,9 +4576,18 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 blockConstant = false;
                 cursor = statementNext;
-            } else if afterItemName < blockSourceSize and source.at(afterItemName) == "." and sym.localIndex(blockLocals, itemName) >= 0 and
-            (types.isRecordKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or types.isTupleKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind)) {
-                recEntry := blockLocals[sym.localIndex(blockLocals, itemName)];
+            } else if afterItemName < blockSourceSize and source.at(afterItemName) == "." and
+            (if isDotItemStmt {
+                resolveMutLeaseLocal(blockLocals, ctxs, ".item", source, itemStart, prefix).idx >= 0
+            } else {
+                sym.localIndex(blockLocals, itemName) >= 0 and
+                (types.isRecordKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind) or types.isTupleKind(blockLocals[sym.localIndex(blockLocals, itemName)].kind))
+            }) {
+                recEntry := if isDotItemStmt {
+                    blockLocals[resolveMutLeaseLocal(blockLocals, ctxs, ".item", source, itemStart, prefix).idx]
+                } else {
+                    blockLocals[sym.localIndex(blockLocals, itemName)]
+                };
                 var scanPos := afterItemName;
                 var curKind := recEntry.kind;
                 mut fieldChain: List<String> = [];
@@ -4526,7 +4689,11 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
             } else if syntax.isSingleEquals(source, afterItemName) {
                 isStatement = true;
-                index := sym.localIndex(blockLocals, itemName);
+                index := if isDotItemStmt {
+                    resolveMutLeaseLocal(blockLocals, ctxs, ".item", source, itemStart, prefix).idx
+                } else {
+                    sym.localIndex(blockLocals, itemName)
+                };
                 if index < 0 { syntax.failAt(source, itemStart, prefix, "unknown value " + itemName); }
                 entry := blockLocals[index];
                 if entry.initState == ir.INIT_STATE_INIT and not entry.mutable { syntax.failAt(source, itemStart, prefix, "cannot assign to immutable local " + itemName); }
@@ -4578,7 +4745,11 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
             } else if syntax.compoundAssignOp(source, afterItemName).width > 0 {
                 isStatement = true;
                 compound := syntax.compoundAssignOp(source, afterItemName);
-                index := sym.localIndex(blockLocals, itemName);
+                index := if isDotItemStmt {
+                    resolveMutLeaseLocal(blockLocals, ctxs, ".item", source, itemStart, prefix).idx
+                } else {
+                    sym.localIndex(blockLocals, itemName)
+                };
                 if index < 0 { syntax.failAt(source, itemStart, prefix, "unknown value " + itemName); }
                 entry := blockLocals[index];
                 if entry.initState =!= ir.INIT_STATE_INIT { syntax.failAt(source, itemStart, prefix, "cannot read uninitialized local " + itemName); }
@@ -4610,6 +4781,7 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 }
                 blockConstant = false;
                 cursor = statementNext;
+            }
             }
         }
         if not isStatement {
@@ -5186,6 +5358,10 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
     var loopEndCursor := condParseStart;
     var loopStmtCode := "";
     var finalIsSeqLoop := false;
+    var finalIsMutLoop := false;
+    var finalUsesThenItem := false;
+    var finalSeqSrcKind := "";
+    var finalSeqCode := "";
     var finalSeqItemKind := "";
     var finalNeedsCount := false;
     var finalNeedsIdx := false;
@@ -5220,6 +5396,7 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         syntax.rejectHeaderBlockTag(source, hdrStart, prefix, "loop");
         var passMarkers := "";
         var isSeqLoop := false;
+        var isMutLoop := false;
         var isRangeLoop := false;
         var isRangeInclusive := false;
         var rangeEndConst := false;
@@ -5231,8 +5408,64 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         var seqSrcKind := "";
         var seqItemName := "";
         var seqItemKind := "";
+        var mutSrcRuntime := "";
+        var mutSrcDepth := 0;
+        var mutSrcName := "";
+        var mutSrcText := "";
         var beforeLoopOpen := hdrStart;
-        if hdrStart < source.length() and source.at(hdrStart) == "{" {
+        if hdrStart < source.length() and source.wordAt(hdrStart, "mut") {
+            isMutLoop = true;
+            mutSrcStart := syntax.skipTrivia(source, hdrStart + 3, prefix);
+            if mutSrcStart >= source.length() or source.at(mutSrcStart) == "{" {
+                syntax.failAt(source, mutSrcStart, prefix, "expected a writable List, Array, or Slice source after loop mut");
+            }
+            hdr := parseBinaryCtx(target, source, mutSrcStart, prefix, locals, functions, params, currentName, "", 0, headerCtxs, loopDepth, passInfer, "", aliases);
+            if passInfer { passMarkers = ctx.collectParsedMarkers(passMarkers, hdr); }
+            afterHdr := syntax.skipTrivia(source, hdr.next, prefix);
+            if source.startsWithAt(afterHdr, "..") {
+                syntax.failAt(source, mutSrcStart, prefix, "loop mut requires a writable List, Array, or Slice source, not a range");
+            }
+            if types.isMapKind(hdr.kind) or types.isSetKind(hdr.kind) {
+                syntax.failAt(source, mutSrcStart, prefix, "loop mut is not supported on " + types.displayKind(hdr.kind));
+            }
+            if not types.isListKind(hdr.kind) and not types.isArrayKind(hdr.kind) and not types.isSliceKind(hdr.kind) {
+                syntax.failAt(source, mutSrcStart, prefix, "loop mut requires a writable List, Array, or Slice source, got " + types.displayKind(hdr.kind));
+            }
+            if types.isBitPackedArrayKind(hdr.kind) {
+                syntax.failAt(source, mutSrcStart, prefix, "loop mut over bit-packed array " + types.displayKind(hdr.kind) + " is not supported yet");
+            }
+            mutSrcIdx := extractAddressableLocal(locals, hdr.code);
+            if mutSrcIdx < 0 {
+                syntax.failAt(source, mutSrcStart, prefix, "loop mut requires an addressable writable List, Array, or Slice binding");
+            }
+            mutSrcEntry := locals[mutSrcIdx];
+            if not mutSrcEntry.writable {
+                syntax.failAt(source, mutSrcStart, prefix, "cannot mut-iterate over read-only binding " + mutSrcEntry.name + "; declare it with mut");
+            }
+            sliceBorrows.checkCanMutateBinding(locals, mutSrcEntry.runtime, mutSrcEntry.name, source, mutSrcStart, prefix);
+            mutSrcRuntime = mutSrcEntry.runtime;
+            mutSrcDepth = mutSrcEntry.depth;
+            mutSrcName = mutSrcEntry.name;
+            mutSrcText = mutSrcEntry.textValue;
+            isSeqLoop = true;
+            seqSrcKind = hdr.kind;
+            seqCode = hdr.code;
+            seqItemKind = if types.isSliceKind(hdr.kind) { types.sliceElementKind(hdr.kind) }
+            else if types.isListKind(hdr.kind) { types.listElementKind(hdr.kind) }
+            else { types.arrayElementKind(hdr.kind) };
+            if source.wordAt(afterHdr, "as") {
+                itemNameStart := syntax.skipTrivia(source, afterHdr + 2, prefix);
+                if itemNameStart >= source.length() or not source.at(itemNameStart).isNameStart() {
+                    syntax.failAt(source, itemNameStart, prefix, "expected an item name after as");
+                }
+                itemNameEnd := source.skipName(itemNameStart);
+                seqItemName = source.slice(itemNameStart, itemNameEnd);
+                if syntax.isReservedWord(seqItemName) { syntax.unsupportedFeature(source, itemNameStart, seqItemName, prefix); }
+                beforeLoopOpen = syntax.skipTrivia(source, itemNameEnd, prefix);
+            } else {
+                beforeLoopOpen = afterHdr;
+            }
+        } else if hdrStart < source.length() and source.at(hdrStart) == "{" {
             isUncond = true;
         } else {
             hdr := parseBinaryCtx(target, source, hdrStart, prefix, locals, functions, params, currentName, "", 0, headerCtxs, loopDepth, passInfer, "", aliases);
@@ -5331,9 +5564,12 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
         }
         syntax.rejectMisplacedTag(source, beforeLoopOpen, prefix, "block tag cannot appear before { in loop");
         loopOpen := syntax.expectSymbol(source, beforeLoopOpen, "{", prefix);
+        mutRefVar := "lt_lref_" + loopIdStr;
+        mutBoxVar := "_lb" + idSuffix;
+        mutElemRuntime := if isCLoop { "(*" + mutRefVar + ")" } else { mutBoxVar + ".v" };
         mut loopLocals: List<Local> = locals;
         var loopIterVar := "_i" + idSuffix;
-        if isSeqLoop and seqItemName =!= "" {
+        if not isMutLoop and isSeqLoop and seqItemName =!= "" {
             var nameTaken := not emitFmt.isSafeTargetIdent(seqItemName, isCLoop);
             if not nameTaken {
                 loop locals as exLoc {
@@ -5343,7 +5579,31 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             loopIterVar = if not nameTaken { seqItemName } else { seqItemName + "_" + loopIdStr };
         }
         loopItemLexDepth := ir.maxLocalLexDepth(loopLocals) + 1;
-        if isSeqLoop and seqItemName =!= "" {
+        if isMutLoop {
+            loopBorrowProv := sliceBorrows.makeSliceProvenance("borrow_ro", mutSrcRuntime, mutSrcDepth, mutSrcName, mutSrcText);
+            mut loopLocals.pushBack((name = "$loopborrow:" + loopIdStr, runtime = "$loopborrow_" + loopIdStr, kind = ir.VALUE_KIND_UNIT,
+            mutable = false, writable = false, depth = loopItemLexDepth, constant = false, code = "",
+            intValue = 0, textValue = loopBorrowProv, initState = ir.INIT_STATE_INIT));
+            if seqItemKind == ir.VALUE_KIND_UNIT {
+                mut loopLocals.pushBack((name = "$loop_item_" + loopIdStr, runtime = ir.targetUnitLiteralCode(target), kind = ir.VALUE_KIND_UNIT,
+                mutable = false, writable = false, depth = loopItemLexDepth, constant = true, code = ir.targetUnitLiteralCode(target),
+                intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+                if seqItemName =!= "" {
+                    mut loopLocals.pushBack((name = seqItemName, runtime = ir.targetUnitLiteralCode(target), kind = ir.VALUE_KIND_UNIT,
+                    mutable = false, writable = false, depth = loopItemLexDepth, constant = true, code = ir.targetUnitLiteralCode(target),
+                    intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+                }
+            } else {
+                mut loopLocals.pushBack((name = "$loop_item_" + loopIdStr, runtime = mutElemRuntime, kind = seqItemKind,
+                mutable = true, writable = true, depth = loopItemLexDepth, constant = false, code = mutElemRuntime,
+                intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+                if seqItemName =!= "" {
+                    mut loopLocals.pushBack((name = seqItemName, runtime = mutElemRuntime, kind = seqItemKind,
+                    mutable = true, writable = true, depth = loopItemLexDepth, constant = false, code = mutElemRuntime,
+                    intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
+                }
+            }
+        } else if isSeqLoop and seqItemName =!= "" {
             if seqItemKind == ir.VALUE_KIND_UNIT {
                 mut loopLocals.pushBack((name = seqItemName, runtime = ir.targetUnitLiteralCode(target), kind = ir.VALUE_KIND_UNIT,
                 mutable = false, writable = false, depth = loopItemLexDepth, constant = true, code = ir.targetUnitLiteralCode(target),
@@ -5355,10 +5615,11 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 intValue = 0, textValue = "", initState = ir.INIT_STATE_INIT));
             }
         }
+        bodyItemVar := if isMutLoop and seqItemKind =!= "" and seqItemKind =!= ir.VALUE_KIND_UNIT { mutElemRuntime } else { loopItemMetaVar };
         loopBodyLexDepthStr := (ir.maxLocalLexDepth(loopLocals) + 1).toText();
         bodyCtx := (id = loopId, tag = condParseTag, kind = ir.CTX_KIND_LOOP, phase = ir.CTX_PHASE_BODY,
         iifeDepth = loopDepth, valKind = passCtxValKind, valVar = loopValVar, label = loopLabel,
-        iterLabel = loopBodyLexDepthStr, countVar = loopCountVar, itemVar = loopItemMetaVar, itemKind = seqItemKind,
+        iterLabel = loopBodyLexDepthStr, countVar = loopCountVar, itemVar = bodyItemVar, itemKind = seqItemKind,
         indexVar = loopIdxVar, hasIndex = isSeqLoop, colVar = passColVar);
         bodyCtxs := ctx.appendCtx(ctxs, bodyCtx);
         loopBodySink := if isSeqLoop and seqItemName =!= "" { "loopBody:" + seqItemName } else { "loopBody" };
@@ -5398,19 +5659,38 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             hdrCheckText := if isRangeLoop { rangeStartCode + " " + rangeEndCode } else if isSeqLoop { seqCode } else { condCode };
             usesIdx := isSeqLoop and (emitFmt.codeUsesIdent(bodyParsed.code, loopIdxVar) or thenMetaSrc.indexOf(".index", 0) >= 0);
             usesCount := suffixField == "count" or usesIdx or emitFmt.codeUsesIdent(bodyParsed.code, loopCountVar) or emitFmt.codeUsesIdent(hdrCheckText, loopCountVar) or thenMetaSrc.indexOf(".count", 0) >= 0;
-            usesItemMeta := isSeqLoop and seqItemKind =!= "" and seqItemKind =!= ir.VALUE_KIND_UNIT and (emitFmt.codeUsesIdent(bodyParsed.code, loopItemMetaVar) or thenMetaSrc.indexOf(".item", 0) >= 0);
+            usesThenItem := isSeqLoop and seqItemKind =!= "" and seqItemKind =!= ir.VALUE_KIND_UNIT and thenMetaSrc.indexOf(".item", 0) >= 0;
+            usesItemMeta := if isMutLoop { usesThenItem } else {
+                isSeqLoop and seqItemKind =!= "" and seqItemKind =!= ir.VALUE_KIND_UNIT and (emitFmt.codeUsesIdent(bodyParsed.code, loopItemMetaVar) or thenMetaSrc.indexOf(".item", 0) >= 0)
+            };
             finalNeedsCount = usesCount;
             finalNeedsIdx = usesIdx;
             finalNeedsItemMeta = usesItemMeta;
+            finalIsMutLoop = isMutLoop;
+            finalUsesThenItem = usesThenItem;
+            finalSeqSrcKind = seqSrcKind;
+            finalSeqCode = seqCode;
+            mutSeqPtrVar := "lt_lseq_" + loopIdStr;
+            mutSeqI := "lt_lsi_" + loopIdStr;
+            mutSeqN := "lt_lsn_" + loopIdStr;
+            mutLastIdxVar := "lt_llast_" + loopIdStr;
             var metaStep := "";
             if isCLoop {
                 if usesIdx { metaStep = metaStep + loopIdxVar + " = " + loopCountVar + "; "; }
                 if usesCount { metaStep = metaStep + loopCountVar + " += 1; "; }
-                if usesItemMeta { metaStep = metaStep + loopItemMetaVar + " = " + loopIterVar + "; "; }
+                if isMutLoop {
+                    if usesThenItem { metaStep = metaStep + mutLastIdxVar + " = " + mutSeqI + "; "; }
+                } else if usesItemMeta {
+                    metaStep = metaStep + loopItemMetaVar + " = " + loopIterVar + "; ";
+                }
             } else {
                 if usesIdx { metaStep = metaStep + loopIdxVar + " = " + loopCountVar + "; "; }
                 if usesCount { metaStep = metaStep + loopCountVar + " = " + loopCountVar + " + 1n; "; }
-                if usesItemMeta { metaStep = metaStep + loopItemMetaVar + " = " + loopIterVar + "; "; }
+                if isMutLoop {
+                    if usesThenItem { metaStep = metaStep + mutLastIdxVar + " = " + mutSeqI + "; "; }
+                } else if usesItemMeta {
+                    metaStep = metaStep + loopItemMetaVar + " = " + loopIterVar + "; ";
+                }
             }
             brkPayId := loopIdStr;
             contPayId := (0 - loopId).toText();
@@ -5449,7 +5729,37 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 wrappedBody
             };
             iterUsedInBody := usesItemMeta or emitFmt.codeUsesIdent(wrappedBody, loopIterVar);
-            rawLoopStmt := if isCLoop {
+            rawLoopStmt := if isMutLoop {
+                if isCLoop {
+                    elemPtrType := if types.isListKind(seqSrcKind) { types.cListElemType(types.cListTag(seqItemKind)) } else { types.cValueType(seqItemKind) };
+                    lenExpr := if types.isArrayKind(seqSrcKind) {
+                        types.arrayExtent(seqSrcKind).toText()
+                    } else if types.isSliceKind(seqSrcKind) {
+                        mutSeqPtrVar + ".len"
+                    } else {
+                        "lt_list_" + types.cListTag(seqItemKind) + "_len(*" + mutSeqPtrVar + ")"
+                    };
+                    slotAddrExpr := if types.isSliceKind(seqSrcKind) {
+                        "&(" + mutSeqPtrVar + ".data[" + mutSeqI + "])"
+                    } else {
+                        "&((" + mutSeqPtrVar + ")->data[" + mutSeqI + "])"
+                    };
+                    elemPtrDecl := elemPtrType + " *" + mutRefVar + " = " + slotAddrExpr + "; (void)" + mutRefVar + "; ";
+                    "for (int64_t " + mutSeqI + " = 0, " + mutSeqN + " = " + lenExpr + "; " + mutSeqI + " < " + mutSeqN + "; " + mutSeqI + " += 1) { " +
+                    elemPtrDecl + metaStep + cBodyWithCont + " }"
+                } else {
+                    tsLenExpr := if types.isSliceKind(seqSrcKind) { mutSeqPtrVar + ".len" } else { mutSeqPtrVar + ".length" };
+                    tsSlotExpr := if types.isSliceKind(seqSrcKind) {
+                        mutSeqPtrVar + ".data[" + mutSeqPtrVar + ".off + " + mutSeqI + "]"
+                    } else {
+                        mutSeqPtrVar + "[" + mutSeqI + "]"
+                    };
+                    tsElemType := types.tsFunctionType(seqItemKind);
+                    tsBoxDecl := "const " + mutBoxVar + ": { v: " + tsElemType + " } = { get v(): " + tsElemType + " { return " + tsSlotExpr + "!; }, set v(lite$nv: " + tsElemType + ") { " + tsSlotExpr + " = lite$nv; } }; void " + mutBoxVar + "; ";
+                    "for (let " + mutSeqI + " = 0, " + mutSeqN + " = " + tsLenExpr + "; " + mutSeqI + " < " + mutSeqN + "; " + mutSeqI + " += 1) { " +
+                    tsBoxDecl + metaStep + wrappedBody + " }"
+                }
+            } else if isCLoop {
                 if isRangeLoop {
                     rangeCmp := if isRangeInclusive { "<=" } else { "<" };
                     if rangeEndConst {
@@ -5541,14 +5851,39 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             } else {
                 loopStmtCode = labeledLoop;
             }
+            if isMutLoop and usesThenItem {
+                if isCLoop {
+                    lastElemExpr := if types.isSliceKind(seqSrcKind) { mutSeqPtrVar + ".data[" + mutLastIdxVar + "]" } else { "(" + mutSeqPtrVar + ")->data[" + mutLastIdxVar + "]" };
+                    dropItemFn := types.cDropFnForKind(seqItemKind);
+                    dropOldItem := if dropItemFn =!= "" { dropItemFn + "(&(" + loopItemMetaVar + ")); " } else { "" };
+                    loopStmtCode = loopStmtCode + " if (" + mutLastIdxVar + " >= 0) { " + dropOldItem + loopItemMetaVar + " = " + ctx.copiedValueCode(target, seqItemKind, lastElemExpr) + "; }";
+                } else {
+                    lastSlotTs := if types.isSliceKind(seqSrcKind) { mutSeqPtrVar + ".data[" + mutSeqPtrVar + ".off + " + mutLastIdxVar + "]!" } else { mutSeqPtrVar + "[" + mutLastIdxVar + "]!" };
+                    loopStmtCode = loopStmtCode + " if (" + mutLastIdxVar + " >= 0) { " + loopItemMetaVar + " = " + ctx.copiedValueCode(target, seqItemKind, lastSlotTs) + "; }";
+                }
+            }
         }
         pass = pass + 1;
     }
     emitCollected := wantsCollected and resolvedPreThenKind =!= ir.VALUE_KIND_UNIT and resolvedPreThenKind =!= ir.VALUE_KIND_NEVER;
     finalColVar := if emitCollected { loopColVar } else { "" };
+    finalMutSeqPtrVar := "lt_lseq_" + loopIdStr;
+    finalMutLastIdxVar := "lt_llast_" + loopIdStr;
     var decls := "";
     if not inferMode {
         if isCLoop {
+            if finalIsMutLoop {
+                if types.isArrayKind(finalSeqSrcKind) {
+                    decls = decls + "/*@T:" + finalSeqSrcKind + "@*/" + types.cArrayTag(finalSeqSrcKind) + " *" + finalMutSeqPtrVar + " = &(" + finalSeqCode + "); (void)" + finalMutSeqPtrVar + "; ";
+                } else if types.isSliceKind(finalSeqSrcKind) {
+                    decls = decls + "/*@T:" + finalSeqSrcKind + "@*/" + types.cSliceTag(finalSeqSrcKind) + " " + finalMutSeqPtrVar + " = " + finalSeqCode + "; (void)" + finalMutSeqPtrVar + "; ";
+                } else {
+                    decls = decls + "/*@T:" + finalSeqSrcKind + "@*/lt_list_" + types.cListTag(finalSeqItemKind) + " *" + finalMutSeqPtrVar + " = &(" + finalSeqCode + "); (void)" + finalMutSeqPtrVar + "; ";
+                }
+                if finalUsesThenItem {
+                    decls = decls + "int64_t " + finalMutLastIdxVar + " = -1; ";
+                }
+            }
             if finalNeedsCount {
                 decls = decls + "int64_t " + loopCountVar + " = 0; ";
             }
@@ -5570,6 +5905,12 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
                 decls = decls + "lt_list_" + colTag + " " + loopColVar + " = lt_list_" + colTag + "_from(0, NULL);" + colVoid + " ";
             }
         } else {
+            if finalIsMutLoop {
+                decls = decls + "const " + finalMutSeqPtrVar + " = " + finalSeqCode + "; void " + finalMutSeqPtrVar + "; ";
+                if finalUsesThenItem {
+                    decls = decls + "let " + finalMutLastIdxVar + ": number = -1; ";
+                }
+            }
             if finalNeedsCount {
                 decls = decls + "let " + loopCountVar + ": bigint = 0n; ";
             }
@@ -5609,17 +5950,24 @@ parseLoopExpr := fn(target: String, source: String, condParseStart: Int, condPar
             finalKind := if resolvedPreThenKind == ir.VALUE_KIND_NEVER { ir.VALUE_KIND_NEVER } else { thenParsed.kind };
             left = ctx.withMarkers((kind = finalKind, code = "", intValue = 0, textValue = "", constant = false, next = thenParsed.next), thenMarkers);
         } else if isCLoop {
+            thenItemDropC := if finalIsMutLoop and finalUsesThenItem and types.cDropFnForKind(finalSeqItemKind) =!= "" {
+                types.cDropFnForKind(finalSeqItemKind) + "(&(" + loopItemMetaVar + ")); "
+            } else { "" };
+            fnIdxThen := ctx.findCtxByKindIndex(ctxs, ir.CTX_KIND_FN);
+            fnRetThen := if fnIdxThen >= 0 { ctxs[fnIdxThen].valKind } else { "" };
             if resolvedPreThenKind == ir.VALUE_KIND_NEVER {
                 left = (kind = ir.VALUE_KIND_NEVER, code = "/*@CBLK:0@*/" + decls + loopStmtCode,
                 intValue = 0, textValue = "", constant = false, next = thenParsed.next);
             } else if thenParsed.kind == ir.VALUE_KIND_UNIT or thenParsed.kind == ir.VALUE_KIND_NEVER {
-                thenC := ctx.cUnwrapIntoVar("", thenParsed.kind, thenParsed.code);
-                left = (kind = thenParsed.kind, code = "/*@CBLK:0@*/" + decls + loopStmtCode + " " + thenC,
+                rawThenC := ctx.cUnwrapIntoVar("", thenParsed.kind, thenParsed.code);
+                thenC := if thenItemDropC =!= "" { ctx.cRewriteExitDrops(rawThenC, thenItemDropC, "", fnRetThen, loopId) } else { rawThenC };
+                left = (kind = thenParsed.kind, code = "/*@CBLK:0@*/" + decls + loopStmtCode + " " + thenC + (if thenItemDropC =!= "" { " " + thenItemDropC } else { "" }),
                 intValue = 0, textValue = "", constant = false, next = thenParsed.next);
             } else {
                 thenVarC := "lt_lthen_" + loopIdStr;
-                thenAssignC := ctx.cUnwrapIntoVar(thenVarC, thenParsed.kind, thenParsed.code);
-                left = (kind = thenParsed.kind, code = "/*@CBLK:" + thenVarC + "@*/" + types.cValueType(thenParsed.kind) + " " + thenVarC + "; { " + decls + loopStmtCode + " " + thenAssignC + " }",
+                rawThenAssignC := ctx.cUnwrapIntoVar(thenVarC, thenParsed.kind, thenParsed.code);
+                thenAssignC := if thenItemDropC =!= "" { ctx.cRewriteExitDrops(rawThenAssignC, thenItemDropC, "", fnRetThen, loopId) } else { rawThenAssignC };
+                left = (kind = thenParsed.kind, code = "/*@CBLK:" + thenVarC + "@*/" + types.cValueType(thenParsed.kind) + " " + thenVarC + "; { " + decls + loopStmtCode + " " + thenAssignC + (if thenItemDropC =!= "" { " " + thenItemDropC } else { "" }) + " }",
                 intValue = 0, textValue = "", constant = false, next = thenParsed.next);
             }
         } else if resolvedPreThenKind == ir.VALUE_KIND_NEVER {
@@ -9165,9 +9513,10 @@ parseDynMethodDotCall := fn(target: String, source: String, labelStart: Int, ope
                 if not lease.matched {
                     syntax.failAt(source, cursor, prefix, "argument " + (ai + 1).toText() + " of " + opLabel + " requires mut argument");
                 }
-                mName := source.slice(lease.nameStart, lease.nameEnd);
-                mLocIdx := sym.localIndex(locals, mName);
-                if mLocIdx < 0 { syntax.failAt(source, lease.nameStart, prefix, "unknown value " + mName); }
+                mRawName := source.slice(lease.nameStart, lease.nameEnd);
+                mLeaseRes := resolveMutLeaseLocal(locals, ctxs, mRawName, source, lease.nameStart, prefix);
+                mName := mLeaseRes.displayName;
+                mLocIdx := mLeaseRes.idx;
                 mEntry := locals[mLocIdx];
                 if not types.isMutContainerKind(mEntry.kind) or not mEntry.writable {
                     syntax.failAt(source, lease.nameStart, prefix, "cannot pass non-mut binding " + mName + " as mut");
@@ -9608,7 +9957,14 @@ selectOverloadForCall := fn(
                 }
             } else {
                 mName := source.slice(lease.nameStart, lease.nameEnd);
-                mLoc := sym.localIndex(locals, mName);
+                var mLoc := if mName.startsWithAt(0, ".") {
+                    pLoopIdx := ctx.findLeadingDotLoopIdx(ctxs, true);
+                    if pLoopIdx >= 0 and ctxs[pLoopIdx].phase =!= ir.CTX_PHASE_THEN and ctxs[pLoopIdx].phase =!= ir.CTX_PHASE_HEADER {
+                        sym.localIndex(locals, "$loop_item_" + ctxs[pLoopIdx].id.toText())
+                    } else { -1 }
+                } else {
+                    sym.localIndex(locals, mName)
+                };
                 if mLoc >= 0 and locals[mLoc].depth >= -1 {
                     aNatOk = true;
                     aNatKind = locals[mLoc].kind;
@@ -10130,7 +10486,10 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                         }
                         mNameStart := lease.nameStart;
                         mNameEnd := lease.nameEnd;
-                        mListName := source.slice(mNameStart, mNameEnd);
+                        mRawListName := source.slice(mNameStart, mNameEnd);
+                        mLeaseRes := resolveMutLeaseLocal(locals, ctxs, mRawListName, source, mNameStart, prefix);
+                        mListName := mLeaseRes.displayName;
+                        mIdxRes := mLeaseRes.idx;
                         afterLease := syntax.skipTrivia(source, lease.next, prefix);
                         isMutSubExpr := afterLease < size and (source.at(afterLease) == "[" or source.at(afterLease) == ".");
                         if isMutSubExpr {
@@ -10146,7 +10505,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                     syntax.failAt(source, rhsStart, prefix, "argument " + (slot + 1).toText() + " of " + calleeDisplay + ": " + uErr);
                                 }
                             }
-                            subRootIdx := extractAddressableLocal(locals, locals[sym.localIndex(locals, mListName)].runtime);
+                            subRootIdx := extractAddressableLocal(locals, locals[mIdxRes].runtime);
                             subRootRt := if subRootIdx >= 0 { locals[subRootIdx].runtime } else { "" };
                             aliasHit := checkMutArgAliasSymmetric(mListName, subRootRt, mutArg.textValue, mutArgRoots, mutArgNames, mutArgProvs);
                             if aliasHit =!= "" {
@@ -10164,9 +10523,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                             entryCount += 1;
                             cursor = syntax.skipTrivia(source, mutArg.next, prefix);
                         } else {
-                            mIdx := sym.localIndex(locals, mListName);
-                            if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
-                            mEntry := locals[mIdx];
+                            mEntry := locals[mIdxRes];
                             if not types.isMutContainerKind(mEntry.kind) {
                                 syntax.failAt(source, mNameStart, prefix, calleeDisplay + " requires a List, Map, Set, or record value, got " + types.displayKind(mEntry.kind));
                             }
@@ -10272,7 +10629,10 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                         }
                         mNameStart := lease.nameStart;
                         mNameEnd := lease.nameEnd;
-                        mListName := source.slice(mNameStart, mNameEnd);
+                        mRawListName := source.slice(mNameStart, mNameEnd);
+                        mLeaseRes := resolveMutLeaseLocal(locals, ctxs, mRawListName, source, mNameStart, prefix);
+                        mListName := mLeaseRes.displayName;
+                        mIdxRes := mLeaseRes.idx;
                         afterLease := syntax.skipTrivia(source, lease.next, prefix);
                         isMutSubExpr := afterLease < size and (source.at(afterLease) == "[" or source.at(afterLease) == ".");
                         if isMutSubExpr {
@@ -10288,7 +10648,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                                     syntax.failAt(source, cursor, prefix, "argument " + (nextSlot + 1).toText() + " of " + calleeDisplay + ": " + uErr);
                                 }
                             }
-                            subRootIdx := extractAddressableLocal(locals, locals[sym.localIndex(locals, mListName)].runtime);
+                            subRootIdx := extractAddressableLocal(locals, locals[mIdxRes].runtime);
                             subRootRt := if subRootIdx >= 0 { locals[subRootIdx].runtime } else { "" };
                             aliasHit := checkMutArgAliasSymmetric(mListName, subRootRt, mutArg.textValue, mutArgRoots, mutArgNames, mutArgProvs);
                             if aliasHit =!= "" {
@@ -10306,9 +10666,7 @@ parseUserOrIndirectCallWithRecv := fn(target: String, source: String, openParen:
                             entryCount += 1;
                             cursor = syntax.skipTrivia(source, mutArg.next, prefix);
                         } else {
-                            mIdx := sym.localIndex(locals, mListName);
-                            if mIdx < 0 { syntax.failAt(source, mNameStart, prefix, "unknown value " + mListName); }
-                            mEntry := locals[mIdx];
+                            mEntry := locals[mIdxRes];
                             if not types.isMutContainerKind(mEntry.kind) {
                                 syntax.failAt(source, mNameStart, prefix, calleeDisplay + " requires a List, Map, Set, or record value, got " + types.displayKind(mEntry.kind));
                             }
@@ -11928,7 +12286,9 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
             if not lease.matched {
                 syntax.failAt(source, cursor, prefix, "Simd.store requires mut Slice<" + types.displayKind(elKind) + ">");
             }
-            mName := source.slice(lease.nameStart, lease.nameEnd);
+            mRawName := source.slice(lease.nameStart, lease.nameEnd);
+            mLeaseRes := resolveMutLeaseLocal(locals, ctxs, mRawName, source, lease.nameStart, prefix);
+            mName := mLeaseRes.displayName;
             afterLease := syntax.skipTrivia(source, lease.next, prefix);
             isMutSubExpr := afterLease < source.length() and (source.at(afterLease) == "[" or source.at(afterLease) == ".");
             var slCode := "";
@@ -11945,9 +12305,7 @@ parseCoreTypeOpHardCall := fn(target: String, source: String, labelStart: Int, o
                 slCode = mutArg.code;
                 slEnd = mutArg.next;
             } else {
-                mIdx := sym.localIndex(locals, mName);
-                if mIdx < 0 { syntax.failAt(source, lease.nameStart, prefix, "unknown value " + mName); }
-                mEntry := locals[mIdx];
+                mEntry := locals[mLeaseRes.idx];
                 if not types.isSliceKind(mEntry.kind) {
                     syntax.failAt(source, lease.nameStart, prefix, "Simd.store expects Slice<" + types.displayKind(elKind) + ">, got " + types.displayKind(mEntry.kind));
                 }
@@ -12627,12 +12985,10 @@ parseTypeOpDotCall := fn(target: String, source: String, labelStart: Int, openPa
 /** Parses an explicit mutating dot call `mut receiver(.field)*.op(args...)` or `(mut receiver).op(args...)`, enforcing root receiver mutability and `mut Self` signature. */
 parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mNameStart: Int, mNameEnd: Int, afterRecv: Int, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, expected: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     size := source.length();
-    recvName := source.slice(mNameStart, mNameEnd);
-    if syntax.isReservedWord(recvName) { syntax.unsupportedFeature(source, mNameStart, recvName, prefix); }
-    recvIdx := sym.localIndex(locals, recvName);
-    if recvIdx < 0 {
-        syntax.failAt(source, mNameStart, prefix, "unknown value " + recvName);
-    }
+    rawRecvName := source.slice(mNameStart, mNameEnd);
+    recvRes := resolveMutLeaseLocal(locals, ctxs, rawRecvName, source, mNameStart, prefix);
+    recvName := recvRes.displayName;
+    recvIdx := recvRes.idx;
     entry := locals[recvIdx];
     if entry.initState =!= ir.INIT_STATE_INIT {
         syntax.failAt(source, mNameStart, prefix, "cannot read uninitialized local " + recvName);
@@ -13325,8 +13681,9 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                 calleeDisplay = left.textValue;
                 var effFnIdx := left.intValue;
                 var ovPreResolved := false;
-                if left.code.startsWithAt(0, "$ovfn:") or left.code.startsWithAt(0, "$ovtop:") {
-                    isOvTop := left.code.startsWithAt(0, "$ovtop:");
+                if left.code.startsWithAt(0, "$ovfn:") or left.code.startsWithAt(0, "$ovtop:") or left.code.startsWithAt(0, "$ovstatictop:") {
+                    isOvStaticTop := left.code.startsWithAt(0, "$ovstatictop:");
+                    isOvTop := left.code.startsWithAt(0, "$ovtop:") or isOvStaticTop;
                     ovParts := left.code.split("\n");
                     var ovCands: List<Int> = [];
                     var ovOwner := "";
@@ -13343,7 +13700,16 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         ovAliasTpl = ovParts[5];
                         errPos = syntax.parseDigits(ovParts[6], 0, ovParts[6].length());
                         ovMemberErrPos = syntax.parseDigits(ovParts[7], 0, ovParts[7].length());
-                        ovCands = findAllTypeOps(functions, ovOwner, ovMember);
+                        rawOvCands := findAllTypeOps(functions, ovOwner, ovMember);
+                        if isOvStaticTop {
+                            mut filteredOv: List<Int> = [];
+                            loop rawOvCands as rci {
+                                if isStaticTypeOp(functions[rci]) { mut filteredOv.pushBack(rci); }
+                            }
+                            ovCands = filteredOv;
+                        } else {
+                            ovCands = rawOvCands;
+                        }
                     } else {
                         ovFnKey := ovParts[1];
                         errPos = syntax.parseDigits(ovParts[2], 0, ovParts[2].length());

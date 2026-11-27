@@ -119,7 +119,7 @@ For loops, leading-dot access uses the loop context without searching outward. I
 
 ## Writable iteration
 
-Selected direction, 2026-11-27. Compiler support is pending. Any supported iterable can be used with `loop mut source` when the source is writable and iteration can expose a writable location for each element. The optional `as` binder and `.item` name the same place with the same access. Choosing a name requires no additional `mut`. During traversal, the source itself is read-only. Element writes go through the current item. Resizing, replacing, or otherwise mutating the source directly is rejected for the duration of traversal.
+Selected direction, 2026-11-27; implemented and verified on TypeScript and C11 backends. Any supported writable sequence (`List`, byte-aligned `[T; N]`, or mutable `Slice`) can be used with `loop mut source` to expose a writable location for each element. The optional `as` binder and `.item` name the same place with the same access. Choosing a name requires no additional `mut`. During traversal, the source itself is read-only. Element writes go through the current item. Resizing, replacing, or otherwise mutating the source directly is rejected for the duration of traversal.
 
 ```text
 loop mut rngs as r {
@@ -134,8 +134,6 @@ loop mut rngs {
 These are alternative loops. Each advances the elements in place and leaves the same collection state when started from the same seeds. The source grant makes the element writable. The `mut` in each call grants that access to `nextInt` under the ordinary receiver rule. Omitting `as` gives access through `.item`.
 
 The writable borrow ends with the iteration, including on `continue` or `break`. In `then`, `.item` is read-only and reflects the last entered element after its updates. An empty loop retains the existing zero placeholder. An ordinary local initializer such as `mut copy := .item` follows the normal initialization and ownership rules.
-
-Pending cases on TS and C11 cover equal final element states for the two forms, rejection of read-only sources and direct source mutation during traversal, and rejection when `r` and `.item` are both supplied as writable arguments to the same call. Completion cases cover the last updated item, empty completion, and rejection of a writable grant from `then`.
 
 ## Normal result and completion
 

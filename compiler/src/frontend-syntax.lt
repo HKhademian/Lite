@@ -1347,6 +1347,10 @@ pub loopNeedsExprLowering := fn(source: String, position: Int, prefix: String): 
     trimmed := skipTrivia(source, position, prefix);
     if trimmed >= size { return false; }
     if source.at(trimmed) == "@" { return true; }
+    if source.wordAt(trimmed, "loop") {
+        afterLp := skipTrivia(source, trimmed + 4, prefix);
+        if afterLp < size and source.wordAt(afterLp, "mut") { return true; }
+    }
     rawEnd := scanRawLoopEnd(source, trimmed, prefix);
     if rawEnd < 0 { return false; }
     afterRaw := skipTrivia(source, rawEnd, prefix);

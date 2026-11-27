@@ -1,0 +1,378 @@
+/* Phase 12 verification: prefix mut placement cutover + aligned context mut syntax, contextual static calls (.op(...)), writable loop iteration (loop mut source [as r] / .item), TS/C11 -Werror/ASan/UBSan parity, and complete rejection matrix. */
+
+test := import "core/test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+emptyEnv := fn(): List<String> {
+    m: List<String> = [];
+    m
+};
+
+emptyBytes := fn(): List<Int> {
+    xs: List<Int> = [];
+    xs
+};
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + selC.error, selC.ok);
+tsComp := selTs.path;
+cComp := selC.path;
+ccProbe := compilerTest.probeCc();
+
+/* 1. Comprehensive multi-module Phase 12 feature matrix (prefix mut, contextual static calls, loop mut) */
+p12Tmp := fs.makeTempDir("lite-p12-");
+test.check("makeTempDir p12", p12Tmp.ok);
+
+modP12Path := path.join(p12Tmp.path, "mod_p12.lt");
+_wModP12 := fs.writeText(modP12Path, [
+    "pub Rng := record { state: Int; label: String = \"\"; };",
+    "pub Rng.create := fn(seed: Int): Rng { Rng { state = seed, label = \"s:\" + seed.toText() } };",
+    "pub Rng.createFrom := fn(seed: Int) context(salt: Int): Rng {",
+    "    Rng { state = seed + salt, label = \"ctx:\" + (seed + salt).toText() }",
+    "};",
+    "pub Rng.nextInt := fn(self: mut Self): Int {",
+    "    self.state = self.state * 7 + 3;",
+    "    self.state",
+    "};",
+    "pub Rng.merge := fn(self: mut Self, other: Rng): Unit {",
+    "    self.state += other.state;",
+    "};",
+    "pub advance := fn(r: mut Rng): Int { mut r.nextInt() };",
+    "pub swapStates := fn(a: mut Rng, b: mut Rng): Unit {",
+    "    tmp := a.state;",
+    "    a.state = b.state;",
+    "    b.state = tmp;",
+    "};",
+    "",
+    "pub Vec := record<T: Type, N: Int> { x: T; };",
+    "pub Vec.zeroed := fn<T: Type, N: Int>(): Vec<T, N> {",
+    "    v: Vec<T, N>;",
+    "    v",
+    "};",
+    "pub IVec2 := alias Vec<Int, 2>;",
+    "",
+    "pub Box := record { tag: String; };",
+    "pub Box.make := fn(n: Int): Box { Box { tag = \"int:\" + n.toText() } };",
+    "pub Box.make := fn(s: String): Box { Box { tag = \"str:\" + s } };",
+    "",
+    "pub Color := enum { Red, Blue };",
+    "pub Pt := record { x: Float32; y: Float32; };"
+].join("\n"));
+
+mainSrc := [
+    "io := import \"core/io\";",
+    "list := import \"core/list\";",
+    "rc := import \"core/rc\";",
+    "simd := import \"core/simd\";",
+    "soa := import \"core/soa\";",
+    "m := import \"./mod_p12\";",
+    "",
+    "RngHolder := record { rng: m.Rng; };",
+    "OwnedItem := record { name: String; nums: List<Int>; };",
+    "OwnedItem.bump := fn(self: mut Self, v: Int): Unit {",
+    "    mut self.nums.pushBack(v);",
+    "};",
+    "context mut ctxRng: m.Rng = .create(10);",
+    "bumpCtx := fn(d: Int) context(ctxRng: mut m.Rng): Int {",
+    "    ctxRng.state += d;",
+    "    ctxRng.state",
+    "};",
+    "passRng := fn(r: m.Rng): String { r.label + \"=\" + r.state.toText() };",
+    "retContextual := fn(seed: Int): m.Rng { .create(seed) };",
+    "",
+    "main := fn(): Unit {",
+    "    /* 1. Prefix mut and var mut declarations + context syntax */",
+    "    mut explicitRng: m.Rng = m.Rng.create(42);",
+    "    mut ctxStaticRng: m.Rng = .create(42);",
+    "    var mut repList: List<Int> = [1, 2];",
+    "    mut repList.pushBack(3);",
+    "    repList = [4, 5];",
+    "    io.outputLine((explicitRng.state == ctxStaticRng.state).toText() + \",\" + explicitRng.label + \",\" + repList[1].toText());",
+    "    mut localRng: m.Rng = .create(10);",
+    "    localRes := context (mut ctxRng = localRng) { bumpCtx(5) };",
+    "    ambRes := bumpCtx(2);",
+    "    io.outputLine(\"ctx:\" + localRes.toText() + \":\" + localRng.state.toText() + \":\" + ambRes.toText());",
+    "",
+    "    /* 2. Contextual static calls: generics, aliases, overloads, contexts, args, return, fields, lists */",
+    "    vZero: m.Vec<Int, 2> = .zeroed();",
+    "    vAlias: m.IVec2 = .zeroed();",
+    "    bInt: m.Box = .make(5);",
+    "    bStr: m.Box = .make(\"hi\");",
+    "    sVec: Simd<Float32, 4> = .splat(cast<Float32>(2.5));",
+    "    mut pSoa: SoA<m.Pt> = .create();",
+    "    mut pSoa.pushBack(m.Pt { x = cast<Float32>(1.5), y = cast<Float32>(2.0) });",
+    "    rcVal: Rc<Int> = .create(7);",
+    "    rRet := retContextual(9);",
+    "    rField := RngHolder { rng = .create(11) };",
+    "    rngBatch: List<m.Rng> = [.create(1), .create(2)];",
+    "    cSalt := 100;",
+    "    ctxMade: m.Rng = context (salt = cSalt) { .createFrom(8) };",
+    "    io.outputLine(vZero.x.toText() + \",\" + vAlias.x.toText() + \",\" + bInt.tag + \",\" + bStr.tag + \",\" + passRng(.create(3)));",
+    "    io.outputLine((sVec[0] == cast<Float32>(2.5)).toText() + \",\" + pSoa.length().toText() + \",\" + rcVal.get().toText() + \",\" + rRet.state.toText() + \",\" + rField.rng.state.toText() + \",\" + rngBatch[1].state.toText() + \",\" + ctxMade.label);",
+    "",
+    "    /* 3. loop mut with as r vs .item yields identical final collection state */",
+    "    mut rngsA: List<m.Rng> = [.create(4), .create(10)];",
+    "    mut rngsB: List<m.Rng> = [.create(4), .create(10)];",
+    "    loop mut rngsA as r {",
+    "        _s1 := mut r.nextInt();",
+    "        _s2 := m.advance(mut r);",
+    "    }",
+    "    loop mut rngsB {",
+    "        _i1 := mut .item.nextInt();",
+    "        _i2 := m.advance(mut .item);",
+    "    }",
+    "    io.outputLine(\"eq=\" + (rngsA[0].state == rngsB[0].state and rngsA[1].state == rngsB[1].state).toText() + \":\" + rngsA[0].state.toText() + \":\" + rngsA[1].state.toText());",
+    "",
+    "    /* 4. loop mut on fixed Array, Slice, scalar List, nested List<List<Int>>, field & index assign, source reads */",
+    "    mut arrRng: [m.Rng; 3] = [.create(1), .create(2), .create(3)];",
+    "    loop mut arrRng as ar {",
+    "        if ar.state == 2 { continue; }",
+    "        ar.state += 100;",
+    "    }",
+    "    if true {",
+    "        mut slRng: Slice<m.Rng> = mut arrRng[0..2];",
+    "        loop mut slRng {",
+    "            _sli := mut .item.nextInt();",
+    "        }",
+    "    };",
+    "    io.outputLine(\"arr=\" + arrRng[0].state.toText() + \",\" + arrRng[1].state.toText() + \",\" + arrRng[2].state.toText());",
+    "",
+    "    mut nums: List<Int> = [2, 3, 4];",
+    "    loop mut nums as n { n += nums.length(); }",
+    "    loop mut nums { .item *= 2; }",
+    "    io.outputLine(\"nums=\" + nums[0].toText() + \",\" + nums[1].toText() + \",\" + nums[2].toText());",
+    "",
+    "    mut rows: List<[Int; 2]> = [[1, 2], [3, 4]];",
+    "    loop mut rows {",
+    "        .item[0] += 10;",
+    "        .item[1] += rows[0][0];",
+    "    }",
+    "    io.outputLine(\"rows=\" + rows[0][0].toText() + \":\" + rows[0][1].toText() + \",\" + rows[1][0].toText() + \":\" + rows[1][1].toText());",
+    "",
+    "    /* 5. Value semantics of local copy from .item, and loop mut then .item (updated, break, empty, owned cleanup) */",
+    "    mut pts: List<m.Pt> = [m.Pt { x = cast<Float32>(1.0), y = cast<Float32>(2.0) }, m.Pt { x = cast<Float32>(3.0), y = cast<Float32>(4.0) }];",
+    "    loop mut pts {",
+    "        mut copy := .item;",
+    "        copy.x = cast<Float32>(999.0);",
+    "        .item.y += cast<Float32>(10.0);",
+    "        if .index == 0 { .item.x += cast<Float32>(5.0); }",
+    "    }",
+    "    io.outputLine(\"pts=\" + Int.trunc(pts[0].x).toText() + \":\" + Int.trunc(pts[0].y).toText() + \",\" + Int.trunc(pts[1].x).toText() + \":\" + Int.trunc(pts[1].y).toText());",
+    "",
+    "    mut owned: List<OwnedItem> = [OwnedItem { name = \"first\", nums = [10] }, OwnedItem { name = \"second\", nums = [20] }];",
+    "    thenOwned := loop mut owned as oi {",
+    "        mut oi.bump(1);",
+    "        if .index == 0 {",
+    "            mut .item.bump(2);",
+    "            break;",
+    "        }",
+    "    } then {",
+    "        .item.name + \":\" + .item.nums.length().toText() + \":\" + .item.nums[2].toText()",
+    "    };",
+    "    io.outputLine(\"thenOwned=\" + thenOwned);",
+    "",
+    "    mut emptyRng: List<m.Rng> = [];",
+    "    emptySummary := loop mut emptyRng {",
+    "        _ := mut .item.nextInt();",
+    "    } then {",
+    "        .count.toText() + \":\" + .item.state.toText()",
+    "    };",
+    "    io.outputLine(\"empty=\" + emptySummary);",
+    "};",
+    "main();"
+].join("\n");
+
+mainPath := path.join(p12Tmp.path, "main.lts");
+_wMain := fs.writeText(mainPath, mainSrc);
+
+tsCompile := compilerTest.compileFile(tsComp, p12Tmp.path, [mainPath]);
+test.checkInt("phase12 full TS compile: " + tsCompile.stderr, 0, tsCompile.status);
+tsRun := compilerTest.checkAndRunTs(root, tsCompile.stdout);
+test.checkInt("phase12 full TS check+run: " + tsRun.stderr, 0, tsRun.status);
+
+expectedOut := [
+    "true,s:42,5",
+    "ctx:15:15:12",
+    "0,0,int:5,str:hi,s:3=3",
+    "true,1,7,9,11,2,ctx:108",
+    "eq=true:220:514",
+    "arr=710,17,103",
+    "nums=10,12,14",
+    "rows=11:13,13:15",
+    "pts=6:12,3:14",
+    "thenOwned=first:3:2",
+    "empty=0:0"
+].join("\n") + "\n";
+test.checkText("phase12 full TS stdout", expectedOut, tsRun.stdout);
+
+if ccProbe.available {
+    cCompile := compilerTest.compileFile(cComp, p12Tmp.path, [mainPath]);
+    test.checkInt("phase12 full C compile: " + cCompile.stderr, 0, cCompile.status);
+    cRun := compilerTest.compileAndRunC(cCompile.stdout, ccProbe.cc, "");
+    test.checkInt("phase12 full C11 -Werror exit 0: " + cRun.stderr, 0, cRun.status);
+    test.checkText("phase12 full C11 stdout == TS stdout", tsRun.stdout, cRun.stdout);
+
+    sanTmp := fs.makeTempDir("lite-p12-san-");
+    test.check("makeTempDir san", sanTmp.ok);
+    sanCPath := path.join(sanTmp.path, "p12.c");
+    sanExe := path.join(sanTmp.path, "p12");
+    _ws := fs.writeText(sanCPath, cCompile.stdout);
+    sanCcOut := path.join(sanTmp.path, "cc.out");
+    sanCcErr := path.join(sanTmp.path, "cc.err");
+    sanCc := proc.runBytes(ccProbe.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined", "-fno-omit-frame-pointer", sanCPath, "-o", sanExe, "-lm"], sanTmp.path, emptyEnv(), 30000, emptyBytes(), sanCcOut, sanCcErr);
+    test.check("phase12 san cc: " + fs.readText(sanCcErr).text, sanCc.status == 0);
+    sanOut := path.join(sanTmp.path, "run.out");
+    sanErr := path.join(sanTmp.path, "run.err");
+    sanRun := proc.runBytes(sanExe, emptyEnv(), sanTmp.path, emptyEnv(), 15000, emptyBytes(), sanOut, sanErr);
+    test.checkInt("phase12 ASan/UBSan exit 0: " + fs.readText(sanErr).text, 0, sanRun.status);
+    test.checkText("phase12 ASan/UBSan stdout == TS stdout", tsRun.stdout, fs.readText(sanOut).text);
+    _rmSan := fs.remove(sanTmp.path);
+}
+_rmP12 := fs.remove(p12Tmp.path);
+
+/* 2. Compile-time rejection matrix */
+
+/* 2a. mut placement cutover rejections */
+compilerTest.assertCompileErrorContains(root, tsComp, "reject legacy name: mut T",
+    "main := fn(): Unit { xs: mut List<Int> = []; };",
+    "place mut before the variable name");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mut var order",
+    "main := fn(): Unit { mut var xs: List<Int> = []; };",
+    "write var mut, not mut var");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate mut mut",
+    "main := fn(): Unit { mut mut xs: List<Int> = []; };",
+    "duplicate mut qualifier");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate var var",
+    "main := fn(): Unit { var var x := 1; };",
+    "duplicate var qualifier");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject context(mut x: T)",
+    "f := fn() context(mut x: Int): Int { x };",
+    "place mut on the context slot type");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject context x: mut T",
+    "context x: mut Int := 1;",
+    "place mut before the context name");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate context mut x: mut T",
+    "context mut x: mut Int := 1;",
+    "duplicate mut qualifier");
+
+/* 2b. Contextual static call rejections */
+compilerTest.assertCompileErrorContains(root, tsComp, "reject leading-dot static call without expected type",
+    "R := record { n: Int; };\nR.create := fn(n: Int): R { R { n = n } };\nmain := fn(): Unit { x := .create(1); };",
+    "requires an expected type");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject unknown contextual static op",
+    "R := record { n: Int; };\nmain := fn(): Unit { r: R = .nope(1); };",
+    "has no static operation nope");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject instance op via contextual leading dot",
+    "R := record { n: Int; };\nR.get := fn(self: Self): Int { self.n };\nmain := fn(): Unit { r: R = .get(); };",
+    "instance operation");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject uncalled contextual static op",
+    "R := record { n: Int; };\nR.create := fn(n: Int): R { R { n = n } };\nmain := fn(): Unit { r: R = .create; };",
+    "must be called with (...)");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject ambiguous contextual static op vs loop metadata",
+    [
+        "R := record { v: Int; };",
+        "R.count := fn(): R { R { v = 1 } };",
+        "main := fn(): Unit {",
+        "    xs: List<R> = @outer loop [1] { .count() }.collected;",
+        "};"
+    ].join("\n"),
+    "ambiguous leading-dot .count");
+
+/* 2c. Writable loop iteration rejections */
+rngPreamble := [
+    "Rng := record { s: Int; };",
+    "Rng.create := fn(s: Int): Rng { Rng { s = s } };",
+    "Rng.step := fn(self: mut Self): Int { self.s += 1; self.s };",
+    "Rng.merge := fn(self: mut Self, o: mut Rng): Unit { self.s += o.s; o.s = 0; };",
+    "swapRng := fn(a: mut Rng, b: mut Rng): Unit { t := a.s; a.s = b.s; b.s = t; };",
+    "readAndMut := fn(a: Rng, b: mut Rng): Unit { b.s += a.s; };"
+].join("\n") + "\n";
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject loop mut on read-only binding",
+    rngPreamble + "main := fn(): Unit { xs: List<Rng> = [.create(1)]; loop mut xs as r { _ := mut r.step(); } };",
+    "read-only binding xs");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject loop mut on non-addressable temporary",
+    "main := fn(): Unit { loop mut [1, 2] { .item += 1; } };",
+    "addressable writable");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject loop mut on bit-packed array",
+    "main := fn(): Unit { mut bits: [Bool; 4] = [false, true, false, true]; loop mut bits as b { b = true; } };",
+    "bit-packed");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject loop mut on Map",
+    "main := fn(): Unit { mut m: Map<String, Int> = [\"a\" = 1]; loop mut m { } };",
+    "loop mut is not supported");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject loop mut on range",
+    "main := fn(): Unit { loop mut 0..3 as i { } };",
+    "not a range");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject direct container mutation during loop mut",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; loop mut xs { mut xs.pushBack(.create(2)); } };",
+    "cannot mutate xs while traversed by loop mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject whole source replacement during loop mut",
+    rngPreamble + "main := fn(): Unit { var mut xs: List<Rng> = [.create(1)]; loop mut xs { xs = [.create(2)]; } };",
+    "cannot mutate xs while traversed by loop mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject index write to source during loop mut",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; loop mut xs { xs[0] = .create(9); } };",
+    "cannot mutate xs while traversed by loop mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject nested loop mut on same source",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; loop mut xs as a { loop mut xs as b { _ := mut a.step() + mut b.step(); } } };",
+    "cannot mutate xs while traversed by loop mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mut r and mut .item in same call",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; loop mut xs as r { swapRng(mut r, mut .item); } };",
+    "multiple times as mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject r and mut .item in same call",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; loop mut xs as r { readAndMut(r, mut .item); } };",
+    "both read-only and mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mut r and .item in same call",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; loop mut xs as r { readAndMut(.item, mut r); } };",
+    "both read-only and mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mut r.merge(mut .item)",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; loop mut xs as r { mut r.merge(mut .item); } };",
+    "multiple times as mut");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mut .item method call in then",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; _ := loop mut xs { } then { mut .item.step() }; };",
+    "cannot mutate .item in loop then block");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject .item field assignment in then",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; _ := loop mut xs { } then { .item.s = 9; 1 }; };",
+    "cannot mutate .item in loop then block");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject mut .item in read-only loop",
+    rngPreamble + "main := fn(): Unit { mut xs: List<Rng> = [.create(1)]; loop xs { _ := mut .item.step(); } };",
+    "cannot mutate .item in a read-only loop");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject .item assignment in read-only loop",
+    "main := fn(): Unit { xs := [1, 2]; loop xs { .item = 9; } };",
+    "cannot mutate .item in a read-only loop");
+
+test.done("phase12-mut-static-and-loops");

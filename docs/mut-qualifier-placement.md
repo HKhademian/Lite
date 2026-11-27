@@ -1,6 +1,6 @@
 # Where mut belongs in typed declarations
 
-Status: **`mut name: T` selected for variable definitions and `name: mut T` for access contracts, 2026-11-27.** The [compiler migration](#planned-variable-definition-migration) is pending. The pre-migration compiler uses `name: mut T` for annotated writable variable definitions.
+Status: **`mut name: T` selected for variable definitions and `name: mut T` for access contracts, 2026-11-27.** Implemented on both TypeScript and C11 backends: prefix `mut name: T` and `var mut name: T` (alongside aligned `context` placement and contextual static calls) are shipped, and legacy `name: mut T` whole-variable definitions are rejected.
 
 ## Variable definitions
 
