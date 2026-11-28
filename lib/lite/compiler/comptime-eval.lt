@@ -1075,27 +1075,7 @@ baseNominalName := fn(kind: String): String {
 };
 
 splitCanonicalNominalArgs := fn(kind: String): List<String> {
-    mut out: List<String> = [];
-    disp := rawNominalDisplay(kind);
-    lt := disp.indexOf("<", 0);
-    if lt < 0 or not disp.endsWith(">") { return out; }
-    argsStr := disp.slice(lt + 1, disp.length() - 1);
-    if argsStr == "" { return out; }
-    var pos := 0;
-    var start := 0;
-    var depth := 0;
-    loop pos < argsStr.length() {
-        ch := argsStr.at(pos);
-        if ch == "<" or ch == "(" or ch == "[" { depth = depth + 1; }
-        else if ch == ">" or ch == ")" or ch == "]" { if depth > 0 { depth = depth - 1; } }
-        else if ch == "," and depth == 0 {
-            mut out.pushBack(argsStr.slice(start, pos).trim());
-            start = pos + 1;
-        }
-        pos = pos + 1;
-    }
-    if start < argsStr.length() { mut out.pushBack(argsStr.slice(start, argsStr.length()).trim()); }
-    out
+    types.nominalTypeArgs(kind)
 };
 
 findTopLevelRangeOp := fn(source: String, startPos: Int, limitPos: Int, prefix: String): (found: Bool, pos: Int, width: Int, inclusive: Bool) {
