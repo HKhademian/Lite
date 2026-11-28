@@ -74,7 +74,7 @@ audio.tone(440, 100, 101);
 test.checkInt("invalid tones ignored", 0, countList(audio.drain()));
 
 audio.tone(440, 180, 25);
-note: audio.Note = (frequency = 523, durationMs = 120, volume = 40);
+note := audio.Note { frequency = 523, durationMs = 120, volume = 40 };
 audio.playNote(note);
 tones := audio.drain();
 test.checkInt("two valid tones queued", 6, countList(tones));

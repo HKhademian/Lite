@@ -9222,17 +9222,41 @@ usesExtraCanvasBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$extraCanvasScratchMark(") or usesIntHelper(calls, "lite$extraCanvasScratchRewind(")
 };
 
+isMatchingCanvasRec := fn(cand: String, name: String, suffix: String): Bool {
+    frontend.isRecordKind(cand) and not frontend.isAnonRecordKind(cand) and frontend.recordDisplayName(cand) == name and cand.endsWith(suffix)
+};
+
+/** Resolves a nominal `gfx/surface` record kind from collected `seedKinds` (and their sub-kinds) by name and field layout, falling back to `fallback`. */
+findCanvasRecordKind := fn(seedKinds: List<String>, name: String, fields: String, fallback: String): String {
+    suffix := ";" + fields + ">";
+    loop seedKinds as sk {
+        if isMatchingCanvasRec(sk, name, suffix) {
+            return sk;
+        }
+        subs := collectSubKinds(sk);
+        loop subs as sub {
+            if sub.startsWithAt(0, "S|") {
+                cand := sub.slice(2, sub.length());
+                if isMatchingCanvasRec(cand, name, suffix) {
+                    return cand;
+                }
+            }
+        }
+    }
+    fallback
+};
+
 /** Emits the self-contained C11 `gfx/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder + vitals). */
-emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
+emitCExtraCanvasHelpers := fn(calls: Set<String>, ptKind: String, rcKind: String, inpKind: String, vitKind: String, bndKind: String): Unit {
     if not usesExtraCanvasBuiltins(calls) { return; }
     surfTag := frontend.cStructTag("(handle:Int)");
     texTag := frontend.cStructTag("(handle:Int,width:Int,height:Int)");
     colTag := frontend.cStructTag("(r:Float,g:Float,b:Float,a:Float)");
-    ptTag := frontend.cStructTag("(x:Float,y:Float)");
-    rcTag := frontend.cStructTag("(x:Float,y:Float,width:Float,height:Float)");
-    inpTag := frontend.cStructTag("(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
-    vitTag := frontend.cStructTag("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int,heapAllocs:Int,liveBytes:Int,tempPeakBytes:Int)");
-    bndTag := frontend.cStructTag("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
+    ptTag := frontend.cStructTag(ptKind);
+    rcTag := frontend.cStructTag(rcKind);
+    inpTag := frontend.cStructTag(inpKind);
+    vitTag := frontend.cStructTag(vitKind);
+    bndTag := frontend.cStructTag(bndKind);
     okErrTag := frontend.cStructTag("(ok:Bool,error:String)");
     outLine("typedef struct { int w; int h; int x; int y; bool fullscreen; uint8_t *pixels; size_t pixels_bytes; bool has_clip; int clip_x0; int clip_y0; int clip_x1; int clip_y1; bool open; double px; double py; bool pdown; bool prev_pdown; bool ppressed; bool preleased; double wheel_y; double pending_wheel_y; char key[16]; char key_out[16]; char keys_down[32][16]; int keys_down_n; char keys_prev[32][16]; int keys_prev_n; char keys_pressed[32][16]; int keys_pressed_n; char keys_released[32][16]; int keys_released_n; int64_t last_ms; int64_t frame_start_ns; int64_t frame_count; double target_fps; double last_frame_ms; double avg_frame_ms; int64_t auto_frame_mark; bool headless; void *win; void *view; } lt_canvas_state;");
     outLine("static lt_canvas_state lt_canvas_slots[16];");
@@ -9530,7 +9554,7 @@ emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     outLine("    memset(s, 0, sizeof(*s));");
     outLine("}");
     if usesIntHelper(calls, "lite$extraCanvasRun(") {
-        runFnTag := frontend.cFnTag("fn(:(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)):Bool");
+        runFnTag := frontend.cFnTag("fn(:" + inpKind + "):Bool");
         outLine("LT_INLINE void lt_canvas_run(" + surfTag + " surf, " + runFnTag + " on_frame) {");
         outLine("    bool prev_in = lt_tl_ctx.in_frame; lt_tl_ctx.in_frame = true;");
         outLine("    for (;;) {");
@@ -10347,18 +10371,23 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
         }
     }
     hasExtraCanvas := usesExtraCanvasBuiltins(calls);
+    ptCanvasKind := findCanvasRecordKind(seedKinds, "Point", "x:Float,y:Float", "(x:Float,y:Float)");
+    rcCanvasKind := findCanvasRecordKind(seedKinds, "Rect", "x:Float,y:Float,width:Float,height:Float", "(x:Float,y:Float,width:Float,height:Float)");
+    inpCanvasKind := findCanvasRecordKind(seedKinds, "FrameInput", "open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int", "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
+    vitCanvasKind := findCanvasRecordKind(seedKinds, "Vitals", "frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int,heapAllocs:Int,liveBytes:Int,tempPeakBytes:Int", "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int,heapAllocs:Int,liveBytes:Int,tempPeakBytes:Int)");
+    bndCanvasKind := findCanvasRecordKind(seedKinds, "Bounds", "x:Int,y:Int,width:Int,height:Int,fullscreen:Bool", "(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
     if hasExtraCanvas {
         mut seedKinds.pushBack("(handle:Int)");
         mut seedKinds.pushBack("(handle:Int,width:Int,height:Int)");
         mut seedKinds.pushBack("(r:Float,g:Float,b:Float,a:Float)");
-        mut seedKinds.pushBack("(x:Float,y:Float)");
-        mut seedKinds.pushBack("(x:Float,y:Float,width:Float,height:Float)");
-        mut seedKinds.pushBack("(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)");
-        mut seedKinds.pushBack("(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int,heapAllocs:Int,liveBytes:Int,tempPeakBytes:Int)");
-        mut seedKinds.pushBack("(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)");
+        mut seedKinds.pushBack(ptCanvasKind);
+        mut seedKinds.pushBack(rcCanvasKind);
+        mut seedKinds.pushBack(inpCanvasKind);
+        mut seedKinds.pushBack(vitCanvasKind);
+        mut seedKinds.pushBack(bndCanvasKind);
         mut seedKinds.pushBack("(ok:Bool,error:String)");
         if usesIntHelper(calls, "lite$extraCanvasRun(") {
-            mut seedKinds.pushBack("fn(:(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)):Bool");
+            mut seedKinds.pushBack("fn(:" + inpCanvasKind + "):Bool");
         }
     }
     if hasCallPrefix(calls, "lt_list_i64_") { mut seedKinds.pushBack("List<Int>"); }
@@ -11433,7 +11462,7 @@ pub emitProgramWithConfig := fn(items: frontend.Items, source: String, prefix: S
     }
     emitCHostBuiltinHelpers(calls);
     emitCSoftBuiltinHelpers(calls, config);
-    emitCExtraCanvasHelpers(calls);
+    emitCExtraCanvasHelpers(calls, ptCanvasKind, rcCanvasKind, inpCanvasKind, vitCanvasKind, bndCanvasKind);
     emitCVmArenaHelpers(calls);
     if hasFunctions {
         if hasFnOutput { outLine("static int lt_io_status = 0;"); }

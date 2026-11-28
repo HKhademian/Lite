@@ -1,7 +1,16 @@
 /* Optional Web Audio tone queue for Lite Play programs. */
 
 /** Validated tone request in hertz (20..20000), milliseconds (1..3000), and percent volume (1..100). */
-pub Note := alias (frequency: Int, durationMs: Int, volume: Int);
+pub Note := record {
+    frequency: Int;
+    durationMs: Int;
+    volume: Int;
+}
+
+/** Constructs a `Note` with `frequency` Hz, `durationMs` ms, and `volume` (1..100). */
+pub Note.of := fn(frequency: Int, durationMs: Int, volume: Int): Self {
+    Self { =frequency, =durationMs, =volume }
+};
 
 var mut toneQueue: List<Int> = [];
 

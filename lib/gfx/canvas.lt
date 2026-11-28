@@ -8,22 +8,16 @@ surfLib := import "./surface";
 pub Color := alias Int;
 
 /** Canvas dimensions and window title returned by setup and query calls. */
-pub Context := alias (width: Int, height: Int, title: String);
+pub Context := record {
+    width: Int;
+    height: Int;
+    title: String;
+}
 
 /** Encoded canvas draw command opcode matching the Play stage wire format. */
 CanvasOp := enum: Int {
     Clear = 1;
     FillRect = 2;
-};
-
-decodeCanvasOp := fn(raw: Int): Option<CanvasOp> {
-    if raw == CanvasOp.Clear.value {
-        .Some(CanvasOp.Clear)
-    } else if raw == CanvasOp.FillRect.value {
-        .Some(CanvasOp.FillRect)
-    } else {
-        .None
-    }
 };
 
 /** Maximum 8-bit color channel intensity (`0..255`). */
@@ -66,6 +60,10 @@ pub rgb := fn(red: Int, green: Int, blue: Int): Color {
     rgba(=red, =green, =blue, alpha = OPAQUE_ALPHA)
 }
 
+makeContext := fn(): Context {
+    Context { width = canvasWidth, height = canvasHeight, title = canvasTitle }
+};
+
 /** Configures a static canvas context using `width`, `height`, and `title`. */
 pub create := fn(width: Int, height: Int, title: String): Context {
     canvasWidth = clampSize(width);
@@ -76,7 +74,7 @@ pub create := fn(width: Int, height: Int, title: String): Context {
     canvasPixels = [];
     canvasOps = [];
     canvasDrawCount += 1;
-    (width = canvasWidth, height = canvasHeight, title = canvasTitle)
+    makeContext()
 }
 
 /** Configures an interactive animated canvas context and starts Play mode. */
@@ -89,7 +87,7 @@ pub play := fn(width: Int, height: Int, title: String): Context {
     canvasPixels = [];
     canvasOps = [];
     canvasDrawCount += 1;
-    (width = canvasWidth, height = canvasHeight, title = canvasTitle)
+    makeContext()
 }
 
 /** Resizes the active canvas while keeping its play mode and title. */
@@ -99,12 +97,12 @@ pub resize := fn(width: Int, height: Int): Context {
     canvasPixels = [];
     canvasOps = [];
     canvasDrawCount += 1;
-    (width = canvasWidth, height = canvasHeight, title = canvasTitle)
+    makeContext()
 }
 
 /** Returns the active canvas context snapshot. */
 pub context := fn(): Context {
-    (width = canvasWidth, height = canvasHeight, title = canvasTitle)
+    makeContext()
 }
 
 /** Clears the active canvas using its latest configured dimensions and `color`. */
@@ -229,7 +227,7 @@ pub flushToSurface := fn(win: surfLib.Surface, scale: Int, lastDrawCount: Int, m
     n := ops.length();
     var i := 0;
     loop i < n {
-        match decodeCanvasOp(ops[i]) {
+        match CanvasOp.from(ops[i]) {
             .Some(op) {
                 match op {
                     .Clear {

@@ -18,10 +18,10 @@ canvas.rgb(240, 180, 90),
 canvas.rgb(198, 154, 232),
 ];
 notes: List<audio.Note> = [
-(frequency = 262, durationMs = 160, volume = 20),
-(frequency = 330, durationMs = 160, volume = 20),
-(frequency = 392, durationMs = 160, volume = 20),
-(frequency = 523, durationMs = 200, volume = 22),
+audio.Note.of(262, 160, 20),
+audio.Note.of(330, 160, 20),
+audio.Note.of(392, 160, 20),
+audio.Note.of(523, 200, 22),
 ];
 
 var stepIndex := 0;

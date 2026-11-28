@@ -19,10 +19,20 @@ pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {
     moduleIdentity == "lite.ds.arena.v1"
 };
 
-/** Normalizes one canonical parameter/result kind for host ABI matching by unwrapping nominal `distinct` wrappers to `Name@BaseKind`. */
+/** Normalizes one canonical parameter/result kind for host ABI matching by unwrapping nominal `distinct` and `record` wrappers. */
 normalizeHostAbiKind := fn(kind: String): String {
     if types.isDistinctKind(kind) {
         return types.distinctDisplayName(kind) + "@" + types.distinctBaseKind(kind);
+    }
+    if types.isRecordKind(kind) and not types.isAnonRecordKind(kind) {
+        semi := kind.indexOf(";", 0);
+        if semi > 7 and kind.length() > semi + 1 {
+            return types.recordDisplayName(kind) + "@(" + kind.slice(semi + 1, kind.length() - 1) + ")";
+        }
+    }
+    if kind.startsWithAt(0, "fn(:") and kind.endsWith("):Bool") {
+        inner := kind.slice(4, kind.length() - 6);
+        return "fn(:" + self(inner) + "):Bool";
     }
     kind
 };
@@ -65,9 +75,9 @@ extraHostFunction := fn(moduleIdentity: String, name: String, rawParams: String,
     if moduleIdentity == "lite.gfx.surface.v1" {
         params := normalizeHostAbiParams(rawParams);
         result := normalizeHostAbiKind(rawResult);
-        pt := "(x:Float,y:Float)";
-        rc := "(x:Float,y:Float,width:Float,height:Float)";
-        inp := "(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)";
+        pt := "Point@(x:Float,y:Float)";
+        rc := "Rect@(x:Float,y:Float,width:Float,height:Float)";
+        inp := "FrameInput@(open:Bool,width:Int,height:Int,pointerX:Float,pointerY:Float,pointerDown:Bool,key:String,deltaMs:Int)";
         dSurf := "Surface@(handle:Int)";
         dTex := "Texture@(handle:Int,width:Int,height:Int)";
         dCol := "Color@(r:Float,g:Float,b:Float,a:Float)";
@@ -84,9 +94,9 @@ extraHostFunction := fn(moduleIdentity: String, name: String, rawParams: String,
         else if name == "Surface.drawText" and params == "surface=" + dSurf + "|content=String|at=" + pt + "|size=Float|fill=" + dCol and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasDrawText" }
         else if name == "Surface.capture" and params == "surface=" + dSurf + "|outPath=String" and result == "(ok:Bool,error:String)" { "lite$extraCanvasCapture" }
         else if name == "Surface.setTargetFps" and params == "surface=" + dSurf + "|fps=Float" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetTargetFps" }
-        else if name == "Surface.vitals" and params == "surface=" + dSurf and result == "(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int,heapAllocs:Int,liveBytes:Int,tempPeakBytes:Int)" { "lite$extraCanvasVitals" }
+        else if name == "Surface.vitals" and params == "surface=" + dSurf and result == "Vitals@(frameCount:Int,frameTimeMs:Float,avgFrameTimeMs:Float,fps:Float,targetFps:Float,cpuTimeMs:Float,memoryBytes:Int,heapAllocs:Int,liveBytes:Int,tempPeakBytes:Int)" { "lite$extraCanvasVitals" }
         else if name == "Surface.playTone" and params == "surface=" + dSurf + "|frequency=Int|durationMs=Int|volume=Int" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasPlayTone" }
-        else if name == "Surface.bounds" and params == "surface=" + dSurf and result == "(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)" { "lite$extraCanvasBounds" }
+        else if name == "Surface.bounds" and params == "surface=" + dSurf and result == "Bounds@(x:Int,y:Int,width:Int,height:Int,fullscreen:Bool)" { "lite$extraCanvasBounds" }
         else if name == "Surface.resize" and params == "surface=" + dSurf + "|width=Int|height=Int" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasResize" }
         else if name == "Surface.setFullscreen" and params == "surface=" + dSurf + "|enabled=Bool" and result == ir.VALUE_KIND_UNIT { "lite$extraCanvasSetFullscreen" }
         else if name == "Surface.isKeyDown" and params == "surface=" + dSurf + "|key=String" and result == ir.VALUE_KIND_BOOL { "lite$extraCanvasIsKeyDown" }

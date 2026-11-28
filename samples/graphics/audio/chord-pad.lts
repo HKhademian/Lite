@@ -45,9 +45,9 @@ render := fn(): Unit {
 playChord := fn(idx: Int): Unit {
     selected = idx;
     render();
-    audio.playNote((frequency = roots[idx], durationMs = 280, volume = 14));
-    audio.playNote((frequency = thirds[idx], durationMs = 280, volume = 13));
-    audio.playNote((frequency = fifths[idx], durationMs = 280, volume = 13));
+    audio.playNote(audio.Note.of(roots[idx], 280, 14));
+    audio.playNote(audio.Note.of(thirds[idx], 280, 13));
+    audio.playNote(audio.Note.of(fifths[idx], 280, 13));
 }
 
 onCanvasInit := fn(): Unit {
