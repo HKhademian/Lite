@@ -216,8 +216,27 @@ export const playSamples: readonly PlaySample[] = [
     args: [],
     stdin: '',
   },
+  {
+    id: 'play-surface-ripples',
+    group: 'play-interactive',
+    title: 'Surface 2D Ripples',
+    note: 'Pure 2D `gfx/surface` and `gfx/color` ripple study with pointer click spawn, Space palette shift, and nominal `Point`/`Rect` types (360×220).',
+    file: 'samples/graphics/interactive/surface-ripples.lts',
+    args: [],
+    stdin: '',
+  },
 
   /* Audio & Synth */
+  {
+    id: 'play-pure-chime-scale',
+    group: 'play-audio',
+    title: 'Pure Audio Chime Scale',
+    note: 'Pure `media/audio` pentatonic chime sequence using `audio.Note` and `audio.playNote` without canvas boilerplate.',
+    file: 'samples/graphics/audio/pure-chime-scale.lts',
+    args: [],
+    stdin: '',
+    showOutput: true,
+  },
   {
     id: 'play-arpeggio',
     group: 'play-audio',

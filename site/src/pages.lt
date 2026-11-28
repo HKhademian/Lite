@@ -593,6 +593,8 @@ renderPlaygroundBody := fn(src: String): String {
     "      <button class=\"snips-cat-tab\" type=\"button\" data-template=\"stdin\">Input &amp; Loops</button>",
     "      <button class=\"snips-cat-tab\" type=\"button\" data-template=\"canvas\">Canvas Scene</button>",
     "      <button class=\"snips-cat-tab\" type=\"button\" data-template=\"play\">Play Loop</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-template=\"surface\">2D Surface</button>",
+    "      <button class=\"snips-cat-tab\" type=\"button\" data-template=\"audio\">Audio Chime</button>",
     "    </div>",
     "    <div id=\"pg-sketches-cat-tabs\" class=\"snips-cat-tabs\" role=\"group\" aria-label=\"Code categories\">",
     "      <button class=\"snips-cat-tab\" type=\"button\" data-cat=\"all\" aria-pressed=\"true\">All</button>",

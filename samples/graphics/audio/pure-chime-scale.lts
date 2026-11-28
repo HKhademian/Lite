@@ -1,0 +1,18 @@
+/* Pure Web Audio C-major pentatonic chime cascade using `media/audio` without `gfx/canvas`. */
+
+audio := import "media/audio";
+io := import "core/io";
+
+scale: List<audio.Note> = [
+audio.Note.of(262, 160, 26),
+audio.Note.of(294, 160, 28),
+audio.Note.of(330, 160, 30),
+audio.Note.of(392, 180, 32),
+audio.Note.of(440, 180, 34),
+audio.Note.of(523, 280, 38),
+];
+
+loop scale as note {
+    audio.playNote(note);
+    io.outputLine("Queued chime", note.frequency, "Hz", note.durationMs, "ms");
+}

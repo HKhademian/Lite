@@ -2281,6 +2281,18 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
       stdin: "",
       args: "",
     },
+    surface: {
+      title: "2D Surface",
+      code: 'color := import "gfx/color";\\nsurf := import "gfx/surface";\\n\\nwin := surf.Surface.open("Surface Sketch", 240, 150);\\nvar x := 24.0;\\nwin.run(fn(inp: surf.FrameInput): Bool {\\n  if not inp.open or inp.key == "Escape" { return false; }\\n  x = x + 1.8;\\n  if x >= 210.0 { x = 0.0; }\\n  win.clear(color.Color.fromRgb(0.05, 0.08, 0.14));\\n  win.fillRect(surf.Rect.of(12.0, 12.0, 216.0, 126.0), color.Color.fromRgb(0.10, 0.14, 0.22));\\n  win.fillCircle(surf.Point.of(x + 15.0, 75.0), 16.0, color.Color.CYAN);\\n  true\\n});\\nwin.close();\\n',
+      stdin: "",
+      args: "",
+    },
+    audio: {
+      title: "Audio Chime",
+      code: 'audio := import "media/audio";\\nio := import "core/io";\\n\\nnotes := [audio.Note.of(392, 160, 28), audio.Note.of(494, 160, 30), audio.Note.of(587, 220, 34)];\\nloop notes as n {\\n  audio.playNote(n);\\n  io.outputLine("Note:", n.frequency, "Hz");\\n}\\n',
+      stdin: "",
+      args: "",
+    },
   };
   function loadTemplate(key, autoRun) {
     const tpl = key ? STARTER_TEMPLATES[key] : null;

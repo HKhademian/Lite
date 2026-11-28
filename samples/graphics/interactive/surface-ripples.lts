@@ -1,0 +1,84 @@
+/* Pure 2D interactive ripple rings using `gfx/surface` and `gfx/color` directly. */
+
+color := import "gfx/color";
+math := import "math/scalar";
+surf := import "gfx/surface";
+proc := import "core/process";
+
+Ripple := record {
+    x: Float;
+    y: Float;
+    radius: Float;
+    hue: Float;
+    alpha: Float;
+}
+
+W := 360;
+H := 220;
+hlEnv := proc.envGet("LITE_CANVAS_HEADLESS");
+headless := hlEnv.found and hlEnv.value == "1";
+
+win := surf.Surface.open("Surface 2D Ripples", W, H);
+win.setTargetFps(60.0);
+
+var mut ripples: List<Ripple> = [
+Ripple { x = 110.0, y = 110.0, radius = 14.0, hue = 195.0, alpha = 0.9 },
+Ripple { x = 240.0, y = 95.0, radius = 28.0, hue = 32.0, alpha = 0.75 },
+];
+var baseHue := 195.0;
+var frame := 0;
+var wasDown := false;
+
+wrapDeg := fn(deg: Float): Float {
+    var d := deg;
+    loop d >= 360.0 { d = d - 360.0; }
+    d
+};
+
+win.run(fn(inp: surf.FrameInput): Bool {
+    if not inp.open or inp.key == "Escape" or inp.key == "q" {
+        return false;
+    }
+    dt := math.min(0.05, math.max(0.001, inp.deltaMs * 0.001));
+
+    if inp.key == " " {
+        baseHue = wrapDeg(baseHue + 55.0);
+    }
+    clicked := inp.pointerDown and not wasDown;
+    wasDown = inp.pointerDown;
+    if clicked or (frame % 36 == 0 and ripples.length() < 10) {
+        sx := if clicked { inp.pointerX } else { 70.0 + ((frame * 53) % 220) * 1.0 };
+        sy := if clicked { inp.pointerY } else { 55.0 + ((frame * 37) % 110) * 1.0 };
+        mut ripples.pushBack(Ripple {
+            x = sx,
+            y = sy,
+            radius = 8.0,
+            hue = wrapDeg(baseHue + (ripples.length() * 24) * 1.0),
+            alpha = 0.95
+        });
+    }
+
+    win.clear(color.Color.fromRgb(0.04, 0.06, 0.11));
+    win.fillRect(surf.Rect.of(10.0, 10.0, (W - 20) * 1.0, (H - 20) * 1.0), color.Color.fromRgba(0.08, 0.11, 0.18, 0.75));
+    win.strokeRect(surf.Rect.of(10.0, 10.0, (W - 20) * 1.0, (H - 20) * 1.0), 1.5, color.Color.CYAN.withAlphaFloat(0.45));
+
+    mut nextRipples: List<Ripple> = [];
+    loop ripples as rp {
+        nr := rp.radius + (42.0 * dt);
+        na := rp.alpha - (0.38 * dt);
+        if na > 0.05 and nr < 130.0 {
+            ringCol := color.Color.fromHsl(rp.hue, 0.85, 0.62).withAlphaFloat(na);
+            center := surf.Point.of(rp.x, rp.y);
+            win.fillCircle(center, nr, ringCol.withAlphaFloat(na * 0.25));
+            win.fillCircle(center, nr * 0.55, ringCol);
+            mut nextRipples.pushBack(Ripple { x = rp.x, y = rp.y, radius = nr, hue = rp.hue, alpha = na });
+        }
+    }
+    ripples = nextRipples;
+
+    win.drawText("Click to ripple | Space: shift hue", surf.Point.of(18.0, 18.0), 8.0, color.Color.WHITE);
+    frame += 1;
+    not headless or frame < 3
+});
+
+win.close();
