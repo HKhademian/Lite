@@ -318,6 +318,38 @@ collectPublicDeclsWithVisited := fn(graph: frontend.Items, path: String, seenPat
     result
 };
 
+/** Returns synthetic `$BuiltinFamily:` exports when an in-progress core owner module is imported cyclically during root core preloading. */
+coreCycleFamilyExports := fn(depPath: String, modAlias: String): frontend.Items {
+    normDep := normalizeSlashes(depPath);
+    if normDep.endsWith("/lib/core/slice.lt") {
+        return [
+            (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.core.slice.v1", intValue = 0, textValue = depPath),
+            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".Slice", runtime = "", code = "$BuiltinFamily:Slice", intValue = 0, textValue = "")
+        ];
+    }
+    if normDep.endsWith("/lib/core/rc.lt") {
+        return [
+            (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.core.rc.v1", intValue = 0, textValue = depPath),
+            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".Rc", runtime = "", code = "$BuiltinFamily:Rc", intValue = 0, textValue = "")
+        ];
+    }
+    if normDep.endsWith("/lib/core/simd.lt") {
+        return [
+            (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.core.simd.v1", intValue = 0, textValue = depPath),
+            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".Simd", runtime = "", code = "$BuiltinFamily:Simd", intValue = 0, textValue = ""),
+            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".SimdNative", runtime = "", code = "$BuiltinFamily:SimdNative", intValue = 0, textValue = "")
+        ];
+    }
+    if normDep.endsWith("/lib/core/soa.lt") {
+        return [
+            (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.core.soa.v1", intValue = 0, textValue = depPath),
+            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".SoA", runtime = "", code = "$BuiltinFamily:SoA", intValue = 0, textValue = "")
+        ];
+    }
+    empty: frontend.Items = [];
+    empty
+};
+
 /** Returns public declaration records for one completed source module. */
 modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.Items {
     emptySeen: Set<String>;
@@ -773,6 +805,40 @@ resolveCoreModules := fn(target: String, initialGraph: frontend.Items, builtinSp
     stripCoreMeta(spliceGenericItems(graph, allMonoItems))
 }
 
+/** Records missing `ImportEdge` and `ModuleLoaded` trace records for already-visited core owner modules when imported by a traced module. */
+recordTransitiveCoreTraces := fn(
+target: String, initialGraph: frontend.Items, modPath: String, projectRoot: String, cwd: String, seen: mut Set<String>
+): frontend.Items {
+    if seen.has(modPath) { return initialGraph; }
+    mut seen.add(modPath);
+    var src := "";
+    var foundSrc := false;
+    loop initialGraph as item {
+        if item.kind == frontend.ITEM_KIND_CORE_MODULE_SOURCE and item.name == modPath {
+            src = item.code;
+            foundSrc = true;
+            break;
+        }
+    }
+    if not foundSrc { return initialGraph; }
+    var mut graph: frontend.Items = initialGraph;
+    clauses := frontend.collectImportClauses(target, src, modPath);
+    loop clauses as clause {
+        loaded := hostFs.readImportedSource(importerPath = modPath, importerDisplay = modPath, spec = clause.textValue,
+        =projectRoot, =cwd);
+        if not importEdgeRecorded(graph, modPath, clause.textValue, loaded.path) {
+            mut graph.pushBack((kind = frontend.ITEM_KIND_IMPORT_EDGE, name = modPath, runtime = loaded.path,
+            code = clause.textValue, intValue = 0, textValue = ""));
+        }
+        if not moduleLoadRecorded(graph, loaded.path) {
+            mut graph.pushBack((kind = frontend.ITEM_KIND_MODULE_LOADED, name = loaded.path, runtime = "",
+            code = "", intValue = 0, textValue = ""));
+        }
+        graph = self(=target, initialGraph = graph, modPath = loaded.path, =projectRoot, =cwd, seen = mut seen);
+    }
+    graph
+};
+
 /** True if `path` already has a `ModuleLoaded` trace record in `graph`. */
 moduleLoadRecorded := fn(graph: frontend.Items, path: String): Bool {
     loop graph as item {
@@ -844,8 +910,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
 
-    skipPreload := normPath.endsWith("/$preload.lt") or normPath.endsWith("/lib/core/option.lt") or
-    normPath.endsWith("/lib/core/slice.lt") or normPath.endsWith("/lib/core/diag.lt") or normPath.endsWith("/lib/core/io.lt");
+    skipPreload := frontend.isHostModuleIdentity(identity) or normPath.endsWith("/$preload.lt") or normPath.contains("/lib/core/") or display.startsWithAt(0, "lib/core/");
     pkgPreloadMod := if not skipPreload {
         hostFs.findPackagePreload(path, rootDir, projectRoot)
     } else {
@@ -866,6 +931,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
 
+    traceActive := isRoot or moduleLoadRecorded(graph, path);
     clauses := frontend.collectImportClauses(target, source, path);
     mut clausePaths: List<String> = [];
     mut depPaths: List<String> = [];
@@ -878,13 +944,19 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     loop clauses as clause {
         loaded := hostFs.readImportedSource(importerPath = path, importerDisplay = display, spec = clause.textValue,
         =projectRoot, =cwd);
-        if not importEdgeRecorded(graph, path, clause.textValue, loaded.path) {
-            mut graph.pushBack((kind = frontend.ITEM_KIND_IMPORT_EDGE, name = path, runtime = loaded.path,
-            code = clause.textValue, intValue = 0, textValue = ""));
-        }
-        if not moduleLoadRecorded(graph, loaded.path) {
-            mut graph.pushBack((kind = frontend.ITEM_KIND_MODULE_LOADED, name = loaded.path, runtime = "",
-            code = "", intValue = 0, textValue = ""));
+        if traceActive {
+            if not importEdgeRecorded(graph, path, clause.textValue, loaded.path) {
+                mut graph.pushBack((kind = frontend.ITEM_KIND_IMPORT_EDGE, name = path, runtime = loaded.path,
+                code = clause.textValue, intValue = 0, textValue = ""));
+            }
+            if not moduleLoadRecorded(graph, loaded.path) {
+                mut graph.pushBack((kind = frontend.ITEM_KIND_MODULE_LOADED, name = loaded.path, runtime = "",
+                code = "", intValue = 0, textValue = ""));
+            }
+            if moduleVisited(graph, loaded.path) {
+                mut coreSeen: Set<String>;
+                graph = recordTransitiveCoreTraces(=target, initialGraph = graph, modPath = loaded.path, =projectRoot, =cwd, seen = mut coreSeen);
+            }
         }
         (mut clausePaths).pushBack(loaded.path);
         if not depPathSet.has(loaded.path) {
@@ -943,6 +1015,11 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
                 moduleAliasExports(graph, depPath, clause.name)
             };
             importedExports = appendModuleExports(importedExports, incomingClauseExports, path);
+        } else if clause.code =!= "unpack" and clause.code =!= "pub_unpack" {
+            cyclicFamily := coreCycleFamilyExports(depPath, clause.name);
+            if cyclicFamily.length() > 0 {
+                importedExports = appendModuleExports(importedExports, cyclicFamily, path);
+            }
         }
         clauseIndex = clauseIndex + 1;
     }

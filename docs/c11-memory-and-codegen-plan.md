@@ -77,7 +77,7 @@ All random system `malloc`/`calloc`/`realloc`/`free` calls in user and stdlib ru
 | Phase | Scope | Verification Gate |
 | --- | --- | --- |
 | **Phase 0** *(completed)* | Record this architecture specification and cross-link owning docs | `node site/build.ts` + link/fragment validation pass |
-| **Phase 1** *(completed)* | Hardware overflow builtins (`__builtin_*_overflow`), `LT_UNLIKELY`/`LT_COLD`, and `static const` module constants in [emit-c.lt](lite://repo/compiler/src/emit-c.lt) | Overflow/division parity tests, full TS/C verification, Gen1/Gen2/Gen3 bootstrap, paired C11 benchmark |
+| **Phase 1** *(completed)* | Hardware overflow builtins (`__builtin_*_overflow`), `LT_UNLIKELY`/`LT_COLD`, and `static const` module constants in [emit-c.lt](lite://repo/lib/lite/compiler/emit-c.lt) | Overflow/division parity tests, full TS/C verification, Gen1/Gen2/Gen3 bootstrap, paired C11 benchmark |
 | **Phase 2** *(completed)* | Inline `[T; N]` (with bit-packed 1/2/4-bit arrays), `Int1..64` / `UInt1..64` / `Float8` (E4M3) / `Float16` (`_Float16`) / `Float32` / `Float64`, bitwise + wrapping + unchecked methods, pure-Lite SHA-256/512 | Pure-Lite C11 SHA-256 matches C speeds (~34 ms -> ~1–2 ms); `Vec`/`Mat` math = 0 `malloc`s; full TS/C parity + bootstrap |
 | **Phase 3** *(completed)* | `lt_vm_arena`, 16 B immutable SSO `lt_str` (+ jumbo header), generation-safe `lt_utf8_cache`, auto Frame Temp Stack rewind + `surface.vitals()` counters | 10,000-frame native game/HUD loop = 0 persistent allocs/frame, flat RSS, ASan/UBSan clean |
 | **Phase 4** *(completed)* | Compile-time exclusivity (`foo(xs, mut xs)`), `rc`-free `List`/`Map`/`Set`, inferred `const *` borrow, move-on-last-use, scope/overwrite cleanup, `lt_heap`, Scope Data Stack escape promotion | ASan/LSan = 0 leaks across native suite, 10,000-frame game loops, and batch `site-docs`; Gen1/Gen2/Gen3 bootstrap |
@@ -100,11 +100,11 @@ All random system `malloc`/`calloc`/`realloc`/`free` calls in user and stdlib ru
 
 ### Phase 6 — Safety flags, unchecked indexing, and builtin boundaries *(completed)*
 
-Extend [OptConfig](lite://repo/compiler/src/opt-config.lt) with independent unchecked, arithmetic, bounds, float-finiteness, and debug-info switches. Before implementation, specify defaults for all six presets and how the Lite checks interact with native sanitizers. Proposed precedence is preset defaults, then `--sanitize` defaults, then explicit per-flag overrides. Test both argument orders for `-O3` and `-fcheck-unchecked` and define what repeated overrides do. Keep regular arithmetic and bounds checks enabled by default across presets.
+Extend [OptConfig](lite://repo/lib/lite/compiler/opt-config.lt) with independent unchecked, arithmetic, bounds, float-finiteness, and debug-info switches. Before implementation, specify defaults for all six presets and how the Lite checks interact with native sanitizers. Proposed precedence is preset defaults, then `--sanitize` defaults, then explicit per-flag overrides. Test both argument orders for `-O3` and `-fcheck-unchecked` and define what repeated overrides do. Keep regular arithmetic and bounds checks enabled by default across presets.
 
 Add unchecked get and set for lists and fixed arrays. Specify the fault with checks enabled and the valid input domain with checks disabled. Cover ordinary positional access, packed array indexing, and valid unchecked operations on TS and C11.
 
-Use the existing [builtin ABI and selection](lite://repo/compiler/src/builtins-abi.lt) for soft builtins. Each soft builtin needs a verified Lite implementation and can have an optional native override. Candidates include bit counts, byte swap, wide multiplication, carry and borrow operations, scalar helpers, bulk copy and fill, and search. Reserve hard builtins for primitives whose semantics require compiler or runtime support, such as unchecked access, float bit reinterpretation, single-rounding `fma`, `VmArena`, and `Rc<T>`.
+Use the existing [builtin ABI and selection](lite://repo/lib/lite/compiler/builtins-abi.lt) for soft builtins. Each soft builtin needs a verified Lite implementation and can have an optional native override. Candidates include bit counts, byte swap, wide multiplication, carry and borrow operations, scalar helpers, bulk copy and fill, and search. Reserve hard builtins for primitives whose semantics require compiler or runtime support, such as unchecked access, float bit reinterpretation, single-rounding `fma`, `VmArena`, and `Rc<T>`.
 
 ### Phase 7 — Borrowed slices *(completed)*
 

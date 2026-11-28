@@ -76,9 +76,9 @@ if not skipHeavy {
         compilerTest.assertDriverMatchesContract(root, contracts, lexerRel, lexDrv, "lex sweep " + nm, src, 0);
     }
     lexSrcs: List<String> = [
-    "compiler/src/c-literals.lt", "compiler/src/emit-c.lt", "compiler/src/driver-c.lt",
-    "compiler/src/lexer.lt", "compiler/tests/lexer/lexer-dump.lts",
-    "compiler/src/parser.lt", "compiler/src/check.lt",
+    "lib/lite/compiler/c-literals.lt", "lib/lite/compiler/emit-c.lt", "lib/lite/compiler/driver-c.lt",
+    "lib/lite/compiler/lexer.lt", "compiler/tests/lexer/lexer-dump.lts",
+    "lib/lite/compiler/parser.lt", "lib/lite/compiler/check.lt",
     "compiler/tests/parser/parser-dump.lts", "compiler/tests/parser/parser-decl-dump.lts",
     "compiler/tests/parser/parser-program-dump.lts", "compiler/tests/checker/checker-dump.lts",
     ];

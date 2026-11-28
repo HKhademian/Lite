@@ -55,7 +55,7 @@ hash_file() {
 
 SEED_C="$ROOT/compiler/bootstrap/compiler.c"
 SEED_TS="$ROOT/compiler/bootstrap/seed.ts"
-C_ROOT="$ROOT/compiler/src/c-root.lts"
+C_ROOT="$ROOT/lib/lite/compiler/c-root.lts"
 
 if [ ! -f "$SEED_C" ]; then
     echo "self-host-c: missing tracked bootstrap source: $SEED_C" >&2
@@ -78,7 +78,7 @@ CFLAGS="-std=c11 -Wall -Wextra -Werror $CC_OPT"
 echo "self-host-c: compiling tracked compiler/bootstrap/compiler.c (Gen 0)..."
 "$CC_BIN" $CFLAGS "$SEED_C" -o "$OUT_DIR/lite-gen0" -lm
 
-echo "self-host-c: Gen 0 -> Gen 1 (compiling compiler/src/c-root.lts)..."
+echo "self-host-c: Gen 0 -> Gen 1 (compiling lib/lite/compiler/c-root.lts)..."
 "$OUT_DIR/lite-gen0" -O1 "$C_ROOT" --out "$OUT_DIR/generation-1.c"
 "$CC_BIN" $CFLAGS "$OUT_DIR/generation-1.c" -o "$OUT_DIR/lite-gen1" -lm
 

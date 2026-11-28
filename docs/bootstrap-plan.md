@@ -585,7 +585,7 @@ P3–P8. L2 host libraries and L3 tooling libraries wait for separate decisions.
 - [x] Token-dump test helper and fixtures; include every construct in S.
 - [x] Reject malformed/unsupported tokens before emission.
 
-**Gate passed 2026-11-01:** [`compiler/src/lexer.lts`](lite://repo/compiler/src/lexer.lt)
+**Gate passed 2026-11-01:** [`compiler/src/lexer.lts`](lite://repo/lib/lite/compiler/lexer.lt)
 tokenizes the expanded TS S, every compiler case, the C emitter, and the lexer
 sources. Five rejection fixtures fail lexically for the expected reasons:
 injected unterminated string, below-minimum and too-large Int literals, a bad
@@ -603,7 +603,7 @@ make the lexer complete.
 
 - [x] Types: scalar names, `Unit`, flat named tuples, `List<T>` of supported
       elements; aliases. Implemented by `parseType`/`parseTypeAlias` in
-      [`compiler/src/parser.lts`](lite://repo/compiler/src/parser.lt) with fixtures under
+      [`compiler/src/parser.lts`](lite://repo/lib/lite/compiler/parser.lt) with fixtures under
       [`compiler/tests/parser/`](lite://repo/compiler/tests/parser).
 - [x] Declarations: `:=`, `var`, typed `: Type`, `: mut List<T>`, type aliases.
       Function annotations remain with the Functions bullet.
@@ -657,7 +657,7 @@ reproduce.
 - [x] Accept every construct in S and reject the focused unsupported/ill-typed
       cases; the restricted 42-case compiler corpus retains exact diagnostics.
 
-**Gate passed 2026-11-01:** [`compiler/src/check.lts`](lite://repo/compiler/src/check.lt)
+**Gate passed 2026-11-01:** [`compiler/src/check.lts`](lite://repo/lib/lite/compiler/check.lt)
 accepts expanded S and rejects focused ill-typed fixtures for scopes, types,
 arity, arguments, returns, conditions, tuple/list/index forms and mutation
 grants. All 50 program and 42 rejection cases retain their exact artifacts and

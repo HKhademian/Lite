@@ -202,7 +202,7 @@ The manifests are [compiler/manifests/ts.json](lite://repo/compiler/manifests/ts
 the graph and build provenance records the resolved dependency paths. The
 production route enters through [`tools/src/compile-ts.lts`](lite://repo/tools/src/compile-ts.lts).
 
-P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](lite://repo/compiler/src/lexer.lt)
+P3 adds the Lite-written lexer in [`../compiler/src/lexer.lts`](lite://repo/lib/lite/compiler/lexer.lt)
 with a token-dump driver at
 [`../compiler/tests/lexer/lexer-dump.lts`](lite://repo/compiler/tests/lexer/lexer-dump.lts). It tokenizes
 names, keywords, Int/String/Bool values, symbols and EOF; skips whitespace and
@@ -218,13 +218,13 @@ migration](lite://doc/compiler/parity#generated-full-source-test-consumers) and
 [artifact-validation ledger](lite://doc/compiler/parity#batched-ts-artifact-validation).
 
 P4 adds the parser core, type grammar, declarations, expressions, statements and
-functions in [`../compiler/src/parser.lts`](lite://repo/compiler/src/parser.lt). It parses
+functions in [`../compiler/src/parser.lts`](lite://repo/lib/lite/compiler/parser.lt). It parses
 expanded S, L0, the lexer source and all program cases; value `if` branches are
 currently single-expression blocks. Compiler source imports now follow Lite
 module aliases; unsupported declarations are rejected by name. Fixtures live under
 [`../compiler/tests/parser/`](lite://repo/compiler/tests/parser).
 
-P5 adds the Lite checker in [`../compiler/src/check.lts`](lite://repo/compiler/src/check.lt).
+P5 adds the Lite checker in [`../compiler/src/check.lts`](lite://repo/lib/lite/compiler/check.lt).
 It collects symbols, validates type names and aliases, checks block scopes,
 local and assignment types, Bool conditions, arity/arguments/returns,
 tuple/list/field/index types, mutation grants and break/return placement.

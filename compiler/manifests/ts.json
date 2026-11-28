@@ -1,6 +1,6 @@
 {
   "target": "ts",
   "files": [
-    "../src/ts-root.lts"
+    "../../lib/lite/compiler/ts-root.lts"
   ]
 }

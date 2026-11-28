@@ -4,7 +4,7 @@ Status: **foundation phases #1–#4 + #6a complete (2026-11-23); v2 pipeline (#5
 
 ## Overview
 
-The active Lite compiler ([`compiler/src/frontend.lts`](lite://repo/compiler/src/frontend.lt), [`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lt), [`compiler/src/frontend-types.lts`](lite://repo/compiler/src/frontend-types.lt), [`compiler/src/emit-ts.lts`](lite://repo/compiler/src/emit-ts.lt), [`compiler/src/emit-c.lts`](lite://repo/compiler/src/emit-c.lt)) now uses $O(1)$ scoped symbol indexing, single-pass brace matching, canonical type and component memoization, 16-byte length-prefixed C11 `lt_str` strings, an $O(V + E)$ call-graph BFS worklist for reachability, $O(1)$ `Set<String>` helper queries, and an $O(1)$ C11 builtin rewrite map.
+The active Lite compiler ([`compiler/src/frontend.lts`](lite://repo/lib/lite/compiler/frontend.lt), [`compiler/src/frontend-expr.lts`](lite://repo/lib/lite/compiler/frontend-expr.lt), [`compiler/src/frontend-types.lts`](lite://repo/lib/lite/compiler/frontend-types.lt), [`compiler/src/emit-ts.lts`](lite://repo/lib/lite/compiler/emit-ts.lt), [`compiler/src/emit-c.lts`](lite://repo/lib/lite/compiler/emit-c.lt)) now uses $O(1)$ scoped symbol indexing, single-pass brace matching, canonical type and component memoization, 16-byte length-prefixed C11 `lt_str` strings, an $O(V + E)$ call-graph BFS worklist for reachability, $O(1)$ `Set<String>` helper queries, and an $O(1)$ C11 builtin rewrite map.
 
 Every phase below eliminates a structural bottleneck rather than adding heuristic flags, while preserving strict dual-target TS/C11 parity, all 94 corpus contracts, and 3-generation self-hosting fixed points.
 
@@ -13,13 +13,13 @@ Every phase below eliminates a structural bottleneck rather than adding heuristi
 | Phase | Upgrade | Target area | Native C→C self-compile (min) | Status |
 |---|---|---|---|---|
 | Baseline | Original compiler before algorithmic cleanup | Full compiler | `1977 ms` | Baseline |
-| Tier-1 | $O(1)$ Map/Set tombstones, `Set<String>` buckets, MRU UTF-8 cache, `lib/util/collections.lts` | [`emit-c.lts`](lite://repo/compiler/src/emit-c.lt), [`reachability.lts`](lite://repo/compiler/src/reachability.lt) | `871 ms` (`2.27×`) | Done (`b791a650`) |
-| **#1** | Scoped $O(1)$ `SymbolTable` with undo-stack shadowing and trace-safety invariants | [`symbol-table.lts`](lite://repo/compiler/src/symbol-table.lt), [`frontend.lts`](lite://repo/compiler/src/frontend.lt), [`frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lt), [`trace-safety.lts`](lite://repo/compiler/src/trace-safety.lt) | `724.9 ms` (`2.73×`) | Done (`5af84147`) |
-| **#2** | Single-pass `BraceIndex` (`Map<Int, Int>`) per source file | [`frontend-syntax.lts`](lite://repo/compiler/src/frontend-syntax.lt) | `587.7 ms` (`3.36×`) | Done (`3e4cb62c`) |
-| **#3** | Canonical `TypeCache` interning (`cStructTag`, `cValueType`, `tsFunctionType`, parsed tuple/record component tables) | [`frontend-types.lts`](lite://repo/compiler/src/frontend-types.lt) | `466.5 ms` (`4.24×`) | Done (`ea0b9907`) |
-| **#4** | Fat 16-byte length-prefixed C11 strings (`lt_str`) with compile-time `byte_len`/`cp_len`, 8-byte word hashing, and 1-byte `lt_text_eq` fast path | [`c-literals.lts`](lite://repo/compiler/src/c-literals.lt), [`frontend-ir.lts`](lite://repo/compiler/src/frontend-ir.lt), [`frontend-types.lts`](lite://repo/compiler/src/frontend-types.lt), [`emit-c.lts`](lite://repo/compiler/src/emit-c.lt) | `390.9 ms` (`5.06×`) | Done (`89dc26fe`) |
-| **#6a** | $O(V + E)$ worklist BFS reachability, `Set<String>` helper queries, $O(1)$ C builtin rewrite map, and jump-scanning passes | [`reachability.lts`](lite://repo/compiler/src/reachability.lt), [`modules.lts`](lite://repo/compiler/src/modules.lt), [`emit-c.lts`](lite://repo/compiler/src/emit-c.lt) | `321.3 ms` (`6.15×`) | Done (`88231e13`) |
-| **#5** | Full-language single-pass tokenized frontend (`Source -> Tokens`) | [`lexer.lts`](lite://repo/compiler/src/lexer.lt), frontend parser | — | Documented (next v2 frontier) |
+| Tier-1 | $O(1)$ Map/Set tombstones, `Set<String>` buckets, MRU UTF-8 cache, `lib/util/collections.lts` | [`emit-c.lts`](lite://repo/lib/lite/compiler/emit-c.lt), [`reachability.lts`](lite://repo/lib/lite/compiler/reachability.lt) | `871 ms` (`2.27×`) | Done (`b791a650`) |
+| **#1** | Scoped $O(1)$ `SymbolTable` with undo-stack shadowing and trace-safety invariants | [`symbol-table.lts`](lite://repo/lib/lite/compiler/symbol-table.lt), [`frontend.lts`](lite://repo/lib/lite/compiler/frontend.lt), [`frontend-expr.lts`](lite://repo/lib/lite/compiler/frontend-expr.lt), [`trace-safety.lts`](lite://repo/lib/lite/compiler/trace-safety.lt) | `724.9 ms` (`2.73×`) | Done (`5af84147`) |
+| **#2** | Single-pass `BraceIndex` (`Map<Int, Int>`) per source file | [`frontend-syntax.lts`](lite://repo/lib/lite/compiler/frontend-syntax.lt) | `587.7 ms` (`3.36×`) | Done (`3e4cb62c`) |
+| **#3** | Canonical `TypeCache` interning (`cStructTag`, `cValueType`, `tsFunctionType`, parsed tuple/record component tables) | [`frontend-types.lts`](lite://repo/lib/lite/compiler/frontend-types.lt) | `466.5 ms` (`4.24×`) | Done (`ea0b9907`) |
+| **#4** | Fat 16-byte length-prefixed C11 strings (`lt_str`) with compile-time `byte_len`/`cp_len`, 8-byte word hashing, and 1-byte `lt_text_eq` fast path | [`c-literals.lts`](lite://repo/lib/lite/compiler/c-literals.lt), [`frontend-ir.lts`](lite://repo/lib/lite/compiler/frontend-ir.lt), [`frontend-types.lts`](lite://repo/lib/lite/compiler/frontend-types.lt), [`emit-c.lts`](lite://repo/lib/lite/compiler/emit-c.lt) | `390.9 ms` (`5.06×`) | Done (`89dc26fe`) |
+| **#6a** | $O(V + E)$ worklist BFS reachability, `Set<String>` helper queries, $O(1)$ C builtin rewrite map, and jump-scanning passes | [`reachability.lts`](lite://repo/lib/lite/compiler/reachability.lt), [`modules.lts`](lite://repo/lib/lite/compiler/modules.lt), [`emit-c.lts`](lite://repo/lib/lite/compiler/emit-c.lt) | `321.3 ms` (`6.15×`) | Done (`88231e13`) |
+| **#5** | Full-language single-pass tokenized frontend (`Source -> Tokens`) | [`lexer.lts`](lite://repo/lib/lite/compiler/lexer.lt), frontend parser | — | Documented (next v2 frontier) |
 | **#6b** | Decoupled `Tokens -> Arena AST -> TypeChecker -> Typed IR -> TS/C Backends` | Compiler v2 frontend & emitters | — | Documented (next v2 frontier) |
 
 ---
@@ -69,7 +69,7 @@ typedef struct {
 
 ### Phase #6a — Structured call-graph BFS, `Set<String>` helper queries, and $O(1)$ builtin lowering
 
-Eliminated the dominant downstream emitted-code string-scraping bottlenecks across [`reachability.lts`](lite://repo/compiler/src/reachability.lt), [`modules.lts`](lite://repo/compiler/src/modules.lt), and [`emit-c.lts`](lite://repo/compiler/src/emit-c.lt):
+Eliminated the dominant downstream emitted-code string-scraping bottlenecks across [`reachability.lts`](lite://repo/lib/lite/compiler/reachability.lt), [`modules.lts`](lite://repo/lib/lite/compiler/modules.lt), and [`emit-c.lts`](lite://repo/lib/lite/compiler/emit-c.lt):
 
 - Replaced the repeated whole-program fixpoint loops in `filterReachableItemsWithConfig` and `closeReachableTokens` with a single-pass function/declaration index plus an $O(V + E)$ BFS worklist (`closeReachableGraph`).
 - Replaced pipe-delimited `|...|` helper strings and repeated `strstr` queries in `emit-c.lts` with `targetHelperCallSet` (`Set<String>`), eliminating redundant per-item `targetCodeCalls` and list-helper re-scans.
@@ -80,11 +80,11 @@ Eliminated the dominant downstream emitted-code string-scraping bottlenecks acro
 
 ## Future v2 frontend architecture (#5 and #6b)
 
-Once **#1–#4** and **#6a** are landed and verified, the remaining structural debt is the fused 16.7k-line character-by-character parser/emitter in [`frontend.lts`](lite://repo/compiler/src/frontend.lt) and [`frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lt). Phases **#5** and **#6b** separate the compiler into a textbook multi-pass pipeline that reuses `#1`'s `SymbolTable` and `#3`'s `TypeCache` directly.
+Once **#1–#4** and **#6a** are landed and verified, the remaining structural debt is the fused 16.7k-line character-by-character parser/emitter in [`frontend.lts`](lite://repo/lib/lite/compiler/frontend.lt) and [`frontend-expr.lts`](lite://repo/lib/lite/compiler/frontend-expr.lt). Phases **#5** and **#6b** separate the compiler into a textbook multi-pass pipeline that reuses `#1`'s `SymbolTable` and `#3`'s `TypeCache` directly.
 
 ### Phase #5 — Full-language single-pass lexer (`Source -> Tokens`)
 
-Upgrade [`compiler/src/lexer.lts`](lite://repo/compiler/src/lexer.lt) from the early bootstrap subset to the complete Lite grammar:
+Upgrade [`compiler/src/lexer.lts`](lite://repo/lib/lite/compiler/lexer.lt) from the early bootstrap subset to the complete Lite grammar:
 
 1. **Flat token stream (`List<Token>`)**:
    - Store `kind: Int` (enum/integer tag rather than string comparisons), `start: Int`, `end: Int`, `line: Int`, `col: Int`, and `matchIdx: Int` (pre-matched partner token index for `{`/`}`, `(`/`)`, `[`/`]`).

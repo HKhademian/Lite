@@ -1,6 +1,6 @@
 /* Token-dump driver for the Lite-written lexer. Test helper, not a public command. */
 
-lexer := import "../../src/lexer";
+lexer := import "lite/compiler/lexer";
 io := import "core/io";
 
 var prefix := "";

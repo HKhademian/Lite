@@ -1,5 +1,7 @@
 /* Fixed-width portable SIMD vector types (`Simd<T, N>`, `SimdNative<T>`), common lane aliases, and lane operations. */
 
+sliceLib := import "core/slice";
+
 /** 16-lane signed 8-bit vector (128-bit baseline). */
 pub Int8x16 := alias Simd<Int8, 16>;
 /** 16-lane unsigned 8-bit vector (128-bit baseline). */
@@ -32,7 +34,7 @@ pub Simd.splat := fn<T: Type, N: Int>(value: T): Self<T, N>;
 pub Simd.fromArray := fn<T: Type, N: Int>(values: [T; N]): Self<T, N>;
 
 /** Loads `N` contiguous lanes starting at `slice[offset..offset + N)`, faulting on out-of-bounds access. */
-pub Simd.load := fn<T: Type, N: Int>(slice: Slice<T>, offset: Int): Self<T, N>;
+pub Simd.load := fn<T: Type, N: Int>(slice: sliceLib.Slice<T>, offset: Int): Self<T, N>;
 
 /** Returns the compile-time target lane count for `SimdNative<T>` (`16 / sizeof(T)` for 128-bit baseline). */
 pub Simd.nativeLanes := fn<T: Type>(): Int;
@@ -53,7 +55,7 @@ pub Simd.$getIndex := fn<T: Type, N: Int>(v: Self<T, N>, index: Int): T;
 pub Simd.withLane := fn<T: Type, N: Int>(v: Self<T, N>, index: Int, value: T): Self<T, N>;
 
 /** Stores all `N` lanes of `v` into `dst[offset..offset + N)`, faulting on out-of-bounds access. */
-pub Simd.store := fn<T: Type, N: Int>(v: Self<T, N>, dst: mut Slice<T>, offset: Int): Unit;
+pub Simd.store := fn<T: Type, N: Int>(v: Self<T, N>, dst: mut sliceLib.Slice<T>, offset: Int): Unit;
 
 /** Lane-wise checked addition (`a[i] + b[i]`), faulting on overflow or non-finite float results. */
 pub Simd.add := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;

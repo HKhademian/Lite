@@ -160,31 +160,31 @@ Current hard-coded preloading remains an implementation gap.
   `core/file`, `core/text`, etc.) require explicit `import` declarations in both
   `.lt` and `.lts` files.
 - **Strict `.lt`/`.lts` import path rules:**
-  [`compiler/src/host-fs.lt`](lite://repo/compiler/src/host-fs.lt) resolves
+  [`compiler/src/host-fs.lt`](lite://repo/lib/lite/compiler/host-fs.lt) resolves
   extensionless `import` paths strictly to `.lt`, rejects explicit `.lt`
   suffixes in `import` clauses, prohibits `.lt` modules from importing `.lts`
   files, and requires explicit `.lts` suffixes when importing `.lts` scripts.
 - **Declaration-only `.lt` top level:**
-  [`compiler/src/frontend.lt`](lite://repo/compiler/src/frontend.lt) admits
+  [`compiler/src/frontend.lt`](lite://repo/lib/lite/compiler/frontend.lt) admits
   declarations, imports, and compile-time definitions at `.lt` top level while
   rejecting top-level runtime statements, blocks, and standalone assignments.
 
 ### Current compiler leaks causing implicit `.lt` availability
 
 1. **`coreOwnerRels` preloading loop:**
-   [`compiler/src/modules.lt`](lite://repo/compiler/src/modules.lt) preloads
+   [`compiler/src/modules.lt`](lite://repo/lib/lite/compiler/modules.lt) preloads
    `lib/core/int.lt`, `lib/core/text.lt`, `lib/core/list.lt`,
    `lib/core/array.lt`, `lib/core/map.lt`, and `lib/core/set.lt` via
    `tryReadCoreOwner` whenever compilation enters the root file with a
    `projectRoot`.
 2. **Global transitive `PublicTypeOp` forwarding:** `appendTransitiveTypeOps` in
-   [`compiler/src/modules.lt`](lite://repo/compiler/src/modules.lt) forwards
+   [`compiler/src/modules.lt`](lite://repo/lib/lite/compiler/modules.lt) forwards
    all `PublicTypeOp` entries across the entire processed module graph into
    every module's `importedExports`, rather than scoping type-attached
    operations to explicitly imported modules or types.
 3. **Ambient built-in type names:**
-   [`compiler/src/frontend.lt`](lite://repo/compiler/src/frontend.lt) and
-   [`compiler/src/frontend-types.lt`](lite://repo/compiler/src/frontend-types.lt)
+   [`compiler/src/frontend.lt`](lite://repo/lib/lite/compiler/frontend.lt) and
+   [`compiler/src/frontend-types.lt`](lite://repo/lib/lite/compiler/frontend-types.lt)
    resolve primitive and built-in collection type names (`Int`, `String`,
    `Bool`, `List`, `Array`, `Map`, `Set`, `Unit`, etc.) ambiently. Compare this set with the eventual intrinsic inventory
    and the exports of the selected preload.

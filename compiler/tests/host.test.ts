@@ -203,7 +203,7 @@ test('TS host rebuilds the Lite source graph and preserves output, diagnostics a
   const built = buildTsCompiler();
   assert.equal(built.builderSha256, seed.artifactSha256);
   assert.equal(built.artifactSha256, seed.artifactSha256);
-  assert.ok(built.dependencies.includes('compiler/src/frontend.lt'));
+  assert.ok(built.dependencies.includes('lib/lite/compiler/frontend.lt'));
   assert.ok(built.dependencies.includes('lib/core/text.lt'));
   const reference = readFileSync(join(root, 'compiler/tests/references/generated/report-42.ts'));
   for (const name of [undefined, '', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
@@ -241,8 +241,8 @@ test('a changed Lite compiler rebuilds with the selected seed, caches by source 
   try {
     // Only the TypeScript checker is shared; the copied checkout still has no T00 code.
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
-    const source = join(directory, 'compiler/src/fixture.lts');
-    writeFileSync(join(directory, 'compiler/manifests/ts.json'), JSON.stringify({ target: 'ts', files: ['../src/fixture.lts'] }));
+    const source = join(directory, 'lib/lite/compiler/fixture.lts');
+    writeFileSync(join(directory, 'compiler/manifests/ts.json'), JSON.stringify({ target: 'ts', files: ['../../lib/lite/compiler/fixture.lts'] }));
     writeFileSync(source, 'io := import "core/io"; source := io.inputAll();\nio.outputLine("fresh");\n');
     const first = invoke(directory, 'io := import "core/io"; io.outputLine(42);');
     assert.equal(first.error, undefined); assert.equal(first.status, 0, first.stderr.toString());
@@ -283,17 +283,18 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
 
 test('selected compiler build exposes its imported source dependencies', () => {
   const selected = buildCompiler('ts');
-  assert.deepEqual(selected.dependencies.slice(0, 7), [
-    'compiler/src/ts-root.lts', 'lib/$preload.lt', 'lib/core/option.lt', 'lib/core/slice.lt',
-    'lib/core/diag.lt', 'lib/core/io.lt', 'lib/core/int.lt',
+  assert.deepEqual(selected.dependencies.slice(0, 6), [
+    'lib/lite/compiler/ts-root.lts', 'lib/$preload.lt', 'lib/core/option.lt', 'lib/core/slice.lt',
+    'lib/core/diag.lt', 'lib/core/io.lt',
   ]);
+  assert.ok(selected.dependencies.includes('lib/core/int.lt'));
   assert.ok(selected.dependencies.includes('lib/core/list.lt'));
   assert.ok(selected.dependencies.includes('lib/core/set.lt'));
   assert.ok(selected.dependencies.includes('lib/core/text.lt'));
-  assert.ok(selected.dependencies.includes('compiler/src/driver-ts.lt'));
-  assert.ok(selected.dependencies.includes('compiler/src/frontend.lt'));
-  assert.ok(selected.dependencies.includes('compiler/src/host-fs.lt'));
-  assert.ok(selected.dependencies.includes('compiler/src/numeric-literals.lt'));
+  assert.ok(selected.dependencies.includes('lib/lite/compiler/driver-ts.lt'));
+  assert.ok(selected.dependencies.includes('lib/lite/compiler/frontend.lt'));
+  assert.ok(selected.dependencies.includes('lib/lite/compiler/host-fs.lt'));
+  assert.ok(selected.dependencies.includes('lib/lite/compiler/numeric-literals.lt'));
 });
 
 test('the unchanged selected TS source graph uses its verified seed without a local TypeScript install', () => {
@@ -327,8 +328,8 @@ test('the graph-built TS-hosted C emitter preserves source names and subset reje
   assert.equal(selected.target, 'c');
   assert.notEqual(selected.artifactSha256, seed.artifactSha256);
   assert.equal(selected.builderSha256, seed.artifactSha256);
-  assert.equal(selected.dependencies[0], 'compiler/src/c-root.lts');
-  assert.ok(selected.dependencies.includes('compiler/src/emit-c.lt'));
+  assert.equal(selected.dependencies[0], 'lib/lite/compiler/c-root.lts');
+  assert.ok(selected.dependencies.includes('lib/lite/compiler/emit-c.lt'));
   const simpleC = compileTarget('c', { text: 'io := import "core/io"; io.outputLine(42);', name: 'سلام file.lts' });
   assert.deepEqual(simpleC, {
     status: 0, stdout: readFileSync(join(root, 'compiler/tests/references/generated/report-42.c')), stderr: Buffer.alloc(0),
@@ -374,9 +375,9 @@ test('imported C compiler source hashes transitive files and invalidates its cac
   const directory = isolatedCheckout();
   try {
     symlinkSync(join(root, 'igniter/node_modules'), join(directory, 'igniter/node_modules'));
-    writeFileSync(join(directory, 'compiler/manifests/c.json'), JSON.stringify({ target: 'c', files: ['../src/fixture-root.lts'] }));
-    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'fc := import "./fixture-c.lts";\n');
-    writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("fresh C");');
+    writeFileSync(join(directory, 'compiler/manifests/c.json'), JSON.stringify({ target: 'c', files: ['../../lib/lite/compiler/fixture-root.lts'] }));
+    writeFileSync(join(directory, 'lib/lite/compiler/fixture-root.lts'), 'fc := import "./fixture-c.lts";\n');
+    writeFileSync(join(directory, 'lib/lite/compiler/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("fresh C");');
     const result = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr.toString());
     assert.equal(result.stdout.toString(), 'fresh C\n');
@@ -385,56 +386,50 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     assert.equal(entries().length, 1);
     const provenance = JSON.parse(readFileSync(join(cache, entries()[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
     assert.deepEqual(provenance.dependencies, [
-      'compiler/src/fixture-root.lts',
+      'lib/lite/compiler/fixture-root.lts',
       'lib/$preload.lt',
       'lib/core/option.lt',
       'lib/core/slice.lt',
       'lib/core/diag.lt',
       'lib/core/io.lt',
-      'lib/core/int.lt',
-      'lib/core/list.lt',
-      'lib/core/set.lt',
-      'compiler/src/fixture-c.lts',
+      'lib/lite/compiler/fixture-c.lts',
     ]);
-    writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
+    writeFileSync(join(directory, 'lib/lite/compiler/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
     const changed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(changed.error, undefined); assert.equal(changed.status, 0, changed.stderr.toString());
     assert.equal(changed.stdout.toString(), 'changed nested C\n');
     assert.equal(entries().length, 2,
       'a transitive source-byte change must select a distinct compiler cache entry');
-    writeFileSync(join(directory, 'compiler/src/fixture-d.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed import path");');
-    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'fd := import "./fixture-d.lts";\n');
+    writeFileSync(join(directory, 'lib/lite/compiler/fixture-d.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed import path");');
+    writeFileSync(join(directory, 'lib/lite/compiler/fixture-root.lts'), 'fd := import "./fixture-d.lts";\n');
     const redirected = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(redirected.status, 0, redirected.stderr.toString());
     assert.equal(redirected.stdout.toString(), 'changed import path\n');
     assert.equal(entries().length, 3,
       'changing an import edge must choose a distinct dependency graph');
-    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("removed dependency");');
+    writeFileSync(join(directory, 'lib/lite/compiler/fixture-root.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("removed dependency");');
     const removed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(removed.status, 0, removed.stderr.toString());
     assert.equal(removed.stdout.toString(), 'removed dependency\n');
     const afterRemoval = entries();
     assert.equal(afterRemoval.length, 4);
     const expectedRemovedDeps = [
-      'compiler/src/fixture-root.lts',
+      'lib/lite/compiler/fixture-root.lts',
       'lib/$preload.lt',
       'lib/core/option.lt',
       'lib/core/slice.lt',
       'lib/core/diag.lt',
       'lib/core/io.lt',
-      'lib/core/int.lt',
-      'lib/core/list.lt',
-      'lib/core/set.lt',
     ];
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
       .find(item => item.dependencies.length === expectedRemovedDeps.length && expectedRemovedDeps.every((dep, idx) => item.dependencies[idx] === dep));
     assert.ok(removedProvenance, 'the root-only graph is recorded independently of directory enumeration order');
     assert.deepEqual(removedProvenance.dependencies, expectedRemovedDeps);
-    const link = join(directory, 'compiler/src/fixture-link.lts');
-    writeFileSync(join(directory, 'compiler/src/fixture-e.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink E");');
-    writeFileSync(join(directory, 'compiler/src/fixture-f.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink F");');
+    const link = join(directory, 'lib/lite/compiler/fixture-link.lts');
+    writeFileSync(join(directory, 'lib/lite/compiler/fixture-e.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink E");');
+    writeFileSync(join(directory, 'lib/lite/compiler/fixture-f.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("symlink F");');
     symlinkSync('fixture-e.lts', link);
-    writeFileSync(join(directory, 'compiler/src/fixture-root.lts'), 'fl := import "./fixture-link.lts";\n');
+    writeFileSync(join(directory, 'lib/lite/compiler/fixture-root.lts'), 'fl := import "./fixture-link.lts";\n');
     const linked = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
     assert.equal(linked.status, 0, linked.stderr.toString());
     assert.equal(linked.stdout.toString(), 'symlink E\n');
@@ -456,7 +451,7 @@ test('default verifier selects consumers after compiler changes and ignores inve
     const git = join(directory, 'git');
     const changedEnv = { ...env, PATH: directory + delimiter + env.PATH };
     // Supply a changed-file listing without editing compiler source or the real Git index.
-    for (const path of ['lib/util/compiler-build.lt', 'compiler/src/c-literals.lt', 'compiler/src/frontend.lt',
+    for (const path of ['lib/util/compiler-build.lt', 'lib/lite/compiler/c-literals.lt', 'lib/lite/compiler/frontend.lt',
       'compiler/manifests/c.json', 'lib/core/int.lt']) {
       writeFileSync(git, `#!/bin/sh\nprintf '%s\\n' ' M ${path}'\n`);
       chmodSync(git, 0o755);
@@ -499,7 +494,7 @@ test('default test startup and generated baseline run in a source archive withou
   if (process.env['LITE_SKIP_HEAVY'] === '1') { context.skip('LITE_SKIP_HEAVY=1'); return; }
   const directory = isolatedCheckout();
   try {
-    for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/bootstrap', 'compiler/manifests', 'compiler/src',
+    for (const path of ['igniter', 'tools', 'bin', 'config', 'compiler/bootstrap', 'compiler/manifests', 'lib/lite/compiler',
       'compiler/tests', 'compiler/tests/references/generated', 'lib',
       'language/verifications', 'language/examples', 'language/samples', 'language/cases', 'language/learn', 'docs', 'site', 'benchmark/challenges/tools', '.agents/rules']) {
       cpSync(join(root, path), join(directory, path), { recursive: true, verbatimSymlinks: true,

@@ -1,8 +1,8 @@
-/** Dual-target tests for `compiler/src/symbol-table.lts` O(1) scoped lookups and undo-stack shadowing. */
+/** Dual-target tests for `lib/lite/compiler/symbol-table.lt` O(1) scoped lookups and undo-stack shadowing. */
 
 test := import "core/test";
-ir := import "../src/frontend-ir";
-sym := import "../src/symbol-table";
+ir := import "lite/compiler/frontend-ir";
+sym := import "lite/compiler/symbol-table";
 
 makeLocal := fn(name: String, rt: String, kind: String, depth: Int, initState: String): ir.Local {
     (name = name, runtime = rt, kind = kind, mutable = false, writable = false,
@@ -54,17 +54,17 @@ mut locals.pushBack(makeLocal("f", "lite_f", "Int", 1, ir.INIT_STATE_INIT));
 test.checkInt("reached f visible", 3, sym.localIndex(locals, "f"));
 test.check("reached f clears unready", not sym.localsHasAnyUnready(locals));
 
-/* 3. Alias shadowing: strictly deeper shadows, same-depth first wins, pop restores */
+/* 3. Alias shadowing: deeper or later same-depth shadows, pop restores */
 var mut aliases: List<ir.AliasDecl> = [];
 mut aliases.pushBack((name = "T", target = "Int", at = 0, end = 10, depth = 0));
 mut aliases.pushBack((name = "T", target = "String", at = 12, end = 20, depth = 0));
-test.checkInt("same-depth first alias wins", 0, sym.findAlias(aliases, "T"));
+test.checkInt("same-depth later alias shadows", 1, sym.findAlias(aliases, "T"));
 aliasMark := sym.aliasMark();
 mut aliases.pushBack((name = "T", target = "Bool", at = 30, end = 40, depth = 1));
 test.checkInt("deeper alias shadows", 2, sym.findAlias(aliases, "T"));
 _pa := mut aliases.popBack();
 sym.rewindAliasesTo(aliasMark);
-test.checkInt("popped alias restores depth 0", 0, sym.findAlias(aliases, "T"));
+test.checkInt("popped alias restores depth 0", 1, sym.findAlias(aliases, "T"));
 
 /* 4. Monotonic function index by name and runtime */
 var mut fns: List<ir.FunctionInfo> = [];

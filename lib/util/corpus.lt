@@ -180,7 +180,7 @@ MODULE_IDENTITIES: Map<String, String> = [
 "lib/core/process.lt" = "lite.core.process.v1",
 "lib/core/crypto.lt" = "lite.core.crypto.v1",
 "lib/core/time.lt" = "lite.core.time.v1",
-"compiler/src/modules.lt" = "lite.compiler.modules.v1",
+"lib/lite/compiler/modules.lt" = "lite.compiler.modules.v1",
 ];
 
 /** Identifies source bytes matching a shipped core/compiler host module. */

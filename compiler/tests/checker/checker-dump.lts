@@ -1,6 +1,6 @@
 /* Top-level checker dump. Test helper, not a public command. */
 
-checker := import "../../src/check";
+checker := import "lite/compiler/check";
 io := import "core/io";
 
 var prefix := "";

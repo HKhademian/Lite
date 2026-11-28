@@ -11,12 +11,12 @@ pool := import "external/pool";
 cases := import "util/cases";
 json := import "data/json";
 project := import "util/project";
-driverTs := import "../../compiler/src/driver-ts";
-frontend := import "../../compiler/src/frontend";
-modules := import "../../compiler/src/modules";
-emitter := import "../../compiler/src/emit-ts";
-hostFs := import "../../compiler/src/host-fs";
-optCfg := import "../../compiler/src/opt-config";
+driverTs := import "lite/compiler/driver-ts";
+frontend := import "lite/compiler/frontend";
+modules := import "lite/compiler/modules";
+emitter := import "lite/compiler/emit-ts";
+hostFs := import "lite/compiler/host-fs";
+optCfg := import "lite/compiler/opt-config";
 
 /** Maps a launcher symlink or alias script path to its canonical `tools/src/<name>.lts` tool name, or `""` for direct igniter CLI mode. */
 toolForEntry := fn(rawEntry: String): String {
@@ -317,7 +317,16 @@ readValidProvenance := fn(rootDir: String, name: String, expectedTarget: String,
         if not depPaths.contains(ei.value) or not depPaths.contains(ep.value) {
             return (valid = false, path = "", sha256 = "");
         }
-        resolved := hostFs.resolveImportPath(path.join(rootDir, ei.value), es.value, rootDir, rootDir);
+        impFull := path.join(rootDir, ei.value);
+        resolved := if es.value == "$preload" {
+            preFound := hostFs.findPackagePreload(impFull, path.parentDir(impFull), rootDir);
+            (ok = preFound.found, path = preFound.path, error = "")
+        } else if es.value == "$context" {
+            ctxFound := hostFs.findPackageContext(impFull, path.parentDir(impFull), rootDir);
+            (ok = ctxFound.found, path = ctxFound.path, error = "")
+        } else {
+            hostFs.resolveImportPath(impFull, es.value, rootDir, rootDir)
+        };
         if not resolved.ok { return (valid = false, path = "", sha256 = ""); }
         rpRes := fs.realPath(resolved.path);
         rpExp := fs.realPath(path.join(rootDir, ep.value));
@@ -616,7 +625,7 @@ executeIgnitedTool := fn(artifactPath: String, forwardArgs: List<String>): Unit 
     io.exit(res.status);
 }
 
-/** Compiles `compiler/src/ts-root.lts` into `dist/bootstrap/compiler.ts` when absent or out of date. */
+/** Compiles `lib/lite/compiler/ts-root.lts` into `dist/bootstrap/compiler.ts` when absent or out of date. */
 ensureDistCompiler := fn(rootDir: String, expectedArtSha: String, force: Bool): (ok: Bool, error: String) {
     bootDir := path.join(rootDir, "dist/bootstrap");
     compPath := path.join(bootDir, "compiler.ts");
@@ -626,7 +635,7 @@ ensureDistCompiler := fn(rootDir: String, expectedArtSha: String, force: Bool): 
             return (ok = true, error = "");
         }
     }
-    srcAbs := path.join(rootDir, "compiler/src/ts-root.lts");
+    srcAbs := path.join(rootDir, "lib/lite/compiler/ts-root.lts");
     rpSrc := fs.realPath(srcAbs);
     canonSrc := if rpSrc.ok { rpSrc.path } else { srcAbs };
     srcRead := fs.readText(canonSrc);
@@ -636,12 +645,12 @@ ensureDistCompiler := fn(rootDir: String, expectedArtSha: String, force: Bool): 
     emptyGraph: frontend.Items = [];
     emptySpecs: List<String> = [];
     graph := modules.visitSourceModule(
-    target = frontend.TARGET_TS, path = canonSrc, display = "compiler/src/ts-root.lts",
+    target = frontend.TARGET_TS, path = canonSrc, display = "lib/lite/compiler/ts-root.lts",
     identity = "", source = srcRead.text, initialGraph = emptyGraph,
     projectRoot = rootDir, cwd = rootDir, builtinSpecs = emptySpecs
     );
     writer := io.Writer.buffer();
-    emitter.emitProgramToWithConfig(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = "compiler/src/ts-root.lts", builtinSpecs = emptySpecs, config = optCfg.presetConfig(optCfg.OptClass.O3, frontend.TARGET_TS));
+    emitter.emitProgramToWithConfig(=writer, items = modules.moduleItems(graph), source = srcRead.text, prefix = "lib/lite/compiler/ts-root.lts", builtinSpecs = emptySpecs, config = optCfg.presetConfig(optCfg.OptClass.O3, frontend.TARGET_TS));
     outRes := writer.text();
     _cl := writer.close();
     if not outRes.ok {

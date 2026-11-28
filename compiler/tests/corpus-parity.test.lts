@@ -43,21 +43,21 @@ test.checkInt("ts manifest 1 file", 1, corpus.readStringListAt(tsManifestSrc, js
 test.checkInt("c manifest 1 file", 1, corpus.readStringListAt(cManifestSrc, json.findField(cManifestSrc, 0, "files").valuePos).length());
 test.check("ts deps > 1", tsDeps.length() > 1);
 test.check("c deps > 1", cDeps.length() > 1);
-test.checkText("ts root dep", "compiler/src/ts-root.lts", tsDeps[0]);
-test.checkText("c root dep", "compiler/src/c-root.lts", cDeps[0]);
-test.check("ts deps include frontend", tsDeps.contains("compiler/src/frontend.lt"));
-test.check("c deps include frontend", cDeps.contains("compiler/src/frontend.lt"));
+test.checkText("ts root dep", "lib/lite/compiler/ts-root.lts", tsDeps[0]);
+test.checkText("c root dep", "lib/lite/compiler/c-root.lts", cDeps[0]);
+test.check("ts deps include frontend", tsDeps.contains("lib/lite/compiler/frontend.lt"));
+test.check("c deps include frontend", cDeps.contains("lib/lite/compiler/frontend.lt"));
 frontendModules: List<String> = [
-    "compiler/src/frontend-ir.lt",
-    "compiler/src/builtins-abi.lt",
-    "compiler/src/frontend-syntax.lt",
-    "compiler/src/frontend-types.lt",
-    "compiler/src/trace-safety.lt",
-    "compiler/src/reachability.lt",
-    "compiler/src/frontend-inference.lt",
-    "compiler/src/frontend-context.lt",
-    "compiler/src/frontend-expr.lt",
-    "compiler/src/comptime-eval.lt",
+    "lib/lite/compiler/frontend-ir.lt",
+    "lib/lite/compiler/builtins-abi.lt",
+    "lib/lite/compiler/frontend-syntax.lt",
+    "lib/lite/compiler/frontend-types.lt",
+    "lib/lite/compiler/trace-safety.lt",
+    "lib/lite/compiler/reachability.lt",
+    "lib/lite/compiler/frontend-inference.lt",
+    "lib/lite/compiler/frontend-context.lt",
+    "lib/lite/compiler/frontend-expr.lt",
+    "lib/lite/compiler/comptime-eval.lt",
 ];
 loop frontendModules as modPath {
     test.check("ts deps include " + modPath, tsDeps.contains(modPath));

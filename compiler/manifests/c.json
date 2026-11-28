@@ -1,6 +1,6 @@
 {
   "target": "c",
   "files": [
-    "../src/c-root.lts"
+    "../../lib/lite/compiler/c-root.lts"
   ]
 }

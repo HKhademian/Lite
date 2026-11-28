@@ -1,6 +1,6 @@
 /* Full-program parser dump. Test helper, not a public command. */
 
-parser := import "../../src/parser";
+parser := import "lite/compiler/parser";
 io := import "core/io";
 
 var prefix := "";

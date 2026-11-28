@@ -36,7 +36,7 @@ Selected design direction and tracked compiler gap:
 - **Known compiler gap (tracked for future fix):** `.lt` files must have
   **no** implicit imports, whereas the current compiler still preloads six core
   type-owner modules (`lib/core/{int,text,list,array,map,set}.lt` via
-  `coreOwnerRels` in [`compiler/src/modules.lt`](lite://repo/compiler/src/modules.lt))
+  `coreOwnerRels` in [`compiler/src/modules.lt`](lite://repo/lib/lite/compiler/modules.lt))
   and exposes their `PublicTypeOp` operations (via `appendTransitiveTypeOps`)
   plus built-in type names (`Int`, `String`, `Bool`, `List`, `Array`, `Map`,
   `Set`, etc.) ambiently across both `.lt` and `.lts`. Removing this implicit
@@ -672,7 +672,7 @@ compiler adopts them without changing the 50 program / 42 rejection baseline.
 
 ## Lite-written lexer checkpoint, 2026-11-01
 
-P3 adds [`compiler/src/lexer.lts`](lite://repo/compiler/src/lexer.lt) and the
+P3 adds [`compiler/src/lexer.lts`](lite://repo/lib/lite/compiler/lexer.lt) and the
 token-dump helper [`compiler/tests/lexer/lexer-dump.lts`](lite://repo/compiler/tests/lexer/lexer-dump.lts).
 It emits name, keyword, Int, String, Bool, symbol and EOF tokens with offset,
 line and column; skips nested and raw comments; decodes the selected string
@@ -704,7 +704,7 @@ single-expression blocks. Current artifacts and diagnostics are unchanged. See
 
 ## Lite checker foundation, 2026-11-01
 
-P5 completes the Lite checker in [`compiler/src/check.lts`](lite://repo/compiler/src/check.lt).
+P5 completes the Lite checker in [`compiler/src/check.lts`](lite://repo/lib/lite/compiler/check.lt).
 It collects source-order symbols and signatures; validates type names, aliases and
 cycles; and checks scopes, local/assignment/initializer types, Bool conditions,
 arity, arguments, returns, tuple/list/field/index types, mutation grants and

@@ -31,7 +31,7 @@ is deferred; the C emitter is hosted by generated TS. There is no verified nativ
 self-hosted compiler, native no-GC guarantee, binary-footprint result, or evidence
 that Lite matches or exceeds C on comparable workloads. The emitted TS includes
 BigInt arithmetic and on-demand host helpers, e.g. in
-[emit-ts.lts](../../../compiler/src/emit-ts.lt). Neither the existence nor the
+[emit-ts.lts](../../../lib/lite/compiler/emit-ts.lt). Neither the existence nor the
 absence of a particular helper proves a native lowering cost.
 
 ## Commands and observed results

@@ -36,7 +36,7 @@ gap is intentional; the compiler is no longer listed there.
 
 The parser, checked Int evaluation, String/Int value model, local lookup,
 report statement stream and source-prefix handling are in
-[`frontend.lts`](../../compiler/src/frontend.lt). Each backend defines only:
+[`frontend.lts`](../../lib/lite/compiler/frontend.lt). Each backend defines only:
 
 - `intLiteralCode` and `textLiteralCode` (target literal syntax/escaping),
 - `emitProgram` (target artifact assembly),

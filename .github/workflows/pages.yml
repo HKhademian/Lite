@@ -36,7 +36,7 @@ jobs:
             dist/compiler-cache
             dist/tools
             dist/cache
-          key: lite-pages-${{ runner.os }}-${{ hashFiles('compiler/bootstrap/seed.ts', 'compiler/src/**', 'lib/**', 'tools/src/**', 'site/src/**') }}
+          key: lite-pages-${{ runner.os }}-${{ hashFiles('compiler/bootstrap/seed.ts', 'lib/**', 'tools/src/**', 'site/src/**') }}
           restore-keys: |
             lite-pages-${{ runner.os }}-
       - name: Build and verify the public showcase site

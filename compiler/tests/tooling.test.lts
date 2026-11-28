@@ -299,7 +299,7 @@ dir5Res := fs.makeTempDir("lite-tools-refresh-");
 test.check("dir5 makeTempDir", dir5Res.ok);
 dir5 := dir5Res.path;
 copyToolArchive(dir5);
-emitPath := path.join(dir5, "compiler/src/emit-ts.lt");
+emitPath := path.join(dir5, "lib/lite/compiler/emit-ts.lt");
 emitSrc := fs.readText(emitPath).text;
 anchor := "    outLine(\"export function main(lite$write?: (text: string) => void): string {\");";
 test.check("emit-ts anchor found", emitSrc.indexOf(anchor, 0) >= 0);

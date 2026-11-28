@@ -208,11 +208,11 @@ runCSelfHost := fn(rootDir: String, ccBin: String, cOutDir: String, requireSeedM
     (ok = true, sha256 = h3.hex, gen3Path = g3Path, error = "")
 };
 
-/** Compiles `compiler/src/c-root.lts` through the TS 3-gen compiler and returns the SHA-256 of the emitted C11 compiler. */
+/** Compiles `lib/lite/compiler/c-root.lts` through the TS 3-gen compiler and returns the SHA-256 of the emitted C11 compiler. */
 runCrossBootstrapC := fn(rootDir: String, gen3TsPath: String, workDir: String): (ok: Bool, sha256: String, error: String) {
     emptyEnv: List<String> = [];
     nodeBin := project.nodeExecPath();
-    cRootPath := path.join(rootDir, "compiler/src/c-root.lts");
+    cRootPath := path.join(rootDir, "lib/lite/compiler/c-root.lts");
     tsEmitterPath := path.join(workDir, "ts-c-emitter.ts");
     crossCPath := path.join(workDir, "cross.c");
 

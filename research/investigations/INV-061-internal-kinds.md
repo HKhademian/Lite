@@ -14,7 +14,7 @@ serialized spellings, direct Node execution and generated bootstrap continuity.
 - [Compiler fixtures](../../lib/util/corpus.lt) originally used typed program/rejected categories in `igniter/test-fixtures.ts` before migrating to Lite.
 - [Declarative cases](../../lib/util/cases.lt) originally used local named `as const` values in `tools/cases.ts` before migrating to Lite;
   that local use did not decide a project-wide refactor.
-- [The Lite lexer](../../compiler/src/lexer.lt) stores String kinds and uses
+- [The Lite lexer](../../lib/lite/compiler/lexer.lt) stores String kinds and uses
   zero-argument canonical accessors because its source subset lacks enums and
   function capture of top-level constants.
 - T00 is an explicit historical reference. Rewriting its internal kinds is not

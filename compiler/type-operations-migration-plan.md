@@ -6,15 +6,15 @@ Status: **completed across TS and C11, 2026-11-23**; normative design recorded i
 
 Replace every magical hardcoded dot-access special case in the compiler (`List`, `Array`, `Map`, `Set`, `String`, and related built-in types — including read-only field-like members such as `.length`, `.size`, and `.isEmpty`) with **real, source-visible declarations** in `lib/core/*.lts` backed by Lite's three-tier implementation model:
 
-1. **Hard builtins** (`coreHostFunction` in [`compiler/src/builtins-abi.lts`](lite://repo/compiler/src/builtins-abi.lt)) — bodyless declarations bound to verified core module identities (`lite.core.*.v1`) for irreducible runtime primitives, lowered on **both** TS and C11.
+1. **Hard builtins** (`coreHostFunction` in [`compiler/src/builtins-abi.lts`](lite://repo/lib/lite/compiler/builtins-abi.lt)) — bodyless declarations bound to verified core module identities (`lite.core.*.v1`) for irreducible runtime primitives, lowered on **both** TS and C11.
 2. **Soft builtins** (`coreSoftBuiltin` + `ITEM_KIND_SOFT_BUILTIN` + `--builtin-mode=pure|builtin`) — **pure Lite implementations** right inside `lib/core/*.lts` that also admit verified native TS and C11 fast-path overrides (switchable per project, module, or individual operation).
 3. **Pure Lite implementations** — ordinary Lite bodies (both `pub` and file-private non-`pub` helpers) built directly on top of the hard/soft primitives with zero compiler special cases.
 
-End state: `parsePostfixChain` in [`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lt) contains **zero hardcoded stdlib dot-property branches**. Every built-in type's operations and properties are declared, type-checked, documented, and testable directly in `lib/core/*.lts`, and replaceable when a standard module provider is swapped ([replaceable standard modules](lite://doc/modules-and-packages#replaceable-standard-modules)).
+End state: `parsePostfixChain` in [`compiler/src/frontend-expr.lts`](lite://repo/lib/lite/compiler/frontend-expr.lt) contains **zero hardcoded stdlib dot-property branches**. Every built-in type's operations and properties are declared, type-checked, documented, and testable directly in `lib/core/*.lts`, and replaceable when a standard module provider is swapped ([replaceable standard modules](lite://doc/modules-and-packages#replaceable-standard-modules)).
 
 ## Final audit of all remaining hardcoded magicals in `compiler/src/`
 
-Audited across [`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lt), [`compiler/src/frontend.lts`](lite://repo/compiler/src/frontend.lt), and [`compiler/src/builtins-abi.lts`](lite://repo/compiler/src/builtins-abi.lt) on **2026-11-23**.
+Audited across [`compiler/src/frontend-expr.lts`](lite://repo/lib/lite/compiler/frontend-expr.lt), [`compiler/src/frontend.lts`](lite://repo/lib/lite/compiler/frontend.lt), and [`compiler/src/builtins-abi.lts`](lite://repo/lib/lite/compiler/builtins-abi.lt) on **2026-11-23**.
 
 ### 1. Structural language primitives (NOT stdlib magic — stay in compiler)
 
@@ -93,11 +93,11 @@ Note on `joinTexts` (`List<String>`): under the owned-type rule, `List.join` bel
 ## Key compiler mechanics
 
 1. **Slice 1A → Slice 1B split (generic function bodies):**
-   - Today [`frontend.lts:2914-2915`](lite://repo/compiler/src/frontend.lt) rejects generic function bodies (`fn<T>(...) { ... }`) while already parsing bodyless generic core declarations (`pub pushBack := fn<T>(...): Unit;`).
+   - Today [`frontend.lts:2914-2915`](lite://repo/lib/lite/compiler/frontend.lt) rejects generic function bodies (`fn<T>(...) { ... }`) while already parsing bodyless generic core declarations (`pub pushBack := fn<T>(...): Unit;`).
    - **Slice 1A** lands immediately for non-generic `record`/`enum` operations, non-generic core types (`String`, `Int` — including pure & soft builtins), and bodyless generic hard builtins (`List.pushBack`, `Map.set`, `Set.add`).
    - **Slice 1B** adds monomorphized generic function bodies (`fn<T> { ... }`) by recording the generic function's raw source span and type-parameter list in `FunctionInfo`, instantiating and caching per concrete type tuple (`List$isEmpty__Int` / `lt_fn_List_isEmpty__int`), unlocking pure and soft generic methods (`List.isEmpty`, `Map.isEmpty`, `Set.isEmpty`, `List.map`, `List.flatten`, `List.sum`) on both TS and C11.
 2. **`mut Self` on `record` (TS COW + C11 pointer parity):**
-   - Lift the `List`/`Map`/`Set`-only `mut` parameter restriction at [`frontend-types.lts:1726`](lite://repo/compiler/src/frontend-types.lt) to admit nominal records (`mut Self` / `mut RecordType`).
+   - Lift the `List`/`Map`/`Set`-only `mut` parameter restriction at [`frontend-types.lts:1726`](lite://repo/lib/lite/compiler/frontend-types.lt) to admit nominal records (`mut Self` / `mut RecordType`).
    - Both `snapshot := player; player.hp -= 10;` and `snapshot := player; player.takeDamage(10);` **must** leave `snapshot` completely unchanged on both targets:
      - **C11:** pass a direct stack pointer (`lt_rec_Player *p`) and mutate `p->hp` in place (zero heap allocation; `snapshot := player` already copied the struct by value).
      - **TS:** pass a 1-field box `{ v: Player }` and keep the existing COW spread (`p$box.v = { ...p$box.v, hp: ... }`), writing `player = b.v` back at the call site (preserving `snapshot`, surviving early returns, and forwarding `p$box` directly to nested `mut Self` calls).
@@ -138,11 +138,11 @@ Follow [compiler development guidelines](lite://repo/.agents/rules/compiler-deve
 
 ### Phase 3 — Hard/soft builtin ABI and lazy core-owner loading
 
-- Extend [`compiler/src/builtins-abi.lts`](lite://repo/compiler/src/builtins-abi.lt):
+- Extend [`compiler/src/builtins-abi.lts`](lite://repo/lib/lite/compiler/builtins-abi.lt):
   - Allow `coreHostFunction` (hard builtins) and `coreSoftBuiltin` (soft builtins) to register and validate `TypeName.op` under verified `lite.core.*.v1` identities.
   - Extend `--builtin-mode` spec parsing so users and CI can toggle pure vs native overrides for type operations as well (for example `--builtin-mode=pure`, `--builtin-mode=core/text=pure`, `--builtin-mode=core/text:String.trim=pure`).
 - Add lazy on-demand core-owner loading for built-in nominal types (`List`, `Map`, `Set`, `String`, `Array`, `Int`):
-  - When a program accesses a member on a built-in type, load its owning `lib/core/*.lts` module definitions without requiring boilerplate imports for basic type operations, while keeping [`reachability.lts`](lite://repo/compiler/src/reachability.lt) DCE intact so unused operations emit **zero bytes** into TS or C11 outputs.
+  - When a program accesses a member on a built-in type, load its owning `lib/core/*.lts` module definitions without requiring boilerplate imports for basic type operations, while keeping [`reachability.lts`](lite://repo/lib/lite/compiler/reachability.lt) DCE intact so unused operations emit **zero bytes** into TS or C11 outputs.
   - Preserve compile-time constant folding for constant strings/arrays (for example `"".isEmpty` / `"abc".length`) via explicit comptime/soft-builtin evaluation rather than ad-hoc parser branches.
 - Add parity tests running the same built-in dot-operation suite under **both** `--builtin-mode=builtin` and `--builtin-mode=pure` on TS and C11.
 
@@ -159,7 +159,7 @@ Follow [compiler development guidelines](lite://repo/.agents/rules/compiler-deve
 
 ### Phase 6 — Remove hardcoded dot-access and intrinsic magic from `frontend-expr.lts`
 
-- Delete Category A hardcoded `List`/`Array`/`Map`/`Set`/`String` `.length`, `.isEmpty`, and `.size` branches in `parsePostfixChain` ([`compiler/src/frontend-expr.lts`](lite://repo/compiler/src/frontend-expr.lt)) after migrating existing callers to `.length()`, `.isEmpty()`, and `.size()`.
+- Delete Category A hardcoded `List`/`Array`/`Map`/`Set`/`String` `.length`, `.isEmpty`, and `.size` branches in `parsePostfixChain` ([`compiler/src/frontend-expr.lts`](lite://repo/lib/lite/compiler/frontend-expr.lt)) after migrating existing callers to `.length()`, `.isEmpty()`, and `.size()`.
 - Retire Category B legacy ambient `push_back`/`pop_back`/`push_front`/`pop_front` (`VALUE_KIND_LIST_OP`), replace Category C's 24 string-switched `lite$core$*` call dispatchers with uniform generic `TypeName.op` + ABI lowering, and route Category D's `list[i]`/`arr[i]`/`map[k]` indexing and indexed assignment through `$getIndex`/`$setIndex`.
 - Re-run full gates:
   - `./bin/lite test --full`

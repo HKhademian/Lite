@@ -314,7 +314,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
     hostSpecPaths: List<String> = [
     "lib/core/io.lt", "lib/core/int.lt", "lib/core/list.lt", "lib/core/text.lt",
     "lib/core/file.lt", "lib/core/process.lt", "lib/core/crypto.lt", "lib/core/time.lt",
-    "compiler/src/modules.lt"
+    "lib/lite/compiler/modules.lt"
     ];
     mut hostIds: List<String> = [];
     mut hostTexts: List<String> = [];

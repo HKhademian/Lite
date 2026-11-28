@@ -972,7 +972,7 @@ invalidatesVerification := fn(relPath: String): Bool {
     ];
     if exact.contains(relPath) { return true; }
     prefixes: List<String> = [
-    "compiler/src/",
+    "lib/lite/compiler/",
     "compiler/bootstrap/",
     "compiler/manifests/",
     "lib/core/",

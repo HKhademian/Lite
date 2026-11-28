@@ -167,10 +167,10 @@ if not skipHeavy {
 
     covered := runCmd(liteBin, ["verify", "--coverage"], root, vEnv, "");
     test.checkInt("verify --coverage status", 0, covered.status);
-    test.check("coverage features", covered.stdout.contains("features: 58 registered, 58 cases"));
-    test.check("coverage examples", covered.stdout.contains("examples: 32/32 manifests"));
+    test.check("coverage features", covered.stdout.contains("features: 66 registered, 66 cases"));
+    test.check("coverage examples", covered.stdout.contains("examples: 40/40 manifests"));
     test.check("coverage samples", covered.stdout.contains("samples: 28/28 manifests"));
-    test.check("coverage showcases", covered.stdout.contains("showcases: 23/23 manifests"));
+    test.check("coverage showcases", covered.stdout.contains("showcases: 27/27 manifests"));
 
     firstV := runCmd(liteBin, ["verify", "--all", "--filter", "features/numeric/integers/signed-arithmetic.json"], root, vEnv, "");
     test.checkInt("verify cache 1", 0, firstV.status);
@@ -282,7 +282,7 @@ isDocDeclLine := fn(line: String): Bool {
     if colEq < 0 and colEqA < 0 and colEqD < 0 { return false; }
     trimmed.indexOf(" ", 0) == colEq or trimmed.indexOf(" ", 0) == colEqA or trimmed.indexOf(" ", 0) == colEqD
 };
-docDirs: List<String> = [path.join(root, "lib/core"), path.join(root, "compiler/src")];
+docDirs: List<String> = [path.join(root, "lib/core"), path.join(root, "lib/lite/compiler")];
 docFiles := path.collectFiles(root, docDirs, ".lts", [], false);
 loop docFiles as docFile {
     content := fs.readText(docFile).text;

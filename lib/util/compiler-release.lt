@@ -236,7 +236,7 @@ runPrepare := fn(rootDir: String, outDir: String): Int {
         srcFilePath := path.resolve(path.parentDir(manPath), manFiles[0]);
         srcBytes := fs.readBytes(srcFilePath);
         regenPath := path.join(workDir, "regen-" + t + ".ts");
-        regRes := runCheckedBytesToFile(project.nodeExecPath(), [tsMeta.artifactPath, "--stdin", "--name", "compiler/src/" + t + "-root.lts", "--root", srcFilePath], rootDir, srcBytes, regenPath, workDir);
+        regRes := runCheckedBytesToFile(project.nodeExecPath(), [tsMeta.artifactPath, "--stdin", "--name", "lib/lite/compiler/" + t + "-root.lts", "--root", srcFilePath], rootDir, srcBytes, regenPath, workDir);
         if not regRes.ok { _rm := fs.remove(workDir); io.errorLine(regRes.error); return 1; }
         regSha := crypto.sha256Bytes(fs.readBytes(regenPath));
         if regSha =!= built.artifactSha256 {

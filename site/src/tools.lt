@@ -159,7 +159,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     }
 
     (mut searchEntries).pushBack("{\"kind\":\"tool\",\"title\":\"VS Code Lite Extension\",\"subtitle\":\"TextMate syntax highlighting extension in editors/vscode/\",\"href\":\"tools/#vscode\",\"keywords\":\"vscode editor syntax highlight vsix textmate\",\"badge\":\"Editor\"}");
-    mut searchEntries.pushBack("{\"kind\":\"tool\",\"title\":\"Self-Hosting 3-Generation Ladder\",\"subtitle\":\"Compile compiler/src/ through three fixed-point generations\",\"href\":\"tools/#bootstrap\",\"keywords\":\"self-host bootstrap fixed-point compiler\",\"badge\":\"Compiler\"}");
+    mut searchEntries.pushBack("{\"kind\":\"tool\",\"title\":\"Self-Hosting 3-Generation Ladder\",\"subtitle\":\"Compile lib/lite/compiler/ through three fixed-point generations\",\"href\":\"tools/#bootstrap\",\"keywords\":\"self-host bootstrap fixed-point compiler\",\"badge\":\"Compiler\"}");
 
     repoVscodeHref := if repoUrl =!= "" { repoUrl + "/tree/main/editors/vscode" } else { "../" };
     repoSelfHostHref := if repoUrl =!= "" { repoUrl + "/blob/main/compiler/scripts/self-host.ts" } else { "../" };
@@ -268,7 +268,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     + "        <span class=\"status-pill status-pill-shipped\">Fixed Point</span>\n"
     + "      </div>\n"
     + "      <p>\n"
-    + "        Lite&#39;s compiler sources live in <code>compiler/src/*.lts</code> and compile against the verified seed in\n"
+    + "        Lite&#39;s compiler sources live in <code>lib/lite/compiler/*.lt</code> and compile against the verified seed in\n"
     + "        <code>compiler/bootstrap/igniter.ts</code>. To prove fixed-point self-hosting, the ladder script compiles\n"
     + "        the compiler through three consecutive generations and verifies identical SHA-256 outputs across generations:\n"
     + "      </p>\n"
