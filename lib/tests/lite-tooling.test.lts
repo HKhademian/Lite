@@ -1,0 +1,109 @@
+/* Dual-target verification for the reusable `lib/lite/` compiler and tooling library modules. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+json := import "data/json";
+builder := import "lite/builder";
+checker := import "lite/checker";
+compiler := import "lite/compiler";
+docgen := import "lite/docgen";
+eval := import "lite/eval";
+formatter := import "lite/formatter";
+lexer := import "lite/lexer";
+parser := import "lite/parser";
+runner := import "lite/runner";
+
+/* 1. Lexer, parser, and checker libraries */
+snippet := "answer := 40 + 2;\n";
+tokens := lexer.tokenize(snippet, "sample.lts");
+test.check("lexer returns tokens ending in EOF", tokens.length() >= 7 and tokens[tokens.length() - 1].kind == lexer.TOKEN_KIND_EOF);
+
+nodes := parser.parseProgram(tokens, "sample.lts");
+test.check("parser returns program nodes", nodes.length() > 0);
+
+syms := checker.checkText(snippet, "sample.lts");
+test.check("checker returns top-level symbols", syms.length() > 0);
+
+/* 2. Compile-time evaluator helpers */
+test.check("eval io.outputLine is effectful", eval.isEffectfulHostBuiltin("lite.core.io.v1", "outputLine"));
+test.check("eval Int is materializable", eval.isMaterializableKind("Int"));
+effRes := eval.checkExprEffects("40 + 2", 0, 6, "expr.lts", "");
+test.check("eval 40 + 2 is pure", effRes.pure);
+
+/* 3. In-process TS and C compiler libraries */
+srcProg := "io := import \"core/io\";\nio.outputLine(40 + 2);\n";
+tsCompiled := compiler.compileSource(srcProg, compiler.defaultCompileOptions(compiler.Target.Ts));
+test.check("compiler ts ok: " + tsCompiled.error, tsCompiled.ok);
+test.check("compiler ts output has main", tsCompiled.output.contains("export function main"));
+
+cCompiled := compiler.compileSource(srcProg, compiler.defaultCompileOptions(compiler.Target.C));
+test.check("compiler c ok: " + cCompiled.error, cCompiled.ok);
+test.check("compiler c output has main", cCompiled.output.contains("int main("));
+
+/* 4. Formatter library */
+rawUnfmt := "add := fn(a: Int): Int{\na + 1\n}\n";
+formatted := formatter.formatLite(rawUnfmt);
+test.check("formatter formats braces", formatted.contains(": Int {\n    a + 1\n}"));
+test.check("formatter is idempotent", formatter.isFormatted(formatted));
+
+tmpRes := fs.makeTempDir("lite-tooling-test-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+tmpDir := tmpRes.path;
+
+fmtSample := path.join(tmpDir, "fmt-sample.lts");
+test.check("write fmtSample", fs.writeText(fmtSample, rawUnfmt).ok);
+fmtCheck := formatter.formatFile(fmtSample, false);
+test.check("formatFile check detects unformatted", fmtCheck.ok and fmtCheck.changed);
+fmtWrite := formatter.formatFile(fmtSample, true);
+test.check("formatFile write updates file", fmtWrite.ok and fmtWrite.changed);
+fmtAgain := formatter.formatFile(fmtSample, false);
+test.check("formatFile check confirms clean", fmtAgain.ok and not fmtAgain.changed);
+
+/* 5. Docgen library */
+modJson := docgen.extractModuleJson("/** Adds two ints. */\npub add := fn(a: Int, b: Int): Int { a + b }\n", "math", "ops", "lib/math/ops.lt");
+test.check("docgen valid json", json.validate(modJson).ok);
+test.check("docgen includes module id", modJson.contains("\"id\":\"math/ops\""));
+
+/* 6. Builder and runner libraries */
+test.check("builder parses web platform", builder.parsePlatform("web").ok);
+test.checkText("builder platformName headless", "headless", builder.platformName(builder.TargetPlatform.Headless));
+webHtml := builder.buildWebHtml("Sample App", "console.log(1);");
+test.check("builder web html embeds canvas stage", webHtml.contains("<canvas id=\"lite-stage\"") and webHtml.contains("Sample App"));
+
+helloScript := path.join(tmpDir, "hello.lts");
+test.check("write helloScript", fs.writeText(helloScript, "io := import \"core/io\";\nio.outputLine(\"hello-lib\");\n").ok);
+
+runRes := runner.runScript(runner.defaultRunOptions(helloScript));
+test.check("runner runs helloScript on TS: " + runRes.error + runRes.stderr, runRes.ok and runRes.status == 0);
+test.checkText("runner finds canvas alias", "cv", runner.findModuleAlias("cv := import \"extra/canvas\";\n", "extra/canvas"));
+test.check("runner detects top-level hook", runner.hasTopLevelFn("pub onCanvasUpdate := fn(dt: Float): Int { 0 }\n", "onCanvasUpdate"));
+
+nativeExe := path.join(tmpDir, "hello-bin");
+defOpts := builder.defaultBuildOptions(helloScript);
+bOpts := builder.BuildOptions {
+    scriptPath = helloScript,
+    outputPath = nativeExe,
+    platform = builder.TargetPlatform.Native,
+    compileOpts = defOpts.compileOpts,
+    hasOpt = false,
+    sizeOpt = false,
+    ccOpt = "-O2",
+    explicitCcOpt = false,
+    sanitize = false,
+    debugPreset = false,
+    explicitDebugSet = false,
+    explicitDebugVal = false,
+    keepC = false,
+    keepTs = false
+};
+bRes := builder.buildScript(bOpts);
+test.check("builder builds native binary: " + bRes.error + bRes.stderr, bRes.ok and bRes.status == 0);
+emptyEnv: List<String> = [];
+execBuilt := proc.run(nativeExe, emptyEnv, "", emptyEnv, true, "");
+test.check("built binary runs cleanly", execBuilt.error == "" and execBuilt.status == 0);
+test.checkText("built binary output", "hello-lib\n", execBuilt.stdout);
+
+_rmTmp := fs.remove(tmpDir);
+test.done("lite-tooling");

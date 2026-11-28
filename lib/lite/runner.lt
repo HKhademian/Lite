@@ -1,0 +1,604 @@
+/* Reusable Lite script runner library supporting TS and C targets plus interactive canvas play wrappers. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+compilerBuild := import "util/compiler-build";
+project := import "util/project";
+tb := import "util/text-builder";
+
+/** Execution target backend for `runScript` (`Ts` or `C`). */
+pub RunTarget := enum { Ts; C; };
+
+/** Options for interactive `--play` surface wrapping when running canvas scripts. */
+pub PlayOptions := record {
+    enabled: Bool;
+    scale: Int;
+    fps: Int;
+    uncap: Bool;
+    debugHud: Bool;
+    showBar: Bool;
+    startFullscreen: Bool;
+    capturePath: String;
+};
+
+/** Configuration for compiling and executing one `.lts` script. */
+pub RunOptions := record {
+    scriptPath: String;
+    target: RunTarget;
+    compileOpts: List<String>;
+    sanitize: Bool;
+    debugPreset: Bool;
+    explicitDebugSet: Bool;
+    explicitDebugVal: Bool;
+    play: PlayOptions;
+    scriptArgs: List<String>;
+};
+
+/** Structured result of `runScript` (zero side-effect process exit). */
+pub RunResult := record {
+    ok: Bool;
+    status: Int;
+    error: String;
+    stderr: String;
+};
+
+/** Returns default `PlayOptions` (disabled, 60fps, auto-scale, stage bar shown). */
+pub defaultPlayOptions := fn(): PlayOptions {
+    PlayOptions {
+        enabled = false,
+        scale = 0,
+        fps = 60,
+        uncap = false,
+        debugHud = false,
+        showBar = true,
+        startFullscreen = false,
+        capturePath = ""
+    }
+};
+
+/** Returns default `RunOptions` targeting TypeScript execution for `scriptPath`. */
+pub defaultRunOptions := fn(scriptPath: String): RunOptions {
+    emptyOpts: List<String> = [];
+    emptyArgs: List<String> = [];
+    RunOptions {
+        =scriptPath,
+        target = RunTarget.Ts,
+        compileOpts = emptyOpts,
+        sanitize = false,
+        debugPreset = false,
+        explicitDebugSet = false,
+        explicitDebugVal = false,
+        play = defaultPlayOptions(),
+        scriptArgs = emptyArgs
+    }
+};
+
+escapeLiteString := fn(raw: String): String {
+    mut out: tb.TextBuilder;
+    n := raw.length();
+    var runStart := 0;
+    var i := 0;
+    loop i < n {
+        ch := raw.at(i);
+        if ch == "\\" or ch == "\"" {
+            if i > runStart { mut out.append(raw.slice(runStart, i)); }
+            mut out.append(if ch == "\\" { "\\\\" } else { "\\\"" });
+            runStart = i + 1;
+        }
+        i += 1;
+    }
+    if runStart == 0 { return raw; }
+    if runStart < n { mut out.append(raw.slice(runStart, n)); }
+    out.build()
+};
+
+splitLines := fn(source: String): List<String> {
+    mut out: List<String> = [];
+    n := source.length();
+    var pos := 0;
+    loop pos <= n {
+        nl := source.indexOf("\n", pos);
+        if nl < 0 {
+            mut out.pushBack(source.slice(pos, n));
+            break;
+        }
+        (mut out).pushBack(source.slice(pos, nl));
+        pos = nl + 1;
+    }
+    out
+};
+
+/** Finds the binding alias name for `modulePath` imported via `alias := import "..."` in `source`. */
+pub findModuleAlias := fn(source: String, modulePath: String): String {
+    needle := "\"" + modulePath + "\"";
+    lines := splitLines(source);
+    loop lines as rawLine {
+        line := rawLine.trim();
+        if line.contains(needle) and line.contains("import") and line.contains(":=") {
+            var work := line;
+            if work.startsWithAt(0, "pub ") {
+                work = work.slice(4, work.length()).trim();
+            }
+            colonIdx := work.indexOf(":=", 0);
+            if colonIdx > 0 {
+                modAlias := work.slice(0, colonIdx).trim();
+                if modAlias =!= "" and not (modAlias).contains(" ") {
+                    return modAlias;
+                }
+            }
+        }
+    }
+    ""
+};
+
+/** Returns true if `source` defines a top-level function `fnName := fn...`. */
+pub hasTopLevelFn := fn(source: String, fnName: String): Bool {
+    lines := splitLines(source);
+    loop lines as rawLine {
+        line := rawLine.trim();
+        var work := line;
+        if work.startsWithAt(0, "pub ") {
+            work = work.slice(4, work.length()).trim();
+        }
+        if work.startsWithAt(0, fnName) {
+            rest := work.slice(fnName.length(), work.length()).trim();
+            if rest.startsWithAt(0, ":=") {
+                after := rest.slice(2, rest.length()).trim();
+                if after.startsWithAt(0, "fn") {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+};
+
+/** Wraps canvas callback `source` in Lite's desktop `--play` stage runner driving `extra/surface`. */
+pub buildPlayWrapper := fn(
+source: String,
+canvasAlias: String,
+scale: Int,
+fps: Int,
+uncap: Bool,
+debugHud: Bool,
+showBar: Bool,
+startFullscreen: Bool,
+capturePath: String
+): String {
+    hasInit := hasTopLevelFn(source, "onCanvasInit");
+    hasUpdate := hasTopLevelFn(source, "onCanvasUpdate");
+    hasKeyDown := hasTopLevelFn(source, "onCanvasKeyDown");
+    hasKeyUp := hasTopLevelFn(source, "onCanvasKeyUp");
+    hasPtrMove := hasTopLevelFn(source, "onCanvasPointerMove");
+    hasPtrDown := hasTopLevelFn(source, "onCanvasPointerDown");
+    hasPtrUp := hasTopLevelFn(source, "onCanvasPointerUp");
+    hasResize := hasTopLevelFn(source, "onSurfaceResize");
+
+    header :=
+    "__lpSurf := import \"extra/surface\";\n" +
+    "__lpIo := import \"core/io\";\n" +
+    "__lpTime := import \"core/time\";\n";
+
+    var footer := "\n/* --- Desktop Play host driver (extra/canvas + extra/audio -> extra/surface) --- */\n";
+    footer = footer +
+    "__lpFloorInt := fn(v: Float): Int {\n" +
+    "    if v <= 0.0 { return 0; }\n" +
+    "    var hi := 1;\n" +
+    "    loop hi < 1000000 and hi <= v { hi = hi * 2; }\n" +
+    "    var lo := 0;\n" +
+    "    loop lo < hi {\n" +
+    "        mid := (lo + hi + 1) / 2;\n" +
+    "        if mid <= v { lo = mid; } else { hi = mid - 1; }\n" +
+    "    }\n" +
+    "    lo\n" +
+    "};\n" +
+    "__lpFmt1 := fn(tenths: Int): String {\n" +
+    "    whole := tenths / 10;\n" +
+    "    frac := tenths % 10;\n" +
+    "    whole.toText() + \".\" + (if frac < 0 { 0 } else { frac }).toText()\n" +
+    "};\n" +
+    "__lpApplyFps := fn(win: __lpSurf.Surface, mode: Int): Unit {\n" +
+    "    if mode == 0 { __lpSurf.setTargetFps(win, 60.0); }\n" +
+    "    else if mode == 1 { __lpSurf.setTargetFps(win, 30.0); }\n" +
+    "    else if mode == 2 { __lpSurf.setTargetFps(win, 120.0); }\n" +
+    "    else { __lpSurf.uncapFrameRate(win); }\n" +
+    "};\n" +
+    "__lpDrawStageBar := fn(win: __lpSurf.Surface, winW: Int, barY: Int, barH: Int, visible: Bool, paused: Bool, muted: Bool, fpsMode: Int, debugOn: Bool, fullOn: Bool, hudFps: Int): Unit {\n" +
+    "    if barH <= 0 { return; }\n" +
+    "    by := barY * 1.0;\n" +
+    "    if not visible {\n" +
+    "        __lpSurf.fillRect(win, __lpSurf.rect(0.0, by, winW * 1.0, barH * 1.0), __lpSurf.rgb(0.04, 0.05, 0.08));\n" +
+    "        return;\n" +
+    "    }\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(0.0, by, winW * 1.0, barH * 1.0), __lpSurf.rgba(0.08, 0.10, 0.14, 0.92));\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(0.0, by, winW * 1.0, 1.0), __lpSurf.rgb(0.22, 0.27, 0.36));\n" +
+    "    pillBg := __lpSurf.rgb(0.15, 0.19, 0.26);\n" +
+    "    amberBg := __lpSurf.rgb(0.65, 0.42, 0.12);\n" +
+    "    coralBg := __lpSurf.rgb(0.62, 0.20, 0.24);\n" +
+    "    cyanBg := __lpSurf.rgb(0.14, 0.44, 0.56);\n" +
+    "    mintBg := __lpSurf.rgb(0.14, 0.46, 0.34);\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(6.0, by + 4.0, 62.0, 20.0), if paused { amberBg } else { pillBg });\n" +
+    "    __lpSurf.drawText(win, if paused { \"PLAY\" } else { \"PAUSE\" }, __lpSurf.point(12.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(74.0, by + 4.0, 44.0, 20.0), pillBg);\n" +
+    "    __lpSurf.drawText(win, \"RST\", __lpSurf.point(82.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(124.0, by + 4.0, 62.0, 20.0), if muted { coralBg } else { pillBg });\n" +
+    "    __lpSurf.drawText(win, if muted { \"MUTED\" } else { \"SOUND\" }, __lpSurf.point(130.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    fpsLabel := if fpsMode == 0 { \"60FPS\" } else if fpsMode == 1 { \"30FPS\" } else if fpsMode == 2 { \"120FP\" } else { \"UNCAP\" };\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(192.0, by + 4.0, 64.0, 20.0), if fpsMode == 3 { cyanBg } else { pillBg });\n" +
+    "    __lpSurf.drawText(win, fpsLabel, __lpSurf.point(198.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(262.0, by + 4.0, 44.0, 20.0), if debugOn { mintBg } else { pillBg });\n" +
+    "    __lpSurf.drawText(win, \"DBG\", __lpSurf.point(270.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(312.0, by + 4.0, 50.0, 20.0), if fullOn { cyanBg } else { pillBg });\n" +
+    "    __lpSurf.drawText(win, if fullOn { \"WIN\" } else { \"FULL\" }, __lpSurf.point(318.0, by + 10.0), 8.0, __lpSurf.WHITE);\n" +
+    "    if winW >= 460 {\n" +
+    "        stat := hudFps.toText() + \" FPS\";\n" +
+    "        __lpSurf.drawText(win, stat, __lpSurf.point((winW - 84) * 1.0, by + 10.0), 8.0, __lpSurf.rgb(0.68, 0.76, 0.86));\n" +
+    "    }\n" +
+    "};\n" +
+    "__lpDrawDebugHud := fn(win: __lpSurf.Surface, hudFps: Int, hudMsT: Int, hudCpuT: Int, hudRssT: Int, hudFrames: Int, fpsMode: Int, paused: Bool, muted: Bool): Unit {\n" +
+    "    __lpSurf.fillRect(win, __lpSurf.rect(8.0, 8.0, 296.0, 42.0), __lpSurf.rgba(0.04, 0.06, 0.10, 0.82));\n" +
+    "    __lpSurf.strokeRect(win, __lpSurf.rect(8.0, 8.0, 296.0, 42.0), 1.0, __lpSurf.rgba(0.45, 0.78, 0.90, 0.65));\n" +
+    "    capTxt := if fpsMode == 0 { \"60\" } else if fpsMode == 1 { \"30\" } else if fpsMode == 2 { \"120\" } else { \"UNCAP\" };\n" +
+    "    stTxt := (if paused { \" PAUSED\" } else { \"\" }) + (if muted { \" MUTED\" } else { \"\" });\n" +
+    "    l1 := \"FPS \" + hudFps.toText() + \"  MS \" + __lpFmt1(hudMsT) + \"  CAP \" + capTxt + stTxt;\n" +
+    "    l2 := \"RSS \" + __lpFmt1(hudRssT) + \"MB  CPU \" + __lpFmt1(hudCpuT) + \"MS  FRM \" + hudFrames.toText();\n" +
+    "    __lpSurf.drawText(win, l1, __lpSurf.point(14.0, 14.0), 8.0, __lpSurf.WHITE);\n" +
+    "    __lpSurf.drawText(win, l2, __lpSurf.point(14.0, 30.0), 8.0, __lpSurf.rgb(0.55, 0.88, 0.76));\n" +
+    "};\n" +
+    "__lpRunPlay := fn(): Unit {\n" +
+    "    snap := " + canvasAlias + ".litePlayCanvasSnapshot();\n" +
+    "    if snap.width <= 0 or snap.height <= 0 { return; }\n" +
+    "    reqScale := " + scale.toText() + ";\n" +
+    "    scale := if reqScale > 0 { reqScale } else if snap.width <= 240 { 3 } else if snap.width <= 480 { 2 } else { 1 };\n" +
+    "    canvasW := snap.width * scale;\n" +
+    "    canvasH := snap.height * scale;\n" +
+    "    barH := " + (if (capturePath == "" or debugHud) and showBar { "28" } else { "0" }) + ";\n" +
+    "    win := __lpSurf.open(snap.title, canvasW, canvasH + barH);\n";
+
+    initFpsMode := if uncap { 3 } else if fps == 30 { 1 } else if fps == 120 { 2 } else { 0 };
+    if uncap {
+        footer = footer + "    __lpSurf.uncapFrameRate(win);\n";
+    } else if fps > 0 {
+        footer = footer + "    __lpSurf.setTargetFps(win, " + fps.toText() + ".0);\n";
+    }
+
+    footer = footer + "    var lastDraw := -1;\n";
+    if hasInit {
+        footer = footer + "    onCanvasInit();\n";
+    }
+    footer = footer + "    lastDraw = " + canvasAlias + ".flushToSurface(win, scale, lastDraw, false);\n";
+    if capturePath =!= "" {
+        if hasUpdate {
+            footer = footer +
+            "    _capSt := onCanvasUpdate(0.025);\n" +
+            "    lastDraw = " + canvasAlias + ".flushToSurface(win, scale, lastDraw, false);\n";
+        }
+        if debugHud {
+            footer = footer +
+            "    vtCap := __lpSurf.vitals(win);\n" +
+            "    __lpDrawStageBar(win, canvasW, canvasH, barH, barH > 0, false, false, " + initFpsMode.toText() + ", true, false, 60);\n" +
+            "    __lpDrawDebugHud(win, 60, 166, 12, __lpFloorInt(((vtCap.memoryBytes / 1048576.0) * 10.0) + 0.5), vtCap.frameCount, " + initFpsMode.toText() + ", false, false);\n";
+        }
+        footer = footer +
+        "    __lpSurf.present(win);\n" +
+        "    _capRes := __lpSurf.capture(win, \"" + escapeLiteString(capturePath) + "\");\n" +
+        "    __lpSurf.close(win);\n" +
+        "    return;\n" +
+        "};\n" +
+        "__lpRunPlay();\n";
+        return header + source + footer;
+    }
+
+    footer = footer +
+    "    var paused := false;\n" +
+    "    var muted := false;\n" +
+    "    var debugOn := " + (if debugHud { "true" } else { "false" }) + ";\n" +
+    "    var barVisible := " + (if showBar { "true" } else { "false" }) + ";\n" +
+    "    var fullOn := " + (if startFullscreen { "true" } else { "false" }) + ";\n" +
+    (if startFullscreen { "    __lpSurf.setFullscreen(win, true);\n" } else { "" }) +
+    "    var fpsMode := " + initFpsMode.toText() + ";\n" +
+    "    var hudFps := 60;\n" +
+    "    var hudMsT := 166;\n" +
+    "    var hudCpuT := 0;\n" +
+    "    var hudRssT := 0;\n" +
+    "    var hudFrames := 0;\n" +
+    "    var nextHudNs := 0;\n" +
+    "    drawBarH := if barH > 0 { barH } else if barVisible { 28 } else { 0 };\n" +
+    "    drawBarY := if barH > 0 { canvasH } else { canvasH - 28 };\n" +
+    "    __lpDrawStageBar(win, canvasW, drawBarY, drawBarH, barVisible, paused, muted, fpsMode, debugOn, fullOn, hudFps);\n" +
+    "    if debugOn { __lpDrawDebugHud(win, hudFps, hudMsT, hudCpuT, hudRssT, hudFrames, fpsMode, paused, muted); }\n" +
+    "    __lpSurf.present(win);\n" +
+    "    var prevKey := \"\";\n" +
+    "    var prevDown := false;\n" +
+    "    var prevCol := -1;\n" +
+    "    var prevRow := -1;\n" +
+    "    var prevWinW := canvasW;\n" +
+    "    var prevWinH := canvasH + barH;\n" +
+    "    var curWinW := canvasW;\n" +
+    "    var curWinH := canvasH + barH;\n" +
+    "    var curScale := scale;\n" +
+    "    __lpSurf.run(win, fn(inp: __lpSurf.FrameInput): Bool {\n" +
+    "        if not inp.open or inp.key == \"Escape\" { return false; }\n" +
+    "        if inp.width > 0 and inp.height > 0 and (inp.width =!= prevWinW or inp.height =!= prevWinH) {\n" +
+    "            prevWinW = inp.width;\n" +
+    "            prevWinH = inp.height;\n" +
+    "            curWinW = inp.width;\n" +
+    "            curWinH = inp.height;\n" +
+    "            availH := if barH > 0 and curWinH > barH { curWinH - barH } else { curWinH };\n" +
+    "            sx := curWinW / snap.width;\n" +
+    "            sy := availH / snap.height;\n" +
+    "            fitS := if sx < sy { sx } else { sy };\n" +
+    "            curScale = if fitS < 1 { 1 } else { fitS };\n" +
+    "            __lpSurf.clear(win, __lpSurf.rgb(0.04, 0.05, 0.08));\n" +
+    (if hasResize { "            onSurfaceResize(curWinW, availH);\n" } else { "" }) +
+    "        }\n" +
+    "        var handledKey := false;\n" +
+    "        if inp.key == \"F12\" {\n" +
+    "            barVisible = not barVisible;\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"f\" or inp.key == \"F\" or inp.key == \"F11\" {\n" +
+    "            __lpSurf.toggleFullscreen(win);\n" +
+    "            fullOn = __lpSurf.isFullscreen(win);\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"p\" or inp.key == \"P\" {\n" +
+    "            paused = not paused;\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"m\" or inp.key == \"M\" {\n" +
+    "            muted = not muted;\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"t\" or inp.key == \"T\" {\n" +
+    "            fpsMode = (fpsMode + 1) % 4;\n" +
+    "            __lpApplyFps(win, fpsMode);\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"v\" or inp.key == \"V\" {\n" +
+    "            debugOn = not debugOn;\n" +
+    "            handledKey = true;\n" +
+    "        } else if inp.key == \"r\" or inp.key == \"R\" {\n" +
+    "            __lpSurf.close(win);\n" +
+    "            __lpIo.exit(42);\n" +
+    "        }\n";
+
+    if hasKeyDown {
+        footer = footer +
+        "        if not handledKey and inp.key =!= \"\" and not paused { onCanvasKeyDown(inp.key); }\n";
+    }
+    if hasKeyUp {
+        footer = footer +
+        "        if prevKey =!= \"\" and inp.key == \"\" and not paused { onCanvasKeyUp(prevKey); }\n";
+    }
+    footer = footer +
+    "        prevKey = if handledKey { \"\" } else { inp.key };\n" +
+    "        curCanvasH := if barH > 0 and curWinH > barH { curWinH - barH } else { curWinH };\n" +
+    "        activeBarY := if barH > 0 { curCanvasH } else { curWinH - 28 };\n" +
+    "        inBar := barVisible and inp.pointerY >= (activeBarY * 1.0);\n" +
+    "        if inBar and inp.pointerDown and not prevDown {\n" +
+    "            px := inp.pointerX;\n" +
+    "            if px >= 6.0 and px <= 68.0 { paused = not paused; }\n" +
+    "            else if px >= 74.0 and px <= 118.0 { __lpSurf.close(win); __lpIo.exit(42); }\n" +
+    "            else if px >= 124.0 and px <= 186.0 { muted = not muted; }\n" +
+    "            else if px >= 192.0 and px <= 256.0 { fpsMode = (fpsMode + 1) % 4; __lpApplyFps(win, fpsMode); }\n" +
+    "            else if px >= 262.0 and px <= 306.0 { debugOn = not debugOn; }\n" +
+    "            else if px >= 312.0 and px <= 362.0 { __lpSurf.toggleFullscreen(win); fullOn = __lpSurf.isFullscreen(win); }\n" +
+    "        }\n" +
+    "        col := __lpFloorInt(inp.pointerX / (curScale * 1.0));\n" +
+    "        row := __lpFloorInt(inp.pointerY / (curScale * 1.0));\n";
+
+    if hasPtrMove {
+        footer = footer +
+        "        if not inBar and not paused and (col =!= prevCol or row =!= prevRow) { onCanvasPointerMove(col, row); }\n";
+    }
+    if hasPtrDown {
+        footer = footer +
+        "        if not inBar and not paused and inp.pointerDown and not prevDown { onCanvasPointerDown(col, row, 0); }\n";
+    }
+    if hasPtrUp {
+        footer = footer +
+        "        if not inBar and not paused and not inp.pointerDown and prevDown { onCanvasPointerUp(col, row, 0); }\n";
+    }
+    footer = footer +
+    "        prevCol = col;\n" +
+    "        prevRow = row;\n" +
+    "        prevDown = inp.pointerDown;\n";
+
+    if hasUpdate {
+        footer = footer +
+        "        if not paused {\n" +
+        "            rawDt := inp.deltaMs / 1000.0;\n" +
+        "            dt := if rawDt > 0.05 { 0.05 } else if rawDt <= 0.0 { 0.016 } else { rawDt };\n" +
+        "            st := onCanvasUpdate(dt);\n" +
+        "            if st =!= 0 { return false; }\n" +
+        "        }\n";
+    }
+
+    footer = footer +
+    "        lastDraw = " + canvasAlias + ".flushToSurface(win, curScale, lastDraw, muted);\n" +
+    "        nowNs := __lpTime.monotonicNs();\n" +
+    "        if nowNs >= nextHudNs {\n" +
+    "            nextHudNs = nowNs + 250000000;\n" +
+    "            vt := __lpSurf.vitals(win);\n" +
+    "            hudFps = __lpFloorInt(vt.fps + 0.5);\n" +
+    "            hudMsT = __lpFloorInt((vt.avgFrameTimeMs * 10.0) + 0.5);\n" +
+    "            hudCpuT = __lpFloorInt((vt.cpuTimeMs * 10.0) + 0.5);\n" +
+    "            hudRssT = __lpFloorInt(((vt.memoryBytes / 1048576.0) * 10.0) + 0.5);\n" +
+    "            hudFrames = vt.frameCount;\n" +
+    "        }\n" +
+    "        curBarH := if barH > 0 { barH } else if barVisible { 28 } else { 0 };\n" +
+    "        __lpDrawStageBar(win, curWinW, activeBarY, curBarH, barVisible, paused, muted, fpsMode, debugOn, fullOn, hudFps);\n" +
+    "        if debugOn { __lpDrawDebugHud(win, hudFps, hudMsT, hudCpuT, hudRssT, hudFrames, fpsMode, paused, muted); }\n" +
+    "        true\n" +
+    "    });\n" +
+    "    __lpSurf.close(win);\n" +
+    "};\n" +
+    "__lpRunPlay();\n";
+
+    header + source + footer
+};
+
+failRun := fn(status: Int, error: String, stderr: String): RunResult {
+    RunResult { ok = false, =status, =error, =stderr }
+};
+
+/** Compiles and executes `opts.scriptPath` using TS or C, returning its exit status cleanly. */
+pub runScript := fn(opts: RunOptions): RunResult {
+    if opts.scriptPath == "" {
+        return failRun(2, "lite run: missing source .lts path", "");
+    }
+    if not opts.scriptPath.endsWith(".lts") {
+        return failRun(2, "lite run: source must be a .lts file", "");
+    }
+    if fs.kind(opts.scriptPath) =!= fs.FILE_KIND_FILE {
+        return failRun(2, "lite run: cannot read " + opts.scriptPath, "");
+    }
+
+    targetName := if opts.target == RunTarget.C { "c" } else { "ts" };
+    root := project.findRepoRoot();
+    sel := compilerBuild.selectCompilerPath(root, targetName);
+    if not sel.ok {
+        return failRun(1, "lite run: " + sel.error, "");
+    }
+    emptyEnv: List<String> = [];
+
+    tempDir := fs.makeTempDir("lite-run-");
+    if not tempDir.ok {
+        return failRun(1, "lite run: " + tempDir.error, "");
+    }
+
+    var compileInput := opts.scriptPath;
+    if opts.play.enabled {
+        srcRead := fs.readText(opts.scriptPath);
+        if not srcRead.ok {
+            fs.remove(tempDir.path);
+            return failRun(1, "lite run: " + srcRead.error, "");
+        }
+        canvasAlias := findModuleAlias(srcRead.text, "extra/canvas");
+        if canvasAlias =!= "" {
+            resolvedCapture := if opts.play.capturePath == "" { "" } else { path.resolve(proc.cwd(), opts.play.capturePath) };
+            wrapped := buildPlayWrapper(
+            srcRead.text, canvasAlias, opts.play.scale, opts.play.fps, opts.play.uncap,
+            opts.play.debugHud, opts.play.showBar, opts.play.startFullscreen, resolvedCapture
+            );
+            wrappedPath := path.join(tempDir.path, "play-entry.lts");
+            wRes := fs.writeText(wrappedPath, wrapped);
+            if not wRes.ok {
+                fs.remove(tempDir.path);
+                return failRun(1, "lite run: " + wRes.error, "");
+            }
+            compileInput = wrappedPath;
+        }
+    }
+
+    mut compileArgs: List<String> = [sel.path];
+    loop opts.compileOpts as opt {
+        mut compileArgs.pushBack(opt);
+    }
+    (mut compileArgs).pushBack(compileInput);
+    compiled := proc.run(project.nodeExecPath(), compileArgs, "", emptyEnv, true, "");
+    if compiled.error =!= "" {
+        fs.remove(tempDir.path);
+        return failRun(1, "lite run: " + compiled.error, "");
+    }
+    if compiled.status =!= 0 {
+        fs.remove(tempDir.path);
+        return failRun(compiled.status, "", compiled.stderr);
+    }
+
+    mut runEnv: List<String> = [];
+    if opts.play.capturePath =!= "" {
+        mut runEnv.pushBack("LITE_CANVAS_HEADLESS=1");
+    }
+
+    base := path.baseName(opts.scriptPath);
+    baseNoExt := base.slice(0, base.length() - 4);
+    if opts.target == RunTarget.C {
+        cArtifact := path.join(tempDir.path, baseNoExt + ".c");
+        cWrite := fs.writeText(cArtifact, compiled.stdout);
+        if not cWrite.ok {
+            fs.remove(tempDir.path);
+            return failRun(1, "lite run: " + cWrite.error, "");
+        }
+        binPath := path.join(tempDir.path, baseNoExt);
+        mut ccArgs: List<String> = ["-std=c11", "-O1", cArtifact, "-o", binPath, "-lm"];
+        if opts.sanitize {
+            mut ccArgs.pushBack("-fsanitize=address,undefined");
+            mut ccArgs.pushBack("-DLITE_ALLOC_SYSTEM");
+            mut ccArgs.pushBack("-fno-omit-frame-pointer");
+            mut ccArgs.pushBack("-g");
+        } else if (if opts.explicitDebugSet { opts.explicitDebugVal } else { opts.debugPreset }) {
+            mut ccArgs.pushBack("-g");
+        }
+        if proc.platform() == "darwin" and compiled.stdout.contains("LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
+            mut ccArgs.pushBack("-framework");
+            mut ccArgs.pushBack("Cocoa");
+            mut ccArgs.pushBack("-framework");
+            mut ccArgs.pushBack("CoreGraphics");
+        }
+        ccRes := proc.run("cc", ccArgs, tempDir.path, emptyEnv, true, "");
+        if ccRes.error =!= "" {
+            fs.remove(tempDir.path);
+            return failRun(1, "lite run: cc failed: " + ccRes.error, "");
+        }
+        if ccRes.status =!= 0 {
+            fs.remove(tempDir.path);
+            return failRun(ccRes.status, "", ccRes.stderr);
+        }
+        var cStatus := 0;
+        var cErr := "";
+        loop true {
+            cExecRes := proc.run(binPath, opts.scriptArgs, "", runEnv, false, "");
+            cStatus = cExecRes.status;
+            cErr = cExecRes.error;
+            if opts.play.enabled and cErr == "" and cStatus == 42 {
+                continue;
+            }
+            break;
+        }
+        fs.remove(tempDir.path);
+        if cErr =!= "" {
+            return failRun(1, "lite run: " + cErr, "");
+        }
+        return RunResult { ok = cStatus == 0, status = cStatus, error = "", stderr = "" };
+    }
+
+    artifact := path.join(tempDir.path, baseNoExt + ".ts");
+    writeRes := fs.writeText(artifact, compiled.stdout);
+    if not writeRes.ok {
+        fs.remove(tempDir.path);
+        return failRun(1, "lite run: " + writeRes.error, "");
+    }
+
+    runnerPath := path.join(tempDir.path, "runner.ts");
+    runnerCode :=
+    "import { writeSync } from 'node:fs';\n" +
+    "import { main } from './" + baseNoExt + ".ts';\n" +
+    "process.argv = [process.execPath, process.argv[1]!, ...process.argv.slice(2)];\n" +
+    "const out = main((text: string): void => { writeSync(1, text); });\n" +
+    "if (typeof out === 'string' && out.length > 0) writeSync(1, out);\n";
+    runWr := fs.writeText(runnerPath, runnerCode);
+    if not runWr.ok {
+        fs.remove(tempDir.path);
+        return failRun(1, "lite run: " + runWr.error, "");
+    }
+
+    mut entryArgs: List<String> = [runnerPath];
+    loop opts.scriptArgs as arg {
+        mut entryArgs.pushBack(arg);
+    }
+    var tsStatus := 0;
+    var tsErr := "";
+    loop true {
+        execRes := proc.run(project.nodeExecPath(), entryArgs, "", runEnv, false, "");
+        tsStatus = execRes.status;
+        tsErr = execRes.error;
+        if opts.play.enabled and tsErr == "" and tsStatus == 42 {
+            continue;
+        }
+        break;
+    }
+    fs.remove(tempDir.path);
+
+    if tsErr =!= "" {
+        return failRun(1, "lite run: " + tsErr, "");
+    }
+    RunResult { ok = tsStatus == 0, status = tsStatus, error = "", stderr = "" }
+};

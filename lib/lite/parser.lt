@@ -1,0 +1,95 @@
+/* Public parser barrel re-exporting Lite's syntax phase for library callers. */
+
+lex := import "./compiler/lexer";
+impl := import "./compiler/parser";
+
+/** One flat parse node: kind, name, detail text, and source position. */
+pub Node := alias impl.Node;
+
+/** Parse nodes in source order. */
+pub Nodes := alias impl.Nodes;
+
+/** Returns the count of tokens up to and including the first EOF token. */
+pub tokenCount := fn(tokens: lex.Tokens): Int {
+    impl.tokenCount(tokens)
+};
+
+/** Returns the token at `index`. */
+pub tokenAt := fn(tokens: lex.Tokens, index: Int): lex.Token {
+    impl.tokenAt(tokens, index)
+};
+
+/** Returns the kind of the token at `index`. */
+pub tokenKindAt := fn(tokens: lex.Tokens, index: Int): String {
+    impl.tokenKindAt(tokens, index)
+};
+
+/** Returns the decoded text of the token at `index`. */
+pub tokenTextAt := fn(tokens: lex.Tokens, index: Int): String {
+    impl.tokenTextAt(tokens, index)
+};
+
+/** Returns the 1-based line number of the token at `index`. */
+pub tokenLineAt := fn(tokens: lex.Tokens, index: Int): Int {
+    impl.tokenLineAt(tokens, index)
+};
+
+/** Returns the 1-based column number of the token at `index`. */
+pub tokenColumnAt := fn(tokens: lex.Tokens, index: Int): Int {
+    impl.tokenColumnAt(tokens, index)
+};
+
+/** Returns the UTF-8 character offset of the token at `index`. */
+pub tokenOffsetAt := fn(tokens: lex.Tokens, index: Int): Int {
+    impl.tokenOffsetAt(tokens, index)
+};
+
+/** True when `token` is the exact symbol `text`. */
+pub isSymbol := fn(token: lex.Token, text: String): Bool {
+    impl.isSymbol(token, text)
+};
+
+/** Parses one type expression starting at `index`. */
+pub parseType := fn(tokens: lex.Tokens, index: Int, prefix: String): (next: Int, text: String) {
+    impl.parseType(tokens, index, prefix)
+};
+
+/** Parses one value expression starting at `index` with operator precedence `minimum`. */
+pub parseExpression := fn(tokens: lex.Tokens, index: Int, prefix: String, minimum: Int): (next: Int, text: String) {
+    impl.parseExpression(tokens, index, prefix, minimum)
+};
+
+/** Parses one top-level declaration starting at `index`. */
+pub parseDeclaration := fn(tokens: lex.Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
+    impl.parseDeclaration(tokens, index, prefix)
+};
+
+/** Parses all top-level declarations in `tokens`. */
+pub parseDeclarations := fn(tokens: lex.Tokens, prefix: String): Nodes {
+    impl.parseDeclarations(tokens, prefix)
+};
+
+/** Parses a brace-delimited block or statement body starting at `index`. */
+pub parseBlock := fn(tokens: lex.Tokens, index: Int, prefix: String, closed: Bool): (next: Int, text: String) {
+    impl.parseBlock(tokens, index, prefix, closed)
+};
+
+/** Parses a complete program from `tokens`. */
+pub parseProgram := fn(tokens: lex.Tokens, prefix: String): Nodes {
+    impl.parseProgram(tokens, prefix)
+};
+
+/** Parses one `:= alias` declaration starting at `index`. */
+pub parseTypeAlias := fn(tokens: lex.Tokens, index: Int, prefix: String): (next: Int, name: String, detail: String, offset: Int, line: Int, column: Int) {
+    impl.parseTypeAlias(tokens, index, prefix)
+};
+
+/** Parses all top-level type alias declarations in `tokens`. */
+pub parseTypeDeclarations := fn(tokens: lex.Tokens, prefix: String): Nodes {
+    impl.parseTypeDeclarations(tokens, prefix)
+};
+
+/** Prints parse nodes to standard output. */
+pub dumpNodes := fn(nodes: Nodes): Unit {
+    impl.dumpNodes(nodes);
+};

@@ -1,0 +1,129 @@
+/* Public in-process Lite compiler barrel supporting TS and C11 compilation without spawning child processes. */
+
+comptimeEval := import "./compiler/comptime-eval";
+emitC := import "./compiler/emit-c";
+emitTs := import "./compiler/emit-ts";
+frontend := import "./compiler/frontend";
+hostFs := import "./compiler/host-fs";
+modules := import "./compiler/modules";
+optCfg := import "./compiler/opt-config";
+fs := import "core/file";
+io := import "core/io";
+proc := import "core/process";
+
+/** Code generation target backend (`Ts` or `C`). */
+pub Target := enum { Ts; C; };
+
+/** Optimization preset level (`-O0`..`-O3`, `-Os`, `-Oc`). */
+pub OptClass := alias optCfg.OptClass;
+
+/** Emitted code formatting style. */
+pub EmitFormat := alias optCfg.EmitFormat;
+
+/** Emitted source-location mapping mode. */
+pub SourceMapMode := alias optCfg.SourceMapMode;
+
+/** Per-pass optimization and code-emission configuration. */
+pub OptConfig := alias optCfg.OptConfig;
+
+/** Options controlling an in-process compilation. */
+pub CompileOptions := record {
+    target: Target;
+    logicalName: String;
+    projectRoot: String;
+    cwd: String;
+    optClass: OptClass;
+    builtinSpecs: List<String>;
+};
+
+/** Structured result returned by `compileSource` and `compileFile`. */
+pub CompileResult := record {
+    ok: Bool;
+    output: String;
+    error: String;
+};
+
+/** Builds default preset configuration for one optimization class and compiler target string. */
+pub presetConfig := fn(preset: OptClass, target: String): OptConfig {
+    optCfg.presetConfig(preset, target)
+};
+
+/** Parses an optimization class suffix (`0`..`3`, `s`, `c`). */
+pub parseOptClass := fn(raw: String): (ok: Bool, value: OptClass) {
+    optCfg.parseOptClass(raw)
+};
+
+/** Parses compiler optimization and pass override flags into an `OptConfig`. */
+pub parseOptConfig := fn(rawArgs: List<String>, target: String): OptConfig {
+    optCfg.parseOptConfig(rawArgs, target)
+};
+
+/** Returns default `CompileOptions` for `target` at `-O1`. */
+pub defaultCompileOptions := fn(target: Target): CompileOptions {
+    emptySpecs: List<String> = [];
+    CompileOptions {
+        =target,
+        logicalName = "input.lts",
+        projectRoot = "",
+        cwd = "",
+        optClass = OptClass.O1,
+        builtinSpecs = emptySpecs
+    }
+};
+
+/** Compiles in-memory Lite `source` using `opts` and returns generated code as a structured `CompileResult`. */
+pub compileSource := fn(source: String, opts: CompileOptions): CompileResult {
+    effectiveCwd := if opts.cwd =!= "" { opts.cwd } else { proc.cwd() };
+    logical := if opts.logicalName =!= "" { opts.logicalName } else { "input.lts" };
+    canonPath := hostFs.canonicalizeRootPath(logical, effectiveCwd);
+    effectiveRoot := if opts.projectRoot =!= "" {
+        opts.projectRoot
+    } else {
+        hostFs.findProjectRoot(proc.entryPath(), canonPath, effectiveCwd)
+    };
+    identity := hostFs.sourceModuleIdentity(effectiveRoot, source);
+    targetName := if opts.target == Target.C { frontend.TARGET_C } else { frontend.TARGET_TS };
+
+    comptimeEval.setStdoutIsArtifact(false);
+    emptyGraph: frontend.Items = [];
+    graph := modules.visitSourceModule(
+    target = targetName,
+    path = canonPath,
+    display = logical,
+    =identity,
+    =source,
+    initialGraph = emptyGraph,
+    projectRoot = effectiveRoot,
+    cwd = effectiveCwd,
+    builtinSpecs = opts.builtinSpecs
+    );
+    items := modules.moduleItems(graph);
+    writer := io.Writer.buffer();
+    cfg := optCfg.presetConfig(opts.optClass, targetName);
+    if opts.target == Target.C {
+        emitC.emitProgramToWithConfig(=writer, =items, =source, prefix = logical, builtinSpecs = opts.builtinSpecs, config = cfg);
+    } else {
+        emitTs.emitProgramToWithConfig(=writer, =items, =source, prefix = logical, builtinSpecs = opts.builtinSpecs, config = cfg);
+    }
+    outRes := writer.text();
+    _cl := writer.close();
+    CompileResult { ok = outRes.ok, output = outRes.text, error = outRes.error }
+};
+
+/** Reads `filePath` and compiles it using `opts` (defaulting `logicalName` to `filePath`). */
+pub compileFile := fn(filePath: String, opts: CompileOptions): CompileResult {
+    readRes := fs.readText(filePath);
+    if not readRes.ok {
+        return CompileResult { ok = false, output = "", error = filePath + ": " + readRes.error };
+    }
+    resolvedName := if opts.logicalName == "" or opts.logicalName == "input.lts" { filePath } else { opts.logicalName };
+    effectiveOpts := CompileOptions {
+        target = opts.target,
+        logicalName = resolvedName,
+        projectRoot = opts.projectRoot,
+        cwd = opts.cwd,
+        optClass = opts.optClass,
+        builtinSpecs = opts.builtinSpecs
+    };
+    compileSource(readRes.text, effectiveOpts)
+};

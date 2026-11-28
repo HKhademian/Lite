@@ -1,0 +1,48 @@
+/* Public lexical scanner barrel re-exporting Lite's lexer phase for library callers. */
+
+impl := import "./compiler/lexer";
+
+/** One lexical token: kind, decoded text, source offset, and 1-based line/column. */
+pub Token := alias impl.Token;
+
+/** Tokens in source order, ending with one EOF token. */
+pub Tokens := alias impl.Tokens;
+
+/** Canonical token kind for ordinary names. */
+pub TOKEN_KIND_NAME := impl.TOKEN_KIND_NAME;
+
+/** Canonical token kind for keywords other than Bool literals. */
+pub TOKEN_KIND_KEYWORD := impl.TOKEN_KIND_KEYWORD;
+
+/** Canonical token kind for Int literals. */
+pub TOKEN_KIND_INT := impl.TOKEN_KIND_INT;
+
+/** Canonical token kind for Float literals. */
+pub TOKEN_KIND_FLOAT := impl.TOKEN_KIND_FLOAT;
+
+/** Canonical token kind for String literals. */
+pub TOKEN_KIND_STRING := impl.TOKEN_KIND_STRING;
+
+/** Canonical token kind for Bool literals. */
+pub TOKEN_KIND_BOOL := impl.TOKEN_KIND_BOOL;
+
+/** Canonical token kind for symbols and operators. */
+pub TOKEN_KIND_SYMBOL := impl.TOKEN_KIND_SYMBOL;
+
+/** Canonical token kind for end of source. */
+pub TOKEN_KIND_EOF := impl.TOKEN_KIND_EOF;
+
+/** Scans Lite `source` into tokens using `prefix` for source-located diagnostics. */
+pub tokenize := fn(source: String, prefix: String): Tokens {
+    impl.tokenize(source, prefix)
+};
+
+/** Escapes token text for canonical token dumps. */
+pub escapedTokenText := fn(text: String): String {
+    impl.escapedTokenText(text)
+};
+
+/** Prints canonical token records to standard output. */
+pub dumpTokens := fn(tokens: Tokens): Unit {
+    impl.dumpTokens(tokens);
+};

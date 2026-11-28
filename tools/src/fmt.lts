@@ -1,158 +1,11 @@
-/** Format Lite (.lts) source files with canonical indentation and spacing. */
+/** Format Lite (.lts / .lt) source files with canonical indentation and spacing. */
 
-io := import "core/io";
+formatter := import "lite/formatter";
 fs := import "core/file";
-proc := import "core/process";
-text := import "core/text";
+io := import "core/io";
 path := import "core/path";
+proc := import "core/process";
 project := import "util/project";
-tb := import "util/text-builder";
-
-scanLineBraces := fn(line: String, startInBlock: Bool): (leadingCloses: Int, netChange: Int, normalized: String, inBlockComment: Bool) {
-    var inBlock := startInBlock;
-    var inString := "";
-    var leadingCloses := 0;
-    var sawCode := false;
-    var netChange := 0;
-    mut out: tb.TextBuilder;
-    var runStart := 0;
-    var lastChar := "";
-    lineLen := line.length();
-    var i := 0;
-
-    loop i < lineLen {
-        ch := line.at(i);
-        if inBlock {
-            lastChar = ch;
-            if ch == "*" and i + 1 < lineLen and line.at(i + 1) == "/" {
-                lastChar = "/";
-                inBlock = false;
-                i = i + 2;
-            } else {
-                i = i + 1;
-            }
-        } else if inString =!= "" {
-            lastChar = ch;
-            if ch == "\\" and i + 1 < lineLen {
-                nextCh := line.at(i + 1);
-                lastChar = nextCh;
-                i = i + 2;
-            } else {
-                if ch == inString { inString = ""; }
-                i = i + 1;
-            }
-        } else if ch == "/" and i + 1 < lineLen and line.at(i + 1) == "/" {
-            i = lineLen;
-            break;
-        } else if ch == "/" and i + 1 < lineLen and line.at(i + 1) == "*" {
-            lastChar = "*";
-            inBlock = true;
-            sawCode = true;
-            i = i + 2;
-        } else if ch == "\"" or ch == "'" {
-            inString = ch;
-            sawCode = true;
-            lastChar = ch;
-            i = i + 1;
-        } else if ch == "}" {
-            if not sawCode { leadingCloses = leadingCloses + 1; } else { netChange = netChange - 1; }
-            lastChar = "}";
-            sawCode = true;
-            if i + 1 < lineLen and line.at(i + 1).isAsciiLetter() {
-                mut out.append(line.slice(runStart, i + 1));
-                mut out.append(" ");
-                runStart = i + 1;
-                lastChar = " ";
-            }
-            i = i + 1;
-        } else if ch == "{" {
-            if lastChar =!= "" and not lastChar.isWhitespace() and lastChar =!= "(" and lastChar =!= "[" {
-                if i > runStart { mut out.append(line.slice(runStart, i)); }
-                mut out.append(" ");
-                runStart = i;
-            }
-            netChange = netChange + 1;
-            lastChar = "{";
-            sawCode = true;
-            i = i + 1;
-        } else {
-            if not ch.isWhitespace() { sawCode = true; }
-            lastChar = ch;
-            i = i + 1;
-        }
-    }
-
-    normalizedRaw := if runStart == 0 {
-        line
-    } else {
-        if runStart < lineLen { mut out.append(line.slice(runStart, lineLen)); }
-        out.build()
-    };
-    totalNet := netChange - leadingCloses;
-    (leadingCloses = leadingCloses, netChange = totalNet, normalized = normalizedRaw.trimEnd(), inBlockComment = inBlock)
-}
-
-/** Formats Lite source text cleanly and idempotently (4-space indentation, LF, single trailing newline). */
-pub formatLite := fn(source: String): String {
-    mut formatted: List<String> = [];
-    var formattedCount := 0;
-    var depth := 0;
-    var inBlockComment := false;
-    var blankRun := 0;
-    size := source.length();
-    var pos := 0;
-    var done := false;
-
-    loop not done {
-        var lineEnd := pos;
-        loop lineEnd < size {
-            ch := source.at(lineEnd);
-            if ch == "\n" or ch == "\r" { break; }
-            lineEnd = lineEnd + 1;
-        }
-        rawLine := source.slice(pos, lineEnd);
-        if lineEnd >= size {
-            done = true;
-        } else if source.at(lineEnd) == "\r" and lineEnd + 1 < size and source.at(lineEnd + 1) == "\n" {
-            pos = lineEnd + 2;
-        } else {
-            pos = lineEnd + 1;
-        }
-
-        trimmed := rawLine.trimEnd();
-        if trimmed.trimStart() == "" {
-            if formattedCount > 0 and blankRun == 0 {
-                mut formatted.pushBack("");
-                formattedCount = formattedCount + 1;
-                blankRun = 1;
-            }
-        } else if inBlockComment {
-            mut formatted.pushBack(trimmed);
-            formattedCount = formattedCount + 1;
-            scanned := scanLineBraces(trimmed, true);
-            inBlockComment = scanned.inBlockComment;
-            blankRun = 0;
-        } else {
-            body := trimmed.trimStart();
-            scanned := scanLineBraces(body, false);
-            var lineDepth := depth - scanned.leadingCloses;
-            if lineDepth < 0 { lineDepth = 0; }
-            (mut formatted).pushBack("    ".repeat(lineDepth) + scanned.normalized);
-            formattedCount = formattedCount + 1;
-            depth = depth + scanned.netChange;
-            if depth < 0 { depth = 0; }
-            inBlockComment = scanned.inBlockComment;
-            blankRun = 0;
-        }
-    }
-
-    loop formattedCount > 0 and formatted[formattedCount - 1] == "" {
-        mut formatted.popBack();
-        formattedCount = formattedCount - 1;
-    }
-    if formattedCount == 0 { return ""; }
-    formatted.join("\n") + "\n"
-}
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "formatter", "fmt");
@@ -182,7 +35,6 @@ run := fn(rawArgs: List<String>): Unit {
     }
 
     targetCount := targets.length();
-
     if targetCount == 0 {
         io.errorLine("Usage: ./bin/lite fmt [--check] [FILE_OR_DIR... | -]");
         io.exit(2);
@@ -194,7 +46,7 @@ run := fn(rawArgs: List<String>): Unit {
             io.errorLine(stdinRes.error);
             io.exit(1);
         }
-        output := formatLite(stdinRes.text);
+        output := formatter.formatLite(stdinRes.text);
         if checkOnly {
             if stdinRes.text == output { io.exit(0); } else { io.exit(1); }
         }
@@ -212,22 +64,15 @@ run := fn(rawArgs: List<String>): Unit {
 
     var dirty := 0;
     loop files as file {
-        readRes := fs.readText(file);
-        if not readRes.ok {
-            io.errorLine(file + ": " + readRes.error);
+        res := formatter.formatFile(file, not checkOnly);
+        if not res.ok {
+            io.errorLine(file + ": " + res.error);
             io.exit(1);
         }
-        after := formatLite(readRes.text);
-        if readRes.text =!= after {
+        if res.changed {
             dirty = dirty + 1;
             if checkOnly {
                 io.outputLine(file);
-            } else {
-                writeRes := fs.writeText(file, after);
-                if not writeRes.ok {
-                    io.errorLine(file + ": " + writeRes.error);
-                    io.exit(1);
-                }
             }
         }
     }

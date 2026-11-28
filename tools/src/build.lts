@@ -1,13 +1,8 @@
 /** Compile one Lite script into a standalone native executable (`--platform native|headless`) or single-file HTML5 app (`--platform web`). */
 
 io := import "core/io";
-fs := import "core/file";
-proc := import "core/process";
-path := import "core/path";
+builder := import "lite/builder";
 project := import "util/project";
-compilerBuild := import "util/compiler-build";
-mdHtml := import "util/markdown-html";
-tb := import "util/text-builder";
 
 usageText := fn(): String {
     "Usage: ./bin/lite build [--platform native|macos|linux|windows|headless|web] [--web] [--headless] [-O0|-O1|-O2|-O3|-Os] [--cc-opt -O0|-O1|-O2|-O3|-Os] [--sanitize] [--builtin-mode SPEC]... [-o OUTPUT] [--keep-c] [--keep-ts] [--quiet] file.lts"
@@ -16,158 +11,6 @@ usageText := fn(): String {
 usageExit := fn(): Unit {
     io.errorLine(usageText());
     io.exit(2);
-};
-
-hostOsName := fn(): String {
-    p := proc.platform();
-    if p == "darwin" { "macos" } else if p == "win32" { "windows" } else { p }
-};
-
-isSupportedPlatform := fn(p: String): Bool {
-    p == "native" or p == "macos" or p == "linux" or p == "windows" or p == "headless" or p == "web"
-};
-
-buildWebHtml := fn(titleText: String, jsBody: String): String {
-    safeTitle := mdHtml.escapeHtml(titleText);
-    mut out: tb.TextBuilder;
-    mut out.append("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n");
-    mut out.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n");
-    mut out.append("<title>" + safeTitle + "</title>\n");
-    mut out.append("<style>\n");
-    mut out.append("*{box-sizing:border-box}html,body{margin:0;padding:0;height:100%;background:#0b0f17;color:#e2e8f0;font:13px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif}\n");
-    mut out.append("body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px}\n");
-    mut out.append("#lite-stage{display:block;max-width:100%;max-height:86vh;width:min(92vw,960px);height:auto;aspect-ratio:16/10;background:#000;border:1px solid #243047;border-radius:8px;box-shadow:0 16px 48px rgba(0,0,0,.55);image-rendering:pixelated;object-fit:contain;outline:none}\n");
-    mut out.append("#lite-stage:focus{border-color:#38bdf8}\n");
-    mut out.append(".lite-bar{display:flex;gap:16px;align-items:center;color:#94a3b8;font-size:12px}.lite-err{color:#f87171;white-space:pre-wrap;max-width:92vw;margin:0}\n");
-    mut out.append("</style>\n</head>\n<body>\n");
-    mut out.append("<canvas id=\"lite-stage\" tabindex=\"0\" width=\"320\" height=\"200\"></canvas>\n");
-    mut out.append("<div class=\"lite-bar\"><strong>" + safeTitle + "</strong><span>Click stage for keyboard &amp; audio</span><span id=\"lite-fps\"></span></div>\n");
-    mut out.append("<pre id=\"lite-err\" class=\"lite-err\"></pre>\n");
-    mut out.append("<script type=\"module\">\n");
-    mut out.append("if (typeof globalThis.process === 'undefined') {\n");
-    mut out.append("  globalThis.process = {\n");
-    mut out.append("    argv: ['lite', 'web'],\n");
-    mut out.append("    env: {},\n");
-    mut out.append("    exitCode: 0,\n");
-    mut out.append("    stdout: { write(s) { console.log(String(s).replace(/\\n$/, '')); } },\n");
-    mut out.append("    stderr: { write(s) { console.error(String(s).replace(/\\n$/, '')); } },\n");
-    mut out.append("    exit(code) { throw new Error('Lite exited with code ' + String(code ?? 0)); }\n");
-    mut out.append("  };\n");
-    mut out.append("}\n");
-    mut out.append("(function installLiteSurfaceHost() {\n");
-    mut out.append("  const canvas = document.getElementById('lite-stage');\n");
-    mut out.append("  const fpsEl = document.getElementById('lite-fps');\n");
-    mut out.append("  const ctx = canvas ? canvas.getContext('2d') : null;\n");
-    mut out.append("  let audioCtx = null;\n");
-    mut out.append("  const unlockAudio = () => {\n");
-    mut out.append("    const AC = globalThis.AudioContext || globalThis.webkitAudioContext;\n");
-    mut out.append("    if (!AC) return;\n");
-    mut out.append("    if (!audioCtx) audioCtx = new AC();\n");
-    mut out.append("    if (audioCtx.state === 'suspended' && audioCtx.resume) audioCtx.resume().catch(() => {});\n");
-    mut out.append("  };\n");
-    mut out.append("  const playTone = (freq, ms, vol) => {\n");
-    mut out.append("    unlockAudio();\n");
-    mut out.append("    if (!audioCtx || audioCtx.state !== 'running') return;\n");
-    mut out.append("    if (!(freq >= 20 && freq <= 20000 && ms > 0 && vol > 0)) return;\n");
-    mut out.append("    const dur = Math.min(ms, 3000) / 1000;\n");
-    mut out.append("    const amp = Math.min(1, vol / 100) * 0.45;\n");
-    mut out.append("    const osc = audioCtx.createOscillator();\n");
-    mut out.append("    const gain = audioCtx.createGain();\n");
-    mut out.append("    const t0 = audioCtx.currentTime;\n");
-    mut out.append("    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, t0);\n");
-    mut out.append("    gain.gain.setValueAtTime(0, t0); gain.gain.linearRampToValueAtTime(amp, t0 + Math.min(dur / 4, 0.01));\n");
-    mut out.append("    gain.gain.linearRampToValueAtTime(0, t0 + dur);\n");
-    mut out.append("    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(t0); osc.stop(t0 + dur);\n");
-    mut out.append("  };\n");
-    mut out.append("  let imgW = 0, imgH = 0, imgData = null, animId = 0, stopped = false, activeState = null, activeApi = null;\n");
-    mut out.append("  let ptrX = 0, ptrY = 0, ptrDown = false, pendingKey = '', pendingWheel = 0, lastAt = 0;\n");
-    mut out.append("  const heldKeys = new Set();\n");
-    mut out.append("  const mapCell = (cx, cy) => {\n");
-    mut out.append("    if (!canvas) return { x: 0, y: 0 };\n");
-    mut out.append("    const r = canvas.getBoundingClientRect();\n");
-    mut out.append("    const w = imgW || canvas.width || 1, h = imgH || canvas.height || 1;\n");
-    mut out.append("    if (!r.width || !r.height) return { x: 0, y: 0 };\n");
-    mut out.append("    const s = Math.min(r.width / w, r.height / h);\n");
-    mut out.append("    const ox = r.left + (r.width - w * s) / 2, oy = r.top + (r.height - h * s) / 2;\n");
-    mut out.append("    return { x: Math.max(0, Math.min(w - 1, Math.floor((cx - ox) / s))), y: Math.max(0, Math.min(h - 1, Math.floor((cy - oy) / s))) };\n");
-    mut out.append("  };\n");
-    mut out.append("  const ensureImg = (w, h) => {\n");
-    mut out.append("    if (!ctx || w < 1 || h < 1) return;\n");
-    mut out.append("    if (imgW !== w || imgH !== h || !imgData) {\n");
-    mut out.append("      imgW = w; imgH = h; canvas.width = w; canvas.height = h;\n");
-    mut out.append("      canvas.style.aspectRatio = String(w) + '/' + String(h);\n");
-    mut out.append("      imgData = ctx.createImageData(w, h);\n");
-    mut out.append("    }\n");
-    mut out.append("  };\n");
-    mut out.append("  if (canvas) {\n");
-    mut out.append("    canvas.addEventListener('keydown', (e) => { unlockAudio(); if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault?.(); heldKeys.add(e.key); pendingKey = e.key; });\n");
-    mut out.append("    canvas.addEventListener('keyup', (e) => { heldKeys.delete(e.key); });\n");
-    mut out.append("    canvas.addEventListener('pointermove', (e) => { const c = mapCell(e.clientX, e.clientY); ptrX = c.x; ptrY = c.y; });\n");
-    mut out.append("    canvas.addEventListener('pointerdown', (e) => { unlockAudio(); canvas.focus?.({ preventScroll: true }); const c = mapCell(e.clientX, e.clientY); ptrX = c.x; ptrY = c.y; ptrDown = true; });\n");
-    mut out.append("    canvas.addEventListener('pointerup', (e) => { const c = mapCell(e.clientX, e.clientY); ptrX = c.x; ptrY = c.y; ptrDown = false; });\n");
-    mut out.append("    canvas.addEventListener('wheel', (e) => { if (typeof e.deltaY === 'number' && Number.isFinite(e.deltaY)) pendingWheel += e.deltaY; });\n");
-    mut out.append("  }\n");
-    mut out.append("  globalThis.__liteSurfaceHost = {\n");
-    mut out.append("    open(_id, title, w, h, st) { stopped = false; activeState = st; if (canvas) { canvas.title = title; canvas.focus?.({ preventScroll: true }); } document.title = title || document.title; ensureImg(w, h); },\n");
-    mut out.append("    poll(_id, st) {\n");
-    mut out.append("      st.pointerX = ptrX; st.pointerY = ptrY; st.pointerDown = ptrDown;\n");
-    mut out.append("      if (st.keysDown) { st.keysDown.clear(); for (const k of heldKeys) st.keysDown.add(k); }\n");
-    mut out.append("      if (pendingWheel !== 0) { st.pendingWheelDelta = (st.pendingWheelDelta ?? 0) + pendingWheel; pendingWheel = 0; }\n");
-    mut out.append("      if (pendingKey) { st.key = pendingKey; pendingKey = ''; }\n");
-    mut out.append("    },\n");
-    mut out.append("    present(_id, st) { if (!ctx) return; ensureImg(st.w, st.h); if (!imgData) return; imgData.data.set(st.pixels.subarray(0, imgData.data.length)); ctx.putImageData(imgData, 0, 0); },\n");
-    mut out.append("    close() { if (animId && globalThis.cancelAnimationFrame) { cancelAnimationFrame(animId); animId = 0; } activeApi = null; activeState = null; },\n");
-    mut out.append("    playTone(_id, f, ms, vol) { playTone(f, ms, vol); },\n");
-    mut out.append("    resize(_id, w, h, st) { ensureImg(w, h); this.present(_id, st); },\n");
-    mut out.append("    run(_surf, st, onFrame, api) {\n");
-    mut out.append("      activeState = st; activeApi = api; lastAt = 0;\n");
-    mut out.append("      const raf = globalThis.requestAnimationFrame;\n");
-    mut out.append("      const stop = () => { if (stopped) return; stopped = true; if (animId && globalThis.cancelAnimationFrame) { cancelAnimationFrame(animId); animId = 0; } st.open = false; activeApi = null; activeState = null; api.close(); };\n");
-    mut out.append("      const step = (now) => {\n");
-    mut out.append("        animId = 0; if (stopped || !st.open) { stop(); return; }\n");
-    mut out.append("        const dt = lastAt > 0 ? Math.max(0, Math.round(now - lastAt)) : 16;\n");
-    mut out.append("        st.pendingDeltaMs = dt; lastAt = now;\n");
-    mut out.append("        if (fpsEl && dt > 0) fpsEl.textContent = (1000 / dt).toFixed(0) + ' fps';\n");
-    mut out.append("        const inp = api.poll();\n");
-    mut out.append("        if (!st.open || !onFrame(inp)) { stop(); return; }\n");
-    mut out.append("        api.present();\n");
-    mut out.append("        if (raf && !stopped && st.open) animId = raf(step);\n");
-    mut out.append("      };\n");
-    mut out.append("      st.pendingDeltaMs = 16; const inp0 = api.poll();\n");
-    mut out.append("      if (!st.open || !onFrame(inp0)) { stop(); return true; }\n");
-    mut out.append("      api.present(); if (raf && !stopped && st.open) animId = raf(step); return true;\n");
-    mut out.append("    }\n");
-    mut out.append("  };\n");
-    mut out.append("})();\n");
-    mut out.append(jsBody);
-    mut out.append("\ntry {\n  if (typeof main === 'function') main((t) => console.log(String(t).replace(/\\n$/, '')));\n} catch (err) {\n  const el = document.getElementById('lite-err');\n  if (el) el.textContent = String(err && err.stack ? err.stack : err);\n  console.error(err);\n}\n");
-    mut out.append("</script>\n</body>\n</html>\n");
-    out.build()
-};
-
-findNativeCompiler := fn(): String {
-    envC := proc.envGet("LITE_COMPILER_C");
-    if envC.found and envC.value =!= "" and fs.kind(envC.value) == fs.FILE_KIND_FILE {
-        return envC.value;
-    }
-    exec := proc.execPath();
-    execBase := path.baseName(exec);
-    if execBase =!= "node" and execBase =!= "node.exe" {
-        sibling := path.join(path.parentDir(exec), "lite-compile-c");
-        if fs.kind(sibling) == fs.FILE_KIND_FILE {
-            return sibling;
-        }
-    }
-    ""
-};
-
-findTsCompiler := fn(root: String): (ok: Bool, path: String, error: String) {
-    envTs := proc.envGet("LITE_COMPILER_TS");
-    if envTs.found and envTs.value =!= "" and fs.kind(envTs.value) == fs.FILE_KIND_FILE {
-        return (ok = true, path = envTs.value, error = "");
-    }
-    sel := compilerBuild.selectCompilerPath(root, "ts");
-    (ok = sel.ok, path = sel.path, error = sel.error)
 };
 
 run := fn(rawArgs: List<String>): Unit {
@@ -185,7 +28,7 @@ run := fn(rawArgs: List<String>): Unit {
     var keepTs := false;
     var quiet := false;
     var hasOpt := false;
-    var platformTarget := "native";
+    var platformRaw := "native";
     var scriptPath := "";
 
     loop args.length() > 0 {
@@ -204,13 +47,13 @@ run := fn(rawArgs: List<String>): Unit {
             outPath = arg.slice(6, arg.length());
         } else if arg == "--platform" {
             if args.length() == 0 or args[0] == "--" { usageExit(); }
-            platformTarget = mut args.popFront();
+            platformRaw = mut args.popFront();
         } else if arg.startsWithAt(0, "--platform=") {
-            platformTarget = arg.slice(11, arg.length());
+            platformRaw = arg.slice(11, arg.length());
         } else if arg == "--web" {
-            platformTarget = "web";
+            platformRaw = "web";
         } else if arg == "--headless" {
-            platformTarget = "headless";
+            platformRaw = "headless";
         } else if arg == "--cc-opt" {
             if args.length() == 0 or args[0] == "--" { usageExit(); }
             ccOpt = mut args.popFront();
@@ -269,195 +112,37 @@ run := fn(rawArgs: List<String>): Unit {
         }
     }
 
-    if not isSupportedPlatform(platformTarget) {
-        io.errorLine("lite build: unsupported platform " + platformTarget + " (expected native, macos, linux, windows, headless, or web)");
+    parsedPlat := builder.parsePlatform(platformRaw);
+    if not parsedPlat.ok {
+        io.errorLine("lite build: unsupported platform " + platformRaw + " (expected native, macos, linux, windows, headless, or web)");
         io.exit(2);
     }
-
-    hostOs := hostOsName();
-    if (platformTarget == "macos" or platformTarget == "linux" or platformTarget == "windows") and platformTarget =!= hostOs {
-        io.errorLine("lite build: cross-compiling native binary for " + platformTarget + " on " + hostOs + " is not supported yet");
-        io.exit(2);
-    }
-
     if scriptPath == "" {
         usageExit();
     }
-    if not scriptPath.endsWith(".lts") {
-        io.errorLine("lite build: source must be a .lts file");
-        io.exit(2);
-    }
-    if fs.kind(scriptPath) =!= fs.FILE_KIND_FILE {
-        io.errorLine("lite build: cannot read " + scriptPath);
-        io.exit(2);
-    }
 
-    base := path.baseName(scriptPath);
-    baseNoExt := base.slice(0, base.length() - 4);
-    defaultName := if platformTarget == "web" { baseNoExt + ".html" } else { baseNoExt };
-    finalOut := if outPath =!= "" { path.resolve(proc.cwd(), outPath) } else { path.resolve(proc.cwd(), defaultName) };
-    outParent := path.parentDir(finalOut);
-    if outParent =!= "" and not path.isDirectory(outParent) {
-        mk := fs.makeDir(outParent);
-        if not mk.ok {
-            io.errorLine("lite build: " + mk.error);
-            io.exit(1);
-        }
-    }
-
-    tempDir := fs.makeTempDir("lite-build-");
-    if not tempDir.ok {
-        io.errorLine("lite build: " + tempDir.error);
-        io.exit(1);
-    }
-    emptyEnv: List<String> = [];
-
-    if platformTarget == "web" {
-        root := project.findRepoRoot();
-        tsSel := findTsCompiler(root);
-        if not tsSel.ok {
-            fs.remove(tempDir.path);
-            io.errorLine("lite build: " + tsSel.error);
-            io.exit(1);
-        }
-        tsArtifact := if keepTs { finalOut + ".ts" } else { path.join(tempDir.path, baseNoExt + ".ts") };
-        mut tsArgs: List<String> = [];
-        if not hasOpt { mut tsArgs.pushBack("-O1"); }
-        loop compileOpts as opt { mut tsArgs.pushBack(opt); }
-        (mut tsArgs).pushBack(scriptPath);
-        mut tsArgs.pushBack("--out");
-        mut tsArgs.pushBack(tsArtifact);
-        tsStatus := project.runCompilerArtifact(tsSel.path, tsArgs);
-        if tsStatus =!= 0 {
-            fs.remove(tempDir.path);
-            io.exit(tsStatus);
-        }
-
-        stripTsPath := path.resolve(root, "site/strip-ts.ts");
-        if fs.kind(stripTsPath) =!= fs.FILE_KIND_FILE {
-            fs.remove(tempDir.path);
-            io.errorLine("lite build: missing site/strip-ts.ts helper for web export");
-            io.exit(1);
-        }
-        jsArtifact := path.join(tempDir.path, baseNoExt + ".js");
-        stripScript :=
-        "import { readFileSync, writeFileSync } from 'node:fs'; import { pathToFileURL } from 'node:url'; " +
-        "const { stripLiteTs } = await import(pathToFileURL(process.argv[1]).href); " +
-        "const raw = readFileSync(process.argv[2], 'utf8'); " +
-        "let js = stripLiteTs(raw).replace(/\\bexport function main\\b/, 'function main'); " +
-        "js = js.replace(/<\\/script/gi, '<\\\\/script'); " +
-        "writeFileSync(process.argv[3], js, 'utf8');";
-        stripRes := proc.run(project.nodeExecPath(), ["--input-type=module", "-e", stripScript, stripTsPath, tsArtifact, jsArtifact], "", emptyEnv, true, "");
-        if stripRes.error =!= "" or stripRes.status =!= 0 {
-            fs.remove(tempDir.path);
-            if stripRes.error =!= "" { io.errorLine("lite build: " + stripRes.error); }
-            project.errorText(stripRes.stderr);
-            io.exit(if stripRes.status =!= 0 { stripRes.status } else { 1 });
-        }
-        jsRead := fs.readText(jsArtifact);
-        if not jsRead.ok {
-            fs.remove(tempDir.path);
-            io.errorLine("lite build: " + jsRead.error);
-            io.exit(1);
-        }
-        htmlText := buildWebHtml(baseNoExt, jsRead.text);
-        htmlWrite := fs.writeText(finalOut, htmlText);
-        fs.remove(tempDir.path);
-        if not htmlWrite.ok {
-            io.errorLine("lite build: " + htmlWrite.error);
-            io.exit(1);
-        }
-        if not quiet {
-            io.outputLine(finalOut);
-        }
-        return;
-    }
-
-    cArtifact := if keepC { finalOut + ".c" } else { path.join(tempDir.path, baseNoExt + ".c") };
-    nativeCompiler := findNativeCompiler();
-    if nativeCompiler =!= "" {
-        mut nativeArgs: List<String> = [];
-        if not hasOpt { mut nativeArgs.pushBack("-O1"); }
-        loop compileOpts as opt { mut nativeArgs.pushBack(opt); }
-        (mut nativeArgs).pushBack(scriptPath);
-        mut nativeArgs.pushBack("--out");
-        mut nativeArgs.pushBack(cArtifact);
-        compiled := proc.run(nativeCompiler, nativeArgs, "", emptyEnv, true, "");
-        if compiled.error =!= "" {
-            fs.remove(tempDir.path);
-            io.errorLine("lite build: " + compiled.error);
-            io.exit(1);
-        }
-        if compiled.status =!= 0 {
-            fs.remove(tempDir.path);
-            project.errorText(compiled.stderr);
-            io.exit(compiled.status);
-        }
-    } else {
-        root := project.findRepoRoot();
-        sel := compilerBuild.selectCompilerPath(root, "c");
-        if not sel.ok {
-            fs.remove(tempDir.path);
-            io.errorLine("lite build: " + sel.error);
-            io.exit(1);
-        }
-        mut nodeArgs: List<String> = [sel.path];
-        if not hasOpt { mut nodeArgs.pushBack("-O1"); }
-        loop compileOpts as opt { mut nodeArgs.pushBack(opt); }
-        (mut nodeArgs).pushBack(scriptPath);
-        compiled := proc.run(project.nodeExecPath(), nodeArgs, "", emptyEnv, true, "");
-        if compiled.error =!= "" {
-            fs.remove(tempDir.path);
-            io.errorLine("lite build: " + compiled.error);
-            io.exit(1);
-        }
-        if compiled.status =!= 0 {
-            fs.remove(tempDir.path);
-            project.errorText(compiled.stderr);
-            io.exit(compiled.status);
-        }
-        cWrite := fs.writeText(cArtifact, compiled.stdout);
-        if not cWrite.ok {
-            fs.remove(tempDir.path);
-            io.errorLine("lite build: " + cWrite.error);
-            io.exit(1);
-        }
-    }
-
-    ccEnv := proc.envGet("CC");
-    ccCmd := if ccEnv.found and ccEnv.value =!= "" { ccEnv.value } else { "cc" };
-    effectiveCcOpt := if sizeOpt and not explicitCcOpt { "-Os" } else { ccOpt };
-    mut ccArgs: List<String> = ["-std=c11", effectiveCcOpt, cArtifact, "-o", finalOut, "-lm"];
-    if sizeOpt and proc.platform() == "darwin" {
-        mut ccArgs.pushBack("-Wl,-dead_strip");
-    }
-    if sanitize {
-        mut ccArgs.pushBack("-fsanitize=address,undefined");
-        mut ccArgs.pushBack("-DLITE_ALLOC_SYSTEM");
-        mut ccArgs.pushBack("-fno-omit-frame-pointer");
-        mut ccArgs.pushBack("-g");
-    } else if (if explicitDebugSet { explicitDebugVal } else { debugPreset }) {
-        mut ccArgs.pushBack("-g");
-    }
-    cText := fs.readText(cArtifact);
-    if cText.ok and proc.platform() == "darwin" and cText.text.contains("LITE_LINK_FRAMEWORKS: Cocoa CoreGraphics") {
-        mut ccArgs.pushBack("-framework");
-        mut ccArgs.pushBack("Cocoa");
-        mut ccArgs.pushBack("-framework");
-        mut ccArgs.pushBack("CoreGraphics");
-    }
-    ccRes := proc.run(ccCmd, ccArgs, "", emptyEnv, true, "");
-    fs.remove(tempDir.path);
-    if ccRes.error =!= "" {
-        io.errorLine("lite build: " + ccCmd + " failed: " + ccRes.error);
-        io.exit(1);
-    }
-    if ccRes.status =!= 0 {
-        project.errorText(ccRes.stderr);
-        io.exit(ccRes.status);
-    }
+    opts := builder.BuildOptions {
+        =scriptPath,
+        outputPath = outPath,
+        platform = parsedPlat.value,
+        =compileOpts,
+        =hasOpt,
+        =sizeOpt,
+        =ccOpt,
+        =explicitCcOpt,
+        =sanitize,
+        =debugPreset,
+        =explicitDebugSet,
+        =explicitDebugVal,
+        =keepC,
+        =keepTs
+    };
+    res := builder.buildScript(opts);
+    if res.error =!= "" { io.errorLine(res.error); }
+    if res.stderr =!= "" { project.errorText(res.stderr); }
+    if not res.ok { io.exit(res.status); }
     if not quiet {
-        io.outputLine(finalOut);
+        io.outputLine(res.outputPath);
     }
 };
 

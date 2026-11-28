@@ -175,7 +175,7 @@ test.check("rendered[1].html has data-fence", html1.indexOf("data-fence=\"0\"", 
 modRes := runDocs(["--modules-json"], root, "");
 test.checkInt("docs --modules-json status: " + modRes.stderr, 0, modRes.status);
 modOffsets := json.arrayOffsets(modRes.stdout, 0);
-test.checkInt("modules count", 39, modOffsets.length());
+test.checkInt("modules count", 46, modOffsets.length());
 
 var foundIo := false;
 var foundCanvas := false;

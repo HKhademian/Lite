@@ -1,0 +1,94 @@
+/* Public compile-time evaluator barrel re-exporting purity checking, evaluation, and materialization helpers. */
+
+impl := import "./compiler/comptime-eval";
+
+/** Indexed compile-time value cell. */
+pub CtCell := alias impl.CtCell;
+
+/** Result of evaluating a statement block, branch, or expression. */
+pub CtOutcome := alias impl.CtOutcome;
+
+/** Result of checking whether a source span performs direct or transitive effects. */
+pub EffectCheckResult := alias impl.EffectCheckResult;
+
+/** Type alias entry passed into compile-time evaluators. */
+pub AliasDecl := alias (name: String, target: String, at: Int, end: Int, depth: Int);
+
+/** Visible lexical binding summary passed into compile-time evaluators. */
+pub VisibleBinding := alias (name: String, runtime: String, kind: String, constant: Bool, intValue: Int, textValue: String);
+
+/** Returns true if a built-in host operation has side effects and cannot run in pure evaluation. */
+pub isEffectfulHostBuiltin := fn(modIdentity: String, opName: String): Bool {
+    impl.isEffectfulHostBuiltin(modIdentity, opName)
+};
+
+/** Checks whether the expression slice `[exprStart, exprEnd)` is pure or performs effects. */
+pub checkExprEffects := fn(source: String, exprStart: Int, exprEnd: Int, prefix: String, modKey: String): EffectCheckResult {
+    impl.checkExprEffects(source, exprStart, exprEnd, prefix, modKey)
+};
+
+/** Evaluates an explicit `comptime` block with host effects permitted. */
+pub evalBlock := fn(
+source: String,
+openBrace: Int,
+prefix: String,
+modKey: String,
+expectedKind: String,
+aliases: List<AliasDecl>,
+visibleBindings: List<VisibleBinding>
+): CtOutcome {
+    impl.evalBlock(source, openBrace, prefix, modKey, expectedKind, aliases, visibleBindings)
+};
+
+/** Evaluates one pure expression `[exprStart, exprEnd)` without side effects. */
+pub evalExprPure := fn(
+source: String,
+exprStart: Int,
+exprEnd: Int,
+prefix: String,
+modKey: String,
+expectedKind: String,
+aliases: List<AliasDecl>,
+visibleBindings: List<VisibleBinding>
+): CtOutcome {
+    impl.evalExprPure(source, exprStart, exprEnd, prefix, modKey, expectedKind, aliases, visibleBindings)
+};
+
+/** Best-effort pure evaluation returning `ok = false` silently if effectful or runtime-dependent. */
+pub tryEvalPureSpeculative := fn(
+source: String,
+exprStart: Int,
+exprEnd: Int,
+prefix: String,
+modKey: String,
+expectedKind: String,
+aliases: List<AliasDecl>,
+visibleBindings: List<VisibleBinding>
+): CtOutcome {
+    impl.tryEvalPureSpeculative(source, exprStart, exprEnd, prefix, modKey, expectedKind, aliases, visibleBindings)
+};
+
+/** Returns a `$Val:` alias token for discrete compile-time values, or empty string. */
+pub comptimeValToken := fn(kind: String, valId: Int): String {
+    impl.comptimeValToken(kind, valId)
+};
+
+/** True when canonical type `kind` can be embedded into a compiled target program. */
+pub isMaterializableKind := fn(kind: String): Bool {
+    impl.isMaterializableKind(kind)
+};
+
+/** Materializes compile-time value `valId` into TS or C11 expression code. */
+pub materializeValue := fn(target: String, kind: String, valId: Int): (code: String, constant: Bool, intValue: Int, textValue: String) {
+    impl.materializeValue(target, kind, valId)
+};
+
+/** Records a file path accessed during compile-time evaluation. */
+pub recordTracedFile := fn(rawPath: String): Unit {
+    impl.recordTracedFile(rawPath);
+};
+
+/** Returns canonical file paths recorded during compile-time evaluation. */
+pub getTracedFiles := fn(): List<String> {
+    impl.getTracedFiles()
+};

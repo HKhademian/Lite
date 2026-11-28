@@ -280,7 +280,7 @@ test.check("probeDir makeTempDir", probeDirRes.ok);
 probeDir := probeDirRes.path;
 probePaths: List<String> = [
 "package.json", "config/versions.json", "bin/lite", "bin/lite-fmt", "bin/lite-ignite",
-"compiler/package.json", "lib/lite/compiler", "compiler/manifests",
+"compiler/package.json", "lib/lite", "compiler/manifests",
 "compiler/bootstrap/igniter", "compiler/bootstrap/igniter.ts", "compiler/bootstrap/seed.ts",
 "igniter/artifacts.ts", "igniter/package.json", "igniter/tsconfig.json",
 "tools/src/cli.lts", "tools/src/fmt.lts", "lib/core", "lib/data", "lib/util"
@@ -401,7 +401,7 @@ if ccProbe.status == 0 {
     test.check("cProbeDir makeTempDir", cProbeDirRes.ok);
     cProbeDir := cProbeDirRes.path;
     cProbePaths: List<String> = [
-    "package.json", "config/versions.json", "lib/lite/compiler", "compiler/manifests",
+    "package.json", "config/versions.json", "lib/lite", "compiler/manifests",
     "compiler/bootstrap/compiler.c", "compiler/bootstrap/seed.ts",
     "tools/src/ignite.lts", "tools/src/cli.lts", "tools/src/fmt.lts",
     "lib/core", "lib/data", "lib/util", "lib/external"

@@ -6,7 +6,7 @@ list := import "core/list";
 path := import "core/path";
 json := import "data/json";
 md := import "util/markdown";
-docgen := import "util/docgen";
+docgen := import "lite/docgen";
 tb := import "util/text-builder";
 
 /** Default directory names excluded when discovering repository Markdown files. */

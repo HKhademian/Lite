@@ -1,0 +1,25 @@
+/* Public checker barrel re-exporting Lite's top-level symbol checker for library callers. */
+
+lex := import "./compiler/lexer";
+impl := import "./compiler/check";
+
+/** One top-level checked symbol: kind, name, detail text, and source position. */
+pub Symbol := alias impl.Symbol;
+
+/** Top-level symbols in source order. */
+pub Symbols := alias impl.Symbols;
+
+/** Checks tokenized Lite `tokens` and returns top-level symbols in source order. */
+pub checkSource := fn(tokens: lex.Tokens, prefix: String): Symbols {
+    impl.checkSource(tokens, prefix)
+};
+
+/** Lexes and checks Lite `source` text, returning top-level symbols in source order. */
+pub checkText := fn(source: String, prefix: String): Symbols {
+    impl.checkSource(lex.tokenize(source, prefix), prefix)
+};
+
+/** Prints checked symbol records to standard output. */
+pub dumpSymbols := fn(symbols: Symbols): Unit {
+    impl.dumpSymbols(symbols);
+};
