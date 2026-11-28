@@ -1927,6 +1927,101 @@ escapeEnumStringLiteral := fn(code: String): String {
     parts.join("")
 };
 
+/** Decodes an encoded TS string literal `valueCode` from `Enum<...>` back to its runtime String text. */
+pub decodeEnumCaseString := fn(valueCode: String): String {
+    size := valueCode.length();
+    if size < 2 or valueCode.at(0) =!= "\"" or valueCode.at(size - 1) =!= "\"" {
+        return valueCode;
+    }
+    mut out: tb.TextBuilder;
+    var i := 1;
+    limit := size - 1;
+    loop i < limit {
+        ch := valueCode.at(i);
+        if ch == "\\" and i + 1 < limit {
+            esc := valueCode.at(i + 1);
+            if esc == "n" { mut out.append("\n"); i += 2; continue; }
+            if esc == "r" { mut out.append("\r"); i += 2; continue; }
+            if esc == "t" { mut out.append("\t"); i += 2; continue; }
+            if esc == "\"" { mut out.append("\""); i += 2; continue; }
+            if esc == "\\" { mut out.append("\\"); i += 2; continue; }
+            if esc == "u" and i + 5 < limit {
+                hex := valueCode.slice(i + 2, i + 6);
+                uCh := match {
+                    hex == "003c" { "<" }
+                    hex == "003e" { ">" }
+                    hex == "0028" { "(" }
+                    hex == "0029" { ")" }
+                    hex == "005b" { "[" }
+                    hex == "005d" { "]" }
+                    _ { "" }
+                };
+                if uCh =!= "" {
+                    mut out.append(uCh);
+                    i += 6;
+                    continue;
+                }
+            }
+            mut out.append(esc);
+            i += 2;
+        } else {
+            mut out.append(ch);
+            i += 1;
+        }
+    }
+    out.build()
+};
+
+/** Decodes a canonical enum integer backing `valueCode` (`10n`, `(-2n)`, etc.) into its sign, digit string, and signed Int value. */
+pub decodeEnumCaseInt := fn(valueCode: String): (ok: Bool, neg: Bool, digits: String, value: Int) {
+    var s := valueCode;
+    var neg := false;
+    if s.startsWithAt(0, "(-") and s.endsWith("n)") and s.length() >= 4 {
+        s = s.slice(2, s.length() - 2);
+        neg = true;
+    } else if s.endsWith("n") and s.length() >= 2 {
+        s = s.slice(0, s.length() - 1);
+        if s.startsWithAt(0, "-") {
+            s = s.slice(1, s.length());
+            neg = true;
+        }
+    } else {
+        return (ok = false, neg = false, digits = "", value = 0);
+    }
+    if s == "" { return (ok = false, neg = false, digits = "", value = 0); }
+    val := if neg and s == "9223372036854775808" {
+        -9223372036854775808
+    } else {
+        mag := syntax.parseDigits(s, 0, s.length());
+        if neg { 0 - mag } else { mag }
+    };
+    (ok = true, neg = neg, digits = s, value = val)
+};
+
+/** Extracts `(neg, digits)` from an encoded enum Float* backing `valueCode`. */
+pub decodeEnumCaseFloatToken := fn(valueCode: String): (neg: Bool, digits: String) {
+    var s := valueCode;
+    var neg := false;
+    if s.startsWithAt(0, "(") and s.endsWith(")") {
+        s = s.slice(1, s.length() - 1);
+    }
+    if s.startsWithAt(0, "-") {
+        neg = true;
+        s = s.slice(1, s.length());
+    }
+    if s.startsWithAt(0, "Math.fround(") and s.endsWith(")") {
+        s = s.slice(12, s.length() - 1);
+    } else if s.startsWithAt(0, "Math.f16round(") and s.endsWith(")") {
+        s = s.slice(14, s.length() - 1);
+    } else if s.startsWithAt(0, "lite$f8Round(") and s.endsWith(", 0)") {
+        s = s.slice(13, s.length() - 4);
+    }
+    if s.startsWithAt(0, "Number(\"") and s.endsWith("\")") {
+        s = s.slice(8, s.length() - 2);
+    }
+    (neg = neg, digits = s)
+};
+
 /** True when `kind` is this compiler's canonical nominal or structural anonymous record kind `Record<...;...>`. */
 pub isRecordKind := fn(kind: String): Bool {
     size := kind.length();
@@ -6846,6 +6941,24 @@ pub genericAliasTemplateInfo := fn(source: String, position: Int, prefix: String
         return (ownerKey = typeOpOwnerKey(tplKind), paramsCsv = resolvedParams, tplKind = tplKind);
     }
     (ownerKey = "", paramsCsv = "", tplKind = "")
+};
+
+/** Resolves active generic `Option<T>` template from `aliases` with `None` and `Some(T)` case indices. */
+pub resolveOptionTemplate := fn(source: String, position: Int, prefix: String, aliases: List<AliasDecl>): (ok: Bool, tplKind: String, paramsCsv: String, paramName: String, noneIdx: Int, someIdx: Int) {
+    info := genericAliasTemplateInfo(source, position, prefix, aliases, "Option");
+    if info.tplKind == "" or not isPayloadEnumKind(info.tplKind) {
+        return (ok = false, tplKind = "", paramsCsv = "", paramName = "", noneIdx = -1, someIdx = -1);
+    }
+    specs := splitParamSpecs(info.paramsCsv);
+    if specs.length() =!= 1 or not isTypeParamKind(specs[0].kind) {
+        return (ok = false, tplKind = "", paramsCsv = "", paramName = "", noneIdx = -1, someIdx = -1);
+    }
+    noneIdx := enumCaseIndex(info.tplKind, "None");
+    someIdx := enumCaseIndex(info.tplKind, "Some");
+    if noneIdx < 0 or someIdx < 0 or enumCasePayloadCount(info.tplKind, noneIdx) =!= 0 or enumCasePayloadCount(info.tplKind, someIdx) =!= 1 {
+        return (ok = false, tplKind = "", paramsCsv = "", paramName = "", noneIdx = -1, someIdx = -1);
+    }
+    (ok = true, tplKind = info.tplKind, paramsCsv = info.paramsCsv, paramName = specs[0].name, noneIdx = noneIdx, someIdx = someIdx)
 };
 
 /** Returns the owned nominal type-op owner key when `name` refers to a generic template, else `""`. */

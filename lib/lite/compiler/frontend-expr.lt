@@ -3807,6 +3807,9 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             if caseIdx >= 0 {
                 return parseEnumCaseConstruct(target, source, resolvedType, memberName, caseIdx, memberEnd, memberStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
             }
+            if memberName == "from" and types.enumBackingKind(resolvedType) =!= "" {
+                return parseEnumFromCall(target, source, resolvedType, memberEnd, memberStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+            }
         }
         if numeric.isIntKind(typeOwnerKey) and memberName == "trunc" {
             openTrunc := syntax.expectSymbol(source, syntax.skipTrivia(source, memberEnd, prefix), "(", prefix);
@@ -3984,6 +3987,171 @@ parseEnumCaseConstruct := fn(target: String, source: String, enumKind: String, c
         syntax.failAt(source, cursor, prefix, "enum case " + types.enumDisplayName(enumKind) + "." + caseName + " expects " + payloads.length().toText() + " payload argument(s), got " + argCodes.length().toText());
     }
     ctx.withMarkers((kind = enumKind, code = emitPayloadEnumValue(target, enumKind, caseIdx, argCodes), intValue = caseIdx, textValue = "", constant = false, next = cursor + 1), markers)
+};
+
+/** Parses and lowers `Enum.from(value)` on value enums into `Option<Enum>`, returning the first-declared matching case. */
+parseEnumFromCall := fn(
+    target: String, source: String, enumKind: String, memberEnd: Int, errPos: Int, prefix: String,
+    locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String,
+    ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>
+): Parsed {
+    size := source.length();
+    backing := types.enumBackingKind(enumKind);
+    optInfo := types.resolveOptionTemplate(source, errPos, prefix, aliases);
+    if not optInfo.ok {
+        syntax.failAt(source, errPos, prefix, types.enumDisplayName(enumKind) + ".from requires Option<T> to be in scope (import \"core/option\" or preload it)");
+    }
+    mut optBindings: Map<String, String>;
+    mut optBindings.set(optInfo.paramName, enumKind);
+    optKind := types.substCanonicalKind(optInfo.paramsCsv, optInfo.tplKind, optBindings);
+    vErr := types.validateCanonicalKind(optKind, "");
+    if vErr =!= "" {
+        syntax.failAt(source, errPos, prefix, vErr);
+    }
+    openParen := syntax.skipTrivia(source, memberEnd, prefix);
+    if openParen >= size or source.at(openParen) =!= "(" {
+        syntax.failAt(source, errPos, prefix, types.enumDisplayName(enumKind) + ".from expects (value) argument");
+    }
+    var argStart := syntax.skipTrivia(source, openParen + 1, prefix);
+    if argStart < size and source.at(argStart) == ")" {
+        syntax.failAt(source, argStart, prefix, types.enumDisplayName(enumKind) + ".from expects a " + types.displayKind(backing) + " value argument");
+    }
+    if argStart < size and source.wordAt(argStart, "value") {
+        afterLbl := syntax.skipTrivia(source, argStart + 5, prefix);
+        if syntax.isSingleEquals(source, afterLbl) {
+            argStart = syntax.skipTrivia(source, afterLbl + 1, prefix);
+        }
+    }
+    arg := parseBinaryCtx(target, source, argStart, prefix, locals, functions, params, currentName, backing, 0, ctxs, iifeDepth, inferMode, "", aliases);
+    closeParen := ctx.expectNonemptyCallClose(source, arg.next, prefix);
+    if inferMode {
+        return ctx.withMarkers((kind = optKind, code = "", intValue = 0, textValue = "", constant = false, next = closeParen),
+        ctx.collectParsedMarkers("", arg));
+    }
+    if not types.isCompatibleKind(backing, arg.kind) {
+        syntax.failAt(source, argStart, prefix, types.enumDisplayName(enumKind) + ".from expected " + types.displayKind(backing) + ", got " + types.displayKind(arg.kind));
+    }
+    caseCount := types.enumCaseCount(enumKind);
+    if arg.constant and (backing == ir.VALUE_KIND_BOOL or backing == ir.VALUE_KIND_STRING or numeric.isSignedIntKind(backing)) {
+        var ci := 0;
+        loop ci < caseCount {
+            vc := types.enumCaseAt(enumKind, ci).valueCode;
+            var matched := false;
+            if backing == ir.VALUE_KIND_BOOL {
+                matched = (arg.intValue =!= 0) == (vc == "true");
+            } else if backing == ir.VALUE_KIND_STRING {
+                matched = arg.textValue == types.decodeEnumCaseString(vc);
+            } else {
+                di := types.decodeEnumCaseInt(vc);
+                matched = di.ok and arg.intValue == di.value;
+            }
+            if matched {
+                caseArgCode := if target == ir.TARGET_C { "(" + types.cValueType(enumKind) + ")" + ci.toText() } else { ci.toText() };
+                return (kind = optKind, code = emitPayloadEnumValue(target, optKind, optInfo.someIdx, [caseArgCode]),
+                intValue = 0, textValue = "", constant = false, next = closeParen);
+            }
+            ci = ci + 1;
+        }
+        emptyConstArgs: List<String> = [];
+        return (kind = optKind, code = emitPayloadEnumValue(target, optKind, optInfo.noneIdx, emptyConstArgs),
+        intValue = 0, textValue = "", constant = false, next = closeParen);
+    }
+    argExpr := if numeric.isNumericKind(backing) { ctx.assignValueCode(target, backing, arg.kind, arg.code) } else { arg.code };
+    mut seenKeys: Set<String>;
+    mut branchCaseIdx: List<Int> = [];
+    mut branchCondLit: List<String> = [];
+    var bi := 0;
+    loop bi < caseCount {
+        vc := types.enumCaseAt(enumKind, bi).valueCode;
+        var dedupKey := "";
+        var litCode := "";
+        if backing == ir.VALUE_KIND_BOOL {
+            bStr := if vc == "true" { "true" } else { "false" };
+            dedupKey = bStr;
+            litCode = bStr;
+        } else if backing == ir.VALUE_KIND_STRING {
+            decStr := types.decodeEnumCaseString(vc);
+            dedupKey = decStr;
+            litCode = ir.targetTextLiteralCode(target, decStr);
+        } else if numeric.isIntKind(backing) {
+            di := types.decodeEnumCaseInt(vc);
+            dedupKey = (if di.neg { "-" } else { "" }) + di.digits;
+            litCode = if target == ir.TARGET_TS {
+                vc
+            } else if numeric.isSignedIntKind(backing) {
+                "((" + types.cValueType(backing) + ")" + ir.targetIntLiteralCode(ir.TARGET_C, di.value, di.neg, di.digits) + ")"
+            } else {
+                "((" + types.cValueType(backing) + ")" + ir.targetUIntLiteralCode(ir.TARGET_C, di.digits) + ")"
+            };
+        } else {
+            ft := types.decodeEnumCaseFloatToken(vc);
+            dedupKey = if ft.digits == "0" or ft.digits == "0.0" { "0" } else { (if ft.neg { "-" } else { "" }) + ft.digits };
+            litCode = if target == ir.TARGET_TS {
+                vc
+            } else if backing == ir.VALUE_KIND_FLOAT32 {
+                ir.targetFloat32LiteralCode(ir.TARGET_C, ft.digits, ft.neg)
+            } else {
+                ir.targetFloatLiteralCode(ir.TARGET_C, ft.digits, ft.neg)
+            };
+        }
+        if not seenKeys.has(dedupKey) {
+            mut seenKeys.add(dedupKey);
+            mut branchCaseIdx.pushBack(bi);
+            mut branchCondLit.pushBack(litCode);
+        }
+        bi = bi + 1;
+    }
+    emptyResArgs: List<String> = [];
+    if target == ir.TARGET_C {
+        optTag := types.cStructTag(optKind);
+        enumCType := types.cValueType(enumKind);
+        argVar := freshCOwnedTemp("lt_efv_");
+        retVar := freshCOwnedTemp("lt_efr_");
+        argCType := types.cValueType(backing);
+        argInit := if argExpr.startsWithAt(0, "/*@CBLK:") { ctx.cUnwrapIntoVar(argVar, backing, argExpr) } else { argVar + " = " + argExpr + ";" };
+        dropFn := types.cDropFnForKind(backing);
+        argDrop := if dropFn =!= "" and (argExpr.startsWithAt(0, "/*@CBLK:") or ctx.isCFreshOwnedExpr(argExpr) or argExpr.startsWithAt(0, "/*@T:")) {
+            " " + dropFn + "(&" + argVar + ");"
+        } else { "" };
+        cmpVar := if backing == ir.VALUE_KIND_FLOAT8 {
+            "lt_f8_to_f64(" + argVar + ")"
+        } else if backing == ir.VALUE_KIND_FLOAT16 {
+            "lt_f16_to_f64(" + argVar + ")"
+        } else {
+            argVar
+        };
+        cmpKind := if backing == ir.VALUE_KIND_FLOAT8 or backing == ir.VALUE_KIND_FLOAT16 { ir.VALUE_KIND_FLOAT } else { backing };
+        mut cBranches: tb.TextBuilder;
+        var ci := 0;
+        loop ci < branchCaseIdx.length() {
+            if ci > 0 { mut cBranches.append(" else "); }
+            cmpC := ir.targetComparisonCode(ir.TARGET_C, "==", cmpKind, cmpVar, branchCondLit[ci]);
+            someCall := "/*@T:" + optKind + "@*/" + optTag + "_mk_" + optInfo.someIdx.toText() + "((" + enumCType + ")" + branchCaseIdx[ci].toText() + ")";
+            mut cBranches.append("if (" + cmpC + ") { " + retVar + " = " + someCall + "; }");
+            ci = ci + 1;
+        }
+        noneCall := emitPayloadEnumValue(ir.TARGET_C, optKind, optInfo.noneIdx, emptyResArgs);
+        if branchCaseIdx.length() > 0 {
+            mut cBranches.append(" else { " + retVar + " = " + noneCall + "; }");
+        } else {
+            mut cBranches.append(retVar + " = " + noneCall + ";");
+        }
+        cBlock := "/*@CBLK:" + retVar + "@*/" + optTag + " " + retVar + "; { " + argCType + " " + argVar + "; " + argInit + " " + cBranches.build() + argDrop + " }";
+        return (kind = optKind, code = cBlock, intValue = 0, textValue = "", constant = false, next = closeParen);
+    }
+    tsOptT := types.tsFunctionType(optKind);
+    tsArgT := types.tsFunctionType(backing);
+    mut tsBranches: tb.TextBuilder;
+    var ti := 0;
+    loop ti < branchCaseIdx.length() {
+        cmpTs := ir.targetComparisonCode(ir.TARGET_TS, "==", backing, "lite$ev", branchCondLit[ti]);
+        someTs := emitPayloadEnumValue(ir.TARGET_TS, optKind, optInfo.someIdx, [branchCaseIdx[ti].toText()]);
+        mut tsBranches.append("if (" + cmpTs + ") return " + someTs + "; ");
+        ti = ti + 1;
+    }
+    noneTs := emitPayloadEnumValue(ir.TARGET_TS, optKind, optInfo.noneIdx, emptyResArgs);
+    tsCode := "((lite$ev: " + tsArgT + "): " + tsOptT + " => { " + tsBranches.build() + "return " + noneTs + "; })(" + argExpr + ")";
+    (kind = optKind, code = tsCode, intValue = 0, textValue = "", constant = false, next = closeParen)
 };
 
 /** Converts an arbitrary error value implementing `ToError` into `core/error.Error` on TS or C11. */
@@ -16650,6 +16818,9 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                     caseIdx := types.enumCaseIndex(modTypeKind, caseName);
                                     if caseIdx >= 0 {
                                         left = parseEnumCaseConstruct(target, source, modTypeKind, caseName, caseIdx, caseEnd, caseStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+                                        handledModMember = true;
+                                    } else if caseName == "from" and types.enumBackingKind(modTypeKind) =!= "" {
+                                        left = parseEnumFromCall(target, source, modTypeKind, caseEnd, caseStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                                         handledModMember = true;
                                     }
                                 }

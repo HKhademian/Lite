@@ -1,0 +1,25 @@
+{
+  "id": "case.types.enums.enum-from",
+  "kind": "feature",
+  "source": "enum-from.lts",
+  "features": [
+    "feature.types.enums.value-enums",
+    "feature.control.branching.subject-match",
+    "feature.io.reporting.report-values"
+  ],
+  "cases": [
+    {
+      "name": "enum-from-lookup-first-duplicate-and-none",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "Option<HttpStatus>.Some(HttpStatus.Ok) Option<HttpStatus>.Some(HttpStatus.Created) Option<HttpStatus>.None Option<Tag>.Some(Tag.Beta) 200\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

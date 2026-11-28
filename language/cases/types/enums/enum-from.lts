@@ -1,0 +1,24 @@
+io := import "core/io";
+
+HttpStatus := enum : Int {
+    Ok = 200;
+    AliasOk = 200;
+    Created;
+    NotFound = 404;
+};
+
+Tag := enum : String {
+    Alpha = "alpha";
+    Beta = "beta";
+};
+
+found := HttpStatus.from(200);
+next := HttpStatus.from(201);
+missing := HttpStatus.from(500);
+tag := Tag.from("beta");
+
+label := match found {
+    .Some(s) { s.value.toText() }
+    .None { "none" }
+};
+io.outputLine(found, next, missing, tag, label);

@@ -1,6 +1,9 @@
 /* End-to-end C11 execution tests for Phase C2: plain enums and value enums (Int, Float, Bool, String backing). */
 
 test := import "core/test";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
 compilerTest := import "../../../tools/src/internal/compiler-test";
 project := import "../../../tools/src/internal/project";
@@ -47,5 +50,83 @@ test.checkText("C/TS enum stdout parity", tsRes.stdout, cRes.stdout);
 test.checkText("C enum exact stdout",
 "Dir.Right true true\nStatus.Created 201 201 404\nScale.Half 0.5 Flag.On true Code.Beta B\n",
 cRes.stdout);
+
+enumFromCProg :=
+"io := import \"core/io\";\n" +
+"Status := enum : Int { Ok = 200; DupOk = 200; Created; NotFound = 404; };\n" +
+"Scale := enum : Float { Half = 0.5; Full = 1.0; };\n" +
+"Flag := enum : Bool { Off = false; On = true; };\n" +
+"Code := enum : String { Alpha = \"alpha-long-heap-candidate\"; Beta = \"(b)[1]\"; };\n" +
+"lookupStatus := fn(raw: Int): Option<Status> { Status.from(raw) };\n" +
+"lookupCode := fn(raw: String): Option<Code> { Code.from(raw + \"-suffix\".slice(0, 0)) };\n" +
+"s1 := lookupStatus(200);\n" +
+"s2 := lookupStatus(404);\n" +
+"s3 := lookupStatus(500);\n" +
+"sc1 := Scale.from(1.0);\n" +
+"fl1 := Flag.from(false);\n" +
+"cd1 := lookupCode(\"alpha-long-heap-\" + \"candidate\");\n" +
+"cd2 := lookupCode(\"missing-\" + \"string-temp\");\n" +
+"io.outputLine(s1, s2, s3, sc1, fl1, cd1, cd2);\n";
+
+cFromRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, enumFromCProg, "", "");
+test.checkInt("C Enum.from run: " + cFromRes.stderr, 0, cFromRes.status);
+tsFromRes := compilerTest.compileCheckRunTs(root, tsComp, enumFromCProg, "");
+test.checkInt("TS Enum.from run: " + tsFromRes.stderr, 0, tsFromRes.status);
+test.checkText("C/TS Enum.from parity", tsFromRes.stdout, cFromRes.stdout);
+test.checkText("C Enum.from exact stdout",
+"Option<Status>.Some(Status.Ok) Option<Status>.Some(Status.NotFound) Option<Status>.None Option<Scale>.Some(Scale.Full) Option<Flag>.Some(Flag.Off) Option<Code>.Some(Code.Alpha) Option<Code>.None\n",
+cFromRes.stdout);
+
+cFromComp := compilerTest.compileStdin(root, cComp, enumFromCProg, "");
+test.checkInt("C Enum.from compile: " + cFromComp.stderr, 0, cFromComp.status);
+/* Check C niche packing keeps Option<Status> scalar-sized when Status uses niche layout or direct typedef */
+test.check("C Enum.from ASan/UBSan + leak check", ccInfo.cc =!= "");
+tmpSanDir := fs.makeTempDir("lite-enum-from-san-");
+test.check("makeTempDir san", tmpSanDir.ok);
+sanCPath := path.join(tmpSanDir.path, "prog.c");
+_wSan := fs.writeText(sanCPath, cFromComp.stdout);
+sanBin := path.join(tmpSanDir.path, "prog_san");
+emptyBytes: List<Int> = [];
+ccSanOut := path.join(tmpSanDir.path, "cc_san.out");
+ccSanErr := path.join(tmpSanDir.path, "cc_san.err");
+ccSan := proc.runBytes(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", sanCPath, "-o", sanBin, "-lm"], tmpSanDir.path, [], 30000, emptyBytes, ccSanOut, ccSanErr);
+test.checkInt("C Enum.from cc san: " + fs.readText(ccSanErr).text, 0, ccSan.status);
+runSanOut := path.join(tmpSanDir.path, "run_san.out");
+runSanErr := path.join(tmpSanDir.path, "run_san.err");
+runSan := proc.runBytes(sanBin, [], tmpSanDir.path, ["LITE_CHECK_LEAKS=1"], 10000, emptyBytes, runSanOut, runSanErr);
+test.checkInt("C Enum.from san run: " + fs.readText(runSanErr).text, 0, runSan.status);
+test.checkText("C Enum.from san stderr", "", fs.readText(runSanErr).text);
+test.checkText("C Enum.from san stdout",
+"Option<Status>.Some(Status.Ok) Option<Status>.Some(Status.NotFound) Option<Status>.None Option<Scale>.Some(Scale.Full) Option<Flag>.Some(Flag.Off) Option<Code>.Some(Code.Alpha) Option<Code>.None\n",
+fs.readText(runSanOut).text);
+_rmSan := fs.remove(tmpSanDir.path);
+
+/* Cross-module mod.Enum.from check (TS + C11) */
+tmpModDir := fs.makeTempDir("lite-enum-from-mod-");
+test.check("makeTempDir mod", tmpModDir.ok);
+_wLib := fs.writeText(path.join(tmpModDir.path, "codes.lt"),
+"pub Http := enum : Int { Ok = 200; Missing = 404; };\n" +
+"pub Label := enum : String { Fast = \"fast\"; Safe = \"safe\"; };\n");
+mainModPath := path.join(tmpModDir.path, "main.lts");
+_wMain := fs.writeText(mainModPath,
+"io := import \"core/io\";\n" +
+"codes := import \"./codes\";\n" +
+"x := codes.Http.from(404);\n" +
+"y := codes.Label.from(\"fast\");\n" +
+"z := codes.Label.from(\"slow\");\n" +
+"io.outputLine(x, y, z);\n");
+tsModComp := compilerTest.compileFile(tsComp, tmpModDir.path, [mainModPath]);
+test.checkInt("TS cross-module Enum.from compile: " + tsModComp.stderr, 0, tsModComp.status);
+tsModRun := compilerTest.checkAndRunTs(root, tsModComp.stdout);
+test.checkInt("TS cross-module Enum.from run: " + tsModRun.stderr, 0, tsModRun.status);
+cModComp := compilerTest.compileFile(cComp, tmpModDir.path, [mainModPath]);
+test.checkInt("C cross-module Enum.from compile: " + cModComp.stderr, 0, cModComp.status);
+cModRun := compilerTest.compileAndRunC(cModComp.stdout, ccInfo.cc, "");
+test.checkInt("C cross-module Enum.from run: " + cModRun.stderr, 0, cModRun.status);
+test.checkText("C/TS cross-module Enum.from parity", tsModRun.stdout, cModRun.stdout);
+test.checkText("C cross-module Enum.from exact",
+"Option<Http>.Some(Http.Missing) Option<Label>.Some(Label.Fast) Option<Label>.None\n",
+cModRun.stdout);
+_rmMod := fs.remove(tmpModDir.path);
 
 test.done("c-backend-enums");

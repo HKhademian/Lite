@@ -814,6 +814,49 @@ parseFloatText := fn(raw: String): (value: Float, ok: Bool) {
     (value = if neg { -val } else { val }, ok = true)
 };
 
+/** Evaluates `Enum.from(value)` in compile-time execution, returning `Option<Enum>`. */
+evalCtEnumFrom := fn(source: String, prefix: String, enumKind: String, aliases: List<AliasDecl>, rawArgId: Int, budget: mut EvalBudget): CtOutcome {
+    backing := types.enumBackingKind(enumKind);
+    optInfo := types.resolveOptionTemplate(source, 0, prefix, aliases);
+    if not optInfo.ok {
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "Enum.from requires Option<T> to be in scope" };
+    }
+    mut optBindings: Map<String, String>;
+    mut optBindings.set(optInfo.paramName, enumKind);
+    optKind := types.substCanonicalKind(optInfo.paramsCsv, optInfo.tplKind, optBindings);
+    argId := coerceCtValue(backing, ctPool[rawArgId].kind, rawArgId, mut budget);
+    argCell := ctPool[argId];
+    caseCount := types.enumCaseCount(enumKind);
+    var ci := 0;
+    loop ci < caseCount {
+        cInfo := types.enumCaseAt(enumKind, ci);
+        var matched := false;
+        if backing == ir.VALUE_KIND_BOOL {
+            matched = argCell.tag == CellTag.Bool and (argCell.intVal =!= 0) == (cInfo.valueCode == "true");
+        } else if backing == ir.VALUE_KIND_STRING {
+            matched = argCell.tag == CellTag.Str and argCell.strVal == types.decodeEnumCaseString(cInfo.valueCode);
+        } else if numeric.isSignedIntKind(backing) {
+            di := types.decodeEnumCaseInt(cInfo.valueCode);
+            matched = argCell.tag == CellTag.Int and di.ok and argCell.intVal == di.value;
+        } else if numeric.isUnsignedIntKind(backing) {
+            di := types.decodeEnumCaseInt(cInfo.valueCode);
+            matched = argCell.tag == CellTag.UInt and di.ok and argCell.strVal == di.digits;
+        } else if numeric.isFloatKind(backing) {
+            ft := types.decodeEnumCaseFloatToken(cInfo.valueCode);
+            fRes := parseFloatText((if ft.neg { "-" } else { "" }) + ft.digits);
+            matched = argCell.tag == CellTag.Float and fRes.ok and argCell.floatVal == fRes.value;
+        }
+        if matched {
+            eVal := makeEnumVal(enumKind, ci, cInfo.name, [], mut budget);
+            someVal := makeEnumVal(optKind, optInfo.someIdx, "Some", [eVal], mut budget);
+            return CtOutcome { ok = true, valId = someVal, flow = FlowKind.None, error = "" };
+        }
+        ci = ci + 1;
+    }
+    noneVal := makeEnumVal(optKind, optInfo.noneIdx, "None", [], mut budget);
+    CtOutcome { ok = true, valId = noneVal, flow = FlowKind.None, error = "" }
+};
+
 /** Converts or widens a compile-time value `valId` from `actualKind` to `targetKind`. */
 coerceCtValue := fn(targetKind: String, actualKind: String, valId: Int, budget: mut EvalBudget): Int {
     if valId < 0 or valId >= ctPool.length() { return valId; }
@@ -2473,33 +2516,53 @@ tryMatchCtPattern := fn(source: String, patStart: Int, limitPos: Int, prefix: St
                 } else {
                     (matched = false, next = if tyR.ok { tyR.next } else { nEnd })
                 }
-            } else if afterN < limitPos and source.at(afterN) == "." {
-                /* Enum.Case or Enum.Case(p) */
-                cS := syntax.skipTrivia(source, afterN + 1, prefix);
-                cE := source.skipName(cS);
-                cName := source.slice(cS, cE);
-                afterC := syntax.skipTrivia(source, cE, prefix);
-                var ok := subCell.tag == CellTag.Enum and subCell.strVal == cName;
-                if afterC < limitPos and source.at(afterC) == "(" {
-                    var pCur := syntax.skipTrivia(source, afterC + 1, prefix);
-                    var pIdx := 0;
-                    loop pCur < limitPos and source.at(pCur) =!= ")" {
-                        if ok and pIdx < subCell.children.length() {
-                            sp := self(source, pCur, limitPos, prefix, subCell.children[pIdx], mut frame, mut budget);
-                            if not sp.matched { ok = false; }
-                            pCur = syntax.skipTrivia(source, sp.next, prefix);
-                        } else {
-                            pCur = syntax.skipBalancedArgument(source, pCur, prefix);
-                            ok = false;
-                        }
-                        pIdx = pIdx + 1;
-                        if pCur < limitPos and source.at(pCur) == "," { pCur = syntax.skipTrivia(source, pCur + 1, prefix); }
-                        else { break; }
+            } else if afterN < limitPos and (source.at(afterN) == "." or source.at(afterN) == "<") {
+                /* Enum.Case, Type<...>.Case, Enum.Case(p), or Type<...>.Case(p) */
+                var dotPos := afterN;
+                if source.at(afterN) == "<" {
+                    var gt := afterN + 1;
+                    var gd := 1;
+                    loop gt < limitPos and gd > 0 {
+                        gc := source.at(gt);
+                        if gc == "<" { gd = gd + 1; }
+                        else if gc == ">" { gd = gd - 1; }
+                        else if gc == ";" or gc == "{" or gc == "}" { break; }
+                        gt = gt + 1;
                     }
-                    if pCur < limitPos and source.at(pCur) == ")" { pCur = pCur + 1; }
-                    (matched = ok, next = pCur)
+                    if gd == 0 {
+                        dotPos = syntax.skipTrivia(source, gt, prefix);
+                    }
+                }
+                if dotPos < limitPos and source.at(dotPos) == "." {
+                    cS := syntax.skipTrivia(source, dotPos + 1, prefix);
+                    cE := source.skipName(cS);
+                    cName := source.slice(cS, cE);
+                    afterC := syntax.skipTrivia(source, cE, prefix);
+                    var ok := subCell.tag == CellTag.Enum and subCell.strVal == cName;
+                    if afterC < limitPos and source.at(afterC) == "(" {
+                        var pCur := syntax.skipTrivia(source, afterC + 1, prefix);
+                        var pIdx := 0;
+                        loop pCur < limitPos and source.at(pCur) =!= ")" {
+                            if ok and pIdx < subCell.children.length() {
+                                sp := self(source, pCur, limitPos, prefix, subCell.children[pIdx], mut frame, mut budget);
+                                if not sp.matched { ok = false; }
+                                pCur = syntax.skipTrivia(source, sp.next, prefix);
+                            } else {
+                                pCur = syntax.skipBalancedArgument(source, pCur, prefix);
+                                ok = false;
+                            }
+                            pIdx = pIdx + 1;
+                            if pCur < limitPos and source.at(pCur) == "," { pCur = syntax.skipTrivia(source, pCur + 1, prefix); }
+                            else { break; }
+                        }
+                        if pCur < limitPos and source.at(pCur) == ")" { pCur = pCur + 1; }
+                        (matched = ok, next = pCur)
+                    } else {
+                        (matched = ok, next = cE)
+                    }
                 } else {
-                    (matched = ok, next = cE)
+                    frameSetOrPush(mut frame, pName, subjValId, false, subCell.kind);
+                    (matched = true, next = nEnd)
                 }
             } else {
                 frameSetOrPush(mut frame, pName, subjValId, false, subCell.kind);
@@ -3106,6 +3169,34 @@ evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: St
             }
             /* Field access on record / tuple */
             cell := ctPool[curId];
+            if cell.tag == CellTag.Enum and fName == "value" and types.enumBackingKind(cell.kind) =!= "" {
+                bk := types.enumBackingKind(cell.kind);
+                cInfo := types.enumCaseAt(cell.kind, cell.intVal);
+                var valCellId := -1;
+                if bk == ir.VALUE_KIND_BOOL {
+                    valCellId = makeBoolVal(cInfo.valueCode == "true", bk, mut budget);
+                } else if bk == ir.VALUE_KIND_STRING {
+                    valCellId = makeStrVal(types.decodeEnumCaseString(cInfo.valueCode), bk, mut budget);
+                } else if numeric.isSignedIntKind(bk) {
+                    di := types.decodeEnumCaseInt(cInfo.valueCode);
+                    valCellId = makeIntVal(if di.ok { di.value } else { 0 }, bk, mut budget);
+                } else if numeric.isUnsignedIntKind(bk) {
+                    di := types.decodeEnumCaseInt(cInfo.valueCode);
+                    uRes := parseUInt64Text(if di.ok { di.digits } else { "0" });
+                    valCellId = makeUIntVal(if uRes.ok { uRes.value } else { cast<UInt64>(0) }, bk, mut budget);
+                } else if numeric.isFloatKind(bk) {
+                    ft := types.decodeEnumCaseFloatToken(cInfo.valueCode);
+                    fRes := parseFloatText((if ft.neg { "-" } else { "" }) + ft.digits);
+                    valCellId = makeFloatVal(if fRes.ok { fRes.value } else { 0.0 }, bk, mut budget);
+                }
+                if valCellId >= 0 {
+                    curId = valCellId;
+                    curName = "";
+                    rawNext = fEnd;
+                    cursor = syntax.skipTrivia(source, fEnd, prefix);
+                    continue;
+                }
+            }
             var foundIdx := -1;
             var ki := 0;
             loop ki < cell.keys.length() {
@@ -3627,6 +3718,14 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                             ci := types.enumCaseIndex(nomK, opName);
                             return evalPostfixChain(source, callA.next, limitPos, prefix, makeEnumVal(nomK, ci, opName, callA.args, mut budget), "", mut frame, mut budget);
                         }
+                        if types.isEnumKind(nomK) and opName == "from" and types.enumBackingKind(nomK) =!= "" {
+                            if callA.args.length() =!= 1 {
+                                return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "Enum.from expects 1 value argument in comptime evaluation" }, next = callA.next);
+                            }
+                            efRes := evalCtEnumFrom(source, prefix, nomK, frame.aliases, callA.args[0], mut budget);
+                            if efRes.flow =!= FlowKind.None { return (outcome = efRes, next = callA.next); }
+                            return evalPostfixChain(source, callA.next, limitPos, prefix, efRes.valId, "", mut frame, mut budget);
+                        }
                         if isEffectfulHostBuiltin(tModId, mName + "." + opName) or tModId.startsWithAt(0, "lite.core.") {
                             candsT := findFnIndicesInModule(tModKey, mName + "." + opName);
                             if candsT.length() > 0 {
@@ -3718,6 +3817,12 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     if types.isEnumKind(nomK) and types.enumCaseIndex(nomK, opName) >= 0 {
                         ci := types.enumCaseIndex(nomK, opName);
                         res = CtOutcome { ok = true, valId = makeEnumVal(nomK, ci, opName, callA.args, mut budget), flow = FlowKind.None, error = "" };
+                    } else if types.isEnumKind(nomK) and opName == "from" and types.enumBackingKind(nomK) =!= "" {
+                        if callA.args.length() =!= 1 {
+                            return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "Enum.from expects 1 value argument in comptime evaluation" }, next = callA.next);
+                        }
+                        res = evalCtEnumFrom(source, prefix, nomK, frame.aliases, callA.args[0], mut budget);
+                        if res.flow =!= FlowKind.None { return (outcome = res, next = callA.next); }
                     } else {
                         cands := findFnIndicesInModule(frame.moduleKey, name + "." + opName);
                         dispN := baseNominalName(nomK);

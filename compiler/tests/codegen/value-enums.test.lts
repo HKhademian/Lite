@@ -91,7 +91,7 @@ combinedSrc :=
 "};\n" +
 "var defDir: Dir;\n" +
 "steps: List<Step> = [Step { dir = .North, dist = 3 }, Step { dir = .West, dist = 4 }];\n" +
-"innerRes := {\n" +
+"innerRes := do {\n" +
 "    Local := enum { Alpha; Beta; }\n" +
 "    v: Local = .Beta;\n" +
 "    match v { .Alpha { 1 } .Beta { 2 } }\n" +
@@ -148,5 +148,42 @@ loop bi < 16 {
 
 cEnumRes := compilerTest.compileStdin(root, cComp, "E := enum { A; B; }; x := E.A;\n", "");
 test.checkInt("enum C backend compile: " + cEnumRes.stderr, 0, cEnumRes.status);
+
+/* 5. Enum.from(value: T): Option<Self> (all backing types, first-declared duplicate match, comptime, constant folding, & rejections) */
+enumFromSrc :=
+"io := import \"core/io\";\n" +
+"Code := enum : Int8 { Zero = 0; Ok = 20; Dup = 20; Neg = -5; };\n" +
+"Scale := enum : Float32 { Half = 0.5; One = 1.0; };\n" +
+"Flag := enum : Bool { Off = false; On = true; Flip = false; };\n" +
+"Op := enum : String { Add = \"+\"; Pair = \"(a)[0]\"; DupAdd = \"+\"; };\n" +
+"Inferred := enum { A = 10; B; };\n" +
+"dynCode := fn(n: Int8): Option<Code> { Code.from(n) };\n" +
+"dynScale := fn(x: Float32): Option<Scale> { Scale.from(x) };\n" +
+"dynFlag := fn(b: Bool): Option<Flag> { Flag.from(b) };\n" +
+"dynOp := fn(s: String): Option<Op> { Op.from(s) };\n" +
+"dynInf := fn(n: Int): Option<Inferred> { Inferred.from(n) };\n" +
+"ctResult := comptime {\n" +
+"    a := Code.from(20).unwrapOr(Code.Zero);\n" +
+"    b := Op.from(\"(a)[0]\").unwrapOr(Op.Add);\n" +
+"    c := Op.from(\"missing\").isNone();\n" +
+"    a.value.toText() + \":\" + b.value + \":\" + (if c { \"none\" } else { \"some\" })\n" +
+"};\n" +
+"foldedHit := Code.from(-5);\n" +
+"foldedMiss := Code.from(99);\n" +
+"io.outputLine(foldedHit, foldedMiss, dynCode(20), dynCode(1), dynScale(0.5), dynScale(2.0), dynFlag(false), dynOp(\"(a)[0]\"), dynOp(\"+\"), dynOp(\"none\"), dynInf(11), dynInf(99), ctResult);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "Enum.from TS", enumFromSrc,
+"Option<Code>.Some(Code.Neg) Option<Code>.None Option<Code>.Some(Code.Ok) Option<Code>.None Option<Scale>.Some(Scale.Half) Option<Scale>.None Option<Flag>.Some(Flag.Off) Option<Op>.Some(Op.Pair) Option<Op>.Some(Op.Add) Option<Op>.None Option<Inferred>.Some(Inferred.B) Option<Inferred>.None 20:(a)[0]:none\n");
+cFromUnit := compilerTest.compileCheckRunC(root, cComp, compilerTest.probeCc().cc, enumFromSrc, "", "");
+test.checkInt("Enum.from C compile/run: " + cFromUnit.stderr, 0, cFromUnit.status);
+test.checkText("Enum.from C stdout",
+"Option<Code>.Some(Code.Neg) Option<Code>.None Option<Code>.Some(Code.Ok) Option<Code>.None Option<Scale>.Some(Scale.Half) Option<Scale>.None Option<Flag>.Some(Flag.Off) Option<Op>.Some(Op.Pair) Option<Op>.Some(Op.Add) Option<Op>.None Option<Inferred>.Some(Inferred.B) Option<Inferred>.None 20:(a)[0]:none\n",
+cFromUnit.stdout);
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject Enum.from redeclaration on value enum",
+"E := enum : Int { A = 1; }; E.from := fn(v: Int): Int { v };", "collides with enum backing built-in from");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject Enum.from on plain enum",
+"E := enum { A; B; }; x := E.from(0);", "enum E has no case from");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject Enum.from wrong arg type",
+"E := enum : String { A = \"a\"; }; x := E.from(1);", "expected String, got Int");
 
 test.done("value-enums");

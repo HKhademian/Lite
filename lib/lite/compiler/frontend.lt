@@ -5878,8 +5878,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if types.isRecordKind(owner.ownerKind) and types.recordFieldKind(owner.ownerKind, opName) =!= "" {
                         failAt(source, opStart, prefix, "cannot declare operation " + qualName + ": collides with record field " + opName);
                     }
-                    if types.isEnumKind(owner.ownerKind) and opName == "value" and types.enumBackingKind(owner.ownerKind) =!= "" {
-                        failAt(source, opStart, prefix, "cannot declare operation " + qualName + ": collides with enum backing value");
+                    if types.isEnumKind(owner.ownerKind) and (opName == "value" or opName == "from") and types.enumBackingKind(owner.ownerKind) =!= "" {
+                        what := if opName == "from" { "built-in from" } else { "value" };
+                        failAt(source, opStart, prefix, "cannot declare operation " + qualName + ": collides with enum backing " + what);
                     }
                     position = skipTrivia(source, afterOpDecl + 2, prefix);
                     opHeaderPos := position;
