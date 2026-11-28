@@ -4,9 +4,9 @@ export const seed = {
   "artifact": "igniter.ts",
   "recorded": "2026-11-28",
   "note": "Checked-in -O3 TS bootstrap igniter and -O1 native C11 bootstrap compiler; both reach 3-generation byte-identical fixed points.",
-  "igniterSha256": "013154d140f36450cfc1737176b968b4342d7d15e547c0d2afc9488b61ae8b59",
-  "sourceSha256": "18b0d9ec143a1d7e799e26090b40e3747c4a55182a4a2dee3d6a49ff62749de1",
-  "artifactSha256": "ad0fc3700ccc3358bd11f5ab3ed526efd0a7ba831b0ac086067d37d79a47da03",
+  "igniterSha256": "2278f5a3e434ec348194d84e9b7ef824af768753d2223dc18d8e90b066426e8a",
+  "sourceSha256": "481a164f53f4956292fcbe2b70a7d23d96039923d31000f3d0e385e1bfd36dab",
+  "artifactSha256": "1ab3f60879438229acb955d084320626834a64ac6576291c16045849bbbd4c68",
   "cArtifact": "compiler.c",
-  "cArtifactSha256": "f061ac97fd7618e17b602556db0dd394996b91a56480ad1fc70c336321e60251",
+  "cArtifactSha256": "9865e4e8df075842904b8053908813f536a8ad151a51a87260a69c685eeb57c3",
 } as const;
