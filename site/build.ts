@@ -78,7 +78,7 @@ function computeSampleCacheSalt(tsCompiler: CompilerBuild): string {
   const h = createHash('sha256');
   h.update('v1\0');
   h.update(readFileSync(tsCompiler.path));
-  for (const rel of ['site/play-keepalive.ts', 'site/canvas-preview.ts', 'lib/gfx/canvas.lt', 'lib/gfx/board.lt', 'lib/gfx/surface.lt', 'lib/gfx/color.lt', 'lib/media/audio.lt', 'lib/core/timer.lt', 'lib/math/scalar.lt', 'lib/math/random.lt', 'lib/ds/pool.lt', 'lib/ds/arena.lt', 'lib/ds/sparse.lt']) {
+  for (const rel of ['site/play-keepalive.ts', 'site/canvas-preview.ts', 'lib/gfx/canvas.lt', 'lib/gfx/board.lt', 'lib/gfx/surface.lt', 'lib/gfx/color.lt', 'lib/gfx/camera.lt', 'lib/gfx/scene.lt', 'lib/media/audio.lt', 'lib/ui/im.lt', 'lib/core/timer.lt', 'lib/math/scalar.lt', 'lib/math/random.lt', 'lib/math/matrix.lt', 'lib/math/transform.lt', 'lib/ds/pool.lt', 'lib/ds/arena.lt', 'lib/ds/sparse.lt']) {
     const p = resolve(root, rel);
     if (existsSync(p)) { h.update('\0' + rel + '\0'); h.update(readFileSync(p)); }
   }
@@ -387,7 +387,7 @@ export function buildSite(options?: BuildSiteOptions): void {
       }
     }
   };
-  for (const ns of ['core', 'math', 'ds', 'data', 'gfx', 'media'] as const) {
+  for (const ns of ['core', 'math', 'ds', 'data', 'gfx', 'media', 'ui'] as const) {
     collectStdlibDir(ns, join(root, 'lib', ns), ns, `lib/${ns}`);
   }
   const preloadRelPath = 'lib/$preload.lt';

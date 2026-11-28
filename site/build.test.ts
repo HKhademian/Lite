@@ -633,7 +633,15 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const stdlib = JSON.parse(readFileSync(join(out, 'playground', 'stdlib.json'), 'utf8')) as Record<string, unknown>;
   assert('gfx/canvas' in stdlib);
   assert('gfx/board' in stdlib);
+  assert('gfx/camera' in stdlib);
+  assert('gfx/scene' in stdlib);
+  assert('math/transform' in stdlib);
+  assert('ui/im' in stdlib);
   assert('media/audio' in stdlib);
+  assert(existsSync(join(out, 'modules', 'ui', 'im.html')), 'missing modules/ui/im.html');
+  assert(existsSync(join(out, 'modules', 'gfx', 'camera.html')), 'missing modules/gfx/camera.html');
+  assert(existsSync(join(out, 'modules', 'gfx', 'scene.html')), 'missing modules/gfx/scene.html');
+  assert(existsSync(join(out, 'modules', 'math', 'transform.html')), 'missing modules/math/transform.html');
   for (const sample of showcaseSamples) {
     assert(existsSync(join(out, 'playground', 'samples', `${sample.id}.json`)), `missing playground payload for ${sample.id}`);
   }
@@ -2738,4 +2746,85 @@ test('renderFrameToImageData copies direct rgba buffers and createCanvasSurfaceH
     g.__liteSurfaceHost = prevHost;
     g.SharedArrayBuffer = prevSab;
   }
+});
+
+test('surface host exposes keysDown, edge transitions, wheelDelta, and playground-worker handles keyup/wheel', () => {
+  const compiler = buildTsCompiler();
+  const src = [
+    'io := import "core/io";',
+    'surf := import "gfx/surface";',
+    'win := surf.Surface.open("InputParity", 8, 8);',
+    'mut log: List<String> = [];',
+    'var f := 0;',
+    'win.run(fn(inp: surf.FrameInput): Bool {',
+    '  if not inp.open { return false; }',
+    '  mut log.pushBack(',
+    '    (if win.isKeyDown("w") { "1" } else { "0" }) +',
+    '    (if win.isKeyPressed("w") { "1" } else { "0" }) +',
+    '    (if win.isKeyReleased("w") { "1" } else { "0" }) +',
+    '    (if win.isPointerPressed() { "1" } else { "0" }) +',
+    '    (if win.isPointerReleased() { "1" } else { "0" }) +',
+    '    ":" + win.wheelDelta().toText()',
+    '  );',
+    '  f += 1;',
+    '  if f >= 4 { io.outputLine(log.join("|")); return false; }',
+    '  true',
+    '});',
+    'win.close();',
+  ].join('\n');
+  const compiled = compileBuiltCompiler(compiler, { text: src, name: 'input-parity.lts', cwd: root });
+  assert.equal(compiled.status, 0, compiled.stderr.toString('utf8'));
+  const js = stripLiteTs(compiled.stdout.toString('utf8')).replace(/\bexport function main\b/, 'function main');
+
+  const listeners = new Map<string, Array<(ev: unknown) => void>>();
+  let rafQueue: Array<(t: number) => void> = [];
+  const mockCanvas = {
+    width: 0,
+    height: 0,
+    title: '',
+    getContext: () => ({
+      createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+      putImageData: () => {},
+    }),
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 8, height: 8 }),
+    addEventListener: (type: string, handler: (ev: unknown) => void) => {
+      const list = listeners.get(type) ?? [];
+      list.push(handler);
+      listeners.set(type, list);
+    },
+    removeEventListener: (type: string, handler: (ev: unknown) => void) => {
+      const list = listeners.get(type) ?? [];
+      listeners.set(type, list.filter((fn) => fn !== handler));
+    },
+  };
+  const mounted = createCanvasSurfaceHost(mockCanvas, {
+    audio: { unlock: () => {}, playTones: () => {}, setMuted: () => {}, isMuted: () => false },
+    requestAnimationFrame: (cb) => { rafQueue.push(cb); return rafQueue.length; },
+    cancelAnimationFrame: () => { rafQueue = []; },
+  });
+
+  const g = globalThis as unknown as { __liteSurfaceHost?: unknown };
+  const prevHost = g.__liteSurfaceHost;
+  let output = '';
+  try {
+    g.__liteSurfaceHost = mounted.host;
+    const runMounted = new Function('emit', js + '\nreturn main(emit);') as (emit: (s: string) => void) => void;
+    runMounted((s) => { output += s; });
+    for (const fn of listeners.get('keydown') ?? []) fn({ key: 'w', preventDefault: () => {} });
+    for (const fn of listeners.get('pointerdown') ?? []) fn({ clientX: 2, clientY: 3 });
+    for (const fn of listeners.get('wheel') ?? []) fn({ deltaY: -120, preventDefault: () => {} });
+    rafQueue.shift()!(16);
+    rafQueue.shift()!(32);
+    for (const fn of listeners.get('keyup') ?? []) fn({ key: 'w' });
+    for (const fn of listeners.get('pointerup') ?? []) fn({ clientX: 2, clientY: 3 });
+    rafQueue.shift()!(48);
+    assert.equal(output.trim(), '00000:0|11010:-120|10000:0|00101:0');
+  } finally {
+    mounted.stop();
+    g.__liteSurfaceHost = prevHost;
+  }
+
+  const workerSrc = readFileSync(join(root, 'site', 'playground-worker.ts'), 'utf8');
+  assert(workerSrc.includes("action === 'wheel'"), 'playground-worker should handle wheel messages');
+  assert(workerSrc.includes('heldKeys'), 'playground-worker should maintain heldKeys across keyDown/keyUp');
 });

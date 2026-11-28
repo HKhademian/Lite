@@ -666,6 +666,15 @@ export function createPlayStage(options: CreatePlayStageOptions): PlayStageContr
     void sendInteraction('pointerup', { ...cell, button: ev.button ?? 0 });
   });
 
+  canvas.addEventListener('wheel', (raw) => {
+    if (!activeCanvas || canvasPaused) return;
+    const ev = raw as { deltaY?: number; preventDefault?: () => void };
+    if (typeof ev.deltaY === 'number' && Number.isFinite(ev.deltaY)) {
+      ev.preventDefault?.();
+      void sendInteraction('wheel', { deltaY: ev.deltaY });
+    }
+  });
+
   return {
     applyFrame,
     startSession,
@@ -793,8 +802,9 @@ export function createCanvasSurfaceHost(
     heldKeys.delete(String(ev.key ?? ''));
   };
   const onWheel = (raw: unknown): void => {
-    const ev = raw as { deltaY?: number };
+    const ev = raw as { deltaY?: number; preventDefault?: () => void };
     if (typeof ev.deltaY === 'number' && Number.isFinite(ev.deltaY)) {
+      ev.preventDefault?.();
       pendingWheel += ev.deltaY;
     }
   };

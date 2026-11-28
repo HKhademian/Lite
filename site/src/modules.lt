@@ -76,7 +76,7 @@ renderModuleSidebar := fn(
 modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts: List<Int>, activeId: String
 ): String {
     prefix := "../../modules/";
-    grpNss: List<String> = ["core", "math", "ds", "data", "gfx", "media", "lite"];
+    grpNss: List<String> = ["core", "math", "ds", "data", "gfx", "media", "ui", "lite"];
     grpLabels: List<String> = [
     "Core Modules (core/*)",
     "Math Modules (math/*)",
@@ -84,11 +84,12 @@ modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts
     "Data & Codecs (data/*)",
     "Graphics (gfx/*)",
     "Media & Audio (media/*)",
+    "Immediate UI (ui/*)",
     "Compiler & Tooling (lite/*)"
     ];
     mut grpBlocks: List<String> = [];
     var gi := 0;
-    loop gi < 7 {
+    loop gi < grpNss.length() {
         ns := grpNss[gi];
         mut items: List<String> = [];
         var mi := 0;
@@ -231,6 +232,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     var dataCount := 0;
     var gfxCount := 0;
     var mediaCount := 0;
+    var uiCount := 0;
     var liteCount := 0;
     var totalSymbols := 0;
     mut coreCards: List<String> = [];
@@ -239,6 +241,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     mut dataCards: List<String> = [];
     mut gfxCards: List<String> = [];
     mut mediaCards: List<String> = [];
+    mut uiCards: List<String> = [];
     mut liteCards: List<String> = [];
 
     var mi := 0;
@@ -257,6 +260,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         else if mNs == "data" { dataCount = dataCount + 1; }
         else if mNs == "gfx" { gfxCount = gfxCount + 1; }
         else if mNs == "media" { mediaCount = mediaCount + 1; }
+        else if mNs == "ui" { uiCount = uiCount + 1; }
         else if mNs == "lite" { liteCount = liteCount + 1; }
 
         symsF := json.findField(inputJson, mp, "symbols");
@@ -295,6 +299,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         else if mNs == "data" { mut dataCards.pushBack(card); }
         else if mNs == "gfx" { mut gfxCards.pushBack(card); }
         else if mNs == "media" { mut mediaCards.pushBack(card); }
+        else if mNs == "ui" { mut uiCards.pushBack(card); }
         else if mNs == "lite" { mut liteCards.pushBack(card); }
         mi = mi + 1;
     }
@@ -303,7 +308,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "  <h1>Standard &amp; Play Modules</h1>\n"
     + "  <p class=\"hero-lead\">\n"
     + "    Reference documentation extracted directly from all " + modCount.toText() + " shipped Lite modules\n"
-    + "    (" + coreCount.toText() + " <code>core/*</code>, " + mathCount.toText() + " <code>math/*</code>, " + dsCount.toText() + " <code>ds/*</code>, " + dataCount.toText() + " <code>data/*</code>, " + gfxCount.toText() + " <code>gfx/*</code>, " + mediaCount.toText() + " <code>media/*</code>, " + liteCount.toText() + " <code>lite/*</code>; " + totalSymbols.toText() + " public symbols).\n"
+    + "    (" + coreCount.toText() + " <code>core/*</code>, " + mathCount.toText() + " <code>math/*</code>, " + dsCount.toText() + " <code>ds/*</code>, " + dataCount.toText() + " <code>data/*</code>, " + gfxCount.toText() + " <code>gfx/*</code>, " + mediaCount.toText() + " <code>media/*</code>, " + uiCount.toText() + " <code>ui/*</code>, " + liteCount.toText() + " <code>lite/*</code>; " + totalSymbols.toText() + " public symbols).\n"
     + "  </p>\n"
     + "  <p>Search by module or symbol name. Each module page shows its import path, public symbols, and where it runs. Try <a href=\"core/io.html\"><code>core/io</code></a> for input and output, or read <a href=\"../docs/handbook/imports-visibility-and-io.html\">how imports work</a> in the Handbook. Module APIs are provisional.</p>\n"
     + "  <div class=\"filter-pills\" role=\"group\" aria-label=\"Filter modules by environment\">\n"
@@ -368,6 +373,15 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "    " + mediaCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
+    + "<section class=\"section\" id=\"ui-modules\">\n"
+    + "  <div class=\"section-head\">\n"
+    + "    <h2>Immediate UI Modules (<code>ui/*</code>)</h2>\n"
+    + "    <span class=\"code-card-meta\">" + uiCount.toText() + " modules</span>\n"
+    + "  </div>\n"
+    + "  <div class=\"portal-grid\">\n"
+    + "    " + uiCards.join("\n") + "\n"
+    + "  </div>\n"
+    + "</section>\n\n"
     + "<section class=\"section\" id=\"lite-modules\">\n"
     + "  <div class=\"section-head\">\n"
     + "    <h2>Compiler &amp; Tooling Modules (<code>lite/*</code>)</h2>\n"
@@ -406,7 +420,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "</script>";
 
     mut pagesJson: List<String> = [
-    "{\"relPath\":\"modules/index.html\",\"title\":\"Modules — Lite\",\"description\":\"Reference documentation for Lite core/*, math/*, ds/*, data/*, gfx/*, media/*, and lite/* modules and their public APIs.\",\"basePath\":\"../\",\"body\":" + json.quoteString(indexBody) + "}"
+    "{\"relPath\":\"modules/index.html\",\"title\":\"Modules — Lite\",\"description\":\"Reference documentation for Lite core/*, math/*, ds/*, data/*, gfx/*, media/*, ui/*, and lite/* modules and their public APIs.\",\"basePath\":\"../\",\"body\":" + json.quoteString(indexBody) + "}"
     ];
     mut searchEntriesJson: List<String> = [];
 

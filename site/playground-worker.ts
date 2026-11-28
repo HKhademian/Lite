@@ -180,6 +180,7 @@ function runWithProcessStub(argv, stdinText, fn, vfs, opts = {}) {
 
   const stubProcess = {
     argv,
+    env: {},
     platform: 'linux',
     cwd() { return '/project'; },
     exit(code) {
@@ -560,6 +561,8 @@ function createWorkerSurfaceHost() {
   let pointerY = 0;
   let pointerDown = false;
   let pendingKey = '';
+  const heldKeys = new Set();
+  let pendingWheel = 0;
   let pendingDeltaMs = -1;
   const tones = [];
   globalThis.__liteSurfaceDrain = () => {
@@ -577,6 +580,14 @@ function createWorkerSurfaceHost() {
       state.pointerX = pointerX;
       state.pointerY = pointerY;
       state.pointerDown = pointerDown;
+      if (state.keysDown) {
+        state.keysDown.clear();
+        for (const k of heldKeys) state.keysDown.add(k);
+      }
+      if (pendingWheel !== 0) {
+        state.pendingWheelDelta = (state.pendingWheelDelta ?? 0) + pendingWheel;
+        pendingWheel = 0;
+      }
       if (pendingKey) {
         state.key = pendingKey;
         pendingKey = '';
@@ -646,7 +657,9 @@ function createWorkerSurfaceHost() {
         },
         keyDown(k) {
           if (!running || !state.open) return;
-          pendingKey = String(k ?? '');
+          const ks = String(k ?? '');
+          heldKeys.add(ks);
+          pendingKey = ks;
           pendingDeltaMs = 0;
           const ok = Boolean(onFrame(api.poll()));
           if (ok && state.open) {
@@ -655,7 +668,31 @@ function createWorkerSurfaceHost() {
             closeSession();
           }
         },
-        keyUp(_k) {},
+        keyUp(k) {
+          const ks = String(k ?? '');
+          heldKeys.delete(ks);
+          if (!running || !state.open) return;
+          pendingDeltaMs = 0;
+          const ok = Boolean(onFrame(api.poll()));
+          if (ok && state.open) {
+            api.present();
+          } else {
+            closeSession();
+          }
+        },
+        wheel(deltaY) {
+          const dy = Number(deltaY ?? 0);
+          if (!Number.isFinite(dy)) return;
+          pendingWheel += dy;
+          if (!running || !state.open) return;
+          pendingDeltaMs = 0;
+          const ok = Boolean(onFrame(api.poll()));
+          if (ok && state.open) {
+            api.present();
+          } else {
+            closeSession();
+          }
+        },
         pointerMove(x, y) {
           pointerX = Number(x ?? 0);
           pointerY = Number(y ?? 0);
@@ -759,6 +796,14 @@ self.onmessage = async (event) => {
       const frame = globalThis.__litePlay.frame();
       const tones = drainTones();
       self.postMessage({ id, ok: true, action, frame, tones });
+      return;
+    }
+
+    if (action === 'wheel' && globalThis.__litePlay) {
+      if (globalThis.__litePlay.wheel) globalThis.__litePlay.wheel(Number(payload.deltaY ?? 0));
+      const frame = globalThis.__litePlay.frame();
+      const tones = drainTones();
+      self.postMessage({ id, ok: true, action: 'wheel', frame, tones });
       return;
     }
 
