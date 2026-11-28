@@ -1,6 +1,6 @@
 /** Generates `/gym/` index, drill/workout dojo page bodies, payloads, and search entries (`site/gym-pages.ts`). */
 
-text := import "core/text";
+text := import "type/string";
 lru := import "ds/lru";
 challenges := import "../../tools/src/internal/challenges";
 json := import "data/json";

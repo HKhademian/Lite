@@ -1,4 +1,4 @@
-/* Dual-target (TS + C11) tests for `core/text` (`startsWith`, `split`, `splitLines`, `replaceAll`, `padLeft`, `padRight`, `lessOrEqual`) and `List.join`. */
+/* Dual-target (TS + C11) tests for `type/string` (`startsWith`, `split`, `splitLines`, `replaceAll`, `padLeft`, `padRight`, `lessOrEqual`) and `List.join`. */
 
 test := import "core/test";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
@@ -17,7 +17,7 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
-"text := import \"core/text\";\n" +
+"text := import \"type/string\";\n" +
 "\n" +
 "io.outputLine(\"hello world\".startsWith(\"hello\"), \"hello\".startsWith(\"world\"), \"\".startsWith(\"\"));\n" +
 "parts := \"a,b,,c\".split(\",\");\n" +

@@ -1,6 +1,6 @@
 /** Shared CLI argument munching and entrypoint normalization helpers. */
 
-list := import "core/list";
+list := import "type/list";
 proc := import "core/process";
 path := import "core/path";
 

@@ -149,16 +149,16 @@ loop unqualifiedCases as uSrc {
 compilerTest.assertCompileErrorContains(root, tsComp, "unaliased host import", "import \"core/io\"; inputArgs();", "import requires a module alias");
 
 /* core list mutations preserve element and mutability checks */
-listSrc := fs.readText(path.join(root, "lib/core/list.lt")).text;
-test.check("core/list pushBack signature", listSrc.contains("pub List.pushBack := fn<T>(values: mut Self<T>, value: T): Unit;"));
-test.check("core/list popBack signature", listSrc.contains("pub List.popBack := fn<T>(values: mut Self<T>): T;"));
-test.check("core/list not variadic", not listSrc.contains("pub List.pushBack := fn(..."));
-test.check("core/list popBack not variadic", not listSrc.contains("pub List.popBack := fn(..."));
+listSrc := fs.readText(path.join(root, "lib/type/list.lt")).text;
+test.check("type/list pushBack signature", listSrc.contains("pub List.pushBack := fn<T>(values: mut Self<T>, value: T): Unit #host;"));
+test.check("type/list popBack signature", listSrc.contains("pub List.popBack := fn<T>(values: mut Self<T>): T #host;"));
+test.check("type/list not variadic", not listSrc.contains("pub List.pushBack := fn(..."));
+test.check("type/list popBack not variadic", not listSrc.contains("pub List.popBack := fn(..."));
 
 listProg := "io := import \"core/io\"; mut values: List<Int> = [1]; mut values.pushBack(2); io.outputLine(mut values.popBack(), values);";
-compilerTest.assertCompileRunTs(root, tsComp, "core/list valid", listProg, "2 [1]\n");
+compilerTest.assertCompileRunTs(root, tsComp, "type/list valid", listProg, "2 [1]\n");
 cListProgRes := compilerTest.compileStdin(root, cComp, listProg, "");
-test.checkInt("core/list C compiles: " + cListProgRes.stderr, 0, cListProgRes.status);
+test.checkInt("type/list C compiles: " + cListProgRes.stderr, 0, cListProgRes.status);
 invalidListCases: List<String> = [
 "mut values: List<Int> = []; mut values.pushBack(\"x\");",
 "values: List<Int> = []; mut values.pushBack(1);",
@@ -167,8 +167,8 @@ invalidListCases: List<String> = [
 ];
 loop invalidListCases as invSrc {
     resInv := compilerTest.compileStdin(root, tsComp, invSrc, "");
-    test.checkInt("invalid core/list status", 2, resInv.status);
-    test.checkText("invalid core/list stdout", "", resInv.stdout);
+    test.checkInt("invalid type/list status", 2, resInv.status);
+    test.checkText("invalid type/list stdout", "", resInv.stdout);
 }
 
 /* pub marks a top-level declaration without changing current visibility behavior */

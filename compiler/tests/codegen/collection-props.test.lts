@@ -47,7 +47,7 @@ loop optFlags as flag {
     rProps.stdout);
 }
 
-/* 2. Dynamic String.isEmpty() & String.length() (non-constant runtime string, without importing core/text) */
+/* 2. Dynamic String.isEmpty() & String.length() (non-constant runtime string, without importing type/string) */
 dynStrProg :=
 "io := import \"core/io\";\n" +
 "describe := fn(s: String): String {\n" +

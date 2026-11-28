@@ -1,4 +1,4 @@
-integer := import "core/int";
+integer := import "type/int";
 test := import "core/test";
 
 sum := 2.checkedAdd(3);

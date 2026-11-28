@@ -1,3 +1,0 @@
-/* Temporary compatibility barrel forwarding to `type/array` during Phase 2 migration. */
-
-pub { ArrayOrderedScalar, ArrayEquatable } := import "type/array";

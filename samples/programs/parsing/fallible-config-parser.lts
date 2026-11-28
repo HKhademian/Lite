@@ -1,7 +1,7 @@
 /* Fallible Config Parser — A | B unions, T!, ToError, postfix ! propagation, else(err) recovery, if patterns, and { ... } records. */
 
 io := import "core/io";
-errs := import "core/error";
+errs := import "type/error";
 
 ConfigErr := enum {
     EmptyKey;

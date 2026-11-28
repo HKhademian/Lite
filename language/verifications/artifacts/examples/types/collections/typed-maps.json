@@ -10,7 +10,7 @@
     "feature.control.loops.sequence-traversal",
     "feature.io.reporting.report-values"
   ],
-  "description": "Demonstrates Map<K, V> indexing, core/map intrinsics, value-copy snapshots, and insertion-order entry traversal.",
+  "description": "Demonstrates Map<K, V> indexing, type/map intrinsics, value-copy snapshots, and insertion-order entry traversal.",
   "cases": [
     {
       "name": "typed-maps",

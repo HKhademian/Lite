@@ -1,4 +1,4 @@
-/* End-to-end C11 execution tests for Phase C3: Fixed Arrays [T; N], Growable List<T>, slicing, core/list, and loop traversal. */
+/* End-to-end C11 execution tests for Phase C3: Fixed Arrays [T; N], Growable List<T>, slicing, type/list, and loop traversal. */
 
 test := import "core/test";
 compilerBuild := import "../../../tools/src/internal/compiler-build";

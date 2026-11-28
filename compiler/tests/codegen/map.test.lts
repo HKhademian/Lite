@@ -1,4 +1,4 @@
-/* Map<K, V>: typed key-value maps, indexing, core/map intrinsics, iteration, value semantics, and diagnostics. */
+/* Map<K, V>: typed key-value maps, indexing, type/map intrinsics, iteration, value semantics, and diagnostics. */
 
 test := import "core/test";
 compilerBuild := import "../../../tools/src/internal/compiler-build";

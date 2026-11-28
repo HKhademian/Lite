@@ -6,7 +6,7 @@ emitFmt := import "./emit-format";
 optCfg := import "./opt-config";
 diagLib := import "core/diag";
 io := import "core/io";
-textLib := import "core/text";
+textLib := import "type/string";
 tb := import "core/text-builder";
 
 var cOutUseWriter := false;
@@ -149,7 +149,7 @@ checkCFunctionSignature := fn(item: frontend.Item): Unit {
     }
 };
 
-/** Emits UTF-8 Unicode scalar `core/text` C11 helpers only for primitives referenced by `calls`. */
+/** Emits UTF-8 Unicode scalar `type/string` C11 helpers only for primitives referenced by `calls`. */
 emitTextPrimitiveHelpers := fn(calls: Set<String>): Unit {
     hasSliceFrom := usesIntHelper(calls, "lite$textSliceFrom(");
     hasLen := usesIntHelper(calls, "lite$textLength(") or hasSliceFrom;
@@ -879,7 +879,7 @@ usesProcessSpawnBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$processRun(") or usesIntHelper(calls, "lite$processRunBytes(")
 };
 
-/** True when any emitted item calls a core/text Unicode hard builtin. */
+/** True when any emitted item calls a type/string Unicode hard builtin. */
 usesUnicodeBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$unicodeToCodePoints(") or usesIntHelper(calls, "lite$unicodeFromCodePoints(")
 };
@@ -927,7 +927,7 @@ usesCFileSoft := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_c_file_append_text(") or usesIntHelper(calls, "lt_c_sha256_file(")
 };
 
-/** True when any emitted item calls a C11 soft-builtin `core/text` UTF-8 helper. */
+/** True when any emitted item calls a C11 soft-builtin `type/string` UTF-8 helper. */
 usesCUtf8Soft := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lt_c_utf8_encode(") or
     usesIntHelper(calls, "lt_c_utf8_decode_strict(") or
@@ -1200,7 +1200,7 @@ emitFloatArithmeticHelpers := fn(calls: Set<String>, float8Values: Bool, float16
     outLine("}");
 }
 
-/** True when a program calls `core/text` UTF-8 scalar primitives. */
+/** True when a program calls `type/string` UTF-8 scalar primitives. */
 usesTextPrimitives := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$textLength(") or usesIntHelper(calls, "lite$textAt(") or
     usesIntHelper(calls, "lite$textSlice(") or usesIntHelper(calls, "lite$textSliceFrom(")
@@ -6885,7 +6885,7 @@ emitCFnTypeHelper := fn(kind: String, calls: Set<String>): Unit {
     outLine("");
 };
 
-/** Emits C11 `core/text` Unicode hard builtin helpers (`String.toCodePoints`, `String.fromCodePoints`). */
+/** Emits C11 `type/string` Unicode hard builtin helpers (`String.toCodePoints`, `String.fromCodePoints`). */
 emitCUnicodeBuiltinHelpers := fn(calls: Set<String>): Unit {
     if usesIntHelper(calls, "lite$unicodeToCodePoints(") {
         outLine("static lt_list_i64 lt_unicode_to_code_points(lt_str text) {");
@@ -8003,7 +8003,7 @@ emitCProcessSpawnAndTimeHelpers := fn(calls: Set<String>): Unit {
     }
 };
 
-/** Emits all C11 host builtin helpers (`core/text` Unicode, `core/io` streams, `core/file`, `core/process`, `core/time`, `core/crypto`). */
+/** Emits all C11 host builtin helpers (`type/string` Unicode, `core/io` streams, `core/file`, `core/process`, `core/time`, `core/crypto`). */
 emitCHostBuiltinHelpers := fn(calls: Set<String>): Unit {
     needDupStr := usesIntHelper(calls, "lite$fileOpenReader(") or usesIntHelper(calls, "lite$fileOpenWriter(") or
     usesIntHelper(calls, "lite$fileOpenAppender(") or usesIntHelper(calls, "lite$ioRead(") or
@@ -8181,7 +8181,7 @@ applyCSoftBuiltins := fn(rawItems: frontend.Items, prefix: String, builtinSpecs:
     out
 };
 
-/** Emits C11 native fast-path helpers for `core/int`, `core/text`, and `core/file` soft builtins. */
+/** Emits C11 native fast-path helpers for `type/int`, `type/string`, and `core/file` soft builtins. */
 emitCSoftBuiltinHelpers := fn(calls: Set<String>, config: optCfg.OptConfig): Unit {
     if not usesCSoftBuiltins(calls) { return; }
     if usesIntHelper(calls, "lt_c_text_is_digit(") {

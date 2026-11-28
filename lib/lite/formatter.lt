@@ -1,7 +1,7 @@
 /* Reusable Lite source formatter library with canonical 4-space indentation and idempotency checks. */
 
 fs := import "core/file";
-text := import "core/text";
+text := import "type/string";
 tb := import "core/text-builder";
 
 /** Structured result of checking or formatting a file on disk. */

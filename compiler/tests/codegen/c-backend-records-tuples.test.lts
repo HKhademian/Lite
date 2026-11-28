@@ -17,7 +17,7 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
+"list := import \"type/list\";\n" +
 "\n" +
 "/* 1. Tuples, label conversions, and formatting */\n" +
 "stored := (width = 640, height = 480);\n" +

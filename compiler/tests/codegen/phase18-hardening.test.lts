@@ -33,9 +33,9 @@ compileAndRunCSanitized := fn(cCode: String, cc: String): compilerTest.RunOutput
     ccOut := path.join(workDir, "cc.stdout");
     ccErr := path.join(workDir, "cc.stderr");
     ccArgs: List<String> = [
-        "-std=c11", "-Wall", "-Wextra", "-Werror",
-        "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", "-fno-omit-frame-pointer", "-g",
-        cPath, "-o", exePath, "-lm"
+    "-std=c11", "-Wall", "-Wextra", "-Werror",
+    "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", "-fno-omit-frame-pointer", "-g",
+    cPath, "-o", exePath, "-lm"
     ];
     ccRes := proc.runBytes(cc, ccArgs, workDir, emptyEnv, 30000, emptyBytes, ccOut, ccErr);
     test.check("compileAndRunCSanitized cc error: " + ccRes.error, ccRes.error == "");
@@ -120,76 +120,76 @@ injectStaticAsserts := fn(cCode: String, assertsBlock: String): String {
 /* 1. Interface associated types & default method bodies                        */
 /* ============================================================================ */
 assocAndDefaultsSrc := [
-    "io := import \"core/io\";",
-    "",
-    "Show := interface {",
-    "    label: fn(self: Self): String;",
-    "    banner := fn(self: Self, tag: String): String {",
-    "        \"[\" + tag + \"] \" + self.label()",
-    "    };",
-    "    tagged: fn(self: Self): String { \"default:\" + self.label() };",
-    "};",
-    "",
-    "Source := interface {",
-    "    Item: Type<Show>;",
-    "    Out: Type = Self.Item;",
-    "    head: fn(self: Self): Self.Item;",
-    "    emit := fn(self: Self): Self.Out { self.head() };",
-    "    describe: fn(self: Self): String { self.head().banner(\"src\") };",
-    "};",
-    "",
-    "Word := record { text: String; };",
-    "Word.label := fn(self: Self): String { self.text };",
-    "impl Show for Word;",
-    "",
-    "LoudWord := record { text: String; };",
-    "impl Show for LoudWord {",
-    "    label := fn(self: Self): String { self.text + \"!\" };",
-    "    tagged := fn(self: Self): String { \"override:\" + self.label() };",
-    "};",
-    "",
-    "PairSrc := record { w: Word; };",
-    "impl Source for PairSrc {",
-    "    Item := Word;",
-    "    head := fn(self: Self): Self.Item { self.w };",
-    "};",
-    "",
-    "BoxSrc := record<T: Type<Show>> { inner: T; };",
-    "impl<T: Type<Show>> Source for BoxSrc<T> {",
-    "    Item := T;",
-    "    head := fn(self: Self): Self.Item { self.inner };",
-    "};",
-    "",
-    "renderDyn := fn(s: dyn Show): String {",
-    "    s.banner(\"dyn\") + \"|\" + s.tagged()",
-    "};",
-    "",
-    "firstBanner := fn<S: Type<Source>>(src: S): String {",
-    "    h: S.Item = src.emit();",
-    "    h.banner(\"gen\")",
-    "};",
-    "",
-    "main := fn(): Unit {",
-    "    w := Word { text = \"alpha\" };",
-    "    lw := LoudWord { text = \"beta\" };",
-    "    ps := PairSrc { w = w };",
-    "    bs := BoxSrc<LoudWord> { inner = lw };",
-    "    x: PairSrc.Item = ps.emit();",
-    "    io.outputLine(w.banner(\"w\") + \"|\" + w.tagged());",
-    "    io.outputLine(lw.banner(\"lw\") + \"|\" + lw.tagged());",
-    "    io.outputLine(renderDyn(w));",
-    "    io.outputLine(renderDyn(lw));",
-    "    io.outputLine(x.label() + \"|\" + ps.describe() + \"|\" + firstBanner(ps) + \"|\" + firstBanner(bs));",
-    "};",
-    "main();"
+"io := import \"core/io\";",
+"",
+"Show := interface {",
+"    label: fn(self: Self): String;",
+"    banner := fn(self: Self, tag: String): String {",
+"        \"[\" + tag + \"] \" + self.label()",
+"    };",
+"    tagged: fn(self: Self): String { \"default:\" + self.label() };",
+"};",
+"",
+"Source := interface {",
+"    Item: Type<Show>;",
+"    Out: Type = Self.Item;",
+"    head: fn(self: Self): Self.Item;",
+"    emit := fn(self: Self): Self.Out { self.head() };",
+"    describe: fn(self: Self): String { self.head().banner(\"src\") };",
+"};",
+"",
+"Word := record { text: String; };",
+"Word.label := fn(self: Self): String { self.text };",
+"impl Show for Word;",
+"",
+"LoudWord := record { text: String; };",
+"impl Show for LoudWord {",
+"    label := fn(self: Self): String { self.text + \"!\" };",
+"    tagged := fn(self: Self): String { \"override:\" + self.label() };",
+"};",
+"",
+"PairSrc := record { w: Word; };",
+"impl Source for PairSrc {",
+"    Item := Word;",
+"    head := fn(self: Self): Self.Item { self.w };",
+"};",
+"",
+"BoxSrc := record<T: Type<Show>> { inner: T; };",
+"impl<T: Type<Show>> Source for BoxSrc<T> {",
+"    Item := T;",
+"    head := fn(self: Self): Self.Item { self.inner };",
+"};",
+"",
+"renderDyn := fn(s: dyn Show): String {",
+"    s.banner(\"dyn\") + \"|\" + s.tagged()",
+"};",
+"",
+"firstBanner := fn<S: Type<Source>>(src: S): String {",
+"    h: S.Item = src.emit();",
+"    h.banner(\"gen\")",
+"};",
+"",
+"main := fn(): Unit {",
+"    w := Word { text = \"alpha\" };",
+"    lw := LoudWord { text = \"beta\" };",
+"    ps := PairSrc { w = w };",
+"    bs := BoxSrc<LoudWord> { inner = lw };",
+"    x: PairSrc.Item = ps.emit();",
+"    io.outputLine(w.banner(\"w\") + \"|\" + w.tagged());",
+"    io.outputLine(lw.banner(\"lw\") + \"|\" + lw.tagged());",
+"    io.outputLine(renderDyn(w));",
+"    io.outputLine(renderDyn(lw));",
+"    io.outputLine(x.label() + \"|\" + ps.describe() + \"|\" + firstBanner(ps) + \"|\" + firstBanner(bs));",
+"};",
+"main();"
 ].join("\n");
 
 expAssocOut := [
-    "[w] alpha|default:alpha",
-    "[lw] beta!|override:beta!",
-    "[dyn] alpha|default:alpha",
-    "[dyn] beta!|override:beta!",
-    "alpha|[src] alpha|[gen] alpha|[gen] beta!"
+"[w] alpha|default:alpha",
+"[lw] beta!|override:beta!",
+"[dyn] alpha|default:alpha",
+"[dyn] beta!|override:beta!",
+"alpha|[src] alpha|[gen] alpha|[gen] beta!"
 ].join("\n") + "\n";
 
 checkParity("assoc types and default methods", assocAndDefaultsSrc, ["-O1"], expAssocOut, true);
@@ -200,36 +200,36 @@ test.check("pkgDir makeTempDir: " + pkgDirRes.error, pkgDirRes.ok);
 pkgDir := pkgDirRes.path;
 _wPkgJson := fs.writeText(path.join(pkgDir, "lite.pkg.json"), "{\"name\":\"p18iface\",\"version\":\"0.1.0\"}\n");
 _wIfaceMod := fs.writeText(path.join(pkgDir, "traits.lt"), [
-    "pub Tagged := interface {",
-    "    Val: Type = Int;",
-    "    raw: fn(self: Self): Self.Val;",
-    "    summary := fn(self: Self): String {",
-    "        \"T\" + self.raw().toText()",
-    "    };",
-    "};",
-    "pub BoxedNum := record { v: Int; };",
-    "pub BoxedNum.raw := fn(self: Self): Int { self.v };",
-    "pub impl Tagged for BoxedNum;",
-    ""
+"pub Tagged := interface {",
+"    Val: Type = Int;",
+"    raw: fn(self: Self): Self.Val;",
+"    summary := fn(self: Self): String {",
+"        \"T\" + self.raw().toText()",
+"    };",
+"};",
+"pub BoxedNum := record { v: Int; };",
+"pub BoxedNum.raw := fn(self: Self): Int { self.v };",
+"pub impl Tagged for BoxedNum;",
+""
 ].join("\n"));
 crossMainPath := path.join(pkgDir, "main.lts");
 _wCrossMain := fs.writeText(crossMainPath, [
-    "io := import \"core/io\";",
-    "tr := import \"./traits\";",
-    "",
-    "LocalNum := record { n: Int; };",
-    "impl tr.Tagged for LocalNum {",
-    "    raw := fn(self: Self): Self.Val { self.n * 2 };",
-    "};",
-    "",
-    "showTag := fn<T: Type<tr.Tagged>>(x: T): String {",
-    "    v: T.Val = x.raw();",
-    "    x.summary() + \":\" + v.toText()",
-    "};",
-    "",
-    "b := tr.BoxedNum { v = 7 };",
-    "l := LocalNum { n = 9 };",
-    "io.outputLine(b.summary() + \"|\" + l.summary() + \"|\" + showTag(b) + \"|\" + showTag(l));"
+"io := import \"core/io\";",
+"tr := import \"./traits\";",
+"",
+"LocalNum := record { n: Int; };",
+"impl tr.Tagged for LocalNum {",
+"    raw := fn(self: Self): Self.Val { self.n * 2 };",
+"};",
+"",
+"showTag := fn<T: Type<tr.Tagged>>(x: T): String {",
+"    v: T.Val = x.raw();",
+"    x.summary() + \":\" + v.toText()",
+"};",
+"",
+"b := tr.BoxedNum { v = 7 };",
+"l := LocalNum { n = 9 };",
+"io.outputLine(b.summary() + \"|\" + l.summary() + \"|\" + showTag(b) + \"|\" + showTag(l));"
 ].join("\n"));
 
 crossTsC := compilerTest.compileFile(tsComp, pkgDir, ["-O1", crossMainPath]);
@@ -250,30 +250,30 @@ _rmPkg := fs.remove(pkgDir);
 /* 2. Context hardening: C FFI NULL shims, unused-ctx opt-out (_), rejections   */
 /* ============================================================================ */
 unusedOptOutSrc := [
-    "io := import \"core/io\";",
-    "context _tag := \"ignored\";",
-    "f := fn(x: Int) context(_tag: String): Int { x + 1 };",
-    "cl := fn(x: Int) context(_tag: String): Int { x + 2 };",
-    "io.outputLine(f(10).toText() + \":\" + cl(10).toText());"
+"io := import \"core/io\";",
+"context _tag := \"ignored\";",
+"f := fn(x: Int) context(_tag: String): Int { x + 1 };",
+"cl := fn(x: Int) context(_tag: String): Int { x + 2 };",
+"io.outputLine(f(10).toText() + \":\" + cl(10).toText());"
 ].join("\n");
 checkParity("unused _-prefixed context opt-out", unusedOptOutSrc, ["-O1"], "11:12\n", true);
 
 if ccInfo.available {
     ffiCtxSrc := [
-        "io := import \"core/io\";",
-        "context factor := 10;",
-        "pub scaleByAmb := fn(x: Int) context(factor: Int): Int {",
-        "    x * factor",
-        "};",
-        "noAmbNeed := fn(x: Int) context(missing: Int): Int {",
-        "    x + missing",
-        "};",
-        "main := fn(): Unit {",
-        "    v1 := scaleByAmb(3);",
-        "    v2 := context (missing = 5) { noAmbNeed(4) };",
-        "    io.outputLine(v1.toText() + \":\" + v2.toText());",
-        "};",
-        "main();"
+    "io := import \"core/io\";",
+    "context factor := 10;",
+    "pub scaleByAmb := fn(x: Int) context(factor: Int): Int {",
+    "    x * factor",
+    "};",
+    "noAmbNeed := fn(x: Int) context(missing: Int): Int {",
+    "    x + missing",
+    "};",
+    "main := fn(): Unit {",
+    "    v1 := scaleByAmb(3);",
+    "    v2 := context (missing = 5) { noAmbNeed(4) };",
+    "    io.outputLine(v1.toText() + \":\" + v2.toText());",
+    "};",
+    "main();"
     ].join("\n");
     ffiCEmit := compilerTest.compileStdinWithOpts(root, cComp, root, ffiCtxSrc, "p18-ffi.lts", "", ["-O1"]);
     test.check("FFI ctx shim C emit: " + ffiCEmit.stderr, ffiCEmit.status == 0 and ffiCEmit.stderr == "");
@@ -300,16 +300,16 @@ if ccInfo.available {
     test.check("located main in FFI C", mainBrace > mainEntry);
     /* Test NULL context falling back cleanly to ambient default */
     cWithNullOk := ffiCEmit.stdout.slice(0, findCharLineEnd(ffiCEmit.stdout, mainBrace)) +
-        "    if (" + scaleSym + "(4, NULL) != 40) { fprintf(stderr, \"FFI_NULL_MISMATCH\\n\"); return 2; }\n" +
-        ffiCEmit.stdout.slice(findCharLineEnd(ffiCEmit.stdout, mainBrace), ffiCEmit.stdout.length());
+    "    if (" + scaleSym + "(4, NULL) != 40) { fprintf(stderr, \"FFI_NULL_MISMATCH\\n\"); return 2; }\n" +
+    ffiCEmit.stdout.slice(findCharLineEnd(ffiCEmit.stdout, mainBrace), ffiCEmit.stdout.length());
     rFfiOk := compileAndRunCSanitized(cWithNullOk, ccInfo.cc);
     test.check("FFI NULL context ambient fallback ASan/UBSan ok: " + rFfiOk.stderr, rFfiOk.status == 0);
     test.checkText("FFI NULL context ambient fallback stdout", "30:9\n", rFfiOk.stdout);
 
     /* Test NULL context panicking cleanly when ambient defaults are absent */
     cWithNullPanic := ffiCEmit.stdout.slice(0, findCharLineEnd(ffiCEmit.stdout, mainBrace)) +
-        "    (void)" + noAmbSym + "(4, NULL);\n" +
-        ffiCEmit.stdout.slice(findCharLineEnd(ffiCEmit.stdout, mainBrace), ffiCEmit.stdout.length());
+    "    (void)" + noAmbSym + "(4, NULL);\n" +
+    ffiCEmit.stdout.slice(findCharLineEnd(ffiCEmit.stdout, mainBrace), ffiCEmit.stdout.length());
     rFfiPanic := compilerTest.compileAndRunC(cWithNullPanic, ccInfo.cc, "");
     test.check("FFI NULL context without ambient defaults panics cleanly", rFfiPanic.status =!= 0 and rFfiPanic.stderr.contains("ContextPanic"));
 }
@@ -318,75 +318,75 @@ if ccInfo.available {
 /* 3. Bit-packed slices (Bool, Int1..4, UInt1..4, non-byte splitAt, loop mut)   */
 /* ============================================================================ */
 bitSliceSrc := [
-    "io := import \"core/io\";",
-    "arrs := import \"core/array\";",
-    "",
-    "sumTiny := fn(s: Slice<UInt2>): Int {",
-    "    var acc := 0;",
-    "    loop s as v { acc += cast<Int>(v); }",
-    "    acc",
-    "};",
-    "",
-    "sumNibs := fn(s: Slice<Int4>): Int {",
-    "    var acc := 0;",
-    "    loop s as v { acc += cast<Int>(v); }",
-    "    acc",
-    "};",
-    "",
-    "flipFlags := fn(s: mut Slice<Bool>): Unit {",
-    "    loop mut s as b { b = not b; }",
-    "};",
-    "",
-    "bumpUntilNeg := fn(s: mut Slice<Int4>): Int {",
-    "    one: Int4 = 1;",
-    "    last := loop mut s as n {",
-    "        n = n + one;",
-    "        if n < 0 { break; }",
-    "    } then { .item };",
-    "    cast<Int>(last)",
-    "};",
-    "",
-    "main := fn(): Unit {",
-    "    mut flags: [Bool; 10] = [true, false, true, true, false, false, true, false, true, false];",
-    "    do {",
-    "        sBool := mut flags[1..9];",
-    "        flipFlags(mut sBool);",
-    "    };",
-    "    io.outputLine(flags[0].toText() + \":\" + flags[1].toText() + \":\" + flags[2].toText() + \":\" + flags[9].toText());",
-    "",
-    "    mut nibs: [Int4; 7] = [1, -4, 3, -2, 5, -6, 7];",
-    "    do {",
-    "        ms := mut nibs[1..6];",
-    "        (left, right) := mut ms.splitAt(3);",
-    "        left[0] = 6;",
-    "        right[1] = -7;",
-    "        io.outputLine(\"split=\" + cast<Int>(left[0]).toText() + \":\" + cast<Int>(right[1]).toText());",
-    "    };",
-    "    lastVal := do {",
-    "        ms2 := mut nibs[0..5];",
-    "        bumpUntilNeg(mut ms2)",
-    "    };",
-    "    roNibs := nibs[1..6];",
-    "    ownedNibs := roNibs.toList();",
-    "    io.outputLine(\"nibs=\" + lastVal.toText() + \":\" + sumNibs(roNibs).toText() + \":\" + ownedNibs.length().toText() + \":\" + cast<Int>(nibs[0]).toText() + \":\" + cast<Int>(nibs[6]).toText());",
-    "",
-    "    mut bits2: [UInt2; 9] = [0, 1, 2, 3, 1, 2, 0, 3, 2];",
-    "    do {",
-    "        s2 := mut bits2[1..8];",
-    "        s2[0] = 3;",
-    "        s2[6] = 1;",
-    "    };",
-    "    sub2 := bits2[2..7];",
-    "    io.outputLine(\"u2=\" + sumTiny(sub2).toText() + \":\" + cast<Int>(bits2[0]).toText() + \":\" + cast<Int>(bits2[1]).toText() + \":\" + cast<Int>(bits2[7]).toText() + \":\" + cast<Int>(bits2[8]).toText());",
-    "};",
-    "main();"
+"io := import \"core/io\";",
+"arrs := import \"type/array\";",
+"",
+"sumTiny := fn(s: Slice<UInt2>): Int {",
+"    var acc := 0;",
+"    loop s as v { acc += cast<Int>(v); }",
+"    acc",
+"};",
+"",
+"sumNibs := fn(s: Slice<Int4>): Int {",
+"    var acc := 0;",
+"    loop s as v { acc += cast<Int>(v); }",
+"    acc",
+"};",
+"",
+"flipFlags := fn(s: mut Slice<Bool>): Unit {",
+"    loop mut s as b { b = not b; }",
+"};",
+"",
+"bumpUntilNeg := fn(s: mut Slice<Int4>): Int {",
+"    one: Int4 = 1;",
+"    last := loop mut s as n {",
+"        n = n + one;",
+"        if n < 0 { break; }",
+"    } then { .item };",
+"    cast<Int>(last)",
+"};",
+"",
+"main := fn(): Unit {",
+"    mut flags: [Bool; 10] = [true, false, true, true, false, false, true, false, true, false];",
+"    do {",
+"        sBool := mut flags[1..9];",
+"        flipFlags(mut sBool);",
+"    };",
+"    io.outputLine(flags[0].toText() + \":\" + flags[1].toText() + \":\" + flags[2].toText() + \":\" + flags[9].toText());",
+"",
+"    mut nibs: [Int4; 7] = [1, -4, 3, -2, 5, -6, 7];",
+"    do {",
+"        ms := mut nibs[1..6];",
+"        (left, right) := mut ms.splitAt(3);",
+"        left[0] = 6;",
+"        right[1] = -7;",
+"        io.outputLine(\"split=\" + cast<Int>(left[0]).toText() + \":\" + cast<Int>(right[1]).toText());",
+"    };",
+"    lastVal := do {",
+"        ms2 := mut nibs[0..5];",
+"        bumpUntilNeg(mut ms2)",
+"    };",
+"    roNibs := nibs[1..6];",
+"    ownedNibs := roNibs.toList();",
+"    io.outputLine(\"nibs=\" + lastVal.toText() + \":\" + sumNibs(roNibs).toText() + \":\" + ownedNibs.length().toText() + \":\" + cast<Int>(nibs[0]).toText() + \":\" + cast<Int>(nibs[6]).toText());",
+"",
+"    mut bits2: [UInt2; 9] = [0, 1, 2, 3, 1, 2, 0, 3, 2];",
+"    do {",
+"        s2 := mut bits2[1..8];",
+"        s2[0] = 3;",
+"        s2[6] = 1;",
+"    };",
+"    sub2 := bits2[2..7];",
+"    io.outputLine(\"u2=\" + sumTiny(sub2).toText() + \":\" + cast<Int>(bits2[0]).toText() + \":\" + cast<Int>(bits2[1]).toText() + \":\" + cast<Int>(bits2[7]).toText() + \":\" + cast<Int>(bits2[8]).toText());",
+"};",
+"main();"
 ].join("\n");
 
 expBitSliceOut := [
-    "true:true:false:false",
-    "split=6:-7",
-    "nibs=-1:8:5:2:7",
-    "u2=8:0:3:1:2"
+"true:true:false:false",
+"split=6:-7",
+"nibs=-1:8:5:2:7",
+"u2=8:0:3:1:2"
 ].join("\n") + "\n";
 
 checkParity("bit-packed slices (Bool, Int4, UInt2, non-byte splitAt, loop mut)", bitSliceSrc, ["-O1"], expBitSliceOut, true);
@@ -395,37 +395,37 @@ checkParity("bit-packed slices (Bool, Int4, UInt2, non-byte splitAt, loop mut)",
 /* 4. Float-niche finite ingress & Option<Float*> packing                       */
 /* ============================================================================ */
 floatNicheSrc := [
-    "io := import \"core/io\";",
-    "",
-    "Option := enum<T: Type> { None, Some(T) };",
-    "FloatWrap := record #no_niche { v: Float; };",
-    "",
-    "inspect_layouts := fn(",
-    "    p_opt_f64: Option<Float>,",
-    "    p_opt_f32: Option<Float32>,",
-    "    p_opt_f16: Option<Float16>,",
-    "    p_opt_f8: Option<Float8>,",
-    "    p_opt_nn_wrap: Option<FloatWrap>",
-    "): String {",
-    "    a := match p_opt_f64 { .None { \"N\" } .Some(v) { v.toBits().toText() } };",
-    "    b := match p_opt_f32 { .None { \"N\" } .Some(v) { cast<Float>(v).toText() } };",
-    "    c := match p_opt_f16 { .None { \"N\" } .Some(v) { cast<Float>(v).toText() } };",
-    "    d := match p_opt_f8 { .None { \"N\" } .Some(v) { cast<Float>(v).toText() } };",
-    "    e := match p_opt_nn_wrap { .None { \"N\" } .Some(w) { w.v.toText() } };",
-    "    a + \":\" + b + \":\" + c + \":\" + d + \":\" + e",
-    "};",
-    "",
-    "f64Some: Option<Float> = .Some(-0.0);",
-    "f64None: Option<Float> = .None;",
-    "f32Val: Float32 = 2.5;",
-    "f16Val: Float16 = 1.5;",
-    "f8Val: Float8 = 4.0;",
-    "f32Some: Option<Float32> = .Some(f32Val);",
-    "f16Some: Option<Float16> = .Some(f16Val);",
-    "f8Some: Option<Float8> = .Some(f8Val);",
-    "nnSome: Option<FloatWrap> = .Some(FloatWrap { v = 3.5 });",
-    "io.outputLine(inspect_layouts(f64Some, f32Some, f16Some, f8Some, nnSome));",
-    "io.outputLine(match f64None { .None { \"none\" } .Some(_) { \"some\" } });"
+"io := import \"core/io\";",
+"",
+"Option := enum<T: Type> { None, Some(T) };",
+"FloatWrap := record #no_niche { v: Float; };",
+"",
+"inspect_layouts := fn(",
+"    p_opt_f64: Option<Float>,",
+"    p_opt_f32: Option<Float32>,",
+"    p_opt_f16: Option<Float16>,",
+"    p_opt_f8: Option<Float8>,",
+"    p_opt_nn_wrap: Option<FloatWrap>",
+"): String {",
+"    a := match p_opt_f64 { .None { \"N\" } .Some(v) { v.toBits().toText() } };",
+"    b := match p_opt_f32 { .None { \"N\" } .Some(v) { cast<Float>(v).toText() } };",
+"    c := match p_opt_f16 { .None { \"N\" } .Some(v) { cast<Float>(v).toText() } };",
+"    d := match p_opt_f8 { .None { \"N\" } .Some(v) { cast<Float>(v).toText() } };",
+"    e := match p_opt_nn_wrap { .None { \"N\" } .Some(w) { w.v.toText() } };",
+"    a + \":\" + b + \":\" + c + \":\" + d + \":\" + e",
+"};",
+"",
+"f64Some: Option<Float> = .Some(-0.0);",
+"f64None: Option<Float> = .None;",
+"f32Val: Float32 = 2.5;",
+"f16Val: Float16 = 1.5;",
+"f8Val: Float8 = 4.0;",
+"f32Some: Option<Float32> = .Some(f32Val);",
+"f16Some: Option<Float16> = .Some(f16Val);",
+"f8Some: Option<Float8> = .Some(f8Val);",
+"nnSome: Option<FloatWrap> = .Some(FloatWrap { v = 3.5 });",
+"io.outputLine(inspect_layouts(f64Some, f32Some, f16Some, f8Some, nnSome));",
+"io.outputLine(match f64None { .None { \"none\" } .Some(_) { \"some\" } });"
 ].join("\n");
 
 expFloatNicheOut := "9223372036854775808:2.5:1.5:4:3.5\nnone\n";
@@ -435,11 +435,11 @@ if ccInfo.available {
     cFnO1 := compilerTest.compileStdinWithOpts(root, cComp, root, floatNicheSrc, "p18-fn.lts", "", ["-O1"]);
     test.checkInt("float-niche -O1 C emit: " + cFnO1.stderr, 0, cFnO1.status);
     o1Asserts := [
-        "    _Static_assert(sizeof(*lite_p_opt_f64) == sizeof(double), \"Option<Float> must reuse qNaN niche\");",
-        "    _Static_assert(sizeof(*lite_p_opt_f32) == sizeof(float), \"Option<Float32> must reuse qNaN niche\");",
-        "    _Static_assert(sizeof(*lite_p_opt_f16) == 2, \"Option<Float16> must reuse qNaN niche (2 bytes)\");",
-        "    _Static_assert(sizeof(*lite_p_opt_f8) == 1, \"Option<Float8> must reuse NaN niche (1 byte)\");",
-        "    _Static_assert(sizeof(*lite_p_opt_nn_wrap) > sizeof(double), \"#no_niche wrapper must stay tagged\");"
+    "    _Static_assert(sizeof(*lite_p_opt_f64) == sizeof(double), \"Option<Float> must reuse qNaN niche\");",
+    "    _Static_assert(sizeof(*lite_p_opt_f32) == sizeof(float), \"Option<Float32> must reuse qNaN niche\");",
+    "    _Static_assert(sizeof(*lite_p_opt_f16) == 2, \"Option<Float16> must reuse qNaN niche (2 bytes)\");",
+    "    _Static_assert(sizeof(*lite_p_opt_f8) == 1, \"Option<Float8> must reuse NaN niche (1 byte)\");",
+    "    _Static_assert(sizeof(*lite_p_opt_nn_wrap) > sizeof(double), \"#no_niche wrapper must stay tagged\");"
     ].join("\n");
     patchedFnO1 := injectStaticAsserts(cFnO1.stdout, o1Asserts);
     test.check("injected float-niche -O1 asserts", patchedFnO1 =!= "");
@@ -450,10 +450,10 @@ if ccInfo.available {
     noFiniteC := compilerTest.compileStdinWithOpts(root, cComp, root, floatNicheSrc, "p18-nofin.lts", "", ["-O1", "-fno-check-float-finite"]);
     test.checkInt("float-niche -fno-check-float-finite C emit: " + noFiniteC.stderr, 0, noFiniteC.status);
     noFinAsserts := [
-        "    _Static_assert(sizeof(*lite_p_opt_f64) > sizeof(double), \"-fno-check-float-finite disables Option<Float> niche\");",
-        "    _Static_assert(sizeof(*lite_p_opt_f32) > sizeof(float), \"-fno-check-float-finite disables Option<Float32> niche\");",
-        "    _Static_assert(sizeof(*lite_p_opt_f16) > 2, \"-fno-check-float-finite disables Option<Float16> niche\");",
-        "    _Static_assert(sizeof(*lite_p_opt_f8) > 1, \"-fno-check-float-finite disables Option<Float8> niche\");"
+    "    _Static_assert(sizeof(*lite_p_opt_f64) > sizeof(double), \"-fno-check-float-finite disables Option<Float> niche\");",
+    "    _Static_assert(sizeof(*lite_p_opt_f32) > sizeof(float), \"-fno-check-float-finite disables Option<Float32> niche\");",
+    "    _Static_assert(sizeof(*lite_p_opt_f16) > 2, \"-fno-check-float-finite disables Option<Float16> niche\");",
+    "    _Static_assert(sizeof(*lite_p_opt_f8) > 1, \"-fno-check-float-finite disables Option<Float8> niche\");"
     ].join("\n");
     patchedNoFin := injectStaticAsserts(noFiniteC.stdout, noFinAsserts);
     test.check("injected -fno-check-float-finite asserts", patchedNoFin =!= "");
@@ -463,22 +463,22 @@ if ccInfo.available {
 
 /* Float-niche runtime NaN/Inf ingress fault + -fno-check-float-finite tagged preservation */
 checkedBitsSrc := [
-    "io := import \"core/io\";",
-    "Option := enum<T: Type> { None, Some(T) };",
-    "bits: UInt32 = 2143289344;",
-    "x := Float32.fromBits(bits);",
-    "opt: Option<Float32> = .Some(x);",
-    "io.outputLine(match opt { .None { \"none\" } .Some(_) { \"some\" } });"
+"io := import \"core/io\";",
+"Option := enum<T: Type> { None, Some(T) };",
+"bits: UInt32 = 2143289344;",
+"x := Float32.fromBits(bits);",
+"opt: Option<Float32> = .Some(x);",
+"io.outputLine(match opt { .None { \"none\" } .Some(_) { \"some\" } });"
 ].join("\n");
 checkFault("Float32.fromBits rejects NaN on TS and C", checkedBitsSrc, ["-O1"], "ArithmeticPanic");
 
 nanOptionIngressSrc := [
-    "io := import \"core/io\";",
-    "Option := enum<T: Type> { None, Some(T) };",
-    "bits: UInt32 = 2143289344;",
-    "x := Float32.uncheckedFromBits(bits);",
-    "opt: Option<Float32> = .Some(x);",
-    "io.outputLine(match opt { .None { \"none\" } .Some(_) { \"some\" } });"
+"io := import \"core/io\";",
+"Option := enum<T: Type> { None, Some(T) };",
+"bits: UInt32 = 2143289344;",
+"x := Float32.uncheckedFromBits(bits);",
+"opt: Option<Float32> = .Some(x);",
+"io.outputLine(match opt { .None { \"none\" } .Some(_) { \"some\" } });"
 ].join("\n");
 if ccInfo.available {
     cNanIng := compilerTest.compileStdinWithOpts(root, cComp, root, nanOptionIngressSrc, "p18-naning.lts", "", ["-O1", "-fno-check-unchecked"]);
@@ -492,43 +492,43 @@ checkParity("-fno-check-float-finite preserves Some(NaN) distinct from None", na
 /* 5. Rejection matrix                                                          */
 /* ============================================================================ */
 compilerTest.assertCompileErrorContains(root, tsComp, "reject dyn on interface with associated type",
-    "Iter := interface { Item: Type; next: fn(self: Self): Self.Item; };\nf := fn(it: dyn Iter): Unit { };",
-    "is not object-safe");
+"Iter := interface { Item: Type; next: fn(self: Self): Self.Item; };\nf := fn(it: dyn Iter): Unit { };",
+"is not object-safe");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject missing required associated type in impl",
-    "Iter := interface { Item: Type; next: fn(self: Self): Self.Item; };\nS := record { x: Int; };\nimpl Iter for S { next := fn(self: Self): Int { self.x }; };",
-    "missing required associated type Item");
+"Iter := interface { Item: Type; next: fn(self: Self): Self.Item; };\nS := record { x: Int; };\nimpl Iter for S { next := fn(self: Self): Int { self.x }; };",
+"missing required associated type Item");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject associated type violating interface bound",
-    "Tag := interface { tag: fn(self: Self): String; };\nIter := interface { Item: Type<Tag>; next: fn(self: Self): Self.Item; };\nS := record { x: Int; };\nimpl Iter for S { Item := Int; next := fn(self: Self): Self.Item { 1 }; };",
-    "does not satisfy bound");
+"Tag := interface { tag: fn(self: Self): String; };\nIter := interface { Item: Type<Tag>; next: fn(self: Self): Self.Item; };\nS := record { x: Int; };\nimpl Iter for S { Item := Int; next := fn(self: Self): Self.Item { 1 }; };",
+"does not satisfy bound");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject unknown Self.Assoc",
-    "I := interface { f: fn(self: Self): Self.NoSuch; };",
-    "unknown associated type Self.NoSuch");
+"I := interface { f: fn(self: Self): Self.NoSuch; };",
+"unknown associated type Self.NoSuch");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject unknown Concrete.Assoc",
-    "S := record { x: Int; };\nf := fn(v: S.NoSuch): Unit { };",
-    "has no associated type NoSuch");
+"S := record { x: Int; };\nf := fn(v: S.NoSuch): Unit { };",
+"has no associated type NoSuch");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject ambiguous T.Item across multiple interface bounds",
-    "A := interface { Item: Type; a: fn(self: Self): Self.Item; };\nB := interface { Item: Type; b: fn(self: Self): Self.Item; };\nf := fn<T: Type<A, B>>(x: T.Item): Unit { };",
-    "ambiguous associated type T.Item");
+"A := interface { Item: Type; a: fn(self: Self): Self.Item; };\nB := interface { Item: Type; b: fn(self: Self): Self.Item; };\nf := fn<T: Type<A, B>>(x: T.Item): Unit { };",
+"ambiguous associated type T.Item");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject unused non-underscore context slot on fn",
-    "f := fn(x: Int) context(tag: String): Int { x + 1 };",
-    "unused context slot 'tag'");
+"f := fn(x: Int) context(tag: String): Int { x + 1 };",
+"unused context slot 'tag'");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject unused non-underscore context slot on closure",
-    "cl := fn(x: Int) context(tag: String): Int { x + 1 };",
-    "unused context slot 'tag'");
+"cl := fn(x: Int) context(tag: String): Int { x + 1 };",
+"unused context slot 'tag'");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject escaping closure capturing mut context slot",
-    "make := fn() context(cnt: mut Int): fn(): Int { fn(): Int { cnt = cnt + 1; cnt } };",
-    "cannot capture borrowed or mut context 'cnt'");
+"make := fn() context(cnt: mut Int): fn(): Int { fn(): Int { cnt = cnt + 1; cnt } };",
+"cannot capture borrowed or mut context 'cnt'");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject escaping closure capturing dyn context slot",
-    "Log := interface { log: fn(self: Self, s: String): Unit; };\nmake := fn() context(lg: dyn Log): fn(): Unit { fn(): Unit { lg.log(\"hi\"); } };",
-    "cannot capture borrowed or mut context 'lg'");
+"Log := interface { log: fn(self: Self, s: String): Unit; };\nmake := fn() context(lg: dyn Log): fn(): Unit { fn(): Unit { lg.log(\"hi\"); } };",
+"cannot capture borrowed or mut context 'lg'");
 
 io.outputLine("phase18-hardening: ok");

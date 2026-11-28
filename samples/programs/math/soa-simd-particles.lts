@@ -1,8 +1,8 @@
 /* SoA Particle Integrator — comptime constants, SoA<Particle>, Float32x4 SIMD columns, and disjoint Slice splitAt. */
 
 io := import "core/io";
-simd := import "core/simd";
-soa := import "core/soa";
+simd := import "type/simd";
+soa := import "type/soa";
 
 Particle := record {
     x: Float32;
@@ -15,11 +15,11 @@ Particle := record {
 STEPS := comptime { 4 };
 
 integrateSimd := fn(
-    x: mut Slice<Float32>,
-    y: mut Slice<Float32>,
-    vx: Slice<Float32>,
-    vy: Slice<Float32>,
-    dt: Float32,
+x: mut Slice<Float32>,
+y: mut Slice<Float32>,
+vx: Slice<Float32>,
+vy: Slice<Float32>,
+dt: Float32,
 ): Unit {
     n := x.length();
     dtv := simd.Float32x4.splat(dt);

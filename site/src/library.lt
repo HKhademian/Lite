@@ -2,7 +2,7 @@
 
 fs := import "core/file";
 path := import "core/path";
-text := import "core/text";
+text := import "type/string";
 challenges := import "../../tools/src/internal/challenges";
 json := import "data/json";
 
@@ -307,12 +307,12 @@ environment: String, extraModulesJson: String, sampleId: String
 /** Builds Playground library items JSON array for Samples, Examples, Cases, and Pieces. */
 pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (ok: Bool, jsonText: String, error: String) {
     hostSpecIds: List<String> = [
-    "lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.text.v1",
+    "lite.core.io.v1", "lite.type.int.v1", "lite.type.list.v1", "lite.type.string.v1",
     "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1",
     "lite.compiler.modules.v1"
     ];
     hostSpecPaths: List<String> = [
-    "lib/core/io.lt", "lib/core/int.lt", "lib/core/list.lt", "lib/core/text.lt",
+    "lib/core/io.lt", "lib/type/int.lt", "lib/type/list.lt", "lib/type/string.lt",
     "lib/core/file.lt", "lib/core/process.lt", "lib/core/crypto.lt", "lib/core/time.lt",
     "lib/lite/compiler/modules.lt"
     ];

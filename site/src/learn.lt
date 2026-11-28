@@ -1,6 +1,6 @@
 /** Generates `/learn/` index, lesson/tutorial page bodies, payloads, and search entries (`site/learn-pages.ts`). */
 
-text := import "core/text";
+text := import "type/string";
 lru := import "ds/lru";
 json := import "data/json";
 siteTools := import "./tools";

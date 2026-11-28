@@ -1,9 +1,9 @@
 /** Discovers `/docs/` Handbook/Spec documents, renders Markdown JSON, and builds portal pages (`site/docs-pages.ts`). */
 
 fs := import "core/file";
-list := import "core/list";
+list := import "type/list";
 path := import "core/path";
-text := import "core/text";
+text := import "type/string";
 json := import "data/json";
 mdHtml := import "data/markdown-html";
 siteLib := import "./library";
@@ -168,7 +168,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     hbSums: List<String> = [
     "Explicit imports, dual-target TS & C11 toolchain, ./bin/lite commands, file kinds, and nestable comments.",
     "Immutable := defaults, zero-value storage, reserved = ?, var updates, and mut lists.",
-    "Int8..Int64, Float/Float32, / % vs :/ :%, **, =!=, chained comparisons, core/text, math/scalar, and math/random.",
+    "Int8..Int64, Float/Float32, / % vs :/ :%, **, =!=, chained comparisons, type/string, math/scalar, and math/random.",
     "Expression if/else, subjectless match, sequence loops, .index/.count/.value/.collected, then, @tag, and finally.",
     "Unnamed/named/mixed tuples, records, enums, [T; N] arrays, List<T>, Map<K, V>, Set<T>, and type aliases.",
     "Final-item block values, DCE pruning, parallel wiring, execution trace safety, self, and closures.",

@@ -10,7 +10,7 @@
     "feature.control.loops.sequence-traversal",
     "feature.io.reporting.report-values"
   ],
-  "description": "Zero-initialized Map<K, V>, core/map lookups, mut grants, independent snapshots, and entry iteration.",
+  "description": "Zero-initialized Map<K, V>, type/map lookups, mut grants, independent snapshots, and entry iteration.",
   "cases": [
     {
       "name": "typed-maps-and-lookup",

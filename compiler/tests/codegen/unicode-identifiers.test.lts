@@ -1,7 +1,7 @@
 /* Dual-target (TS and C11) + pure/host soft-builtin tests for Unicode 16.0.0 UAX #31 identifiers. */
 
 test := import "core/test";
-text := import "core/text";
+text := import "type/string";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
 compilerTest := import "../../../tools/src/internal/compiler-test";
 project := import "../../../tools/src/internal/project";
@@ -36,66 +36,66 @@ checkRejectBoth := fn(name: String, src: String): Unit {
 
 /* 1. User reproducer and 8-script variables, reassignments, functions, and mut params */
 persianBasics := [
-    "io := import \"core/io\";",
-    "پیام := \"hello lite\\nAé🚀\\n\";",
-    "io.outputLine(پیام);",
-    "var شمارش := 1;",
-    "شمارش = شمارش + 1;",
-    "mut لیست: List<Int> = [10];",
-    "کتاب_ها := 5;",
-    "متغیر۱ := 2;",
-    "größe := 2;",
-    "élève := 3;",
-    "学生数 := 4;",
-    "άθροισμα := 6;",
-    "счётчик := 7;",
-    "հաշվիչ := 8;",
-    "მრიცხველი := 9;",
-    "جمع := fn(الف: Int, ب: Int): Int { الف + ب };",
-    "افزودن := fn(مقصد: mut List<Int>, مقدار: Int): Unit { mut مقصد.pushBack(مقدار) };",
-    "افزودن(mut لیست, جمع(کتاب_ها, متغیر۱));",
-    "io.outputLine(شمارش + لیست[0] + لیست[1], größe + élève + 学生数 + άθροισμα + счётчик + հաշվիչ + მრიცხველი);"
+"io := import \"core/io\";",
+"پیام := \"hello lite\\nAé🚀\\n\";",
+"io.outputLine(پیام);",
+"var شمارش := 1;",
+"شمارش = شمارش + 1;",
+"mut لیست: List<Int> = [10];",
+"کتاب_ها := 5;",
+"متغیر۱ := 2;",
+"größe := 2;",
+"élève := 3;",
+"学生数 := 4;",
+"άθροισμα := 6;",
+"счётчик := 7;",
+"հաշվիչ := 8;",
+"მრიცხველი := 9;",
+"جمع := fn(الف: Int, ب: Int): Int { الف + ب };",
+"افزودن := fn(مقصد: mut List<Int>, مقدار: Int): Unit { mut مقصد.pushBack(مقدار) };",
+"افزودن(mut لیست, جمع(کتاب_ها, متغیر۱));",
+"io.outputLine(شمارش + لیست[0] + لیست[1], größe + élève + 学生数 + άθροισμα + счётчик + հաշվիչ + მრიცხველი);"
 ].join("\n");
 checkParity("eight-script-basics", persianBasics, "hello lite\nAé🚀\n\n19 39\n");
 
 /* 2. Records, methods, tuples, enums, tagged loops, and generics with Unicode names */
 persianTypesAndControl := [
-    "io := import \"core/io\";",
-    "وضعیت := enum { آماده; انجام_شده };",
-    "کاربر := record { نام: String; سن: Int };",
-    "کاربر.معرفی := fn(خود: Self): String { خود.نام + \":\" + خود.سن.toText() };",
-    "هویت := fn<نوع>(مقدار: نوع): نوع { مقدار };",
-    "ساخت_جفت := fn(عنوان: String, تعداد: Int): (عنوان: String, تعداد: Int) { (عنوان = عنوان, تعداد = تعداد) };",
-    "سارا := کاربر { نام = \"سارا\", سن = 12 };",
-    "جفت := ساخت_جفت(تعداد = 3, عنوان = \"کتاب\");",
-    "حالت := وضعیت.انجام_شده;",
-    "برچسب := match حالت {",
-    "    .آماده { \"wait\" }",
-    "    .انجام_شده { \"done\" }",
-    "};",
-    "var مجموع := 0;",
-    "@حلقه loop 0..4 as گام {",
-    "    if گام == 3 { break @حلقه; }",
-    "    مجموع = مجموع + گام;",
-    "}",
-    "نکته := هویت(کاربر { نام = \"علی\", سن = 7 });",
-    "io.outputLine(سارا.معرفی(), جفت.عنوان, جفت.تعداد, برچسب, مجموع, نکته.نام);"
+"io := import \"core/io\";",
+"وضعیت := enum { آماده; انجام_شده };",
+"کاربر := record { نام: String; سن: Int };",
+"کاربر.معرفی := fn(خود: Self): String { خود.نام + \":\" + خود.سن.toText() };",
+"هویت := fn<نوع>(مقدار: نوع): نوع { مقدار };",
+"ساخت_جفت := fn(عنوان: String, تعداد: Int): (عنوان: String, تعداد: Int) { (عنوان = عنوان, تعداد = تعداد) };",
+"سارا := کاربر { نام = \"سارا\", سن = 12 };",
+"جفت := ساخت_جفت(تعداد = 3, عنوان = \"کتاب\");",
+"حالت := وضعیت.انجام_شده;",
+"برچسب := match حالت {",
+"    .آماده { \"wait\" }",
+"    .انجام_شده { \"done\" }",
+"};",
+"var مجموع := 0;",
+"@حلقه loop 0..4 as گام {",
+"    if گام == 3 { break @حلقه; }",
+"    مجموع = مجموع + گام;",
+"}",
+"نکته := هویت(کاربر { نام = \"علی\", سن = 7 });",
+"io.outputLine(سارا.معرفی(), جفت.عنوان, جفت.تعداد, برچسب, مجموع, نکته.نام);"
 ].join("\n");
 checkParity("persian-records-enums-generics-tags", persianTypesAndControl, "سارا:12 کتاب 3 done 3 علی\n");
 
 /* 3. Latin vs Cyrillic lookalikes remain distinct and never silently collide */
 lookalikeDistinct := [
-    "io := import \"core/io\";",
-    "score := 1;",
-    "scorе := 2;",
-    "io.outputLine(score, scorе);"
+"io := import \"core/io\";",
+"score := 1;",
+"scorе := 2;",
+"io.outputLine(score, scorе);"
 ].join("\n");
 checkParity("latin-cyrillic-lookalikes-distinct", lookalikeDistinct, "1 2\n");
 
 checkRejectBoth("latin-cyrillic-mismatch-undefined", [
-    "io := import \"core/io\";",
-    "score := 1;",
-    "io.outputLine(scorе);"
+"io := import \"core/io\";",
+"score := 1;",
+"io.outputLine(scorе);"
 ].join("\n"));
 
 /* 4. Rejections: emoji, ZWNJ (U+200C), ZWJ (U+200D), and leading digits */
@@ -110,11 +110,11 @@ checkRejectBoth("reject-leading-ascii-digit-persian", "1اب := 1;\n");
 
 /* 5. Pure-ASCII fast path: generated C keeps unmangled ASCII names without u__ prefix */
 asciiProgram := [
-    "io := import \"core/io\";",
-    "Box := record { count_val: Int };",
-    "add_one := fn(input_val: Int): Int { input_val + 1 };",
-    "b := Box { count_val = 4 };",
-    "io.outputLine(add_one(b.count_val));"
+"io := import \"core/io\";",
+"Box := record { count_val: Int };",
+"add_one := fn(input_val: Int): Int { input_val + 1 };",
+"b := Box { count_val = 4 };",
+"io.outputLine(add_one(b.count_val));"
 ].join("\n");
 asciiC := compilerTest.compileStdin(root, cComp, asciiProgram, "ascii-fastpath.lts");
 test.checkInt("ascii C compile status", 0, asciiC.status);
@@ -124,15 +124,15 @@ test.check("ascii C omits xid tables when unused", not asciiC.stdout.contains("l
 
 /* 6. Soft-builtin vs pure-Lite parity for Unicode XID classification in both TS and C11 */
 softCheckSrc := [
-    "io := import \"core/io\";",
-    "text := import \"core/text\";",
-    "zwnj := String.fromCodePoints([8204]).text;",
-    "zwj := String.fromCodePoints([8205]).text;",
-    "supp := String.fromCodePoints([134071]).text;",
-    "io.outputLine(\"پ\".isNameStart(), \"ی\".isNameStart(), \"۱\".isNameStart(), \"۱\".isNameContinue(), \"🚀\".isNameStart(), \"🚀\".isNameContinue());",
-    "io.outputLine(\"ß\".isNameStart(), \"é\".isNameStart(), \"学\".isNameStart(), \"ά\".isNameStart(), \"ё\".isNameStart(), \"հ\".isNameStart(), \"მ\".isNameStart());",
-    "io.outputLine(supp.isNameStart(), supp.isNameContinue(), zwnj.isNameContinue(), zwj.isNameContinue());",
-    "io.outputLine((\"پیام۱\" + zwnj + \"x\").skipName(0), (supp + \"۱ \" + \"ب\").skipName(0), \"پیام پ\".wordAt(0, \"پیام\"), \"پیام۱ پ\".wordAt(0, \"پیام\"));"
+"io := import \"core/io\";",
+"text := import \"type/string\";",
+"zwnj := String.fromCodePoints([8204]).text;",
+"zwj := String.fromCodePoints([8205]).text;",
+"supp := String.fromCodePoints([134071]).text;",
+"io.outputLine(\"پ\".isNameStart(), \"ی\".isNameStart(), \"۱\".isNameStart(), \"۱\".isNameContinue(), \"🚀\".isNameStart(), \"🚀\".isNameContinue());",
+"io.outputLine(\"ß\".isNameStart(), \"é\".isNameStart(), \"学\".isNameStart(), \"ά\".isNameStart(), \"ё\".isNameStart(), \"հ\".isNameStart(), \"მ\".isNameStart());",
+"io.outputLine(supp.isNameStart(), supp.isNameContinue(), zwnj.isNameContinue(), zwj.isNameContinue());",
+"io.outputLine((\"پیام۱\" + zwnj + \"x\").skipName(0), (supp + \"۱ \" + \"ب\").skipName(0), \"پیام پ\".wordAt(0, \"پیام\"), \"پیام۱ پ\".wordAt(0, \"پیام\"));"
 ].join("\n");
 expectedSoftOut := "true true false true false false\ntrue true true true true true true\ntrue true false false\n5 2 true false\n";
 

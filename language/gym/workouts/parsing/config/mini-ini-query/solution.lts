@@ -1,5 +1,5 @@
 io := import "core/io";
-list := import "core/list";
+list := import "type/list";
 
 splitLines := fn(raw: String): List<String> {
     mut out: List<String> = [];

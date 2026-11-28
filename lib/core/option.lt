@@ -1,3 +1,0 @@
-/* Temporary compatibility barrel forwarding to `type/option` during Phase 2 migration. */
-
-pub { Option } := import "type/option";

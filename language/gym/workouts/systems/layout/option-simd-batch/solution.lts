@@ -1,7 +1,7 @@
 io := import "core/io";
-opt := import "core/option";
-simd := import "core/simd";
-soa := import "core/soa";
+opt := import "type/option";
+simd := import "type/simd";
+soa := import "type/soa";
 
 Sample := record { val: Int32; };
 

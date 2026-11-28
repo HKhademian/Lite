@@ -60,11 +60,20 @@ const outputDir = join(root, 'dist', 'site');
 function coreModuleIdentity(relPath: string): string {
   switch (relPath) {
     case 'lib/core/io.lt': return 'lite.core.io.v1';
-    case 'lib/core/int.lt': return 'lite.core.int.v1';
-    case 'lib/core/list.lt': return 'lite.core.list.v1';
-    case 'lib/core/map.lt': return 'lite.core.map.v1';
-    case 'lib/core/set.lt': return 'lite.core.set.v1';
-    case 'lib/core/text.lt': return 'lite.core.text.v1';
+    case 'lib/type/int.lt': return 'lite.type.int.v1';
+    case 'lib/type/float.lt': return 'lite.type.float.v1';
+    case 'lib/type/bool.lt': return 'lite.type.bool.v1';
+    case 'lib/type/string.lt': return 'lite.type.string.v1';
+    case 'lib/type/list.lt': return 'lite.type.list.v1';
+    case 'lib/type/array.lt': return 'lite.type.array.v1';
+    case 'lib/type/map.lt': return 'lite.type.map.v1';
+    case 'lib/type/set.lt': return 'lite.type.set.v1';
+    case 'lib/type/rc.lt': return 'lite.type.rc.v1';
+    case 'lib/type/slice.lt': return 'lite.type.slice.v1';
+    case 'lib/type/simd.lt': return 'lite.type.simd.v1';
+    case 'lib/type/soa.lt': return 'lite.type.soa.v1';
+    case 'lib/type/option.lt': return 'lite.type.option.v1';
+    case 'lib/type/error.lt': return 'lite.type.error.v1';
     case 'lib/core/file.lt': return 'lite.core.file.v1';
     case 'lib/core/process.lt': return 'lite.core.process.v1';
     case 'lib/core/crypto.lt': return 'lite.core.crypto.v1';

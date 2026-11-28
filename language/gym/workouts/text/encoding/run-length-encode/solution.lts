@@ -1,5 +1,5 @@
 io := import "core/io";
-text := import "core/text";
+text := import "type/string";
 
 line := io.inputLine();
 n := line.length();

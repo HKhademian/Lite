@@ -1,6 +1,6 @@
 /** Generates `/tools/` toolchain hub body HTML and search entries (`site/tools-page.ts`). */
 
-text := import "core/text";
+text := import "type/string";
 json := import "data/json";
 tb := import "core/text-builder";
 

@@ -1,4 +1,4 @@
-text := import "core/text";
+text := import "type/string";
 test := import "core/test";
 
 test.checkBool("digit 7", true, "7".isDigit());

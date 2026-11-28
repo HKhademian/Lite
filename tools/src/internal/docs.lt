@@ -1,8 +1,8 @@
 /** Offline documentation discovery, search formatting, and Markdown integrity verification. */
 
 fs := import "core/file";
-text := import "core/text";
-list := import "core/list";
+text := import "type/string";
+list := import "type/list";
 path := import "core/path";
 json := import "data/json";
 md := import "data/markdown";
@@ -709,8 +709,8 @@ pub checkDocuments := fn(directory: String): List<String> {
                 id := json.readFieldString(cfgText, evidencePos, "id").value;
                 manifestRead := fs.readText(path.resolve(directory, manifest));
                 if doc == "" or fs.kind(path.resolve(directory, doc)) =!= fs.FILE_KIND_FILE
-                    or manifest == "" or not manifestRead.ok or id == ""
-                    or json.readFieldString(manifestRead.text, 0, "id").value =!= id {
+                or manifest == "" or not manifestRead.ok or id == ""
+                or json.readFieldString(manifestRead.text, 0, "id").value =!= id {
                     mut failures.pushBack("config/documentation.json: invalid verified example " + doc + " → " + manifest + " (" + id + ")");
                 }
             }

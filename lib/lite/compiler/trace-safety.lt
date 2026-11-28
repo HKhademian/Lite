@@ -1,7 +1,7 @@
 /** Execution-trace initialization safety, callable dependency extraction, deferred body stripping, and outer update propagation. */
 
-listLib := import "core/list";
-textLib := import "core/text";
+listLib := import "type/list";
+textLib := import "type/string";
 tb := import "core/text-builder";
 ir := import "./frontend-ir";
 sym := import "./symbol-table";

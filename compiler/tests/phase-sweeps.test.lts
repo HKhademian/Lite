@@ -1,7 +1,7 @@
 /* Lexer, parser, and checker source-graph sweeps migrated from igniter/test.ts. */
 
 fs := import "core/file";
-list := import "core/list";
+list := import "type/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
@@ -41,8 +41,8 @@ if not skipHeavy {
 
     /* Compile all L0 core libs and compiler source deps in parallel via external/pool */
     mut compileTargets: List<String> = [
-    "lib/core/int.lt", "lib/core/text.lt", "lib/core/source.lt",
-    "lib/core/diag.lt", "lib/core/list.lt", "lib/core/test.lt",
+    "lib/type/int.lt", "lib/type/string.lt", "lib/core/source.lt",
+    "lib/core/diag.lt", "lib/type/list.lt", "lib/core/test.lt",
     ];
     loop tsDeps as d { mut compileTargets.pushBack(d); }
     loop cDeps as d {

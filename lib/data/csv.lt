@@ -1,6 +1,6 @@
 /** Pure RFC-4180 CSV parser and flat table encoder (`data/csv`) across TS and C11. */
 
-text := import "core/text";
+text := import "type/string";
 tb := import "core/text-builder";
 
 /** Flat-backed parsed CSV table supporting variable-width rows across TS and C11. */

@@ -61,20 +61,20 @@ defaultPreloadSrc := [
 ].join("\n");
 runParity("default preload Option+Slice", defaultPreloadSrc, "preload-default.lts", "true 20 5 22\n");
 
-/* 2. Bare Rc / SoA / Simd / SimdNative are rejected without importing their core modules */
-compilerTest.assertCompileErrorContains(root, tsComp, "bare Rc<T> rejected", "x: Rc<Int>;", "requires importing \"core/rc\"");
-compilerTest.assertCompileErrorContains(root, cComp, "bare Rc.create rejected C", "r := Rc.create(1);", "requires importing \"core/rc\"");
-compilerTest.assertCompileErrorContains(root, tsComp, "bare SoA<R> rejected", "P := record { x: Int; }; s: SoA<P>;", "requires importing \"core/soa\"");
-compilerTest.assertCompileErrorContains(root, cComp, "bare SoA.create rejected C", "s := SoA.create();", "requires importing \"core/soa\"");
-compilerTest.assertCompileErrorContains(root, tsComp, "bare Simd<T, N> rejected", "v: Simd<Float32, 4>;", "requires importing \"core/simd\"");
-compilerTest.assertCompileErrorContains(root, cComp, "bare SimdNative<T> rejected C", "v: SimdNative<Int32>;", "requires importing \"core/simd\"");
+/* 2. Bare Rc / SoA / Simd / SimdNative are rejected without importing their type modules */
+compilerTest.assertCompileErrorContains(root, tsComp, "bare Rc<T> rejected", "x: Rc<Int>;", "requires importing \"type/rc\"");
+compilerTest.assertCompileErrorContains(root, cComp, "bare Rc.create rejected C", "r := Rc.create(1);", "requires importing \"type/rc\"");
+compilerTest.assertCompileErrorContains(root, tsComp, "bare SoA<R> rejected", "P := record { x: Int; }; s: SoA<P>;", "requires importing \"type/soa\"");
+compilerTest.assertCompileErrorContains(root, cComp, "bare SoA.create rejected C", "s := SoA.create();", "requires importing \"type/soa\"");
+compilerTest.assertCompileErrorContains(root, tsComp, "bare Simd<T, N> rejected", "v: Simd<Float32, 4>;", "requires importing \"type/simd\"");
+compilerTest.assertCompileErrorContains(root, cComp, "bare SimdNative<T> rejected C", "v: SimdNative<Int32>;", "requires importing \"type/simd\"");
 
-/* 3. Explicit core module imports and transparent aliases work across TS & C11 */
+/* 3. Explicit type module imports and transparent aliases work across TS & C11 */
 explicitModulesSrc := [
 "io := import \"core/io\";",
-"rc := import \"core/rc\";",
-"soa := import \"core/soa\";",
-"simd := import \"core/simd\";",
+"rc := import \"type/rc\";",
+"soa := import \"type/soa\";",
+"simd := import \"type/simd\";",
 "MySoA := alias soa.SoA;",
 "Pt := record { x: Float32; y: Float32; };",
 "shared := rc.Rc.create(42);",
@@ -84,7 +84,7 @@ explicitModulesSrc := [
 "vn: simd.SimdNative<Int32> = simd.SimdNative<Int32>.splat(cast<Int32>(3));",
 "io.outputLine(shared.get(), pts[0].x + pts[0].y, v.reduceAdd(), vn[0]);"
 ].join("\n");
-runParity("explicit core/rc,soa,simd + alias", explicitModulesSrc, "preload-explicit.lts", "42 4 8 3\n");
+runParity("explicit type/rc,soa,simd + alias", explicitModulesSrc, "preload-explicit.lts", "42 4 8 3\n");
 
 /* 4. Explicit local declaration cleanly shadows preloaded Option without duplicate error */
 shadowPreloadSrc := [
@@ -97,8 +97,8 @@ shadowPreloadSrc := [
 runParity("local enum Option shadows preload", shadowPreloadSrc, "preload-shadow.lts", "7\n");
 
 /* 5. Unaliased import / pub import outside $preload.lt are rejected */
-compilerTest.assertCompileErrorContains(root, tsComp, "unaliased import outside preload", "import \"core/option\";", "import requires a module alias");
-compilerTest.assertCompileErrorContains(root, tsComp, "unaliased pub import outside preload", "pub import \"core/option\";", "only allowed in $preload.lt");
+compilerTest.assertCompileErrorContains(root, tsComp, "unaliased import outside preload", "import \"type/option\";", "import requires a module alias");
+compilerTest.assertCompileErrorContains(root, tsComp, "unaliased pub import outside preload", "pub import \"type/option\";", "only allowed in $preload.lt");
 
 /* 6. Package-local empty $preload.lt clears Option and Slice and avoids implicit preload edge */
 tmpRes := fs.makeTempDir("lite-preload-test-");
@@ -116,11 +116,11 @@ test.check("empty $preload.lt removes bare Option (got: " + emptyFail.stderr + "
 emptySliceMain := path.join(emptyPkgDir, "slice_fail.lts");
 _w3 := fs.writeText(emptySliceMain, "f := fn(s: Slice<Int>): Int { s.length() };\n");
 emptySliceFail := compilerTest.compileFile(tsComp, emptyPkgDir, ["--out", path.join(emptyPkgDir, "s.ts"), emptySliceMain]);
-test.check("empty $preload.lt removes bare Slice (got: " + emptySliceFail.stderr + ")", emptySliceFail.status =!= 0 and emptySliceFail.stderr.contains("requires importing \"core/slice\""));
+test.check("empty $preload.lt removes bare Slice (got: " + emptySliceFail.stderr + ")", emptySliceFail.status =!= 0 and emptySliceFail.stderr.contains("requires importing \"type/slice\""));
 
 emptyOkMain := path.join(emptyPkgDir, "ok.lts");
 emptyTrace := path.join(emptyPkgDir, "trace.json");
-_w4 := fs.writeText(emptyOkMain, "io := import \"core/io\";\nopt := import \"core/option\";\nx: opt.Option<Int> = .Some(9);\nio.outputLine(x.unwrapOr(0));\n");
+_w4 := fs.writeText(emptyOkMain, "io := import \"core/io\";\nopt := import \"type/option\";\nx: opt.Option<Int> = .Some(9);\nio.outputLine(x.unwrapOr(0));\n");
 emptyOkComp := compilerTest.compileFile(tsComp, emptyPkgDir, ["--trace-json", emptyTrace, "--out", path.join(emptyPkgDir, "ok.ts"), emptyOkMain]);
 test.checkInt("empty $preload.lt explicit import compiles: " + emptyOkComp.stderr, 0, emptyOkComp.status);
 traceTxt := fs.readText(emptyTrace).text;

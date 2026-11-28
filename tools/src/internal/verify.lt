@@ -5,9 +5,9 @@ fs := import "core/file";
 proc := import "core/process";
 project := import "./project";
 crypto := import "core/crypto";
-text := import "core/text";
+text := import "type/string";
 time := import "core/time";
-list := import "core/list";
+list := import "type/list";
 path := import "core/path";
 json := import "data/json";
 streams := import "./streams";
@@ -975,6 +975,7 @@ invalidatesVerification := fn(relPath: String): Bool {
     "lib/lite/compiler/",
     "compiler/bootstrap/",
     "compiler/manifests/",
+    "lib/type/",
     "lib/core/",
     "lib/external/"
     ];

@@ -3,7 +3,7 @@
 diag := import "core/diag";
 file := import "core/file";
 io := import "core/io";
-text := import "core/text";
+text := import "type/string";
 
 /** Generates `count` cryptographically strong random `0..255` byte values. */
 pub randomBytes := fn(count: Int): List<Int> #host;

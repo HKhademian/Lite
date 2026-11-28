@@ -1,4 +1,4 @@
-/* Phase 15 verification: runtime unions (normalization, widening, equality, owned drop/copy/move), type tests & flow narrowing, match & if := patterns, fallible functions T ! E / T!, core/error.Error + ToError, .ok/.err, Unit!, postfix ! propagation & unwinds, else(err) recovery, TS strict + C11 -Werror + ASan/LSan/UBSan + LITE_CHECK_LEAKS=1 parity, and 22+ rejection cases. */
+/* Phase 15 verification: runtime unions (normalization, widening, equality, owned drop/copy/move), type tests & flow narrowing, match & if := patterns, fallible functions T ! E / T!, type/error.Error + ToError, .ok/.err, Unit!, postfix ! propagation & unwinds, else(err) recovery, TS strict + C11 -Werror + ASan/LSan/UBSan + LITE_CHECK_LEAKS=1 parity, and 22+ rejection cases. */
 
 test := import "core/test";
 fs := import "core/file";
@@ -209,10 +209,10 @@ runAll("union-match-and-if-pattern",
 "}\n",
 "str:hi\nbool:T\nint(5)/int(5)\nflt(3.5)/flt(3.5)\nbig:20\nsmall\nsmall\nmatched:patStr\n20\n");
 
-/* 4. Result<T, E>, T! shorthand (core/error.Error + ToError), .ok/.err, implicit success lifting, Unit!, widening, equality, zero init. */
+/* 4. Result<T, E>, T! shorthand (type/error.Error + ToError), .ok/.err, implicit success lifting, Unit!, widening, equality, zero init. */
 runAll("fallibles-result-error-toerror-unit",
 "io := import \"core/io\";\n" +
-"errs := import \"core/error\";\n" +
+"errs := import \"type/error\";\n" +
 "\n" +
 "ParseErr := enum { Empty; BadSyntax(String); }\n" +
 "impl errs.ToError for ParseErr {\n" +
@@ -263,7 +263,7 @@ runAll("fallibles-result-error-toerror-unit",
 /* 5. Postfix ! chains, closures, finally + owned locals drop on propagation error, and else(err)/else recovery. */
 runAll("postfix-bang-unwind-closure-and-else",
 "io := import \"core/io\";\n" +
-"errs := import \"core/error\";\n" +
+"errs := import \"type/error\";\n" +
 "\n" +
 "User := record { name: String; tags: List<String>; }\n" +
 "loadUser := fn(ok: Bool): User! {\n" +
@@ -410,4 +410,3 @@ expectRejectBoth("reject-result-if-else-incompatible-fallback",
 "mk := fn(): Int ! String { .err(\"e\") };\n" +
 "f := fn(): Int { mk() else { \"bad\" } };\n",
 "cannot return Int | String");
-

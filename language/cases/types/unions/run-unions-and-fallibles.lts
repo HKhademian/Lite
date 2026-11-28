@@ -1,5 +1,5 @@
 io := import "core/io";
-errs := import "core/error";
+errs := import "type/error";
 
 checked := fn(x: Int): Int! {
     if x < 0 { return .err(errs.Error.new("Range", "neg")); }

@@ -2,7 +2,7 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-list := import "core/list";
+list := import "type/list";
 path := import "core/path";
 json := import "data/json";
 

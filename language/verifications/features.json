@@ -170,7 +170,7 @@
     },
     {
       "id": "feature.types.collections.typed-maps",
-      "summary": "Typed Map<K, V> collections, core/map intrinsics, indexed reads/writes, and entry traversal.",
+      "summary": "Typed Map<K, V> collections, type/map intrinsics, indexed reads/writes, and entry traversal.",
       "case": "features/types/collections/typed-maps.json",
       "status": "verified",
       "docs": [
@@ -179,7 +179,7 @@
     },
     {
       "id": "feature.types.collections.typed-sets",
-      "summary": "Typed Set<T> value sets, core/set intrinsics, deduplication, and insertion-order traversal.",
+      "summary": "Typed Set<T> value sets, type/set intrinsics, deduplication, and insertion-order traversal.",
       "case": "features/types/collections/typed-sets.json",
       "status": "verified",
       "docs": [

@@ -3,10 +3,10 @@
 io := import "core/io";
 fs := import "core/file";
 path := import "core/path";
-text := import "core/text";
-list := import "core/list";
+text := import "type/string";
+list := import "type/list";
 time := import "core/time";
-collections := import "core/list";
+collections := import "type/list";
 json := import "data/json";
 md := import "data/markdown";
 challenges := import "./challenges";
@@ -242,7 +242,7 @@ trimTrailingColons := fn(s: String): String {
 };
 
 parseRoadmapListJson := fn(
-    tomlPath: String, listId: String, title: String, url: String, description: String, sortedKnownIds: List<String>
+tomlPath: String, listId: String, title: String, url: String, description: String, sortedKnownIds: List<String>
 ): (ok: Bool, hasList: Bool, listJson: String, metaJson: String, error: String) {
     if fs.kind(tomlPath) =!= fs.FILE_KIND_FILE {
         return (ok = true, hasList = false, listJson = "", metaJson = "", error = "");
@@ -343,9 +343,9 @@ parseRoadmapListJson := fn(
     cnt := uniqFlat.length();
     groupsField := if groupsJson.length() > 0 { ",\"groups\":[" + groupsJson.join(",") + "]" } else { "" };
     lJson := "{\"id\":" + json.quoteString(listId) + ",\"title\":" + json.quoteString(title)
-        + ",\"kind\":\"roadmap\",\"source\":\"leetcode\",\"url\":" + json.quoteString(url)
-        + ",\"description\":" + json.quoteString(description) + ",\"count\":" + cnt.toText()
-        + ",\"challenge_ids\":" + quoteStringList(uniqFlat) + groupsField + "}";
+    + ",\"kind\":\"roadmap\",\"source\":\"leetcode\",\"url\":" + json.quoteString(url)
+    + ",\"description\":" + json.quoteString(description) + ",\"count\":" + cnt.toText()
+    + ",\"challenge_ids\":" + quoteStringList(uniqFlat) + groupsField + "}";
     mJson := "{\"id\":" + json.quoteString(listId) + ",\"title\":" + json.quoteString(title) + ",\"count\":" + cnt.toText() + "}";
     (ok = true, hasList = true, listJson = lJson, metaJson = mJson, error = "")
 };
@@ -1248,18 +1248,18 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     rmTitles: List<String> = ["Blind 75", "NeetCode 150"];
     rmFiles: List<String> = ["blind_75.toml", "neetcode_150.toml"];
     rmUrls: List<String> = [
-        "https://leetcode.com/discuss/general-discussion/460599/blind-75",
-        "https://neetcode.io/practice"
+    "https://leetcode.com/discuss/general-discussion/460599/blind-75",
+    "https://neetcode.io/practice"
     ];
     rmDescs: List<String> = [
-        "The classic 75-question interview list, grouped by pattern.",
-        "NeetCode's curated 150-question roadmap, grouped by pattern."
+    "The classic 75-question interview list, grouped by pattern.",
+    "NeetCode's curated 150-question roadmap, grouped by pattern."
     ];
     var rmi := 0;
     loop rmi < 2 {
         rmRes := parseRoadmapListJson(
-            path.join(cacheDir, "roadmaps/" + rmFiles[rmi]),
-            rmIds[rmi], rmTitles[rmi], rmUrls[rmi], rmDescs[rmi], sortedIdsForCheck
+        path.join(cacheDir, "roadmaps/" + rmFiles[rmi]),
+        rmIds[rmi], rmTitles[rmi], rmUrls[rmi], rmDescs[rmi], sortedIdsForCheck
         );
         if not rmRes.ok { return (ok = false, summaryText = "", error = rmRes.error); }
         if rmRes.hasList {
@@ -1344,9 +1344,9 @@ pub buildChallengeCorpus := fn(challengesRootDir: String, catalogJsonText: Strin
     lcCatIds: List<String> = ["databases", "concurrency", "shell"];
     lcCatTitles: List<String> = ["LeetCode · Database", "LeetCode · Concurrency", "LeetCode · Shell"];
     lcCatDescs: List<String> = [
-        "All SQL/database problems in the corpus; good for SQL interview prep.",
-        "Threads, locks and synchronization problems.",
-        "Unix shell and command-line problems."
+    "All SQL/database problems in the corpus; good for SQL interview prep.",
+    "Threads, locks and synchronization problems.",
+    "Unix shell and command-line problems."
     ];
     var lci := 0;
     loop lci < 3 {

@@ -4,7 +4,7 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
+text := import "type/string";
 cases := import "./src/internal/cases";
 compilerBuild := import "./src/internal/compiler-build";
 compilerTest := import "./src/internal/compiler-test";
@@ -175,7 +175,7 @@ test.check("rendered[1].html has data-fence", html1.indexOf("data-fence=\"0\"", 
 modRes := runDocs(["--modules-json"], root, "");
 test.checkInt("docs --modules-json status: " + modRes.stderr, 0, modRes.status);
 modOffsets := json.arrayOffsets(modRes.stdout, 0);
-test.checkInt("modules count", 62, modOffsets.length());
+test.checkInt("modules count", 65, modOffsets.length());
 
 var foundIo := false;
 var foundCanvas := false;

@@ -1,3 +1,0 @@
-/* Temporary compatibility barrel forwarding to `type/list` during Phase 2 migration. */
-
-pub { OrderedScalar, Equatable, IntComparator, sortIndicesBy, countTexts } := import "type/list";

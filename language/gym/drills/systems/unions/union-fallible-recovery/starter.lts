@@ -1,5 +1,5 @@
 io := import "core/io";
-errs := import "core/error";
+errs := import "type/error";
 
 v := io.inputInt();
 _ := errs.Error.new("Input", "non-positive");

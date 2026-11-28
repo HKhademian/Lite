@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "unions-and-fallibles.lts",
-    "hash": "sha256:48ea6d4b98b43381ca645ef0fe275c3b5b353649edc12f3985a6e42645107de5"
+    "hash": "sha256:14f68a3617a652b83dab1bf6d25a393c41f778fefecbd521ad0f9204b743316a"
   },
   "features": [
     "feature.types.unions.unions-and-fallibles"

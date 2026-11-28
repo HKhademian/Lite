@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/types/unions/unions-and-fallible-pipeline.lts",
-    "hash": "sha256:b3fc53bfa00547d422ade6855ee0bc9df44c231221282b7ffd228c185d8fde10"
+    "hash": "sha256:85819d96c18ff7da04955d3855ce9074af97d949e6ffabb9202664e3ff1bffca"
   },
   "features": [
     "feature.types.unions.unions-and-fallibles",

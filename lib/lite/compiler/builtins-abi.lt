@@ -144,28 +144,11 @@ externalHostFunction := fn(moduleIdentity: String, name: String, params: String,
     }
 };
 
-/** Maps `lite.type.*` owner identities onto the canonical host ABI table key when shared with legacy `lite.core.*`. */
-normalizeHostModuleIdentity := fn(moduleIdentity: String): String {
-    match moduleIdentity {
-        "lite.type.string.v1" { "lite.core.text.v1" }
-        "lite.type.float.v1" { "lite.core.text.v1" }
-        "lite.type.list.v1" { "lite.core.list.v1" }
-        "lite.type.array.v1" { "lite.core.array.v1" }
-        "lite.type.map.v1" { "lite.core.map.v1" }
-        "lite.type.set.v1" { "lite.core.set.v1" }
-        "lite.type.rc.v1" { "lite.core.rc.v1" }
-        "lite.type.slice.v1" { "lite.core.slice.v1" }
-        "lite.type.simd.v1" { "lite.core.simd.v1" }
-        "lite.type.soa.v1" { "lite.core.soa.v1" }
-        _ { moduleIdentity }
-    }
-};
-
 /** Resolves a bodyless public core or external declaration only when its module identity and complete ABI are registered. */
 pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: String, rawResult: String): String {
     params := normalizeHostAbiParams(rawParams);
     result := normalizeHostAbiKind(rawResult);
-    effIdentity := normalizeHostModuleIdentity(moduleIdentity);
+    effIdentity := moduleIdentity;
     if effIdentity.startsWithAt(0, "lite.external.") {
         return externalHostFunction(effIdentity, name, params, result);
     }
@@ -205,7 +188,7 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Writer.flush" and params == "writer=" + wr and result == "(ok:Bool,error:String)" { "lite$ioFlush" }
         else if name == "Writer.close" and params == "writer=" + wr and result == "(ok:Bool,error:String)" { "lite$ioCloseWriter" }
         else { "" }
-    } else if effIdentity == "lite.core.text.v1" {
+    } else if effIdentity == "lite.type.string.v1" or effIdentity == "lite.type.float.v1" {
         if name == "String.length" and params == "text=String" and result == ir.VALUE_KIND_INT { "lite$textLength" }
         else if name == "String.at" and params == "text=String|position=Int" and result == ir.VALUE_KIND_STRING { "lite$textAt" }
         else if name == "String.slice" and params == "text=String|start=Int|end=Int" and result == ir.VALUE_KIND_STRING { "lite$textSlice" }
@@ -215,7 +198,7 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Float.toText" and params == "value=Float" and result == ir.VALUE_KIND_STRING { "lite$floatToText" }
         else if name == "Float32.toText" and params == "value=Float32" and result == ir.VALUE_KIND_STRING { "lite$float32ToText" }
         else { "" }
-    } else if effIdentity == "lite.core.list.v1" {
+    } else if effIdentity == "lite.type.list.v1" {
         if name == "List.pushBack" and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushBack:v1" }
         else if name == "List.popBack" and params == "values=mut List<T>" and result == "T" { "lite$core$list$popBack:v1" }
         else if name == "List.pushFront" and params == "values=mut List<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$list$pushFront:v1" }
@@ -229,14 +212,14 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "List.reverse" and params == "values=List<T>" and result == "List<T>" { "lite$core$list$reverse:v1" }
         else if name == "List.clear" and params == "values=mut List<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$list$clear:v1" }
         else { "" }
-    } else if effIdentity == "lite.core.array.v1" {
+    } else if effIdentity == "lite.type.array.v1" {
         if name == "Array.length" and params == "values=[T;N]" and result == ir.VALUE_KIND_INT { "lite$core$array$length:v1" }
         else if name == "Array.$getIndex" and params == "values=[T;N]|index=Int" and result == "T" { "lite$core$array$getIndex:v1" }
         else if name == "Array.$setIndex" and params == "values=mut [T;N]|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$array$setIndex:v1" }
         else if name == "Array.uncheckedGet" and params == "values=[T;N]|index=Int" and result == "T" { "lite$core$array$uncheckedGet:v1" }
         else if name == "Array.uncheckedSet" and params == "values=mut [T;N]|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$array$uncheckedSet:v1" }
         else { "" }
-    } else if effIdentity == "lite.core.map.v1" {
+    } else if effIdentity == "lite.type.map.v1" {
         if (name == "Map.set" or name == "Map.$setIndex") and params == "entries=mut Map<K,V>|key=K|value=V" and result == ir.VALUE_KIND_UNIT { "lite$core$map$set:v1" }
         else if name == "Map.$getIndex" and params == "entries=Map<K,V>|key=K" and result == "V" { "lite$core$map$getIndex:v1" }
         else if name == "Map.get" and params == "entries=Map<K,V>|key=K" and result == "(found:Bool,value:V)" { "lite$core$map$get:v1" }
@@ -248,7 +231,7 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Map.keys" and params == "entries=Map<K,V>" and result == "List<K>" { "lite$core$map$keys:v1" }
         else if name == "Map.values" and params == "entries=Map<K,V>" and result == "List<V>" { "lite$core$map$values:v1" }
         else { "" }
-    } else if effIdentity == "lite.core.set.v1" {
+    } else if effIdentity == "lite.type.set.v1" {
         if name == "Set.add" and params == "s=mut Set<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$set$add:v1" }
         else if name == "Set.has" and params == "s=Set<T>|value=T" and result == ir.VALUE_KIND_BOOL { "lite$core$set$has:v1" }
         else if name == "Set.remove" and params == "s=mut Set<T>|value=T" and result == ir.VALUE_KIND_BOOL { "lite$core$set$remove:v1" }
@@ -256,7 +239,7 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Set.clear" and params == "s=mut Set<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$set$clear:v1" }
         else if name == "Set.values" and params == "s=Set<T>" and result == "List<T>" { "lite$core$set$values:v1" }
         else { "" }
-    } else if effIdentity == "lite.core.rc.v1" {
+    } else if effIdentity == "lite.type.rc.v1" {
         if name == "Rc.create" and params == "value=T" and result == "Rc<T>" { "lite$core$rc$create:v1" }
         else if name == "Rc.get" and params == "r=Rc<T>" and result == "T" { "lite$core$rc$get:v1" }
         else if name == "Rc.share" and params == "r=Rc<T>" and result == "Rc<T>" { "lite$core$rc$share:v1" }
@@ -267,7 +250,7 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Rc.replace" and params == "r=mut Rc<T>|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$rc$replace:v1" }
         else if name == "Rc.reset" and params == "r=mut Rc<T>" and result == ir.VALUE_KIND_UNIT { "lite$core$rc$reset:v1" }
         else { "" }
-    } else if effIdentity == "lite.core.slice.v1" {
+    } else if effIdentity == "lite.type.slice.v1" {
         if name == "Slice.length" and params == "values=Slice<T>" and result == ir.VALUE_KIND_INT { "lite$core$slice$length:v1" }
         else if name == "Slice.$getIndex" and params == "values=Slice<T>|index=Int" and result == "T" { "lite$core$slice$getIndex:v1" }
         else if name == "Slice.$setIndex" and params == "values=mut Slice<T>|index=Int|value=T" and result == ir.VALUE_KIND_UNIT { "lite$core$slice$setIndex:v1" }
@@ -276,7 +259,7 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Slice.splitAt" and params == "values=Slice<T>|mid=Int" and result == "(left:Slice<T>,right:Slice<T>)" { "lite$core$slice$splitAt:v1" }
         else if name == "Slice.toList" and params == "values=Slice<T>" and result == "List<T>" { "lite$core$slice$toList:v1" }
         else { "" }
-    } else if effIdentity == "lite.core.simd.v1" {
+    } else if effIdentity == "lite.type.simd.v1" {
         if name == "Simd.splat" and params == "value=T" and result == "Simd<T,N>" { "lite$core$simd$splat:v1" }
         else if name == "Simd.fromArray" and params == "values=[T;N]" and result == "Simd<T,N>" { "lite$core$simd$fromArray:v1" }
         else if name == "Simd.load" and params == "slice=Slice<T>|offset=Int" and result == "Simd<T,N>" { "lite$core$simd$load:v1" }
@@ -310,7 +293,7 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
         else if name == "Simd.dot" and params == "a=Simd<T,N>|b=Simd<T,N>" and result == "T" { "lite$core$simd$dot:v1" }
         else if name == "Simd.select" and params == "whenTrue=Simd<T,N>|whenFalse=Simd<T,N>|mask=[Bool;N]" and result == "Simd<T,N>" { "lite$core$simd$select:v1" }
         else { "" }
-    } else if effIdentity == "lite.core.soa.v1" {
+    } else if effIdentity == "lite.type.soa.v1" {
         if name == "SoA.create" and params == "" and result == "SoA<R>" { "lite$core$soa$create:v1" }
         else if name == "SoA.withCapacity" and params == "cap=Int" and result == "SoA<R>" { "lite$core$soa$withCapacity:v1" }
         else if name == "SoA.length" and params == "values=SoA<R>" and result == ir.VALUE_KIND_INT { "lite$core$soa$length:v1" }
@@ -380,9 +363,9 @@ softBuiltinModuleForIdentity := fn(moduleIdentity: String): String {
     match {
         moduleIdentity == "lite.core.crypto.v1" { "lib/core/crypto" }
         moduleIdentity == "lite.core.file.v1" { "lib/core/file" }
-        moduleIdentity == "lite.core.int.v1" or moduleIdentity == "lite.type.int.v1" { "lib/type/int" }
-        moduleIdentity == "lite.core.list.v1" or moduleIdentity == "lite.type.list.v1" { "lib/type/list" }
-        moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.type.string.v1" { "lib/type/string" }
+        moduleIdentity == "lite.type.int.v1" { "lib/type/int" }
+        moduleIdentity == "lite.type.list.v1" { "lib/type/list" }
+        moduleIdentity == "lite.type.string.v1" { "lib/type/string" }
         moduleIdentity == "lite.core.io.v1" { "lib/core/io" }
         _ { "" }
     }
@@ -584,9 +567,6 @@ normalizeBuiltinModule := fn(raw: String): String {
     if out.startsWithAt(0, "core/") or out.startsWithAt(0, "type/") {
         out = "lib/" + out;
     }
-    if out == "lib/core/int" { out = "lib/type/int"; }
-    else if out == "lib/core/list" { out = "lib/type/list"; }
-    else if out == "lib/core/text" { out = "lib/type/string"; }
     if not out.startsWithAt(0, "lib/core/") and not out.startsWithAt(0, "lib/type/") { return ""; }
     if not isSoftBuiltinModule(out) { return ""; }
     out

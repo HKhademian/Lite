@@ -1,5 +1,5 @@
 io := import "core/io";
-list := import "core/list";
+list := import "type/list";
 
 textLessThan := fn(a: String, b: String): Bool {
     la := a.length();

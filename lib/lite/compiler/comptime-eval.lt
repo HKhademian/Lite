@@ -3,11 +3,11 @@
 crypto := import "core/crypto";
 diagLib := import "core/diag";
 fs := import "core/file";
-integer := import "core/int";
+integer := import "type/int";
 io := import "core/io";
 path := import "core/path";
 proc := import "core/process";
-textLib := import "core/text";
+textLib := import "type/string";
 time := import "core/time";
 tb := import "core/text-builder";
 numeric := import "./numeric-literals";
@@ -1798,7 +1798,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
         loop bs as b { mut ids.pushBack(makeIntVal(b, "", mut budget)); }
         return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
     }
-    if modIdentity == "lite.core.text.v1" or modIdentity == "lite.type.string.v1" or modIdentity == "lite.type.float.v1" {
+    if modIdentity == "lite.type.string.v1" or modIdentity == "lite.type.float.v1" {
         if opName == "String.length" and args.length() > 0 {
             return CtOutcome { ok = true, valId = makeIntVal(ctPool[args[0]].strVal.length(), "", mut budget), flow = FlowKind.None, error = "" };
         }
@@ -1839,7 +1839,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome { ok = true, valId = makeStrVal(ctPool[args[0]].floatVal.toText(), "", mut budget), flow = FlowKind.None, error = "" };
         }
     }
-    if modIdentity == "lite.core.int.v1" or modIdentity == "lite.type.int.v1" {
+    if modIdentity == "lite.type.int.v1" {
         return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsupported host int builtin " + opName + " in comptime" };
     }
     if modIdentity == "lite.core.diag.v1" {
@@ -3131,9 +3131,9 @@ evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: 
         colonPos := ownerKey.indexOf(":", 0);
         ownerMod := if colonPos >= 0 and hashPos > colonPos { ownerKey.slice(colonPos + 1, hashPos) } else { frame.moduleKey };
         dispName := baseNominalName(recv.kind);
-        var candIndices: List<Int> = findFnIndicesInModule(if recv.kind == types.CORE_ERROR_KIND { "lib$core$error" } else { ownerMod }, dispName + "." + methodName);
+        var candIndices: List<Int> = findFnIndicesInModule(if recv.kind == types.CORE_ERROR_KIND { "lib$type$error" } else { ownerMod }, dispName + "." + methodName);
         if candIndices.length() == 0 and recv.kind == types.CORE_ERROR_KIND {
-            candIndices = findFnIndicesInModule("lib_s_core_s_error", "Error." + methodName);
+            candIndices = findFnIndicesInModule("lib_s_type_s_error", "Error." + methodName);
         }
         if candIndices.length() == 0 {
             candIndices = findFnIndicesInModule(frame.moduleKey, dispName + "." + methodName);
@@ -3145,12 +3145,12 @@ evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: 
             return invokeCtFnDefWithTypeArgs(chosen, splitCanonicalNominalArgs(recv.kind), allArgs, labels, mut budget);
         }
     }
-    /* Also check `lib/core/text` soft methods cleanly */
+    /* Also check `lib/type/string` soft methods cleanly */
     if recv.tag == CellTag.Str {
         mut textArgs: List<Int> = [recvId];
         loop args as a { mut textArgs.pushBack(a); }
-        tIdx := findFnIndicesInModule("lib$core$text", "String." + methodName);
-        tIdx2 := if tIdx.length() > 0 { tIdx } else { findFnIndicesInModule("lib_s_core_s_text", "String." + methodName) };
+        tIdx := findFnIndicesInModule("lib$type$string", "String." + methodName);
+        tIdx2 := if tIdx.length() > 0 { tIdx } else { findFnIndicesInModule("lib_s_type_s_string", "String." + methodName) };
         if tIdx2.length() > 0 {
             chosen := selectOverloadFnDef(tIdx2, textArgs.length() - labels.length(), labels);
             return invokeCtFnDef(chosen, textArgs, labels, mut budget);
@@ -3958,8 +3958,8 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                             findFnIndicesInModule(ownerMod, name + "." + opName)
                         };
                         candsAlias := if candsOwner.length() > 0 { candsOwner } else { findAliasOpIndicesInModule(frame.moduleKey, nomK, opName) };
-                        cands2 := if candsAlias.length() > 0 { candsAlias } else { findFnIndicesInModule("lib$core$text", name + "." + opName) };
-                        cands3 := if cands2.length() > 0 { cands2 } else { findFnIndicesInModule("lib_s_core_s_text", name + "." + opName) };
+                        cands2 := if candsAlias.length() > 0 { candsAlias } else { findFnIndicesInModule("lib$type$string", name + "." + opName) };
+                        cands3 := if cands2.length() > 0 { cands2 } else { findFnIndicesInModule("lib_s_type_s_string", name + "." + opName) };
                         chosen := selectOverloadFnDef(cands3, callA.args.length() - callA.labels.length(), callA.labels);
                         res = invokeCtFnDefWithTypeArgs(chosen, splitCanonicalNominalArgs(nomK), callA.args, callA.labels, mut budget);
                     }

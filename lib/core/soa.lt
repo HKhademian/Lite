@@ -1,3 +1,0 @@
-/* Temporary compatibility shim for `type/soa` during Phase 2 migration. */
-
-_fwd := import "type/soa";

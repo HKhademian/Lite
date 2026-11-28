@@ -1,4 +1,4 @@
-/* Reverse Polish Notation (RPN) stack evaluator using `core/list` and `core/text`. */
+/* Reverse Polish Notation (RPN) stack evaluator using `type/list` and `type/string`. */
 
 io := import "core/io";
 

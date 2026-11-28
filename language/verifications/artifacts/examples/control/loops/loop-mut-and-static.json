@@ -3,7 +3,7 @@
   "kind": "example",
   "source": {
     "file": "../../../../../examples/control/loops/loop-mut-and-static.lts",
-    "hash": "sha256:cbfede08d58d74f219cd4869aa1ffdd523fd4ebcdb54449323e0e5f5af8630fa"
+    "hash": "sha256:bd438dc5a47f8504f6f81e18c9ae0078806bf583b673f059ffe601e5666011e7"
   },
   "features": [
     "feature.control.loops.loop-mut-and-static"

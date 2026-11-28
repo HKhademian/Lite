@@ -1,4 +1,4 @@
-/* End-to-end C11 execution tests for Phase C7: core/text Unicode codecs, core/io streams, core/file, core/process queries, pure-Lite core/crypto, and Copy-on-Write list value semantics. */
+/* End-to-end C11 execution tests for Phase C7: type/string Unicode codecs, core/io streams, core/file, core/process queries, pure-Lite core/crypto, and Copy-on-Write list value semantics. */
 
 test := import "core/test";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
@@ -21,9 +21,9 @@ src :=
 "proc := import \"core/process\";\n" +
 "crypto := import \"core/crypto\";\n" +
 "time := import \"core/time\";\n" +
-"listLib := import \"core/list\";\n" +
+"listLib := import \"type/list\";\n" +
 "\n" +
-"/* 1. core/text Unicode round-trip */\n" +
+"/* 1. type/string Unicode round-trip */\n" +
 "cps := \"Hi!\".toCodePoints();\n" +
 "io.outputLine(cps);\n" +
 "dec := String.fromCodePoints([76, 105, 116, 101]);\n" +

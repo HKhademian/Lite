@@ -1,8 +1,8 @@
 /* Packed Nibble Codec — bit-packed Slice<Int4> & Slice<Bool>, UInt8/Int4 bitops, #packed header, Option<T>, and Rc<T>. */
 
 io := import "core/io";
-opt := import "core/option";
-rc := import "core/rc";
+opt := import "type/option";
+rc := import "type/rc";
 
 PacketMeta := record #packed {
     version: UInt4;

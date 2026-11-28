@@ -1,4 +1,4 @@
-listLib := import "core/list";
+listLib := import "type/list";
 sourceLib := import "core/source";
 diagLib := import "core/diag";
 numeric := import "./numeric-literals";
@@ -317,42 +317,30 @@ pub isBitPackedArrayKind := fn(kind: String): Bool { types.isBitPackedArrayKind(
 pub cSliceTag := fn(kind: String): String { types.cSliceTag(kind) };
 /** True when `moduleIdentity` is a registered core/type module allowed to declare `Slice<T>` constructors. */
 isCoreSliceHostModule := fn(moduleIdentity: String): Bool {
-    moduleIdentity == "lite.core.list.v1" or moduleIdentity == "lite.core.array.v1" or
-    moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.core.slice.v1" or
-    moduleIdentity == "lite.core.simd.v1" or moduleIdentity == "lite.type.list.v1" or
+    moduleIdentity == "lite.type.list.v1" or
     moduleIdentity == "lite.type.array.v1" or moduleIdentity == "lite.type.string.v1" or
     moduleIdentity == "lite.type.slice.v1" or moduleIdentity == "lite.type.simd.v1"
 };
 /** True when `(moduleIdentity, fnName)` is a built-in container intrinsic whose generic `<T>`/`<K, V>` header uses special family binding. */
 isContainerIntrinsicFn := fn(moduleIdentity: String, fnName: String): Bool {
-    effId := match moduleIdentity {
-        "lite.type.list.v1" { "lite.core.list.v1" }
-        "lite.type.map.v1" { "lite.core.map.v1" }
-        "lite.type.set.v1" { "lite.core.set.v1" }
-        "lite.type.rc.v1" { "lite.core.rc.v1" }
-        "lite.type.slice.v1" { "lite.core.slice.v1" }
-        "lite.type.simd.v1" { "lite.core.simd.v1" }
-        "lite.type.soa.v1" { "lite.core.soa.v1" }
-        _ { moduleIdentity }
-    };
-    (effId == "lite.core.list.v1" and
+    (moduleIdentity == "lite.type.list.v1" and
     (fnName == "pushBack" or fnName == "popBack" or fnName == "pushFront" or fnName == "popFront" or
     fnName == "length" or fnName == "setAt" or fnName == "slice" or fnName == "reverse" or fnName == "clear")) or
-    (effId == "lite.core.map.v1" and
+    (moduleIdentity == "lite.type.map.v1" and
     (fnName == "set" or fnName == "get" or fnName == "getOr" or fnName == "has" or
     fnName == "remove" or fnName == "size" or fnName == "clear" or fnName == "keys" or fnName == "values")) or
-    (effId == "lite.core.set.v1" and
+    (moduleIdentity == "lite.type.set.v1" and
     (fnName == "add" or fnName == "has" or fnName == "remove" or
     fnName == "size" or fnName == "clear" or fnName == "values")) or
-    (effId == "lite.core.rc.v1" and
+    (moduleIdentity == "lite.type.rc.v1" and
     (fnName == "create" or fnName == "get" or fnName == "share" or
     fnName == "isEmpty" or fnName == "strongCount" or fnName == "ptrEqual" or
     fnName == "makeUnique" or fnName == "replace" or fnName == "reset")) or
-    (effId == "lite.core.slice.v1" and
+    (moduleIdentity == "lite.type.slice.v1" and
     (fnName == "length" or fnName == "isEmpty" or fnName == "uncheckedGet" or
     fnName == "uncheckedSet" or fnName == "splitAt" or fnName == "toList" or
     fnName == "$getIndex" or fnName == "$setIndex")) or
-    (effId == "lite.core.simd.v1" and
+    (moduleIdentity == "lite.type.simd.v1" and
     (fnName == "splat" or fnName == "fromArray" or fnName == "load" or fnName == "nativeLanes" or
     fnName == "lanes" or fnName == "toArray" or fnName == "get" or fnName == "$getIndex" or
     fnName == "withLane" or fnName == "store" or fnName == "add" or fnName == "sub" or
@@ -362,7 +350,7 @@ isContainerIntrinsicFn := fn(moduleIdentity: String, fnName: String): Bool {
     fnName == "bitNot" or fnName == "fma" or fnName == "sqrt" or fnName == "reduceAdd" or
     fnName == "wrappingReduceAdd" or fnName == "reduceMin" or fnName == "reduceMax" or
     fnName == "dot" or fnName == "select")) or
-    (effId == "lite.core.soa.v1" and
+    (moduleIdentity == "lite.type.soa.v1" and
     (fnName == "create" or fnName == "withCapacity" or fnName == "length" or fnName == "isEmpty" or
     fnName == "reserve" or fnName == "clear" or fnName == "pushBack" or fnName == "popBack" or
     fnName == "swapRemove" or fnName == "get" or fnName == "set" or fnName == "$getIndex" or
@@ -437,7 +425,7 @@ pub isResultKind := fn(kind: String): Bool { types.isResultKind(kind) };
 pub resultOkKind := fn(kind: String): String { types.resultOkKind(kind) };
 /** Returns the error type `E` of `Result<T,E>`. */
 pub resultErrKind := fn(kind: String): String { types.resultErrKind(kind) };
-/** Canonical built-in `core/error.Error` record kind. */
+/** Canonical built-in `type/error.Error` record kind. */
 pub CORE_ERROR_KIND := types.CORE_ERROR_KIND;
 /** True when `kind` is a nominal `enum` type kind. */
 pub isEnumKind := fn(kind: String): Bool { types.isEnumKind(kind) };
@@ -2490,18 +2478,18 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     var parameterTotal := 0;
     var futureValues: List<FutureValue> = [];
     if monoInstIdx < 0 {
-        if moduleIdentity == "lite.core.rc.v1" or moduleIdentity == "lite.type.rc.v1" {
+        if moduleIdentity == "lite.type.rc.v1" {
             mut aliases.pushBack((name = "Rc", target = "$BuiltinFamily:Rc", at = -1, end = 0, depth = 0));
             mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "Rc", runtime = "", code = "$BuiltinFamily:Rc", intValue = 0, textValue = ""));
-        } else if moduleIdentity == "lite.core.slice.v1" or moduleIdentity == "lite.type.slice.v1" {
+        } else if moduleIdentity == "lite.type.slice.v1" {
             mut aliases.pushBack((name = "Slice", target = "$BuiltinFamily:Slice", at = -1, end = 0, depth = 0));
             mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "Slice", runtime = "", code = "$BuiltinFamily:Slice", intValue = 0, textValue = ""));
-        } else if moduleIdentity == "lite.core.simd.v1" or moduleIdentity == "lite.type.simd.v1" {
+        } else if moduleIdentity == "lite.type.simd.v1" {
             mut aliases.pushBack((name = "Simd", target = "$BuiltinFamily:Simd", at = -1, end = 0, depth = 0));
             mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "Simd", runtime = "", code = "$BuiltinFamily:Simd", intValue = 0, textValue = ""));
             mut aliases.pushBack((name = "SimdNative", target = "$BuiltinFamily:SimdNative", at = -1, end = 0, depth = 0));
             mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "SimdNative", runtime = "", code = "$BuiltinFamily:SimdNative", intValue = 0, textValue = ""));
-        } else if moduleIdentity == "lite.core.soa.v1" or moduleIdentity == "lite.type.soa.v1" {
+        } else if moduleIdentity == "lite.type.soa.v1" {
             mut aliases.pushBack((name = "SoA", target = "$BuiltinFamily:SoA", at = -1, end = 0, depth = 0));
             mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "SoA", runtime = "", code = "$BuiltinFamily:SoA", intValue = 0, textValue = ""));
         } else if moduleIdentity == "lite.type.list.v1" {

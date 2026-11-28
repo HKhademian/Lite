@@ -1,7 +1,7 @@
 /* Showcase: Unions A | B, definite initialization guards, fallibles T ! E / T!, ToError, postfix !, and else(err). */
 
 io := import "core/io";
-errs := import "core/error";
+errs := import "type/error";
 
 ConfigErr := enum { Missing; OutOfBand(Int); };
 impl errs.ToError for ConfigErr {

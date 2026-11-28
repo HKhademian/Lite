@@ -10,7 +10,7 @@
     "feature.control.loops.sequence-traversal",
     "feature.io.reporting.report-values"
   ],
-  "description": "Zero-initialized Set<T>, core/set membership and mutation grants, independent snapshots, and element traversal.",
+  "description": "Zero-initialized Set<T>, type/set membership and mutation grants, independent snapshots, and element traversal.",
   "cases": [
     {
       "name": "typed-sets-and-membership",

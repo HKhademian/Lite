@@ -1,8 +1,8 @@
 /** Dual-target tests for `util/collections` O(n log n) sorts and O(n) Set/Map helpers. */
 
-collections := import "core/list";
+collections := import "type/list";
 test := import "core/test";
-text := import "core/text";
+text := import "type/string";
 
 /* sortIndicesBy with capturing multi-key closure */
 keys: List<String> = ["b", "a", "c", "a2"];

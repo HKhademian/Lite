@@ -10,7 +10,7 @@
     "feature.control.loops.sequence-traversal",
     "feature.io.reporting.report-values"
   ],
-  "description": "Demonstrates Set<T> deduplication, core/set intrinsics, value-copy snapshots, and insertion-order traversal.",
+  "description": "Demonstrates Set<T> deduplication, type/set intrinsics, value-copy snapshots, and insertion-order traversal.",
   "cases": [
     {
       "name": "typed-sets",

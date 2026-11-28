@@ -2,7 +2,7 @@
 
 diagLib := import "core/diag";
 sourceLib := import "core/source";
-textLib := import "core/text";
+textLib := import "type/string";
 tb := import "core/text-builder";
 numeric := import "./numeric-literals";
 ir := import "./frontend-ir";

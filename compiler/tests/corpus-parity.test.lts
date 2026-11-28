@@ -2,7 +2,7 @@
 
 crypto := import "core/crypto";
 fs := import "core/file";
-list := import "core/list";
+list := import "type/list";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
@@ -48,16 +48,16 @@ test.checkText("c root dep", "lib/lite/compiler/c-root.lts", cDeps[0]);
 test.check("ts deps include frontend", tsDeps.contains("lib/lite/compiler/frontend.lt"));
 test.check("c deps include frontend", cDeps.contains("lib/lite/compiler/frontend.lt"));
 frontendModules: List<String> = [
-    "lib/lite/compiler/frontend-ir.lt",
-    "lib/lite/compiler/builtins-abi.lt",
-    "lib/lite/compiler/frontend-syntax.lt",
-    "lib/lite/compiler/frontend-types.lt",
-    "lib/lite/compiler/trace-safety.lt",
-    "lib/lite/compiler/reachability.lt",
-    "lib/lite/compiler/frontend-inference.lt",
-    "lib/lite/compiler/frontend-context.lt",
-    "lib/lite/compiler/frontend-expr.lt",
-    "lib/lite/compiler/comptime-eval.lt",
+"lib/lite/compiler/frontend-ir.lt",
+"lib/lite/compiler/builtins-abi.lt",
+"lib/lite/compiler/frontend-syntax.lt",
+"lib/lite/compiler/frontend-types.lt",
+"lib/lite/compiler/trace-safety.lt",
+"lib/lite/compiler/reachability.lt",
+"lib/lite/compiler/frontend-inference.lt",
+"lib/lite/compiler/frontend-context.lt",
+"lib/lite/compiler/frontend-expr.lt",
+"lib/lite/compiler/comptime-eval.lt",
 ];
 loop frontendModules as modPath {
     test.check("ts deps include " + modPath, tsDeps.contains(modPath));

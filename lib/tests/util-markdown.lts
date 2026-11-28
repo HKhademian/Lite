@@ -1,5 +1,5 @@
 md := import "data/markdown";
-list := import "core/list";
+list := import "type/list";
 test := import "core/test";
 
 doc := "# Title\n\n## A `name` <T>\n\n## A `name` <T>\n\n`[skip](ignored.md)`\n\n[one](topic.md#a-name-) [two](<space path.md> \"t\")\n\n```lts\n[in-code](missing.md)\n```\n";

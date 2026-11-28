@@ -1,3 +1,0 @@
-/* Temporary compatibility barrel forwarding to `type/set` during Phase 2 migration. */
-
-pub { Set } := import "type/set";

@@ -1,3 +1,0 @@
-/* Temporary compatibility barrel forwarding to `type/int` during Phase 2 migration. */
-
-pub { Byte, intMin, intMax, SignedInt, UnsignedInt, Integer } := import "type/int";

@@ -20,10 +20,10 @@ cComp := selC.path;
 /* core integer operations are available through a module alias */
 coreIntName := path.join(root, "compiler/tests/fixtures/core-int-alias.lts");
 coreIntSrc :=
-"io := import \"core/io\"; integer := import \"core/int\";\n" +
+"io := import \"core/io\"; integer := import \"type/int\";\n" +
 "sum := 40.checkedAdd(2);\n" +
 "io.outputLine(sum.value.toText(), sum.ok);";
-compilerTest.assertCompileRunTsNamed(root, tsComp, "core/int alias", coreIntSrc, coreIntName, "42 true\n");
+compilerTest.assertCompileRunTsNamed(root, tsComp, "type/int alias", coreIntSrc, coreIntName, "42 true\n");
 
 /* imported output aliases preserve the heterogeneous host-output contract */
 fixtureName := path.join(root, "compiler/tests/fixtures/core-host-io.lts");

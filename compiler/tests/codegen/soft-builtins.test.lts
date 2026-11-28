@@ -4,7 +4,7 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
+text := import "type/string";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
 compilerTest := import "../../../tools/src/internal/compiler-test";
 json := import "data/json";
@@ -54,15 +54,15 @@ sampleFile := path.join(bmDir, "sample.txt");
 sourceFile := path.join(bmDir, "digest.lts");
 _ws := fs.writeText(sampleFile, "hello world\n");
 bmSrc := [
-    "crypto := import \"core/crypto\";",
-    "io := import \"core/io\";",
-    "fileHash := crypto.sha256File(" + json.quoteString(sampleFile) + ");",
-    "sha256T := crypto.sha256Text(\"hello\");",
-    "sha256B := crypto.sha256Bytes([104, 101, 108, 108, 111]);",
-    "sha512T := crypto.sha512Text(\"abc\");",
-    "sha512B := crypto.sha512Bytes([97, 98, 99]);",
-    "hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);",
-    "io.outputLine(fileHash.ok, fileHash.hex, sha256T == sha256B, sha256T, sha512T == sha512B, hmac);"
+"crypto := import \"core/crypto\";",
+"io := import \"core/io\";",
+"fileHash := crypto.sha256File(" + json.quoteString(sampleFile) + ");",
+"sha256T := crypto.sha256Text(\"hello\");",
+"sha256B := crypto.sha256Bytes([104, 101, 108, 108, 111]);",
+"sha512T := crypto.sha512Text(\"abc\");",
+"sha512B := crypto.sha512Bytes([97, 98, 99]);",
+"hmac := crypto.hmacSha256Bytes([107, 101, 121], [97, 98, 99]);",
+"io.outputLine(fileHash.ok, fileHash.hex, sha256T == sha256B, sha256T, sha512T == sha512B, hmac);"
 ].join("\n");
 _wSrcFile := fs.writeText(sourceFile, bmSrc);
 bmExpectedOut := "true a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447 true 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824 true 9c196e32dc0175f86f4b1cb89289d6619de6bee699e4c378e68309ed97a1a6ab\n";
@@ -114,23 +114,23 @@ test.check("bm fn512 has bytes", fn512Comp.stdout.contains("function lite$crypto
 test.check("bm fn512 no text", not fn512Comp.stdout.contains("function lite$cryptoDigestText("));
 
 badFlagPairs: List<(a: String, b: String)> = [
-    (a = "--builtin-mode", b = ""),
-    (a = "--builtin-mode", b = "bogus"),
-    (a = "--builtin-mode", b = "core/crypto=bogus"),
-    (a = "--builtin-mode", b = "=pure"),
-    (a = "--builtin-mode", b = "core/crypto.=pure"),
-    (a = "--builtin-mode", b = "./core/crypto=pure"),
-    (a = "--builtin-mode", b = "./lib/core/crypto.lts=pure"),
-    (a = "--builtin-mode", b = "../core/crypto=pure"),
-    (a = "--builtin-mode", b = "/lib/core/crypto=pure"),
-    (a = "--builtin-mode", b = "lib\\core\\crypto=pure"),
-    (a = "--builtin-mode", b = "lib/core//crypto=pure"),
-    (a = "--builtin-mode", b = "foo/bar=pure"),
-    (a = "--builtin-mode", b = "core/unknown=pure"),
-    (a = "--builtin-mode", b = "core/crypto.nonexistent=pure"),
-    (a = "--builtin-mode", b = "core/crypto.randomBytes=pure"),
-    (a = "--builtin-mode", b = "core/crypto.lts.sha256Text=pure"),
-    (a = "--unknown-flag", b = "")
+(a = "--builtin-mode", b = ""),
+(a = "--builtin-mode", b = "bogus"),
+(a = "--builtin-mode", b = "core/crypto=bogus"),
+(a = "--builtin-mode", b = "=pure"),
+(a = "--builtin-mode", b = "core/crypto.=pure"),
+(a = "--builtin-mode", b = "./core/crypto=pure"),
+(a = "--builtin-mode", b = "./lib/core/crypto.lts=pure"),
+(a = "--builtin-mode", b = "../core/crypto=pure"),
+(a = "--builtin-mode", b = "/lib/core/crypto=pure"),
+(a = "--builtin-mode", b = "lib\\core\\crypto=pure"),
+(a = "--builtin-mode", b = "lib/core//crypto=pure"),
+(a = "--builtin-mode", b = "foo/bar=pure"),
+(a = "--builtin-mode", b = "core/unknown=pure"),
+(a = "--builtin-mode", b = "core/crypto.nonexistent=pure"),
+(a = "--builtin-mode", b = "core/crypto.randomBytes=pure"),
+(a = "--builtin-mode", b = "core/crypto.lts.sha256Text=pure"),
+(a = "--unknown-flag", b = "")
 ];
 dummySrc := "io := import \"core/io\"; io.outputLine(1);";
 loop badFlagPairs as bf {
@@ -178,73 +178,73 @@ spoofRun := compilerTest.checkAndRunTs(root, spoofComp.stdout);
 test.checkInt("spoofed root status", 0, spoofRun.status);
 test.checkText("spoofed root stdout", "spoofed:hello\n", spoofRun.stdout);
 
-/* 3. pure and soft-builtin modes match for core/text.indexOf and core/io stream helpers */
+/* 3. pure and soft-builtin modes match for type/string.indexOf and core/io stream helpers */
 tmpTextIo := fs.makeTempDir("lite-pure-text-io-");
 test.check("text-io makeTempDir", tmpTextIo.ok);
 textIoDir := tmpTextIo.path;
 bigFile := path.join(textIoDir, "big.txt");
 _wBig := fs.writeText(bigFile, "A".repeat(70000) + "€");
 textIoSrc := [
-    "io := import \"core/io\";",
-    "file := import \"core/file\";",
-    "u := \"a😀b€c😀d\";",
-    "textSummary := [",
-    "    \"hello world\".indexOf(\"world\", 0),",
-    "    \"banana\".indexOf(\"ana\", 2),",
-    "    \"abc\".indexOf(\"z\", 0),",
-    "    \"abc\".indexOf(\"abcd\", 0),",
-    "    \"abc\".indexOf(\"\", 0),",
-    "    \"abc\".indexOf(\"\", 3),",
-    "    \"abc\".indexOf(\"\", 4),",
-    "    \"abc\".indexOf(\"a\", -1),",
-    "    u.indexOf(\"€\", 0),",
-    "    u.indexOf(\"😀\", 2),",
-    "    u.indexOf(\"d\", 6),",
-    "    u.indexOf(\"\", 7),",
-    "    u.indexOf(\"\", 8)",
-    "];",
-    "tr := io.Reader.fromText(\"a€😀\");",
-    "trBytes := tr.readAll();",
-    "trEofAfter := tr.atEof();",
-    "collectLines := fn(r: io.Reader): String {",
-    "    var out := \"\";",
-    "    loop true {",
-    "        res := r.readLine();",
-    "        if not res.ok { return \"ERR:\" + res.error; }",
-    "        if res.eof { break; }",
-    "        if out =!= \"\" { out = out + \"|\"; }",
-    "        out = out + \"[\" + res.line + \"]\";",
-    "    }",
-    "    out",
-    "};",
-    "linesCrlf := collectLines(io.Reader.fromText(\"alpha\\r\\n\\nbeta\\rgamma\\r\\n€😀\"));",
-    "linesEmpty := collectLines(io.Reader.fromText(\"\"));",
-    "badLine := io.Reader.fromBytes([195, 40]).readLine();",
-    "bw := io.Writer.buffer();",
-    "wt := bw.writeText(\"A€\");",
-    "wl := bw.writeLine(\"😀\");",
-    "wl2 := bw.writeLine(\"\");",
-    "bwBytes := bw.bytes();",
-    "bwTxt := bw.text();",
-    "_cw := bw.close();",
-    "wtClosed := bw.writeText(\"x\");",
-    "bwClosedTxt := bw.text();",
-    "rtOk := io.Reader.fromBytes(\"hi€😀\".utf8Encode()).readAllText();",
-    "rtBad := io.Reader.fromBytes([255, 128]).readAllText();",
-    "cr := io.Reader.fromText(\"x\");",
-    "_crClose := cr.close();",
-    "rtClosed := cr.readAllText();",
-    "rlClosed := cr.readLine();",
-    "bigReader := file.openReader(" + json.quoteString(bigFile) + ");",
-    "bigRes := bigReader.readAllText();",
-    "_bigClose := bigReader.close();",
-    "io.outputLine(",
-    "    textSummary, trBytes, trEofAfter, linesCrlf, linesEmpty,",
-    "    badLine.ok, badLine.eof, badLine.error =!= \"\", wt.ok, wl.ok, wl2.ok,",
-    "    bwBytes, bwTxt.ok, bwClosedTxt.ok, bwTxt.text == bwClosedTxt.text, not wtClosed.ok,",
-    "    rtOk.ok, rtOk.text == \"hi€😀\", not rtBad.ok, not rtClosed.ok, not rlClosed.ok,",
-    "    bigRes.ok, bigRes.text.length(), bigRes.text.at(70000)",
-    ");"
+"io := import \"core/io\";",
+"file := import \"core/file\";",
+"u := \"a😀b€c😀d\";",
+"textSummary := [",
+"    \"hello world\".indexOf(\"world\", 0),",
+"    \"banana\".indexOf(\"ana\", 2),",
+"    \"abc\".indexOf(\"z\", 0),",
+"    \"abc\".indexOf(\"abcd\", 0),",
+"    \"abc\".indexOf(\"\", 0),",
+"    \"abc\".indexOf(\"\", 3),",
+"    \"abc\".indexOf(\"\", 4),",
+"    \"abc\".indexOf(\"a\", -1),",
+"    u.indexOf(\"€\", 0),",
+"    u.indexOf(\"😀\", 2),",
+"    u.indexOf(\"d\", 6),",
+"    u.indexOf(\"\", 7),",
+"    u.indexOf(\"\", 8)",
+"];",
+"tr := io.Reader.fromText(\"a€😀\");",
+"trBytes := tr.readAll();",
+"trEofAfter := tr.atEof();",
+"collectLines := fn(r: io.Reader): String {",
+"    var out := \"\";",
+"    loop true {",
+"        res := r.readLine();",
+"        if not res.ok { return \"ERR:\" + res.error; }",
+"        if res.eof { break; }",
+"        if out =!= \"\" { out = out + \"|\"; }",
+"        out = out + \"[\" + res.line + \"]\";",
+"    }",
+"    out",
+"};",
+"linesCrlf := collectLines(io.Reader.fromText(\"alpha\\r\\n\\nbeta\\rgamma\\r\\n€😀\"));",
+"linesEmpty := collectLines(io.Reader.fromText(\"\"));",
+"badLine := io.Reader.fromBytes([195, 40]).readLine();",
+"bw := io.Writer.buffer();",
+"wt := bw.writeText(\"A€\");",
+"wl := bw.writeLine(\"😀\");",
+"wl2 := bw.writeLine(\"\");",
+"bwBytes := bw.bytes();",
+"bwTxt := bw.text();",
+"_cw := bw.close();",
+"wtClosed := bw.writeText(\"x\");",
+"bwClosedTxt := bw.text();",
+"rtOk := io.Reader.fromBytes(\"hi€😀\".utf8Encode()).readAllText();",
+"rtBad := io.Reader.fromBytes([255, 128]).readAllText();",
+"cr := io.Reader.fromText(\"x\");",
+"_crClose := cr.close();",
+"rtClosed := cr.readAllText();",
+"rlClosed := cr.readLine();",
+"bigReader := file.openReader(" + json.quoteString(bigFile) + ");",
+"bigRes := bigReader.readAllText();",
+"_bigClose := bigReader.close();",
+"io.outputLine(",
+"    textSummary, trBytes, trEofAfter, linesCrlf, linesEmpty,",
+"    badLine.ok, badLine.eof, badLine.error =!= \"\", wt.ok, wl.ok, wl2.ok,",
+"    bwBytes, bwTxt.ok, bwClosedTxt.ok, bwTxt.text == bwClosedTxt.text, not wtClosed.ok,",
+"    rtOk.ok, rtOk.text == \"hi€😀\", not rtBad.ok, not rtClosed.ok, not rlClosed.ok,",
+"    bigRes.ok, bigRes.text.length(), bigRes.text.at(70000)",
+");"
 ].join("\n");
 textIoFile := path.join(textIoDir, "pure-text-io.lts");
 _wTio := fs.writeText(textIoFile, textIoSrc);
@@ -257,7 +257,7 @@ loop ioHelpers as h { test.check("text-io default has " + h, tioDef.contains(h))
 tioPure := compileCheckAndAssertOut(textIoSrc, textIoFile, ["--builtin-mode", "pure"], "text-io pure", textIoExpected);
 loop ioHelpers as h { test.check("text-io pure omits " + h, not tioPure.contains(h)); }
 
-tioTextOnly := compileCheckAndAssertOut(textIoSrc, textIoFile, ["--builtin-mode", "core/text:String.indexOf=pure"], "text-io String.indexOf=pure", textIoExpected);
+tioTextOnly := compileCheckAndAssertOut(textIoSrc, textIoFile, ["--builtin-mode", "type/string:String.indexOf=pure"], "text-io String.indexOf=pure", textIoExpected);
 test.check("text-io text-only omits indexOf", not tioTextOnly.contains("function lite$textIndexOf("));
 test.check("text-io text-only keeps readLine", tioTextOnly.contains("function lite$ioReadLine("));
 
@@ -272,7 +272,7 @@ test.check("text-io rl=pure keeps writeLine", tioRlPure.contains("function lite$
 test.check("text-io rl=pure keeps textReader", tioRlPure.contains("function lite$ioTextReader("));
 _rmTio := fs.remove(textIoDir);
 
-/* 4. soft builtin overrides for core/text UTF-8 codecs and core/file */
+/* 4. soft builtin overrides for type/string UTF-8 codecs and core/file */
 tmpUniFile := fs.makeTempDir("litescript-soft-unicode-file-");
 test.check("uni-file makeTempDir", tmpUniFile.ok);
 ufDir := tmpUniFile.path;
@@ -280,23 +280,23 @@ textPath := path.join(ufDir, "note.txt");
 bytesPath := path.join(ufDir, "raw.bin");
 missingPath := path.join(ufDir, "missing.bin");
 ufSrc := [
-    "file := import \"core/file\";",
-    "io := import \"core/io\";",
-    "enc := \"A€🙂\".utf8Encode();",
-    "dec := String.fromUtf8Strict(enc);",
-    "badRange := String.fromUtf8Strict([256]);",
-    "badSeq := String.fromUtf8Strict([255]);",
-    "lossy := String.fromUtf8Lossy([65, 255, 66]);",
-    "lossyRange := String.fromUtf8Lossy([65, 999, 66]);",
-    "w1 := file.writeText(" + json.quoteString(textPath) + ", \"hi\");",
-    "a1 := file.appendText(" + json.quoteString(textPath) + ", \"🙂\");",
-    "r1 := file.readText(" + json.quoteString(textPath) + ");",
-    "w2 := file.writeBytes(" + json.quoteString(bytesPath) + ", [65, 66]);",
-    "a2 := file.appendBytes(" + json.quoteString(bytesPath) + ", [67]);",
-    "rb := file.readBytes(" + json.quoteString(bytesPath) + ");",
-    "badW := file.writeBytes(" + json.quoteString(bytesPath) + ", [256]);",
-    "io.outputLine(enc, dec.ok, dec.text, not badRange.ok, not badSeq.ok, lossy, lossyRange);",
-    "io.outputLine(w1.ok, a1.ok, r1.ok, r1.text, w2.ok, a2.ok, rb, not badW.ok);"
+"file := import \"core/file\";",
+"io := import \"core/io\";",
+"enc := \"A€🙂\".utf8Encode();",
+"dec := String.fromUtf8Strict(enc);",
+"badRange := String.fromUtf8Strict([256]);",
+"badSeq := String.fromUtf8Strict([255]);",
+"lossy := String.fromUtf8Lossy([65, 255, 66]);",
+"lossyRange := String.fromUtf8Lossy([65, 999, 66]);",
+"w1 := file.writeText(" + json.quoteString(textPath) + ", \"hi\");",
+"a1 := file.appendText(" + json.quoteString(textPath) + ", \"🙂\");",
+"r1 := file.readText(" + json.quoteString(textPath) + ");",
+"w2 := file.writeBytes(" + json.quoteString(bytesPath) + ", [65, 66]);",
+"a2 := file.appendBytes(" + json.quoteString(bytesPath) + ", [67]);",
+"rb := file.readBytes(" + json.quoteString(bytesPath) + ");",
+"badW := file.writeBytes(" + json.quoteString(bytesPath) + ", [256]);",
+"io.outputLine(enc, dec.ok, dec.text, not badRange.ok, not badSeq.ok, lossy, lossyRange);",
+"io.outputLine(w1.ok, a1.ok, r1.ok, r1.text, w2.ok, a2.ok, rb, not badW.ok);"
 ].join("\n");
 fffd := String.fromCodePoint(65533).text;
 ufExpected := "[65, 226, 130, 172, 240, 159, 153, 130] true A€🙂 true true A" + fffd + "B A" + fffd + "B\ntrue true true hi🙂 true true [65, 66, 67] true\n";
@@ -315,7 +315,7 @@ ufPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "pure"]
 test.check("uf pure no encode", not ufPure.contains("function lite$unicodeUtf8Encode("));
 test.check("uf pure no readBytes", not ufPure.contains("function lite$fileReadBytes("));
 
-ufUniPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "core/text=pure"], "uf text pure", ufExpected);
+ufUniPure := compileCheckAndAssertOut(ufSrc, "main.lts", ["--builtin-mode", "type/string=pure"], "uf text pure", ufExpected);
 test.check("uf text pure no encode", not ufUniPure.contains("function lite$unicodeUtf8Encode("));
 test.check("uf text pure keeps writeText", ufUniPure.contains("function lite$fileWriteText("));
 
@@ -354,12 +354,12 @@ test.checkInt("dce crypto status", 0, cryptoThinRun.status);
 test.checkText("dce crypto stdout", "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4\n", cryptoThinRun.stdout);
 
 mixedDceSrc := [
-    "io := import \"core/io\";",
-    "unusedPure := \"PURGED_PURE_MARKER\";",
-    "unusedSum := 1 + 2;",
-    "sideEffectFn := fn(): Int { io.outputLine(\"kept-side-effect\"); 7 };",
-    "keptSideEffect := sideEffectFn();",
-    "unusedHelper := fn(): String { \"PURGED_FN_MARKER\" };"
+"io := import \"core/io\";",
+"unusedPure := \"PURGED_PURE_MARKER\";",
+"unusedSum := 1 + 2;",
+"sideEffectFn := fn(): Int { io.outputLine(\"kept-side-effect\"); 7 };",
+"keptSideEffect := sideEffectFn();",
+"unusedHelper := fn(): String { \"PURGED_FN_MARKER\" };"
 ].join("\n");
 mixedDceComp := compilerTest.compileStdin(root, tsComp, mixedDceSrc, "main.lts");
 test.checkInt("dce mixed compile", 0, mixedDceComp.status);
@@ -374,26 +374,26 @@ topFaultRun := compilerTest.compileCheckRunTs(root, tsComp, "unusedFault := 1 / 
 test.check("dce top fault status != 0", topFaultRun.status =!= 0);
 test.check("dce top fault stderr", topFaultRun.stderr.contains("division by zero"));
 
-/* 6. soft builtin overrides for core/int, core/text, and core/crypto match pure implementations and respect --builtin-mode */
+/* 6. soft builtin overrides for type/int, type/string, and core/crypto match pure implementations and respect --builtin-mode */
 intTextSrc := [
-    "integer := import \"core/int\";",
-    "io := import \"core/io\";",
-    "text := import \"core/text\";",
-    "nbsp := String.fromCodePoints([160]).text;",
-    "vtab := String.fromCodePoints([11]).text;",
-    "io.outputLine(0.toText(), (-42).toText(), integer.intMax.toText(), integer.intMin.toText());",
-    "io.outputLine(\"A🙂B\".startsWithAt(1, \"🙂\"), \"A🙂B\".startsWithAt(2, \"B\"), \"A🙂B\".startsWithAt(-1, \"A\"), \"A🙂B\".startsWithAt(3, \"\"));",
-    "io.outputLine(\"if_x\".wordAt(0, \"if\"), \"if 🙂\".wordAt(0, \"if\"), \"a🙂b\".wordAt(0, \"a\"), \"if\".wordAt(0, \"if\"));",
-    "emptyParts: List<String> = []; onePart: List<String> = [\"x\"]; manyParts: List<String> = [\"a\", \"b\", \"c\"];",
-    "io.outputLine(emptyParts.join(\",\"), onePart.join(\",\"), manyParts.join(\"-\"));",
-    "n0 := \"-9223372036854775808\".toInt(); n1 := \"+42\".toInt(); n2 := \"9223372036854775808\".toInt(); n3 := \"1a\".toInt();",
-    "io.outputLine(n0.ok, n0.value, n1.ok, n1.value, n2.ok, n3.ok);",
-    "padded := \" \\t\" + nbsp + \"hi\" + vtab + \"\\r\\n \";",
-    "io.outputLine(\"[\" + padded.trimStart() + \"]\", \"[\" + padded.trimEnd() + \"]\", \"[\" + padded.trim() + \"]\");",
-    "io.outputLine(\"A🙂bc\".endsWith(\"🙂bc\"), \"A🙂bc\".endsWith(\"xy\"), \"A🙂bc\".contains(\"🙂b\"), \"hi\".repeat(3), \"[\" + \"hi\".repeat(-2) + \"]\");",
-    "io.outputLine(\"ÄÉΩABC_xyz🙂\".toLowerAscii(), \"5\".isDigit(), \"Q\".isAsciiLetter(), \"_\".isNameStart(), \"9\".isNameContinue(), nbsp.isWhitespace());",
-    "io.outputLine(\" \\t\\r\\n🙂x\".skipSpaces(0), \"🙂  foo\".skipSpaces(1), \"abc\".skipSpaces(10), \"abc_12🙂\".skipName(0), \"🙂abc\".skipName(1), \"abc\".skipName(9));",
-    "io.outputLine(\"A🙂B🙂C\".indexOf(\"🙂\", 0), \"A🙂B🙂C\".indexOf(\"🙂\", 2), \"A🙂B\".indexOf(\"\", -1), \"A🙂B\".indexOf(\"\", 3), \"A🙂B\".indexOf(\"\", 4));"
+"integer := import \"type/int\";",
+"io := import \"core/io\";",
+"text := import \"type/string\";",
+"nbsp := String.fromCodePoints([160]).text;",
+"vtab := String.fromCodePoints([11]).text;",
+"io.outputLine(0.toText(), (-42).toText(), integer.intMax.toText(), integer.intMin.toText());",
+"io.outputLine(\"A🙂B\".startsWithAt(1, \"🙂\"), \"A🙂B\".startsWithAt(2, \"B\"), \"A🙂B\".startsWithAt(-1, \"A\"), \"A🙂B\".startsWithAt(3, \"\"));",
+"io.outputLine(\"if_x\".wordAt(0, \"if\"), \"if 🙂\".wordAt(0, \"if\"), \"a🙂b\".wordAt(0, \"a\"), \"if\".wordAt(0, \"if\"));",
+"emptyParts: List<String> = []; onePart: List<String> = [\"x\"]; manyParts: List<String> = [\"a\", \"b\", \"c\"];",
+"io.outputLine(emptyParts.join(\",\"), onePart.join(\",\"), manyParts.join(\"-\"));",
+"n0 := \"-9223372036854775808\".toInt(); n1 := \"+42\".toInt(); n2 := \"9223372036854775808\".toInt(); n3 := \"1a\".toInt();",
+"io.outputLine(n0.ok, n0.value, n1.ok, n1.value, n2.ok, n3.ok);",
+"padded := \" \\t\" + nbsp + \"hi\" + vtab + \"\\r\\n \";",
+"io.outputLine(\"[\" + padded.trimStart() + \"]\", \"[\" + padded.trimEnd() + \"]\", \"[\" + padded.trim() + \"]\");",
+"io.outputLine(\"A🙂bc\".endsWith(\"🙂bc\"), \"A🙂bc\".endsWith(\"xy\"), \"A🙂bc\".contains(\"🙂b\"), \"hi\".repeat(3), \"[\" + \"hi\".repeat(-2) + \"]\");",
+"io.outputLine(\"ÄÉΩABC_xyz🙂\".toLowerAscii(), \"5\".isDigit(), \"Q\".isAsciiLetter(), \"_\".isNameStart(), \"9\".isNameContinue(), nbsp.isWhitespace());",
+"io.outputLine(\" \\t\\r\\n🙂x\".skipSpaces(0), \"🙂  foo\".skipSpaces(1), \"abc\".skipSpaces(10), \"abc_12🙂\".skipName(0), \"🙂abc\".skipName(1), \"abc\".skipName(9));",
+"io.outputLine(\"A🙂B🙂C\".indexOf(\"🙂\", 0), \"A🙂B🙂C\".indexOf(\"🙂\", 2), \"A🙂B\".indexOf(\"\", -1), \"A🙂B\".indexOf(\"\", 3), \"A🙂B\".indexOf(\"\", 4));"
 ].join("\n");
 
 itDef := compileCheckVariant(intTextSrc, "main.lts", emptyList(), "int/text default");
@@ -412,34 +412,34 @@ test.check("itPure omits wordAt", not itPure.code.contains("function lite$textWo
 test.check("itPure omits trim", not itPure.code.contains("function lite$textTrim("));
 test.check("itPure omits skipWhile", not itPure.code.contains("function lite$textSkipWhile("));
 
-itIntPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/int=pure"], "core/int=pure");
+itIntPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "type/int=pure"], "type/int=pure");
 test.checkText("itIntPure matches", itPure.stdout, itIntPure.stdout);
 test.check("itIntPure omits String(lite_value)", not itIntPure.code.contains("String(lite_value)"));
 test.check("itIntPure keeps wordAt", itIntPure.code.contains("function lite$textWordAt("));
 
-itWordPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/text:String.wordAt=pure"], "core/text:String.wordAt=pure");
+itWordPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "type/string:String.wordAt=pure"], "type/string:String.wordAt=pure");
 test.checkText("itWordPure matches", itPure.stdout, itWordPure.stdout);
 test.check("itWordPure omits wordAt", not itWordPure.code.contains("function lite$textWordAt("));
 test.check("itWordPure keeps startsWithAt", itWordPure.code.contains("function lite$textStartsWithAt("));
 
-itIdxPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/text:String.indexOf=pure"], "core/text:String.indexOf=pure");
+itIdxPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "type/string:String.indexOf=pure"], "type/string:String.indexOf=pure");
 test.checkText("itIdxPure matches", itPure.stdout, itIdxPure.stdout);
 
-itJoinPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "core/list:List.join=pure"], "core/list:List.join=pure");
+itJoinPure := compileCheckVariant(intTextSrc, "main.lts", ["--builtin-mode", "type/list:List.join=pure"], "type/list:List.join=pure");
 test.checkText("itJoinPure matches", itPure.stdout, itJoinPure.stdout);
 
 cryptoParitySrc := [
-    "crypto := import \"core/crypto\";",
-    "io := import \"core/io\";",
-    "io.outputLine(crypto.isValidBase64(\"\"), crypto.isValidBase64(\"AEH/\"), crypto.isValidBase64(\"YQ==\"), crypto.isValidBase64(\"Y===\"), crypto.isValidBase64(\"====\"), crypto.isValidBase64(\"YW Jj\"));",
-    "io.outputLine(crypto.isValidHex(\"\"), crypto.isValidHex(\"0041ff\"), crypto.isValidHex(\"ABCDEF\"), crypto.isValidHex(\"abc\"), crypto.isValidHex(\"00gg\"));",
-    "raw: List<Int> = [0, 65, 255];",
-    "b64 := crypto.base64Encode(raw);",
-    "hex := crypto.hexEncode(raw);",
-    "io.outputLine(b64, crypto.base64Decode(b64), hex, crypto.hexDecode(hex), crypto.hexDecode(\"00FF\"));",
-    "key: List<Int> = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];",
-    "longKey := crypto.base64Decode(\"QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5\");",
-    "io.outputLine(crypto.hmacSha256Bytes(key, raw), crypto.hmacSha256Bytes(longKey, raw));"
+"crypto := import \"core/crypto\";",
+"io := import \"core/io\";",
+"io.outputLine(crypto.isValidBase64(\"\"), crypto.isValidBase64(\"AEH/\"), crypto.isValidBase64(\"YQ==\"), crypto.isValidBase64(\"Y===\"), crypto.isValidBase64(\"====\"), crypto.isValidBase64(\"YW Jj\"));",
+"io.outputLine(crypto.isValidHex(\"\"), crypto.isValidHex(\"0041ff\"), crypto.isValidHex(\"ABCDEF\"), crypto.isValidHex(\"abc\"), crypto.isValidHex(\"00gg\"));",
+"raw: List<Int> = [0, 65, 255];",
+"b64 := crypto.base64Encode(raw);",
+"hex := crypto.hexEncode(raw);",
+"io.outputLine(b64, crypto.base64Decode(b64), hex, crypto.hexDecode(hex), crypto.hexDecode(\"00FF\"));",
+"key: List<Int> = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];",
+"longKey := crypto.base64Decode(\"QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5\");",
+"io.outputLine(crypto.hmacSha256Bytes(key, raw), crypto.hmacSha256Bytes(longKey, raw));"
 ].join("\n");
 
 crDef := compileCheckVariant(cryptoParitySrc, "main.lts", emptyList(), "crypto default");
@@ -457,12 +457,12 @@ test.checkText("crDecPure matches", crPure.stdout, crDecPure.stdout);
 test.check("crDecPure keeps encode", crDecPure.code.contains("function lite$cryptoEncodeBytes("));
 
 cryptoFaults: List<(lbl: String, stmt: String, err: String)> = [
-    (lbl = "invalid base64Decode", stmt = "crypto.base64Decode(\"Y===\")", err = "invalid base64 input"),
-    (lbl = "invalid hexDecode", stmt = "crypto.hexDecode(\"0g\")", err = "invalid hex input"),
-    (lbl = "out-of-range base64Encode", stmt = "crypto.base64Encode([256])", err = "byte value outside 0..255: 256"),
-    (lbl = "out-of-range hexEncode", stmt = "crypto.hexEncode([-1])", err = "byte value outside 0..255: -1"),
-    (lbl = "out-of-range hmac key", stmt = "crypto.hmacSha256Bytes([256], [1])", err = "byte value outside 0..255: 256"),
-    (lbl = "out-of-range hmac data", stmt = "crypto.hmacSha256Bytes([1], [256])", err = "byte value outside 0..255: 256")
+(lbl = "invalid base64Decode", stmt = "crypto.base64Decode(\"Y===\")", err = "invalid base64 input"),
+(lbl = "invalid hexDecode", stmt = "crypto.hexDecode(\"0g\")", err = "invalid hex input"),
+(lbl = "out-of-range base64Encode", stmt = "crypto.base64Encode([256])", err = "byte value outside 0..255: 256"),
+(lbl = "out-of-range hexEncode", stmt = "crypto.hexEncode([-1])", err = "byte value outside 0..255: -1"),
+(lbl = "out-of-range hmac key", stmt = "crypto.hmacSha256Bytes([256], [1])", err = "byte value outside 0..255: 256"),
+(lbl = "out-of-range hmac data", stmt = "crypto.hmacSha256Bytes([1], [256])", err = "byte value outside 0..255: 256")
 ];
 loop cryptoFaults as cf {
     fSrc := "crypto := import \"core/crypto\";\nio := import \"core/io\";\n{ _ := " + cf.stmt + "; } finally { io.outputLine(\"cleaned\"); };";
@@ -478,10 +478,10 @@ loop cryptoFaults as cf {
 }
 
 textBounds: List<(lbl: String, stmt: String)> = [
-    (lbl = "neg skipSpaces empty", stmt = "\"\".skipSpaces(-1)"),
-    (lbl = "neg skipSpaces non-empty", stmt = "\"  a\".skipSpaces(-1)"),
-    (lbl = "neg skipName empty", stmt = "\"\".skipName(-1)"),
-    (lbl = "neg skipName non-empty", stmt = "\"abc\".skipName(-1)")
+(lbl = "neg skipSpaces empty", stmt = "\"\".skipSpaces(-1)"),
+(lbl = "neg skipSpaces non-empty", stmt = "\"  a\".skipSpaces(-1)"),
+(lbl = "neg skipName empty", stmt = "\"\".skipName(-1)"),
+(lbl = "neg skipName non-empty", stmt = "\"abc\".skipName(-1)")
 ];
 loop textBounds as tb {
     bSrc := "io := import \"core/io\";\n{ _ := " + tb.stmt + "; } finally { io.outputLine(\"cleaned\"); };";

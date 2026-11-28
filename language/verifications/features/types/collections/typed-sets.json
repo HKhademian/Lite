@@ -8,7 +8,7 @@
   "features": [
     "feature.types.collections.typed-sets"
   ],
-  "guideline": "Checks zero-initialized mut Set<T>, core/set add/has/remove/size intrinsics, deduplication, and independent value snapshots.",
+  "guideline": "Checks zero-initialized mut Set<T>, type/set add/has/remove/size intrinsics, deduplication, and independent value snapshots.",
   "cases": [
     {
       "name": "set-ops-and-snapshot",

@@ -1,4 +1,4 @@
-/* Word frequency counter using Map<String, Int> and core/map lookups. */
+/* Word frequency counter using Map<String, Int> and type/map lookups. */
 io := import "core/io";
 
 words := ["lite", "map", "lite", "code", "map", "lite"];

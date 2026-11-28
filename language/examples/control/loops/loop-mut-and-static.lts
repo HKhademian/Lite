@@ -1,7 +1,7 @@
 /* Example: In-place loop mut, contextual .static() calls, do { ... } blocks, if pattern bindings, and dependent defaults. */
 
 io := import "core/io";
-opt := import "core/option";
+opt := import "type/option";
 rnd := import "math/random";
 
 Span := record {

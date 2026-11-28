@@ -17,7 +17,7 @@ cComp := selC.path;
 /* 1. Map, filter, filter-map, early break (bare + payload), empty, all-skipped, contributed zero, .count/.value suffixes */
 basicProg :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
+"list := import \"type/list\";\n" +
 "Direction := enum { Up; Down; };\n" +
 "nums := [1, 2, 3, 4, 5, 6];\n" +
 "doubled := loop [1, 2, 3, 4] { .item * 2 }.collected;\n" +

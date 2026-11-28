@@ -1,8 +1,8 @@
 /** Shared component release stream parsing, SemVer validation, and readiness profile helpers. */
 
 fs := import "core/file";
-text := import "core/text";
-list := import "core/list";
+text := import "type/string";
+list := import "type/list";
 path := import "core/path";
 json := import "data/json";
 

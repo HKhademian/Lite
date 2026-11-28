@@ -35,9 +35,9 @@ compileAndRunCSanitized := fn(cCode: String, cc: String): compilerTest.RunOutput
     ccOut := path.join(workDir, "cc.stdout");
     ccErr := path.join(workDir, "cc.stderr");
     ccArgs: List<String> = [
-        "-std=c11", "-Wall", "-Wextra", "-Werror",
-        "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", "-fno-omit-frame-pointer", "-g",
-        cPath, "-o", exePath, "-lm"
+    "-std=c11", "-Wall", "-Wextra", "-Werror",
+    "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", "-fno-omit-frame-pointer", "-g",
+    cPath, "-o", exePath, "-lm"
     ];
     ccRes := proc.runBytes(cc, ccArgs, workDir, emptyEnv, 30000, emptyBytes, ccOut, ccErr);
     test.check("compileAndRunCSanitized cc error: " + ccRes.error, ccRes.error == "");
@@ -158,8 +158,8 @@ test.checkInt("-O2 -fdebug-info C compiles cleanly", 0, debugCO2Dbg.status);
 /* 3. List.uncheckedGet/Set and Array.uncheckedGet/Set (byte-aligned AND bit-packed [Bool; 10] / [Int4; 6]). */
 uncheckedValidSrc :=
 "io := import \"core/io\";\n" +
-"lists := import \"core/list\";\n" +
-"arrs := import \"core/array\";\n" +
+"lists := import \"type/list\";\n" +
+"arrs := import \"type/array\";\n" +
 "mut xs: List<Int> = [10, 20, 30];\n" +
 "mut xs.uncheckedSet(1, 77);\n" +
 "mut arr: [Int; 4] = [1, 2, 3, 4];\n" +
@@ -190,14 +190,14 @@ test.check("-O2 TS uncheckedGet/Set omits BoundPanic", not noUnchIdxTs.stdout.co
 
 listOobUnchSrc :=
 "io := import \"core/io\";\n" +
-"_ := import \"core/list\";\n" +
+"_ := import \"type/list\";\n" +
 "xs: List<Int> = [1, 2];\n" +
 "io.outputLine(xs.uncheckedGet(5).toText());\n";
 checkFault("List.uncheckedGet OOB faults under -fcheck-unchecked", listOobUnchSrc, ["-O1", "-fcheck-unchecked"], "BoundPanic");
 
 bitsOobUnchSrc :=
 "io := import \"core/io\";\n" +
-"_ := import \"core/array\";\n" +
+"_ := import \"type/array\";\n" +
 "bits: [Bool; 10] = [false; 10];\n" +
 "io.outputLine(bits.uncheckedGet(10).toText());\n";
 checkFault("[Bool; 10].uncheckedGet OOB faults under -O0", bitsOobUnchSrc, ["-O0"], "BoundPanic");
@@ -246,8 +246,8 @@ checkFault("Float64.uncheckedFma Inf faults under -fcheck-unchecked", ufmaNanSrc
 /* 5. All 18 Soft Builtins: full 4-way (TS, C11) x (builtin, pure) parity + --sanitize + fault parity. */
 softAllSrc :=
 "io := import \"core/io\";\n" +
-"_ := import \"core/int\";\n" +
-"lists := import \"core/list\";\n" +
+"_ := import \"type/int\";\n" +
+"lists := import \"type/list\";\n" +
 "z32: UInt32 = 0;\n" +
 "o32: UInt32 = 1;\n" +
 "m32: UInt32 = 2147483648;\n" +
@@ -297,8 +297,8 @@ expectedSoftAll :=
 "18446744073709551615:true:18446744073709551615:true:0:false|" +
 "1:9:20:30:40:6:1:3:-1\n";
 
-builtinModes: List<String> = ["--builtin-mode=core/int=builtin", "--builtin-mode=core/list=builtin"];
-pureModes: List<String> = ["--builtin-mode=core/int=pure", "--builtin-mode=core/list=pure"];
+builtinModes: List<String> = ["--builtin-mode=type/int=builtin", "--builtin-mode=type/list=builtin"];
+pureModes: List<String> = ["--builtin-mode=type/int=pure", "--builtin-mode=type/list=pure"];
 checkParity("soft builtins builtin mode", softAllSrc, builtinModes, expectedSoftAll);
 checkParity("soft builtins pure mode", softAllSrc, pureModes, expectedSoftAll);
 
@@ -311,21 +311,21 @@ test.checkText("soft builtins --sanitize stdout", expectedSoftAll, sanSoftRun.st
 /* Soft builtin fault parity across builtin vs pure modes */
 absMinSrc :=
 "io := import \"core/io\";\n" +
-"_ := import \"core/int\";\n" +
+"_ := import \"type/int\";\n" +
 "m := -9223372036854775807 - 1;\n" +
 "io.outputLine(Int.abs(m).toText());\n";
 checkFault("Int.abs(Int.min) builtin faults", absMinSrc, builtinModes, "ArithmeticPanic");
 checkFault("Int.abs(Int.min) pure faults", absMinSrc, pureModes, "ArithmeticPanic");
 
 fillOobSrc :=
-"_ := import \"core/list\";\n" +
+"_ := import \"type/list\";\n" +
 "mut buf: List<UInt8> = [1, 2, 3];\n" +
 "List.fillBytes(mut buf, 2, 2, 0);\n";
 checkFault("List.fillBytes OOB builtin faults", fillOobSrc, builtinModes, "BoundPanic");
 checkFault("List.fillBytes OOB pure faults", fillOobSrc, pureModes, "BoundPanic");
 
 copyOobSrc :=
-"_ := import \"core/list\";\n" +
+"_ := import \"type/list\";\n" +
 "mut dst: List<UInt8> = [1, 2, 3];\n" +
 "src: List<UInt8> = [4, 5];\n" +
 "List.copyBytes(mut dst, 1, src, 1, 2);\n";

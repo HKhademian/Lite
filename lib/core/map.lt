@@ -1,3 +1,0 @@
-/* Temporary compatibility barrel forwarding to `type/map` during Phase 2 migration. */
-
-pub { Map } := import "type/map";

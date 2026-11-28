@@ -1,4 +1,4 @@
-/* End-to-end C11 execution tests for Phase C5b: Map<K, V> and Set<T> literals, indexing, core/map & core/set intrinsics, value-copy, loops, and output formatting. */
+/* End-to-end C11 execution tests for Phase C5b: Map<K, V> and Set<T> literals, indexing, type/map & type/set intrinsics, value-copy, loops, and output formatting. */
 
 test := import "core/test";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
@@ -60,23 +60,23 @@ if ccInfo.available {
     test.check("c map missing key panic msg: " + cPanic.stderr, cPanic.stderr.contains("BoundPanic: map key not found"));
 
     tombSrc := "io := import \"core/io\";\n" +
-        "text := import \"core/text\";\n" +
-        "mut m: Map<String, Int>;\n" +
-        "mut m.set(\"a\", 1); mut m.set(\"b\", 2); mut m.set(\"c\", 3); mut m.set(\"d\", 4);\n" +
-        "snap := m;\n" +
-        "_r1 := mut m.remove(\"a\"); _r2 := mut m.remove(\"c\");\n" +
-        "mut m.set(\"a\", 10);\n" +
-        "var sum := 0; loop m as e { sum += e.value; }\n" +
-        "io.outputLine(m.keys().join(\",\"), snap.size(), sum);\n" +
-        "mut s: Set<String>;\n" +
-        "mut s.add(\"x\"); mut s.add(\"y\"); mut s.add(\"z\");\n" +
-        "_rs := mut s.remove(\"x\"); mut s.add(\"x\");\n" +
-        "mut lv: List<String> = []; loop s as v { mut lv.pushBack(v); }\n" +
-        "io.outputLine(lv.join(\",\"));\n" +
-        "mut bigM: Map<Int, Int>; mut bigS: Set<Int>;\n" +
-        "loop 0..5000 as i { mut bigM.set(i, i * 2); mut bigS.add(i); }\n" +
-        "loop 0..4995 as i { _dm := mut bigM.remove(i); _ds := mut bigS.remove(i); }\n" +
-        "io.outputLine(bigM.size(), bigS.size(), bigM.getOr(4999, -1), bigS.has(4999), bigS.has(100));\n";
+    "text := import \"type/string\";\n" +
+    "mut m: Map<String, Int>;\n" +
+    "mut m.set(\"a\", 1); mut m.set(\"b\", 2); mut m.set(\"c\", 3); mut m.set(\"d\", 4);\n" +
+    "snap := m;\n" +
+    "_r1 := mut m.remove(\"a\"); _r2 := mut m.remove(\"c\");\n" +
+    "mut m.set(\"a\", 10);\n" +
+    "var sum := 0; loop m as e { sum += e.value; }\n" +
+    "io.outputLine(m.keys().join(\",\"), snap.size(), sum);\n" +
+    "mut s: Set<String>;\n" +
+    "mut s.add(\"x\"); mut s.add(\"y\"); mut s.add(\"z\");\n" +
+    "_rs := mut s.remove(\"x\"); mut s.add(\"x\");\n" +
+    "mut lv: List<String> = []; loop s as v { mut lv.pushBack(v); }\n" +
+    "io.outputLine(lv.join(\",\"));\n" +
+    "mut bigM: Map<Int, Int>; mut bigS: Set<Int>;\n" +
+    "loop 0..5000 as i { mut bigM.set(i, i * 2); mut bigS.add(i); }\n" +
+    "loop 0..4995 as i { _dm := mut bigM.remove(i); _ds := mut bigS.remove(i); }\n" +
+    "io.outputLine(bigM.size(), bigS.size(), bigM.getOr(4999, -1), bigS.has(4999), bigS.has(100));\n";
     tsTomb := compilerTest.compileCheckRunTs(root, tsComp, tombSrc, "");
     test.checkInt("ts tombstone parity status: " + tsTomb.stderr, 0, tsTomb.status);
     cTomb := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, tombSrc, "", "");

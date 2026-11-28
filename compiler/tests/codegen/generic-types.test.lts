@@ -90,8 +90,8 @@ coreSrc + "mut w: Wrap<Int> = cast(Box<Int> { value = 1 }); mut w.set(2);\n",
 /* Rebuild coreSrc cleanly without invalid field access inside distinct Wrap. */
 cleanCoreSrc :=
 "io := import \"core/io\";\n" +
-"map := import \"core/map\";\n" +
-"set := import \"core/set\";\n" +
+"map := import \"type/map\";\n" +
+"set := import \"type/set\";\n" +
 "\n" +
 "makeBox := fn<T: Type>(v: T): Box<T> {\n" +
 "    Box<T> { value = v }\n" +

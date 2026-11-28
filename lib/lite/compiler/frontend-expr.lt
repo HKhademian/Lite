@@ -1,9 +1,9 @@
 /** Expression, block, conditional, loop, call, and operator precedence parser and lowering for TS and C targets. */
 
-listLib := import "core/list";
+listLib := import "type/list";
 sourceLib := import "core/source";
 numeric := import "./numeric-literals";
-integer := import "core/int";
+integer := import "type/int";
 cLiteral := import "./c-literals";
 tsLiteral := import "./ts-literals";
 emitFmt := import "./emit-format";
@@ -22,7 +22,7 @@ infer := import "./frontend-inference";
 ctx := import "./frontend-context";
 sliceBorrows := import "./slice-borrows";
 comptimeEval := import "./comptime-eval";
-textLib := import "core/text";
+textLib := import "type/string";
 tb := import "core/text-builder";
 
 /** One parsed expression matching `frontend-ir.Parsed`. */
@@ -4013,7 +4013,7 @@ ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDe
     backing := types.enumBackingKind(enumKind);
     optInfo := types.resolveOptionTemplate(source, errPos, prefix, aliases);
     if not optInfo.ok {
-        syntax.failAt(source, errPos, prefix, types.enumDisplayName(enumKind) + ".from requires Option<T> to be in scope (import \"core/option\" or preload it)");
+        syntax.failAt(source, errPos, prefix, types.enumDisplayName(enumKind) + ".from requires Option<T> to be in scope (import \"type/option\" or preload it)");
     }
     mut optBindings: Map<String, String>;
     mut optBindings.set(optInfo.paramName, enumKind);
@@ -4168,7 +4168,7 @@ ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDe
     (kind = optKind, code = tsCode, intValue = 0, textValue = "", constant = false, next = closeParen)
 };
 
-/** Converts an arbitrary error value implementing `ToError` into `core/error.Error` on TS or C11. */
+/** Converts an arbitrary error value implementing `ToError` into `type/error.Error` on TS or C11. */
 buildToErrorConversion := fn(target: String, source: String, pos: Int, prefix: String, errKind: String, errCode: String, functions: List<FunctionInfo>): (ok: Bool, code: String) {
     imp := types.findToErrorImpl(target, errKind);
     if not imp.found { return (ok = false, code = ""); }
@@ -11685,7 +11685,7 @@ parseListIntrinsicCall := fn(target: String, source: String, start: Int, argOpen
     intValue = 0, textValue = "", constant = false, next = close)
 };
 
-/** Parses and lowers a `core/map` generic intrinsic call (`set`, `get`, `getOr`, `has`, `remove`, `size`, `clear`, `keys`, `values`). */
+/** Parses and lowers a `type/map` generic intrinsic call (`set`, `get`, `getOr`, `has`, `remove`, `size`, `clear`, `keys`, `values`). */
 parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName: String, opDisplay: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     if opName == "set" or opName == "remove" or opName == "clear" {
         grant := ctx.parseMapGrant(source, argOpen, prefix, locals, opDisplay);
@@ -11816,7 +11816,7 @@ parseMapIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName
     ctx.withMarkers((kind = vKind, code = code, intValue = 0, textValue = "", constant = false, next = close), markers)
 };
 
-/** Parses and lowers a `core/set` generic intrinsic call (`add`, `has`, `remove`, `size`, `clear`, `values`). */
+/** Parses and lowers a `type/set` generic intrinsic call (`add`, `has`, `remove`, `size`, `clear`, `values`). */
 parseSetIntrinsicCall := fn(target: String, source: String, argOpen: Int, opName: String, opDisplay: String, prefix: String, locals: List<Local>, functions: List<FunctionInfo>, params: List<String>, currentName: String, ctxs: List<ConstructCtx>, iifeDepth: Int, inferMode: Bool, aliases: List<AliasDecl>): Parsed {
     if opName == "add" or opName == "remove" or opName == "clear" {
         grant := ctx.parseSetGrant(source, argOpen, prefix, locals, opDisplay);

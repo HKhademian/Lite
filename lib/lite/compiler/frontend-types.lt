@@ -1,8 +1,8 @@
 /** Frontend canonical type-kind algebra, type/alias parsing, compatibility checks, TypeScript type formatting, and non-failing header pre-resolution. */
 
-integer := import "core/int";
-listLib := import "core/list";
-textLib := import "core/text";
+integer := import "type/int";
+listLib := import "type/list";
+textLib := import "type/string";
 numeric := import "./numeric-literals";
 tsLiteral := import "./ts-literals";
 ir := import "./frontend-ir";
@@ -15,8 +15,8 @@ tb := import "core/text-builder";
 /** One transparent type alias matching `frontend-ir.AliasDecl`. */
 AliasDecl := alias (name: String, target: String, at: Int, end: Int, depth: Int);
 
-/** Canonical built-in `core/error.Error` record kind used by `T!` and implicit error values. */
-pub CORE_ERROR_KIND := "Record<core/error#0#Error;kind:String,message:String,code:Int>";
+/** Canonical built-in `type/error.Error` record kind used by `T!` and implicit error values. */
+pub CORE_ERROR_KIND := "Record<type/error#0#Error;kind:String,message:String,code:Int>";
 
 /** True for type-constructor names that later slices will admit, not scalar, flat named-tuple or List aliases yet. */
 pub isUnsupportedAliasTarget := fn(name: String): Bool {
@@ -687,16 +687,16 @@ pub builtinFamilyFromAlias := fn(aliases: List<AliasDecl>, name: String): String
     ""
 };
 
-/** Reports that a builtin generic family requires importing its owning `core/` module. */
+/** Reports that a builtin generic family requires importing its owning `type/` module. */
 pub failMissingBuiltinFamily := fn(source: String, position: Int, prefix: String, name: String): Unit {
     modSpec := if name == "Rc" {
-        "core/rc"
+        "type/rc"
     } else if name == "Slice" {
-        "core/slice"
+        "type/slice"
     } else if name == "Simd" or name == "SimdNative" {
-        "core/simd"
+        "type/simd"
     } else {
-        "core/soa"
+        "type/soa"
     };
     shortAlias := if name == "Rc" {
         "rc"
@@ -1743,24 +1743,24 @@ pub nominalTypeArgs := fn(kind: String): List<String> {
 
 /** Returns the built-in nominal type family owned by core/type `moduleIdentity` when it matches `typeName`, else `""`. */
 pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String {
-    if (moduleIdentity == "lite.core.list.v1" or moduleIdentity == "lite.type.list.v1") and typeName == "List" { return "List"; }
-    if (moduleIdentity == "lite.core.map.v1" or moduleIdentity == "lite.type.map.v1") and typeName == "Map" { return "Map"; }
-    if (moduleIdentity == "lite.core.set.v1" or moduleIdentity == "lite.type.set.v1") and typeName == "Set" { return "Set"; }
-    if (moduleIdentity == "lite.core.rc.v1" or moduleIdentity == "lite.type.rc.v1") and typeName == "Rc" { return "Rc"; }
-    if (moduleIdentity == "lite.core.slice.v1" or moduleIdentity == "lite.type.slice.v1") and typeName == "Slice" { return "Slice"; }
-    if (moduleIdentity == "lite.core.simd.v1" or moduleIdentity == "lite.type.simd.v1") and typeName == "Simd" { return "Simd"; }
-    if (moduleIdentity == "lite.core.soa.v1" or moduleIdentity == "lite.type.soa.v1") and typeName == "SoA" { return "SoA"; }
-    if (moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.type.string.v1") and typeName == "String" { return "String"; }
-    if (moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.type.bool.v1") and typeName == "Bool" { return "Bool"; }
-    if (moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.type.float.v1") {
+    if moduleIdentity == "lite.type.list.v1" and typeName == "List" { return "List"; }
+    if moduleIdentity == "lite.type.map.v1" and typeName == "Map" { return "Map"; }
+    if moduleIdentity == "lite.type.set.v1" and typeName == "Set" { return "Set"; }
+    if moduleIdentity == "lite.type.rc.v1" and typeName == "Rc" { return "Rc"; }
+    if moduleIdentity == "lite.type.slice.v1" and typeName == "Slice" { return "Slice"; }
+    if moduleIdentity == "lite.type.simd.v1" and typeName == "Simd" { return "Simd"; }
+    if moduleIdentity == "lite.type.soa.v1" and typeName == "SoA" { return "SoA"; }
+    if moduleIdentity == "lite.type.string.v1" and typeName == "String" { return "String"; }
+    if moduleIdentity == "lite.type.bool.v1" and typeName == "Bool" { return "Bool"; }
+    if moduleIdentity == "lite.type.float.v1" {
         if typeName == "Float64" or typeName == "Double" { return "Float"; }
         if numeric.isFloatKind(typeName) { return typeName; }
     }
-    if (moduleIdentity == "lite.core.int.v1" or moduleIdentity == "lite.type.int.v1") {
+    if moduleIdentity == "lite.type.int.v1" {
         if typeName == "Int64" { return "Int"; }
         if numeric.isIntKind(typeName) { return typeName; }
     }
-    if (moduleIdentity == "lite.core.array.v1" or moduleIdentity == "lite.type.array.v1") and typeName == "Array" { return "Array"; }
+    if moduleIdentity == "lite.type.array.v1" and typeName == "Array" { return "Array"; }
     ""
 };
 
@@ -4608,13 +4608,10 @@ pub findMatchingImplsByKey := fn(actualKind: String, reqKey: String): List<(impl
     out
 };
 
-/** Finds a visible conformance from `actualKind` to `type/error.ToError` (or legacy `core/error.ToError`) on `target`. */
+/** Finds a visible conformance from `actualKind` to `type/error.ToError` on `target`. */
 pub findToErrorImpl := fn(target: String, actualKind: String): (found: Bool, implIdx: Int, bindingsEncoded: String) {
     typeModKey := if target == ir.TARGET_TS { "lib$type$error" } else { "lib_s_type_s_error" };
-    typeRes := findImplForConcrete(actualKind, "Iface<" + typeModKey + "#ToError>");
-    if typeRes.found { return typeRes; }
-    legacyModKey := if target == ir.TARGET_TS { "lib$core$error" } else { "lib_s_core_s_error" };
-    findImplForConcrete(actualKind, "Iface<" + legacyModKey + "#ToError>")
+    findImplForConcrete(actualKind, "Iface<" + typeModKey + "#ToError>")
 };
 
 /** True when concrete `actualKind` satisfies closed-union, single-interface, or multi-bound `All<...>` constraint `constraintKind`. */
@@ -7943,10 +7940,9 @@ pub collectRecordTargetWithAttrs := fn(source: String, bracePos: Int, prefix: St
         mut pairsBuf.append(encodeLengthPrefixedText(typesList[idx]));
         idx = idx + 1;
     }
-    recHeader := if (moduleIdentity == "lite.type.error.v1" or moduleIdentity == "lib$type$error" or moduleIdentity == "lib_s_type_s_error" or
-    moduleIdentity == "lite.core.error.v1" or moduleIdentity == "lib$core$error" or moduleIdentity == "lib_s_core_s_error") and
+    recHeader := if (moduleIdentity == "lite.type.error.v1" or moduleIdentity == "lib$type$error" or moduleIdentity == "lib_s_type_s_error") and
     recName == "Error" and effectiveAttrSuffix == "" {
-        "core/error#0#Error"
+        "type/error#0#Error"
     } else {
         moduleIdentity + "#" + declAt.toText() + "#" + recName + effectiveAttrSuffix
     };

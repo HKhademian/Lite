@@ -78,10 +78,10 @@
           "file": "language/showcases/foundations/strings/strings-and-unicode.lts",
           "helperFiles": [],
           "manifest": "language/verifications/artifacts/showcases/foundations/strings/strings-and-unicode.json",
-          "summary": "Applies string escapes, core/text trimming and code-point indexing, and scalar and strict UTF-8 round-trips.",
+          "summary": "Applies string escapes, type/string trimming and code-point indexing, and scalar and strict UTF-8 round-trips.",
           "teaches": [
             "String",
-            "core/text"
+            "type/string"
           ],
           "features": [
             "feature.text.strings.concatenation",
@@ -279,15 +279,15 @@
         },
         {
           "id": "showcase.types.collections.typed-maps-and-lookup",
-          "title": "Typed Maps Map<K, V>, core/map Lookups, and Value Snapshots",
+          "title": "Typed Maps Map<K, V>, type/map Lookups, and Value Snapshots",
           "file": "language/showcases/types/collections/typed-maps-and-lookup.lts",
           "helperFiles": [],
           "manifest": "language/verifications/artifacts/showcases/types/collections/typed-maps-and-lookup.json",
-          "summary": "Demonstrates zero-initialized mut Map<K, V>, indexed reads/writes, core/map get/getOr/remove/keys, independent value snapshots, and entry iteration.",
+          "summary": "Demonstrates zero-initialized mut Map<K, V>, indexed reads/writes, type/map get/getOr/remove/keys, independent value snapshots, and entry iteration.",
           "teaches": [
             "Map<K, V>",
             "mut Map",
-            "core/map",
+            "type/map",
             "m[k] = v",
             "loop m as entry"
           ],
@@ -304,15 +304,15 @@
         },
         {
           "id": "showcase.types.collections.typed-sets-and-membership",
-          "title": "Typed Sets Set<T>, core/set Membership, and Value Snapshots",
+          "title": "Typed Sets Set<T>, type/set Membership, and Value Snapshots",
           "file": "language/showcases/types/collections/typed-sets-and-membership.lts",
           "helperFiles": [],
           "manifest": "language/verifications/artifacts/showcases/types/collections/typed-sets-and-membership.json",
-          "summary": "Demonstrates zero-initialized mut Set<T>, core/set add/has/remove/size, independent value snapshots, and insertion-order element iteration.",
+          "summary": "Demonstrates zero-initialized mut Set<T>, type/set add/has/remove/size, independent value snapshots, and insertion-order element iteration.",
           "teaches": [
             "Set<T>",
             "mut Set",
-            "core/set",
+            "type/set",
             "loop s as item"
           ],
           "features": [
@@ -617,7 +617,7 @@
           "teaches": [
             "core/path",
             "core/file",
-            "core/text",
+            "type/string",
             "finally cleanup"
           ],
           "features": [

@@ -1,7 +1,7 @@
 /** Forward declaration pre-scanning, non-failing root expression type inference, loop marker resolution, and import clause collection. */
 
-listLib := import "core/list";
-textLib := import "core/text";
+listLib := import "type/list";
+textLib := import "type/string";
 tb := import "core/text-builder";
 numeric := import "./numeric-literals";
 ir := import "./frontend-ir";

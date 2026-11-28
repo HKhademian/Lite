@@ -4,7 +4,7 @@ crypto := import "core/crypto";
 io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
-text := import "core/text";
+text := import "type/string";
 path := import "core/path";
 json := import "data/json";
 

@@ -1,8 +1,8 @@
 /** Expression/block context tracking, branch/loop state joining, constant folding, value conversions, and loop-field resolution. */
 
-integer := import "core/int";
-listLib := import "core/list";
-textLib := import "core/text";
+integer := import "type/int";
+listLib := import "type/list";
+textLib := import "type/string";
 tb := import "core/text-builder";
 numeric := import "./numeric-literals";
 ir := import "./frontend-ir";
@@ -1224,7 +1224,7 @@ pub parseMapGrant := fn(source: String, open: Int, prefix: String, locals: List<
     (runtime = entry.runtime, kind = entry.kind, next = nameEnd)
 };
 
-/** Parses the `mut name` grant after a `core/set` mutating call opener. */
+/** Parses the `mut name` grant after a `type/set` mutating call opener. */
 pub parseSetGrant := fn(source: String, open: Int, prefix: String, locals: List<Local>, operation: String): (runtime: String, kind: String, next: Int) {
     cursor := syntax.skipTrivia(source, open + 1, prefix);
     if not source.wordAt(cursor, "mut") {

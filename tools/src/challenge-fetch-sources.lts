@@ -2,7 +2,7 @@
 
 fs := import "core/file";
 io := import "core/io";
-list := import "core/list";
+list := import "type/list";
 path := import "core/path";
 cfetch := import "./internal/challenge-fetch";
 project := import "./internal/project";

@@ -133,12 +133,12 @@ usesMapIndex := fn(calls: String): Bool {
     usesBuiltin(calls, "mapAt")
 }
 
-/** True when any emitted item calls the shared `core/map` `get` helper. */
+/** True when any emitted item calls the shared `type/map` `get` helper. */
 usesMapGet := fn(calls: String): Bool {
     usesBuiltin(calls, "mapGet")
 }
 
-/** True when any emitted item calls the shared `core/map` `getOr` helper. */
+/** True when any emitted item calls the shared `type/map` `getOr` helper. */
 usesMapGetOr := fn(calls: String): Bool {
     usesBuiltin(calls, "mapGetOr")
 }
@@ -3157,7 +3157,7 @@ emitVmArenaHelpers := fn(calls: String): Unit {
     outLine("");
 };
 
-/** Emits the single-lookup `core/map` `get` helper. */
+/** Emits the single-lookup `type/map` `get` helper. */
 emitMapGetHelper := fn(): Unit {
     outLine("function lite$mapGet<K, V>(entries: ReadonlyMap<K, V>, key: K, zero: V): { found: boolean; value: V } {");
     outLine("    const value = entries.get(key);");
@@ -3166,7 +3166,7 @@ emitMapGetHelper := fn(): Unit {
     outLine("");
 }
 
-/** Emits the single-lookup `core/map` `getOr` helper. */
+/** Emits the single-lookup `type/map` `getOr` helper. */
 emitMapGetOrHelper := fn(): Unit {
     outLine("function lite$mapGetOr<K, V>(entries: ReadonlyMap<K, V>, key: K, fallback: V): V {");
     outLine("    const value = entries.get(key);");
@@ -3205,7 +3205,7 @@ emitListUncheckedSetHelper := fn(config: optCfg.OptConfig): Unit {
     outLine("");
 }
 
-/** Emits the checked list-slice helper used by `core/list.slice`. */
+/** Emits the checked list-slice helper used by `type/list.slice`. */
 emitListSliceHelper := fn(): Unit {
     outLine("function lite$listSlice<T>(items: readonly T[], start: bigint, end: bigint, at: number): T[] {");
     outLine("    const len = BigInt(items.length);");

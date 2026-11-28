@@ -3,7 +3,7 @@
 fs := import "core/file";
 path := import "core/path";
 test := import "core/test";
-text := import "core/text";
+text := import "type/string";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
 compilerTest := import "../../../tools/src/internal/compiler-test";
 project := import "../../../tools/src/internal/project";
@@ -21,7 +21,7 @@ cComp := selC.path;
 /* TS runtime helpers preserve checked Int64, text and list semantics */
 rtOkSrc :=
 "io := import \"core/io\";\n" +
-"integer := import \"core/int\";\n" +
+"integer := import \"type/int\";\n" +
 "negSeven := -7;\n" +
 "two := 2;\n" +
 "fortyTwo := 42;\n" +
@@ -34,9 +34,9 @@ rtOkSrc :=
 compilerTest.assertCompileRunTs(root, tsComp, "runtime helpers ok", rtOkSrc, "5 -1 -42 -3 -1 -42 -9223372036854775808\n2 🙂 🙂\n2 3\n");
 
 rtFaultSrc: List<String> = [
-"integer := import \"core/int\"; io := import \"core/io\"; x := integer.intMax; io.outputLine(x + 1);",
+"integer := import \"type/int\"; io := import \"core/io\"; x := integer.intMax; io.outputLine(x + 1);",
 "x := 0; io := import \"core/io\"; io.outputLine(1 / x);",
-"integer := import \"core/int\"; io := import \"core/io\"; x := integer.intMin; io.outputLine(-x);",
+"integer := import \"type/int\"; io := import \"core/io\"; x := integer.intMin; io.outputLine(-x);",
 "io := import \"core/io\"; io.outputLine(\"a\".at(9));",
 ];
 rtFaultPat: List<String> = ["ArithmeticPanic:", "ArithmeticPanic:", "ArithmeticPanic:", "BoundPanic:"];
@@ -164,7 +164,7 @@ loop ibi < 13 {
 cArgsCompile := compilerTest.compileStdin(root, cComp, "io := import \"core/io\"; io.outputLine(io.inputArgs());\n", "");
 test.checkInt("C compiles inputArgs: " + cArgsCompile.stderr, 0, cArgsCompile.status);
 
-/* C compiler executes core/text UTF-8 primitives and String padding natively */
+/* C compiler executes type/string UTF-8 primitives and String padding natively */
 ccTextInfo := compilerTest.probeCc();
 cTextParitySrc := "io := import \"core/io\"; s := \"سلام🙂ab\"; io.outputLine(s.length(), s.at(0), s.at(4), s.slice(1, 5), s.indexOf(\"🙂\", 0), 42.toText().padLeft(4));\n";
 tsTextRes := compilerTest.compileCheckRunTs(root, tsComp, cTextParitySrc, "");
@@ -194,34 +194,34 @@ if ccTextInfo.available {
 /* C compiler executes io.errorLine, io.exit (flushing stdout), and core/diag.fail natively */
 ccInfo := compilerTest.probeCc();
 diagExitCases: List<(label: String, src: String, expectedStatus: Int, expectedOut: String, expectedErr: String)> = [
-    (
-        label = "C io.errorLine",
-        src = "io := import \"core/io\"; io.output(\"ok\"); io.errorLine(\"x\");\n",
-        expectedStatus = 0,
-        expectedOut = "ok",
-        expectedErr = "x\n"
-    ),
-    (
-        label = "C io.exit flushes stdout",
-        src = "io := import \"core/io\"; io.output(\"before\"); io.exit(7);\n",
-        expectedStatus = 7,
-        expectedOut = "before",
-        expectedErr = ""
-    ),
-    (
-        label = "C io.exit in fn return and value if",
-        src = "io := import \"core/io\"; pick := fn(flag: Bool): Int { if flag { io.exit(3); } return 42; }; x := if false { io.exit(9) } else { pick(false) }; io.outputLine(x);\n",
-        expectedStatus = 0,
-        expectedOut = "42\n",
-        expectedErr = ""
-    ),
-    (
-        label = "C core/diag.fail",
-        src = "d := import \"core/diag\"; d.fail(\"p\", \"boom\");\n",
-        expectedStatus = 2,
-        expectedOut = "",
-        expectedErr = "p:boom\n"
-    )
+(
+label = "C io.errorLine",
+src = "io := import \"core/io\"; io.output(\"ok\"); io.errorLine(\"x\");\n",
+expectedStatus = 0,
+expectedOut = "ok",
+expectedErr = "x\n"
+),
+(
+label = "C io.exit flushes stdout",
+src = "io := import \"core/io\"; io.output(\"before\"); io.exit(7);\n",
+expectedStatus = 7,
+expectedOut = "before",
+expectedErr = ""
+),
+(
+label = "C io.exit in fn return and value if",
+src = "io := import \"core/io\"; pick := fn(flag: Bool): Int { if flag { io.exit(3); } return 42; }; x := if false { io.exit(9) } else { pick(false) }; io.outputLine(x);\n",
+expectedStatus = 0,
+expectedOut = "42\n",
+expectedErr = ""
+),
+(
+label = "C core/diag.fail",
+src = "d := import \"core/diag\"; d.fail(\"p\", \"boom\");\n",
+expectedStatus = 2,
+expectedOut = "",
+expectedErr = "p:boom\n"
+)
 ];
 loop diagExitCases as dc {
     cCompiled := compilerTest.compileStdin(root, cComp, dc.src, "");

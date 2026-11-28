@@ -1,9 +1,9 @@
 /* Int64 boundaries, overflow/division/bounds faults, inequality, comparison chains, and C argument output order tests migrated from compiler/tests/host.test.ts. */
 
-integer := import "core/int";
+integer := import "type/int";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
+text := import "type/string";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
 compilerTest := import "../../../tools/src/internal/compiler-test";
 project := import "../../../tools/src/internal/project";
@@ -43,19 +43,19 @@ buildSelectorBranches := fn(varName: String, items: List<String>, wrapOutput: Bo
 
 int64BoundaryProgram := fn(division: Bool): String {
     values: List<Int> = [
-        integer.intMin,
-        integer.intMin + 1,
-        -3037000500,
-        -3037000499,
-        -2,
-        -1,
-        0,
-        1,
-        2,
-        3037000499,
-        3037000500,
-        integer.intMax - 1,
-        integer.intMax
+    integer.intMin,
+    integer.intMin + 1,
+    -3037000500,
+    -3037000499,
+    -2,
+    -1,
+    0,
+    1,
+    2,
+    3037000499,
+    3037000500,
+    integer.intMax - 1,
+    integer.intMax
     ];
     mut lines: List<String> = ["io := import \"core/io\";"];
     var idx := 0;
@@ -92,30 +92,30 @@ int64BoundaryProgram := fn(division: Bool): String {
 };
 
 overflowingInt64Expressions: List<String> = [
-    "hi + 1",
-    "lo + -1",
-    "hi - -1",
-    "lo - 1",
-    "hi * 2",
-    "lo * 2",
-    "-lo",
-    "lo * -1",
-    "(hi + 1) - 1",
-    "(hi + 1) + (lo - 1)",
-    "(lo - 1) + (hi + 1)"
+"hi + 1",
+"lo + -1",
+"hi - -1",
+"lo - 1",
+"hi * 2",
+"lo * 2",
+"-lo",
+"lo * -1",
+"(hi + 1) - 1",
+"(hi + 1) + (lo - 1)",
+"(lo - 1) + (hi + 1)"
 ];
 
 divisionFaultExpressions: List<String> = [
-    "hi / zero",
-    "hi % zero",
-    "hi :/ zero",
-    "hi :% zero",
-    "lo / -1",
-    "lo :/ -1",
-    "(hi / zero) + (lo % zero)",
-    "(lo % zero) + (hi / zero)",
-    "(hi + 1) / zero",
-    "lo / (hi + 1)"
+"hi / zero",
+"hi % zero",
+"hi :/ zero",
+"hi :% zero",
+"lo / -1",
+"lo :/ -1",
+"(hi / zero) + (lo % zero)",
+"(lo % zero) + (hi / zero)",
+"(hi + 1) / zero",
+"lo / (hi + 1)"
 ];
 
 int64FaultProgram := fn(expr: String): String {
@@ -163,20 +163,20 @@ if not skipHeavy {
 
 /* generated text/list bounds faults preserve exact positions, output and operand effects */
 boundCases: List<(body: String, stdout: String, panic: String)> = [
-    (body = "io.outputLine(\"🙂x\".at(-1));", stdout = "before\n", panic = "BoundPanic: textAt index outside text"),
-    (body = "io.outputLine(\"🙂x\".at(2));", stdout = "before\n", panic = "BoundPanic: textAt index outside text"),
-    (body = "io.outputLine(\"\".at(0));", stdout = "before\n", panic = "BoundPanic: textAt index outside text"),
-    (body = "io.outputLine(\"🙂ab\".slice(-1, 1));", stdout = "before\n", panic = "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)"),
-    (body = "io.outputLine(\"🙂ab\".slice(2, 1));", stdout = "before\n", panic = "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)"),
-    (body = "io.outputLine(\"🙂ab\".slice(0, 4));", stdout = "before\n", panic = "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)"),
-    (body = "values: List<Int> = [7]; io.outputLine(values[-1]);", stdout = "before\n", panic = "BoundPanic: list index outside its extent"),
-    (body = "values: List<Int> = [7]; io.outputLine(values[/* سلام */ 1]);", stdout = "before\n", panic = "BoundPanic: list index outside its extent"),
-    (body = "values: List<Int> = [7]; io.outputLine(values[9223372036854775807]);", stdout = "before\n", panic = "BoundPanic: list index outside its extent"),
-    (body = "mut values: List<Int> = []; io.outputLine(mut values.popBack());", stdout = "before\n", panic = "BoundPanic: pop_back on an empty list"),
-    (body = "mut values: List<Int> = [7]; io.outputLine(mut values.popBack()); mut values.popBack();", stdout = "before\n7\n", panic = "BoundPanic: pop_back on an empty list"),
-    (body = "io.outputLine(\"prefix\", \"x\".at(1));", stdout = "before\n", panic = "BoundPanic: textAt index outside text"),
-    (body = "var n := 0; loop n < 2 { io.outputLine(\"x\".at(n)); n = n + 1; }", stdout = "before\nx\n", panic = "BoundPanic: textAt index outside text"),
-    (body = "io.outputLine(\"x\".slice(0, 2), \"\".at(0));", stdout = "before\n", panic = "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)")
+(body = "io.outputLine(\"🙂x\".at(-1));", stdout = "before\n", panic = "BoundPanic: textAt index outside text"),
+(body = "io.outputLine(\"🙂x\".at(2));", stdout = "before\n", panic = "BoundPanic: textAt index outside text"),
+(body = "io.outputLine(\"\".at(0));", stdout = "before\n", panic = "BoundPanic: textAt index outside text"),
+(body = "io.outputLine(\"🙂ab\".slice(-1, 1));", stdout = "before\n", panic = "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)"),
+(body = "io.outputLine(\"🙂ab\".slice(2, 1));", stdout = "before\n", panic = "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)"),
+(body = "io.outputLine(\"🙂ab\".slice(0, 4));", stdout = "before\n", panic = "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)"),
+(body = "values: List<Int> = [7]; io.outputLine(values[-1]);", stdout = "before\n", panic = "BoundPanic: list index outside its extent"),
+(body = "values: List<Int> = [7]; io.outputLine(values[/* سلام */ 1]);", stdout = "before\n", panic = "BoundPanic: list index outside its extent"),
+(body = "values: List<Int> = [7]; io.outputLine(values[9223372036854775807]);", stdout = "before\n", panic = "BoundPanic: list index outside its extent"),
+(body = "mut values: List<Int> = []; io.outputLine(mut values.popBack());", stdout = "before\n", panic = "BoundPanic: pop_back on an empty list"),
+(body = "mut values: List<Int> = [7]; io.outputLine(mut values.popBack()); mut values.popBack();", stdout = "before\n7\n", panic = "BoundPanic: pop_back on an empty list"),
+(body = "io.outputLine(\"prefix\", \"x\".at(1));", stdout = "before\n", panic = "BoundPanic: textAt index outside text"),
+(body = "var n := 0; loop n < 2 { io.outputLine(\"x\".at(n)); n = n + 1; }", stdout = "before\nx\n", panic = "BoundPanic: textAt index outside text"),
+(body = "io.outputLine(\"x\".slice(0, 2), \"\".at(0));", stdout = "before\n", panic = "BoundPanic: textSlice requires 0 <= start <= end <= textLength(text)")
 ];
 mut boundBodies: List<String> = [];
 loop boundCases as bc {
@@ -212,20 +212,20 @@ compilerTest.assertCompileRunTs(root, tsComp, "bounds-valid", boundsValid, "🙂
 
 /* inequality stays distinct from assignment and tuple fields in grouping and function tails */
 ineqCommon: List<String> = [
-    "io := import \"core/io\"; value := \"x\"; io.outputLine((value =!= \"\"), (((value =!= \"x\"))), (value == \"x\"));",
-    "io := import \"core/io\"; var x := 2; io.outputLine((x =!= 1), (x =!= 2), (x == 2));",
-    "io := import \"core/io\"; var flag := true; io.outputLine((flag =!= false), (flag =!= true));",
-    "io := import \"core/io\"; var x := 1; x = 3; io.outputLine((x =!= 2), x);",
-    "io := import \"core/io\"; value := \"\"; io.outputLine(not (value =!= \"\"));",
-    "io := import \"core/io\"; value := \"x\"; io.outputLine((value /* left */ =!= /* right */ \"\"));",
-    "io := import \"core/io\"; var x := 0; loop x < 2 { if (x =!= 1) { io.outputLine(x); } x = x + 1; }"
+"io := import \"core/io\"; value := \"x\"; io.outputLine((value =!= \"\"), (((value =!= \"x\"))), (value == \"x\"));",
+"io := import \"core/io\"; var x := 2; io.outputLine((x =!= 1), (x =!= 2), (x == 2));",
+"io := import \"core/io\"; var flag := true; io.outputLine((flag =!= false), (flag =!= true));",
+"io := import \"core/io\"; var x := 1; x = 3; io.outputLine((x =!= 2), x);",
+"io := import \"core/io\"; value := \"\"; io.outputLine(not (value =!= \"\"));",
+"io := import \"core/io\"; value := \"x\"; io.outputLine((value /* left */ =!= /* right */ \"\"));",
+"io := import \"core/io\"; var x := 0; loop x < 2 { if (x =!= 1) { io.outputLine(x); } x = x + 1; }"
 ];
 ineqTsOnly: List<String> = [
-    "io := import \"core/io\"; different := fn(value: String): Bool { value =!= \"\" } io.outputLine(different(\"x\"), different(\"\"));",
-    "io := import \"core/io\"; different := fn(value: Int): Bool { value =!= 0 } io.outputLine(different(0), different(1));",
-    "io := import \"core/io\"; different := fn(value: Bool): Bool { value =!= false } io.outputLine(different(true), different(false));",
-    "io := import \"core/io\"; different := fn(value: String): Bool { (value =!= \"\") } io.outputLine(different(\"x\"));",
-    "io := import \"core/io\"; point := (value = 7); io.outputLine(point.value);"
+"io := import \"core/io\"; different := fn(value: String): Bool { value =!= \"\" } io.outputLine(different(\"x\"), different(\"\"));",
+"io := import \"core/io\"; different := fn(value: Int): Bool { value =!= 0 } io.outputLine(different(0), different(1));",
+"io := import \"core/io\"; different := fn(value: Bool): Bool { value =!= false } io.outputLine(different(true), different(false));",
+"io := import \"core/io\"; different := fn(value: String): Bool { (value =!= \"\") } io.outputLine(different(\"x\"));",
+"io := import \"core/io\"; point := (value = 7); io.outputLine(point.value);"
 ];
 loop ineqCommon as src {
     assertBothTargetsMatch("ineq-common", src, "", "", 0);
@@ -235,11 +235,11 @@ loop ineqTsOnly as src {
     compilerTest.assertRunMatchesContract(contractsJson, "ineq-ts", src, "", 0, actualTs);
 }
 ineqBad: List<String> = [
-    "value := \"x\"; io.outputLine((value =!=));",
-    "value := \"x\"; io.outputLine((value =!= 1));",
-    "x := 1; x = 2;",
-    "point := (value =);",
-    "var x := 1; x === 2;"
+"value := \"x\"; io.outputLine((value =!=));",
+"value := \"x\"; io.outputLine((value =!= 1));",
+"x := 1; x = 2;",
+"point := (value =);",
+"var x := 1; x === 2;"
 ];
 loop ineqBad as badTail {
     badSrc := "io := import \"core/io\"; io.outputLine(\"before\"); " + badTail;
@@ -254,20 +254,20 @@ loop ineqBad as badTail {
 
 /* constant integer faults execute only when reached, preserving short-circuit and operand order */
 constFaultExprs: List<String> = [
-    "1 / 0",
-    "1 % 0",
-    "1 :/ 0",
-    "1 :% 0",
-    "9223372036854775807 + 1",
-    "-9223372036854775808 - 1",
-    "9223372036854775807 * 2",
-    "-(-9223372036854775808)",
-    "-9223372036854775808 / -1",
-    "-9223372036854775808 :/ -1",
-    "(9223372036854775807 + 1) - 1",
-    "0 * (9223372036854775807 + 1)",
-    "(9223372036854775807 + 1) / (1 / 0)",
-    "(1 / 0) + (9223372036854775807 + 1)"
+"1 / 0",
+"1 % 0",
+"1 :/ 0",
+"1 :% 0",
+"9223372036854775807 + 1",
+"-9223372036854775808 - 1",
+"9223372036854775807 * 2",
+"-(-9223372036854775808)",
+"-9223372036854775808 / -1",
+"-9223372036854775808 :/ -1",
+"(9223372036854775807 + 1) - 1",
+"0 * (9223372036854775807 + 1)",
+"(9223372036854775807 + 1) / (1 / 0)",
+"(1 / 0) + (9223372036854775807 + 1)"
 ];
 mut skippedLines: List<String> = ["io := import \"core/io\";"];
 loop constFaultExprs as expr {
@@ -299,18 +299,18 @@ loop constFaultExprs as expr {
 compilerTest.cleanupPreparedTs(prepConstFaults);
 
 constMiscValid: List<String> = [
-    "io := import \"core/io\"; unused := fn(): Int { 1 / 0 } io.outputLine(7);",
-    "io := import \"core/io\"; value := if true { 5 } else { 1 / 0 }; io.outputLine(value);",
-    "io := import \"core/io\"; value := if false { 1 / 0 } else { 5 }; io.outputLine(value);"
+"io := import \"core/io\"; unused := fn(): Int { 1 / 0 } io.outputLine(7);",
+"io := import \"core/io\"; value := if true { 5 } else { 1 / 0 }; io.outputLine(value);",
+"io := import \"core/io\"; value := if false { 1 / 0 } else { 5 }; io.outputLine(value);"
 ];
 loop constMiscValid as src {
     runM := compilerTest.compileCheckRunTs(root, tsComp, src, "");
     compilerTest.assertRunMatchesContract(contractsJson, "const-misc-valid", src, "", 0, runM);
 }
 constMiscBad: List<String> = [
-    "io := import \"core/io\"; if false { io.outputLine(missing); }",
-    "io := import \"core/io\"; io.outputLine(false and (\"x\" + 1 > 0));",
-    "io := import \"core/io\"; if false { io.outputLine(9223372036854775808); }"
+"io := import \"core/io\"; if false { io.outputLine(missing); }",
+"io := import \"core/io\"; io.outputLine(false and (\"x\" + 1 > 0));",
+"io := import \"core/io\"; if false { io.outputLine(9223372036854775808); }"
 ];
 loop constMiscBad as badSrc {
     _rmb := compilerTest.assertContractStatus(contractsJson, "const-misc-bad", badSrc, "", "", 1);
@@ -326,9 +326,9 @@ loop constMiscBad as badSrc {
 cmpOps: List<String> = ["==", "=!=", "<", "<!", "<=", "<!=", ">", ">!", ">=", ">!="];
 mut chainRows: List<String> = ["io := import \"core/io\"; var a := 0; var b := 0; var c := 0;"];
 cmpTriples: List<(a: Int, b: Int, c: Int)> = [
-    (a = -1, b = 0, c = 1),
-    (a = 1, b = 0, c = -1),
-    (a = 0, b = 0, c = 0)
+(a = -1, b = 0, c = 1),
+(a = 1, b = 0, c = -1),
+(a = 0, b = 0, c = 0)
 ];
 loop cmpTriples as tr {
     aTxt := tr.a.toText();
@@ -360,15 +360,15 @@ chainMatrix := chainRows.join("\n");
 assertBothTargetsMatch("cmp-chain-matrix", chainMatrix, "", "", 0);
 
 chainEffectCases: List<(src: String, stdin: String, status: Int)> = [
-    (src = "io := import \"core/io\"; touch := fn(n: Int): Int { io.outputLine(n); n } io.outputLine(touch(1) < touch(2) < touch(3)); io.outputLine(touch(3) < touch(2) < touch(1));", stdin = "", status = 0),
-    (src = "io := import \"core/io\"; touch := fn(): Unit { io.outputLine(\"unit\"); } io.outputLine(Unit == Unit == touch()); io.outputLine(Unit =!= Unit == touch());", stdin = "", status = 0),
-    (src = "io := import \"core/io\"; io.outputLine(\"x\" == \"y\" == io.inputLine(\"unreached: \"));", stdin = "", status = 0),
-    (src = "io := import \"core/io\"; io.outputLine(\"x\" == \"x\" == io.inputLine(\"Text: \"));", stdin = "x\n", status = 0),
-    (src = "io := import \"core/io\"; io.outputLine(io.inputFloat() == io.inputFloat() == io.inputFloat());", stdin = "1.5 1.5 1.5", status = 0),
-    (src = "io := import \"core/io\"; stop := fn(): Unit { io.exit(3); } io.outputLine(\"before\"); io.outputLine(Unit == Unit == stop());", stdin = "", status = 3),
-    (src = "io := import \"core/io\"; io.outputLine(io.inputInt() < io.inputInt() < io.inputInt()); io.outputLine(io.inputInt());", stdin = "3 2 1", status = 0),
-    (src = "io := import \"core/io\"; values: List<Int> = [1]; io.outputLine(1 > 2 < values[9]);", stdin = "", status = 0),
-    (src = "io := import \"core/io\"; values: List<Int> = [1]; io.outputLine(\"before\"); io.outputLine(0 < 1 < values[9]);", stdin = "", status = 1)
+(src = "io := import \"core/io\"; touch := fn(n: Int): Int { io.outputLine(n); n } io.outputLine(touch(1) < touch(2) < touch(3)); io.outputLine(touch(3) < touch(2) < touch(1));", stdin = "", status = 0),
+(src = "io := import \"core/io\"; touch := fn(): Unit { io.outputLine(\"unit\"); } io.outputLine(Unit == Unit == touch()); io.outputLine(Unit =!= Unit == touch());", stdin = "", status = 0),
+(src = "io := import \"core/io\"; io.outputLine(\"x\" == \"y\" == io.inputLine(\"unreached: \"));", stdin = "", status = 0),
+(src = "io := import \"core/io\"; io.outputLine(\"x\" == \"x\" == io.inputLine(\"Text: \"));", stdin = "x\n", status = 0),
+(src = "io := import \"core/io\"; io.outputLine(io.inputFloat() == io.inputFloat() == io.inputFloat());", stdin = "1.5 1.5 1.5", status = 0),
+(src = "io := import \"core/io\"; stop := fn(): Unit { io.exit(3); } io.outputLine(\"before\"); io.outputLine(Unit == Unit == stop());", stdin = "", status = 3),
+(src = "io := import \"core/io\"; io.outputLine(io.inputInt() < io.inputInt() < io.inputInt()); io.outputLine(io.inputInt());", stdin = "3 2 1", status = 0),
+(src = "io := import \"core/io\"; values: List<Int> = [1]; io.outputLine(1 > 2 < values[9]);", stdin = "", status = 0),
+(src = "io := import \"core/io\"; values: List<Int> = [1]; io.outputLine(\"before\"); io.outputLine(0 < 1 < values[9]);", stdin = "", status = 1)
 ];
 loop chainEffectCases as cec {
     runCe := compilerTest.compileCheckRunTsWithInput(root, tsComp, cec.src, "", cec.stdin, emptyArgs());
@@ -383,11 +383,11 @@ loop chainFaultExprs as expr {
 }
 
 chainBadCases: List<String> = [
-    "io := import \"core/io\"; io.outputLine(1 > 2 < \"bad\");",
-    "io := import \"core/io\"; io.outputLine(true < true < true);",
-    "io := import \"core/io\"; io.outputLine(1 < 2 < missing);",
-    "if 1 < 2",
-    "io := import \"core/io\"; io.outputLine(1 < 2 <);"
+"io := import \"core/io\"; io.outputLine(1 > 2 < \"bad\");",
+"io := import \"core/io\"; io.outputLine(true < true < true);",
+"io := import \"core/io\"; io.outputLine(1 < 2 < missing);",
+"if 1 < 2",
+"io := import \"core/io\"; io.outputLine(1 < 2 <);"
 ];
 loop chainBadCases as badSrc {
     _rcb := compilerTest.assertContractStatus(contractsJson, "cmp-chain-bad", badSrc, "", "", 1);
@@ -405,20 +405,20 @@ test.checkInt("cmp-chain c rejects Never inside Unit comparison", 2, cUnitExitCm
 if ccProbe.available {
     cOutPrefix := "io := import \"core/io\"; /* 🙂 */ var zero := 0; var maximum := 9223372036854775807;\r\n";
     cOutCases: List<(body: String, status: Int)> = [
-        (body = "io.outputLine(\"prefix\", 1 / zero);", status = 1),
-        (body = "io.output(\"prefix\", 1 / zero);", status = 1),
-        (body = "io.outputLine(\"prefix\", true, maximum + 1);", status = 1),
-        (body = "io.outputLine(Unit, 1 % zero);", status = 1),
-        (body = "io.outputLine(\"prefix\", 1 / zero, maximum + 1);", status = 1),
-        (body = "io.outputLine(\"prefix\", maximum + 1, 1 / zero);", status = 1),
-        (body = "io.outputLine(\"before\"); io.outputLine(\"prefix\", 1 :/ zero);", status = 1),
-        (body = "io.output(\"before\"); io.output(\"prefix\", 1 :% zero);", status = 1),
-        (body = "var n := 2; loop n >= 0 { io.outputLine(\"value\", 10 / n); n = n - 1; }", status = 1),
-        (body = "var text := \"value\"; io.outputLine(text + \"x\", 1 / zero);", status = 1),
-        (body = "io.outputLine(Unit, (), true, \"text\", 7);", status = 0),
-        (body = "io.outputLine(Unit); io.output(); io.outputLine(); io.output(\"x\", Unit); io.outputLine();", status = 0),
-        (body = "var lt_output_0 := 3; io.outputLine(lt_output_0, \"x\", true);", status = 0),
-        (body = "var n := 0; loop n < 2 { if n == 0 { io.output(\"a\", n); } else { io.outputLine(\"b\", n); } n = n + 1; }", status = 0)
+    (body = "io.outputLine(\"prefix\", 1 / zero);", status = 1),
+    (body = "io.output(\"prefix\", 1 / zero);", status = 1),
+    (body = "io.outputLine(\"prefix\", true, maximum + 1);", status = 1),
+    (body = "io.outputLine(Unit, 1 % zero);", status = 1),
+    (body = "io.outputLine(\"prefix\", 1 / zero, maximum + 1);", status = 1),
+    (body = "io.outputLine(\"prefix\", maximum + 1, 1 / zero);", status = 1),
+    (body = "io.outputLine(\"before\"); io.outputLine(\"prefix\", 1 :/ zero);", status = 1),
+    (body = "io.output(\"before\"); io.output(\"prefix\", 1 :% zero);", status = 1),
+    (body = "var n := 2; loop n >= 0 { io.outputLine(\"value\", 10 / n); n = n - 1; }", status = 1),
+    (body = "var text := \"value\"; io.outputLine(text + \"x\", 1 / zero);", status = 1),
+    (body = "io.outputLine(Unit, (), true, \"text\", 7);", status = 0),
+    (body = "io.outputLine(Unit); io.output(); io.outputLine(); io.output(\"x\", Unit); io.outputLine();", status = 0),
+    (body = "var lt_output_0 := 3; io.outputLine(lt_output_0, \"x\", true);", status = 0),
+    (body = "var n := 0; loop n < 2 { if n == 0 { io.output(\"a\", n); } else { io.outputLine(\"b\", n); } n = n + 1; }", status = 0)
     ];
     cOutName := "output سلام🙂.lts";
     loop cOutCases as oc {
@@ -430,10 +430,10 @@ if ccProbe.available {
 
 /* generated TS division family matches boundary values, fault positions and call effects */
 divValidCases: List<String> = [
-    int64BoundaryProgram(true),
-    "io := import \"core/io\"; var n := -9223372036854775808; io.outputLine(n % -1, n :% -1, -9223372036854775808 % -1);",
-    "io := import \"core/io\"; touch := fn(n: Int): Int { io.outputLine(\"arg\", n); n } io.outputLine(touch(-7) / touch(2), touch(-7) % touch(2), touch(-7) :/ touch(2), touch(-7) :% touch(2));",
-    "io := import \"core/io\"; var x := 1; var z := 0; var flag := false; io.outputLine(flag and (x / z > 0)); if flag { io.outputLine(x % z); }"
+int64BoundaryProgram(true),
+"io := import \"core/io\"; var n := -9223372036854775808; io.outputLine(n % -1, n :% -1, -9223372036854775808 % -1);",
+"io := import \"core/io\"; touch := fn(n: Int): Int { io.outputLine(\"arg\", n); n } io.outputLine(touch(-7) / touch(2), touch(-7) % touch(2), touch(-7) :/ touch(2), touch(-7) :% touch(2));",
+"io := import \"core/io\"; var x := 1; var z := 0; var flag := false; io.outputLine(flag and (x / z > 0)); if flag { io.outputLine(x % z); }"
 ];
 loop divValidCases as dSrc {
     runD := compilerTest.compileCheckRunTs(root, tsComp, dSrc, "");

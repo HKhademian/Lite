@@ -162,6 +162,7 @@ function isolatedCheckout(): string {
   const directory = mkdtempSync(join(tmpdir(), 'lite-t11-checkout-'));
   const dependencies = (['ts', 'c'] as const).flatMap(target => buildCompiler(target).dependencies);
   const toolSources = readdirSync(join(root, 'tools/src')).filter(f => f.endsWith('.lts')).map(f => `tools/src/${f}`);
+  const typeLibs = readdirSync(join(root, 'lib/type')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/type/${f}`);
   const coreLibs = readdirSync(join(root, 'lib/core')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/core/${f}`);
   const dataLibs = readdirSync(join(root, 'lib/data')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/data/${f}`);
   const externalLibs = readdirSync(join(root, 'lib/external')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/external/${f}`);
@@ -180,7 +181,7 @@ function isolatedCheckout(): string {
     'config/versions.json',
     'compiler/bootstrap/igniter', 'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/tsconfig.json',
-    ...dependencies, ...toolSources, ...coreLibs, ...dataLibs, ...externalLibs, ...gfxLibs, ...mediaLibs, ...uiLibs, ...mathLibs, ...liteLibs, ...liteInternalLibs, ...internalToolLibs, ...siteLibs,
+    ...dependencies, ...toolSources, ...typeLibs, ...coreLibs, ...dataLibs, ...externalLibs, ...gfxLibs, ...mediaLibs, ...uiLibs, ...mathLibs, ...liteLibs, ...liteInternalLibs, ...internalToolLibs, ...siteLibs,
   ]);
   for (const path of paths) {
     const destination = join(directory, path);
@@ -210,7 +211,7 @@ test('TS host rebuilds the Lite source graph and preserves output, diagnostics a
   assert.equal(built.builderSha256, seed.artifactSha256);
   assert.equal(built.artifactSha256, seed.artifactSha256);
   assert.ok(built.dependencies.includes('lib/lite/compiler/frontend.lt'));
-  assert.ok(built.dependencies.includes('lib/core/text.lt'));
+  assert.ok(built.dependencies.includes('lib/type/string.lt'));
   const reference = readFileSync(join(root, 'compiler/tests/references/generated/report-42.ts'));
   for (const name of [undefined, '', 'a b.lts', 'سلام🙂.lts', 'quote";\\\nname.lts']) {
     const input = name === undefined ? { text: 'io := import "core/io"; io.outputLine(42);' } : { text: 'io := import "core/io"; io.outputLine(42);', name };
@@ -290,13 +291,13 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
 test('selected compiler build exposes its imported source dependencies', () => {
   const selected = buildCompiler('ts');
   assert.deepEqual(selected.dependencies.slice(0, 6), [
-    'lib/lite/compiler/ts-root.lts', 'lib/$preload.lt', 'lib/core/option.lt', 'lib/core/slice.lt',
-    'lib/core/diag.lt', 'lib/core/io.lt',
+    'lib/lite/compiler/ts-root.lts', 'lib/$preload.lt', 'lib/type/option.lt', 'lib/type/slice.lt',
+    'lib/type/int.lt', 'lib/type/float.lt',
   ]);
-  assert.ok(selected.dependencies.includes('lib/core/int.lt'));
-  assert.ok(selected.dependencies.includes('lib/core/list.lt'));
-  assert.ok(selected.dependencies.includes('lib/core/set.lt'));
-  assert.ok(selected.dependencies.includes('lib/core/text.lt'));
+  assert.ok(selected.dependencies.includes('lib/type/int.lt'));
+  assert.ok(selected.dependencies.includes('lib/type/list.lt'));
+  assert.ok(selected.dependencies.includes('lib/type/set.lt'));
+  assert.ok(selected.dependencies.includes('lib/type/string.lt'));
   assert.ok(selected.dependencies.includes('lib/lite/compiler/driver-ts.lt'));
   assert.ok(selected.dependencies.includes('lib/lite/compiler/frontend.lt'));
   assert.ok(selected.dependencies.includes('lib/lite/compiler/host-fs.lt'));
@@ -394,8 +395,10 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     assert.deepEqual(provenance.dependencies, [
       'lib/lite/compiler/fixture-root.lts',
       'lib/$preload.lt',
-      'lib/core/option.lt',
-      'lib/core/slice.lt',
+      'lib/type/option.lt',
+      'lib/type/slice.lt',
+      'lib/type/int.lt',
+      'lib/type/float.lt',
       'lib/core/diag.lt',
       'lib/core/io.lt',
       'lib/lite/compiler/fixture-c.lts',
@@ -422,8 +425,10 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const expectedRemovedDeps = [
       'lib/lite/compiler/fixture-root.lts',
       'lib/$preload.lt',
-      'lib/core/option.lt',
-      'lib/core/slice.lt',
+      'lib/type/option.lt',
+      'lib/type/slice.lt',
+      'lib/type/int.lt',
+      'lib/type/float.lt',
       'lib/core/diag.lt',
       'lib/core/io.lt',
     ];
@@ -458,7 +463,7 @@ test('default verifier selects consumers after compiler changes and ignores inve
     const changedEnv = { ...env, PATH: directory + delimiter + env.PATH };
     // Supply a changed-file listing without editing compiler source or the real Git index.
     for (const path of ['tools/src/internal/compiler-build.lt', 'lib/lite/compiler/c-literals.lt', 'lib/lite/compiler/frontend.lt',
-      'compiler/manifests/c.json', 'lib/core/int.lt']) {
+      'compiler/manifests/c.json', 'lib/type/int.lt']) {
       writeFileSync(git, `#!/bin/sh\nprintf '%s\\n' ' M ${path}'\n`);
       chmodSync(git, 0o755);
       const result = spawnSync(join(root, 'bin/lite'), ['verify', '--no-cache', '--filter', 'features/numeric/integers/signed-arithmetic.json'], {

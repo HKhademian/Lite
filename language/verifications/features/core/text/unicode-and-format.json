@@ -8,7 +8,7 @@
   "features": [
     "feature.core.text.unicode-and-format"
   ],
-  "guideline": "Checks scalar code-point conversions, strict UTF-8 round-trips, invalid UTF-8 detection, and String text/integer padding via core/text.",
+  "guideline": "Checks scalar code-point conversions, strict UTF-8 round-trips, invalid UTF-8 detection, and String text/integer padding via type/string.",
   "targets": [
     "ts",
     "c"

@@ -16,118 +16,118 @@ cComp := selC.path;
 ccProbe := compilerTest.probeCc();
 
 simdSoaSrc := [
-    "io := import \"core/io\";",
-    "simd := import \"core/simd\";",
-    "soa := import \"core/soa\";",
-    "rc := import \"core/rc\";",
-    "opt := import \"core/option\";",
-    "Particle := record { x: Float32; y: Float32; vx: Float32; vy: Float32; };",
-    "Entity := record { name: String; tag: opt.Option<Int>; hp: rc.Rc<Int>; nums: List<Int>; };",
-    "stepParticles := fn(x: mut Slice<Float32>, y: mut Slice<Float32>, vx: Slice<Float32>, vy: Slice<Float32>, dt: Float32): Unit {",
-    "    n := x.length();",
-    "    var i := 0;",
-    "    loop i + 4 <= n {",
-    "        px := simd.Float32x4.load(x, i);",
-    "        py := simd.Float32x4.load(y, i);",
-    "        pvx := simd.Float32x4.load(vx, i);",
-    "        pvy := simd.Float32x4.load(vy, i);",
-    "        dtv := simd.Float32x4.splat(dt);",
-    "        nx := pvx.fma(dtv, px);",
-    "        ny := pvy.fma(dtv, py);",
-    "        nx.store(mut x, i);",
-    "        ny.store(mut y, i);",
-    "        i += 4;",
-    "    }",
-    "    loop i < n {",
-    "        x[i] = vx[i].fma(dt, x[i]);",
-    "        y[i] = vy[i].fma(dt, y[i]);",
-    "        i += 1;",
-    "    }",
-    "};",
-    "probeTypes := fn(a: simd.Float32x4, b: simd.Float32x8, c: simd.UInt8x16, p: soa.SoA<Particle>): Bool {",
-    "    a.lanes() == 4 and b.lanes() == 8 and c.lanes() == 16 and p.length() >= 0",
-    "};",
-    "main := fn(): Unit {",
-    "    /* 1. Native lane counts + scalar vs Simd float/int parity */",
-    "    nl := [simd.Simd.nativeLanes<Int8>(), simd.Simd.nativeLanes<Int16>(), simd.Simd.nativeLanes<Float32>(), simd.Simd.nativeLanes<Float>()];",
-    "    a4 := simd.Simd.fromArray([cast<Float32>(1.5), cast<Float32>(-2.25), cast<Float32>(4.0), cast<Float32>(0.5)]);",
-    "    b4 := simd.Simd.fromArray([cast<Float32>(0.25), cast<Float32>(3.0), cast<Float32>(2.0), cast<Float32>(-1.5)]);",
-    "    c4 := simd.Float32x4.splat(cast<Float32>(1.0));",
-    "    fmaSimd := a4.fma(b4, c4);",
-    "    fmaArr := fmaSimd.toArray();",
-    "    a4a := a4.toArray();",
-    "    b4a := b4.toArray();",
-    "    var fmaMatch := true;",
-    "    loop 0..4 as i {",
-    "        sc := a4a[i].fma(b4a[i], cast<Float32>(1.0));",
-    "        if fmaArr[i] =!= sc { fmaMatch = false; }",
-    "    }",
-    "    /* Non-associative left-to-right float64 reduction check */",
-    "    d2 := simd.Simd<Float, 4>.fromArray([1e16, 1.0, -1e16, 0.25]);",
-    "    dSum := d2.reduceAdd();",
-    "    dScalar := (((1e16 + 1.0) + (-1e16)) + 0.25);",
-    "    /* Checked int, wrapping int, bitwise, select, neg, abs, sqrt, min/max, withLane, dot */",
-    "    iv := simd.SimdNative<Int32>.fromArray([cast<Int32>(2147483647), cast<Int32>(-10), cast<Int32>(5), cast<Int32>(8)]);",
-    "    wv := simd.Simd<Int32, 4>.splat(cast<Int32>(1));",
-    "    wrapped := iv.wrappingAdd(wv);",
-    "    xored := iv.bitXor(wv).bitNot();",
-    "    s32a := simd.Simd.fromArray([cast<Int32>(3), cast<Int32>(-7), cast<Int32>(10), cast<Int32>(-2)]);",
-    "    s32b := simd.Simd.fromArray([cast<Int32>(4), cast<Int32>(2), cast<Int32>(-1), cast<Int32>(9)]);",
-    "    absOk := s32a.abs().toArray()[1] == cast<Int32>(7) and s32a.abs().neg()[3] == cast<Int32>(-2);",
-    "    dotVal := s32a.dot(s32b);",
-    "    blended := s32a.select(s32b, [true, false, true, false]);",
-    "    replaced := s32a.withLane(2, cast<Int32>(99));",
-    "    u16 := simd.UInt8x16.splat(cast<UInt8>(250)).wrappingAdd(simd.UInt8x16.splat(cast<UInt8>(10)));",
-    "    uSum := u16.wrappingReduceAdd();",
-    "    sq := a4.abs().sqrt();",
-    "    /* Wide 256-bit and 64-bit integer lanes */",
-    "    f8 := simd.Float32x8.splat(cast<Float32>(1.25));",
-    "    f8Dot := f8.dot(simd.Float32x8.splat(cast<Float32>(2.0)));",
-    "    i64 := simd.Int64x2.fromArray([1000000000000, -500000000000]);",
-    "    u64 := simd.UInt64x2.splat(cast<UInt64>(7)).wrappingMul(simd.UInt64x2.splat(cast<UInt64>(6)));",
-    "    eqOk := a4 == a4.add(simd.Float32x4.splat(cast<Float32>(0.0))) and a4 =!= b4;",
-    "    io.outputLine(\"simd:\", nl, fmaMatch, dSum == dScalar, dSum, wrapped[0], xored[1], absOk, dotVal, blended.toArray(), replaced[2], u16[0], uSum, sq[2], f8Dot, i64.reduceAdd(), u64.wrappingReduceAdd(), eqOk);",
-    "",
-    "    /* 2. POD SoA<Particle> + SIMD column integration + restrict + reserve/swapRemove/pop */",
-    "    var mut particles: soa.SoA<Particle> = soa.SoA.withCapacity(4);",
-    "    loop 0..6 as idx {",
-    "        mut particles.pushBack(Particle { x = cast<Float32>(idx), y = cast<Float32>(idx * 2), vx = cast<Float32>(1.0), vy = cast<Float32>(-0.5) });",
-    "    }",
-    "    stepParticles(mut particles.x, mut particles.y, particles.vx, particles.vy, cast<Float32>(0.5));",
-    "    mut particles.reserve(16);",
-    "    remP := mut particles.swapRemove(1);",
-    "    popP := mut particles.popBack();",
-    "    particles[0] = Particle { x = cast<Float32>(9.0), y = cast<Float32>(8.0), vx = cast<Float32>(0.0), vy = cast<Float32>(0.0) };",
-    "    p0 := particles[0];",
-    "    pU := particles.uncheckedGet(1);",
-    "    okProbe := probeTypes(a4, f8, u16, particles);",
-    "    io.outputLine(\"podSoa:\", okProbe, particles.length(), p0.x, p0.y, remP.x, popP.y, pU.x);",
-    "",
-    "    /* 3. Owning SoA<Entity> with String + Rc + List + Option + capacity growth + copy + swapRemove + clear */",
-    "    shared := rc.Rc.create(77);",
-    "    {",
-    "        mut ents: soa.SoA<Entity> = soa.SoA.create();",
-    "        loop 0..10 as k {",
-    "            mut ents.pushBack(Entity { name = \"ent-\" + k.toText() + \"-long-label\", tag = if k % 2 == 0 { .Some(k * 10) } else { .None }, hp = shared.share(), nums = [k, k + 1] });",
-    "        }",
-    "        mut entsCopy: soa.SoA<Entity> = ents;",
-    "        rmEnt := mut ents.swapRemove(2);",
-    "        mut entsCopy.uncheckedSet(0, Entity { name = \"updated-0\", tag = .Some(999), hp = shared.share(), nums = [42] });",
-    "        g0 := entsCopy[0];",
-    "        gLast := ents.get(ents.length() - 1);",
-    "        /* Slice reading over owning column while another column could be distinct */",
-    "        {",
-    "            names := ents.name;",
-    "            io.outputLine(\"ownCols:\", names.length(), names[0], names[2]);",
-    "        }",
-    "        io.outputLine(\"ownSoa:\", g0.hp.get(), ents.length(), rmEnt.name, g0.name, g0.nums, gLast.tag.unwrapOr(-1), entsCopy.length());",
-    "        mut ents.clear();",
-    "        mut entsCopy.clear();",
-    "        io.outputLine(\"ownAfterClear:\", shared.get(), ents.isEmpty(), entsCopy.length());",
-    "    }",
-    "    io.outputLine(\"afterScopeRc:\", shared.get());",
-    "};",
-    "main();"
+"io := import \"core/io\";",
+"simd := import \"type/simd\";",
+"soa := import \"type/soa\";",
+"rc := import \"type/rc\";",
+"opt := import \"type/option\";",
+"Particle := record { x: Float32; y: Float32; vx: Float32; vy: Float32; };",
+"Entity := record { name: String; tag: opt.Option<Int>; hp: rc.Rc<Int>; nums: List<Int>; };",
+"stepParticles := fn(x: mut Slice<Float32>, y: mut Slice<Float32>, vx: Slice<Float32>, vy: Slice<Float32>, dt: Float32): Unit {",
+"    n := x.length();",
+"    var i := 0;",
+"    loop i + 4 <= n {",
+"        px := simd.Float32x4.load(x, i);",
+"        py := simd.Float32x4.load(y, i);",
+"        pvx := simd.Float32x4.load(vx, i);",
+"        pvy := simd.Float32x4.load(vy, i);",
+"        dtv := simd.Float32x4.splat(dt);",
+"        nx := pvx.fma(dtv, px);",
+"        ny := pvy.fma(dtv, py);",
+"        nx.store(mut x, i);",
+"        ny.store(mut y, i);",
+"        i += 4;",
+"    }",
+"    loop i < n {",
+"        x[i] = vx[i].fma(dt, x[i]);",
+"        y[i] = vy[i].fma(dt, y[i]);",
+"        i += 1;",
+"    }",
+"};",
+"probeTypes := fn(a: simd.Float32x4, b: simd.Float32x8, c: simd.UInt8x16, p: soa.SoA<Particle>): Bool {",
+"    a.lanes() == 4 and b.lanes() == 8 and c.lanes() == 16 and p.length() >= 0",
+"};",
+"main := fn(): Unit {",
+"    /* 1. Native lane counts + scalar vs Simd float/int parity */",
+"    nl := [simd.Simd.nativeLanes<Int8>(), simd.Simd.nativeLanes<Int16>(), simd.Simd.nativeLanes<Float32>(), simd.Simd.nativeLanes<Float>()];",
+"    a4 := simd.Simd.fromArray([cast<Float32>(1.5), cast<Float32>(-2.25), cast<Float32>(4.0), cast<Float32>(0.5)]);",
+"    b4 := simd.Simd.fromArray([cast<Float32>(0.25), cast<Float32>(3.0), cast<Float32>(2.0), cast<Float32>(-1.5)]);",
+"    c4 := simd.Float32x4.splat(cast<Float32>(1.0));",
+"    fmaSimd := a4.fma(b4, c4);",
+"    fmaArr := fmaSimd.toArray();",
+"    a4a := a4.toArray();",
+"    b4a := b4.toArray();",
+"    var fmaMatch := true;",
+"    loop 0..4 as i {",
+"        sc := a4a[i].fma(b4a[i], cast<Float32>(1.0));",
+"        if fmaArr[i] =!= sc { fmaMatch = false; }",
+"    }",
+"    /* Non-associative left-to-right float64 reduction check */",
+"    d2 := simd.Simd<Float, 4>.fromArray([1e16, 1.0, -1e16, 0.25]);",
+"    dSum := d2.reduceAdd();",
+"    dScalar := (((1e16 + 1.0) + (-1e16)) + 0.25);",
+"    /* Checked int, wrapping int, bitwise, select, neg, abs, sqrt, min/max, withLane, dot */",
+"    iv := simd.SimdNative<Int32>.fromArray([cast<Int32>(2147483647), cast<Int32>(-10), cast<Int32>(5), cast<Int32>(8)]);",
+"    wv := simd.Simd<Int32, 4>.splat(cast<Int32>(1));",
+"    wrapped := iv.wrappingAdd(wv);",
+"    xored := iv.bitXor(wv).bitNot();",
+"    s32a := simd.Simd.fromArray([cast<Int32>(3), cast<Int32>(-7), cast<Int32>(10), cast<Int32>(-2)]);",
+"    s32b := simd.Simd.fromArray([cast<Int32>(4), cast<Int32>(2), cast<Int32>(-1), cast<Int32>(9)]);",
+"    absOk := s32a.abs().toArray()[1] == cast<Int32>(7) and s32a.abs().neg()[3] == cast<Int32>(-2);",
+"    dotVal := s32a.dot(s32b);",
+"    blended := s32a.select(s32b, [true, false, true, false]);",
+"    replaced := s32a.withLane(2, cast<Int32>(99));",
+"    u16 := simd.UInt8x16.splat(cast<UInt8>(250)).wrappingAdd(simd.UInt8x16.splat(cast<UInt8>(10)));",
+"    uSum := u16.wrappingReduceAdd();",
+"    sq := a4.abs().sqrt();",
+"    /* Wide 256-bit and 64-bit integer lanes */",
+"    f8 := simd.Float32x8.splat(cast<Float32>(1.25));",
+"    f8Dot := f8.dot(simd.Float32x8.splat(cast<Float32>(2.0)));",
+"    i64 := simd.Int64x2.fromArray([1000000000000, -500000000000]);",
+"    u64 := simd.UInt64x2.splat(cast<UInt64>(7)).wrappingMul(simd.UInt64x2.splat(cast<UInt64>(6)));",
+"    eqOk := a4 == a4.add(simd.Float32x4.splat(cast<Float32>(0.0))) and a4 =!= b4;",
+"    io.outputLine(\"simd:\", nl, fmaMatch, dSum == dScalar, dSum, wrapped[0], xored[1], absOk, dotVal, blended.toArray(), replaced[2], u16[0], uSum, sq[2], f8Dot, i64.reduceAdd(), u64.wrappingReduceAdd(), eqOk);",
+"",
+"    /* 2. POD SoA<Particle> + SIMD column integration + restrict + reserve/swapRemove/pop */",
+"    var mut particles: soa.SoA<Particle> = soa.SoA.withCapacity(4);",
+"    loop 0..6 as idx {",
+"        mut particles.pushBack(Particle { x = cast<Float32>(idx), y = cast<Float32>(idx * 2), vx = cast<Float32>(1.0), vy = cast<Float32>(-0.5) });",
+"    }",
+"    stepParticles(mut particles.x, mut particles.y, particles.vx, particles.vy, cast<Float32>(0.5));",
+"    mut particles.reserve(16);",
+"    remP := mut particles.swapRemove(1);",
+"    popP := mut particles.popBack();",
+"    particles[0] = Particle { x = cast<Float32>(9.0), y = cast<Float32>(8.0), vx = cast<Float32>(0.0), vy = cast<Float32>(0.0) };",
+"    p0 := particles[0];",
+"    pU := particles.uncheckedGet(1);",
+"    okProbe := probeTypes(a4, f8, u16, particles);",
+"    io.outputLine(\"podSoa:\", okProbe, particles.length(), p0.x, p0.y, remP.x, popP.y, pU.x);",
+"",
+"    /* 3. Owning SoA<Entity> with String + Rc + List + Option + capacity growth + copy + swapRemove + clear */",
+"    shared := rc.Rc.create(77);",
+"    {",
+"        mut ents: soa.SoA<Entity> = soa.SoA.create();",
+"        loop 0..10 as k {",
+"            mut ents.pushBack(Entity { name = \"ent-\" + k.toText() + \"-long-label\", tag = if k % 2 == 0 { .Some(k * 10) } else { .None }, hp = shared.share(), nums = [k, k + 1] });",
+"        }",
+"        mut entsCopy: soa.SoA<Entity> = ents;",
+"        rmEnt := mut ents.swapRemove(2);",
+"        mut entsCopy.uncheckedSet(0, Entity { name = \"updated-0\", tag = .Some(999), hp = shared.share(), nums = [42] });",
+"        g0 := entsCopy[0];",
+"        gLast := ents.get(ents.length() - 1);",
+"        /* Slice reading over owning column while another column could be distinct */",
+"        {",
+"            names := ents.name;",
+"            io.outputLine(\"ownCols:\", names.length(), names[0], names[2]);",
+"        }",
+"        io.outputLine(\"ownSoa:\", g0.hp.get(), ents.length(), rmEnt.name, g0.name, g0.nums, gLast.tag.unwrapOr(-1), entsCopy.length());",
+"        mut ents.clear();",
+"        mut entsCopy.clear();",
+"        io.outputLine(\"ownAfterClear:\", shared.get(), ents.isEmpty(), entsCopy.length());",
+"    }",
+"    io.outputLine(\"afterScopeRc:\", shared.get());",
+"};",
+"main();"
 ].join("\n");
 
 /* 1. TS vs C11 (-Werror) vs C11 (-DLITE_SIMD_SCALAR) vs C11 (--sanitize ASan/LSan/UBSan) parity */
@@ -136,13 +136,13 @@ test.checkInt("phase8b TS compile+run: " + tsRun.stderr, 0, tsRun.status);
 test.checkText("phase8b TS stderr", "", tsRun.stderr);
 
 expectedOut := [
-    "simd: [16, 8, 4, 2] true true 0.25 -2147483648 8 true -30 [3, 2, 10, 9] 99 4 64 2 20 500000000000 84 true",
-    "podSoa: true 4 9 8 1.5 7.75 5.5",
-    "ownCols: 9 ent-0-long-label ent-9-long-label",
-    "ownSoa: 77 9 ent-2-long-label updated-0 [42] 80 10",
-    "ownAfterClear: 77 true 0",
-    "afterScopeRc: 77",
-    ""
+"simd: [16, 8, 4, 2] true true 0.25 -2147483648 8 true -30 [3, 2, 10, 9] 99 4 64 2 20 500000000000 84 true",
+"podSoa: true 4 9 8 1.5 7.75 5.5",
+"ownCols: 9 ent-0-long-label ent-9-long-label",
+"ownSoa: 77 9 ent-2-long-label updated-0 [42] 80 10",
+"ownAfterClear: 77 true 0",
+"afterScopeRc: 77",
+""
 ].join("\n");
 test.checkText("phase8b TS stdout", expectedOut, tsRun.stdout);
 
@@ -180,13 +180,13 @@ if ccProbe.available {
     probeBody := if probeDefPos >= 0 { cCode.indexOf(") {", probeDefPos) } else { -1 };
     test.check("found probeTypes in C", probeBody >= 0);
     simdAsserts := [
-        "    _Static_assert(sizeof(lt_simd_f32_4) == 16, \"Float32x4 size 16\");",
-        "    _Static_assert(_Alignof(lt_simd_f32_4) == 16, \"Float32x4 align 16\");",
-        "    _Static_assert(sizeof(lt_simd_f32_8) == 32, \"Float32x8 size 32\");",
-        "    _Static_assert(_Alignof(lt_simd_f32_8) == 32, \"Float32x8 align 32\");",
-        "    _Static_assert(sizeof(lt_simd_u8_16) == 16, \"UInt8x16 size 16\");",
-        "    _Static_assert(_Alignof(lt_simd_u8_16) == 16, \"UInt8x16 align 16\");",
-        "    _Static_assert(sizeof(*lite_p) > sizeof(float *), \"SoA header holds parallel columns + len/cap\");"
+    "    _Static_assert(sizeof(lt_simd_f32_4) == 16, \"Float32x4 size 16\");",
+    "    _Static_assert(_Alignof(lt_simd_f32_4) == 16, \"Float32x4 align 16\");",
+    "    _Static_assert(sizeof(lt_simd_f32_8) == 32, \"Float32x8 size 32\");",
+    "    _Static_assert(_Alignof(lt_simd_f32_8) == 32, \"Float32x8 align 32\");",
+    "    _Static_assert(sizeof(lt_simd_u8_16) == 16, \"UInt8x16 size 16\");",
+    "    _Static_assert(_Alignof(lt_simd_u8_16) == 16, \"UInt8x16 align 16\");",
+    "    _Static_assert(sizeof(*lite_p) > sizeof(float *), \"SoA header holds parallel columns + len/cap\");"
     ].join("\n");
     patched := cCode.slice(0, probeBody + 3) + "\n" + simdAsserts + "\n" + cCode.slice(probeBody + 3, cCode.length());
     saRun := compilerTest.compileAndRunC(patched, ccProbe.cc, "");
@@ -195,26 +195,26 @@ if ccProbe.available {
 
     /* C11 deterministic RAII refcount verification across SoA copy, uncheckedSet overwrite, swapRemove, clear, and scope drop */
     cRaSrc := [
-        "io := import \"core/io\";",
-        "rc := import \"core/rc\";",
-        "soa := import \"core/soa\";",
-        "E := record { tag: String; hp: rc.Rc<Int>; };",
-        "f := fn(): Unit {",
-        "    shared := rc.Rc.create(77);",
-        "    {",
-        "        mut a: soa.SoA<E> = soa.SoA.create();",
-        "        loop 0..5 as k { mut a.pushBack(E { tag = \"e\" + k.toText(), hp = shared.share() }); }",
-        "        mut b: soa.SoA<E> = a;",
-        "        _rm := mut a.swapRemove(1);",
-        "        mut b.uncheckedSet(0, E { tag = \"u\", hp = shared.share() });",
-        "        io.outputLine(\"mid:\", shared.strongCount());",
-        "        mut a.clear();",
-        "        mut b.clear();",
-        "        io.outputLine(\"cleared:\", shared.strongCount());",
-        "    }",
-        "    io.outputLine(\"after:\", shared.strongCount(), shared.isUnique());",
-        "};",
-        "f();"
+    "io := import \"core/io\";",
+    "rc := import \"type/rc\";",
+    "soa := import \"type/soa\";",
+    "E := record { tag: String; hp: rc.Rc<Int>; };",
+    "f := fn(): Unit {",
+    "    shared := rc.Rc.create(77);",
+    "    {",
+    "        mut a: soa.SoA<E> = soa.SoA.create();",
+    "        loop 0..5 as k { mut a.pushBack(E { tag = \"e\" + k.toText(), hp = shared.share() }); }",
+    "        mut b: soa.SoA<E> = a;",
+    "        _rm := mut a.swapRemove(1);",
+    "        mut b.uncheckedSet(0, E { tag = \"u\", hp = shared.share() });",
+    "        io.outputLine(\"mid:\", shared.strongCount());",
+    "        mut a.clear();",
+    "        mut b.clear();",
+    "        io.outputLine(\"cleared:\", shared.strongCount());",
+    "    }",
+    "    io.outputLine(\"after:\", shared.strongCount(), shared.isUnique());",
+    "};",
+    "f();"
     ].join("\n");
     cRaRun := compilerTest.compileCheckRunC(root, cComp, ccProbe.cc, cRaSrc, "phase8b-raii.lts", "--sanitize");
     test.checkInt("phase8b C RAII strongCount compile+run: " + cRaRun.stderr, 0, cRaRun.status);
@@ -223,11 +223,11 @@ if ccProbe.available {
 
 /* 2. Runtime fault parity (TS & C11) for SIMD overflow, sqrt(-1), and out-of-bounds load/store */
 overflowSrc := [
-    "io := import \"core/io\";",
-    "simd := import \"core/simd\";",
-    "a := simd.Int32x4.splat(cast<Int32>(2147483647));",
-    "b := simd.Int32x4.splat(cast<Int32>(1));",
-    "io.outputLine(a.add(b)[0]);"
+"io := import \"core/io\";",
+"simd := import \"type/simd\";",
+"a := simd.Int32x4.splat(cast<Int32>(2147483647));",
+"b := simd.Int32x4.splat(cast<Int32>(1));",
+"io.outputLine(a.add(b)[0]);"
 ].join("\n");
 tsOv := compilerTest.compileCheckRunTs(root, tsComp, overflowSrc, "phase8b-ov-ts.lts");
 test.check("TS SIMD checked add overflow faults ArithmeticPanic", tsOv.status =!= 0 and tsOv.stderr.contains("ArithmeticPanic"));
@@ -237,10 +237,10 @@ if ccProbe.available {
 }
 
 sqrtNegSrc := [
-    "io := import \"core/io\";",
-    "simd := import \"core/simd\";",
-    "a := simd.Float32x4.splat(cast<Float32>(-1.0));",
-    "io.outputLine(a.sqrt()[0]);"
+"io := import \"core/io\";",
+"simd := import \"type/simd\";",
+"a := simd.Float32x4.splat(cast<Float32>(-1.0));",
+"io.outputLine(a.sqrt()[0]);"
 ].join("\n");
 tsSq := compilerTest.compileCheckRunTs(root, tsComp, sqrtNegSrc, "phase8b-sq-ts.lts");
 test.check("TS SIMD sqrt(-1) faults ArithmeticPanic", tsSq.status =!= 0 and tsSq.stderr.contains("ArithmeticPanic"));
@@ -250,11 +250,11 @@ if ccProbe.available {
 }
 
 oobLoadSrc := [
-    "io := import \"core/io\";",
-    "simd := import \"core/simd\";",
-    "xs: List<Float32> = [cast<Float32>(1.0), cast<Float32>(2.0)];",
-    "v := simd.Float32x4.load(xs[0..2], 0);",
-    "io.outputLine(v[0]);"
+"io := import \"core/io\";",
+"simd := import \"type/simd\";",
+"xs: List<Float32> = [cast<Float32>(1.0), cast<Float32>(2.0)];",
+"v := simd.Float32x4.load(xs[0..2], 0);",
+"io.outputLine(v[0]);"
 ].join("\n");
 tsLd := compilerTest.compileCheckRunTs(root, tsComp, oobLoadSrc, "phase8b-ld-ts.lts");
 test.check("TS SIMD load OOB faults BoundPanic", tsLd.status =!= 0 and tsLd.stderr.contains("BoundPanic"));
@@ -265,70 +265,70 @@ if ccProbe.available {
 
 /* 3. SIMD & #packed compile-time rejections */
 compilerTest.assertCompileErrorContains(root, tsComp, "reject sizeless Simd<Float32, *>",
-"simd := import \"core/simd\";\nv: simd.Simd<Float32, *> = simd.Simd.splat(cast<Float32>(1.0));", "runtime-scalable or sizeless SIMD vectors are not supported");
+"simd := import \"type/simd\";\nv: simd.Simd<Float32, *> = simd.Simd.splat(cast<Float32>(1.0));", "runtime-scalable or sizeless SIMD vectors are not supported");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject 1-arg Simd<Float32>",
-"simd := import \"core/simd\";\nv: simd.Simd<Float32> = simd.Simd.splat(cast<Float32>(1.0));", "Simd requires two arguments: Simd<T, N>");
+"simd := import \"type/simd\";\nv: simd.Simd<Float32> = simd.Simd.splat(cast<Float32>(1.0));", "Simd requires two arguments: Simd<T, N>");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject non-power-of-2 Simd<Float32, 3>",
-"simd := import \"core/simd\";\nv: simd.Simd<Float32, 3> = simd.Simd.splat(cast<Float32>(1.0));", "Simd lane count must be a power of two");
+"simd := import \"type/simd\";\nv: simd.Simd<Float32, 3> = simd.Simd.splat(cast<Float32>(1.0));", "Simd lane count must be a power of two");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject 1-lane Simd<Int32, 1>",
-"simd := import \"core/simd\";\nv: simd.Simd<Int32, 1> = simd.Simd.splat(cast<Int32>(1));", "Simd lane count must be a power of two");
+"simd := import \"type/simd\";\nv: simd.Simd<Int32, 1> = simd.Simd.splat(cast<Int32>(1));", "Simd lane count must be a power of two");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject >64B Simd<Float, 16>",
-"simd := import \"core/simd\";\nv: simd.Simd<Float, 16> = simd.Simd.splat(1.0);", "total width must be <= 64 bytes");
+"simd := import \"type/simd\";\nv: simd.Simd<Float, 16> = simd.Simd.splat(1.0);", "total width must be <= 64 bytes");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject Simd<Bool, 4>",
-"simd := import \"core/simd\";\nv: simd.Simd<Bool, 4>;", "unsupported Simd lane type Bool");
+"simd := import \"type/simd\";\nv: simd.Simd<Bool, 4>;", "unsupported Simd lane type Bool");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject Simd<String, 4>",
-"simd := import \"core/simd\";\nv: simd.Simd<String, 4>;", "unsupported Simd lane type String");
+"simd := import \"type/simd\";\nv: simd.Simd<String, 4>;", "unsupported Simd lane type String");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject Simd<Int4, 4>",
-"simd := import \"core/simd\";\nv: simd.Simd<Int4, 4>;", "unsupported Simd lane type Int4");
+"simd := import \"type/simd\";\nv: simd.Simd<Int4, 4>;", "unsupported Simd lane type Int4");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject sqrt on Int32x4",
-"simd := import \"core/simd\";\nv := simd.Int32x4.splat(cast<Int32>(4)).sqrt();", "requires a floating-point Simd type");
+"simd := import \"type/simd\";\nv := simd.Int32x4.splat(cast<Int32>(4)).sqrt();", "requires a floating-point Simd type");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject wrappingAdd on Float32x4",
-"simd := import \"core/simd\";\nv := simd.Float32x4.splat(cast<Float32>(1.0)).wrappingAdd(simd.Float32x4.splat(cast<Float32>(1.0)));", "requires an integer Simd type");
+"simd := import \"type/simd\";\nv := simd.Float32x4.splat(cast<Float32>(1.0)).wrappingAdd(simd.Float32x4.splat(cast<Float32>(1.0)));", "requires an integer Simd type");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject neg on UInt32x4",
-"simd := import \"core/simd\";\nv := simd.UInt32x4.splat(cast<UInt32>(1)).neg();", "is not supported on unsigned Simd type");
+"simd := import \"type/simd\";\nv := simd.UInt32x4.splat(cast<UInt32>(1)).neg();", "is not supported on unsigned Simd type");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject #packed with Simd field",
-"simd := import \"core/simd\";\nP := record #packed { v: simd.Float32x4; };", "#packed record cannot contain heap-owned or drop-requiring fields");
+"simd := import \"type/simd\";\nP := record #packed { v: simd.Float32x4; };", "#packed record cannot contain heap-owned or drop-requiring fields");
 
 /* 4. SoA<R> & disjoint column slice compile-time rejections */
 compilerTest.assertCompileErrorContains(root, tsComp, "reject SoA<Int>",
-"soa := import \"core/soa\";\ns: soa.SoA<Int>;", "SoA<R> requires a non-empty record type");
+"soa := import \"type/soa\";\ns: soa.SoA<Int>;", "SoA<R> requires a non-empty record type");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject SoA with Slice field",
-"soa := import \"core/soa\";\nBad := record { s: Slice<Int>; };\nx: soa.SoA<Bad>;", "borrowed Slice<T> cannot be stored in owning container or type definition");
+"soa := import \"type/soa\";\nBad := record { s: Slice<Int>; };\nx: soa.SoA<Bad>;", "borrowed Slice<T> cannot be stored in owning container or type definition");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject pushBack while column slice active",
-"soa := import \"core/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := p.x;\n    mut p.pushBack(P { x = cast<Float32>(3.0), y = cast<Float32>(4.0) });\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
+"soa := import \"type/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := p.x;\n    mut p.pushBack(P { x = cast<Float32>(3.0), y = cast<Float32>(4.0) });\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject reserve while column slice active",
-"soa := import \"core/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    xs := p.x;\n    mut p.reserve(32);\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
+"soa := import \"type/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    xs := p.x;\n    mut p.reserve(32);\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject swapRemove while column slice active",
-"soa := import \"core/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := p.x;\n    _r := mut p.swapRemove(0);\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
+"soa := import \"type/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := p.x;\n    _r := mut p.swapRemove(0);\n    _u := xs.length();\n};", "cannot mutate p while borrowed by slice xs");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject same-column mut+mut aliasing in call",
-"soa := import \"core/soa\";\nP := record { x: Float32; y: Float32; };\ng := fn(a: mut Slice<Float32>, b: mut Slice<Float32>): Unit { a[0] = b[0]; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    g(mut p.x, mut p.x);\n};", "cannot pass p multiple times as mut in the same call");
+"soa := import \"type/soa\";\nP := record { x: Float32; y: Float32; };\ng := fn(a: mut Slice<Float32>, b: mut Slice<Float32>): Unit { a[0] = b[0]; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    g(mut p.x, mut p.x);\n};", "cannot pass p multiple times as mut in the same call");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject same-column mut+ro aliasing in call",
-"soa := import \"core/soa\";\nP := record { x: Float32; y: Float32; };\ng := fn(a: mut Slice<Float32>, b: Slice<Float32>): Unit { a[0] = b[0]; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    g(mut p.x, p.x);\n};", "cannot pass p as both read-only and mut in the same call");
+"soa := import \"type/soa\";\nP := record { x: Float32; y: Float32; };\ng := fn(a: mut Slice<Float32>, b: Slice<Float32>): Unit { a[0] = b[0]; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    g(mut p.x, p.x);\n};", "cannot pass p as both read-only and mut in the same call");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject whole-row read while column mutably borrowed",
-"soa := import \"core/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := mut p.x;\n    _r := p[0];\n    xs[0] = cast<Float32>(3.0);\n};", "cannot read p while mutably borrowed by slice xs");
+"soa := import \"type/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(): Unit {\n    mut p: soa.SoA<P> = soa.SoA.create();\n    mut p.pushBack(P { x = cast<Float32>(1.0), y = cast<Float32>(2.0) });\n    xs := mut p.x;\n    _r := p[0];\n    xs[0] = cast<Float32>(3.0);\n};", "cannot read p while mutably borrowed by slice xs");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject mut column on read-only SoA",
-"soa := import \"core/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(p: soa.SoA<P>): Unit {\n    _xs := mut p.x;\n};", "cannot take mutable column slice of read-only binding p");
+"soa := import \"type/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(p: soa.SoA<P>): Unit {\n    _xs := mut p.x;\n};", "cannot take mutable column slice of read-only binding p");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject returning escaping column slice",
-"soa := import \"core/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(p: soa.SoA<P>): Slice<Float32> { p.x };", "borrowed Slice<T> cannot escape via function return type");
+"soa := import \"type/soa\";\nP := record { x: Float32; y: Float32; };\nf := fn(p: soa.SoA<P>): Slice<Float32> { p.x };", "borrowed Slice<T> cannot escape via function return type");
 
 test.done("phase8b-simd-and-soa");

@@ -1,4 +1,4 @@
-/* Deduplicate a sequence in O(n) using Set<String> and core/set. */
+/* Deduplicate a sequence in O(n) using Set<String> and type/set. */
 io := import "core/io";
 
 items := ["alpha", "beta", "alpha", "gamma", "beta", "delta"];

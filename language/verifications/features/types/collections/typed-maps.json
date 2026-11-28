@@ -8,7 +8,7 @@
   "features": [
     "feature.types.collections.typed-maps"
   ],
-  "guideline": "Checks zero-initialized mut Map<K, V>, indexed writes/reads, core/map intrinsics, and value-copy snapshots.",
+  "guideline": "Checks zero-initialized mut Map<K, V>, indexed writes/reads, type/map intrinsics, and value-copy snapshots.",
   "cases": [
     {
       "name": "map-ops-and-snapshot",

@@ -1,6 +1,6 @@
 /** Procedural 3D meshes, materials, lighting, and painter-sorted software renderer (`gfx/scene`) on `gfx/surface`. */
 
-listMod := import "core/list";
+listMod := import "type/list";
 math := import "math/scalar";
 vec := import "math/vector";
 mat := import "math/matrix";

@@ -4,7 +4,7 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-text := import "core/text";
+text := import "type/string";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
 compilerTest := import "../../../tools/src/internal/compiler-test";
 json := import "data/json";
@@ -136,7 +136,7 @@ coreHostExpected := [
 ].join("\n") + "\n";
 compilerTest.assertCompileRunTsNamed(root, tsComp, "core-host-os", coreHostSrc, fixtureName, coreHostExpected);
 
-/* core/text unicode scalar length/at */
+/* type/string unicode scalar length/at */
 compilerTest.assertCompileRunTsNamed(
 root,
 tsComp,
@@ -149,8 +149,8 @@ fixtureName,
 /* extended core crypto, time, and unicode */
 extCoreSrc := [
 "crypto := import \"core/crypto\";",
-"list := import \"core/list\";",
-"text := import \"core/text\";",
+"list := import \"type/list\";",
+"text := import \"type/string\";",
 "time := import \"core/time\";",
 "io := import \"core/io\";",
 "raw: List<Int> = [0, 65, 255];",

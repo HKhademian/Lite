@@ -1,3 +1,0 @@
-/* Temporary compatibility barrel forwarding to `type/simd` during Phase 2 migration. */
-
-pub { Int8x16, UInt8x16, Int16x8, UInt16x8, Int32x4, UInt32x4, Int64x2, UInt64x2, Float32x4, Float32x8, Float64x2, Float64x4 } := import "type/simd";

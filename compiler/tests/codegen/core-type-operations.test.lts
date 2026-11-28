@@ -87,7 +87,7 @@ expectedOut :=
 /* Run under default builtin mode, full pure mode, and targeted TypeName.op pure override! */
 builtinArgs: List<String> = ["--builtin-mode=builtin"];
 pureArgs: List<String> = ["--builtin-mode=pure"];
-targetedArgs: List<String> = ["--builtin-mode=core/text:String.trim=pure", "--builtin-mode=core/int:Int.toText=pure"];
+targetedArgs: List<String> = ["--builtin-mode=type/string:String.trim=pure", "--builtin-mode=type/int:Int.toText=pure"];
 
 runWithModes("core-type-ops-builtin", coreOpsSrc, expectedOut, builtinArgs);
 runWithModes("core-type-ops-pure", coreOpsSrc, expectedOut, pureArgs);
@@ -104,9 +104,9 @@ test.check("min ts omits unused List.map", not minTs.stdout.contains("tp_List_op
 
 /* 3. Removed free-function shims and ambient push_back/pop_back are rejected, while dot ops and TypeName.op succeed on TS and C11. */
 rejectSources: List<String> = [
-    "list := import \"core/list\"; mut xs: List<Int> = [1]; _ := list.popBack(mut xs);\n",
-    "mut xs: List<Int> = [1]; push_back(mut xs, 2);\n",
-    "mut xs: List<Int> = [1]; _ := pop_back(mut xs);\n"
+"list := import \"type/list\"; mut xs: List<Int> = [1]; _ := list.popBack(mut xs);\n",
+"mut xs: List<Int> = [1]; push_back(mut xs, 2);\n",
+"mut xs: List<Int> = [1]; _ := pop_back(mut xs);\n"
 ];
 loop rejectSources as rejSrc {
     tsRej := compilerTest.compileStdin(root, tsComp, rejSrc, "");

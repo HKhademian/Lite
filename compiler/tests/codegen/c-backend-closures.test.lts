@@ -17,7 +17,7 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
+"list := import \"type/list\";\n" +
 "\n" +
 "/* 1. Top-level module function passed as a value (trampoline) */\n" +
 "triple := fn(x: Int): Int { x * 3 };\n" +

@@ -1,6 +1,6 @@
 /** Generic function template registry, type unification/substitution, and on-demand monomorphization queue. */
 
-textLib := import "core/text";
+textLib := import "type/string";
 numeric := import "./numeric-literals";
 ir := import "./frontend-ir";
 types := import "./frontend-types";
@@ -21,44 +21,44 @@ FutureValue := alias ir.FutureValue;
 
 /** Registered uninstantiated generic function or type-attached operation template. */
 pub GenericTemplate := alias (
-    key: String,
-    qualName: String,
-    typeOpKey: String,
-    moduleKey: String,
-    moduleIdentity: String,
-    prefix: String,
-    source: String,
-    bodyStart: Int,
-    bodyEnd: Int,
-    declAt: Int,
-    genericParams: String,
-    params: String,
-    paramCount: Int,
-    result: String,
-    selfTarget: String,
-    isPub: Bool
+key: String,
+qualName: String,
+typeOpKey: String,
+moduleKey: String,
+moduleIdentity: String,
+prefix: String,
+source: String,
+bodyStart: Int,
+bodyEnd: Int,
+declAt: Int,
+genericParams: String,
+params: String,
+paramCount: Int,
+result: String,
+selfTarget: String,
+isPub: Bool
 );
 
 /** Index slice into flat environment tables for one parsed module. */
 pub ModuleEnvRange := alias (
-    moduleKey: String,
-    localsStart: Int, localsCount: Int,
-    fnsStart: Int, fnsCount: Int,
-    paramsStart: Int, paramsCount: Int,
-    aliasesStart: Int, aliasesCount: Int,
-    futuresStart: Int, futuresCount: Int,
-    assignedStart: Int, assignedCount: Int
+moduleKey: String,
+localsStart: Int, localsCount: Int,
+fnsStart: Int, fnsCount: Int,
+paramsStart: Int, paramsCount: Int,
+aliasesStart: Int, aliasesCount: Int,
+futuresStart: Int, futuresCount: Int,
+assignedStart: Int, assignedCount: Int
 );
 
 /** One requested concrete monomorphization of a `GenericTemplate`. */
 pub GenericInstance := alias (
-    templateKey: String,
-    bindingsEncoded: String,
-    substParams: String,
-    substResult: String,
-    runtime: String,
-    moduleKey: String,
-    compiled: Bool
+templateKey: String,
+bindingsEncoded: String,
+substParams: String,
+substResult: String,
+runtime: String,
+moduleKey: String,
+compiled: Bool
 );
 
 mut templates: List<GenericTemplate> = [];
@@ -156,13 +156,13 @@ functionParams: List<String>, aliases: List<AliasDecl>, futureValues: List<Futur
     rCount := envAssignedPool.length() - rStart;
 
     rng: ModuleEnvRange = (
-        moduleKey = moduleKey,
-        localsStart = lStart, localsCount = lCount,
-        fnsStart = fStart, fnsCount = fCount,
-        paramsStart = pStart, paramsCount = pCount,
-        aliasesStart = aStart, aliasesCount = aCount,
-        futuresStart = fvStart, futuresCount = fvCount,
-        assignedStart = rStart, assignedCount = rCount
+    moduleKey = moduleKey,
+    localsStart = lStart, localsCount = lCount,
+    fnsStart = fStart, fnsCount = fCount,
+    paramsStart = pStart, paramsCount = pCount,
+    aliasesStart = aStart, aliasesCount = aCount,
+    futuresStart = fvStart, futuresCount = fvCount,
+    assignedStart = rStart, assignedCount = rCount
     );
     existing := moduleEnvByKey.getOr(moduleKey, -1);
     if existing >= 0 {
@@ -426,13 +426,13 @@ pub requestInstance := fn(target: String, templateKey: String, bindingsEncoded: 
     }
     idx := instances.length();
     mut instances.pushBack((
-        templateKey = curTplKey,
-        bindingsEncoded = curEnc,
-        substParams = effSubstParams,
-        substResult = effSubstResult,
-        runtime = instRuntime,
-        moduleKey = tpl.moduleKey,
-        compiled = false
+    templateKey = curTplKey,
+    bindingsEncoded = curEnc,
+    substParams = effSubstParams,
+    substResult = effSubstResult,
+    runtime = instRuntime,
+    moduleKey = tpl.moduleKey,
+    compiled = false
     ));
     mut instanceByKey.set(cacheKey, idx);
     instRuntime
@@ -447,13 +447,13 @@ pub requestFixedInstance := fn(templateKey: String, runtime: String, substParams
     tpl := templates[tplIdx];
     idx := instances.length();
     mut instances.pushBack((
-        templateKey = templateKey,
-        bindingsEncoded = "",
-        substParams = substParams,
-        substResult = substResult,
-        runtime = runtime,
-        moduleKey = tpl.moduleKey,
-        compiled = false
+    templateKey = templateKey,
+    bindingsEncoded = "",
+    substParams = substParams,
+    substResult = substResult,
+    runtime = runtime,
+    moduleKey = tpl.moduleKey,
+    compiled = false
     ));
     mut instanceByKey.set(cacheKey, idx);
 };
@@ -478,13 +478,13 @@ pub getInstance := fn(idx: Int): GenericInstance {
 pub markInstanceCompiled := fn(idx: Int): Unit {
     cur := instances[idx];
     instances[idx] = (
-        templateKey = cur.templateKey,
-        bindingsEncoded = cur.bindingsEncoded,
-        substParams = cur.substParams,
-        substResult = cur.substResult,
-        runtime = cur.runtime,
-        moduleKey = cur.moduleKey,
-        compiled = true
+    templateKey = cur.templateKey,
+    bindingsEncoded = cur.bindingsEncoded,
+    substParams = cur.substParams,
+    substResult = cur.substResult,
+    runtime = cur.runtime,
+    moduleKey = cur.moduleKey,
+    compiled = true
     );
 };
 

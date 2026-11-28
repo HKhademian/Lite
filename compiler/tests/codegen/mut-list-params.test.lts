@@ -17,7 +17,7 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
-"text := import \"core/text\";\n" +
+"text := import \"type/string\";\n" +
 "\n" +
 "Buf := alias List<String>;\n" +
 "\n" +

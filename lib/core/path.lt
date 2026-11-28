@@ -2,9 +2,9 @@
 
 file := import "core/file";
 io := import "core/io";
-list := import "core/list";
+list := import "type/list";
 proc := import "core/process";
-text := import "core/text";
+text := import "type/string";
 
 /** True when the active host platform uses Windows path rules. */
 isWin32 := fn(): Bool {

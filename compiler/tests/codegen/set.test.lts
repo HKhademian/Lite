@@ -1,4 +1,4 @@
-/* Set<T>: typed value sets, core/set intrinsics, iteration, value semantics, enum elements, and diagnostics. */
+/* Set<T>: typed value sets, type/set intrinsics, iteration, value semantics, enum elements, and diagnostics. */
 
 test := import "core/test";
 compilerBuild := import "../../../tools/src/internal/compiler-build";

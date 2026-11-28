@@ -1,7 +1,7 @@
 /* Tests length-prefixed fat `lt_str` C11 string semantics: ASCII, multi-byte UTF-8, default zero-init, collections, and string-backed enums. */
 
 io := import "core/io";
-text := import "core/text";
+text := import "type/string";
 diag := import "core/diag";
 
 assert := fn(cond: Bool, msg: String): Unit {

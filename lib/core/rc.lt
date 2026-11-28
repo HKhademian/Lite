@@ -1,3 +1,0 @@
-/* Temporary compatibility shim for `type/rc` during Phase 2 migration. */
-
-_fwd := import "type/rc";

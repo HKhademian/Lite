@@ -19,11 +19,11 @@ test.checkBool("impl fn not host", true, modJson.contains("\"signature\":\"pub a
 test.checkBool("private omitted", false, modJson.contains("\"priv\""));
 
 opsSource := "pub make := fn(): Int { 0 }\n"
-    + "pub Vec.empty := fn<T: Type<math.Numeric>>(): Self<T, 2> { 0 }\n"
-    + "pub Vec.from := fn<T: Type<math.Numeric>>(values: [T; 2]): Self<T, 2> { 0 }\n"
-    + "pub Vec.copy := fn<T: Type<math.Numeric>>(value: Vec<T, 2>): Self<T, 2> { 0 }\n"
-    + "pub Vec.dim := fn<T: Type<math.Numeric>>(v: Self<T, 2>): Int { 2 }\n"
-    + "pub Vec.set := fn<T: Type<math.Numeric>>(v: /* lease */ mut /* receiver */ Self<T, 2>, n: Int): Unit { }\n";
++ "pub Vec.empty := fn<T: Type<math.Numeric>>(): Self<T, 2> { 0 }\n"
++ "pub Vec.from := fn<T: Type<math.Numeric>>(values: [T; 2]): Self<T, 2> { 0 }\n"
++ "pub Vec.copy := fn<T: Type<math.Numeric>>(value: Vec<T, 2>): Self<T, 2> { 0 }\n"
++ "pub Vec.dim := fn<T: Type<math.Numeric>>(v: Self<T, 2>): Int { 2 }\n"
++ "pub Vec.set := fn<T: Type<math.Numeric>>(v: /* lease */ mut /* receiver */ Self<T, 2>, n: Int): Unit { }\n";
 opsJson := docgen.extractModuleJson(opsSource, "math", "vec", "lib/math/vec.lt");
 opsField := json.findField(opsJson, 0, "symbols");
 opsOffsets := json.arrayOffsets(opsJson, opsField.valuePos);
@@ -41,7 +41,7 @@ allJson := docgen.extractAllModulesJson(rootDir);
 validAll := json.validate(allJson);
 test.checkBool("all modules json valid", true, validAll.ok);
 test.checkBool("includes core/io", true, allJson.contains("\"id\":\"core/io\""));
-test.checkBool("includes core/text", true, allJson.contains("\"id\":\"core/text\""));
+test.checkBool("includes type/string", true, allJson.contains("\"id\":\"type/string\""));
 test.checkBool("includes gfx/canvas", true, allJson.contains("\"id\":\"gfx/canvas\",\"namespace\":\"gfx\",\"name\":\"canvas\",\"file\":\"lib/gfx/canvas.lt\",\"environment\":\"play\""));
 test.checkBool("core/file is cli", true, allJson.contains("\"id\":\"core/file\",\"namespace\":\"core\",\"name\":\"file\",\"file\":\"lib/core/file.lt\",\"environment\":\"cli\""));
 

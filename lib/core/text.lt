@@ -1,3 +1,0 @@
-/* Temporary compatibility barrel forwarding to `type/string` during Phase 2 migration. */
-
-pub { UNICODE_MAX_SCALAR, UNICODE_REPLACEMENT_CHAR, isValidScalar, isXidStart, isXidContinue, earliestIndex } := import "type/string";

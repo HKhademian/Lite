@@ -1,3 +1,0 @@
-/* Temporary compatibility barrel forwarding to `type/error` during Phase 2 migration. */
-
-pub { Error, ToError } := import "type/error";

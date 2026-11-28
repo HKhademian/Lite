@@ -1,7 +1,7 @@
 /** Target helper call scanning, 32-bucket token sets, block-scoped pure dead-code pruning, and program reachability filtering. */
 
-integer := import "core/int";
-textLib := import "core/text";
+integer := import "type/int";
+textLib := import "type/string";
 tb := import "core/text-builder";
 ir := import "./frontend-ir";
 optCfg := import "./opt-config";

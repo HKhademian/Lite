@@ -4,8 +4,8 @@ fs := import "core/file";
 proc := import "core/process";
 project := import "./project";
 crypto := import "core/crypto";
-text := import "core/text";
-list := import "core/list";
+text := import "type/string";
+list := import "type/list";
 path := import "core/path";
 json := import "data/json";
 

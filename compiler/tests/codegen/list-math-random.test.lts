@@ -1,7 +1,7 @@
 /* Focused tests for xs[i] = v index mutation, generic List<T> intrinsics, math/scalar, and math/random. */
 
 test := import "core/test";
-list := import "core/list";
+list := import "type/list";
 math := import "math/scalar";
 rand := import "math/random";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
@@ -17,7 +17,7 @@ tsComp := selTs.path;
 /* 1. Direct xs[i] = v on mutable List<T> and [T; N], plus generic List<T> intrinsics */
 prog :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
+"list := import \"type/list\";\n" +
 "mut nums: List<Int> = [10, 20, 30, 40];\n" +
 "nums[1] = 25;\n" +
 "mut nums.setAt(3, 45);\n" +

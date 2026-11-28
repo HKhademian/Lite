@@ -1,4 +1,4 @@
-list := import "core/list";
+list := import "type/list";
 test := import "core/test";
 
 texts: List<String> = ["a", "b", "c"];

@@ -39,7 +39,7 @@ expectRejectBoth := fn(label: String, src: String, expectedMsg: String): Unit {
 /* 1. Standalone generic functions: identity, pair, forward calls, mut List<T>, self recursion, mapList with unannotated lambda, expected-return inference. */
 genStandaloneSrc :=
 "io := import \"core/io\";\n" +
-"list := import \"core/list\";\n" +
+"list := import \"type/list\";\n" +
 "\n" +
 "forwardDouble := fn(x: Int): Int {\n" +
 "    identity(x) * 2\n" +
