@@ -1,7 +1,7 @@
 {
   "note": "Post-Phase 18 compiler source reorganization into lib/lite/compiler/. All 69 TS and C corpus artifact hashes and Phases 5–18 verified.",
   "recorded": "2026-11-28",
-  "sourceSha256": "c08a642ade70309cfe776f2a2fd46e0886a6b918d24d585c85ab964e236fdc6a",
+  "sourceSha256": "d53e4f76a20b34350181bcfeeabefbf2906ba6fbb48a28cdd4aa6d7f4856aa0f",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
