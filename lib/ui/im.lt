@@ -1,0 +1,250 @@
+/** Immediate-mode HUD and widget overlay (`ui/im`) rendered onto `gfx/surface`. */
+
+math := import "math/scalar";
+color := import "gfx/color";
+surf := import "gfx/surface";
+
+/** Color palette styling immediate-mode `ui/im` panels, buttons, toggles, and sliders. */
+pub UiTheme := record {
+    panelBg: color.Color;
+    panelBorder: color.Color;
+    buttonBg: color.Color;
+    buttonHover: color.Color;
+    buttonActive: color.Color;
+    accent: color.Color;
+    text: color.Color;
+    mutedText: color.Color;
+}
+
+/** Returns the default dark HUD theme for 3D scenes and games. */
+pub UiTheme.dark := fn(): Self {
+    Self {
+        panelBg = color.Color.fromRgba(0.06, 0.08, 0.13, 0.84),
+        panelBorder = color.Color.fromRgba(0.32, 0.52, 0.78, 0.65),
+        buttonBg = color.Color.fromRgba(0.14, 0.20, 0.30, 0.92),
+        buttonHover = color.Color.fromRgba(0.22, 0.32, 0.48, 0.96),
+        buttonActive = color.Color.fromRgba(0.20, 0.56, 0.86, 0.98),
+        accent = color.Color.fromRgb(0.22, 0.74, 0.97),
+        text = color.WHITE,
+        mutedText = color.Color.fromRgb(0.68, 0.76, 0.86)
+    }
+};
+
+/** Returns a bright high-contrast light HUD theme. */
+pub UiTheme.light := fn(): Self {
+    Self {
+        panelBg = color.Color.fromRgba(0.94, 0.96, 0.99, 0.88),
+        panelBorder = color.Color.fromRgba(0.42, 0.52, 0.66, 0.75),
+        buttonBg = color.Color.fromRgba(0.84, 0.88, 0.94, 0.95),
+        buttonHover = color.Color.fromRgba(0.74, 0.82, 0.92, 0.98),
+        buttonActive = color.Color.fromRgba(0.14, 0.48, 0.84, 0.98),
+        accent = color.Color.fromRgb(0.10, 0.46, 0.82),
+        text = color.Color.fromRgb(0.08, 0.11, 0.18),
+        mutedText = color.Color.fromRgb(0.36, 0.42, 0.52)
+    }
+};
+
+/** Per-frame immediate-mode UI interaction state. */
+pub UiState := record {
+    pointerX: Float;
+    pointerY: Float;
+    pointerDown: Bool;
+    pointerPressed: Bool;
+    pointerReleased: Bool;
+    hotId: Int;
+    activeId: Int;
+    consumedPointer: Bool;
+    theme: UiTheme;
+}
+
+/** Creates an `UiState` initialized with `UiTheme.dark()`. */
+pub UiState.new := fn(): Self {
+    Self {
+        pointerX = 0.0,
+        pointerY = 0.0,
+        pointerDown = false,
+        pointerPressed = false,
+        pointerReleased = false,
+        hotId = 0,
+        activeId = 0,
+        consumedPointer = false,
+        theme = UiTheme.dark()
+    }
+};
+
+/** Creates an `UiState` initialized with explicit `theme`. */
+pub UiState.withTheme := fn(theme: UiTheme): Self {
+    Self {
+        pointerX = 0.0,
+        pointerY = 0.0,
+        pointerDown = false,
+        pointerPressed = false,
+        pointerReleased = false,
+        hotId = 0,
+        activeId = 0,
+        consumedPointer = false,
+        theme = theme
+    }
+};
+
+pointInRect := fn(px: Float, py: Float, r: surf.Rect): Bool {
+    px >= r.x and px <= r.x + r.width and py >= r.y and py <= r.y + r.height
+};
+
+/** Begins a UI frame by capturing pointer state and edge transitions from `s` and `inp`. */
+pub UiState.beginFrame := fn(ui: mut Self, s: surf.Surface, inp: surf.FrameInput): Unit {
+    ui.pointerX = inp.pointerX;
+    ui.pointerY = inp.pointerY;
+    ui.pointerDown = inp.pointerDown;
+    ui.pointerPressed = s.isPointerPressed();
+    ui.pointerReleased = s.isPointerReleased();
+    ui.hotId = 0;
+    ui.consumedPointer = false;
+    if not ui.pointerDown and not ui.pointerReleased {
+        ui.activeId = 0;
+    }
+};
+
+/** Completes a UI frame, clearing transient active widget capture after pointer release. */
+pub UiState.endFrame := fn(ui: mut Self): Unit {
+    if ui.pointerReleased or not ui.pointerDown {
+        ui.activeId = 0;
+    }
+};
+
+/** True when the pointer is currently over or captured by a UI widget or panel. */
+pub UiState.wantsPointer := fn(ui: Self): Bool {
+    ui.consumedPointer or ui.activeId =!= 0
+};
+
+/** Draws a translucent panel background, border, and optional header `title`. */
+pub panel := fn(ui: mut UiState, s: surf.Surface, area: surf.Rect, title: String): Unit {
+    if pointInRect(ui.pointerX, ui.pointerY, area) {
+        ui.consumedPointer = true;
+    }
+    s.fillRect(area, ui.theme.panelBg);
+    s.strokeRect(area, 1.0, ui.theme.panelBorder);
+    if title =!= "" {
+        s.drawText(title, surf.point(area.x + 8.0, area.y + 7.0), 10.0, ui.theme.accent);
+    }
+};
+
+/** Draws HUD text `content` at `(x, y)` with logical height `size`. */
+pub label := fn(ui: UiState, s: surf.Surface, content: String, x: Float, y: Float, size: Float): Unit {
+    s.drawText(content, surf.point(x, y), size, ui.theme.text);
+};
+
+/** Draws muted secondary HUD text `content` at `(x, y)`. */
+pub mutedLabel := fn(ui: UiState, s: surf.Surface, content: String, x: Float, y: Float, size: Float): Unit {
+    s.drawText(content, surf.point(x, y), size, ui.theme.mutedText);
+};
+
+/** Draws a compact colored status pill containing `content`. */
+pub badge := fn(ui: UiState, s: surf.Surface, content: String, area: surf.Rect, fill: color.Color): Unit {
+    s.fillRect(area, fill);
+    s.strokeRect(area, 1.0, ui.theme.panelBorder);
+    s.drawText(content, surf.point(area.x + 6.0, area.y + math.max(2.0, (area.height - 9.0) * 0.5)), 9.0, ui.theme.text);
+};
+
+/** Immediate-mode push button identified by unique `id`; returns `true` when clicked. */
+pub button := fn(ui: mut UiState, s: surf.Surface, id: Int, area: surf.Rect, text: String): Bool {
+    hovered := pointInRect(ui.pointerX, ui.pointerY, area);
+    if hovered {
+        ui.hotId = id;
+        ui.consumedPointer = true;
+        if ui.pointerPressed {
+            ui.activeId = id;
+        }
+    }
+    clicked := hovered and ui.activeId == id and ui.pointerReleased;
+    bg := if ui.activeId == id and ui.pointerDown {
+        ui.theme.buttonActive
+    } else if hovered {
+        ui.theme.buttonHover
+    } else {
+        ui.theme.buttonBg
+    };
+    border := if hovered or ui.activeId == id { ui.theme.accent } else { ui.theme.panelBorder };
+    s.fillRect(area, bg);
+    s.strokeRect(area, 1.0, border);
+    textY := area.y + math.max(3.0, (area.height - 10.0) * 0.5);
+    s.drawText(text, surf.point(area.x + 7.0, textY), 10.0, ui.theme.text);
+    clicked
+};
+
+/** Immediate-mode boolean toggle button identified by unique `id`; returns updated state. */
+pub toggle := fn(ui: mut UiState, s: surf.Surface, id: Int, area: surf.Rect, text: String, value: Bool): Bool {
+    hovered := pointInRect(ui.pointerX, ui.pointerY, area);
+    if hovered {
+        ui.hotId = id;
+        ui.consumedPointer = true;
+        if ui.pointerPressed {
+            ui.activeId = id;
+        }
+    }
+    clicked := hovered and ui.activeId == id and ui.pointerReleased;
+    next := if clicked { not value } else { value };
+    bg := if next {
+        ui.theme.buttonActive
+    } else if hovered {
+        ui.theme.buttonHover
+    } else {
+        ui.theme.buttonBg
+    };
+    s.fillRect(area, bg);
+    s.strokeRect(area, 1.0, if next or hovered { ui.theme.accent } else { ui.theme.panelBorder });
+    prefix := if next { "[X] " } else { "[ ] " };
+    textY := area.y + math.max(3.0, (area.height - 10.0) * 0.5);
+    s.drawText(prefix + text, surf.point(area.x + 6.0, textY), 10.0, ui.theme.text);
+    next
+};
+
+/** Immediate-mode horizontal float slider in `[minVal, maxVal]` identified by unique `id`. */
+pub slider := fn(
+ui: mut UiState, s: surf.Surface, id: Int, area: surf.Rect, labelText: String, value: Float, minVal: Float, maxVal: Float
+): Float {
+    lo := math.min(minVal, maxVal);
+    hi := math.max(minVal, maxVal);
+    span := hi - lo;
+    var cur := math.clamp(value, lo, hi);
+
+    hovered := pointInRect(ui.pointerX, ui.pointerY, area);
+    if hovered {
+        ui.hotId = id;
+        ui.consumedPointer = true;
+        if ui.pointerPressed {
+            ui.activeId = id;
+        }
+    }
+    if ui.activeId == id and ui.pointerDown and span > 0.000000000001 and area.width > 4.0 {
+        ui.consumedPointer = true;
+        t := math.clamp((ui.pointerX - (area.x + 2.0)) / (area.width - 4.0), 0.0, 1.0);
+        cur = lo + (span * t);
+    }
+
+    frac := if span <= 0.000000000001 { 0.0 } else { math.clamp((cur - lo) / span, 0.0, 1.0) };
+    s.fillRect(area, ui.theme.buttonBg);
+    fillW := math.max(0.0, (area.width - 4.0) * frac);
+    if fillW > 0.0 {
+        s.fillRect(surf.rect(area.x + 2.0, area.y + 2.0, fillW, math.max(2.0, area.height - 4.0)), ui.theme.accent.withAlphaFloat(0.75));
+    }
+    thumbX := area.x + 2.0 + fillW;
+    s.fillRect(surf.rect(math.clamp(thumbX - 2.0, area.x + 1.0, area.x + area.width - 5.0), area.y + 1.0, 4.0, math.max(2.0, area.height - 2.0)), color.WHITE);
+    s.strokeRect(area, 1.0, if hovered or ui.activeId == id { ui.theme.accent } else { ui.theme.panelBorder });
+    if labelText =!= "" {
+        textY := area.y + math.max(2.0, (area.height - 9.0) * 0.5);
+        s.drawText(labelText, surf.point(area.x + 6.0, textY), 9.0, ui.theme.text);
+    }
+    cur
+};
+
+/** Draws a non-interactive horizontal progress/health bar for `fraction` in `0.0..1.0`. */
+pub progressBar := fn(ui: UiState, s: surf.Surface, area: surf.Rect, fraction: Float, fill: color.Color): Unit {
+    f := math.clamp(fraction, 0.0, 1.0);
+    s.fillRect(area, ui.theme.buttonBg);
+    fillW := math.max(0.0, (area.width - 2.0) * f);
+    if fillW > 0.0 {
+        s.fillRect(surf.rect(area.x + 1.0, area.y + 1.0, fillW, math.max(2.0, area.height - 2.0)), fill);
+    }
+    s.strokeRect(area, 1.0, ui.theme.panelBorder);
+};

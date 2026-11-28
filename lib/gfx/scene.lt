@@ -1,0 +1,618 @@
+/** Procedural 3D meshes, materials, lighting, and painter-sorted software renderer (`gfx/scene`) on `gfx/surface`. */
+
+listMod := import "core/list";
+math := import "math/scalar";
+vec := import "math/vector";
+mat := import "math/matrix";
+xform := import "math/transform";
+color := import "gfx/color";
+surf := import "gfx/surface";
+camera := import "gfx/camera";
+
+/** Indexed triangle mesh storing 3D object-space positions and triangle index triples. */
+pub Mesh := record {
+    vertices: List<vec.FVec3>;
+    indices: List<Int>;
+}
+
+/** Surface shading parameters controlling diffuse, specular highlight, wireframe overlay, and culling. */
+pub Material := record {
+    baseColor: color.Color;
+    ambient: Float;
+    diffuse: Float;
+    specular: Float;
+    shininess: Float;
+    wireframe: Bool;
+    doubleSided: Bool;
+}
+
+/** Constructs a matte material tinted with `baseColor`. */
+pub Material.matte := fn(baseColor: color.Color): Self {
+    Self {
+        baseColor = baseColor,
+        ambient = 0.24,
+        diffuse = 0.78,
+        specular = 0.08,
+        shininess = 8.0,
+        wireframe = false,
+        doubleSided = false
+    }
+};
+
+/** Constructs a glossy specular material tinted with `baseColor`. */
+pub Material.glossy := fn(baseColor: color.Color): Self {
+    Self {
+        baseColor = baseColor,
+        ambient = 0.20,
+        diffuse = 0.75,
+        specular = 0.52,
+        shininess = 28.0,
+        wireframe = false,
+        doubleSided = false
+    }
+};
+
+/** Returns a copy of `m` with wireframe edge overlay enabled or disabled. */
+pub Material.withWireframe := fn(m: Self, wireframe: Bool): Self {
+    Self {
+        baseColor = m.baseColor,
+        ambient = m.ambient,
+        diffuse = m.diffuse,
+        specular = m.specular,
+        shininess = m.shininess,
+        wireframe = wireframe,
+        doubleSided = m.doubleSided
+    }
+};
+
+/** Returns a copy of `m` with backface culling disabled (`doubleSided = true`) or enabled. */
+pub Material.withDoubleSided := fn(m: Self, doubleSided: Bool): Self {
+    Self {
+        baseColor = m.baseColor,
+        ambient = m.ambient,
+        diffuse = m.diffuse,
+        specular = m.specular,
+        shininess = m.shininess,
+        wireframe = m.wireframe,
+        doubleSided = doubleSided
+    }
+};
+
+/** World-space directional light illuminating a `Scene`. */
+pub DirectionalLight := record {
+    direction: vec.FVec3;
+    color: color.Color;
+    intensity: Float;
+}
+
+/** Constructs a `DirectionalLight` shining in direction `dir` (vector toward surface; normalized automatically). */
+pub DirectionalLight.new := fn(dir: vec.FVec3, c: color.Color, intensity: Float): Self {
+    norm := if dir.lengthSq() <= 0.000000000001 { vec.vec3(-0.4, -0.8, -0.4).normalize() } else { dir.normalize() };
+    Self {
+        direction = norm,
+        color = c,
+        intensity = math.max(0.0, intensity)
+    }
+};
+
+/** Per-frame rasterization statistics returned by `Scene.render`. */
+pub RenderStats := record {
+    totalTriangles: Int;
+    drawnTriangles: Int;
+    culledTriangles: Int;
+}
+
+/** One placed mesh object inside a 3D `Scene`. */
+pub MeshInstance := record {
+    mesh: Mesh;
+    transform: xform.Transform3D;
+    material: Material;
+}
+
+/** Immediate 3D scene container with directional lighting, distance fog, and mesh instances. */
+pub Scene := record {
+    instances: List<MeshInstance>;
+    light: DirectionalLight;
+    ambientColor: color.Color;
+    fogColor: color.Color;
+    fogStart: Float;
+    fogEnd: Float;
+}
+
+/** Creates an empty 3D `Scene` with default sunlight and fog disabled. */
+pub Scene.new := fn(): Self {
+    Self {
+        instances = [],
+        light = DirectionalLight.new(vec.vec3(-0.5, -0.85, -0.35), color.WHITE, 1.05),
+        ambientColor = color.Color.fromRgb(0.55, 0.65, 0.80),
+        fogColor = color.Color.fromRgb(0.05, 0.07, 0.12),
+        fogStart = 0.0,
+        fogEnd = 0.0
+    }
+};
+
+/** Removes all queued mesh instances while preserving scene lighting and fog settings. */
+pub Scene.clear := fn(s: mut Self): Unit {
+    s.instances = [];
+};
+
+/** Appends a transformed mesh instance to `s`. */
+pub Scene.add := fn(s: mut Self, mesh: Mesh, transform: xform.Transform3D, material: Material): Unit {
+    mut s.instances.pushBack(MeshInstance { mesh = mesh, transform = transform, material = material });
+};
+
+/** Updates the scene's primary directional light. */
+pub Scene.setLight := fn(s: mut Self, light: DirectionalLight): Unit {
+    s.light = light;
+};
+
+/** Configures linear world-distance fog (`endDist <= startDist` disables fog). */
+pub Scene.setFog := fn(s: mut Self, fogColor: color.Color, startDist: Float, endDist: Float): Unit {
+    s.fogColor = fogColor;
+    s.fogStart = startDist;
+    s.fogEnd = endDist;
+};
+
+/** Creates an empty indexed `Mesh`. */
+pub Mesh.empty := fn(): Self {
+    Self { vertices = [], indices = [] }
+};
+
+pushTri := fn(indices: mut List<Int>, a: Int, b: Int, c: Int): Unit {
+    mut indices.pushBack(a);
+    mut indices.pushBack(b);
+    mut indices.pushBack(c);
+};
+
+pushQuad := fn(indices: mut List<Int>, a: Int, b: Int, c: Int, d: Int): Unit {
+    pushTri(mut indices, a, b, c);
+    pushTri(mut indices, a, c, d);
+};
+
+/** Creates a centered box mesh of dimensions `(width, height, depth)` with CCW outward faces. */
+pub Mesh.box := fn(width: Float, height: Float, depth: Float): Self {
+    hx := width * 0.5;
+    hy := height * 0.5;
+    hz := depth * 0.5;
+    mut verts: List<vec.FVec3> = [];
+    mut idxs: List<Int> = [];
+
+    /* 0..3 Front (+Z), 4..7 Back (-Z), 8..11 Right (+X), 12..15 Left (-X), 16..19 Top (+Y), 20..23 Bottom (-Y) */
+    mut verts.pushBack(vec.vec3(0.0 - hx, 0.0 - hy, hz));
+    mut verts.pushBack(vec.vec3(hx, 0.0 - hy, hz));
+    mut verts.pushBack(vec.vec3(hx, hy, hz));
+    mut verts.pushBack(vec.vec3(0.0 - hx, hy, hz));
+    pushQuad(mut idxs, 0, 1, 2, 3);
+
+    mut verts.pushBack(vec.vec3(hx, 0.0 - hy, 0.0 - hz));
+    mut verts.pushBack(vec.vec3(0.0 - hx, 0.0 - hy, 0.0 - hz));
+    mut verts.pushBack(vec.vec3(0.0 - hx, hy, 0.0 - hz));
+    mut verts.pushBack(vec.vec3(hx, hy, 0.0 - hz));
+    pushQuad(mut idxs, 4, 5, 6, 7);
+
+    mut verts.pushBack(vec.vec3(hx, 0.0 - hy, hz));
+    mut verts.pushBack(vec.vec3(hx, 0.0 - hy, 0.0 - hz));
+    mut verts.pushBack(vec.vec3(hx, hy, 0.0 - hz));
+    mut verts.pushBack(vec.vec3(hx, hy, hz));
+    pushQuad(mut idxs, 8, 9, 10, 11);
+
+    mut verts.pushBack(vec.vec3(0.0 - hx, 0.0 - hy, 0.0 - hz));
+    mut verts.pushBack(vec.vec3(0.0 - hx, 0.0 - hy, hz));
+    mut verts.pushBack(vec.vec3(0.0 - hx, hy, hz));
+    mut verts.pushBack(vec.vec3(0.0 - hx, hy, 0.0 - hz));
+    pushQuad(mut idxs, 12, 13, 14, 15);
+
+    mut verts.pushBack(vec.vec3(0.0 - hx, hy, hz));
+    mut verts.pushBack(vec.vec3(hx, hy, hz));
+    mut verts.pushBack(vec.vec3(hx, hy, 0.0 - hz));
+    mut verts.pushBack(vec.vec3(0.0 - hx, hy, 0.0 - hz));
+    pushQuad(mut idxs, 16, 17, 18, 19);
+
+    mut verts.pushBack(vec.vec3(0.0 - hx, 0.0 - hy, 0.0 - hz));
+    mut verts.pushBack(vec.vec3(hx, 0.0 - hy, 0.0 - hz));
+    mut verts.pushBack(vec.vec3(hx, 0.0 - hy, hz));
+    mut verts.pushBack(vec.vec3(0.0 - hx, 0.0 - hy, hz));
+    pushQuad(mut idxs, 20, 21, 22, 23);
+
+    Self { vertices = verts, indices = idxs }
+};
+
+/** Creates a uniform centered cube mesh of edge length `size`. */
+pub Mesh.cube := fn(size: Float): Self {
+    Mesh.box(size, size, size)
+};
+
+/** Creates a subdivided XZ ground plane (`width x depth`) facing `+Y`. */
+pub Mesh.plane := fn(width: Float, depth: Float, segsX: Int, segsZ: Int): Self {
+    nx := if segsX < 1 { 1 } else { segsX };
+    nz := if segsZ < 1 { 1 } else { segsZ };
+    mut verts: List<vec.FVec3> = [];
+    mut idxs: List<Int> = [];
+    var iz := 0;
+    loop iz <= nz {
+        vz := ((iz * 1.0) / (nz * 1.0) - 0.5) * depth;
+        var ix := 0;
+        loop ix <= nx {
+            vx := ((ix * 1.0) / (nx * 1.0) - 0.5) * width;
+            mut verts.pushBack(vec.vec3(vx, 0.0, vz));
+            ix += 1;
+        }
+        iz += 1;
+    }
+    stride := nx + 1;
+    var z := 0;
+    loop z < nz {
+        var x := 0;
+        loop x < nx {
+            tl := z * stride + x;
+            tr := tl + 1;
+            bl := (z + 1) * stride + x;
+            br := bl + 1;
+            pushTri(mut idxs, tl, bl, br);
+            pushTri(mut idxs, tl, br, tr);
+            x += 1;
+        }
+        z += 1;
+    }
+    Self { vertices = verts, indices = idxs }
+};
+
+/** Creates a UV sphere mesh of `radius` with `rings` latitude bands and `sectors` longitude slices. */
+pub Mesh.sphere := fn(radius: Float, rings: Int, sectors: Int): Self {
+    rCnt := if rings < 3 { 3 } else { rings };
+    sCnt := if sectors < 4 { 4 } else { sectors };
+    mut verts: List<vec.FVec3> = [];
+    mut idxs: List<Int> = [];
+    var r := 0;
+    loop r <= rCnt {
+        phi := ((r * 1.0) / (rCnt * 1.0)) * math.PI;
+        sp := math.sin(phi);
+        cp := math.cos(phi);
+        var s := 0;
+        loop s <= sCnt {
+            theta := ((s * 1.0) / (sCnt * 1.0)) * math.TAU;
+            st := math.sin(theta);
+            ct := math.cos(theta);
+            mut verts.pushBack(vec.vec3(radius * sp * ct, radius * cp, radius * sp * st));
+            s += 1;
+        }
+        r += 1;
+    }
+    stride := sCnt + 1;
+    var ri := 0;
+    loop ri < rCnt {
+        var si := 0;
+        loop si < sCnt {
+            a := ri * stride + si;
+            b := a + stride;
+            c := b + 1;
+            d := a + 1;
+            if ri > 0 { pushTri(mut idxs, a, d, b); }
+            if ri + 1 < rCnt { pushTri(mut idxs, d, c, b); }
+            si += 1;
+        }
+        ri += 1;
+    }
+    Self { vertices = verts, indices = idxs }
+};
+
+/** Creates a capped Y-aligned cylinder of `radius` and total `height` with `sectors` radial sides. */
+pub Mesh.cylinder := fn(radius: Float, height: Float, sectors: Int): Self {
+    sCnt := if sectors < 3 { 3 } else { sectors };
+    hy := height * 0.5;
+    mut verts: List<vec.FVec3> = [];
+    mut idxs: List<Int> = [];
+    /* 0 = top center, 1 = bottom center */
+    mut verts.pushBack(vec.vec3(0.0, hy, 0.0));
+    mut verts.pushBack(vec.vec3(0.0, 0.0 - hy, 0.0));
+    var i := 0;
+    loop i < sCnt {
+        ang := ((i * 1.0) / (sCnt * 1.0)) * math.TAU;
+        px := radius * math.cos(ang);
+        pz := radius * math.sin(ang);
+        mut verts.pushBack(vec.vec3(px, hy, pz));
+        mut verts.pushBack(vec.vec3(px, 0.0 - hy, pz));
+        i += 1;
+    }
+    var j := 0;
+    loop j < sCnt {
+        nextJ := (j + 1) % sCnt;
+        t0 := 2 + j * 2;
+        b0 := t0 + 1;
+        t1 := 2 + nextJ * 2;
+        b1 := t1 + 1;
+        pushTri(mut idxs, 0, t1, t0);
+        pushTri(mut idxs, 1, b0, b1);
+        pushQuad(mut idxs, t0, t1, b1, b0);
+        j += 1;
+    }
+    Self { vertices = verts, indices = idxs }
+};
+
+/** Creates a Y-up torus mesh (`majorRadius` ring radius, `minorRadius` tube radius). */
+pub Mesh.torus := fn(majorRadius: Float, minorRadius: Float, majorSegs: Int, minorSegs: Int): Self {
+    maj := if majorSegs < 6 { 6 } else { majorSegs };
+    minS := if minorSegs < 4 { 4 } else { minorSegs };
+    mut verts: List<vec.FVec3> = [];
+    mut idxs: List<Int> = [];
+    var i := 0;
+    loop i <= maj {
+        u := ((i * 1.0) / (maj * 1.0)) * math.TAU;
+        cu := math.cos(u);
+        su := math.sin(u);
+        var j := 0;
+        loop j <= minS {
+            v := ((j * 1.0) / (minS * 1.0)) * math.TAU;
+            cv := math.cos(v);
+            sv := math.sin(v);
+            ring := majorRadius + (minorRadius * cv);
+            mut verts.pushBack(vec.vec3(ring * cu, minorRadius * sv, ring * su));
+            j += 1;
+        }
+        i += 1;
+    }
+    stride := minS + 1;
+    var mi := 0;
+    loop mi < maj {
+        var ni := 0;
+        loop ni < minS {
+            a := mi * stride + ni;
+            b := (mi + 1) * stride + ni;
+            c := b + 1;
+            d := a + 1;
+            pushTri(mut idxs, a, b, d);
+            pushTri(mut idxs, d, b, c);
+            ni += 1;
+        }
+        mi += 1;
+    }
+    Self { vertices = verts, indices = idxs }
+};
+
+/** Creates a four-sided Y-up pyramid of square `baseSize` and `height`. */
+pub Mesh.pyramid := fn(baseSize: Float, height: Float): Self {
+    hs := baseSize * 0.5;
+    hy := height * 0.5;
+    verts: List<vec.FVec3> = [
+    vec.vec3(0.0 - hs, 0.0 - hy, 0.0 - hs),
+    vec.vec3(hs, 0.0 - hy, 0.0 - hs),
+    vec.vec3(hs, 0.0 - hy, hs),
+    vec.vec3(0.0 - hs, 0.0 - hy, hs),
+    vec.vec3(0.0, hy, 0.0)
+    ];
+    mut idxs: List<Int> = [];
+    pushQuad(mut idxs, 0, 1, 2, 3);
+    pushTri(mut idxs, 0, 4, 1);
+    pushTri(mut idxs, 1, 4, 2);
+    pushTri(mut idxs, 2, 4, 3);
+    pushTri(mut idxs, 3, 4, 0);
+    Self { vertices = verts, indices = idxs }
+};
+
+/** Creates a regular octahedron centered at the origin with vertex radius `radius`. */
+pub Mesh.octahedron := fn(radius: Float): Self {
+    verts: List<vec.FVec3> = [
+    vec.vec3(0.0, radius, 0.0),
+    vec.vec3(radius, 0.0, 0.0),
+    vec.vec3(0.0, 0.0, radius),
+    vec.vec3(0.0 - radius, 0.0, 0.0),
+    vec.vec3(0.0, 0.0, 0.0 - radius),
+    vec.vec3(0.0, 0.0 - radius, 0.0)
+    ];
+    idxs: List<Int> = [
+    0, 2, 1, 0, 1, 4, 0, 4, 3, 0, 3, 2,
+    5, 1, 2, 5, 4, 1, 5, 3, 4, 5, 2, 3
+    ];
+    Self { vertices = verts, indices = idxs }
+};
+
+powSpec := fn(base: Float, expVal: Float): Float {
+    if base <= 0.0 { return 0.0; }
+    steps := math.clamp(math.round(expVal), 1.0, 64.0);
+    var acc := 1.0;
+    var b := base;
+    var n := math.floorToInt(steps);
+    loop n > 0 {
+        if n % 2 == 1 { acc = acc * b; }
+        n = n / 2;
+        if n > 0 { b = b * b; }
+    }
+    acc
+};
+
+shadeFace := fn(s: Scene, matDef: Material, worldPos: vec.FVec3, normal: vec.FVec3, camPos: vec.FVec3, toLight: vec.FVec3): color.Color {
+    nDotL := math.max(0.0, normal.dot(toLight));
+    viewDir := camPos.sub(worldPos).normalize();
+    halfVec := toLight.add(viewDir).normalize();
+    specAngle := math.max(0.0, normal.dot(halfVec));
+    specTerm := if nDotL > 0.0 and matDef.specular > 0.0 { matDef.specular * powSpec(specAngle, matDef.shininess) } else { 0.0 };
+
+    baseR := matDef.baseColor.redFloat();
+    baseG := matDef.baseColor.greenFloat();
+    baseB := matDef.baseColor.blueFloat();
+    ambR := s.ambientColor.redFloat() * matDef.ambient;
+    ambG := s.ambientColor.greenFloat() * matDef.ambient;
+    ambB := s.ambientColor.blueFloat() * matDef.ambient;
+    diffScale := matDef.diffuse * nDotL * s.light.intensity;
+    specScale := specTerm * s.light.intensity;
+    lightR := s.light.color.redFloat();
+    lightG := s.light.color.greenFloat();
+    lightB := s.light.color.blueFloat();
+
+    var r := (baseR * (ambR + (diffScale * lightR))) + (specScale * lightR);
+    var g := (baseG * (ambG + (diffScale * lightG))) + (specScale * lightG);
+    var b := (baseB * (ambB + (diffScale * lightB))) + (specScale * lightB);
+
+    shaded := color.Color.fromRgba(math.clamp(r, 0.0, 1.0), math.clamp(g, 0.0, 1.0), math.clamp(b, 0.0, 1.0), matDef.baseColor.alphaFloat());
+    if s.fogEnd > s.fogStart {
+        dist := camPos.sub(worldPos).length();
+        fogFactor := math.clamp((dist - s.fogStart) / (s.fogEnd - s.fogStart), 0.0, 1.0);
+        return shaded.mix(s.fogColor, fogFactor);
+    }
+    shaded
+};
+
+/** Renders all mesh instances in `s` onto `surf` using `cam` and back-to-front painter depth sorting. */
+pub Scene.render := fn(s: Self, surfObj: surf.Surface, cam: camera.Camera3D, viewportW: Float, viewportH: Float): RenderStats {
+    if viewportW <= 0.0 or viewportH <= 0.0 {
+        return RenderStats { totalTriangles = 0, drawnTriangles = 0, culledTriangles = 0 };
+    }
+    vp := cam.viewProjectionMatrix();
+    camPos := cam.eye;
+    toLight := s.light.direction.scale(-1.0).normalize();
+
+    mut triAx: List<Float> = [];
+    mut triAy: List<Float> = [];
+    mut triBx: List<Float> = [];
+    mut triBy: List<Float> = [];
+    mut triCx: List<Float> = [];
+    mut triCy: List<Float> = [];
+    mut triDepth: List<Float> = [];
+    mut triColor: List<color.Color> = [];
+    mut triWire: List<Bool> = [];
+    var totalTris := 0;
+    var culledTris := 0;
+
+    loop s.instances as inst {
+        mesh := inst.mesh;
+        vCount := mesh.vertices.length();
+        iCount := mesh.indices.length();
+        if vCount == 0 or iCount < 3 {
+            continue;
+        }
+        modelMat := inst.transform.toMat4();
+        mvp := vp.mul(modelMat);
+
+        mut worldPts: List<vec.FVec3> = [];
+        mut scrX: List<Float> = [];
+        mut scrY: List<Float> = [];
+        mut clipW: List<Float> = [];
+        mut ndcZ: List<Float> = [];
+        var vi := 0;
+        loop vi < vCount {
+            lp := mesh.vertices[vi];
+            wp := modelMat.transformPoint3(lp);
+            clip := mvp.mulVec(vec.vec4(lp.x(), lp.y(), lp.z(), 1.0));
+            wVal := clip.w();
+            invW := if math.abs(wVal) > 0.0001 { 1.0 / wVal } else { 1.0 };
+            sx := ((clip.x() * invW) + 1.0) * 0.5 * viewportW;
+            sy := (1.0 - (clip.y() * invW)) * 0.5 * viewportH;
+            mut worldPts.pushBack(wp);
+            mut scrX.pushBack(sx);
+            mut scrY.pushBack(sy);
+            mut clipW.pushBack(wVal);
+            mut ndcZ.pushBack(clip.z() * invW);
+            vi += 1;
+        }
+
+        triEnd := iCount - 2;
+        var ti := 0;
+        loop ti < triEnd {
+            totalTris += 1;
+            ia := mesh.indices[ti];
+            ib := mesh.indices[ti + 1];
+            ic := mesh.indices[ti + 2];
+            ti += 3;
+
+            if ia < 0 or ib < 0 or ic < 0 or ia >= vCount or ib >= vCount or ic >= vCount {
+                culledTris += 1;
+                continue;
+            }
+            if clipW[ia] <= 0.15 or clipW[ib] <= 0.15 or clipW[ic] <= 0.15 {
+                culledTris += 1;
+                continue;
+            }
+            za := ndcZ[ia]; zb := ndcZ[ib]; zc := ndcZ[ic];
+            if (za > 1.05 and zb > 1.05 and zc > 1.05) or (za < -1.05 and zb < -1.05 and zc < -1.05) {
+                culledTris += 1;
+                continue;
+            }
+
+            ax := scrX[ia]; ay := scrY[ia];
+            bx := scrX[ib]; by := scrY[ib];
+            cx := scrX[ic]; cy := scrY[ic];
+            minX := math.min(ax, math.min(bx, cx));
+            maxX := math.max(ax, math.max(bx, cx));
+            minY := math.min(ay, math.min(by, cy));
+            maxY := math.max(ay, math.max(by, cy));
+            if maxX < 0.0 or minX > viewportW or maxY < 0.0 or minY > viewportH {
+                culledTris += 1;
+                continue;
+            }
+
+            pa := worldPts[ia];
+            pb := worldPts[ib];
+            pc := worldPts[ic];
+            rawNormal := pb.sub(pa).cross(pc.sub(pa));
+            if rawNormal.lengthSq() <= 0.000000000001 {
+                culledTris += 1;
+                continue;
+            }
+            var normal := rawNormal.normalize();
+            center := pa.add(pb).add(pc).scale(1.0 / 3.0);
+            facing := camPos.sub(center).dot(normal);
+            if not inst.material.doubleSided and facing <= 0.0 {
+                culledTris += 1;
+                continue;
+            }
+            if facing < 0.0 {
+                normal = normal.scale(-1.0);
+            }
+
+            shaded := shadeFace(s, inst.material, center, normal, camPos, toLight);
+            distSq := camPos.sub(center).lengthSq();
+            mut triAx.pushBack(ax); mut triAy.pushBack(ay);
+            mut triBx.pushBack(bx); mut triBy.pushBack(by);
+            mut triCx.pushBack(cx); mut triCy.pushBack(cy);
+            mut triDepth.pushBack(distSq);
+            mut triColor.pushBack(shaded);
+            mut triWire.pushBack(inst.material.wireframe);
+        }
+    }
+
+    drawn := triDepth.length();
+    if drawn > 0 {
+        order := listMod.sortIndicesBy(drawn, fn(a: Int, b: Int): Bool { triDepth[a] >= triDepth[b] });
+        var oi := 0;
+        loop oi < drawn {
+            idx := order[oi];
+            p0 := surf.point(triAx[idx], triAy[idx]);
+            p1 := surf.point(triBx[idx], triBy[idx]);
+            p2 := surf.point(triCx[idx], triCy[idx]);
+            col := triColor[idx];
+            surfObj.fillTriangle(p0, p1, p2, col);
+            if triWire[idx] {
+                edgeCol := col.mix(color.WHITE, 0.35);
+                surfObj.strokeLine(p0, p1, 1.0, edgeCol);
+                surfObj.strokeLine(p1, p2, 1.0, edgeCol);
+                surfObj.strokeLine(p2, p0, 1.0, edgeCol);
+            }
+            oi += 1;
+        }
+    }
+    RenderStats { totalTriangles = totalTris, drawnTriangles = drawn, culledTriangles = culledTris }
+};
+
+/** Draws a 3D reference ground grid at world elevation `y` spanning `[-halfExtent*step, +halfExtent*step]` along X and Z. */
+pub renderWireframeGrid := fn(
+surfObj: surf.Surface, cam: camera.Camera3D, viewportW: Float, viewportH: Float, halfExtent: Int, step: Float, y: Float, lineColor: color.Color
+): Unit {
+    ext := halfExtent * step;
+    var i := 0 - halfExtent;
+    loop i <= halfExtent {
+        coord := i * step;
+        x0 := cam.project(vec.vec3(coord, y, 0.0 - ext), viewportW, viewportH);
+        x1 := cam.project(vec.vec3(coord, y, ext), viewportW, viewportH);
+        match (x0, x1) {
+            (.Some(a), .Some(b)) { surfObj.strokeLine(surf.point(a.x(), a.y()), surf.point(b.x(), b.y()), 1.0, lineColor); }
+            _ { }
+        }
+        z0 := cam.project(vec.vec3(0.0 - ext, y, coord), viewportW, viewportH);
+        z1 := cam.project(vec.vec3(ext, y, coord), viewportW, viewportH);
+        match (z0, z1) {
+            (.Some(a), .Some(b)) { surfObj.strokeLine(surf.point(a.x(), a.y()), surf.point(b.x(), b.y()), 1.0, lineColor); }
+            _ { }
+        }
+        i += 1;
+    }
+};

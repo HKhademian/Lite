@@ -1,0 +1,202 @@
+/** 3D perspective/orthographic cameras and interactive orbit controller (`gfx/camera`) across TS and C11. */
+
+math := import "math/scalar";
+vec := import "math/vector";
+mat := import "math/matrix";
+
+/** Projection mode for `Camera3D`. */
+pub ProjectionKind := enum: Int {
+    Perspective = 0;
+    Orthographic = 1;
+}
+
+/** 3D camera storing eye/target/up basis and perspective or orthographic frustum settings. */
+pub Camera3D := record {
+    eye: vec.FVec3;
+    target: vec.FVec3;
+    up: vec.FVec3;
+    fovYRad: Float;
+    aspect: Float;
+    near: Float;
+    far: Float;
+    orthoHalfHeight: Float;
+    projection: ProjectionKind;
+}
+
+/** Constructs a perspective `Camera3D` with vertical field of view `fovYRad` (radians). */
+pub Camera3D.perspective := fn(
+eye: vec.FVec3, target: vec.FVec3, up: vec.FVec3, fovYRad: Float, aspect: Float, near: Float, far: Float
+): Self {
+    Self {
+        eye = eye,
+        target = target,
+        up = up,
+        fovYRad = fovYRad,
+        aspect = if aspect <= 0.0001 { 1.0 } else { aspect },
+        near = if near <= 0.0001 { 0.1 } else { near },
+        far = if far <= near + 0.001 { near + 100.0 } else { far },
+        orthoHalfHeight = 5.0,
+        projection = ProjectionKind.Perspective
+    }
+};
+
+/** Constructs an orthographic `Camera3D` with vertical half-extent `halfHeight`. */
+pub Camera3D.orthographic := fn(
+eye: vec.FVec3, target: vec.FVec3, up: vec.FVec3, halfHeight: Float, aspect: Float, near: Float, far: Float
+): Self {
+    Self {
+        eye = eye,
+        target = target,
+        up = up,
+        fovYRad = math.PI / 3.0,
+        aspect = if aspect <= 0.0001 { 1.0 } else { aspect },
+        near = near,
+        far = if far <= near + 0.001 { near + 100.0 } else { far },
+        orthoHalfHeight = if halfHeight <= 0.0001 { 5.0 } else { halfHeight },
+        projection = ProjectionKind.Orthographic
+    }
+};
+
+/** Computes the right-handed 4x4 view matrix looking from `cam.eye` toward `cam.target`. */
+pub Camera3D.viewMatrix := fn(cam: Self): mat.FMat4 {
+    mat.Mat.lookAt(cam.eye, cam.target, cam.up)
+};
+
+/** Computes the 4x4 projection matrix (`perspective` or `ortho`). */
+pub Camera3D.projectionMatrix := fn(cam: Self): mat.FMat4 {
+    if cam.projection == ProjectionKind.Perspective {
+        return mat.Mat.perspective(cam.fovYRad, cam.aspect, cam.near, cam.far);
+    }
+    hh := cam.orthoHalfHeight;
+    hw := hh * cam.aspect;
+    mat.Mat.ortho(0.0 - hw, hw, 0.0 - hh, hh, cam.near, cam.far)
+};
+
+/** Computes combined `projection * view` matrix for transforming world coordinates to clip space. */
+pub Camera3D.viewProjectionMatrix := fn(cam: Self): mat.FMat4 {
+    cam.projectionMatrix().mul(cam.viewMatrix())
+};
+
+/** Normalized unit direction pointing from `cam.eye` toward `cam.target`. */
+pub Camera3D.forward := fn(cam: Self): vec.FVec3 {
+    raw := cam.target.sub(cam.eye);
+    if raw.lengthSq() <= 0.000000000001 { vec.vec3(0.0, 0.0, -1.0) } else { raw.normalize() }
+};
+
+/** Normalized unit right vector perpendicular to `forward` and `cam.up`. */
+pub Camera3D.right := fn(cam: Self): vec.FVec3 {
+    fwd := cam.forward();
+    var r := fwd.cross(cam.up);
+    if r.lengthSq() <= 0.000000000001 {
+        alt := if math.abs(fwd.y()) < 0.99 { vec.UNIT_Y3 } else { vec.UNIT_Z3 };
+        r = fwd.cross(alt);
+    }
+    r.normalize()
+};
+
+/** Projects a 3D world point onto pixel coordinates `(sx, sy, ndcZ)` inside `viewportW x viewportH`, or `.None` if behind the camera/outside depth bounds. */
+pub Camera3D.project := fn(cam: Self, worldPoint: vec.FVec3, viewportW: Float, viewportH: Float): Option<vec.FVec3> {
+    if viewportW <= 0.0 or viewportH <= 0.0 {
+        return .None;
+    }
+    vp := cam.viewProjectionMatrix();
+    clip := vp.mulVec(vec.vec4(worldPoint.x(), worldPoint.y(), worldPoint.z(), 1.0));
+    if clip.w() <= 0.0001 {
+        return .None;
+    }
+    invW := 1.0 / clip.w();
+    ndcX := clip.x() * invW;
+    ndcY := clip.y() * invW;
+    ndcZ := clip.z() * invW;
+    if ndcZ < -1.0 or ndcZ > 1.0 {
+        return .None;
+    }
+    sx := (ndcX + 1.0) * 0.5 * viewportW;
+    sy := (1.0 - ndcY) * 0.5 * viewportH;
+    .Some(vec.vec3(sx, sy, ndcZ))
+};
+
+/** Unprojects a viewport pixel `(screenX, screenY)` into a world-space ray `(origin, dir)`, or `.None` if the camera matrix is singular. */
+pub Camera3D.unprojectRay := fn(cam: Self, screenX: Float, screenY: Float, viewportW: Float, viewportH: Float): Option<(origin: vec.FVec3, dir: vec.FVec3)> {
+    if viewportW <= 0.0 or viewportH <= 0.0 {
+        return .None;
+    }
+    invOpt := cam.viewProjectionMatrix().inverse();
+    match invOpt {
+        .None { return .None; }
+        .Some(invVp) {
+            ndcX := (screenX / viewportW) * 2.0 - 1.0;
+            ndcY := 1.0 - (screenY / viewportH) * 2.0;
+            nearWorld := invVp.transformPoint3(vec.vec3(ndcX, ndcY, -1.0));
+            farWorld := invVp.transformPoint3(vec.vec3(ndcX, ndcY, 1.0));
+            dirRaw := farWorld.sub(nearWorld);
+            if dirRaw.lengthSq() <= 0.000000000001 {
+                return .None;
+            }
+            return .Some((origin = nearWorld, dir = dirRaw.normalize()));
+        }
+    }
+};
+
+/** Interactive spherical orbit camera around a 3D `target` point. */
+pub OrbitCamera := record {
+    target: vec.FVec3;
+    yaw: Float;
+    pitch: Float;
+    distance: Float;
+    minDistance: Float;
+    maxDistance: Float;
+    fovYRad: Float;
+    near: Float;
+    far: Float;
+}
+
+/** Constructs an `OrbitCamera` looking at `target` from spherical `(yaw, pitch, distance)` radians/units. */
+pub OrbitCamera.new := fn(target: vec.FVec3, yaw: Float, pitch: Float, distance: Float): Self {
+    clampedDist := math.clamp(distance, 0.5, 500.0);
+    Self {
+        target = target,
+        yaw = yaw,
+        pitch = math.clamp(pitch, -1.45, 1.45),
+        distance = clampedDist,
+        minDistance = 1.5,
+        maxDistance = 120.0,
+        fovYRad = math.PI / 3.2,
+        near = 0.2,
+        far = 250.0
+    }
+};
+
+/** Rotates orbit camera `o` by `deltaYaw` and `deltaPitch` radians (clamping pitch away from gimbal poles). */
+pub OrbitCamera.orbit := fn(o: mut Self, deltaYaw: Float, deltaPitch: Float): Unit {
+    o.yaw = o.yaw + deltaYaw;
+    o.pitch = math.clamp(o.pitch + deltaPitch, -1.45, 1.45);
+};
+
+/** Adjusts orbit distance by `delta` clamped between `minDistance` and `maxDistance`. */
+pub OrbitCamera.zoom := fn(o: mut Self, delta: Float): Unit {
+    o.distance = math.clamp(o.distance + delta, o.minDistance, o.maxDistance);
+};
+
+/** Pans `o.target` along camera right/up directions by `(dx, dy)` world units. */
+pub OrbitCamera.pan := fn(o: mut Self, dx: Float, dy: Float): Unit {
+    fwd := o.target.sub(o.eye()).normalize();
+    right := fwd.cross(vec.UNIT_Y3).normalize();
+    up := right.cross(fwd).normalize();
+    o.target = o.target.add(right.scale(dx)).add(up.scale(dy));
+};
+
+/** Computes the current world-space eye position of `o`. */
+pub OrbitCamera.eye := fn(o: Self): vec.FVec3 {
+    cp := math.cos(o.pitch);
+    sp := math.sin(o.pitch);
+    cy := math.cos(o.yaw);
+    sy := math.sin(o.yaw);
+    offset := vec.vec3(o.distance * cp * sy, o.distance * sp, o.distance * cp * cy);
+    o.target.add(offset)
+};
+
+/** Converts `o` to a perspective `Camera3D` for `aspect = width / height`. */
+pub OrbitCamera.toCamera := fn(o: Self, aspect: Float): Camera3D {
+    Camera3D.perspective(o.eye(), o.target, vec.UNIT_Y3, o.fovYRad, aspect, o.near, o.far)
+};
