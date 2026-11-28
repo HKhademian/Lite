@@ -658,6 +658,58 @@ isPowerOfTwoAlign := fn(n: Int): Bool {
     p == n
 };
 
+/** Returns the builtin generic family (`Rc`, `Slice`, `Simd`, `SimdNative`, `SoA`) if `name` resolves via an imported or preloaded `$BuiltinFamily:` alias, else `""`. */
+pub builtinFamilyFromAlias := fn(aliases: List<AliasDecl>, name: String): String {
+    var cur := name;
+    var steps := 0;
+    loop steps < 8 {
+        dotPos := cur.indexOf(".", 0);
+        if dotPos > 0 {
+            head := cur.slice(0, dotPos);
+            tail := cur.slice(dotPos + 1, cur.length());
+            modIdx := findAlias(aliases, "$modalias:" + head);
+            if modIdx >= 0 {
+                cur = aliases[modIdx].target + "." + tail;
+            }
+        }
+        idx := findAlias(aliases, cur);
+        if idx < 0 { return ""; }
+        t := aliases[idx].target;
+        if t.startsWithAt(0, "$BuiltinFamily:") {
+            return t.slice(15, t.length());
+        }
+        if t == "" or t.startsWithAt(0, "$") or t.startsWithAt(0, "@") or not t.at(0).isNameStart() {
+            return "";
+        }
+        cur = t;
+        steps = steps + 1;
+    }
+    ""
+};
+
+/** Reports that a builtin generic family requires importing its owning `core/` module. */
+pub failMissingBuiltinFamily := fn(source: String, position: Int, prefix: String, name: String): Unit {
+    modSpec := if name == "Rc" {
+        "core/rc"
+    } else if name == "Slice" {
+        "core/slice"
+    } else if name == "Simd" or name == "SimdNative" {
+        "core/simd"
+    } else {
+        "core/soa"
+    };
+    shortAlias := if name == "Rc" {
+        "rc"
+    } else if name == "Slice" {
+        "slice"
+    } else if name == "Simd" or name == "SimdNative" {
+        "simd"
+    } else {
+        "soa"
+    };
+    syntax.failAt(source, position, prefix, "generic type " + name + " requires importing \"" + modSpec + "\" (e.g. " + shortAlias + " := import \"" + modSpec + "\"; " + shortAlias + "." + name + "<...>)");
+};
+
 /** Decodes optional `~P~A<n>~N` layout attributes from a canonical record or enum header. */
 pub parseLayoutAttrSuffix := fn(rawHeader: String): (packed: Bool, align: Int, noNiche: Bool) {
     baseEnd := headerBaseEnd(rawHeader);
@@ -6103,12 +6155,15 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
                 }
                 return (kind = "$Assoc<" + headName + ";" + gHit.ifaceKind + ";" + memName + ">", next = after);
             }
-            name = headName;
-            after = source.skipName(start);
+            if findAlias(aliases, headName) >= 0 or headName == "List" or headName == "Map" or headName == "Set" or headName == "Array" {
+                name = headName;
+                after = source.skipName(start);
+            }
         }
     }
     afterName := syntax.skipTrivia(source, after, prefix);
     var resolvedName := name;
+    var resolvedBuiltinFamily := "";
     if name == "Self" {
         selfIdx := findAlias(aliases, "Self");
         if selfIdx >= 0 and aliases[selfIdx].target.startsWithAt(0, "$Family:") {
@@ -6117,7 +6172,10 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
                 syntax.failAt(errSource, nameStart, prefix, "generic type " + fam + " requires explicit type arguments on Self<...>");
             }
             resolvedName = fam;
+            resolvedBuiltinFamily = fam;
         }
+    } else {
+        resolvedBuiltinFamily = builtinFamilyFromAlias(aliases, resolvedName);
     }
     if resolvedName == "List" and afterName < size and source.at(afterName) == "<" {
         innerStart := syntax.skipTrivia(source, afterName + 1, prefix);
@@ -6216,7 +6274,7 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
         }
         return (kind = "Set<" + elemParsed.kind + ">", next = close + 1);
     }
-    if resolvedName == "Rc" and afterName < size and source.at(afterName) == "<" {
+    if resolvedBuiltinFamily == "Rc" and afterName < size and source.at(afterName) == "<" {
         elemStart := syntax.skipTrivia(source, afterName + 1, prefix);
         if elemStart >= size or source.at(elemStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected an Rc payload type");
@@ -6235,7 +6293,7 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
         }
         return (kind = "Rc<" + elemParsed.kind + ">", next = close + 1);
     }
-    if resolvedName == "Slice" and afterName < size and source.at(afterName) == "<" {
+    if resolvedBuiltinFamily == "Slice" and afterName < size and source.at(afterName) == "<" {
         elemStart := syntax.skipTrivia(source, afterName + 1, prefix);
         if elemStart >= size or source.at(elemStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected a Slice element type");
@@ -6254,7 +6312,7 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
         }
         return (kind = "Slice<" + elemParsed.kind + ">", next = close + 1);
     }
-    if resolvedName == "Simd" and afterName < size and source.at(afterName) == "<" {
+    if resolvedBuiltinFamily == "Simd" and afterName < size and source.at(afterName) == "<" {
         innerStart := syntax.skipTrivia(source, afterName + 1, prefix);
         if innerStart >= size or source.at(innerStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { innerStart } else { errPos }, prefix, "expected a Simd element type");
@@ -6290,7 +6348,7 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
         }
         return (kind = "Simd<" + inner.kind + "," + ext.extText + ">", next = ext.next);
     }
-    if resolvedName == "SimdNative" and afterName < size and source.at(afterName) == "<" {
+    if resolvedBuiltinFamily == "SimdNative" and afterName < size and source.at(afterName) == "<" {
         elemStart := syntax.skipTrivia(source, afterName + 1, prefix);
         if elemStart >= size or source.at(elemStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { elemStart } else { errPos }, prefix, "expected a SimdNative element type");
@@ -6309,7 +6367,7 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
         nativeLanes := simdNativeLaneCount(elemParsed.kind);
         return (kind = "Simd<" + elemParsed.kind + "," + nativeLanes.toText() + ">", next = close + 1);
     }
-    if resolvedName == "SoA" and afterName < size and source.at(afterName) == "<" {
+    if resolvedBuiltinFamily == "SoA" and afterName < size and source.at(afterName) == "<" {
         recStart := syntax.skipTrivia(source, afterName + 1, prefix);
         if recStart >= size or source.at(recStart) == ">" {
             syntax.failAt(errSource, if useLocalErr { recStart } else { errPos }, prefix, "expected a record type in SoA<R>");
@@ -6353,6 +6411,11 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
         }
         if (aliasItem.target).startsWithAt(0, "$Kind:") {
             return (kind = (aliasItem.target).slice(6, (aliasItem.target).length()), next = after);
+        }
+        if (aliasItem.target).startsWithAt(0, "$BuiltinFamily:") {
+            fam := (aliasItem.target).slice(15, (aliasItem.target).length());
+            syntax.failAt(errSource, nameStart, prefix, "generic type " + fam + " requires explicit type arguments");
+            return (kind = "", next = after);
         }
         isGenRaw := (aliasItem.target).startsWithAt(0, "@genraw:");
         isGenTpl := (aliasItem.target).startsWithAt(0, "@gentpl:");
@@ -6535,6 +6598,9 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
             syntax.failAt(errSource, aliasItem.at, prefix, "unexpected text after type");
         }
         return (kind = resolved.kind, next = after);
+    }
+    if name == "Rc" or name == "Slice" or name == "Simd" or name == "SimdNative" or name == "SoA" {
+        failMissingBuiltinFamily(errSource, nameStart, prefix, name);
     }
     if not useLocalErr and isUnsupportedAliasTarget(name) {
         unsupportedAliasTarget(errSource, errPos, prefix, name);
@@ -8328,11 +8394,16 @@ canResolveTypeBaseAtomAt := fn(source: String, position: Int, prefix: String, al
         }
     }
     var resolvedName := name;
+    var resolvedBuiltinFamily := "";
     if name == "Self" {
         selfIdx := findAlias(aliases, "Self");
         if selfIdx >= 0 and aliases[selfIdx].target.startsWithAt(0, "$Family:") {
-            resolvedName = aliases[selfIdx].target.slice(8, aliases[selfIdx].target.length());
+            fam := aliases[selfIdx].target.slice(8, aliases[selfIdx].target.length());
+            resolvedName = fam;
+            resolvedBuiltinFamily = fam;
         }
+    } else {
+        resolvedBuiltinFamily = builtinFamilyFromAlias(aliases, resolvedName);
     }
     if resolvedName == "List" {
         afterList := syntax.skipTrivia(source, afterName, prefix);
@@ -8408,7 +8479,7 @@ canResolveTypeBaseAtomAt := fn(source: String, position: Int, prefix: String, al
         }
         return (ok = true, kind = "Set<" + elemRes.kind + ">", next = close + 1);
     }
-    if resolvedName == "Rc" {
+    if resolvedBuiltinFamily == "Rc" {
         afterRc := syntax.skipTrivia(source, afterName, prefix);
         if afterRc >= size or source.at(afterRc) =!= "<" {
             return (ok = false, kind = "", next = afterRc);
@@ -8423,7 +8494,7 @@ canResolveTypeBaseAtomAt := fn(source: String, position: Int, prefix: String, al
         }
         return (ok = true, kind = "Rc<" + elemRes.kind + ">", next = close + 1);
     }
-    if resolvedName == "Slice" {
+    if resolvedBuiltinFamily == "Slice" {
         afterSl := syntax.skipTrivia(source, afterName, prefix);
         if afterSl >= size or source.at(afterSl) =!= "<" {
             return (ok = false, kind = "", next = afterSl);
@@ -8438,7 +8509,7 @@ canResolveTypeBaseAtomAt := fn(source: String, position: Int, prefix: String, al
         }
         return (ok = true, kind = "Slice<" + elemRes.kind + ">", next = close + 1);
     }
-    if resolvedName == "Simd" {
+    if resolvedBuiltinFamily == "Simd" {
         afterSm := syntax.skipTrivia(source, afterName, prefix);
         if afterSm >= size or source.at(afterSm) =!= "<" {
             return (ok = false, kind = "", next = afterSm);
@@ -8493,7 +8564,7 @@ canResolveTypeBaseAtomAt := fn(source: String, position: Int, prefix: String, al
         }
         return (ok = true, kind = "Simd<" + elemRes.kind + "," + lanesTxt + ">", next = close + 1);
     }
-    if resolvedName == "SimdNative" {
+    if resolvedBuiltinFamily == "SimdNative" {
         afterSn := syntax.skipTrivia(source, afterName, prefix);
         if afterSn >= size or source.at(afterSn) =!= "<" {
             return (ok = false, kind = "", next = afterSn);
@@ -8514,7 +8585,7 @@ canResolveTypeBaseAtomAt := fn(source: String, position: Int, prefix: String, al
         }
         return (ok = true, kind = "Simd<" + elemRes.kind + "," + simdNativeLaneCount(elemRes.kind).toText() + ">", next = close + 1);
     }
-    if resolvedName == "SoA" {
+    if resolvedBuiltinFamily == "SoA" {
         afterSoa := syntax.skipTrivia(source, afterName, prefix);
         if afterSoa >= size or source.at(afterSoa) =!= "<" {
             return (ok = false, kind = "", next = afterSoa);
@@ -8565,6 +8636,9 @@ canResolveTypeBaseAtomAt := fn(source: String, position: Int, prefix: String, al
             return (ok = false, kind = "", next = afterName);
         }
         return (ok = true, kind = kindVal, next = afterName);
+    }
+    if (aliasItem.target).startsWithAt(0, "$BuiltinFamily:") {
+        return (ok = false, kind = "", next = afterName);
     }
     isGenRaw := (aliasItem.target).startsWithAt(0, "@genraw:");
     isGenTpl := (aliasItem.target).startsWithAt(0, "@gentpl:");

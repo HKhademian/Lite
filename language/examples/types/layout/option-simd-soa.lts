@@ -21,10 +21,10 @@ h := Header { kind = 5, flags = 3, count = 42 };
 maybeTag: opt.Option<Int> = .Some(cast<Int>(h.count));
 tagOut := if .Some(n) := maybeTag { n + 1 } else { 0 };
 
-shared := Rc.create(100);
+shared := rc.Rc.create(100);
 sharedCopy := shared.share();
 
-mut swarm: SoA<Particle> = SoA.create();
+mut swarm: soa.SoA<Particle> = soa.SoA.create();
 loop 0..4 as i {
     mut swarm.pushBack(Particle { x = cast<Float32>(i), vx = cast<Float32>(2.0) });
 }

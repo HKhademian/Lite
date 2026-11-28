@@ -264,18 +264,64 @@ sortedDepIndices := fn(logicals: List<String>, paths: List<String>, count: Int):
     })
 }
 
-/** Returns public declaration records for one completed source module. */
-modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.Items {
+/** Resolves the imported canonical module path recorded for `(importerPath, spec)` in `graph`, or `""`. */
+importEdgeTargetPath := fn(graph: frontend.Items, importerPath: String, spec: String): String {
+    loop graph as item {
+        if item.kind == frontend.ITEM_KIND_IMPORT_EDGE and item.name == importerPath and item.code == spec {
+            return item.runtime;
+        }
+    }
+    ""
+};
+
+/** Returns the leading unqualified symbol or module alias segment before any `.`. */
+topLevelHeadName := fn(name: String): String {
+    dotIdx := name.indexOf(".", 0);
+    if dotIdx >= 0 { name.slice(0, dotIdx) } else { name }
+};
+
+/** Collects public declarations for one module, expanding `pub import` and `pub alias := import` recursively without cycles. */
+collectPublicDeclsWithVisited := fn(graph: frontend.Items, path: String, seenPaths: Set<String>): frontend.Items {
     mut result: frontend.Items = [];
+    if seenPaths.has(path) { return result; }
+    var mut nextSeen := seenPaths;
+    mut nextSeen.add(path);
     var inside := false;
+    var mut reexportImports: frontend.Items = [];
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_MODULE_START { inside = item.name == path; }
         else if item.kind == frontend.ITEM_KIND_MODULE_END and inside { break; }
-        else if inside and (item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE) {
-            mut result.pushBack(item);
+        else if inside {
+            if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
+                mut result.pushBack(item);
+            } else if item.kind == frontend.ITEM_KIND_IMPORT and (item.code == "pub_unpack" or item.code == "pub_alias") {
+                mut reexportImports.pushBack(item);
+            }
+        }
+    }
+    loop reexportImports as imp {
+        depPath := importEdgeTargetPath(graph, path, imp.textValue);
+        if depPath =!= "" {
+            subDecls := self(graph, depPath, nextSeen);
+            if imp.code == "pub_unpack" {
+                loop subDecls as sd { mut result.pushBack(sd); }
+            } else {
+                mut result.pushBack((kind = frontend.ITEM_KIND_MODULE_ALIAS, name = imp.name, runtime = moduleKeyForPath(graph, depPath),
+                code = moduleIdentityForPath(graph, depPath), intValue = 0, textValue = depPath));
+                loop subDecls as sd {
+                    mut result.pushBack((kind = sd.kind, name = imp.name + "." + sd.name, runtime = sd.runtime,
+                    code = sd.code, intValue = sd.intValue, textValue = sd.textValue));
+                }
+            }
         }
     }
     result
+};
+
+/** Returns public declaration records for one completed source module. */
+modulePublicDeclarations := fn(graph: frontend.Items, path: String): frontend.Items {
+    emptySeen: Set<String>;
+    collectPublicDeclsWithVisited(graph, path, emptySeen)
 }
 /** Appends an import interface, rejecting alias, value, and duplicate-runtime collisions while allowing overloaded functions. */
 appendModuleExports := fn(existing: frontend.Items, incoming: frontend.Items, prefix: String): frontend.Items {
@@ -561,18 +607,62 @@ stripCoreMeta := fn(graph: frontend.Items): frontend.Items {
     cleaned
 }
 
+/** Prepends preload exports wrapped in `PRELOAD_MARK` markers without colliding with explicit imports. */
+appendPreloadExports := fn(graph: frontend.Items, preloadPath: String, explicitExports: frontend.Items, prefix: String): frontend.Items {
+    if preloadPath == "" or not moduleProcessed(graph, preloadPath) {
+        return explicitExports;
+    }
+    mut explicitHeadNames: Set<String>;
+    loop explicitExports as expItem {
+        mut explicitHeadNames.add(topLevelHeadName(expItem.name));
+    }
+    rawPreloadExports := modulePublicDeclarations(graph, preloadPath);
+    mut filteredPreload: frontend.Items = [];
+    loop rawPreloadExports as pItem {
+        if not explicitHeadNames.has(topLevelHeadName(pItem.name)) {
+            mut filteredPreload.pushBack(pItem);
+        }
+    }
+    if filteredPreload.length() == 0 {
+        return explicitExports;
+    }
+    combinedWithPreload := appendModuleExports(explicitExports, filteredPreload, prefix);
+    expCount := explicitExports.length();
+    var mut rebuiltExports: frontend.Items = [];
+    mut rebuiltExports.pushBack((kind = frontend.ITEM_KIND_PRELOAD_MARK, name = "start", runtime = "", code = "", intValue = 0, textValue = ""));
+    var ci := expCount;
+    loop ci < combinedWithPreload.length() {
+        mut rebuiltExports.pushBack(combinedWithPreload[ci]);
+        ci = ci + 1;
+    }
+    mut rebuiltExports.pushBack((kind = frontend.ITEM_KIND_PRELOAD_MARK, name = "end", runtime = "", code = "", intValue = 0, textValue = ""));
+    var ei := 0;
+    loop ei < expCount {
+        mut rebuiltExports.pushBack(combinedWithPreload[ei]);
+        ei = ei + 1;
+    }
+    rebuiltExports
+};
+
 /** Collects cached import exports for core module `modPath` from `CoreModuleImport` records. */
 coreModuleExports := fn(graph: frontend.Items, modPath: String): frontend.Items {
     var mut importedExports: frontend.Items = [];
+    var preloadPath := "";
     loop graph as item {
         if item.kind == frontend.ITEM_KIND_CORE_MODULE_IMPORT and item.name == modPath {
-            if moduleProcessed(graph, item.code) {
-                importedExports = appendModuleExports(importedExports,
-                moduleAliasExports(graph, item.code, item.runtime), modPath);
+            if item.textValue == "$preload" {
+                preloadPath = item.code;
+            } else if moduleProcessed(graph, item.code) {
+                incoming := if item.textValue == "unpack" or item.textValue == "pub_unpack" {
+                    modulePublicDeclarations(graph, item.code)
+                } else {
+                    moduleAliasExports(graph, item.code, item.runtime)
+                };
+                importedExports = appendModuleExports(importedExports, incoming, modPath);
             }
         }
     }
-    importedExports
+    appendPreloadExports(graph, preloadPath, importedExports, modPath)
 }
 
 /** Splices compiled generic monomorphization items (grouped by `ITEM_KIND_MONO_OWNER` markers) right before their owning module's `ModuleEnd`. */
@@ -754,6 +844,28 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
 
+    skipPreload := normPath.endsWith("/$preload.lt") or normPath.endsWith("/lib/core/option.lt") or
+    normPath.endsWith("/lib/core/slice.lt") or normPath.endsWith("/lib/core/diag.lt") or normPath.endsWith("/lib/core/io.lt");
+    pkgPreloadMod := if not skipPreload {
+        hostFs.findPackagePreload(path, rootDir, projectRoot)
+    } else {
+        (found = false, path = "", display = "", identity = "", text = "")
+    };
+    if pkgPreloadMod.found and pkgPreloadMod.path =!= path {
+        if not importEdgeRecorded(graph, path, "$preload", pkgPreloadMod.path) {
+            mut graph.pushBack((kind = frontend.ITEM_KIND_IMPORT_EDGE, name = path, runtime = pkgPreloadMod.path,
+            code = "$preload", intValue = 0, textValue = ""));
+        }
+        if not moduleLoadRecorded(graph, pkgPreloadMod.path) {
+            mut graph.pushBack((kind = frontend.ITEM_KIND_MODULE_LOADED, name = pkgPreloadMod.path, runtime = "",
+            code = "", intValue = 0, textValue = ""));
+        }
+        if not moduleVisited(graph, pkgPreloadMod.path) {
+            graph = self(=target, path = pkgPreloadMod.path, display = pkgPreloadMod.display, identity = pkgPreloadMod.identity,
+            source = pkgPreloadMod.text, initialGraph = graph, =projectRoot, =cwd, =builtinSpecs);
+        }
+    }
+
     clauses := frontend.collectImportClauses(target, source, path);
     mut clausePaths: List<String> = [];
     mut depPaths: List<String> = [];
@@ -807,6 +919,10 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         ctxChildLevel := moduleLevelForPath(graph, pkgCtxMod.path);
         if ctxChildLevel > maxChildLevel { maxChildLevel = ctxChildLevel; }
     }
+    if pkgPreloadMod.found and pkgPreloadMod.path =!= path and moduleProcessed(graph, pkgPreloadMod.path) {
+        preChildLevel := moduleLevelForPath(graph, pkgPreloadMod.path);
+        if preChildLevel > maxChildLevel { maxChildLevel = preChildLevel; }
+    }
     if isRoot {
         loop graph as pItem {
             if pItem.kind == frontend.ITEM_KIND_MODULE_PROCESSED and pItem.intValue > maxChildLevel {
@@ -821,9 +937,17 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     loop clauses as clause {
         depPath := clausePaths[clauseIndex];
         if moduleProcessed(graph, depPath) {
-            importedExports = appendModuleExports(importedExports, moduleAliasExports(graph, depPath, clause.name), path);
+            incomingClauseExports := if clause.code == "unpack" or clause.code == "pub_unpack" {
+                modulePublicDeclarations(graph, depPath)
+            } else {
+                moduleAliasExports(graph, depPath, clause.name)
+            };
+            importedExports = appendModuleExports(importedExports, incomingClauseExports, path);
         }
         clauseIndex = clauseIndex + 1;
+    }
+    if pkgPreloadMod.found and pkgPreloadMod.path =!= path {
+        importedExports = appendPreloadExports(graph, pkgPreloadMod.path, importedExports, path);
     }
     importedExports = appendTransitiveTypeOps(graph, importedExports, path);
     if pkgCtxMod.found and pkgCtxMod.path =!= path and moduleProcessed(graph, pkgCtxMod.path) {
@@ -860,8 +984,12 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         var importIndex := 0;
         loop clauses as clause {
             mut graph.pushBack((kind = frontend.ITEM_KIND_CORE_MODULE_IMPORT, name = path, runtime = clause.name,
-            code = clausePaths[importIndex], intValue = 0, textValue = ""));
+            code = clausePaths[importIndex], intValue = 0, textValue = clause.code));
             importIndex = importIndex + 1;
+        }
+        if pkgPreloadMod.found and pkgPreloadMod.path =!= path {
+            mut graph.pushBack((kind = frontend.ITEM_KIND_CORE_MODULE_IMPORT, name = path, runtime = "",
+            code = pkgPreloadMod.path, intValue = 0, textValue = "$preload"));
         }
     }
     (mut graph).pushBack((kind = frontend.ITEM_KIND_MODULE_PROCESSED, name = path, runtime = moduleKey, code = logical,

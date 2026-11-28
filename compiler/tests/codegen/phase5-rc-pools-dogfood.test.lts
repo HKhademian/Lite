@@ -24,39 +24,40 @@ cComp := builtC.path;
 ccInfo := compilerTest.probeCc();
 
 /* 1. Compile-time Rc diagnostics: no `?` reserved storage, no `==` comparison, `mut` required for makeUnique/replace/reset. */
-compilerTest.assertCompileErrorContains(root, cComp, "Rc rejects reserved storage", "r: Rc<Int> = ?;", "reserved storage is not supported for Rc");
-compilerTest.assertCompileErrorContains(root, tsComp, "Rc TS rejects ==", "a := Rc.create(1); b := Rc.create(1); _ := a == b;", "cannot compare Rc values");
-compilerTest.assertCompileErrorContains(root, cComp, "Rc C rejects ==", "a := Rc.create(1); b := Rc.create(1); _ := a == b;", "cannot compare Rc values");
-compilerTest.assertCompileErrorContains(root, cComp, "Rc replace requires mut", "mut r := Rc.create(1); r.replace(2);", "requires mut at call site");
-compilerTest.assertCompileErrorContains(root, cComp, "Rc makeUnique requires mut", "r := Rc.create(1); r.makeUnique();", "cannot call mutating operation makeUnique on read-only value");
+compilerTest.assertCompileErrorContains(root, cComp, "Rc rejects reserved storage", "rc := import \"core/rc\"; r: rc.Rc<Int> = ?;", "reserved storage is not supported for Rc");
+compilerTest.assertCompileErrorContains(root, tsComp, "Rc TS rejects ==", "rc := import \"core/rc\"; a := rc.Rc.create(1); b := rc.Rc.create(1); _ := a == b;", "cannot compare Rc values");
+compilerTest.assertCompileErrorContains(root, cComp, "Rc C rejects ==", "rc := import \"core/rc\"; a := rc.Rc.create(1); b := rc.Rc.create(1); _ := a == b;", "cannot compare Rc values");
+compilerTest.assertCompileErrorContains(root, cComp, "Rc replace requires mut", "rc := import \"core/rc\"; mut r := rc.Rc.create(1); r.replace(2);", "requires mut at call site");
+compilerTest.assertCompileErrorContains(root, cComp, "Rc makeUnique requires mut", "rc := import \"core/rc\"; r := rc.Rc.create(1); r.makeUnique();", "cannot call mutating operation makeUnique on read-only value");
 
 /* 2. Comprehensive Rc<T> + packed Arena/VmArena/SlotPool/Pool<T> behavioral & churn parity. */
 rcMemSrc := [
     "io := import \"core/io\";",
+    "rc := import \"core/rc\";",
     "arenaMod := import \"ds/arena\";",
     "poolMod := import \"ds/pool\";",
     "BoxRec := record { tag: String; nums: List<Int>; };",
-    "Holder := record { item: Rc<Int>; };",
+    "Holder := record { item: rc.Rc<Int>; };",
     "",
-    "borrowSum := fn(r: Rc<List<Int>>): Int {",
+    "borrowSum := fn(r: rc.Rc<List<Int>>): Int {",
     "    xs := r.get();",
     "    var s := 0;",
     "    loop xs as v { s += v; }",
     "    s",
     "};",
     "",
-    "mutateInFn := fn(r: mut Rc<Int>, v: Int): Unit {",
+    "mutateInFn := fn(r: mut rc.Rc<Int>, v: Int): Unit {",
     "    mut r.makeUnique();",
     "    mut r.replace(v);",
     "};",
     "",
     "/* Basic create forms, share, counts, equality, zero value, print */",
-    "a := Rc.create(42);",
-    "b := Rc<Int>.create(100);",
-    "c := Rc.create<Int>(7);",
+    "a := rc.Rc.create(42);",
+    "b := rc.Rc<Int>.create(100);",
+    "c := rc.Rc.create<Int>(7);",
     "mut a2 := a.share();",
-    "io.outputLine(\"rc_init\", a.get(), b.get(), c.get(), a.strongCount(), a.isUnique(), a.ptrEqual(a2), Rc.ptrEqual(a, b));",
-    "io.outputLine(\"rc_print\", a, (fn(): Rc<Int> { var z: Rc<Int> = 0; z })());",
+    "io.outputLine(\"rc_init\", a.get(), b.get(), c.get(), a.strongCount(), a.isUnique(), a.ptrEqual(a2), rc.Rc.ptrEqual(a, b));",
+    "io.outputLine(\"rc_print\", a, (fn(): rc.Rc<Int> { var z: rc.Rc<Int> = 0; z })());",
     "",
     "mut a2.makeUnique();",
     "mut a2.replace(99);",
@@ -66,22 +67,22 @@ rcMemSrc := [
     "io.outputLine(\"rc_reset\", a2.isEmpty(), a2.strongCount(), a2.isUnique(), a.get(), a.strongCount());",
     "",
     "/* mut Rc param + mut record-field Rc */",
-    "mut hm := Holder { item = Rc.create(5) };",
+    "mut hm := Holder { item = rc.Rc.create(5) };",
     "hmSnap := hm.item;",
     "mut hm.item.makeUnique();",
     "mut hm.item.replace(44);",
-    "mut rMut := Rc.create(10);",
+    "mut rMut := rc.Rc.create(10);",
     "mutateInFn(mut rMut, 55);",
     "io.outputLine(\"rc_field\", hmSnap.get(), hmSnap.strongCount(), hm.item.get(), hm.item.strongCount(), rMut.get(), rMut.strongCount());",
     "",
     "/* Containers & nested payloads inside Rc and containers holding Rc */",
-    "rList := Rc<List<Int>>.create([1, 2, 3, 4]);",
+    "rList := rc.Rc<List<Int>>.create([1, 2, 3, 4]);",
     "mut rList2 := rList.share();",
-    "rRec := Rc.create(BoxRec { tag = \"mesh_a\", nums = [10, 20] });",
-    "rNested := Rc.create(Rc.create(\"hello-nested-rc-world\"));",
-    "rcVec: List<Rc<Int>> = [a, b, c];",
-    "rcArr: [Rc<Int>; 2] = [a, b];",
-    "rcMap: Map<String, Rc<Int>> = [ \"k1\" = a, \"k2\" = b ];",
+    "rRec := rc.Rc.create(BoxRec { tag = \"mesh_a\", nums = [10, 20] });",
+    "rNested := rc.Rc.create(rc.Rc.create(\"hello-nested-rc-world\"));",
+    "rcVec: List<rc.Rc<Int>> = [a, b, c];",
+    "rcArr: [rc.Rc<Int>; 2] = [a, b];",
+    "rcMap: Map<String, rc.Rc<Int>> = [ \"k1\" = a, \"k2\" = b ];",
     "mut rList2.makeUnique();",
     "io.outputLine(\"rc_comp\", borrowSum(rList), borrowSum(rList2), rRec.get().tag, rRec.get().nums.length(), rNested.get().get(), rcVec[1].get(), rcArr[0].get(), rcMap.getOr(\"k1\", b).get(), a.strongCount());",
     "",
@@ -89,7 +90,7 @@ rcMemSrc := [
     "var churnAcc := 0;",
     "var ci := 0;",
     "loop ci < 10000 {",
-    "    p1 := Rc<List<Int>>.create([ci, ci + 1]);",
+    "    p1 := rc.Rc<List<Int>>.create([ci, ci + 1]);",
     "    mut p2 := p1.share();",
     "    if ci % 2 == 0 {",
     "        mut p2.makeUnique();",
@@ -175,7 +176,8 @@ test.check("c lists remain rc-free", not cRcOut.contains("lt_list_i64_rc") and n
 /* NullPointerPanic parity on empty Rc.get() */
 emptyGetSrc := [
     "io := import \"core/io\";",
-    "mut r := Rc.create(10);",
+    "rc := import \"core/rc\";",
+    "mut r := rc.Rc.create(10);",
     "mut r.reset();",
     "io.outputLine(r.get());"
 ].join("\n");
@@ -260,24 +262,26 @@ if ccInfo.available {
     dogDir := path.join(tmpDir, "dogfood_game");
     _mkDog := fs.makeDir(dogDir);
     assetsSrc := [
+        "rc := import \"core/rc\";",
         "pub MeshAsset := record { name: String; radius: Float; coords: List<Float32>; };",
         "pub PaletteAsset := record { tintR: Float; tintG: Float; tintB: Float; };",
-        "pub AssetBank := record { heroMesh: Rc<MeshAsset>; sparkMesh: Rc<MeshAsset>; palette: Rc<PaletteAsset>; };",
+        "pub AssetBank := record { heroMesh: rc.Rc<MeshAsset>; sparkMesh: rc.Rc<MeshAsset>; palette: rc.Rc<PaletteAsset>; };",
         "pub createAssetBank := fn(): AssetBank {",
         "    hCoords: List<Float32> = [0.0, 0.0, 8.0, 8.0];",
         "    sCoords: List<Float32> = [0.0, 0.0, 3.0, 3.0];",
         "    AssetBank {",
-        "        heroMesh = Rc.create(MeshAsset { name = \"hero\", radius = 6.0, coords = hCoords }),",
-        "        sparkMesh = Rc.create(MeshAsset { name = \"spark\", radius = 2.0, coords = sCoords }),",
-        "        palette = Rc.create(PaletteAsset { tintR = 0.25, tintG = 0.75, tintB = 0.95 })",
+        "        heroMesh = rc.Rc.create(MeshAsset { name = \"hero\", radius = 6.0, coords = hCoords }),",
+        "        sparkMesh = rc.Rc.create(MeshAsset { name = \"spark\", radius = 2.0, coords = sCoords }),",
+        "        palette = rc.Rc.create(PaletteAsset { tintR = 0.25, tintG = 0.75, tintB = 0.95 })",
         "    }",
         "};"
     ].join("\n");
     worldSrc := [
+        "rc := import \"core/rc\";",
         "arenaMod := import \"ds/arena\";",
         "poolMod := import \"ds/pool\";",
         "assets := import \"./assets\";",
-        "pub Entity := record { px: Int; py: Int; vx: Int; vy: Int; mesh: Rc<assets.MeshAsset>; };",
+        "pub Entity := record { px: Int; py: Int; vx: Int; vy: Int; mesh: rc.Rc<assets.MeshAsset>; };",
         "pub World := record {",
         "    bank: assets.AssetBank;",
         "    entities: poolMod.Pool<Entity>;",

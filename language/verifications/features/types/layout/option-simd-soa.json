@@ -3,7 +3,7 @@
   "kind": "feature",
   "source": {
     "file": "option-simd-soa.lts",
-    "hash": "sha256:2f7abc17c1a30880286fe510a9b51c4d249ba53067467159f5940510e9be3eec"
+    "hash": "sha256:16da1ea01e5ac0d31d0abf873cbda12233eb0c08183461f88ea5b8f7027370ea"
   },
   "features": [
     "feature.types.layout.option-simd-soa"

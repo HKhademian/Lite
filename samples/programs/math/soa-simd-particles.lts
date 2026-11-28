@@ -2,6 +2,7 @@
 
 io := import "core/io";
 simd := import "core/simd";
+soa := import "core/soa";
 
 Particle := record {
     x: Float32;
@@ -43,7 +44,7 @@ boostEnergy := fn(s: mut Slice<Int>, delta: Int): Unit {
     loop mut s { .item += delta; }
 };
 
-mut swarm: SoA<Particle> = SoA.withCapacity(8);
+mut swarm: soa.SoA<Particle> = soa.SoA.withCapacity(8);
 loop 0..8 as i {
     mut swarm.pushBack(Particle {
         x = cast<Float32>(i),

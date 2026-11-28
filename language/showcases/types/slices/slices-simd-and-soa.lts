@@ -45,7 +45,7 @@ do {
     applyBias(mut right, 100);
 }
 
-mut swarm: SoA<Particle> = SoA.withCapacity(4);
+mut swarm: soa.SoA<Particle> = soa.SoA.withCapacity(4);
 loop 0..4 as i {
     mut swarm.pushBack(Particle {
         x = cast<Float32>(i),
@@ -56,7 +56,7 @@ loop 0..4 as i {
 }
 stepSimd(mut swarm.x, mut swarm.y, swarm.vx, swarm.vy, cast<Float32>(0.5));
 
-shared := Rc.create(77);
+shared := rc.Rc.create(77);
 other := shared.share();
 
 io.outputLine(hdr.version, parsedLen, vals, swarm[2].x, swarm[2].y, shared.get() + other.get());

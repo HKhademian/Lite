@@ -1,6 +1,6 @@
 # Packages and preload
 
-Status: **package-local preload selected; implementation pending**. See [modules and imports](lite://doc/modules-and-packages) for source syntax and visibility.
+Status: **package-local `$preload.lt` implemented (with `lib/$preload.lt` default fallback exporting `core/option` and `core/slice`)**. See [modules and imports](lite://doc/modules-and-packages) for source syntax and visibility.
 
 ## Package contents
 
@@ -12,14 +12,15 @@ Implicit arbitrary module initialization and package installation scripts were d
 
 ### Package preload
 
-Selected **2026-11-26**, with compiler implementation pending. The reserved
-source file `$preload.lt` configures preloaded module names for a package.
+Implemented with default fallback [lib/$preload.lt](lite://repo/lib/$preload.lt) (`pub import "core/option"; pub import "core/slice";`). Builtin container/vector families `Rc<T>`, `Slice<T>`, `Simd<T, N>`, `SimdNative<T>`, and `SoA<R>` are module-owned (`core/rc`, `core/slice`, `core/simd`, `core/soa`) rather than naked compiler intrinsics; by default, only `Option<T>` and `Slice<T>` are exposed implicitly through `lib/$preload.lt`.
+
+The reserved source file `$preload.lt` configures preloaded module names for a package.
 Resolve it independently for each package:
 
-1. If the package supplies a `$preload.lt` in its sources, use that file.
+1. If the package supplies a `$preload.lt` in its sources (walking up to the package/project root), use that file.
    An empty override selects an empty preload.
-2. Otherwise use Lite's own `$preload.lt`, if present in Lite's source tree.
-3. If neither file exists, preload zero modules.
+2. Otherwise use Lite's own `lib/$preload.lt`, if present in Lite's source tree.
+3. If neither file exists (or inside `lib/core/`), preload zero modules.
 
 The package file's sole role is to replace the default preload. The selected
 file's public symbols enter the package's source-file root scopes as private

@@ -1393,7 +1393,7 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                             mut decls.pushBack((kind = ir.DECL_KIND_PUB_FN, name = declName, runtime = "", code = "", intValue = declStart, textValue = ""));
                         } else if source.wordAt(valStart, "alias") or source.wordAt(valStart, "distinct") or source.wordAt(valStart, "record") or source.wordAt(valStart, "enum") or source.wordAt(valStart, "interface") {
                             mut decls.pushBack((kind = ir.DECL_KIND_PUB_TYPE, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
-                        } else {
+                        } else if not source.wordAt(valStart, "import") {
                             mut decls.pushBack((kind = ir.DECL_KIND_PUB_VAL, name = declName, runtime = "", code = "", intValue = 0, textValue = ""));
                         }
                     } else if source.slice(declStart, declEnd) == "impl" and operator < size and
@@ -1711,9 +1711,23 @@ pub withoutFutureValues := fn(locals: List<Local>): List<Local> {
     kept
 };
 
-/** Parses one top-level aliased import and returns its next source position. */
-pub parseImportClause := fn(target: String, source: String, position: Int, modAlias: String, prefix: String): Item {
-    if modAlias == "" { syntax.failAt(source, position, prefix, "import requires a module alias"); }
+/** True when `prefix` refers to a package `$preload.lt` file (including the default `lib/$preload.lt`). */
+pub isPreloadSourcePath := fn(prefix: String): Bool {
+    prefix == "$preload.lt" or prefix.endsWith("/$preload.lt")
+};
+
+/** Parses one top-level aliased or preload-unpacked import and returns its next source position. */
+pub parseImportClauseWithMode := fn(target: String, source: String, position: Int, modAlias: String, modeCode: String, prefix: String): Item {
+    isUnpack := modeCode == "unpack" or modeCode == "pub_unpack";
+    if isUnpack and not isPreloadSourcePath(prefix) {
+        if modeCode == "pub_unpack" {
+            syntax.failAt(source, position, prefix, "unaliased pub import is only allowed in $preload.lt");
+        }
+        syntax.failAt(source, position, prefix, "import requires a module alias");
+    }
+    if not isUnpack and modAlias == "" {
+        syntax.failAt(source, position, prefix, "import requires a module alias");
+    }
     pathStart := syntax.skipTrivia(source, position + 6, prefix);
     if pathStart >= source.length() or source.at(pathStart) =!= "\"" {
         syntax.failAt(source, pathStart, prefix, "import requires a quoted source path");
@@ -1733,7 +1747,12 @@ pub parseImportClause := fn(target: String, source: String, position: Int, modAl
     if statementNext < 0 {
         syntax.failAt(source, syntax.skipTrivia(source, path.next, prefix), prefix, "expected ; after import");
     }
-    (kind = ir.ITEM_KIND_IMPORT, name = modAlias, runtime = "", code = "", intValue = statementNext, textValue = path.textValue)
+    (kind = ir.ITEM_KIND_IMPORT, name = modAlias, runtime = "", code = modeCode, intValue = statementNext, textValue = path.textValue)
+};
+
+/** Parses one top-level aliased import and returns its next source position. */
+pub parseImportClause := fn(target: String, source: String, position: Int, modAlias: String, prefix: String): Item {
+    parseImportClauseWithMode(target, source, position, modAlias, "", prefix)
 };
 
 /** Collects top-level import clauses before parsing so imported declarations can seed the importing file's symbol table. */
@@ -1754,8 +1773,31 @@ pub collectImportClauses := fn(target: String, source: String, prefix: String): 
         } else if ch.isNameStart() {
             nameEnd := source.skipName(position);
             name := source.slice(position, nameEnd);
-            if name == "import" {
-                imported := parseImportClause(target, source, position, "", prefix);
+            if name == "pub" {
+                afterPub := syntax.skipTrivia(source, nameEnd, prefix);
+                if afterPub < size and source.at(afterPub).isNameStart() {
+                    pubEnd := source.skipName(afterPub);
+                    pubWord := source.slice(afterPub, pubEnd);
+                    if pubWord == "import" {
+                        imported := parseImportClauseWithMode(target, source, afterPub, "", "pub_unpack", prefix);
+                        mut imports.pushBack(imported);
+                        position = imported.intValue;
+                        continue;
+                    }
+                    afterPubName := syntax.skipTrivia(source, pubEnd, prefix);
+                    if source.startsWithAt(afterPubName, ":=") {
+                        afterDeclare := syntax.skipTrivia(source, afterPubName + 2, prefix);
+                        if source.wordAt(afterDeclare, "import") {
+                            imported := parseImportClauseWithMode(target, source, afterDeclare, pubWord, "pub_alias", prefix);
+                            mut imports.pushBack(imported);
+                            position = imported.intValue;
+                            continue;
+                        }
+                    }
+                }
+                position = afterPub;
+            } else if name == "import" {
+                imported := parseImportClauseWithMode(target, source, position, "", "unpack", prefix);
                 mut imports.pushBack(imported);
                 position = imported.intValue;
             } else {
@@ -1763,7 +1805,7 @@ pub collectImportClauses := fn(target: String, source: String, prefix: String): 
                 if source.startsWithAt(afterName, ":=") {
                     afterDeclare := syntax.skipTrivia(source, afterName + 2, prefix);
                     if source.wordAt(afterDeclare, "import") {
-                        imported := parseImportClause(target, source, afterDeclare, name, prefix);
+                        imported := parseImportClauseWithMode(target, source, afterDeclare, name, "", prefix);
                         mut imports.pushBack(imported);
                         position = imported.intValue;
                     } else {

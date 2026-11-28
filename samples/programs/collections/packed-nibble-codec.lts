@@ -2,6 +2,7 @@
 
 io := import "core/io";
 opt := import "core/option";
+rc := import "core/rc";
 
 PacketMeta := record #packed {
     version: UInt4;
@@ -34,7 +35,7 @@ encoded := packPair(10, 6);
 meta := PacketMeta { version = 2, flags = 9, totalBytes = 6 };
 optVersion: opt.Option<UInt4> = .Some(meta.version);
 verOut := if .Some(v) := optVersion { cast<Int>(v) } else { 0 };
-sharedTag := Rc.create(encoded);
+sharedTag := rc.Rc.create(encoded);
 
 io.outputLine("nibbles:", nibbles[0], nibbles[1], nibbles[3], nibbles[5]);
 io.outputLine("flags:", flags[0], flags[3], "byte:", sharedTag.get(), "ver:", verOut);

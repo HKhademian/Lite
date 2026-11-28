@@ -3715,7 +3715,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         return ctx.withMarkers((kind = targetKind, code = castCode, intValue = if castConst { arg.intValue } else { 0 }, textValue = if castConst { arg.textValue } else { "" }, constant = castConst, next = closeParen), argMarkers);
     }
     if afterName < source.length() and (source.at(afterName) == "." or source.at(afterName) == "<") and
-    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "Rc" or name == "Simd" or name == "SimdNative" or name == "SoA" or (source.at(afterName) == "." and (name == "String" or numeric.isNumericKind(name)))) {
+    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or (source.at(afterName) == "." and (name == "String" or numeric.isNumericKind(name)))) {
         var resolvedType := "";
         var typeOwnerKey := "";
         var aliasParamsCsv := "";
@@ -3753,8 +3753,11 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                 }
                 syntax.failAt(source, dotPos, prefix, "expected { or . after type " + types.displayKind(resolvedType));
             }
-        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "Rc" or name == "Simd" or name == "SimdNative" or name == "SoA" or name == "String" or numeric.isNumericKind(name) {
-            typeOwnerKey = if name == "SimdNative" { "Simd" } else { name };
+        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or numeric.isNumericKind(name) {
+            typeOwnerKey = name;
+        } else if types.builtinFamilyFromAlias(aliases, name) =!= "" {
+            bfFam := types.builtinFamilyFromAlias(aliases, name);
+            typeOwnerKey = if bfFam == "SimdNative" { "Simd" } else { bfFam };
         } else if inferMode {
             genInfo := types.genericAliasTemplateInfo(source, nameStart, prefix, aliases, name);
             if genInfo.ownerKey =!= "" {
@@ -3873,6 +3876,11 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             }
         }
         return parseRecordLiteral(target, source, afterName, prefix, locals, functions, params, currentName, resolvedRec, ctxs, iifeDepth, inferMode, aliases);
+    }
+    if afterName < source.length() and (source.at(afterName) == "." or source.at(afterName) == "<") and
+    (name == "Rc" or name == "Slice" or name == "Simd" or name == "SimdNative" or name == "SoA") and
+    types.findAlias(aliases, name) < 0 {
+        types.failMissingBuiltinFamily(source, nameStart, prefix, name);
     }
     syntax.failAt(source, nameStart, prefix, "unknown value " + name);
     ctx.intParsed("", 0, true, start)
@@ -16572,25 +16580,30 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                     modDotOrBracePos = syntax.skipTrivia(source, parsedModType.next, prefix);
                                 }
                             } else if source.at(afterMemberLabel) == "." {
-                                genInfo := types.genericAliasTemplateInfo(source, labelStart, prefix, aliases, qualified);
-                                if genInfo.ownerKey =!= "" {
-                                    modTypeOwnerKey = genInfo.ownerKey;
-                                    modAliasParamsCsv = genInfo.paramsCsv;
-                                    modAliasTplKind = genInfo.tplKind;
-                                } else if inferMode {
-                                    emptySeen: List<String> = [];
-                                    canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
-                                    if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind) and types.typeOpOwnerKey(canRes.kind) == "") {
-                                        return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
-                                    }
-                                    modTypeKind = canRes.kind;
-                                    modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
+                                modFam := types.builtinFamilyFromAlias(aliases, qualified);
+                                if modFam =!= "" {
+                                    modTypeOwnerKey = if modFam == "SimdNative" { "Simd" } else { modFam };
                                 } else {
-                                    emptySeen: List<String> = [];
-                                    modTypeKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
-                                    modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
-                                    if not types.isEnumKind(modTypeKind) and not types.isRecordKind(modTypeKind) and not types.isDistinctKind(modTypeKind) and modTypeOwnerKey == "" {
-                                        syntax.failAt(source, labelStart, prefix, "enum case access requires an enum type, got " + types.displayKind(modTypeKind));
+                                    genInfo := types.genericAliasTemplateInfo(source, labelStart, prefix, aliases, qualified);
+                                    if genInfo.ownerKey =!= "" {
+                                        modTypeOwnerKey = genInfo.ownerKey;
+                                        modAliasParamsCsv = genInfo.paramsCsv;
+                                        modAliasTplKind = genInfo.tplKind;
+                                    } else if inferMode {
+                                        emptySeen: List<String> = [];
+                                        canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
+                                        if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind) and types.typeOpOwnerKey(canRes.kind) == "") {
+                                            return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
+                                        }
+                                        modTypeKind = canRes.kind;
+                                        modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
+                                    } else {
+                                        emptySeen: List<String> = [];
+                                        modTypeKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
+                                        modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
+                                        if not types.isEnumKind(modTypeKind) and not types.isRecordKind(modTypeKind) and not types.isDistinctKind(modTypeKind) and modTypeOwnerKey == "" {
+                                            syntax.failAt(source, labelStart, prefix, "enum case access requires an enum type, got " + types.displayKind(modTypeKind));
+                                        }
                                     }
                                 }
                             } else {

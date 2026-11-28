@@ -377,6 +377,59 @@ pub findPackageContext := fn(modulePath: String, rootDir: String, projectRoot: S
     empty
 }
 
+/** Walks up from `modulePath` to locate the owning package's optional `$preload.lt`, falling back to `lib/$preload.lt`. */
+pub findPackagePreload := fn(modulePath: String, rootDir: String, projectRoot: String): (found: Bool, path: String, display: String, identity: String, text: String) {
+    empty := (found = false, path = "", display = "", identity = "", text = "");
+    base := path.baseName(modulePath);
+    if modulePath == "" or base == "$preload.lt" or base == "$context.lt" { return empty; }
+    var dir := path.parentDir(modulePath);
+    normRootDir := if rootDir =!= "" { path.normalize(rootDir) } else { "" };
+    normProjRoot := if projectRoot =!= "" { path.normalize(projectRoot) } else { "" };
+    loop true {
+        normDir := path.normalize(dir);
+        if normDir == "" or normDir == "/" or normDir == "/tmp" or normDir == "/private/tmp" or normDir == "/var" or normDir == "/var/folders" {
+            break;
+        }
+        if normProjRoot =!= "" and normDir == normProjRoot {
+            break;
+        }
+        cand := path.join(normDir, "$preload.lt");
+        if fs.kind(cand) == fs.FILE_KIND_FILE {
+            rp := fs.realPath(cand);
+            canonPath := if rp.ok { rp.path } else { cand };
+            if canonPath == modulePath { return empty; }
+            readRes := fs.readText(canonPath);
+            if readRes.ok {
+                display := displaySourcePath(canonPath, projectRoot);
+                identity := sourceModuleIdentity(projectRoot, readRes.text);
+                return (found = true, path = canonPath, =display, =identity, text = readRes.text);
+            }
+        }
+        if normRootDir =!= "" and normDir == normRootDir {
+            break;
+        }
+        parent := path.parentDir(normDir);
+        if parent == normDir { break; }
+        dir = parent;
+    }
+    if projectRoot =!= "" {
+        defCand := path.join(projectRoot, "lib/$preload.lt");
+        if fs.kind(defCand) == fs.FILE_KIND_FILE {
+            defRp := fs.realPath(defCand);
+            defCanon := if defRp.ok { defRp.path } else { defCand };
+            if defCanon =!= modulePath {
+                defRead := fs.readText(defCanon);
+                if defRead.ok {
+                    defDisp := displaySourcePath(defCanon, projectRoot);
+                    defId := sourceModuleIdentity(projectRoot, defRead.text);
+                    return (found = true, path = defCanon, display = defDisp, identity = defId, text = defRead.text);
+                }
+            }
+        }
+    }
+    empty
+}
+
 /** Reads one shipped built-in core owner module if present and identity-verified, without failing when absent. */
 pub tryReadCoreOwner := fn(projectRoot: String, relPath: String): (
 ok: Bool, path: String, display: String, identity: String, text: String

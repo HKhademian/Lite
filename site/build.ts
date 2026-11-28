@@ -382,6 +382,13 @@ export function buildSite(options?: BuildSiteOptions): void {
       stdlib[modName] = { path: relPath, display: relPath, identity: coreModuleIdentity(relPath), text };
     }
   }
+  const preloadRelPath = 'lib/$preload.lt';
+  stdlib['$preload'] = {
+    path: preloadRelPath,
+    display: preloadRelPath,
+    identity: coreModuleIdentity(preloadRelPath),
+    text: readFileSync(join(root, preloadRelPath), 'utf8')
+  };
   const stdlibJson = JSON.stringify(stdlib);
 
   for (const targetDir of [join(outputDir, 'runtime'), join(outputDir, 'playground')]) {

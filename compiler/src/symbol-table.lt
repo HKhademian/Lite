@@ -224,7 +224,7 @@ pub hasFutureLocal := fn(locals: List<Local>): Bool {
 pushAliasSlot := fn(idx: Int, entry: AliasDecl): Unit {
     prevIdx := aliasByName.getOr(entry.name, -1);
     prevDepth := if prevIdx >= 0 { aliasDepthByName.getOr(entry.name, -1) } else { -1 };
-    changed := entry.depth > prevDepth;
+    changed := prevIdx < 0 or entry.depth >= prevDepth;
     if changed {
         mut aliasByName.set(entry.name, idx);
         mut aliasDepthByName.set(entry.name, entry.depth);

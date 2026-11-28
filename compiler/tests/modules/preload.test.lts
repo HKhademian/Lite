@@ -1,0 +1,209 @@
+/* Package $preload.lt discovery, overrides, unpacked/aliased re-exports, isolation, and explicit module ownership of Rc/Slice/Simd/SoA. */
+
+cases := import "util/cases";
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "util/compiler-build";
+compilerTest := import "util/compiler-test";
+project := import "util/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+
+builtTs := compilerBuild.buildCompiler(root, "ts");
+test.check("build TS compiler: " + builtTs.error, builtTs.ok);
+builtC := compilerBuild.buildCompiler(root, "c");
+test.check("build C compiler: " + builtC.error, builtC.ok);
+tsComp := builtTs.path;
+cComp := builtC.path;
+ccInfo := compilerTest.probeCc();
+
+emptyEnv: List<String> = [];
+
+runNodeTs := fn(tsFile: String, workDir: String): (status: Int, stdout: String, stderr: String, error: String) {
+    _wp := fs.writeText(path.join(workDir, "package.json"), "{\"type\":\"module\"}\n");
+    runner := path.join(workDir, "runner.ts");
+    _wr := cases.writeTsRunner(runner);
+    proc.run(project.nodeExecPath(), [runner, tsFile], workDir, emptyEnv, true, "")
+};
+
+compileAndRunCSan := fn(ccBin: String, workDir: String, cFile: String, binPath: String): (status: Int, stdout: String, stderr: String, error: String) {
+    ccRes := proc.run(ccBin, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", cFile, "-o", binPath, "-lm"], workDir, emptyEnv, true, "");
+    test.checkInt("cc " + cFile + ": " + ccRes.stderr, 0, ccRes.status);
+    proc.run(binPath, [], workDir, ["LITE_CHECK_LEAKS=1"], true, "")
+};
+
+runParity := fn(label: String, src: String, fileName: String, expectedOut: String): Unit {
+    tsRes := compilerTest.compileCheckRunTs(root, tsComp, src, fileName);
+    test.checkInt(label + " TS status: " + tsRes.stderr, 0, tsRes.status);
+    test.checkText(label + " TS stdout", expectedOut, tsRes.stdout);
+    if ccInfo.available {
+        cRes := compilerTest.compileCheckRunC(root, cComp, ccInfo.cc, src, fileName, "");
+        test.checkInt(label + " C status: " + cRes.stderr, 0, cRes.status);
+        test.checkText(label + " C stdout", expectedOut, cRes.stdout);
+    }
+};
+
+/* 1. Default lib/$preload.lt exposes Option<T> and Slice<T> without explicit import */
+defaultPreloadSrc := [
+"io := import \"core/io\";",
+"sumSlice := fn(s: Slice<Int>): Int {",
+"    var total := 0;",
+"    loop s as v { total += v; }",
+"    total",
+"};",
+"a: Option<Int> = .Some(20);",
+"b: Option<Int> = .None;",
+"xs: List<Int> = [10, 12];",
+"io.outputLine(a.isSome(), a.unwrapOr(0), b.unwrapOr(5), sumSlice(xs[0..2]));"
+].join("\n");
+runParity("default preload Option+Slice", defaultPreloadSrc, "preload-default.lts", "true 20 5 22\n");
+
+/* 2. Bare Rc / SoA / Simd / SimdNative are rejected without importing their core modules */
+compilerTest.assertCompileErrorContains(root, tsComp, "bare Rc<T> rejected", "x: Rc<Int>;", "requires importing \"core/rc\"");
+compilerTest.assertCompileErrorContains(root, cComp, "bare Rc.create rejected C", "r := Rc.create(1);", "requires importing \"core/rc\"");
+compilerTest.assertCompileErrorContains(root, tsComp, "bare SoA<R> rejected", "P := record { x: Int; }; s: SoA<P>;", "requires importing \"core/soa\"");
+compilerTest.assertCompileErrorContains(root, cComp, "bare SoA.create rejected C", "s := SoA.create();", "requires importing \"core/soa\"");
+compilerTest.assertCompileErrorContains(root, tsComp, "bare Simd<T, N> rejected", "v: Simd<Float32, 4>;", "requires importing \"core/simd\"");
+compilerTest.assertCompileErrorContains(root, cComp, "bare SimdNative<T> rejected C", "v: SimdNative<Int32>;", "requires importing \"core/simd\"");
+
+/* 3. Explicit core module imports and transparent aliases work across TS & C11 */
+explicitModulesSrc := [
+"io := import \"core/io\";",
+"rc := import \"core/rc\";",
+"soa := import \"core/soa\";",
+"simd := import \"core/simd\";",
+"MySoA := alias soa.SoA;",
+"Pt := record { x: Float32; y: Float32; };",
+"shared := rc.Rc.create(42);",
+"mut pts: MySoA<Pt> = soa.SoA.create();",
+"mut pts.pushBack(Pt { x = cast<Float32>(1.5), y = cast<Float32>(2.5) });",
+"v: simd.Simd<Float32, 4> = simd.Simd.splat(cast<Float32>(2.0));",
+"vn: simd.SimdNative<Int32> = simd.SimdNative<Int32>.splat(cast<Int32>(3));",
+"io.outputLine(shared.get(), pts[0].x + pts[0].y, v.reduceAdd(), vn[0]);"
+].join("\n");
+runParity("explicit core/rc,soa,simd + alias", explicitModulesSrc, "preload-explicit.lts", "42 4 8 3\n");
+
+/* 4. Explicit local declaration cleanly shadows preloaded Option without duplicate error */
+shadowPreloadSrc := [
+"io := import \"core/io\";",
+"Option := enum { Empty; Just(Int); };",
+"x := Option.Just(7);",
+"y := match x { Option.Empty { 0 } Option.Just(v) { v } };",
+"io.outputLine(y);"
+].join("\n");
+runParity("local enum Option shadows preload", shadowPreloadSrc, "preload-shadow.lts", "7\n");
+
+/* 5. Unaliased import / pub import outside $preload.lt are rejected */
+compilerTest.assertCompileErrorContains(root, tsComp, "unaliased import outside preload", "import \"core/option\";", "import requires a module alias");
+compilerTest.assertCompileErrorContains(root, tsComp, "unaliased pub import outside preload", "pub import \"core/option\";", "only allowed in $preload.lt");
+
+/* 6. Package-local empty $preload.lt clears Option and Slice and avoids implicit preload edge */
+tmpRes := fs.makeTempDir("lite-preload-test-");
+test.check("tmpDir created: " + tmpRes.error, tmpRes.ok);
+tmpRoot := tmpRes.path;
+
+emptyPkgDir := path.join(tmpRoot, "empty_pkg");
+_m1 := fs.makeDir(emptyPkgDir);
+_w1 := fs.writeText(path.join(emptyPkgDir, "$preload.lt"), "");
+emptyMain := path.join(emptyPkgDir, "main.lts");
+_w2 := fs.writeText(emptyMain, "io := import \"core/io\";\nx: Option<Int> = .None;\nio.outputLine(1);\n");
+emptyFail := compilerTest.compileFile(tsComp, emptyPkgDir, ["--out", path.join(emptyPkgDir, "out.ts"), emptyMain]);
+test.check("empty $preload.lt removes bare Option (got: " + emptyFail.stderr + ")", emptyFail.status =!= 0 and emptyFail.stderr.contains("unsupported local type Option"));
+
+emptySliceMain := path.join(emptyPkgDir, "slice_fail.lts");
+_w3 := fs.writeText(emptySliceMain, "f := fn(s: Slice<Int>): Int { s.length() };\n");
+emptySliceFail := compilerTest.compileFile(tsComp, emptyPkgDir, ["--out", path.join(emptyPkgDir, "s.ts"), emptySliceMain]);
+test.check("empty $preload.lt removes bare Slice (got: " + emptySliceFail.stderr + ")", emptySliceFail.status =!= 0 and emptySliceFail.stderr.contains("requires importing \"core/slice\""));
+
+emptyOkMain := path.join(emptyPkgDir, "ok.lts");
+emptyTrace := path.join(emptyPkgDir, "trace.json");
+_w4 := fs.writeText(emptyOkMain, "io := import \"core/io\";\nopt := import \"core/option\";\nx: opt.Option<Int> = .Some(9);\nio.outputLine(x.unwrapOr(0));\n");
+emptyOkComp := compilerTest.compileFile(tsComp, emptyPkgDir, ["--trace-json", emptyTrace, "--out", path.join(emptyPkgDir, "ok.ts"), emptyOkMain]);
+test.checkInt("empty $preload.lt explicit import compiles: " + emptyOkComp.stderr, 0, emptyOkComp.status);
+traceTxt := fs.readText(emptyTrace).text;
+realEmptyOk := fs.realPath(emptyOkMain).path;
+realEmptyPreload := fs.realPath(path.join(emptyPkgDir, "$preload.lt")).path;
+realDefaultPreload := fs.realPath(path.join(root, "lib/$preload.lt")).path;
+expectedPreloadEdge := "{\"importer\":\"" + realEmptyOk + "\",\"spec\":\"$preload\",\"path\":\"" + realEmptyPreload + "\"";
+defaultPreloadEdge := "{\"importer\":\"" + realEmptyOk + "\",\"spec\":\"$preload\",\"path\":\"" + realDefaultPreload + "\"";
+test.check("empty $preload.lt is recorded as $preload edge (got: " + traceTxt + ")", traceTxt.contains(expectedPreloadEdge));
+test.check("empty $preload.lt does not link default preload edge", not traceTxt.contains(defaultPreloadEdge));
+
+/* 7. Custom package $preload.lt: pub import + pub alias := import + private helper isolation + caller explicit shadow */
+customPkgDir := path.join(tmpRoot, "custom_pkg");
+_m2 := fs.makeDir(customPkgDir);
+_c1 := fs.writeText(path.join(customPkgDir, "helper.lt"), "pub BASE := 10;\n");
+_c2 := fs.writeText(path.join(customPkgDir, "types.lt"), "pub Pair := record { a: Int; b: Int; };\n");
+_c3 := fs.writeText(path.join(customPkgDir, "mathx.lt"), "pub add2 := fn(x: Int, y: Int): Int { x + y };\n");
+_c4 := fs.writeText(path.join(customPkgDir, "alt.lt"), "pub add2 := fn(x: Int, y: Int): Int { x * 100 + y };\n");
+_c5 := fs.writeText(path.join(customPkgDir, "$preload.lt"), [
+"helper := import \"./helper\";",
+"pub import \"./types\";",
+"pub mv := import \"./mathx\";",
+"pub SCALE := helper.BASE * 2;"
+].join("\n") + "\n");
+
+customApp := path.join(customPkgDir, "app.lts");
+_c6 := fs.writeText(customApp, [
+"io := import \"core/io\";",
+"p := Pair { a = 3, b = 4 };",
+"io.outputLine(mv.add2(p.a, p.b), SCALE);"
+].join("\n") + "\n");
+tsCustomOut := path.join(customPkgDir, "app.ts");
+tsCustomComp := compilerTest.compileFile(tsComp, customPkgDir, ["--out", tsCustomOut, customApp]);
+test.checkInt("custom $preload.lt TS compile: " + tsCustomComp.stderr, 0, tsCustomComp.status);
+tsCustomRun := runNodeTs(tsCustomOut, customPkgDir);
+test.checkInt("custom $preload.lt TS run: " + tsCustomRun.stderr, 0, tsCustomRun.status);
+test.checkText("custom $preload.lt TS output", "7 20\n", tsCustomRun.stdout);
+
+if ccInfo.available {
+    cCustomOut := path.join(customPkgDir, "app.c");
+    cCustomComp := compilerTest.compileFile(cComp, customPkgDir, ["--out", cCustomOut, customApp]);
+    test.checkInt("custom $preload.lt C compile: " + cCustomComp.stderr, 0, cCustomComp.status);
+    cBin := path.join(customPkgDir, "app_bin");
+    cRun := compileAndRunCSan(ccInfo.cc, customPkgDir, cCustomOut, cBin);
+    test.checkInt("custom $preload.lt C run: " + cRun.stderr, 0, cRun.status);
+    test.checkText("custom $preload.lt C output", "7 20\n", cRun.stdout);
+}
+
+/* Explicit import in module overrides preloaded pub alias of the same name */
+shadowAliasApp := path.join(customPkgDir, "override.lts");
+_c7 := fs.writeText(shadowAliasApp, [
+"io := import \"core/io\";",
+"mv := import \"./alt\";",
+"io.outputLine(mv.add2(2, 5));"
+].join("\n") + "\n");
+tsOvOut := path.join(customPkgDir, "override.ts");
+tsOvComp := compilerTest.compileFile(tsComp, customPkgDir, ["--out", tsOvOut, shadowAliasApp]);
+test.checkInt("override preload alias TS compile: " + tsOvComp.stderr, 0, tsOvComp.status);
+tsOvRun := runNodeTs(tsOvOut, customPkgDir);
+test.checkText("override preload alias TS output", "205\n", tsOvRun.stdout);
+
+/* Non-pub import inside $preload.lt is NOT leaked into receiving module */
+leakHelperApp := path.join(customPkgDir, "leak_helper.lts");
+_c8 := fs.writeText(leakHelperApp, "io := import \"core/io\";\nio.outputLine(helper.BASE);\n");
+leakHelperFail := compilerTest.compileFile(tsComp, customPkgDir, ["--out", path.join(customPkgDir, "lh.ts"), leakHelperApp]);
+test.check("non-pub import in $preload.lt stays private (got: " + leakHelperFail.stderr + ")", leakHelperFail.status =!= 0 and leakHelperFail.stderr.contains("unknown value helper"));
+
+/* Package preload symbols of an imported module do NOT leak to an outside importer in another package */
+outsideDir := path.join(tmpRoot, "outside_pkg");
+_m3 := fs.makeDir(outsideDir);
+_o1 := fs.writeText(path.join(outsideDir, "$preload.lt"), "");
+_c9 := fs.writeText(path.join(customPkgDir, "libmod.lt"), "pub mkPair := fn(): Pair { Pair { a = 1, b = SCALE } };\n");
+outsideMain := path.join(outsideDir, "main.lts");
+_o2 := fs.writeText(outsideMain, "io := import \"core/io\";\nlm := import \"../custom_pkg/libmod\";\np := lm.mkPair();\nio.outputLine(p.a, p.b);\n");
+tsOutPkg := path.join(outsideDir, "main.ts");
+tsOutComp := compilerTest.compileFile(tsComp, outsideDir, ["--out", tsOutPkg, outsideMain]);
+test.checkInt("cross-package signature preserves preload type: " + tsOutComp.stderr, 0, tsOutComp.status);
+tsOutRun := runNodeTs(tsOutPkg, outsideDir);
+test.checkText("cross-package signature run", "1 20\n", tsOutRun.stdout);
+
+outsideLeak := path.join(outsideDir, "leak.lts");
+_o3 := fs.writeText(outsideLeak, "lm := import \"../custom_pkg/libmod\";\np := Pair { a = 1, b = 2 };\n");
+outsideLeakFail := compilerTest.compileFile(tsComp, outsideDir, ["--out", path.join(outsideDir, "ol.ts"), outsideLeak]);
+test.check("imported module preload does not leak across packages (got: " + outsideLeakFail.stderr + ")", outsideLeakFail.status =!= 0 and outsideLeakFail.stderr.contains("Pair"));
+
+test.done("preload");

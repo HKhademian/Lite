@@ -27,7 +27,7 @@ Bit-packed fixed arrays `[Bool; N]`, `[Int1..4; N]`, and `[UInt1..4; N]` also su
 
 ## Layout Attributes (`#packed`, `#align`) & Niche Packing
 
-Control C11 binary layout directly with `#packed`, `#align(N)`, and `#no_niche` right after `record` or `enum` (after any `<T>` or `: BackingType`). By default, `Option<T>` (`core/option`) automatically uses sentinel niches (including `Bool`, small enums, non-null heap handles, and finite-checked `Float` NaN niches) so `Option<Bool>` or `Option<Rc<T>>` adds zero tag bytes!
+Control C11 binary layout directly with `#packed`, `#align(N)`, and `#no_niche` right after `record` or `enum` (after any `<T>` or `: BackingType`). By default, `Option<T>` (`core/option`, preloaded via `lib/$preload.lt`) automatically uses sentinel niches (including `Bool`, small enums, non-null heap handles, and finite-checked `Float` NaN niches) so `Option<Bool>` or `Option<rc.Rc<T>>` (`core/rc`) adds zero tag bytes!
 
 ```lite
 io := import "core/io";

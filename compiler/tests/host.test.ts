@@ -283,9 +283,12 @@ test('a modified bootstrap seed fails explicitly without executing T00', () => {
 
 test('selected compiler build exposes its imported source dependencies', () => {
   const selected = buildCompiler('ts');
-  assert.deepEqual(selected.dependencies.slice(0, 4), [
-    'compiler/src/ts-root.lts', 'lib/core/int.lt', 'lib/core/list.lt', 'lib/core/set.lt',
+  assert.deepEqual(selected.dependencies.slice(0, 7), [
+    'compiler/src/ts-root.lts', 'lib/$preload.lt', 'lib/core/option.lt', 'lib/core/slice.lt',
+    'lib/core/diag.lt', 'lib/core/io.lt', 'lib/core/int.lt',
   ]);
+  assert.ok(selected.dependencies.includes('lib/core/list.lt'));
+  assert.ok(selected.dependencies.includes('lib/core/set.lt'));
   assert.ok(selected.dependencies.includes('lib/core/text.lt'));
   assert.ok(selected.dependencies.includes('compiler/src/driver-ts.lt'));
   assert.ok(selected.dependencies.includes('compiler/src/frontend.lt'));
@@ -383,11 +386,15 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     const provenance = JSON.parse(readFileSync(join(cache, entries()[0]!, 'provenance.json'), 'utf8')) as { dependencies: string[] };
     assert.deepEqual(provenance.dependencies, [
       'compiler/src/fixture-root.lts',
+      'lib/$preload.lt',
+      'lib/core/option.lt',
+      'lib/core/slice.lt',
+      'lib/core/diag.lt',
+      'lib/core/io.lt',
       'lib/core/int.lt',
       'lib/core/list.lt',
       'lib/core/set.lt',
       'compiler/src/fixture-c.lts',
-      'lib/core/io.lt',
     ]);
     writeFileSync(join(directory, 'compiler/src/fixture-c.lts'), 'io := import "core/io"; source := io.inputAll(); io.outputLine("changed nested C");');
     const changed = invoke(directory, 'io := import "core/io"; io.outputLine(42);', 'c');
@@ -410,10 +417,14 @@ test('imported C compiler source hashes transitive files and invalidates its cac
     assert.equal(afterRemoval.length, 4);
     const expectedRemovedDeps = [
       'compiler/src/fixture-root.lts',
+      'lib/$preload.lt',
+      'lib/core/option.lt',
+      'lib/core/slice.lt',
+      'lib/core/diag.lt',
+      'lib/core/io.lt',
       'lib/core/int.lt',
       'lib/core/list.lt',
       'lib/core/set.lt',
-      'lib/core/io.lt',
     ];
     const removedProvenance = afterRemoval.map(name => JSON.parse(readFileSync(join(cache, name, 'provenance.json'), 'utf8')) as { dependencies: string[] })
       .find(item => item.dependencies.length === expectedRemovedDeps.length && expectedRemovedDeps.every((dep, idx) => item.dependencies[idx] === dep));

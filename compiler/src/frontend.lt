@@ -160,6 +160,7 @@ pub ITEM_KIND_PUBLIC_VALUE := ir.ITEM_KIND_PUBLIC_VALUE;
 pub ITEM_KIND_PUBLIC_TYPE := ir.ITEM_KIND_PUBLIC_TYPE;
 pub ITEM_KIND_PUBLIC_IMPL := ir.ITEM_KIND_PUBLIC_IMPL;
 pub ITEM_KIND_PUBLIC_CONTEXT := ir.ITEM_KIND_PUBLIC_CONTEXT;
+pub ITEM_KIND_PRELOAD_MARK := ir.ITEM_KIND_PRELOAD_MARK;
 pub ITEM_KIND_PURE_GLOBAL := ir.ITEM_KIND_PURE_GLOBAL;
 pub ITEM_KIND_COMPTIME_DEP := ir.ITEM_KIND_COMPTIME_DEP;
 pub ITEM_KIND_FUNCTION_START := ir.ITEM_KIND_FUNCTION_START;
@@ -1974,6 +1975,9 @@ appendAssignedBagDecls := fn(assignedBag: String, decls: List<BlockDecl>, depth:
 /** Removes deferred-only entries after one function body has been checked. */
 withoutFutureValues := fn(locals: List<Local>): List<Local> { infer.withoutFutureValues(locals) };
 
+/** Parses one top-level aliased or preload-unpacked import and returns its next source position. */
+parseImportClauseWithMode := fn(target: String, source: String, position: Int, modAlias: String, modeCode: String, prefix: String): Item { infer.parseImportClauseWithMode(target, source, position, modAlias, modeCode, prefix) };
+
 /** Parses one top-level aliased import and returns its next source position. */
 parseImportClause := fn(target: String, source: String, position: Int, modAlias: String, prefix: String): Item { infer.parseImportClause(target, source, position, modAlias, prefix) };
 
@@ -2314,9 +2318,34 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     var parameterTotal := 0;
     var futureValues: List<FutureValue> = [];
     if monoInstIdx < 0 {
+    if moduleIdentity == "lite.core.rc.v1" {
+        mut aliases.pushBack((name = "Rc", target = "$BuiltinFamily:Rc", at = -1, end = 0, depth = 0));
+        mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "Rc", runtime = "", code = "$BuiltinFamily:Rc", intValue = 0, textValue = ""));
+    } else if moduleIdentity == "lite.core.slice.v1" {
+        mut aliases.pushBack((name = "Slice", target = "$BuiltinFamily:Slice", at = -1, end = 0, depth = 0));
+        mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "Slice", runtime = "", code = "$BuiltinFamily:Slice", intValue = 0, textValue = ""));
+    } else if moduleIdentity == "lite.core.simd.v1" {
+        mut aliases.pushBack((name = "Simd", target = "$BuiltinFamily:Simd", at = -1, end = 0, depth = 0));
+        mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "Simd", runtime = "", code = "$BuiltinFamily:Simd", intValue = 0, textValue = ""));
+        mut aliases.pushBack((name = "SimdNative", target = "$BuiltinFamily:SimdNative", at = -1, end = 0, depth = 0));
+        mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "SimdNative", runtime = "", code = "$BuiltinFamily:SimdNative", intValue = 0, textValue = ""));
+    } else if moduleIdentity == "lite.core.soa.v1" {
+        mut aliases.pushBack((name = "SoA", target = "$BuiltinFamily:SoA", at = -1, end = 0, depth = 0));
+        mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE, name = "SoA", runtime = "", code = "$BuiltinFamily:SoA", intValue = 0, textValue = ""));
+    }
+    var inPreloadTypes := false;
     loop exports as exported {
-        if exported.kind == ITEM_KIND_PUBLIC_TYPE {
-            mut aliases.pushBack((name = exported.name, target = exported.code, at = -1, end = 0, depth = 0));
+        if exported.kind == ITEM_KIND_PRELOAD_MARK {
+            inPreloadTypes = exported.name == "start";
+        } else if exported.kind == ITEM_KIND_PUBLIC_TYPE {
+            expAt := if inPreloadTypes { -2 } else { -1 };
+            expDepth := if inPreloadTypes { -1 } else { 0 };
+            expTarget := if exported.code =!= "" and not exported.code.startsWithAt(0, "@") and not exported.code.startsWithAt(0, "$") and not exported.code.startsWithAt(0, "Iface<") {
+                "$Kind:" + exported.code
+            } else {
+                exported.code
+            };
+            mut aliases.pushBack((name = exported.name, target = expTarget, at = expAt, end = 0, depth = expDepth));
             if exported.textValue =!= "" {
                 if exported.textValue.startsWithAt(0, "@ifacedef:") {
                     decI := interfaces.decodeInterfaceMeta(exported.textValue);
@@ -2330,7 +2359,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     } else {
                         exported.code
                     };
-                    aliases = types.appendEncodedRecordDefaults(aliases, defTarget, exported.textValue, 0);
+                    aliases = types.appendEncodedRecordDefaults(aliases, defTarget, exported.textValue, expDepth);
                 }
             }
         } else if exported.kind == ITEM_KIND_PUBLIC_IMPL {
@@ -2391,17 +2420,22 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
     loop rootAssignedNames as rootAssigned {
         mut blockAssignedDecls.pushBack((name = rootAssigned, depth = 0));
     }
+    var inPreloadDecls := false;
     loop exports as exported {
-        if exported.kind == ITEM_KIND_MODULE_ALIAS {
+        if exported.kind == ITEM_KIND_PRELOAD_MARK {
+            inPreloadDecls = exported.name == "start";
+        } else if exported.kind == ITEM_KIND_MODULE_ALIAS {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
+                if inPreloadDecls { continue; }
                 diagLib.fail(prefix, "duplicate imported module name " + exported.name);
             }
             comptimeEval.registerModuleImport(moduleKey, exported.name, exported.runtime, exported.code);
             (mut locals).pushBack((name = exported.name, runtime = "", kind = VALUE_KIND_MODULE, mutable = false,
-            writable = false, depth = 0, constant = false, code = "", intValue = exported.intValue,
+            writable = false, depth = if inPreloadDecls { -1 } else { 0 }, constant = false, code = "", intValue = exported.intValue,
             textValue = exported.name, initState = INIT_STATE_INIT));
         } else if exported.kind == ITEM_KIND_PUBLIC_FUNCTION {
             if localIndex(locals, exported.name) >= 0 {
+                if inPreloadDecls { continue; }
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
             }
             existingImpFns := sym.findFunctions(functions, exported.name);
@@ -2424,7 +2458,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 }
                 (mut functions).pushBack((name = exported.name, runtime = exported.runtime, result = exported.code,
                 first = first, count = exported.intValue, declAt = -1));
-                if exported.name.indexOf(".", 0) < 0 and existingImpFns.length() == 0 {
+                if not inPreloadDecls and exported.name.indexOf(".", 0) < 0 and existingImpFns.length() == 0 {
                     mut blockDecls.pushBack((name = exported.name, depth = 0));
                 }
             }
@@ -2452,6 +2486,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             }
         } else if exported.kind == ITEM_KIND_PUBLIC_VALUE {
             if findFunction(functions, exported.name) >= 0 or localIndex(locals, exported.name) >= 0 {
+                if inPreloadDecls { continue; }
                 diagLib.fail(prefix, "duplicate imported public name " + exported.name);
             }
             if exported.intValue > 0 {
@@ -2459,20 +2494,21 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 comptimeEval.registerLocalCtVal(exported.runtime, impCtId);
                 ctTok := comptimeEval.comptimeValToken(exported.code, impCtId);
                 if ctTok =!= "" {
-                    mut aliases.pushBack((name = "$ctv:" + exported.name, target = ctTok, at = -1, end = 0, depth = 0));
+                    expCtDepth := if inPreloadDecls { -1 } else { 0 };
+                    mut aliases.pushBack((name = "$ctv:" + exported.name, target = ctTok, at = -1, end = 0, depth = expCtDepth));
                 }
             }
             (mut locals).pushBack((name = exported.name, runtime = exported.runtime, kind = exported.code,
-            mutable = false, writable = false, depth = 0, constant = false, code = exported.runtime,
+            mutable = false, writable = false, depth = if inPreloadDecls { -1 } else { 0 }, constant = false, code = exported.runtime,
             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
-            if exported.name.indexOf(".", 0) < 0 {
+            if not inPreloadDecls and exported.name.indexOf(".", 0) < 0 {
                 mut blockDecls.pushBack((name = exported.name, depth = 0));
             }
         } else if exported.kind == ITEM_KIND_PUBLIC_TYPE {
             if findAlias(aliases, exported.name) < 0 {
                 diagLib.fail(prefix, "unknown imported public type " + exported.name);
             }
-            if exported.name.indexOf(".", 0) < 0 {
+            if not inPreloadDecls and exported.name.indexOf(".", 0) < 0 {
                 mut blockDecls.pushBack((name = exported.name, depth = 0));
             }
         } else if exported.kind == ITEM_KIND_PUBLIC_IMPL {
@@ -4025,7 +4061,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if blockCount =!= 0 {
                 failAt(source, nameStart, prefix, "import is only allowed at top level");
             }
-            failAt(source, nameStart, prefix, "import requires a module alias");
+            imported := parseImportClauseWithMode(target, source, nameStart, "", "unpack", prefix);
+            mut items.pushBack(imported);
+            position = imported.intValue;
+            continue;
         }
         var isPubImpl := false;
         var isPubContext := false;
@@ -4038,21 +4077,39 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 failAt(source, declarationStart, prefix, "expected a declaration after pub");
             }
             declarationEnd := source.skipName(declarationStart);
+            pubDeclName := source.slice(declarationStart, declarationEnd);
             var declarationOperator := skipTrivia(source, declarationEnd, prefix);
-            if source.slice(declarationStart, declarationEnd) == "impl" and declarationOperator < size and
+            if pubDeclName == "import" {
+                imported := parseImportClauseWithMode(target, source, declarationStart, "", "pub_unpack", prefix);
+                mut items.pushBack(imported);
+                position = imported.intValue;
+                continue;
+            } else if pubDeclName == "impl" and declarationOperator < size and
             not source.startsWithAt(declarationOperator, ":") and not isSingleEquals(source, declarationOperator) and
             (source.at(declarationOperator) == "<" or source.at(declarationOperator).isNameStart()) {
                 isPubImpl = true;
                 position = skipTrivia(source, declarationEnd, prefix);
                 nameStart = declarationStart;
                 name = "impl";
-            } else if source.slice(declarationStart, declarationEnd) == "context" and declarationOperator < size and
+            } else if pubDeclName == "context" and declarationOperator < size and
             not source.startsWithAt(declarationOperator, ":=") and not source.startsWithAt(declarationOperator, ":") and
             not isSingleEquals(source, declarationOperator) and source.at(declarationOperator) =!= "(" {
                 isPubContext = true;
                 position = skipTrivia(source, declarationEnd, prefix);
                 nameStart = declarationStart;
                 name = "context";
+            } else if source.startsWithAt(declarationOperator, ":=") and source.wordAt(skipTrivia(source, declarationOperator + 2, prefix), "import") {
+                afterPubImp := skipTrivia(source, declarationOperator + 2, prefix);
+                if declaredImportAliases.has(pubDeclName) {
+                    failAt(source, declarationStart, prefix, "duplicate module alias " + pubDeclName);
+                }
+                rejectDuplicateBlockDecl(source, declarationStart, prefix, blockDecls, depth, pubDeclName);
+                mut declaredImportAliases.add(pubDeclName);
+                mut blockDecls.pushBack((name = pubDeclName, depth = depth));
+                imported := parseImportClauseWithMode(target, source, afterPubImp, pubDeclName, "pub_alias", prefix);
+                mut items.pushBack(imported);
+                position = imported.intValue;
+                continue;
             } else {
                 if declarationOperator < size and source.at(declarationOperator) == "." {
                     pubOpStart := skipTrivia(source, declarationOperator + 1, prefix);
@@ -5516,7 +5573,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "alias") {
             var earlierAlias := false;
             loop aliases as aliasItem {
-                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
+                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at >= 0 and aliasItem.at < nameStart { earlierAlias = true; }
             }
             if earlierAlias {
                 failAt(source, nameStart, prefix, "duplicate type alias " + name);
@@ -5581,9 +5638,18 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 tplKind := types.resolveGenericTypeText(source, targetStart, prefix, scopedAliasEnv, rawInner, resolvedParams, seenAliases);
                 "@gentpl:" + types.encodeLengthPrefixedText(resolvedParams) + tplKind
             } else {
-                mut seenAliases: List<String> = [];
-                resolveTypeText(source, targetStart, prefix, aliasesUpToDepth(aliases, depth), aliasEntry.target, seenAliases)
+                scopedAliasEnv := aliasesUpToDepth(aliases, depth);
+                bfFam := types.builtinFamilyFromAlias(scopedAliasEnv, aliasEntry.target);
+                if bfFam =!= "" {
+                    "$BuiltinFamily:" + bfFam
+                } else {
+                    mut seenAliases: List<String> = [];
+                    resolveTypeText(source, targetStart, prefix, scopedAliasEnv, aliasEntry.target, seenAliases)
+                }
             };
+            if resolvedType.startsWithAt(0, "$BuiltinFamily:") {
+                aliases[aliasIndex] = (name = aliasEntry.name, target = resolvedType, at = aliasEntry.at, end = aliasEntry.end, depth = aliasEntry.depth);
+            }
             var exportedDefaults := "";
             defRecKind := if resolvedType.startsWithAt(0, "@gentpl:") {
                 pDec := types.decodeLengthPrefixedAt(resolvedType, 8);
@@ -5606,7 +5672,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "distinct") {
             var earlierAlias := false;
             loop aliases as aliasItem {
-                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
+                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at >= 0 and aliasItem.at < nameStart { earlierAlias = true; }
             }
             if earlierAlias {
                 failAt(source, nameStart, prefix, "duplicate type alias " + name);
@@ -5660,7 +5726,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "record") {
             var earlierAlias := false;
             loop aliases as aliasItem {
-                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
+                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at >= 0 and aliasItem.at < nameStart { earlierAlias = true; }
             }
             if earlierAlias {
                 failAt(source, nameStart, prefix, "duplicate type alias " + name);
@@ -5712,7 +5778,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
         if source.startsWithAt(position, ":=") and source.wordAt(afterDefinition, "enum") {
             var earlierAlias := false;
             loop aliases as aliasItem {
-                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at < nameStart { earlierAlias = true; }
+                if aliasItem.name == name and aliasItem.depth == depth and aliasItem.at >= 0 and aliasItem.at < nameStart { earlierAlias = true; }
             }
             if earlierAlias {
                 failAt(source, nameStart, prefix, "duplicate type alias " + name);
