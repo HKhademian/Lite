@@ -130,12 +130,12 @@ pub Camera3D.unprojectRay := fn(cam: Self, screenX: Float, screenY: Float, viewp
             nearWorld := invVp.transformPoint3(vec.vec3(ndcX, ndcY, -1.0));
             farWorld := invVp.transformPoint3(vec.vec3(ndcX, ndcY, 1.0));
             dirRaw := farWorld.sub(nearWorld);
-            if dirRaw.lengthSq() <= 0.000000000001 {
-                return .None;
+            if dirRaw.lengthSq() > 0.000000000001 {
+                return .Some((origin = nearWorld, dir = dirRaw.normalize()));
             }
-            return .Some((origin = nearWorld, dir = dirRaw.normalize()));
         }
     }
+    .None
 };
 
 /** Interactive spherical orbit camera around a 3D `target` point. */

@@ -1,0 +1,172 @@
+/* Dual-target (TS + C11 + ASan/UBSan) tests for `math/matrix` 3D ops, `math/transform`, `gfx/camera`, `gfx/scene`, and `ui/im`. */
+
+fs := import "core/file";
+path := import "core/path";
+proc := import "core/process";
+test := import "core/test";
+compilerBuild := import "../../tools/src/internal/compiler-build";
+compilerTest := import "../../tools/src/internal/compiler-test";
+project := import "../../tools/src/internal/project";
+
+root := project.findRepoRoot();
+test.check("repo root found", root =!= "");
+selTs := compilerBuild.selectCompilerPath(root, "ts");
+test.check("select TS compiler: " + selTs.error, selTs.ok);
+selC := compilerBuild.selectCompilerPath(root, "c");
+test.check("select C compiler: " + selC.error, selC.ok);
+ccInfo := compilerTest.probeCc();
+
+tmpRes := fs.makeTempDir("lite-gfx-3d-ui-test-");
+test.check("makeTempDir: " + tmpRes.error, tmpRes.ok);
+tmpDir := tmpRes.path;
+
+functionalSrc := [
+"io := import \"core/io\";",
+"math := import \"math/scalar\";",
+"vec := import \"math/vector\";",
+"mat := import \"math/matrix\";",
+"xform := import \"math/transform\";",
+"color := import \"gfx/color\";",
+"surf := import \"gfx/surface\";",
+"camera := import \"gfx/camera\";",
+"scene := import \"gfx/scene\";",
+"im := import \"ui/im\";",
+"",
+"near := fn(a: Float, b: Float): Bool { math.abs(a - b) < 0.001 };",
+"",
+"/* 1. math/matrix: lookAt, ortho, inverse, transformDir3 */",
+"view := mat.Mat.lookAt(vec.vec3(0.0, 2.0, 5.0), vec.vec3(0.0, 0.0, 0.0), vec.UNIT_Y3);",
+"eyeInView := view.transformPoint3(vec.vec3(0.0, 2.0, 5.0));",
+"tgtInView := view.transformPoint3(vec.vec3(0.0, 0.0, 0.0));",
+"dirTest := mat.FMat4.translate3(10.0, 20.0, 30.0).transformDir3(vec.vec3(1.0, 2.0, 3.0));",
+"ortho := mat.Mat.ortho(-10.0, 10.0, -5.0, 5.0, 1.0, 21.0);",
+"op := ortho.transformPoint3(vec.vec3(10.0, 5.0, -1.0));",
+"tr := xform.Transform3D.fromEuler(vec.vec3(3.0, -2.0, 7.0), 0.35, -0.7, 0.2, vec.vec3(2.0, 1.5, 0.75)).toMat4();",
+"var invOk := false;",
+"match tr.inverse() {",
+"    .None { invOk = false; }",
+"    .Some(invTr) {",
+"        prod := tr.mul(invTr);",
+"        invOk = near(prod.at(0, 0), 1.0) and near(prod.at(1, 1), 1.0) and near(prod.at(2, 2), 1.0) and near(prod.at(3, 3), 1.0) and near(prod.at(0, 3), 0.0) and near(prod.at(2, 1), 0.0);",
+"    }",
+"}",
+"singOk := mat.FMat4.zeroed().inverse().isNone();",
+"io.outputLine(\"mat3d\", near(eyeInView.length(), 0.0), near(tgtInView.x(), 0.0) and near(tgtInView.y(), 0.0) and tgtInView.z() < -5.0, near(dirTest.x(), 1.0) and near(dirTest.z(), 3.0), near(op.x(), 1.0) and near(op.y(), 1.0) and near(op.z(), -1.0), invOk, singOk);",
+"",
+"/* 2. math/transform: Quat + Transform3D */",
+"q90 := xform.Quat.fromAxisAngle(vec.UNIT_Y3, math.HALF_PI);",
+"rv := q90.rotateVec(vec.UNIT_Z3);",
+"qs := xform.QUAT_IDENTITY.slerp(q90, 0.5);",
+"qm4 := q90.toMat4().transformDir3(vec.UNIT_Z3);",
+"tParent := xform.Transform3D.fromPosition(vec.vec3(10.0, 0.0, 0.0));",
+"tChild := xform.Transform3D.fromEuler(vec.vec3(0.0, 0.0, 2.0), 0.0, math.HALF_PI, 0.0, vec.vec3(1.0, 1.0, 1.0));",
+"tComb := tParent.combine(tChild);",
+"cp := tComb.transformPoint(vec.vec3(0.0, 0.0, -1.0));",
+"io.outputLine(\"xform\", near(rv.x(), 1.0) and near(rv.z(), 0.0), near(qs.length(), 1.0), near(qm4.x(), 1.0), near(cp.x(), 9.0) and near(cp.z(), 2.0));",
+"",
+"/* 3. gfx/camera: Camera3D + OrbitCamera */",
+"mut orb := camera.OrbitCamera.new(vec.ZERO3, 0.4, 0.35, 8.0);",
+"mut orb.orbit(0.1, 2.0);",
+"mut orb.zoom(-2.0);",
+"cam := orb.toCamera(160.0 / 120.0);",
+"proj := cam.project(vec.ZERO3, 160.0, 120.0);",
+"var camProjOk := false;",
+"match proj {",
+"    .None { camProjOk = false; }",
+"    .Some(sp) {",
+"        camProjOk = near(sp.x(), 80.0) and near(sp.y(), 60.0);",
+"    }",
+"}",
+"rayOpt := cam.unprojectRay(80.0, 60.0, 160.0, 120.0);",
+"var rayOk := false;",
+"match rayOpt {",
+"    .None { rayOk = false; }",
+"    .Some(r) {",
+"        rayOk = r.dir.dot(cam.forward()) > 0.999;",
+"    }",
+"}",
+"orthoCam := camera.Camera3D.orthographic(vec.vec3(0.0, 0.0, 10.0), vec.ZERO3, vec.UNIT_Y3, 4.0, 2.0, 0.5, 50.0);",
+"op2 := orthoCam.project(vec.vec3(4.0, 2.0, 0.0), 160.0, 120.0);",
+"var orthoProjOk := false;",
+"match op2 {",
+"    .None { orthoProjOk = false; }",
+"    .Some(sp2) { orthoProjOk = near(sp2.x(), 120.0) and near(sp2.y(), 30.0); }",
+"}",
+"io.outputLine(\"cam\", orb.pitch <= 1.451, near(orb.distance, 6.0), camProjOk, rayOk, orthoProjOk);",
+"",
+"/* 4. gfx/scene + ui/im on headless Surface */",
+"win := surf.Surface.open(\"Gfx3dTest\", 160, 120);",
+"mut sc := scene.Scene.new();",
+"mut sc.add(scene.Mesh.cube(1.8), xform.Transform3D.fromPosition(vec.vec3(0.0, 0.0, 0.0)), scene.Material.glossy(color.CYAN));",
+"mut sc.add(scene.Mesh.sphere(0.6, 6, 8), xform.Transform3D.fromPosition(vec.vec3(1.8, 0.5, -1.0)), scene.Material.matte(color.MAGENTA));",
+"mut sc.add(scene.Mesh.torus(0.7, 0.2, 8, 5), xform.Transform3D.fromPosition(vec.vec3(-1.8, 0.0, 0.0)), scene.Material.matte(color.YELLOW));",
+"mut sc.add(scene.Mesh.cylinder(0.4, 1.0, 6), xform.Transform3D.fromPosition(vec.vec3(0.0, 2.0, -2.0)), scene.Material.matte(color.GREEN));",
+"mut sc.add(scene.Mesh.pyramid(0.9, 1.0), xform.Transform3D.fromPosition(vec.vec3(-1.0, 1.5, -2.0)), scene.Material.matte(color.RED));",
+"mut sc.add(scene.Mesh.octahedron(0.6), xform.Transform3D.fromPosition(vec.vec3(1.0, -1.2, -1.0)), scene.Material.matte(color.WHITE));",
+"mut sc.add(scene.Mesh.plane(6.0, 6.0, 2, 2), xform.Transform3D.fromPosition(vec.vec3(0.0, -1.8, 0.0)), scene.Material.matte(color.BLUE));",
+"mut ui := im.UiState.new();",
+"var stats := scene.RenderStats { totalTriangles = 0, drawnTriangles = 0, culledTriangles = 0 };",
+"var tog := false;",
+"var slVal := 0.5;",
+"var frameIdx := 0;",
+"win.run(fn(inp: surf.FrameInput): Bool {",
+"    if not inp.open { return false; }",
+"    win.clear(color.Color.fromRgb(0.05, 0.06, 0.10));",
+"    stats = sc.render(win, cam, 160.0, 120.0);",
+"    scene.renderWireframeGrid(win, cam, 160.0, 120.0, 2, 1.0, -1.8, color.WHITE.withAlphaFloat(0.2));",
+"    mut ui.beginFrame(win, inp);",
+"    im.panel(mut ui, win, surf.rect(4.0, 4.0, 96.0, 72.0), \"HUD\");",
+"    _ := im.button(mut ui, win, 1, surf.rect(8.0, 22.0, 88.0, 14.0), \"Btn\");",
+"    tog = im.toggle(mut ui, win, 2, surf.rect(8.0, 38.0, 88.0, 14.0), \"Tog\", tog);",
+"    slVal = im.slider(mut ui, win, 3, surf.rect(8.0, 54.0, 88.0, 12.0), \"S\", slVal, 0.0, 1.0);",
+"    im.progressBar(ui, win, surf.rect(8.0, 68.0, 88.0, 5.0), slVal, color.CYAN);",
+"    mut ui.endFrame();",
+"    frameIdx += 1;",
+"    frameIdx < 2",
+"});",
+"win.close();",
+"io.outputLine(\"scene_ui\", frameIdx, stats.totalTriangles > 100 and stats.drawnTriangles > 20, tog == false, near(slVal, 0.5), ui.wantsPointer() == false);"
+].join("\n");
+
+expectedOut :=
+"mat3d true true true true true true\n" +
+"xform true true true true\n" +
+"cam true true true true true\n" +
+"scene_ui 2 true true true true\n";
+
+tsComp := compilerTest.compileStdin(root, selTs.path, functionalSrc, "");
+test.checkInt("TS compile status: " + tsComp.stderr, 0, tsComp.status);
+tsOutFile := path.join(tmpDir, "gfx3d_functional.ts");
+test.check("write gfx3d_functional.ts", fs.writeText(tsOutFile, tsComp.stdout).ok);
+tsRunner := path.join(tmpDir, "runner.ts");
+tsRunnerCode :=
+"import { writeSync } from 'node:fs';\n" +
+"import { main } from './gfx3d_functional.ts';\n" +
+"const out = main((t: string): void => { writeSync(1, t); });\n" +
+"if (typeof out === 'string' && out.length > 0) writeSync(1, out);\n";
+test.check("write runner.ts", fs.writeText(tsRunner, tsRunnerCode).ok);
+tsRun := proc.run(project.nodeExecPath(), [tsRunner], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+test.checkInt("TS run status: " + tsRun.stderr, 0, tsRun.status);
+test.checkText("TS functional output", expectedOut, tsRun.stdout);
+
+if ccInfo.available {
+    cComp := compilerTest.compileStdin(root, selC.path, functionalSrc, "");
+    test.checkInt("C11 compile status: " + cComp.stderr, 0, cComp.status);
+    cFile := path.join(tmpDir, "gfx3d_functional.c");
+    cBin := path.join(tmpDir, "gfx3d_functional_san");
+    test.check("write gfx3d_functional.c", fs.writeText(cFile, cComp.stdout).ok);
+    mut sanArgs: List<String> = ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", cFile, "-o", cBin, "-lm"];
+    if proc.platform() == "darwin" {
+        mut sanArgs.pushBack("-framework"); mut sanArgs.pushBack("Cocoa");
+        mut sanArgs.pushBack("-framework"); mut sanArgs.pushBack("CoreGraphics");
+    }
+    ccRes := proc.run(ccInfo.cc, sanArgs, tmpDir, [], true, "");
+    test.checkInt("C11 ASan+UBSan cc status: " + ccRes.stderr, 0, ccRes.status);
+    cRun := proc.run(cBin, [], root, ["LITE_CANVAS_HEADLESS=1", "LITE_CHECK_LEAKS=1"], true, "");
+    test.checkInt("C11 ASan+UBSan run status: " + cRun.stderr, 0, cRun.status);
+    test.checkText("C11 functional output matches TS", expectedOut, cRun.stdout);
+}
+
+_rm := fs.remove(tmpDir);
+io := import "core/io";
+io.outputLine("gfx-3d-ui: ok");
