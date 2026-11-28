@@ -1741,23 +1741,26 @@ pub nominalTypeArgs := fn(kind: String): List<String> {
     empty
 };
 
-/** Returns the built-in nominal type family owned by core `moduleIdentity` when it matches `typeName`, else `""`. */
+/** Returns the built-in nominal type family owned by core/type `moduleIdentity` when it matches `typeName`, else `""`. */
 pub coreBuiltinOwnerType := fn(moduleIdentity: String, typeName: String): String {
-    if moduleIdentity == "lite.core.list.v1" and typeName == "List" { return "List"; }
-    if moduleIdentity == "lite.core.map.v1" and typeName == "Map" { return "Map"; }
-    if moduleIdentity == "lite.core.set.v1" and typeName == "Set" { return "Set"; }
-    if moduleIdentity == "lite.core.rc.v1" and typeName == "Rc" { return "Rc"; }
-    if moduleIdentity == "lite.core.slice.v1" and typeName == "Slice" { return "Slice"; }
-    if moduleIdentity == "lite.core.simd.v1" and typeName == "Simd" { return "Simd"; }
-    if moduleIdentity == "lite.core.soa.v1" and typeName == "SoA" { return "SoA"; }
-    if moduleIdentity == "lite.core.text.v1" and
-    (typeName == "String" or typeName == "Bool" or numeric.isFloatKind(typeName)) {
-        return typeName;
+    if (moduleIdentity == "lite.core.list.v1" or moduleIdentity == "lite.type.list.v1") and typeName == "List" { return "List"; }
+    if (moduleIdentity == "lite.core.map.v1" or moduleIdentity == "lite.type.map.v1") and typeName == "Map" { return "Map"; }
+    if (moduleIdentity == "lite.core.set.v1" or moduleIdentity == "lite.type.set.v1") and typeName == "Set" { return "Set"; }
+    if (moduleIdentity == "lite.core.rc.v1" or moduleIdentity == "lite.type.rc.v1") and typeName == "Rc" { return "Rc"; }
+    if (moduleIdentity == "lite.core.slice.v1" or moduleIdentity == "lite.type.slice.v1") and typeName == "Slice" { return "Slice"; }
+    if (moduleIdentity == "lite.core.simd.v1" or moduleIdentity == "lite.type.simd.v1") and typeName == "Simd" { return "Simd"; }
+    if (moduleIdentity == "lite.core.soa.v1" or moduleIdentity == "lite.type.soa.v1") and typeName == "SoA" { return "SoA"; }
+    if (moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.type.string.v1") and typeName == "String" { return "String"; }
+    if (moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.type.bool.v1") and typeName == "Bool" { return "Bool"; }
+    if (moduleIdentity == "lite.core.text.v1" or moduleIdentity == "lite.type.float.v1") {
+        if typeName == "Float64" or typeName == "Double" { return "Float"; }
+        if numeric.isFloatKind(typeName) { return typeName; }
     }
-    if moduleIdentity == "lite.core.int.v1" and numeric.isIntKind(typeName) {
-        return typeName;
+    if (moduleIdentity == "lite.core.int.v1" or moduleIdentity == "lite.type.int.v1") {
+        if typeName == "Int64" { return "Int"; }
+        if numeric.isIntKind(typeName) { return typeName; }
     }
-    if moduleIdentity == "lite.core.array.v1" and typeName == "Array" { return "Array"; }
+    if (moduleIdentity == "lite.core.array.v1" or moduleIdentity == "lite.type.array.v1") and typeName == "Array" { return "Array"; }
     ""
 };
 
@@ -4605,10 +4608,13 @@ pub findMatchingImplsByKey := fn(actualKind: String, reqKey: String): List<(impl
     out
 };
 
-/** Finds a visible conformance from `actualKind` to `core/error.ToError` on `target`. */
+/** Finds a visible conformance from `actualKind` to `type/error.ToError` (or legacy `core/error.ToError`) on `target`. */
 pub findToErrorImpl := fn(target: String, actualKind: String): (found: Bool, implIdx: Int, bindingsEncoded: String) {
-    modKey := if target == ir.TARGET_TS { "lib$core$error" } else { "lib_s_core_s_error" };
-    findImplForConcrete(actualKind, "Iface<" + modKey + "#ToError>")
+    typeModKey := if target == ir.TARGET_TS { "lib$type$error" } else { "lib_s_type_s_error" };
+    typeRes := findImplForConcrete(actualKind, "Iface<" + typeModKey + "#ToError>");
+    if typeRes.found { return typeRes; }
+    legacyModKey := if target == ir.TARGET_TS { "lib$core$error" } else { "lib_s_core_s_error" };
+    findImplForConcrete(actualKind, "Iface<" + legacyModKey + "#ToError>")
 };
 
 /** True when concrete `actualKind` satisfies closed-union, single-interface, or multi-bound `All<...>` constraint `constraintKind`. */
@@ -5641,30 +5647,30 @@ parseArrayExtentWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool
                 syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer or Int comptime parameter extent in array type");
             }
         } else {
-        vpKind := valueParamKind(genericType, extName);
-        if vpKind == ir.VALUE_KIND_INT {
-            extText = extName;
-        } else if vpKind =!= "" {
-            syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(vpKind));
-        } else if isGenericParamName(genericType, extName) {
-            syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent cannot be Type parameter " + extName);
-        } else {
-            aliasIdx := findAlias(aliases, extName);
-            ctAliasIdx := if aliasIdx >= 0 { aliasIdx } else { findAlias(aliases, "$ctv:" + extName) };
-            if ctAliasIdx >= 0 and (aliases[ctAliasIdx].target).startsWithAt(0, "$Val:") {
-                tok := (aliases[ctAliasIdx].target).slice(5, (aliases[ctAliasIdx].target).length());
-                if not isComptimeIntToken(tok) {
-                    syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(comptimeValueTokenKind(tok)));
-                }
-                nVal := comptimeIntValue(tok);
-                if nVal <= 0 {
-                    syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be a positive integer, got " + nVal.toText());
-                }
-                extText = nVal.toText();
+            vpKind := valueParamKind(genericType, extName);
+            if vpKind == ir.VALUE_KIND_INT {
+                extText = extName;
+            } else if vpKind =!= "" {
+                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(vpKind));
+            } else if isGenericParamName(genericType, extName) {
+                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent cannot be Type parameter " + extName);
             } else {
-                syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer or Int comptime parameter extent in array type");
+                aliasIdx := findAlias(aliases, extName);
+                ctAliasIdx := if aliasIdx >= 0 { aliasIdx } else { findAlias(aliases, "$ctv:" + extName) };
+                if ctAliasIdx >= 0 and (aliases[ctAliasIdx].target).startsWithAt(0, "$Val:") {
+                    tok := (aliases[ctAliasIdx].target).slice(5, (aliases[ctAliasIdx].target).length());
+                    if not isComptimeIntToken(tok) {
+                        syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be an Int, got " + displayKind(comptimeValueTokenKind(tok)));
+                    }
+                    nVal := comptimeIntValue(tok);
+                    if nVal <= 0 {
+                        syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "array extent must be a positive integer, got " + nVal.toText());
+                    }
+                    extText = nVal.toText();
+                } else {
+                    syntax.failAt(errSource, if useLocalErr { extentStart } else { errPos }, prefix, "expected positive integer or Int comptime parameter extent in array type");
+                }
             }
-        }
         }
     } else {
         loop extentEnd < size and source.at(extentEnd).isDigit() {
@@ -5685,9 +5691,9 @@ parseArrayExtentWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Bool
 
 /** Parses `context([mut] name: [mut] Type, ...)` using caller's type-atom parser callback, returning canonical `Ctx<...>`. */
 parseContextClauseWith := fn(
-    parseAtom: fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int),
-    errSource: String, errPos: Int, useLocalErr: Bool, source: String, kwPos: Int, prefix: String,
-    aliases: List<AliasDecl>, genericType: String, seen: List<String>
+parseAtom: fn(errSource: String, errPos: Int, useLocalErr: Bool, source: String, position: Int, prefix: String, aliases: List<AliasDecl>, context: String, genericType: String, seen: List<String>): (kind: String, next: Int),
+errSource: String, errPos: Int, useLocalErr: Bool, source: String, kwPos: Int, prefix: String,
+aliases: List<AliasDecl>, genericType: String, seen: List<String>
 ): (ctxKind: String, next: Int) {
     size := source.length();
     var cursor := syntax.skipTrivia(source, kwPos + 7, prefix);
@@ -7912,7 +7918,9 @@ pub collectRecordTargetWithAttrs := fn(source: String, bracePos: Int, prefix: St
         mut pairsBuf.append(encodeLengthPrefixedText(typesList[idx]));
         idx = idx + 1;
     }
-    recHeader := if (moduleIdentity == "lite.core.error.v1" or moduleIdentity == "lib$core$error" or moduleIdentity == "lib_s_core_s_error") and recName == "Error" and effectiveAttrSuffix == "" {
+    recHeader := if (moduleIdentity == "lite.type.error.v1" or moduleIdentity == "lib$type$error" or moduleIdentity == "lib_s_type_s_error" or
+    moduleIdentity == "lite.core.error.v1" or moduleIdentity == "lib$core$error" or moduleIdentity == "lib_s_core_s_error") and
+    recName == "Error" and effectiveAttrSuffix == "" {
         "core/error#0#Error"
     } else {
         moduleIdentity + "#" + declAt.toText() + "#" + recName + effectiveAttrSuffix

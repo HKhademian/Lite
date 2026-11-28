@@ -1,0 +1,39 @@
+/* Core map operations. */
+
+/** Inserts or updates `key` with `value` in O(1). */
+pub Map.set := fn<K, V>(entries: mut Self<K, V>, key: K, value: V): Unit #host;
+
+/** Returns `(found = true, value = v)` when present, or `(found = false, value = zero(V))` in O(1). */
+pub Map.get := fn<K, V>(entries: Self<K, V>, key: K): (found: Bool, value: V) #host;
+
+/** Returns the stored value for `key` or `fallback` when absent in O(1). */
+pub Map.getOr := fn<K, V>(entries: Self<K, V>, key: K, fallback: V): V #host;
+
+/** True when `entries` contains `key` in O(1). */
+pub Map.has := fn<K, V>(entries: Self<K, V>, key: K): Bool #host;
+
+/** Removes `key` and returns true when it was present in O(1). */
+pub Map.remove := fn<K, V>(entries: mut Self<K, V>, key: K): Bool #host;
+
+/** Returns the number of entries in `entries` in O(1). */
+pub Map.size := fn<K, V>(entries: Self<K, V>): Int #host;
+
+/** Removes all entries from `entries` in O(1). */
+pub Map.clear := fn<K, V>(entries: mut Self<K, V>): Unit #host;
+
+/** Returns all keys in insertion order in O(n). */
+pub Map.keys := fn<K, V>(entries: Self<K, V>): List<K> #host;
+
+/** Returns all values in insertion order in O(n). */
+pub Map.values := fn<K, V>(entries: Self<K, V>): List<V> #host;
+
+/** Returns the value for `key`, faulting when absent. */
+pub Map.$getIndex := fn<K, V>(entries: Self<K, V>, key: K): V #host;
+
+/** Inserts or updates `key` with `value` via `entries[key] = value`. */
+pub Map.$setIndex := fn<K, V>(entries: mut Self<K, V>, key: K, value: V): Unit #host;
+
+/** True when `entries` contains zero entries. */
+pub Map.isEmpty := fn<K, V>(entries: Self<K, V>): Bool {
+    entries.size() == 0
+};

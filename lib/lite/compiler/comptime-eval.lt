@@ -1798,7 +1798,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
         loop bs as b { mut ids.pushBack(makeIntVal(b, "", mut budget)); }
         return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
     }
-    if modIdentity == "lite.core.text.v1" {
+    if modIdentity == "lite.core.text.v1" or modIdentity == "lite.type.string.v1" or modIdentity == "lite.type.float.v1" {
         if opName == "String.length" and args.length() > 0 {
             return CtOutcome { ok = true, valId = makeIntVal(ctPool[args[0]].strVal.length(), "", mut budget), flow = FlowKind.None, error = "" };
         }
@@ -1839,7 +1839,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome { ok = true, valId = makeStrVal(ctPool[args[0]].floatVal.toText(), "", mut budget), flow = FlowKind.None, error = "" };
         }
     }
-    if modIdentity == "lite.core.int.v1" {
+    if modIdentity == "lite.core.int.v1" or modIdentity == "lite.type.int.v1" {
         return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsupported host int builtin " + opName + " in comptime" };
     }
     if modIdentity == "lite.core.diag.v1" {
@@ -3783,7 +3783,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                             if efRes.flow =!= FlowKind.None { return (outcome = efRes, next = callA.next); }
                             return evalPostfixChain(source, callA.next, limitPos, prefix, efRes.valId, "", mut frame, mut budget);
                         }
-                        if isEffectfulHostBuiltin(tModId, mName + "." + opName) or tModId.startsWithAt(0, "lite.core.") {
+                        if isEffectfulHostBuiltin(tModId, mName + "." + opName) or tModId.startsWithAt(0, "lite.core.") or tModId.startsWithAt(0, "lite.type.") {
                             candsT := findFnIndicesInModule(tModKey, mName + "." + opName);
                             if candsT.length() > 0 {
                                 chosen := selectOverloadFnDef(candsT, callA.args.length() - callA.labels.length(), callA.labels);

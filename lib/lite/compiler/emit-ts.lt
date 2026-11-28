@@ -3793,7 +3793,7 @@ softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Strin
         if fnName == "hexEncode" { return "lite$cryptoEncodeBytes(\"hex\", " + arg0 + ")"; }
         if fnName == "base64Decode" { return "lite$cryptoDecodeBytes(\"base64\", " + arg0 + ")"; }
         if fnName == "hexDecode" { return "lite$cryptoDecodeBytes(\"hex\", " + arg0 + ")"; }
-    } else if moduleName == "lib/core/int" {
+    } else if moduleName == "lib/type/int" {
         if fnName == "Int.toText" { return "String(" + arg0 + ")"; }
         if fnName == "Int.abs" { return "(" + arg0 + " < 0n ? lite$negateInt(" + arg0 + ", 0) : " + arg0 + ")"; }
         if fnName == "Int.min" { return "(" + arg0 + " < " + paramRuntimeAt(params, 1) + " ? " + arg0 + " : " + paramRuntimeAt(params, 1) + ")"; }
@@ -3814,7 +3814,7 @@ softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Strin
         if fnName == "UInt64.mulWide" { return "lite$wmulU(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", 64n)"; }
         if fnName == "UInt64.addWithCarry" { return "lite$u64AddCarry(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")"; }
         if fnName == "UInt64.subWithBorrow" { return "lite$u64SubBorrow(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")"; }
-    } else if moduleName == "lib/core/list" {
+    } else if moduleName == "lib/type/list" {
         if fnName == "List.join" { return arg0 + ".join(" + paramRuntimeAt(params, 1) + ")"; }
         if fnName == "List.fillBytes" {
             return "lite$listFillBytes(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ", " + paramRuntimeAt(params, 3) + ")";
@@ -3825,7 +3825,7 @@ softBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Strin
         if fnName == "List.indexOfByte" {
             return "lite$listIndexOfByte(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", " + paramRuntimeAt(params, 2) + ")";
         }
-    } else if moduleName == "lib/core/text" {
+    } else if moduleName == "lib/type/string" {
         if fnName == "String.skipSpaces" { return "lite$textSkipWhile(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", true)"; }
         if fnName == "String.skipName" { return "lite$textSkipWhile(" + arg0 + ", " + paramRuntimeAt(params, 1) + ", false)"; }
         if fnName == "String.indexOf" {

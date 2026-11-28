@@ -1,4 +1,4 @@
 /** Default Lite package preload: exposes Option<T> and Slice<T> directly in root scopes. */
 
-pub import "core/option";
-pub import "core/slice";
+pub import "type/option";
+pub import "type/slice";

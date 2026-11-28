@@ -1,0 +1,6 @@
+/* Built-in `Bool` operations. */
+
+/** Formats one `Bool` as `"true"` or `"false"`. */
+pub Bool.toText := fn(value: Self): String {
+    if value { "true" } else { "false" }
+};

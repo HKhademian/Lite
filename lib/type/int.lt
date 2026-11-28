@@ -1,0 +1,441 @@
+/* Core checked-integer operations. */
+
+/** Smallest signed 64-bit value. */
+pub intMin := -9223372036854775808;
+
+/** Largest signed 64-bit value. */
+pub intMax := 9223372036854775807;
+
+/** Checked signed 64-bit addition; `ok` is false instead of evaluating an overflow. */
+pub Int.checkedAdd := fn(left: Self, right: Int): (value: Int, ok: Bool) {
+    if right > 0 and left > intMax - right { return (value = 0, ok = false); }
+    if right < 0 and left < intMin - right { return (value = 0, ok = false); }
+    (value = left + right, ok = true)
+};
+
+/** Checked signed 64-bit subtraction; `ok` is false instead of evaluating an overflow. */
+pub Int.checkedSub := fn(left: Self, right: Int): (value: Int, ok: Bool) {
+    if right < 0 and left > intMax + right { return (value = 0, ok = false); }
+    if right > 0 and left < intMin + right { return (value = 0, ok = false); }
+    (value = left - right, ok = true)
+};
+
+/** Checked signed 64-bit multiplication; `ok` is false instead of evaluating an overflow. */
+pub Int.checkedMul := fn(left: Self, right: Int): (value: Int, ok: Bool) {
+    if left == 0 or right == 0 { return (value = 0, ok = true); }
+    if left > 0 {
+        if right > 0 {
+            if left > intMax / right { return (value = 0, ok = false); }
+        } else if right < intMin / left {
+            return (value = 0, ok = false);
+        }
+    } else if right > 0 {
+        if left < intMin / right { return (value = 0, ok = false); }
+    } else if right < intMax / left {
+        return (value = 0, ok = false);
+    }
+    (value = left * right, ok = true)
+};
+
+/** Checked truncating signed division; `ok` is false on zero or the signed-minimum overflow. */
+pub Int.checkedDiv := fn(left: Self, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    if left == intMin and right == -1 { return (value = 0, ok = false); }
+    (value = left / right, ok = true)
+};
+
+/** Checked truncating signed remainder; the minimum/-1 result is zero, with no overflowing quotient evaluation. */
+pub Int.checkedRem := fn(left: Self, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    if left == intMin and right == -1 { return (value = 0, ok = true); }
+    (value = left % right, ok = true)
+};
+
+/** Checked floor division; `ok` is false on zero or the signed-minimum overflow. */
+pub Int.floorDiv := fn(left: Self, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    if left == intMin and right == -1 { return (value = 0, ok = false); }
+    quotient := left / right;
+    if left % right =!= 0 and (left < 0) =!= (right < 0) {
+        (value = quotient - 1, ok = true)
+    } else {
+        (value = quotient, ok = true)
+    }
+};
+
+/** Checked floor modulo; `ok` is false only on a zero divisor. */
+pub Int.floorMod := fn(left: Self, right: Int): (value: Int, ok: Bool) {
+    if right == 0 { return (value = 0, ok = false); }
+    remainder := left % right;
+    if remainder =!= 0 and (remainder < 0) =!= (right < 0) {
+        (value = remainder + right, ok = true)
+    } else {
+        (value = remainder, ok = true)
+    }
+};
+
+/** Checked unary negation; `ok` is false for the signed minimum. */
+pub Int.checkedNeg := fn(value: Self): (value: Int, ok: Bool) {
+    if value == intMin { return (value = 0, ok = false); }
+    (value = 0 - value, ok = true)
+};
+
+/** Converts one `0..9` digit value into its ASCII numeral string. */
+digitChar := fn(digit: Int): String {
+    match {
+        digit == 0 { "0" }
+        digit == 1 { "1" }
+        digit == 2 { "2" }
+        digit == 3 { "3" }
+        digit == 4 { "4" }
+        digit == 5 { "5" }
+        digit == 6 { "6" }
+        digit == 7 { "7" }
+        digit == 8 { "8" }
+        _ { "9" }
+    }
+}
+
+/** Formats one signed 64-bit Int as decimal text (soft builtin). */
+pub Int.toText := fn(value: Self): String {
+    if value == 0 { return "0"; }
+    if value == intMin { return "-9223372036854775808"; }
+    if value < 0 { return "-" + self(0 - value); }
+    var remaining := value;
+    var digits := "";
+    loop remaining > 0 {
+        digit := remaining % 10;
+        digits = digitChar(digit) + digits;
+        remaining = remaining / 10;
+    }
+    digits
+};
+
+/** Formats one signed 8-bit Int8 as decimal text. */
+pub Int8.toText := fn(value: Self): String {
+    Int.toText(value)
+};
+
+/** Formats one signed 16-bit Int16 as decimal text. */
+pub Int16.toText := fn(value: Self): String {
+    Int.toText(value)
+};
+
+/** Formats one signed 32-bit Int32 as decimal text. */
+pub Int32.toText := fn(value: Self): String {
+    Int.toText(value)
+}
+
+/** Formats one 1-bit signed Int1 as base-10 text. */
+pub Int1.toText := fn(value: Self): String {
+    Int.toText(cast<Int>(value))
+};
+
+/** Formats one 2-bit signed Int2 as base-10 text. */
+pub Int2.toText := fn(value: Self): String {
+    Int.toText(cast<Int>(value))
+};
+
+/** Formats one 4-bit signed Int4 as base-10 text. */
+pub Int4.toText := fn(value: Self): String {
+    Int.toText(cast<Int>(value))
+};
+
+/** Formats one 64-bit unsigned UInt64 as base-10 text. */
+pub UInt64.toText := fn(value: Self): String {
+    if value == 0 { return "0"; }
+    digits := "0123456789";
+    ten: UInt64 = 10;
+    var current := value;
+    var out := "";
+    loop current > 0 {
+        rem := current % ten;
+        idx := cast<Int>(rem);
+        out = digits.at(idx) + out;
+        current = current / ten;
+    }
+    out
+};
+
+/** Formats one 1-bit unsigned UInt1 as base-10 text. */
+pub UInt1.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 2-bit unsigned UInt2 as base-10 text. */
+pub UInt2.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 4-bit unsigned UInt4 as base-10 text. */
+pub UInt4.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 8-bit unsigned UInt8 as base-10 text. */
+pub UInt8.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 16-bit unsigned UInt16 as base-10 text. */
+pub UInt16.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Formats one 32-bit unsigned UInt32 as base-10 text. */
+pub UInt32.toText := fn(value: Self): String {
+    UInt64.toText(cast<UInt64>(value))
+};
+
+/** Returns the absolute value of signed 64-bit integer `value`, faulting on `Int.min`. */
+pub Int.abs := fn(value: Self): Int {
+    if value < 0 { 0 - value } else { value }
+};
+
+/** Returns the smaller of signed 64-bit integers `a` and `b`. */
+pub Int.min := fn(a: Self, b: Self): Int {
+    if a < b { a } else { b }
+};
+
+/** Returns the larger of signed 64-bit integers `a` and `b`. */
+pub Int.max := fn(a: Self, b: Self): Int {
+    if a > b { a } else { b }
+};
+
+/** Clamps signed 64-bit integer `value` to `[lo, hi]`. */
+pub Int.clamp := fn(value: Self, lo: Self, hi: Self): Int {
+    if value < lo { lo } else if value > hi { hi } else { value }
+};
+
+/** Returns the count of leading zero bits in `value` (`32` when zero). */
+pub UInt32.clz := fn(value: Self): Int {
+    zero: UInt32 = 0;
+    if value == zero { return 32; }
+    var v := value;
+    var count := 0;
+    top: UInt32 = 2147483648;
+    loop v.bitAnd(top) == zero {
+        count += 1;
+        v = v.shiftLeft(1);
+    }
+    count
+};
+
+/** Returns the count of trailing zero bits in `value` (`32` when zero). */
+pub UInt32.ctz := fn(value: Self): Int {
+    zero: UInt32 = 0;
+    if value == zero { return 32; }
+    var v := value;
+    var count := 0;
+    one: UInt32 = 1;
+    loop v.bitAnd(one) == zero {
+        count += 1;
+        v = v.shiftRight(1);
+    }
+    count
+};
+
+/** Returns the count of set bits in `value`. */
+pub UInt32.popcnt := fn(value: Self): Int {
+    var v := value;
+    var count := 0;
+    zero: UInt32 = 0;
+    one: UInt32 = 1;
+    loop v > zero {
+        v = v.bitAnd(v - one);
+        count += 1;
+    }
+    count
+};
+
+/** Returns `value` with its 4 bytes reversed. */
+pub UInt32.bswap := fn(value: Self): UInt32 {
+    m: UInt32 = 255;
+    b0 := value.bitAnd(m).shiftLeft(24);
+    b1 := value.shiftRight(8).bitAnd(m).shiftLeft(16);
+    b2 := value.shiftRight(16).bitAnd(m).shiftLeft(8);
+    b3 := value.shiftRight(24).bitAnd(m);
+    b0.bitOr(b1).bitOr(b2).bitOr(b3)
+};
+
+/** Returns the count of leading zero bits in `value` (`64` when zero). */
+pub UInt64.clz := fn(value: Self): Int {
+    zero: UInt64 = 0;
+    if value == zero { return 64; }
+    var v := value;
+    var count := 0;
+    one: UInt64 = 1;
+    top := one.shiftLeft(63);
+    loop v.bitAnd(top) == zero {
+        count += 1;
+        v = v.shiftLeft(1);
+    }
+    count
+};
+
+/** Returns the count of trailing zero bits in `value` (`64` when zero). */
+pub UInt64.ctz := fn(value: Self): Int {
+    zero: UInt64 = 0;
+    if value == zero { return 64; }
+    var v := value;
+    var count := 0;
+    one: UInt64 = 1;
+    loop v.bitAnd(one) == zero {
+        count += 1;
+        v = v.shiftRight(1);
+    }
+    count
+};
+
+/** Returns the count of set bits in `value`. */
+pub UInt64.popcnt := fn(value: Self): Int {
+    var v := value;
+    var count := 0;
+    zero: UInt64 = 0;
+    one: UInt64 = 1;
+    loop v > zero {
+        v = v.bitAnd(v - one);
+        count += 1;
+    }
+    count
+};
+
+/** Returns `value` with its 8 bytes reversed. */
+pub UInt64.bswap := fn(value: Self): UInt64 {
+    m: UInt64 = 255;
+    b0 := value.bitAnd(m).shiftLeft(56);
+    b1 := value.shiftRight(8).bitAnd(m).shiftLeft(48);
+    b2 := value.shiftRight(16).bitAnd(m).shiftLeft(40);
+    b3 := value.shiftRight(24).bitAnd(m).shiftLeft(32);
+    b4 := value.shiftRight(32).bitAnd(m).shiftLeft(24);
+    b5 := value.shiftRight(40).bitAnd(m).shiftLeft(16);
+    b6 := value.shiftRight(48).bitAnd(m).shiftLeft(8);
+    b7 := value.shiftRight(56).bitAnd(m);
+    b0.bitOr(b1).bitOr(b2).bitOr(b3).bitOr(b4).bitOr(b5).bitOr(b6).bitOr(b7)
+};
+
+/** Returns the exact 128-bit unsigned product of `a` and `b` as `(lo, hi)`. */
+pub UInt64.mulWide := fn(a: Self, b: Self): (lo: UInt64, hi: UInt64) {
+    mask32: UInt64 = 4294967295;
+    al := a.bitAnd(mask32);
+    ah := a.shiftRight(32);
+    bl := b.bitAnd(mask32);
+    bh := b.shiftRight(32);
+    p0 := al * bl;
+    p1 := al * bh;
+    p2 := ah * bl;
+    p3 := ah * bh;
+    mid := p0.shiftRight(32) + p1.bitAnd(mask32) + p2.bitAnd(mask32);
+    hiVal := p3 + p1.shiftRight(32) + p2.shiftRight(32) + mid.shiftRight(32);
+    loVal := p0.bitAnd(mask32).bitOr(mid.bitAnd(mask32).shiftLeft(32));
+    (lo = loVal, hi = hiVal)
+};
+
+/** Returns `(sum, carry)` for `a + b + carry` in 64-bit unsigned arithmetic. */
+pub UInt64.addWithCarry := fn(a: Self, b: Self, carry: Bool): (sum: UInt64, carry: Bool) {
+    s1 := a.wrappingAdd(b);
+    c1 := s1 < a;
+    one: UInt64 = 1;
+    zero: UInt64 = 0;
+    cIn := if carry { one } else { zero };
+    s2 := s1.wrappingAdd(cIn);
+    c2 := s2 < s1;
+    (sum = s2, carry = c1 or c2)
+};
+
+/** Returns `(diff, borrow)` for `a - b - borrow` in 64-bit unsigned arithmetic. */
+pub UInt64.subWithBorrow := fn(a: Self, b: Self, borrow: Bool): (diff: UInt64, borrow: Bool) {
+    d1 := a.wrappingSub(b);
+    b1 := a < b;
+    one: UInt64 = 1;
+    zero: UInt64 = 0;
+    bIn := if borrow { one } else { zero };
+    d2 := d1.wrappingSub(bIn);
+    b2 := d1 < bIn;
+    (diff = d2, borrow = b1 or b2)
+};
+
+/** Canonical 8-bit unsigned byte alias (`UInt8`). */
+pub Byte := alias UInt8;
+
+/** Canonical signed 64-bit integer alias (`Int64`). */
+pub Int := alias Int64;
+
+/** Signed integer scalar constraint covering `Int1` through `Int64`. */
+pub SignedInt := alias Int1 | Int2 | Int4 | Int8 | Int16 | Int32 | Int64;
+
+/** Unsigned integer scalar constraint covering `UInt1` through `UInt64`. */
+pub UnsignedInt := alias UInt1 | UInt2 | UInt4 | UInt8 | UInt16 | UInt32 | UInt64;
+
+/** Any signed or unsigned integer scalar type. */
+pub Integer := alias SignedInt | UnsignedInt;
+
+/** Minimum 1-bit signed integer value (`-1`). */
+pub Int1.MIN: Int1 := -1;
+/** Maximum 1-bit signed integer value (`0`). */
+pub Int1.MAX: Int1 := 0;
+
+/** Minimum 2-bit signed integer value (`-2`). */
+pub Int2.MIN: Int2 := -2;
+/** Maximum 2-bit signed integer value (`1`). */
+pub Int2.MAX: Int2 := 1;
+
+/** Minimum 4-bit signed integer value (`-8`). */
+pub Int4.MIN: Int4 := -8;
+/** Maximum 4-bit signed integer value (`7`). */
+pub Int4.MAX: Int4 := 7;
+
+/** Minimum 8-bit signed integer value (`-128`). */
+pub Int8.MIN: Int8 := -128;
+/** Maximum 8-bit signed integer value (`127`). */
+pub Int8.MAX: Int8 := 127;
+
+/** Minimum 16-bit signed integer value (`-32768`). */
+pub Int16.MIN: Int16 := -32768;
+/** Maximum 16-bit signed integer value (`32767`). */
+pub Int16.MAX: Int16 := 32767;
+
+/** Minimum 32-bit signed integer value (`-2147483648`). */
+pub Int32.MIN: Int32 := -2147483648;
+/** Maximum 32-bit signed integer value (`2147483647`). */
+pub Int32.MAX: Int32 := 2147483647;
+
+/** Minimum 64-bit signed integer value (`-9223372036854775808`). */
+pub Int64.MIN: Int64 := -9223372036854775808;
+/** Maximum 64-bit signed integer value (`9223372036854775807`). */
+pub Int64.MAX: Int64 := 9223372036854775807;
+
+/** Minimum 1-bit unsigned integer value (`0`). */
+pub UInt1.MIN: UInt1 := 0;
+/** Maximum 1-bit unsigned integer value (`1`). */
+pub UInt1.MAX: UInt1 := 1;
+
+/** Minimum 2-bit unsigned integer value (`0`). */
+pub UInt2.MIN: UInt2 := 0;
+/** Maximum 2-bit unsigned integer value (`3`). */
+pub UInt2.MAX: UInt2 := 3;
+
+/** Minimum 4-bit unsigned integer value (`0`). */
+pub UInt4.MIN: UInt4 := 0;
+/** Maximum 4-bit unsigned integer value (`15`). */
+pub UInt4.MAX: UInt4 := 15;
+
+/** Minimum 8-bit unsigned integer value (`0`). */
+pub UInt8.MIN: UInt8 := 0;
+/** Maximum 8-bit unsigned integer value (`255`). */
+pub UInt8.MAX: UInt8 := 255;
+
+/** Minimum 16-bit unsigned integer value (`0`). */
+pub UInt16.MIN: UInt16 := 0;
+/** Maximum 16-bit unsigned integer value (`65535`). */
+pub UInt16.MAX: UInt16 := 65535;
+
+/** Minimum 32-bit unsigned integer value (`0`). */
+pub UInt32.MIN: UInt32 := 0;
+/** Maximum 32-bit unsigned integer value (`4294967295`). */
+pub UInt32.MAX: UInt32 := 4294967295;
+
+/** Minimum 64-bit unsigned integer value (`0`). */
+pub UInt64.MIN: UInt64 := 0;
+/** Maximum 64-bit unsigned integer value (`18446744073709551615`). */
+pub UInt64.MAX: UInt64 := 18446744073709551615;

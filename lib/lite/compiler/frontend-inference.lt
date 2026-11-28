@@ -375,27 +375,27 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
             leftNext = blockClose;
         }
         if not isRecLit {
-        tailPos := tryInferBlockTailStart(source, start, blockClose, prefix);
-        if tailPos < 0 {
-            leftKind = ir.VALUE_KIND_UNIT;
-        } else {
-            tailParsed := self(source, tailPos, prefix, aliases, functions, params, locals, futureValues, expected, 0, depthLeft - 1);
-            if tailParsed.kind == "" or syntax.skipTrivia(source, tailParsed.next, prefix) =!= blockClose - 1 {
-                return (kind = "", next = start);
+            tailPos := tryInferBlockTailStart(source, start, blockClose, prefix);
+            if tailPos < 0 {
+                leftKind = ir.VALUE_KIND_UNIT;
+            } else {
+                tailParsed := self(source, tailPos, prefix, aliases, functions, params, locals, futureValues, expected, 0, depthLeft - 1);
+                if tailParsed.kind == "" or syntax.skipTrivia(source, tailParsed.next, prefix) =!= blockClose - 1 {
+                    return (kind = "", next = start);
+                }
+                leftKind = tailParsed.kind;
             }
-            leftKind = tailParsed.kind;
-        }
-        var endAfterBlk := blockClose;
-        afterBlk := syntax.skipTrivia(source, blockClose, prefix);
-        if afterBlk < size and source.wordAt(afterBlk, "finally") {
-            finOpen := syntax.skipTrivia(source, afterBlk + 7, prefix);
-            if finOpen < size and source.at(finOpen) == "{" {
-                finClose := syntax.scanBraceEnd(source, finOpen, prefix);
-                if finClose < 0 { return (kind = "", next = start); }
-                endAfterBlk = finClose;
+            var endAfterBlk := blockClose;
+            afterBlk := syntax.skipTrivia(source, blockClose, prefix);
+            if afterBlk < size and source.wordAt(afterBlk, "finally") {
+                finOpen := syntax.skipTrivia(source, afterBlk + 7, prefix);
+                if finOpen < size and source.at(finOpen) == "{" {
+                    finClose := syntax.scanBraceEnd(source, finOpen, prefix);
+                    if finClose < 0 { return (kind = "", next = start); }
+                    endAfterBlk = finClose;
+                }
             }
-        }
-        leftNext = endAfterBlk;
+            leftNext = endAfterBlk;
         }
     } else if ch == "i" and source.wordAt(start, "if") {
         var curIf := start + 2;
@@ -724,8 +724,8 @@ pub tryInferRootExprKind := fn(source: String, position: Int, prefix: String, al
     (kind = leftKind, next = leftNext)
 };
 
-/** Skips over an explicit `: Type` annotation span up to `=`, `;`, `{`, `}`, or `limit` while respecting strings and nested delimiters. */
-skipTypeAnnotationSpan := fn(source: String, annStart: Int, limit: Int, prefix: String): Int {
+/** Shared implementation for skipping an explicit `: Type` annotation span, optionally stopping right before `:=`. */
+skipTypeAnnotationImpl := fn(source: String, annStart: Int, limit: Int, prefix: String, stopBeforeColonEq: Bool): Int {
     var cursor := annStart;
     var depth := 0;
     loop cursor < limit {
@@ -742,6 +742,8 @@ skipTypeAnnotationSpan := fn(source: String, annStart: Int, limit: Int, prefix: 
             cursor = cursor + 1;
         } else if ch == "{" or ch == "}" {
             break;
+        } else if stopBeforeColonEq and depth == 0 and source.startsWithAt(cursor, ":=") {
+            break;
         } else if depth == 0 and (ch == ";" or syntax.isSingleEquals(source, cursor)) {
             cursor = cursor + 1;
             break;
@@ -750,6 +752,16 @@ skipTypeAnnotationSpan := fn(source: String, annStart: Int, limit: Int, prefix: 
         }
     }
     cursor
+};
+
+/** Skips over an explicit `: Type` annotation span up to `=`, `;`, `{`, `}`, or `limit` while respecting strings and nested delimiters. */
+skipTypeAnnotationSpan := fn(source: String, annStart: Int, limit: Int, prefix: String): Int {
+    skipTypeAnnotationImpl(source, annStart, limit, prefix, false)
+};
+
+/** Skips over an explicit `: Type` annotation span stopping right before a top-level `:=`. */
+skipTypeAnnotationBeforeColonEq := fn(source: String, annStart: Int, limit: Int, prefix: String): Int {
+    skipTypeAnnotationImpl(source, annStart, limit, prefix, true)
 };
 
 /** Skips a pre-scanned `fn(...) { ... }` expression span up to `limit`, optionally detecting inner `type`/`record`/`enum` aliases or nested `fn` expressions in its body. */
@@ -1389,7 +1401,7 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                             opEnd := source.skipName(opScan);
                             var afterOp := syntax.skipTrivia(source, opEnd, prefix);
                             if afterOp < size and source.at(afterOp) == ":" and not source.startsWithAt(afterOp, ":=") {
-                                afterOp = syntax.skipTrivia(source, skipTypeAnnotationSpan(source, afterOp + 1, size, prefix), prefix);
+                                afterOp = syntax.skipTrivia(source, skipTypeAnnotationBeforeColonEq(source, afterOp + 1, size, prefix), prefix);
                             }
                             if source.startsWithAt(afterOp, ":=") {
                                 valStart := syntax.skipTrivia(source, afterOp + 2, prefix);

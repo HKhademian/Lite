@@ -326,29 +326,29 @@ collectPublicDeclsWithVisited := fn(graph: frontend.Items, path: String, seenPat
 /** Returns synthetic `$BuiltinFamily:` exports when an in-progress core owner module is imported cyclically during root core preloading. */
 coreCycleFamilyExports := fn(depPath: String, modAlias: String): frontend.Items {
     normDep := normalizeSlashes(depPath);
-    if normDep.endsWith("/lib/core/slice.lt") {
+    if normDep.endsWith("/lib/type/slice.lt") or normDep.endsWith("/lib/core/slice.lt") {
         return [
-            (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.core.slice.v1", intValue = 0, textValue = depPath),
-            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".Slice", runtime = "", code = "$BuiltinFamily:Slice", intValue = 0, textValue = "")
+        (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.type.slice.v1", intValue = 0, textValue = depPath),
+        (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".Slice", runtime = "", code = "$BuiltinFamily:Slice", intValue = 0, textValue = "")
         ];
     }
-    if normDep.endsWith("/lib/core/rc.lt") {
+    if normDep.endsWith("/lib/type/rc.lt") or normDep.endsWith("/lib/core/rc.lt") {
         return [
-            (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.core.rc.v1", intValue = 0, textValue = depPath),
-            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".Rc", runtime = "", code = "$BuiltinFamily:Rc", intValue = 0, textValue = "")
+        (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.type.rc.v1", intValue = 0, textValue = depPath),
+        (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".Rc", runtime = "", code = "$BuiltinFamily:Rc", intValue = 0, textValue = "")
         ];
     }
-    if normDep.endsWith("/lib/core/simd.lt") {
+    if normDep.endsWith("/lib/type/simd.lt") or normDep.endsWith("/lib/core/simd.lt") {
         return [
-            (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.core.simd.v1", intValue = 0, textValue = depPath),
-            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".Simd", runtime = "", code = "$BuiltinFamily:Simd", intValue = 0, textValue = ""),
-            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".SimdNative", runtime = "", code = "$BuiltinFamily:SimdNative", intValue = 0, textValue = "")
+        (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.type.simd.v1", intValue = 0, textValue = depPath),
+        (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".Simd", runtime = "", code = "$BuiltinFamily:Simd", intValue = 0, textValue = ""),
+        (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".SimdNative", runtime = "", code = "$BuiltinFamily:SimdNative", intValue = 0, textValue = "")
         ];
     }
-    if normDep.endsWith("/lib/core/soa.lt") {
+    if normDep.endsWith("/lib/type/soa.lt") or normDep.endsWith("/lib/core/soa.lt") {
         return [
-            (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.core.soa.v1", intValue = 0, textValue = depPath),
-            (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".SoA", runtime = "", code = "$BuiltinFamily:SoA", intValue = 0, textValue = "")
+        (kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = "", code = "lite.type.soa.v1", intValue = 0, textValue = depPath),
+        (kind = frontend.ITEM_KIND_PUBLIC_TYPE, name = modAlias + ".SoA", runtime = "", code = "$BuiltinFamily:SoA", intValue = 0, textValue = "")
         ];
     }
     empty: frontend.Items = [];
@@ -410,7 +410,8 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
     var mut result: frontend.Items = existing;
     mut seenOps: Set<String>;
     loop existing as prev {
-        if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or prev.kind == frontend.ITEM_KIND_PUBLIC_IMPL {
+        if prev.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or prev.kind == frontend.ITEM_KIND_PUBLIC_IMPL or
+        (prev.kind == frontend.ITEM_KIND_PUBLIC_VALUE and prev.textValue.startsWithAt(0, "$typeprop:")) {
             mut seenOps.add(prev.kind + "|" + prev.name + "|" + prev.runtime);
         }
     }
@@ -422,7 +423,8 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
             insideSkip = false;
         } else if not insideSkip and (
         (item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and not frontend.isAliasOpKey(item.name)) or
-        item.kind == frontend.ITEM_KIND_PUBLIC_IMPL) {
+        item.kind == frontend.ITEM_KIND_PUBLIC_IMPL or
+        (item.kind == frontend.ITEM_KIND_PUBLIC_VALUE and item.textValue.startsWithAt(0, "$typeprop:"))) {
             opDedupKey := item.kind + "|" + item.name + "|" + item.runtime;
             if not seenOps.has(opDedupKey) {
                 mut seenOps.add(opDedupKey);
@@ -937,7 +939,12 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
     intValue = if isRoot { 1 } else { 0 }, textValue = moduleKey));
 
     if isRoot and projectRoot =!= "" {
-        coreOwnerRels: List<String> = ["lib/core/int.lt", "lib/core/text.lt", "lib/core/list.lt", "lib/core/array.lt", "lib/core/map.lt", "lib/core/set.lt", "lib/core/rc.lt", "lib/core/slice.lt", "lib/core/simd.lt", "lib/core/soa.lt"];
+        hasLegacyCoreSlice := hostFs.tryReadCoreOwner(projectRoot, "lib/core/slice.lt").ok;
+        coreOwnerRels: List<String> = if hasLegacyCoreSlice {
+            ["lib/core/int.lt", "lib/core/text.lt", "lib/core/list.lt", "lib/core/array.lt", "lib/core/map.lt", "lib/core/set.lt", "lib/core/rc.lt", "lib/core/slice.lt", "lib/core/simd.lt", "lib/core/soa.lt"]
+        } else {
+            ["lib/type/int.lt", "lib/type/float.lt", "lib/type/bool.lt", "lib/type/string.lt", "lib/type/list.lt", "lib/type/array.lt", "lib/type/map.lt", "lib/type/set.lt", "lib/type/rc.lt", "lib/type/slice.lt", "lib/type/simd.lt", "lib/type/soa.lt"]
+        };
         loop coreOwnerRels as ownerRel {
             loadedOwner := hostFs.tryReadCoreOwner(projectRoot, ownerRel);
             if loadedOwner.ok and not moduleVisited(graph, loadedOwner.path) {
@@ -968,7 +975,7 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         }
     }
 
-    skipPreload := frontend.isHostModuleIdentity(identity) or normPath.endsWith("/$preload.lt") or normPath.contains("/lib/core/") or display.startsWithAt(0, "lib/core/");
+    skipPreload := frontend.isHostModuleIdentity(identity) or normPath.endsWith("/$preload.lt") or normPath.contains("/lib/core/") or display.startsWithAt(0, "lib/core/") or normPath.contains("/lib/type/") or display.startsWithAt(0, "lib/type/");
     pkgPreloadMod := if not skipPreload {
         hostFs.findPackagePreload(path, rootDir, projectRoot)
     } else {

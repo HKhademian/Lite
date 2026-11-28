@@ -252,12 +252,14 @@ pub sourceModuleIdentity := fn(projectRoot: String, sourceText: String): String 
     paths: List<String> = [
     "lib/core/io.lt", "lib/core/int.lt", "lib/core/list.lt", "lib/core/array.lt", "lib/core/map.lt", "lib/core/set.lt", "lib/core/rc.lt", "lib/core/slice.lt", "lib/core/simd.lt", "lib/core/soa.lt", "lib/core/text.lt",
     "lib/core/error.lt", "lib/core/file.lt", "lib/core/process.lt", "lib/core/crypto.lt", "lib/core/time.lt",
+    "lib/type/int.lt", "lib/type/float.lt", "lib/type/bool.lt", "lib/type/string.lt", "lib/type/list.lt", "lib/type/array.lt", "lib/type/map.lt", "lib/type/set.lt", "lib/type/rc.lt", "lib/type/slice.lt", "lib/type/simd.lt", "lib/type/soa.lt", "lib/type/option.lt", "lib/type/error.lt",
     "lib/ds/arena.lt", "lib/external/ts.lt", "lib/external/http.lt", "lib/external/bench.lt",
     "lib/external/pool.lt", "lib/gfx/surface.lt", "lib/lite/compiler/modules.lt"
     ];
     identities: List<String> = [
     "lite.core.io.v1", "lite.core.int.v1", "lite.core.list.v1", "lite.core.array.v1", "lite.core.map.v1", "lite.core.set.v1", "lite.core.rc.v1", "lite.core.slice.v1", "lite.core.simd.v1", "lite.core.soa.v1", "lite.core.text.v1",
     "lite.core.error.v1", "lite.core.file.v1", "lite.core.process.v1", "lite.core.crypto.v1", "lite.core.time.v1",
+    "lite.type.int.v1", "lite.type.float.v1", "lite.type.bool.v1", "lite.type.string.v1", "lite.type.list.v1", "lite.type.array.v1", "lite.type.map.v1", "lite.type.set.v1", "lite.type.rc.v1", "lite.type.slice.v1", "lite.type.simd.v1", "lite.type.soa.v1", "lite.type.option.v1", "lite.type.error.v1",
     "lite.ds.arena.v1", "lite.external.ts.v1", "lite.external.http.v1", "lite.external.bench.v1",
     "lite.external.pool.v1", "lite.gfx.surface.v1", "lite.compiler.modules.v1"
     ];

@@ -1,0 +1,7 @@
+/* Numeric type union and default scalar alias barrel (`Byte`, `SignedInt`, `UnsignedInt`, `Integer`, `Double`, `Floating`, `Number`). */
+
+pub { Byte, Int, SignedInt, UnsignedInt, Integer } := import "./int";
+pub { Float, Double, Floating } := import "./float";
+
+/** Any signed/unsigned integer or binary floating-point scalar type. */
+pub Number := alias Integer | Floating;

@@ -1,29 +1,3 @@
-/* Core value-semantic general error record (`Error`) and error conversion interface (`ToError`). */
+/* Temporary compatibility barrel forwarding to `type/error` during Phase 2 migration. */
 
-/** Value-semantic general recoverable error used by `T!` (`T ! Error`). */
-pub Error := record {
-    kind: String = "Error";
-    message: String = "";
-    code: Int = 0;
-};
-
-/** Constructs an `Error` with `kind`, `message`, and `code = 0`. */
-pub Error.new := fn(kind: String, message: String): Self {
-    Error { =kind, =message, code = 0 }
-};
-
-/** Constructs an `Error` with `kind`, `message`, and explicit numeric `code`. */
-pub Error.withCode := fn(kind: String, message: String, code: Int): Self {
-    Error { =kind, =message, =code }
-};
-
-/** Formats `self` into a human-readable diagnostic string (`kind`, `kind: message`, or `kind(code): message`). */
-pub Error.format := fn(self: Self): String {
-    head := if self.code =!= 0 { self.kind + "(" + self.code.toText() + ")" } else { self.kind };
-    if self.message =!= "" { head + ": " + self.message } else { head }
-};
-
-/** Conversion contract allowing domain error types to propagate into `T!` (`T ! Error`). */
-pub ToError := interface {
-    toError: fn(self: Self): Error;
-};
+pub { Error, ToError } := import "type/error";

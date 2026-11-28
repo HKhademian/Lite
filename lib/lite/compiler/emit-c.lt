@@ -8060,7 +8060,7 @@ cParamRuntimeAt := fn(encoded: String, targetIndex: Int): String {
 /** Returns a C11 native fast-path return expression for a registered soft-builtin function, or `""`. */
 cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): String {
     arg0 := cParamRuntimeAt(params, 0);
-    if moduleName == "lib/core/int" {
+    if moduleName == "lib/type/int" {
         if fnName == "Int.toText" { return "lt_c_int_text(" + arg0 + ")"; }
         if fnName == "Int.abs" { return "(" + arg0 + " < 0 ? lt_checked_negate(" + arg0 + ", 0) : " + arg0 + ")"; }
         if fnName == "Int.min" { return "(" + arg0 + " < " + cParamRuntimeAt(params, 1) + " ? " + arg0 + " : " + cParamRuntimeAt(params, 1) + ")"; }
@@ -8087,7 +8087,7 @@ cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Stri
         if fnName == "UInt64.subWithBorrow" {
             return "lt_c_u64_sub_borrow(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
         }
-    } else if moduleName == "lib/core/list" {
+    } else if moduleName == "lib/type/list" {
         if fnName == "List.join" { return "lt_c_text_join(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ")"; }
         if fnName == "List.fillBytes" {
             return "lt_c_list_fill_bytes(&" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ", " + cParamRuntimeAt(params, 3) + ")";
@@ -8098,7 +8098,7 @@ cSoftBuiltinExpr := fn(moduleName: String, fnName: String, params: String): Stri
         if fnName == "List.indexOfByte" {
             return "lt_c_list_index_of_byte(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", " + cParamRuntimeAt(params, 2) + ")";
         }
-    } else if moduleName == "lib/core/text" {
+    } else if moduleName == "lib/type/string" {
         if fnName == "String.skipSpaces" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", true)"; }
         if fnName == "String.skipName" { return "lt_c_text_skip_while(" + arg0 + ", " + cParamRuntimeAt(params, 1) + ", false)"; }
         if fnName == "String.indexOf" {

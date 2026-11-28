@@ -3724,7 +3724,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
         return ctx.withMarkers((kind = targetKind, code = castCode, intValue = if castConst { arg.intValue } else { 0 }, textValue = if castConst { arg.textValue } else { "" }, constant = castConst, next = closeParen), argMarkers);
     }
     if afterName < source.length() and (source.at(afterName) == "." or source.at(afterName) == "<") and
-    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or (source.at(afterName) == "." and (name == "String" or numeric.isNumericKind(name)))) {
+    (types.findAlias(aliases, name) >= 0 or name == "List" or name == "Map" or name == "Set" or name == "Array" or (source.at(afterName) == "." and (name == "String" or numeric.isNumericKind(name) or numeric.numericAliasKind(name) =!= ""))) {
         var resolvedType := "";
         var typeOwnerKey := "";
         var aliasParamsCsv := "";
@@ -3762,8 +3762,9 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                 }
                 syntax.failAt(source, dotPos, prefix, "expected { or . after type " + types.displayKind(resolvedType));
             }
-        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or numeric.isNumericKind(name) {
-            typeOwnerKey = name;
+        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or numeric.isNumericKind(name) or (types.findAlias(aliases, name) < 0 and numeric.numericAliasKind(name) =!= "") {
+            numAlias := numeric.numericAliasKind(name);
+            typeOwnerKey = if numAlias =!= "" { numAlias } else { name };
         } else if types.builtinFamilyFromAlias(aliases, name) =!= "" {
             bfFam := types.builtinFamilyFromAlias(aliases, name);
             typeOwnerKey = if bfFam == "SimdNative" { "Simd" } else { bfFam };

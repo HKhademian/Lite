@@ -1,0 +1,54 @@
+/* Built-in IEEE-754 floating-point types (`Float8`, `Float16`, `Float32`, `Float64`), bounds, and formatting. */
+
+/** Canonical 64-bit IEEE-754 floating-point alias (`Float64`). */
+pub Float := alias Float64;
+
+/** Legacy/mathematical synonym for 64-bit IEEE-754 `Float64`. */
+pub Double := alias Float64;
+
+/** Any binary floating-point scalar type. */
+pub Floating := alias Float8 | Float16 | Float32 | Float64;
+
+/** Smallest positive finite normal 8-bit E4M3 float (`2^-6 = 0.015625`). */
+pub Float8.MIN: Float8 := 0.015625;
+/** Maximum finite 8-bit E4M3 float (`448.0`). */
+pub Float8.MAX: Float8 := 448.0;
+/** Machine epsilon for 8-bit E4M3 float (`2^-3 = 0.125`). */
+pub Float8.EPSILON: Float8 := 0.125;
+
+/** Smallest positive normal IEEE binary16 float (`2^-14`). */
+pub Float16.MIN: Float16 := 0.00006103515625;
+/** Maximum finite IEEE binary16 float (`65504.0`). */
+pub Float16.MAX: Float16 := 65504.0;
+/** Machine epsilon for IEEE binary16 float (`2^-10`). */
+pub Float16.EPSILON: Float16 := 0.0009765625;
+
+/** Smallest positive normal IEEE binary32 float (`FLT_MIN`). */
+pub Float32.MIN: Float32 := 1.17549435e-38;
+/** Maximum finite IEEE binary32 float (`FLT_MAX`). */
+pub Float32.MAX: Float32 := 3.40282347e38;
+/** Machine epsilon for IEEE binary32 float (`FLT_EPSILON`). */
+pub Float32.EPSILON: Float32 := 1.19209290e-7;
+
+/** Smallest positive normal IEEE binary64 float (`DBL_MIN`). */
+pub Float64.MIN: Float64 := 2.2250738585072014e-308;
+/** Maximum finite IEEE binary64 float (`DBL_MAX`). */
+pub Float64.MAX: Float64 := 1.7976931348623157e308;
+/** Machine epsilon for IEEE binary64 float (`DBL_EPSILON`). */
+pub Float64.EPSILON: Float64 := 2.2204460492503131e-16;
+
+/** Formats one 64-bit IEEE-754 Float as shortest round-trip decimal text (`-0.0` formats as `"0"`). */
+pub Float.toText := fn(value: Self): String #host;
+
+/** Formats one 32-bit IEEE-754 Float32 as shortest round-trip decimal text (`-0.0` formats as `"0"`). */
+pub Float32.toText := fn(value: Self): String #host;
+
+/** Formats one 8-bit OCP E4M3 Float8 as decimal text (`-0.0` formats as `"0"`). */
+pub Float8.toText := fn(value: Self): String {
+    Float.toText(cast<Float>(value))
+};
+
+/** Formats one 16-bit IEEE binary16 Float16 as decimal text (`-0.0` formats as `"0"`). */
+pub Float16.toText := fn(value: Self): String {
+    Float.toText(cast<Float>(value))
+};

@@ -1,0 +1,153 @@
+/* Core fixed-length array operations. */
+
+/** Closed numeric scalar constraint supported by `Array.sort`. */
+pub ArrayOrderedScalar := alias Int | Int8 | Int16 | Int32 | Float | Float32;
+
+/** Closed equatable scalar constraint supported by `Array.indexOf`, `Array.contains`, and `Array.dedup`. */
+pub ArrayEquatable := alias ArrayOrderedScalar | String | Bool;
+
+/** Returns the compile-time element count of fixed-length array `values`. */
+pub Array.length := fn<T: Type, N: Int>(values: Self<T, N>): Int #host;
+
+/** Returns the element at zero-based `index` in fixed-length array `values`, faulting on out-of-bounds access. */
+pub Array.$getIndex := fn<T: Type, N: Int>(values: Self<T, N>, index: Int): T #host;
+
+/** Replaces the element at zero-based `index` in fixed-length array `values`, faulting on out-of-bounds access. */
+pub Array.$setIndex := fn<T: Type, N: Int>(values: mut Self<T, N>, index: Int, value: T): Unit #host;
+
+/** Returns the element at zero-based `index` in fixed-length array `values`, skipping bounds checks when `-fno-check-unchecked` is active. */
+pub Array.uncheckedGet := fn<T: Type, N: Int>(values: Self<T, N>, index: Int): T #host;
+
+/** Replaces the element at zero-based `index` in fixed-length array `values`, skipping bounds checks when `-fno-check-unchecked` is active. */
+pub Array.uncheckedSet := fn<T: Type, N: Int>(values: mut Self<T, N>, index: Int, value: T): Unit #host;
+
+/** True when fixed-length array `values` has zero elements. */
+pub Array.isEmpty := fn<T: Type, N: Int>(values: Self<T, N>): Bool {
+    values.length() == 0
+};
+
+/** Constructs a fixed-length array `Array<T, N>` with every element initialized to `val`. */
+pub Array.filled := fn<T: Type, N: Int>(val: T): Self<T, N> {
+    [val; N]
+};
+
+/** Constructs a zero-initialized fixed-length array `Array<T, N>`. */
+pub Array.zeroed := fn<T: Type, N: Int>(): Self<T, N> {
+    res: Self<T, N>;
+    res
+};
+
+/** Overwrites every element of fixed-length array `values` with `val` in-place. */
+pub Array.fill := fn<T: Type, N: Int>(values: mut Self<T, N>, val: T): Unit {
+    loop 0..values.length() as i {
+        values[i] = val;
+    }
+};
+
+/** Converts fixed-length array `values` into a dynamic `List<T>`. */
+pub Array.toList := fn<T: Type, N: Int>(values: Self<T, N>): List<T> {
+    mut out: List<T> = [];
+    loop 0..values.length() as i {
+        mut out.pushBack(values[i]);
+    }
+    out
+};
+
+/** Joins string array elements in order with `separator` between adjacent items. */
+pub Array.join := fn<N: Int>(values: Self<String, N>, separator: String): String {
+    values.toList().join(separator)
+};
+
+/** Returns the zero-based index of `target` in `values`, or -1 when absent. */
+pub Array.indexOf := fn<T: Type<ArrayEquatable>, N: Int>(values: Self<T, N>, target: T): Int {
+    loop 0..values.length() as i {
+        if values[i] == target { return i; }
+    }
+    -1
+};
+
+/** True when `values` contains `target`. */
+pub Array.contains := fn<T: Type<ArrayEquatable>, N: Int>(values: Self<T, N>, target: T): Bool {
+    values.indexOf(target) >= 0
+};
+
+/** Folds `values` left-to-right starting from `initial` using `step(acc, item)`. */
+pub Array.fold := fn<T: Type, U: Type, N: Int>(values: Self<T, N>, initial: U, step: fn(U, T): U): U {
+    var acc := initial;
+    loop 0..values.length() as i {
+        acc = step(acc, values[i]);
+    }
+    acc
+};
+
+/** True when any element of `values` satisfies `pred`. */
+pub Array.any := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): Bool {
+    loop 0..values.length() as i {
+        if pred(values[i]) { return true; }
+    }
+    false
+};
+
+/** True when every element of `values` satisfies `pred`. */
+pub Array.all := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): Bool {
+    loop 0..values.length() as i {
+        if not pred(values[i]) { return false; }
+    }
+    true
+};
+
+/** Returns the zero-based index of the first element satisfying `pred`, or -1 when absent. */
+pub Array.findIndex := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): Int {
+    loop 0..values.length() as i {
+        if pred(values[i]) { return i; }
+    }
+    -1
+};
+
+/** Returns `(found = true, value = item)` for the first element satisfying `pred`, or `(found = false, value = zero)`. */
+pub Array.find := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): (found: Bool, value: T) {
+    z: T;
+    loop 0..values.length() as i {
+        if pred(values[i]) { return (found = true, value = values[i]); }
+    }
+    (found = false, value = z)
+};
+
+/** Returns a new fixed-length array `Array<U, N>` obtained by applying `transform` to every element of `values`. */
+pub Array.map := fn<T: Type, U: Type, N: Int>(values: Self<T, N>, transform: fn(T): U): Self<U, N> {
+    mut out: Self<U, N>;
+    loop 0..values.length() as i {
+        out[i] = transform(values[i]);
+    }
+    out
+};
+
+/** Returns a new `List<T>` containing the elements of `values` satisfying `pred`. */
+pub Array.filter := fn<T: Type, N: Int>(values: Self<T, N>, pred: fn(T): Bool): List<T> {
+    mut out: List<T> = [];
+    loop 0..values.length() as i {
+        item := values[i];
+        if pred(item) { mut out.pushBack(item); }
+    }
+    out
+};
+
+/** Returns unique elements of `values` preserving first-seen order in O(n). */
+pub Array.dedup := fn<T: Type<ArrayEquatable>, N: Int>(values: Self<T, N>): List<T> {
+    values.toList().dedup()
+};
+
+/** Returns a stable O(n log n) `List<T>` copy of `values` ordered by `lessOrEqual(a, b)`. */
+pub Array.sortBy := fn<T: Type, N: Int>(values: Self<T, N>, lessOrEqual: fn(T, T): Bool): List<T> {
+    values.toList().sortBy(lessOrEqual)
+};
+
+/** Returns a new sorted ascending `List<T>` copy of numeric scalar `values`. */
+pub Array.sort := fn<T: Type<ArrayOrderedScalar>, N: Int>(values: Self<T, N>): List<T> {
+    values.toList().sort()
+};
+
+/** Returns a new lexicographically sorted ascending `List<String>` copy of `values`. */
+pub Array.sortTexts := fn<N: Int>(values: Self<String, N>): List<String> {
+    values.toList().sortTexts()
+};
