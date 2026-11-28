@@ -10,11 +10,21 @@ pub Color := alias Int;
 /** Canvas dimensions and window title returned by setup and query calls. */
 pub Context := alias (width: Int, height: Int, title: String);
 
-/** Canvas draw operation opcode for clearing the canvas. */
-CANVAS_OP_CLEAR := 1;
+/** Encoded canvas draw command opcode matching the Play stage wire format. */
+CanvasOp := enum: Int {
+    Clear = 1;
+    FillRect = 2;
+};
 
-/** Canvas draw operation opcode for filling an axis-aligned rectangle. */
-CANVAS_OP_FILL_RECT := 2;
+decodeCanvasOp := fn(raw: Int): Option<CanvasOp> {
+    if raw == CanvasOp.Clear.value {
+        .Some(CanvasOp.Clear)
+    } else if raw == CanvasOp.FillRect.value {
+        .Some(CanvasOp.FillRect)
+    } else {
+        .None
+    }
+};
 
 /** Maximum 8-bit color channel intensity (`0..255`). */
 COLOR_CHANNEL_MAX := 255;
@@ -101,14 +111,14 @@ pub context := fn(): Context {
 pub clear := fn(color: Color): Unit {
     canvasBg = color;
     canvasPixels = [];
-    canvasOps = [CANVAS_OP_CLEAR, color];
+    canvasOps = [CanvasOp.Clear.value, color];
 }
 
 /** Draws a single pixel at `(x, y)` on the active canvas. */
 pub setPixel := fn(x: Int, y: Int, color: Color): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 { return; }
     if x < 0 or x >= canvasWidth or y < 0 or y >= canvasHeight { return; }
-    (mut canvasOps).pushBack(CANVAS_OP_FILL_RECT);
+    (mut canvasOps).pushBack(CanvasOp.FillRect.value);
     mut canvasOps.pushBack(x);
     mut canvasOps.pushBack(y);
     mut canvasOps.pushBack(1);
@@ -124,7 +134,7 @@ pub unsetPixel := fn(x: Int, y: Int): Unit {
 /** Fills an axis-aligned rectangle `(x, y, width, height)` using alpha blending. */
 pub fillRect := fn(x: Int, y: Int, width: Int, height: Int, color: Color): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 or width <= 0 or height <= 0 { return; }
-    (mut canvasOps).pushBack(CANVAS_OP_FILL_RECT);
+    (mut canvasOps).pushBack(CanvasOp.FillRect.value);
     mut canvasOps.pushBack(x);
     mut canvasOps.pushBack(y);
     mut canvasOps.pushBack(width);
@@ -219,15 +229,30 @@ pub flushToSurface := fn(win: surfLib.Surface, scale: Int, lastDrawCount: Int, m
     n := ops.length();
     var i := 0;
     loop i < n {
-        op := ops[i];
-        if op == CANVAS_OP_CLEAR and i + 1 < n {
-            win.fillRect(surfLib.rect(0.0, 0.0, canvasWidth * scaleF, canvasHeight * scaleF), decodeColor(ops[i + 1]));
-            i += 2;
-        } else if op == CANVAS_OP_FILL_RECT and i + 5 < n {
-            win.fillRect(surfLib.rect(ops[i + 1] * scaleF, ops[i + 2] * scaleF, ops[i + 3] * scaleF, ops[i + 4] * scaleF), decodeColor(ops[i + 5]));
-            i += 6;
-        } else {
-            break;
+        match decodeCanvasOp(ops[i]) {
+            .Some(op) {
+                match op {
+                    .Clear {
+                        if i + 1 < n {
+                            win.fillRect(surfLib.rect(0.0, 0.0, canvasWidth * scaleF, canvasHeight * scaleF), decodeColor(ops[i + 1]));
+                            i += 2;
+                        } else {
+                            break;
+                        }
+                    }
+                    .FillRect {
+                        if i + 5 < n {
+                            win.fillRect(surfLib.rect(ops[i + 1] * scaleF, ops[i + 2] * scaleF, ops[i + 3] * scaleF, ops[i + 4] * scaleF), decodeColor(ops[i + 5]));
+                            i += 6;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            .None {
+                break;
+            }
         }
     }
     tones := audioLib.drain();

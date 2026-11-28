@@ -1,5 +1,6 @@
 /** Pure RFC-8259 JSON scanner, typed reader, and O(N) string serializer (`data/json`) across TS and C11. */
 
+errLib := import "core/error";
 text := import "core/text";
 tb := import "core/text-builder";
 
@@ -488,6 +489,33 @@ pub findField := fn(source: String, objectStart: Int, key: String): JsonField {
         }
     }
     JsonField { found = false, valuePos = -1 }
+};
+
+/** Finds direct property `key` inside the JSON object at or after `objectStart`, returning `.Some(valuePos)` or `.None`. */
+pub findFieldOpt := fn(source: String, objectStart: Int, key: String): Option<Int> {
+    res := findField(source, objectStart, key);
+    if res.found { .Some(res.valuePos) } else { .None }
+};
+
+/** Decodes a JSON string literal at or after `start`, returning a fallible `String!`. */
+pub parseStringFallible := fn(source: String, start: Int): String! {
+    res := readStringAt(source, start);
+    if not res.ok { return .err(errLib.Error.new("JsonError", res.error)); }
+    res.value
+};
+
+/** Reads a JSON signed 64-bit integer token at or after `start`, returning a fallible `Int!`. */
+pub parseIntFallible := fn(source: String, start: Int): Int! {
+    res := readIntAt(source, start);
+    if not res.ok { return .err(errLib.Error.new("JsonError", res.error)); }
+    res.value
+};
+
+/** Reads a JSON boolean literal at or after `start`, returning a fallible `Bool!`. */
+pub parseBoolFallible := fn(source: String, start: Int): Bool! {
+    res := readBoolAt(source, start);
+    if not res.ok { return .err(errLib.Error.new("JsonError", res.error)); }
+    res.value
 };
 
 /** Reads direct string property `key` from JSON object at `objectStart`. */

@@ -1,6 +1,7 @@
 /** Pure RFC-4180 CSV parser and flat table encoder (`data/csv`) across TS and C11. */
 
 text := import "core/text";
+tb := import "core/text-builder";
 
 /** Flat-backed parsed CSV table supporting variable-width rows across TS and C11. */
 pub CsvTable := record {
@@ -29,17 +30,17 @@ pub CsvTable.parse := fn(source: String, delimiter: String): Self {
         loop inRow {
             if pos < size and source.at(pos) == "\"" {
                 pos += 1;
-                mut parts: List<String> = [];
+                mut out: tb.TextBuilder;
                 var segStart := pos;
                 loop pos < size {
                     if source.at(pos) == "\"" {
                         if pos + 1 < size and source.at(pos + 1) == "\"" {
-                            if pos > segStart { mut parts.pushBack(source.slice(segStart, pos)); }
-                            mut parts.pushBack("\"");
+                            if pos > segStart { mut out.append(source.slice(segStart, pos)); }
+                            mut out.append("\"");
                             pos += 2;
                             segStart = pos;
                         } else {
-                            if pos > segStart { mut parts.pushBack(source.slice(segStart, pos)); }
+                            if pos > segStart { mut out.append(source.slice(segStart, pos)); }
                             pos += 1;
                             break;
                         }
@@ -47,7 +48,7 @@ pub CsvTable.parse := fn(source: String, delimiter: String): Self {
                         pos += 1;
                     }
                 }
-                mut fields.pushBack(parts.join(""));
+                mut fields.pushBack(out.build());
                 rowLen += 1;
                 loop pos < size and source.at(pos) =!= delim and source.at(pos) =!= "\r" and source.at(pos) =!= "\n" {
                     pos += 1;
@@ -121,6 +122,27 @@ pub CsvTable.cell := fn(t: Self, row: Int, col: Int): String {
     t.fields[t.rowStarts[row] + col]
 };
 
+/** Returns `.Some(cell)` at `(row, col)`, or `.None` when out of bounds. */
+pub CsvTable.cellOpt := fn(t: Self, row: Int, col: Int): Option<String> {
+    if row < 0 or row >= t.rowStarts.length() { return .None; }
+    if col < 0 or col >= t.rowLens[row] { return .None; }
+    .Some(t.fields[t.rowStarts[row] + col])
+};
+
+/** Formats one borrowed slice of fields separated by `delimiter` (`","` when empty). */
+pub CsvTable.encodeRowSlice := fn(fields: Slice<String>, delimiter: String): String {
+    delim := effectiveDelim(delimiter);
+    mut out: tb.TextBuilder;
+    var i := 0;
+    n := fields.length();
+    loop i < n {
+        if i > 0 { mut out.append(delim); }
+        mut out.append(Self.encodeField(fields[i], delim));
+        i += 1;
+    }
+    out.build()
+};
+
 /** Returns a fresh `List<String>` containing all fields in `row`. */
 pub CsvTable.row := fn(t: Self, row: Int): List<String> {
     mut out: List<String> = [];
@@ -140,21 +162,22 @@ pub CsvTable.encodeField := fn(value: String, delimiter: String): String {
     delim := effectiveDelim(delimiter);
     needsQuote := value.contains(delim) or value.contains("\"") or value.contains("\n") or value.contains("\r");
     if not needsQuote { return value; }
-    mut parts: List<String> = ["\""];
+    mut out: tb.TextBuilder;
+    mut out.append("\"");
     size := value.length();
     var segStart := 0;
     var i := 0;
     loop i < size {
         if value.at(i) == "\"" {
-            if i > segStart { mut parts.pushBack(value.slice(segStart, i)); }
-            mut parts.pushBack("\"\"");
+            if i > segStart { mut out.append(value.slice(segStart, i)); }
+            mut out.append("\"\"");
             segStart = i + 1;
         }
         i += 1;
     }
-    if segStart < size { mut parts.pushBack(value.slice(segStart, size)); }
-    mut parts.pushBack("\"");
-    parts.join("")
+    if segStart < size { mut out.append(value.slice(segStart, size)); }
+    mut out.append("\"");
+    out.build()
 };
 
 /** Formats one row of fields separated by `delimiter` (`","` when empty). */

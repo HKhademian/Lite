@@ -24,6 +24,26 @@ countRepeatedAt := fn(source: String, start: Int, limit: Int, ch: String): Int {
     count
 }
 
+FenceKind := enum {
+    None;
+    Backtick;
+    Tilde;
+};
+
+fenceKindForChar := fn(ch: String): FenceKind {
+    if ch == "`" { FenceKind.Backtick }
+    else if ch == "~" { FenceKind.Tilde }
+    else { FenceKind.None }
+};
+
+fenceKindChar := fn(k: FenceKind): String {
+    match k {
+        .None { "" }
+        .Backtick { "`" }
+        .Tilde { "~" }
+    }
+};
+
 /** Removes fenced code blocks delimited at column 0 (` ``` ` or `~~~`) so prose scanners skip example code. */
 pub stripCodeBlocks := fn(source: String): String {
     if source.indexOf("```", 0) < 0 and source.indexOf("~~~", 0) < 0 {
@@ -33,24 +53,23 @@ pub stripCodeBlocks := fn(source: String): String {
     mut out: tb.TextBuilder;
     var runStart := 0;
     var pos := 0;
-    var inFence := false;
-    var fenceChar := "";
+    var fence := FenceKind.None;
     var fenceLen := 0;
     var fenceStart := 0;
 
     loop pos <= size {
         lineEnd := findLineEnd(source, pos, size);
-        if not inFence {
+        if fence == FenceKind.None {
             if pos < size {
                 ch := source.at(pos);
-                if ch == "`" or ch == "~" {
+                kind := fenceKindForChar(ch);
+                if kind =!= FenceKind.None {
                     cnt := countRepeatedAt(source, pos, lineEnd, ch);
                     if cnt >= 3 {
                         if pos > runStart {
                             mut out.append(source.slice(runStart, pos));
                         }
-                        inFence = true;
-                        fenceChar = ch;
+                        fence = kind;
                         fenceLen = cnt;
                         fenceStart = pos;
                     }
@@ -58,10 +77,9 @@ pub stripCodeBlocks := fn(source: String): String {
             }
         } else {
             if pos + fenceLen <= lineEnd {
-                matches := countRepeatedAt(source, pos, lineEnd, fenceChar);
+                matches := countRepeatedAt(source, pos, lineEnd, fenceKindChar(fence));
                 if matches == fenceLen and isBlankRest(source, pos + fenceLen, lineEnd) {
-                    inFence = false;
-                    fenceChar = "";
+                    fence = FenceKind.None;
                     fenceLen = 0;
                     runStart = lineEnd;
                 }
@@ -71,7 +89,7 @@ pub stripCodeBlocks := fn(source: String): String {
         pos = lineEnd + 1;
     }
 
-    if inFence {
+    if fence =!= FenceKind.None {
         mut out.append(source.slice(fenceStart, size));
     } else if runStart < size {
         mut out.append(source.slice(runStart, size));
@@ -86,7 +104,7 @@ pub hasUnclosedFence := fn(source: String): Bool {
     }
     size := source.length();
     var pos := 0;
-    var fenceChar := "";
+    var fence := FenceKind.None;
     var fenceLen := 0;
 
     loop pos < size {
@@ -99,14 +117,15 @@ pub hasUnclosedFence := fn(source: String): Bool {
         }
         if lead < lineEnd {
             ch := source.at(lead);
-            if ch == "`" or ch == "~" {
+            kind := fenceKindForChar(ch);
+            if kind =!= FenceKind.None {
                 cnt := countRepeatedAt(source, lead, lineEnd, ch);
                 if cnt >= 3 {
                     if fenceLen == 0 {
-                        fenceChar = ch;
+                        fence = kind;
                         fenceLen = cnt;
-                    } else if ch == fenceChar and cnt >= fenceLen {
-                        fenceChar = "";
+                    } else if kind == fence and cnt >= fenceLen {
+                        fence = FenceKind.None;
                         fenceLen = 0;
                     }
                 }
