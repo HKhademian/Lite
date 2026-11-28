@@ -18693,7 +18693,7 @@ pub parseExpressionItem := fn(target: String, source: String, position: Int, pre
         ""
     };
     trimmedStart := syntax.skipTrivia(source, position, prefix);
-    stmtSink := if trimmedStart < source.length() and (source.at(trimmedStart) == "{" or source.wordAt(trimmedStart, "do")) and (not isTailClose or currentResult == ir.VALUE_KIND_UNIT) { "exprOut" } else { "" };
+    stmtSink := if trimmedStart < source.length() and (source.wordAt(trimmedStart, "do") or (source.at(trimmedStart) == "{" and (not isTailClose or currentResult == ir.VALUE_KIND_UNIT))) { "exprOut" } else { "" };
     stmtMin := if not isTailClose or currentResult == ir.VALUE_KIND_UNIT { -2 } else { 0 };
     parsed := parseBinaryCtx(target, source, position, prefix, locals, functions, params, currentName, expected, stmtMin, ctxs, 0, false, stmtSink, aliases);
     ended := syntax.consumeStatementEnd(source, parsed.next, prefix);
