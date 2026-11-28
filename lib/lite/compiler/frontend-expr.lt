@@ -1740,7 +1740,7 @@ parseFnLiteralExpr := fn(target: String, source: String, nameStart: Int, afterKw
         inferCtxs := ctx.appendCtx(emptyInferCtxs, inferFnCtx);
         sym.invalidateLocals();
         inferredBody := parseBinaryCtx(target, source, cursor, prefix, fnLocals, functions, params, "<fn>",
-        "", 0, inferCtxs, fnBodyDepth, true, "", aliases);
+        "", 0, inferCtxs, fnBodyDepth, true, "exprOut", aliases);
         sym.invalidateLocals();
         if inferredBody.kind == "" {
             syntax.failAt(source, cursor, prefix, "could not infer return type of function expression");
