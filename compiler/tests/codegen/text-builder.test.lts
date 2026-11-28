@@ -1,4 +1,4 @@
-/* Dual-target (TS + C11) tests for `util/text-builder`. */
+/* Dual-target (TS + C11) tests for `core/text-builder`. */
 
 test := import "core/test";
 compilerBuild := import "../../../tools/src/internal/compiler-build";
@@ -17,7 +17,7 @@ ccInfo := compilerTest.probeCc();
 
 src :=
 "io := import \"core/io\";\n" +
-"tb := import \"util/text-builder\";\n" +
+"tb := import \"core/text-builder\";\n" +
 "\n" +
 "mut b: tb.TextBuilder;\n" +
 "io.outputLine(b.count(), b.build());\n" +
