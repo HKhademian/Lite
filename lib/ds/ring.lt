@@ -2,28 +2,6 @@
 
 math := import "math/scalar";
 
-/** Outcome of reading or popping an element from a generic `Ring<T>`. */
-pub RingItem := enum<T: Type> {
-    Empty;
-    Some(T);
-}
-
-/** True when `item` holds a present value `.Some(...)`. */
-pub RingItem.isSome := fn<T: Type>(item: Self<T>): Bool {
-    match item {
-        .Empty { false }
-        .Some { true }
-    }
-};
-
-/** Returns the wrapped value when `.Some(v)`, or `fallback` when `.Empty`. */
-pub RingItem.unwrapOr := fn<T: Type>(item: Self<T>, fallback: T): T {
-    match item {
-        .Empty { fallback }
-        .Some(v) { v }
-    }
-};
-
 /** Generic fixed-capacity circular ring buffer storing `T` values. */
 pub Ring := record<T: Type> {
     data: List<T>;
@@ -95,9 +73,9 @@ pub Ring.tryPush := fn<T: Type>(r: mut Self<T>, value: T): Bool {
     true
 };
 
-/** Removes and returns the oldest element, or `.Empty` if empty. */
-pub Ring.pop := fn<T: Type>(r: mut Self<T>): RingItem<T> {
-    if r.count <= 0 { return .Empty; }
+/** Removes and returns the oldest element, or `.None` if empty. */
+pub Ring.pop := fn<T: Type>(r: mut Self<T>): Option<T> {
+    if r.count <= 0 { return .None; }
     val := r.data[r.head];
     z: T;
     mut buf: List<T> = r.data;
@@ -109,18 +87,18 @@ pub Ring.pop := fn<T: Type>(r: mut Self<T>): RingItem<T> {
 };
 
 /** Returns the oldest element without removing it. */
-pub Ring.peekFront := fn<T: Type>(r: Self<T>): RingItem<T> {
-    if r.count <= 0 { .Empty } else { .Some(r.data[r.head]) }
+pub Ring.peekFront := fn<T: Type>(r: Self<T>): Option<T> {
+    if r.count <= 0 { .None } else { .Some(r.data[r.head]) }
 };
 
 /** Returns the most recently pushed element without removing it. */
-pub Ring.peekBack := fn<T: Type>(r: Self<T>): RingItem<T> {
-    if r.count <= 0 { .Empty } else { .Some(r.data[(r.head + r.count - 1) % r.cap]) }
+pub Ring.peekBack := fn<T: Type>(r: Self<T>): Option<T> {
+    if r.count <= 0 { .None } else { .Some(r.data[(r.head + r.count - 1) % r.cap]) }
 };
 
 /** Returns the `index`-th element (`0` = oldest) without removing it. */
-pub Ring.get := fn<T: Type>(r: Self<T>, index: Int): RingItem<T> {
-    if index < 0 or index >= r.count { .Empty } else { .Some(r.data[(r.head + index) % r.cap]) }
+pub Ring.get := fn<T: Type>(r: Self<T>, index: Int): Option<T> {
+    if index < 0 or index >= r.count { .None } else { .Some(r.data[(r.head + index) % r.cap]) }
 };
 
 /** Resets `r` to empty and clears stored elements to their zero value. */

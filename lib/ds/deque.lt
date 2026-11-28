@@ -1,27 +1,5 @@
 /** Generic O(1) double-ended queues (`ds/deque`) backed by circular buffers. */
 
-/** Outcome of reading or popping an element from a generic `Deque<T>`. */
-pub DequeItem := enum<T: Type> {
-    Empty;
-    Some(T);
-}
-
-/** True when `item` holds a present value `.Some(...)`. */
-pub DequeItem.isSome := fn<T: Type>(item: Self<T>): Bool {
-    match item {
-        .Empty { false }
-        .Some { true }
-    }
-};
-
-/** Returns the wrapped value when `.Some(v)`, or `fallback` when `.Empty`. */
-pub DequeItem.unwrapOr := fn<T: Type>(item: Self<T>, fallback: T): T {
-    match item {
-        .Empty { fallback }
-        .Some(v) { v }
-    }
-};
-
 /** Generic O(1) bounded-capacity circular double-ended queue storing `T` values. */
 pub Deque := record<T: Type> {
     data: List<T>;
@@ -90,9 +68,9 @@ pub Deque.pushFront := fn<T: Type>(d: mut Self<T>, value: T): Bool {
     true
 };
 
-/** Pops and returns the back element, or `.Empty` if empty. */
-pub Deque.popBack := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
-    if d.count <= 0 { return .Empty; }
+/** Pops and returns the back element, or `.None` if empty. */
+pub Deque.popBack := fn<T: Type>(d: mut Self<T>): Option<T> {
+    if d.count <= 0 { return .None; }
     pos := (d.head + d.count - 1) % d.cap;
     val := d.data[pos];
     z: T;
@@ -103,9 +81,9 @@ pub Deque.popBack := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
     .Some(val)
 };
 
-/** Pops and returns the front element, or `.Empty` if empty. */
-pub Deque.popFront := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
-    if d.count <= 0 { return .Empty; }
+/** Pops and returns the front element, or `.None` if empty. */
+pub Deque.popFront := fn<T: Type>(d: mut Self<T>): Option<T> {
+    if d.count <= 0 { return .None; }
     val := d.data[d.head];
     z: T;
     mut buf: List<T> = d.data;
@@ -117,18 +95,18 @@ pub Deque.popFront := fn<T: Type>(d: mut Self<T>): DequeItem<T> {
 };
 
 /** Returns the front element without removing it. */
-pub Deque.peekFront := fn<T: Type>(d: Self<T>): DequeItem<T> {
-    if d.count <= 0 { .Empty } else { .Some(d.data[d.head]) }
+pub Deque.peekFront := fn<T: Type>(d: Self<T>): Option<T> {
+    if d.count <= 0 { .None } else { .Some(d.data[d.head]) }
 };
 
 /** Returns the back element without removing it. */
-pub Deque.peekBack := fn<T: Type>(d: Self<T>): DequeItem<T> {
-    if d.count <= 0 { .Empty } else { .Some(d.data[(d.head + d.count - 1) % d.cap]) }
+pub Deque.peekBack := fn<T: Type>(d: Self<T>): Option<T> {
+    if d.count <= 0 { .None } else { .Some(d.data[(d.head + d.count - 1) % d.cap]) }
 };
 
 /** Returns the element at zero-based logical `index` (`0` = front). */
-pub Deque.get := fn<T: Type>(d: Self<T>, index: Int): DequeItem<T> {
-    if index < 0 or index >= d.count { .Empty } else { .Some(d.data[(d.head + index) % d.cap]) }
+pub Deque.get := fn<T: Type>(d: Self<T>, index: Int): Option<T> {
+    if index < 0 or index >= d.count { .None } else { .Some(d.data[(d.head + index) % d.cap]) }
 };
 
 /** Clears `d` and resets all slots to their zero value. */

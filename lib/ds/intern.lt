@@ -11,27 +11,8 @@ pub SymbolId.isValid := fn(id: Self): Bool {
     cast<Int>(id) >= 0
 };
 
-/** Outcome of resolving a `SymbolId` inside an `Interner`. */
-pub InternLookup := enum {
-    None;
-    Some(String);
-}
-
-/** True when `res` contains a resolved string `.Some(...)`. */
-pub InternLookup.isSome := fn(res: Self): Bool {
-    match res {
-        .None { false }
-        .Some { true }
-    }
-};
-
-/** Returns the resolved string when `.Some(s)`, or `fallback` when `.None`. */
-pub InternLookup.unwrapOr := fn(res: Self, fallback: String): String {
-    match res {
-        .None { fallback }
-        .Some(s) { s }
-    }
-};
+/** Compatibility alias for `Option<String>` returned by `Interner.resolve`. */
+pub InternLookup := alias Option<String>;
 
 /** Deduplication statistics snapshot for an `Interner`. */
 pub InternStats := record {
@@ -64,11 +45,9 @@ pub Interner.intern := fn(table: mut Self, value: String): SymbolId {
         return cast<SymbolId>(existing.value);
     }
     eid := table.entries.length();
-    mut es: List<String> = table.entries;
+    mut table.entries.pushBack(value);
     mut mp: Map<String, Int> = table.lookup;
-    mut es.pushBack(value);
     mut mp.set(value, eid);
-    table.entries = es;
     table.lookup = mp;
     table.totalChars = table.totalChars + value.length();
     cast<SymbolId>(eid)
@@ -84,6 +63,12 @@ pub Interner.lookupId := fn(table: Self, value: String): (found: Bool, id: Symbo
     }
 };
 
+/** Looks up `value` without inserting it, returning `.Some(id)` or `.None`. */
+pub Interner.find := fn(table: Self, value: String): Option<SymbolId> {
+    res := table.lookup.get(value);
+    if res.found { .Some(cast<SymbolId>(res.value)) } else { .None }
+};
+
 /** True when `value` is currently interned in `table`. */
 pub Interner.has := fn(table: Self, value: String): Bool {
     table.lookup.has(value)
@@ -96,7 +81,7 @@ pub Interner.hasId := fn(table: Self, id: SymbolId): Bool {
 };
 
 /** Resolves `id` back to its interned `String` in O(1), or `.None` if absent. */
-pub Interner.resolve := fn(table: Self, id: SymbolId): InternLookup {
+pub Interner.resolve := fn(table: Self, id: SymbolId): Option<String> {
     if not table.hasId(id) { .None } else { .Some(table.entries[cast<Int>(id)]) }
 };
 
@@ -118,10 +103,10 @@ pub Interner.charCount := fn(table: Self): Int {
 /** Returns deduplication statistics for `table`. */
 pub Interner.stats := fn(table: Self): InternStats {
     InternStats {
-    uniqueCount = table.entries.length(),
-    totalChars = table.totalChars,
-    internCalls = table.internCalls,
-    hitCalls = table.hitCalls
+        uniqueCount = table.entries.length(),
+        totalChars = table.totalChars,
+        internCalls = table.internCalls,
+        hitCalls = table.hitCalls
     }
 };
 

@@ -81,15 +81,19 @@ functionalSrc :=
 "h3 := mut sp.acquire();\n" +
 "io.outputLine(\"slotPool\", h1.index, h2.index, hFull.isValid(), rel1, relDup, h3.index == h1.index, h3.generation > h1.generation, sp.isAlive(h1), sp.isAlive(h3));\n" +
 "mut sp.clear();\n" +
-"io.outputLine(\"slotClear\", sp.count(), sp.isAlive(h2), sp.isAlive(h3));\n" +
+"optH := mut sp.tryAcquire();\n" +
+"_optH2 := mut sp.tryAcquire();\n" +
+"optFull := mut sp.tryAcquire();\n" +
+"io.outputLine(\"slotClear\", sp.count(), sp.isAlive(h2), sp.isAlive(h3), optH.isSome(), optFull.isSome());\n" +
 "\n" +
 "mut ip: pool.IntPool = pool.IntPool.create(4);\n" +
 "ih := mut ip.acquire(101);\n" +
+"ih2 := mut ip.tryInsert(303);\n" +
 "_is := mut ip.set(ih, 202);\n" +
 "ig1 := ip.get(ih);\n" +
 "_ir := mut ip.release(ih);\n" +
 "ig2 := ip.get(ih);\n" +
-"io.outputLine(\"intPool\", ig1.isSome(), ig1.unwrapOr(-1), ig2.isSome(), ip.count());\n" +
+"io.outputLine(\"intPool\", ig1.isSome(), ig1.unwrapOr(-1), ig2.isSome(), ip.count(), ih2.isSome());\n" +
 "\n" +
 "mut tp: pool.TextPool = pool.Pool<String>.create(4);\n" +
 "th := mut tp.acquire(\"alpha\");\n" +
@@ -109,7 +113,7 @@ functionalSrc :=
 "_t2b := mut t2.intern(\"only2b\");\n" +
 "idOther := mut t2.intern(\"alpha\");\n" +
 "ist := t1.stats();\n" +
-"io.outputLine(\"intern\", idA == idA2, idA =!= idColon, t1.resolveOr(idA, \"\"), t1.resolveOr(idColon, \"\"), t1.resolve(idOther).isSome(), ist.uniqueCount, ist.internCalls, ist.hitCalls);\n" +
+"io.outputLine(\"intern\", idA == idA2, idA =!= idColon, t1.resolveOr(idA, \"\"), t1.resolveOr(idColon, \"\"), t1.resolve(idOther).isSome(), ist.uniqueCount, ist.internCalls, ist.hitCalls, t1.find(\"alpha\").isSome(), t1.find(\"missing\").isNone());\n" +
 "mut t1.clear();\n" +
 "io.outputLine(\"internClear\", t1.count(), t1.has(\"alpha\"), t1.hasId(idA), t2.has(\"alpha\"));\n" +
 "\n" +
@@ -155,10 +159,10 @@ expectedOut :=
 "intArena 0 42 99 5 6\n" +
 "floatArena 0 1.5 2.5 4\n" +
 "slotPool 0 1 false true false true true false true\n" +
-"slotClear 0 false false\n" +
-"intPool true 202 false 0\n" +
+"slotClear 2 false false true false\n" +
+"intPool true 202 false 1 true\n" +
 "textPool true beta false 0\n" +
-"intern true true alpha :alpha false 2 3 1\n" +
+"intern true true alpha :alpha false 2 3 1 true true\n" +
 "internClear 0 false false true\n" +
 "lruText true 1 2 true b 2 false d c 3 1 0 1\n" +
 "lruTextRm true true a 1\n" +

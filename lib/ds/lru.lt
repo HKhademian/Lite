@@ -12,50 +12,6 @@ pub LruStats := record {
     evictions: Int;
 }
 
-/** Outcome of reading a value from an `Lru<K, V>`. */
-pub LruValue := enum<V: Type> {
-    Empty;
-    Some(V);
-}
-
-/** True when `item` holds `.Some(...)`. */
-pub LruValue.isSome := fn<V: Type>(item: Self<V>): Bool {
-    match item {
-        .Empty { false }
-        .Some { true }
-    }
-};
-
-/** Returns the cached value when `.Some(v)`, or `fallback` when `.Empty`. */
-pub LruValue.unwrapOr := fn<V: Type>(item: Self<V>, fallback: V): V {
-    match item {
-        .Empty { fallback }
-        .Some(v) { v }
-    }
-};
-
-/** Outcome of querying newest or oldest key from an `Lru<K, V>`. */
-pub LruKeyOpt := enum<K: Type<LruKey>> {
-    Empty;
-    Some(K);
-}
-
-/** True when `item` holds a key `.Some(...)`. */
-pub LruKeyOpt.isSome := fn<K: Type<LruKey>>(item: Self<K>): Bool {
-    match item {
-        .Empty { false }
-        .Some { true }
-    }
-};
-
-/** Returns the key when `.Some(k)`, or `fallback` when `.Empty`. */
-pub LruKeyOpt.unwrapOr := fn<K: Type<LruKey>>(item: Self<K>, fallback: K): K {
-    match item {
-        .Empty { fallback }
-        .Some(k) { k }
-    }
-};
-
 /** Eviction report returned by `Lru.put` and `Lru.evictOldest`. */
 pub LruEviction := record<K: Type<LruKey>, V: Type> {
     evicted: Bool;
@@ -132,8 +88,8 @@ pub Lru.create := fn<K: Type<LruKey>, V: Type>(capacity: Int): Self<K, V> {
     }
     idxMap: Map<K, Int>;
     Lru<K, V> {
-    keys = ks, vals = vs, prev = pr, next = nx, freeSlots = fl, index = idxMap,
-    cap = cap, head = -1, tail = -1, hits = 0, misses = 0, evictions = 0
+        keys = ks, vals = vs, prev = pr, next = nx, freeSlots = fl, index = idxMap,
+        cap = cap, head = -1, tail = -1, hits = 0, misses = 0, evictions = 0
     }
 };
 
@@ -181,11 +137,11 @@ pub Lru.put := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K, value: V)
 };
 
 /** Looks up `key` in O(1), updating hit/miss counters and promoting to most-recently-used on hit. */
-pub Lru.get := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K): LruValue<V> {
+pub Lru.get := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K): Option<V> {
     res := c.index.get(key);
     if not res.found {
         c.misses = c.misses + 1;
-        return .Empty;
+        return .None;
     }
     c.hits = c.hits + 1;
     idx := res.value;
@@ -195,9 +151,9 @@ pub Lru.get := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>, key: K): LruValue
 };
 
 /** Reads `key` in O(1) without changing recency order or hit/miss counters. */
-pub Lru.peek := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>, key: K): LruValue<V> {
+pub Lru.peek := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>, key: K): Option<V> {
     res := c.index.get(key);
-    if not res.found { .Empty } else { .Some(c.vals[res.value]) }
+    if not res.found { .None } else { .Some(c.vals[res.value]) }
 };
 
 /** True when `key` is currently cached. */
@@ -252,14 +208,14 @@ pub Lru.evictOldest := fn<K: Type<LruKey>, V: Type>(c: mut Self<K, V>): LruEvict
     ev
 };
 
-/** Returns the most-recently-used key, or `.Empty` if empty. */
-pub Lru.newestKey := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): LruKeyOpt<K> {
-    if c.head < 0 { .Empty } else { .Some(c.keys[c.head]) }
+/** Returns the most-recently-used key, or `.None` if empty. */
+pub Lru.newestKey := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): Option<K> {
+    if c.head < 0 { .None } else { .Some(c.keys[c.head]) }
 };
 
-/** Returns the least-recently-used key, or `.Empty` if empty. */
-pub Lru.oldestKey := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): LruKeyOpt<K> {
-    if c.tail < 0 { .Empty } else { .Some(c.keys[c.tail]) }
+/** Returns the least-recently-used key, or `.None` if empty. */
+pub Lru.oldestKey := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): Option<K> {
+    if c.tail < 0 { .None } else { .Some(c.keys[c.tail]) }
 };
 
 /** Number of entries currently stored in `c`. */
@@ -275,11 +231,11 @@ pub Lru.capacity := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): Int {
 /** Returns an `LruStats` snapshot for `c`. */
 pub Lru.stats := fn<K: Type<LruKey>, V: Type>(c: Self<K, V>): LruStats {
     LruStats {
-    count = c.index.size(),
-    capacity = c.cap,
-    hits = c.hits,
-    misses = c.misses,
-    evictions = c.evictions
+        count = c.index.size(),
+        capacity = c.cap,
+        hits = c.hits,
+        misses = c.misses,
+        evictions = c.evictions
     }
 };
 

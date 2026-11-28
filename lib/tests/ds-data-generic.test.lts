@@ -47,7 +47,7 @@ functionalSrc :=
 "mut rs := ring.Ring<Item>.create(2);\n" +
 "_s1 := mut rs.push(Item { id = 7, label = \"orb\" });\n" +
 "sFront := rs.peekFront();\n" +
-"sId := match sFront { .Empty { -1 } .Some(it) { it.id } };\n" +
+"sId := match sFront { .None { -1 } .Some(it) { it.id } };\n" +
 "mut rs.clear();\n" +
 "ringOk :=\n" +
 "    not rOv1 and not rOv2 and rTp1 and not rTpFull and rOv3\n" +
@@ -81,7 +81,7 @@ functionalSrc :=
 "_di1 := mut dqi.pushFront(2);\n" +
 "_di2 := mut dqi.pushBack(3);\n" +
 "_di3 := mut dqi.pushFront(1);\n" +
-"dqiMatch := match dqi.peekFront() { .Empty { -1 } .Some(v) { v } };\n" +
+"dqiMatch := match dqi.peekFront() { .None { -1 } .Some(v) { v } };\n" +
 "io.outputLine(\"deque\", dequeOk and dqi.isFull() and dqiMatch == 1 and dqi.peekBack().unwrapOr(-1) == 3);\n" +
 "\n" +
 "/* 3. Generic Grid<T> across Int and String */\n" +
@@ -143,6 +143,12 @@ functionalSrc :=
 "tag1 := json.readStringAt(encoded, tagOffs[1]);\n" +
 "keys := json.objectKeys(encoded, 0);\n" +
 "uStr := json.readStringAt(\"\\\"\\\\u0041\\\\uD83D\\\\uDE00\\\"\", 0);\n" +
+"tagsOptPos := json.findFieldOpt(encoded, 0, \"tags\").unwrapOr(-1);\n" +
+"missOpt := json.findFieldOpt(encoded, 0, \"missing\").isNone();\n" +
+"pName := json.parseStringFallible(encoded, json.findFieldOpt(encoded, 0, \"name\").unwrapOr(0)) else(_e) { \"\" };\n" +
+"pScore := json.parseIntFallible(encoded, json.findFieldOpt(encoded, 0, \"score\").unwrapOr(0)) else(_e) { 0 };\n" +
+"pActive := json.parseBoolFallible(encoded, json.findFieldOpt(encoded, 0, \"active\").unwrapOr(0)) else(_e) { false };\n" +
+"pBadInt := match json.parseIntFallible(\"\\\"notnum\\\"\", 0) { .ok(_) { false } .err(e) { e.kind == \"JsonError\" } };\n" +
 "jsonOk :=\n" +
 "    vOk.ok and not vBad.ok and not vTrail.ok\n" +
 "    and rName.found and rName.ok and rName.value == \"Ada\\n\\\"Lovelace\\\"\"\n" +
@@ -151,7 +157,8 @@ functionalSrc :=
 "    and tagOffs.length() == 2 and tag1.ok and tag1.value == \"logic\"\n" +
 "    and keys.length() == 5 and keys[0] == \"name\"\n" +
 "    and uStr.ok and uStr.value == \"A😀\"\n" +
-"    and json.kindAt(encoded, tagsF.valuePos) == json.JsonKind.Array;\n" +
+"    and json.kindAt(encoded, tagsF.valuePos) == json.JsonKind.Array\n" +
+"    and tagsOptPos == tagsF.valuePos and missOpt and pName == \"Ada\\n\\\"Lovelace\\\"\" and pScore == -42 and pActive and pBadInt;\n" +
 "io.outputLine(\"json\", jsonOk);\n" +
 "\n" +
 "/* 6. data/csv RFC-4180 parsing & round-trip encoding */\n" +
@@ -160,6 +167,8 @@ functionalSrc :=
 "rt := tbl.encode(\",\");\n" +
 "tbl2 := csv.CsvTable.parse(rt, \",\");\n" +
 "row1 := csv.CsvTable.parseRow(\"10;20;\\\"a;b\\\"\", \";\");\n" +
+"sliceRow := [\"x\", \"y,z\"];\n" +
+"encodedSliceRow := csv.CsvTable.encodeRowSlice(sliceRow[0..2], \",\");\n" +
 "csvOk :=\n" +
 "    tbl.rowCount() == 3\n" +
 "    and tbl.colCount(1) == 2\n" +
@@ -167,7 +176,8 @@ functionalSrc :=
 "    and tbl.cell(1, 1) == \"line1\\nline2\"\n" +
 "    and tbl.cell(2, 1) == \"a\\\"b\\\"\"\n" +
 "    and tbl2.rowCount() == 3 and tbl2.cell(1, 0) == \"Doe, John\" and tbl2.cell(1, 1) == \"line1\\nline2\"\n" +
-"    and row1.length() == 3 and row1[2] == \"a;b\";\n" +
+"    and row1.length() == 3 and row1[2] == \"a;b\"\n" +
+"    and tbl.cellOpt(1, 0).unwrapOr(\"\") == \"Doe, John\" and tbl.cellOpt(99, 0).isNone() and encodedSliceRow == \"x,\\\"y,z\\\"\";\n" +
 "io.outputLine(\"csv\", csvOk);\n";
 
 expectedOut :=

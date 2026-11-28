@@ -19,28 +19,6 @@ pub Handle.equals := fn(a: Self, b: Self): Bool {
     a.index == b.index and a.generation == b.generation
 };
 
-/** Optional slot lookup result returned by `Pool.get`. */
-pub PoolItem := enum<T: Type> {
-    Empty;
-    Some(T);
-};
-
-/** True when `item` holds a `Some` value. */
-pub PoolItem.isSome := fn<T: Type>(item: Self<T>): Bool {
-    match item {
-        PoolItem<T>.Empty { false }
-        PoolItem<T>.Some(_) { true }
-    }
-};
-
-/** Unwraps `item` or returns `fallback` when `Empty`. */
-pub PoolItem.unwrapOr := fn<T: Type>(item: Self<T>, fallback: T): T {
-    match item {
-        PoolItem<T>.Empty { fallback }
-        PoolItem<T>.Some(v) { v }
-    }
-};
-
 /** Fixed-capacity generational handle allocator backed by packed 32-bit metadata and LIFO free list. */
 pub SlotPool := record {
     slotMeta: List<UInt32>;
@@ -105,6 +83,12 @@ pub SlotPool.acquire := fn(p: mut Self): Handle {
     mut p.slotMeta.setAt(slotIdx, packMeta(gen, true));
     p.liveCount = p.liveCount + 1;
     Handle { index = slotIdx, generation = gen }
+};
+
+/** Acquires one free slot handle in O(1), returning `.None` when full. */
+pub SlotPool.tryAcquire := fn(p: mut Self): Option<Handle> {
+    if p.freeList.length() == 0 { return .None; }
+    .Some(mut p.acquire())
 };
 
 /** True when `h` matches an currently live slot inside `p`. */
@@ -179,6 +163,12 @@ pub Pool.acquire := fn<T: Type>(p: mut Self<T>, value: T): Handle {
     Handle { index = slotIdx, generation = gen }
 };
 
+/** Acquires a slot storing `value` in O(1), returning `.None` when full. */
+pub Pool.tryInsert := fn<T: Type>(p: mut Self<T>, value: T): Option<Handle> {
+    if p.freeList.length() == 0 { return .None; }
+    .Some(mut p.acquire(value))
+};
+
 /** True when `h` points to a live slot in `p`. */
 pub Pool.isAlive := fn<T: Type>(p: Self<T>, h: Handle): Bool {
     if h.index < 0 or h.index >= p.cap or h.generation <= 0 { return false; }
@@ -186,10 +176,10 @@ pub Pool.isAlive := fn<T: Type>(p: Self<T>, h: Handle): Bool {
     metaAlive(m) and metaGen(m) == h.generation
 };
 
-/** Returns `PoolItem.Some(value)` if `h` is alive, otherwise `PoolItem.Empty`. */
-pub Pool.get := fn<T: Type>(p: Self<T>, h: Handle): PoolItem<T> {
-    if not p.isAlive(h) { return PoolItem<T>.Empty; }
-    PoolItem<T>.Some(p.values[h.index])
+/** Returns `.Some(value)` if `h` is alive, otherwise `.None`. */
+pub Pool.get := fn<T: Type>(p: Self<T>, h: Handle): Option<T> {
+    if not p.isAlive(h) { return .None; }
+    .Some(p.values[h.index])
 };
 
 /** Overwrites a live slot's stored value in-place; returns `false` for stale/invalid handles. */

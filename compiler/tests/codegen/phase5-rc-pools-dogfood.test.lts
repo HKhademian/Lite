@@ -321,8 +321,8 @@ if ccInfo.available {
         "    loop hi < hLen {",
         "        h := w.handles[hi];",
         "        match w.entities.get(h) {",
-        "            poolMod.PoolItem<Entity>.Empty { }",
-        "            poolMod.PoolItem<Entity>.Some(ent) {",
+        "            .None { }",
+        "            .Some(ent) {",
         "                nx := (ent.px + ent.vx) % 60;",
         "                ny := (ent.py + ent.vy) % 44;",
         "                sl := mut w.scratch.allocAligned(4, 4);",
@@ -385,7 +385,7 @@ if ccInfo.available {
     test.checkInt("dogfood ts compile: " + dogTs.stderr, 0, dogTs.status);
     dogTsFile := path.join(tmpDir, "dogfood.ts");
     _wdt := fs.writeText(dogTsFile, dogTs.stdout);
-    runDogTs := proc.run(proc.execPath(), [dogTsFile], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
+    runDogTs := proc.run(project.nodeExecPath(), [dogTsFile], root, ["LITE_CANVAS_HEADLESS=1"], true, "");
     test.checkInt("dogfood ts run: " + runDogTs.stderr, 0, runDogTs.status);
 
     /* C11 VM lt_heap + ASan/UBSan + LITE_CHECK_LEAKS=1 dogfood check */

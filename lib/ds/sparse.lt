@@ -79,6 +79,35 @@ pub SparseSet.capacity := fn(s: Self): Int {
     s.cap
 };
 
+/** Returns the dense index (`0..count-1`) of `value`, or `.None` if absent. */
+pub SparseSet.findIndex := fn(s: Self, value: Int): Option<Int> {
+    if not s.has(value) { return .None; }
+    .Some(s.sparse[value])
+};
+
+/** Returns the member ID at dense position `index` (`0..count-1`), or `.None` if out of bounds. */
+pub SparseSet.at := fn(s: Self, index: Int): Option<Int> {
+    if index < 0 or index >= s.liveCount { return .None; }
+    .Some(s.dense[index])
+};
+
+/** Inserts all IDs in `values` into `s`, returning the number of newly inserted IDs. */
+pub SparseSet.insertAll := fn(s: mut Self, values: Slice<Int>): Int {
+    var added := 0;
+    loop values as v {
+        if mut s.insert(v) { added += 1; }
+    }
+    added
+};
+
+/** True when any ID in `values` is currently present in `s`. */
+pub SparseSet.hasAny := fn(s: Self, values: Slice<Int>): Bool {
+    loop values as v {
+        if s.has(v) { return true; }
+    }
+    false
+};
+
 /** Clears `s` in O(1) without rewriting the sparse array. */
 pub SparseSet.clear := fn(s: mut Self): Unit {
     s.liveCount = 0;

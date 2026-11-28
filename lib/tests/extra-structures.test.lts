@@ -93,10 +93,10 @@ functionalSrc :=
 "_q3 := mut pq.push(20, 102);\n" +
 "pqa := mut pq.pop();\n" +
 "pqb := mut pq.pop();\n" +
-"paPrio := match pqa { .Empty { -1 } .Some(e) { e.priority } };\n" +
-"paItem := match pqa { .Empty { -1 } .Some(e) { e.item } };\n" +
-"pbPrio := match pqb { .Empty { -1 } .Some(e) { e.priority } };\n" +
-"pbItem := match pqb { .Empty { -1 } .Some(e) { e.item } };\n" +
+"paPrio := match pqa { .None { -1 } .Some(e) { e.priority } };\n" +
+"paItem := match pqa { .None { -1 } .Some(e) { e.item } };\n" +
+"pbPrio := match pqb { .None { -1 } .Some(e) { e.priority } };\n" +
+"pbItem := match pqb { .None { -1 } .Some(e) { e.item } };\n" +
 "io.outputLine(\"pq\", paPrio, paItem, pbPrio, pbItem, pq.count());\n" +
 "\n" +
 "/* 4. ds/bitset */\n" +
@@ -126,9 +126,13 @@ functionalSrc :=
 "si3 := mut ss.insert(99);\n" +
 "sr1 := mut ss.remove(42);\n" +
 "srDup := mut ss.remove(42);\n" +
-"io.outputLine(\"sparse\", si1, si2, siDup, si3, sr1, srDup, ss.has(42), ss.has(7), ss.has(99), ss.count(), ss.denseAt(0), ss.denseAt(1));\n" +
+"io.outputLine(\"sparse\", si1, si2, siDup, si3, sr1, srDup, ss.has(42), ss.has(7), ss.has(99), ss.count(), ss.denseAt(0), ss.denseAt(1), ss.findIndex(99).unwrapOr(-1), ss.findIndex(42).isNone(), ss.at(0).unwrapOr(-1), ss.at(9).isNone());\n" +
 "mut ss.clear();\n" +
-"io.outputLine(\"sparseClear\", ss.count(), ss.has(99));\n";
+"bulkIds := [5, 7, 5, 12];\n" +
+"addedBulk := mut ss.insertAll(bulkIds[0..4]);\n" +
+"probeYes := [1, 7, 9];\n" +
+"probeNo := [1, 2, 3];\n" +
+"io.outputLine(\"sparseClear\", addedBulk, ss.count(), ss.has(12), ss.hasAny(probeYes[0..3]), ss.hasAny(probeNo[0..3]));\n";
 
 expectedOut :=
 "ringInt false false false false true 20 40 30 90\n" +
@@ -142,8 +146,8 @@ expectedOut :=
 "bitset1 true true true false 3 0 1\n" +
 "bitsetOps 4 2 true 0 -1\n" +
 "bitsetAll 65 -1\n" +
-"sparse true true false true true false false true true 2 99 7\n" +
-"sparseClear 0 false\n";
+"sparse true true false true true false false true true 2 99 7 0 true 99 true\n" +
+"sparseClear 3 3 true true false\n";
 
 emptyEnv: List<String> = [];
 tsComp := compilerTest.compileStdin(root, selTs.path, functionalSrc, "");

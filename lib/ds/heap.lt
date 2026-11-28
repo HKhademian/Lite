@@ -1,46 +1,10 @@
 /** Binary heaps and generic keyed priority queues (`ds/heap`) for timers, schedulers, and pathfinding. */
 
-/** Outcome of popping or peeking a `MinHeap` or `MaxHeap`. */
-pub HeapItem := enum<T: Type> {
-    Empty;
-    Some(T);
-}
-
-/** True when `item` holds a value `.Some(...)`. */
-pub HeapItem.isSome := fn<T: Type>(item: Self<T>): Bool {
-    match item {
-        .Empty { false }
-        .Some { true }
-    }
-};
-
-/** Returns the wrapped value when `.Some(v)`, or `fallback` when `.Empty`. */
-pub HeapItem.unwrapOr := fn<T: Type>(item: Self<T>, fallback: T): T {
-    match item {
-        .Empty { fallback }
-        .Some(v) { v }
-    }
-};
-
 /** Entry stored in a keyed `PriorityQueue<T>`. */
 pub PQEntry := record<T: Type> {
     priority: Int;
     item: T;
 }
-
-/** Outcome of popping or peeking a keyed `PriorityQueue<T>`. */
-pub PQItem := enum<T: Type> {
-    Empty;
-    Some(PQEntry<T>);
-}
-
-/** True when `entry` holds `.Some(...)`. */
-pub PQItem.isSome := fn<T: Type>(entry: Self<T>): Bool {
-    match entry {
-        .Empty { false }
-        .Some { true }
-    }
-};
 
 /** Fixed-capacity binary min-heap of `Int` values. */
 pub MinHeap := record {
@@ -88,9 +52,9 @@ pushIntHeap := fn(buf: mut List<Int>, cap: Int, value: Int, isMax: Bool): Bool {
     true
 };
 
-popIntHeap := fn(buf: mut List<Int>, isMax: Bool): HeapItem<Int> {
+popIntHeap := fn(buf: mut List<Int>, isMax: Bool): Option<Int> {
     cnt := buf.length();
-    if cnt <= 0 { return .Empty; }
+    if cnt <= 0 { return .None; }
     top := buf[0];
     last := mut buf.popBack();
     nextCnt := buf.length();
@@ -142,7 +106,7 @@ pub MinHeap.push := fn(h: mut Self, value: Int): Bool {
 };
 
 /** Removes and returns the minimum value in O(log n). */
-pub MinHeap.pop := fn(h: mut Self): HeapItem<Int> {
+pub MinHeap.pop := fn(h: mut Self): Option<Int> {
     mut buf: List<Int> = h.data;
     res := popIntHeap(mut buf, false);
     h.data = buf;
@@ -150,8 +114,8 @@ pub MinHeap.pop := fn(h: mut Self): HeapItem<Int> {
 };
 
 /** Returns the minimum value without removing it in O(1). */
-pub MinHeap.peek := fn(h: Self): HeapItem<Int> {
-    if h.data.length() == 0 { .Empty } else { .Some(h.data[0]) }
+pub MinHeap.peek := fn(h: Self): Option<Int> {
+    if h.data.length() == 0 { .None } else { .Some(h.data[0]) }
 };
 
 /** Returns the number of elements currently in `h`. */
@@ -181,7 +145,7 @@ pub MaxHeap.push := fn(h: mut Self, value: Int): Bool {
 };
 
 /** Removes and returns the maximum value in O(log n). */
-pub MaxHeap.pop := fn(h: mut Self): HeapItem<Int> {
+pub MaxHeap.pop := fn(h: mut Self): Option<Int> {
     mut buf: List<Int> = h.data;
     res := popIntHeap(mut buf, true);
     h.data = buf;
@@ -189,8 +153,8 @@ pub MaxHeap.pop := fn(h: mut Self): HeapItem<Int> {
 };
 
 /** Returns the maximum value without removing it in O(1). */
-pub MaxHeap.peek := fn(h: Self): HeapItem<Int> {
-    if h.data.length() == 0 { .Empty } else { .Some(h.data[0]) }
+pub MaxHeap.peek := fn(h: Self): Option<Int> {
+    if h.data.length() == 0 { .None } else { .Some(h.data[0]) }
 };
 
 /** Returns the number of elements currently in `h`. */
@@ -250,9 +214,9 @@ pub PriorityQueue.push := fn<T: Type>(pq: mut Self<T>, priority: Int, item: T): 
 };
 
 /** Removes and returns the lowest-priority `PQEntry<T>` in O(log n). */
-pub PriorityQueue.pop := fn<T: Type>(pq: mut Self<T>): PQItem<T> {
+pub PriorityQueue.pop := fn<T: Type>(pq: mut Self<T>): Option<PQEntry<T>> {
     cnt := pq.prios.length();
-    if cnt <= 0 { return .Empty; }
+    if cnt <= 0 { return .None; }
     topP := pq.prios[0];
     topI := pq.items[0];
     mut ps: List<Int> = pq.prios;
@@ -286,9 +250,9 @@ pub PriorityQueue.pop := fn<T: Type>(pq: mut Self<T>): PQItem<T> {
 };
 
 /** Returns the lowest-priority `PQEntry<T>` without removing it in O(1). */
-pub PriorityQueue.peek := fn<T: Type>(pq: Self<T>): PQItem<T> {
+pub PriorityQueue.peek := fn<T: Type>(pq: Self<T>): Option<PQEntry<T>> {
     if pq.prios.length() == 0 {
-        .Empty
+        .None
     } else {
         .Some(PQEntry<T> { priority = pq.prios[0], item = pq.items[0] })
     }
