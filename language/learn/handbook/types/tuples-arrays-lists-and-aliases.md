@@ -22,9 +22,9 @@ rect := do { width := 640; height := 480; (=width, =height) };
 io.outputLine(rect, w * height);
 ```
 
-## Nominal `record` Types & `=name` Shorthand
+## Nominal `record` Types & Field Shorthand
 
-Declare distinct nominal records with `record { ... }`, optional field defaults, zero initialization (`= 0`), `Type { = name }` construction, contextual `{ ... }`, and `{ alias = field, = same } := value;` destructuring (bare `{ name } := rec` without `=` is rejected):
+Declare distinct nominal records with `record { ... }`, optional field defaults, zero initialization (`= 0`), `Type { = name }` construction, contextual `{ ... }`, and `{ alias = field, = same, bare } := value;` destructuring (`{ name } := rec` expands `name` to `name = name`, while bare `{ _ }` is rejected in favor of `_ = field`):
 
 ```lite
 io := import "core/io";
@@ -36,7 +36,7 @@ Config := record {
 
 cfg := do { port := 9090; Config { = port } };
 defaulted: Config = {};
-{ endpoint = host, = port: Int } := cfg;
+{ endpoint = host, port: Int } := cfg;
 io.outputLine(endpoint, port, defaulted.host, defaulted.port);
 ```
 
@@ -78,7 +78,7 @@ io.outputLine(scores["alice"], scores.getOr("carol", 0), scores.size(), scores.i
 
 ## Nominal Plain & Value Enums
 
-Declare nominal closed case sets with `enum { ... }` or attach scalar backing values with `enum : Type { ... }` (`Int*`, `Float*`, `String`, `Bool`). Use contextual `.Case` shorthand wherever the enum type is known, read backing values via `.value`, and rely on exhaustive `match`:
+Declare nominal closed case sets with `enum { ... }` or attach scalar backing values with `enum : Type { ... }` (`Int*`, `UInt*`, `Float*`, `String`, `Bool`). Use contextual `.Case` shorthand wherever the enum type is known, read backing values via `.value`, parse raw values with `Enum.from(raw): Option<Self>`, and rely on exhaustive `match`:
 
 ```lite
 io := import "core/io";
@@ -90,37 +90,31 @@ Status := enum : Int {
 };
 
 s: Status = .Created;
+parsed := Status.from(200);
 label := match s { .Ok or .Created { "ok" } .NotFound { "missing" } };
-io.outputLine(s, s.value, label);
+io.outputLine(s, s.value, parsed, label);
 ```
 
-## Transparent `type` Aliases & Inner Type Scope
+## Transparent `alias`, Static Properties & Scoped `Alias.op`
 
-The selected design spells a transparent alias `Name := alias TypeExpression`.
-For example, `Point := alias (x: Int, y: Int)` names a structural tuple type.
-A `distinct` declaration creates a fresh type identity. See
+The selected design spells a transparent alias `Name := alias TypeExpression`. For example, `Point := alias (x: Int, y: Int)` names a structural tuple type. A `distinct` declaration creates a fresh type identity. Local aliases (including narrowed generics) also support static properties (`Alias.PROP := expr;`) and lexically scoped operations (`Alias.op := fn(...) ...`). See
 [aliases and distinct type declarations](lite://doc/type-aliases).
-
-The runnable example uses `Name := alias TypeExpression`, the spelling accepted
-by the current Playground. `Point` names a tuple type with fields `x` and `y`.
-`Pair` names a tuple type with two unnamed `Int` components scoped to the block.
-The annotation `pair: Pair` uses the block's forward type lookup.
 
 ```lite
 io := import "core/io";
 
 Point := alias (x: Int, y: Int);
-p: Point = (x = 3, y = 4);
+Point.ORIGIN := (x = 0, y = 0);
+Point.sum := fn(p: Self): Int { p.x + p.y };
 
+p: Point = .ORIGIN;
 pairSum := do {
     pair: Pair = (10, 20);
     Pair := alias (:Int, :Int);
     pair.0 + pair.1
 };
-io.outputLine(p, pairSum);
+io.outputLine(Point.sum(p), p.sum(), pairSum);
 ```
-
-The block's final expression adds the two tuple components, so `pairSum` is `30`.
 
 ## Typed Sets `Set<T>`
 

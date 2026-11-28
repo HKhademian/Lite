@@ -1,14 +1,16 @@
-/* Showcase 03.03 — Transparent type aliases at root and inside blocks with forward alias wiring. */
+/* Showcase 03.03 — Transparent type aliases, static Alias.PROP, scoped Alias.op, and block scoping. */
 
 io := import "core/io";
 
 Point := alias (x: Int, y: Int);
+Point.ORIGIN := (x = 3, y = 4);
+Point.stepY := fn(p: Self, dy: Int): Self { (x = p.x + 1, y = dy) };
 ScoreList := alias List<Int>;
 
-origin: Point = (x = 3, y = 4);
+origin: Point = .ORIGIN;
 scores: ScoreList = [10, 20, 30];
 
-/* Inner blocks support their own `type` aliases, including forward references and shadowed names. */
+/* Inner blocks support their own `alias` declarations, including forward references and shadowed names. */
 blockSum := do {
     Alias := alias RawPair;
     RawPair := alias (left: Int, right: Int);
@@ -19,6 +21,6 @@ blockSum := do {
     if label == "inner" { pair.left + pair.right } else { 0 }
 };
 
-/* The outer `Point` alias remains intact after the inner block ends. */
-nextPoint: Point = (x = origin.x + 1, y = blockSum);
+/* The outer `Point` alias and its scoped operation remain intact after the inner block ends. */
+nextPoint := origin.stepY(blockSum);
 io.outputLine("origin:", origin, "nextPoint:", nextPoint);

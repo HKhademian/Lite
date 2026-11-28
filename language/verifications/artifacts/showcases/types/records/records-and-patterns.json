@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/types/records/records-and-patterns.lts",
-    "hash": "sha256:bdffdf2d9c8c9226d3022849bc339054a4b5bc6dd6215cdd42904ac242e4c5e6"
+    "hash": "sha256:d1cd4a445e93d91d9ca73a1f51aea7c2da34942a01e987d4c425b9547df6654e"
   },
   "features": [
     "feature.types.records.nominal-records",

@@ -85,9 +85,9 @@ player.pos.x += 5;
 // snapshot.hp is still 100 and snapshot.pos.x is still 0
 ```
 
-### Proposed same-name field shorthand
+### Same-name field shorthand
 
-The explicit `= name` same-name shorthand expands `= name` to `name = name` in both record construction (`User { = name, = age }`) and named record destructuring (`{ a = label, = other } := rec;`, `{ = age: Int } := rec;`), matching tuple/call `= name` shorthand. Bare `{ name, age } := user` without `=` remains a separate proposal because it would need distinct omission and bare-`_` rules. Explicit `_ = age` binds age under the unused-allowed name.
+Both `= name` and bare `{ name }` same-name shorthands are implemented in record patterns (`{ a = label, = other } := rec;`, `{ label, other: Int } := rec;`, and inside `match` record arms such as `{ name, >= 65 = age }`), expanding `name` to `name = name`. Record construction keeps explicit `User { = name, = age }` / `field = expr`. Bare `{ _ } := rec` remains rejected; write `_ = age` to explicitly discard or skip a field.
 
 Removing record from the declaration is a separate proposal. `User := { name: String; age: Int; }` would make braces introduce a type as well as executable blocks and contextual data. Nonempty type-only field entries could potentially distinguish that form syntactically, but empty `{}` already means a Unit-valued block, and future field defaults can resemble ordinary typed declarations. Retain `User := record { ... }` until an explicit grammar settles those cases; do not choose by capitalization or whichever interpretation type-checks.
 

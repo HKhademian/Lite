@@ -172,9 +172,19 @@ Recommend keeping an enum case a constructor/value of the enclosing enum, withou
 
 An enum may implement behavior through an interface without requiring every case to inherit a common class. Conversely, an ordinary empty interface is not enough to establish a closed set of alternatives; any sealed-family facility would need a separate closedness contract.
 
-### Keep raw codes and representation separate
+### Raw value mapping (`.value` and `Enum.from`)
 
-Recommend explicit, validated conversion between raw codes and enum values. Invalid external data must not silently become an otherwise unmatchable case. Conversion names and failure channels are not chosen here. Duplicate codes would also need a rule for ambiguity or aliases.
+Value-backed enums (`enum : T { ... }` over `Int*`, `UInt*`, `Float*`, `String`, `Bool`) expose both `.value` on an enum instance and static `Enum.from(raw: T): Option<Self>` for validated conversion from external values:
+
+- Returns `.Some(case)` when a declared backing value matches `raw`, or `.None` when absent.
+- When duplicate backing values exist across cases, cases are matched in declaration order (first declared case wins).
+- `.from` is reserved alongside `.value` on value-backed enums and supports constant folding, compile-time evaluation, TypeScript, and C11 (preserving `Option<Self>` niche packing via lexical `Option`).
+
+```lite
+HttpStatus := enum : Int { Ok = 200; DupOk = 200; NotFound = 404; };
+hit := HttpStatus.from(200);   // .Some(HttpStatus.Ok)
+miss := HttpStatus.from(500);  // .None
+```
 
 Raw Float/string/integer codes need not determine the physical tag representation. Flags, reflection names, explicit ABI layout, and compile-time constant substitution each require their own justification. TypeScript const enum is primarily an emission facility, not another sum-type category.
 
@@ -207,9 +217,9 @@ This direction does not add class, data class, value class, sealed, or distinct 
 
 No representation is selected by writing these examples. Plain enums can have compact numeric representations and payload enums can use tagged representations, but their actual ABI and costs need a specification and implementation.
 
-## Current generated-TS support and examples
+## Current compiler support and examples
 
-The generated-TS compiler currently implements nominal plain and scalar-backed value enums (`Int`, `Int8`, `Int16`, `Int32`, `Float`, `Float32`, `String`, `Bool`), auto-incremented integer cases, inferred backing types, zero-initialization to the first case, qualified `Enum.Case` and contextual `.Case` shorthand, `.value` reads, equality (`==` / `=!=`), and exhaustive `match` (the C backend currently rejects enum values).
+Both the TypeScript and C11 backends (as well as `comptime` evaluation) implement nominal plain and scalar-backed value enums (`Int*`, `UInt*`, `Float*`, `String`, `Bool`), auto-incremented integer cases, inferred backing types, zero-initialization to the first case, qualified `Enum.Case` and contextual `.Case` shorthand, `.value` reads, static `Enum.from(value: T): Option<Self>`, equality (`==` / `=!=`), and exhaustive `match`.
 
 - Interactive example: [value enums](lite://play/example/value-enums)
 - Guided lesson: [Nominal Plain & Value Enums](lite://learn/types/value-enums)

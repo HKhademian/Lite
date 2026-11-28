@@ -16,8 +16,8 @@ primary := do {
 localDefault: Config = { tls = true };
 zeroed: Config = 0;
 
-/* Record destructuring: alias = field, = sameName, = typed: Type, _ = discard. */
-{ endpoint = host, = port: Int, = tls, _ = env } := primary;
+/* Record destructuring: alias = field, = sameName, bare shorthand, and _ = discard. */
+{ endpoint = host, = port: Int, tls, _ = env } := primary;
 
 /* Named, mixed, and =name shorthand tuple destructuring. */
 status := ("ready", code = 200, region = "eu");

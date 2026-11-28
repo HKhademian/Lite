@@ -25,3 +25,4 @@ phase = nextPhase(phase);
 io.outputLine("step1:", phase, "running?", phase == .Running);
 phase = nextPhase(phase);
 io.outputLine("step2:", phase);
+io.outputLine("from:", Level.from(2.5), Level.from(9.0));

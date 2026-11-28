@@ -87,7 +87,7 @@ match student {
 
 All fields are shown here to avoid selecting partial-field omission through an example. Positional constructor-family examples below remain schema proposals, not a requirement to write a type head on the selected named form. Omission, field/position mixing, duplicate source-field selection, and complete grammar remain open.
 
-The explicit `= name` shorthand (`{ = name } := rec`, `(= name) := tup`) is selected and implemented for same-name binding across records and tuples; see [record shorthand](lite://doc/records#proposed-same-name-field-shorthand). The separate proposed bare shorthand `{ name, age } := user` would omit `=` and turn entries directly into bindings rather than value tests, and its grammar, field omission, and `_` field-entry behavior remain proposals.
+Both explicit `= name` (`{ = name } := rec`, `(= name) := tup`) and bare `{ name, age } := rec` shorthands are implemented for same-name field binding in record destructuring and `match` record patterns; bare `{ _ }` remains rejected in favor of explicit `_ = field`. See [record shorthand](lite://doc/records#same-name-field-shorthand).
 
 ## Optional leading separators in nested patterns
 

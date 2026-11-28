@@ -64,19 +64,27 @@ valid.
 
 ### Transparent `alias` propagation for static type operations
 
-While declaring *new* operations on an `alias` remains disallowed ([type-attached operations](lite://doc/type-operations)), any static or instance operation owned by the underlying nominal type is automatically available through transparent concrete or generic aliases with pre-bound compile-time arguments:
+Any static or instance operation owned by an underlying nominal type is automatically available through transparent concrete or generic aliases with pre-bound compile-time arguments.
+
+### Static properties and scoped `Alias.op`
 
 ```text
 pub Vec  := record<T: Type<math.Numeric>, N: Int> { data: [T; N]; }
 pub Vec2 := alias<T: Type<math.Numeric>> Vec<T, 2>;
+pub FVec2 := alias Vec<Float, 2>;
 pub IVec2 := alias Vec<Int, 2>;
 
 pub Vec.zeroed := fn<T: Type<math.Numeric>, N: Int>(): Self<T, N> { res: Self<T, N>; res };
 pub Vec.splat  := fn<T: Type<math.Numeric>, N: Int>(val: T): Self<T, N> { ... };
 
+pub FVec2.ZERO := FVec2 { data = [0.0, 0.0] };  /* contextual `.ZERO` and `FVec2.ZERO` */
+pub FVec2.x    := fn(v: Self): Float { v.data[0] }; /* visible only where FVec2 / its module is imported */
+
 z := IVec2.zeroed();      // pre-binds T = Int, N = 2
 s := Vec2.splat(3.5);     // pre-binds N = 2, infers T = Float
 ```
+
+Unlike nominal `Type.op` declarations, scoped `Alias.op` and `Alias.PROP` definitions are **non-transitive**: they are invisible on the underlying type in external modules until the module (or that specific alias via `{ FVec2 } := import "..."`) is imported, at which point the operation is callable on both the alias and matching underlying values (enforcing compile-time overload collision checks).
 
 ### Specializing standalone generic functions with `alias`
 

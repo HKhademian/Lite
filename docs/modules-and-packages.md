@@ -214,24 +214,23 @@ module's public symbols enter the receiving scope. `pub` controls what that
 scope exports to its consumers.
 
 ```text
-import "./shapes";           /* public names of shapes enter this block privately */
-shapes := import "./shapes"; /* the namespace alias is private in this scope */
-pub import "./shapes";       /* expose the imported public names directly */
-pub shapes := import "./shapes"; /* expose the namespace alias */
+import "./shapes";                              /* only allowed in $preload.lt: expand public names */
+shapes := import "./shapes";                    /* bind namespace alias privately */
+{ Point, =Rect, Line = Segment } := import "./shapes"; /* selectively import named exports */
+pub import "./shapes";                          /* $preload.lt only: re-export all public names */
+pub shapes := import "./shapes";                /* re-export namespace alias */
+pub { Point, =Rect, Line = Segment } := import "./shapes"; /* selectively re-export named exports */
 ```
 
-An unaliased import expands public names into its containing block. At file
-scope that means the file's root block. An aliased import collects the public
+A destructured `[pub] { Name, =Name, Local = Exported } := import "...";` clause is valid at top level in any module and imports (or re-exports under `pub`) only the listed public declarations (functions including overloads, constants, types/aliases with their scoped alias operations/properties, interfaces, and module aliases), rejecting missing exports or duplicate local names. Unaliased `pub import "./shapes";` remains restricted to package `$preload.lt` files.
+
+An aliased import collects the public
 names under the explicit alias. For example, if `./shapes` exports `Point`,
-the two `pub` forms above let a consumer of this file access `Point` or
-`shapes.Point`, respectively, under that consumer's own import of this file.
+`pub shapes := import "./shapes";` and `pub { Point } := import "./shapes";` expose `shapes.Point` or `Point` to consumers of this file.
 A re-export preserves the original declaration's identity and access rules.
 The imported file's private declarations remain private to that file.
 
-These are four alternative forms. A November 2026 probe verified the private
-namespace form on TS and C11. Both compilers currently reject the unaliased
-form with `import requires a module alias`. The public import forms and
-block-local expansion are pending compiler support. See also
+The namespace and destructured import forms are implemented across both TS and C11 backends, while unaliased wildcard `import` outside `$preload.lt` continues to require an explicit alias or `{ ... }` selection. See also
 [visibility](lite://doc/modules-and-packages#visibility).
 
 ### Namespace import history

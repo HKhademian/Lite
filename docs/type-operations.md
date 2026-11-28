@@ -158,25 +158,29 @@ pub Scores := distinct List<Int>;
 pub Scores.average := fn(s: Self): Float { ... }
 ```
 
-### Aliased and foreign targets disallowed for now
+### Scoped `Alias.op`, static properties, and foreign-type isolation
 
-In LiteLang, `alias` is a pure transparent **symbol/target alias** — it introduces no separate identity, storage, or namespace of its own ([aliases and distinct types](lite://doc/type-aliases)). Writing an aliased name behaves completely as if the user had written the targeted symbol or type expression directly (even where surface syntax would not allow writing the target inline).
+In addition to nominal `Type.op` declarations, LiteLang supports:
 
-Accordingly, attaching operations through an `alias` or to a foreign target is **disallowed for now**:
+1. **Static properties** (`[pub] Type.PROP := expr;`, `[pub] Alias.PROP := expr;` with optional `: Type` annotation) on concrete owned types and local aliases, supporting `Type.PROP`, `mod.Type.PROP`, contextual `.PROP`, and compile-time evaluation.
+2. **Scoped alias operations** (`[pub] Alias.op := fn(...) ...`) on locally declared transparent aliases, including narrowed generic instantiations (such as `FVec2 := alias Vec<Float, 2>; FVec2.x := fn(v: Self): Float { ... }`).
 
 ```text
-myLib := import "./someLib";
-pub myType := alias myLib.thatType;
 pub Scores := alias List<Int>;
-
-// Rejected for now: myType is a transparent alias for foreign symbol myLib.thatType.
-pub myType.itsFn := fn(v: Self, arg1: Int): String { ... }
-
-// Rejected for now: Scores is a transparent alias for List<Int>, not an owned type.
 pub Scores.average := fn(s: Self): Float { ... }
+
+/* Rejected: un-aliased foreign nominal types cannot be patched outside their owning module. */
+myLib := import "./someLib";
+pub myLib.TheirRec.extra := fn(v: Self): Unit { ... }
 ```
 
-Authors who need owned dot-operations on a wrapped type should either declare `distinct` (`pub myType := distinct myLib.thatType;`, `pub Scores := distinct List<Int>;`) or export an ordinary module function (`pub itsFn := fn(v: myType, ...)`).
+Scoped `Alias.op` operations are **lexically scoped (non-transitive)**:
+
+- Importing only the underlying type's module does **not** expose an alias extension defined elsewhere.
+- Importing the extension module (via `ext := import "..."`, `{ Scores } := import "..."`, or `$preload.lt`) activates `Scores.op` on both `Scores` and matching underlying `List<Int>` values in that module.
+- Declaring or importing two visible operations on the same target type with colliding names and signatures is rejected at compile time.
+
+Directly patching a foreign nominal type *without* declaring a local alias remains disallowed; wrap foreign types in either a local `alias` (for scoped operations) or `distinct` (for an independent nominal identity).
 
 ## Future direction: explicit imported extensions (deferred)
 

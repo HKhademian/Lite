@@ -28,10 +28,11 @@ pub summarize := fn(values: List<Int>): Stats {
 };
 ```
 
-Consumers import the module into a local namespace without pulling private helpers into scope:
+Consumers can import a module as a namespace alias or destructure specific exports (`[pub] { Name, =Name, Local = Exported } := import "...";`) without pulling private helpers into scope:
 
 ```lite
 stats := import "./helpers/math-stats.lts";
+{ summarize, factor = scaleFactor } := import "./helpers/math-stats.lts";
 /* `stats.hiddenBoost` is private and cannot be accessed here */
 ```
 

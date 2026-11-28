@@ -49,9 +49,9 @@ User := record { name: String; age: Int = 18; };
 
 classify := fn(u: User): String {
     match u {
-        { >= 65 = age, = name } { name + ":senior" }
-        { = name, = age } if 18 <= age < 65 { name + ":adult" }
-        { = name } { name + ":minor" }
+        { >= 65 = age, name } { name + ":senior" }
+        { name, age } if 18 <= age < 65 { name + ":adult" }
+        { name } { name + ":minor" }
     }
 };
 

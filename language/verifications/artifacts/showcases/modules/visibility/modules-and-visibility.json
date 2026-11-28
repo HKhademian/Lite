@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/modules/visibility/modules-and-visibility.lts",
-    "hash": "sha256:68d6abc53cff3063fd0972ebeded59259e62d9b4a55dfad5f0afcb27483dacbe"
+    "hash": "sha256:9655d93d08116a3d0bff3f78b4a20cd067517bbb9c9b137fa21a74d74c2560b3"
   },
   "features": [
     "feature.modules.visibility.namespace-imports",
