@@ -68,19 +68,19 @@ pub IntArena := alias TypedArena<Int>;
 pub FloatArena := alias TypedArena<Float>;
 
 /** Internal host binding: creates a VM-backed byte arena with `capacityBytes` bytes. */
-pub vmArenaCreate := fn(capacityBytes: Int): Int;
+pub vmArenaCreate := fn(capacityBytes: Int): Int #host;
 /** Internal host binding: writes one unsigned byte `value` at `offset` inside `handle`. */
-pub vmArenaWriteByte := fn(handle: Int, offset: Int, value: Int): Bool;
+pub vmArenaWriteByte := fn(handle: Int, offset: Int, value: Int): Bool #host;
 /** Internal host binding: reads one unsigned byte at `offset` inside `handle`, or `-1`. */
-pub vmArenaReadByte := fn(handle: Int, offset: Int): Int;
+pub vmArenaReadByte := fn(handle: Int, offset: Int): Int #host;
 /** Internal host binding: writes one little-endian 32-bit signed integer at `offset`. */
-pub vmArenaWriteInt32 := fn(handle: Int, offset: Int, value: Int): Bool;
+pub vmArenaWriteInt32 := fn(handle: Int, offset: Int, value: Int): Bool #host;
 /** Internal host binding: reads one little-endian 32-bit signed integer at `offset`. */
-pub vmArenaReadInt32 := fn(handle: Int, offset: Int): Int;
+pub vmArenaReadInt32 := fn(handle: Int, offset: Int): Int #host;
 /** Internal host binding: resets runtime tracking for `handle`. */
-pub vmArenaReset := fn(handle: Int): Unit;
+pub vmArenaReset := fn(handle: Int): Unit #host;
 /** Internal host binding: releases native VM memory for `handle`. */
-pub vmArenaDestroy := fn(handle: Int): Unit;
+pub vmArenaDestroy := fn(handle: Int): Unit #host;
 
 isPowerOfTwo := fn(align: Int): Bool {
     align >= 1 and align.bitAnd(align - 1) == 0

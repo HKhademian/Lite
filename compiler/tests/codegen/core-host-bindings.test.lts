@@ -362,12 +362,12 @@ appUnbSrc := "file := import \"./file.lts\"; x := file.kind(\".\");\n";
 _wu2 := fs.writeText(appUnbPath, appUnbSrc);
 realUnbApp := fs.realPath(appUnbPath);
 test.check("unbound realPath", realUnbApp.ok);
-compilerTest.assertCompileErrorContainsNamed(root, tsComp, "unbound relative", appUnbSrc, realUnbApp.path, "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "unbound relative", appUnbSrc, realUnbApp.path, "require #host;");
 _rmUnbound := fs.remove(tmpUnbound.path);
 
-compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad file abi", "pub kind := fn(path: String): Int;", "lib/core/file.lt", "bodyless function declaration has no matching core host binding");
-compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-ts abi", "pub stripTypes := fn(source: String): String;", "lib/external/ts.lt", "bodyless function declaration has no matching core host binding");
-compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-pool abi", "pub cpuCount := fn(): String;", "lib/external/pool.lt", "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad file abi", "pub kind := fn(path: String): Int #host;", "lib/core/file.lt", "#host declarations are only allowed");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-ts abi", "pub stripTypes := fn(source: String): String #host;", "lib/external/ts.lt", "#host declarations are only allowed");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "bad ext-pool abi", "pub cpuCount := fn(): String #host;", "lib/external/pool.lt", "#host declarations are only allowed");
 
 /* external/ts, external/pool, external/http, external/bench */
 extTsRun := compilerTest.compileCheckRunTs(
@@ -544,12 +544,14 @@ if ccInfo.available {
     _rmEntry := fs.remove(entryTmp.path);
 }
 
-/* Reject #host declarations in user code */
+/* Reject #host and bare bodyless fn declarations in user code */
 hostRejectCases: List<(label: String, src: String, expectedErr: String)> = [
 (label = "user top-level #host fn", src = "pub f := fn(): Int #host;\n", expectedErr = "#host declarations are only allowed"),
 (label = "user #host type op", src = "Box := record { x: Int; };\npub Box.get := fn(b: Self): Int #host;\n", expectedErr = "#host declarations are only allowed"),
 (label = "local #host fn literal", src = "f := fn(): Int { g := fn(): Int #host;\n0 };\n", expectedErr = "#host declarations are only allowed"),
-(label = "unknown fn attribute", src = "pub f := fn(): Int #bogus;\n", expectedErr = "unknown function attribute #bogus")
+(label = "unknown fn attribute", src = "pub f := fn(): Int #bogus;\n", expectedErr = "unknown function attribute #bogus"),
+(label = "bare bodyless top fn", src = "pub f := fn(): Int;\n", expectedErr = "require #host;"),
+(label = "bare bodyless type op", src = "Box := record { x: Int; };\npub Box.get := fn(b: Self): Int;\n", expectedErr = "require #host;")
 ];
 loop hostRejectCases as hrc {
     tsRej := compilerTest.compileStdin(root, tsComp, hrc.src, fixtureName);
@@ -561,5 +563,10 @@ loop hostRejectCases as hrc {
     cMsg := cRej.stderr + cRej.stdout;
     test.check("c reject msg " + hrc.label + " got: " + cMsg, cMsg.contains(hrc.expectedErr));
 }
+
+/* Bodyless fn signatures inside interface remain valid */
+ifaceBodylessSrc := "Showable := interface {\n    show: fn(self: Self): String;\n};\n";
+test.checkInt("ts iface bodyless ok", 0, compilerTest.compileStdin(root, tsComp, ifaceBodylessSrc, fixtureName).status);
+test.checkInt("c iface bodyless ok", 0, compilerTest.compileStdin(root, cComp, ifaceBodylessSrc, fixtureName).status);
 
 test.done("core-host-bindings");

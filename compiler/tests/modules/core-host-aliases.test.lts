@@ -56,10 +56,10 @@ unboundSource := path.join(forgeDir, "io.lts");
 unboundApp := path.join(forgeDir, "app.lts");
 _wf1 := fs.writeText(unboundSource, "pub output := fn(...values): Unit;\n");
 _wf2 := fs.writeText(unboundApp, "io := import \"./io.lts\"; io.output(1, \"x\");\n");
-compilerTest.assertCompileErrorContainsNamed(root, tsComp, "unbound host decl", fs.readText(unboundApp).text, unboundApp, "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "unbound host decl", fs.readText(unboundApp).text, unboundApp, "require #host;");
 _rmForge := fs.remove(forgeDir);
 
-compilerTest.assertCompileErrorContainsNamed(root, tsComp, "mismatched host abi", "pub output := fn(...values): String;", "lib/core/io.lt", "bodyless function declaration has no matching core host binding");
+compilerTest.assertCompileErrorContainsNamed(root, tsComp, "mismatched host abi", "pub output := fn(...values): String #host;", "lib/core/io.lt", "#host declarations are only allowed");
 compilerTest.assertCompileErrorContainsNamed(root, tsComp, "ordinary variadic rejected", "values := fn(...values): Unit { };", fixtureName, "variadic parameters are reserved for registered core host declarations");
 compilerTest.assertCompileErrorContainsNamed(root, tsComp, "output as value rejected", "io := import \"core/io\"; value := io.output(1);", fixtureName, "host output functions are standalone statements");
 compilerTest.assertCompileErrorContainsNamed(root, tsComp, "errorLine type rejected", "io := import \"core/io\"; io.errorLine(1);", fixtureName, "argument 1 of io.errorLine must be String, got Int");

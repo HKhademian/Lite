@@ -7,19 +7,19 @@ pub ArrayOrderedScalar := alias Int | Int8 | Int16 | Int32 | Float | Float32;
 pub ArrayEquatable := alias ArrayOrderedScalar | String | Bool;
 
 /** Returns the compile-time element count of fixed-length array `values`. */
-pub Array.length := fn<T: Type, N: Int>(values: Self<T, N>): Int;
+pub Array.length := fn<T: Type, N: Int>(values: Self<T, N>): Int #host;
 
 /** Returns the element at zero-based `index` in fixed-length array `values`, faulting on out-of-bounds access. */
-pub Array.$getIndex := fn<T: Type, N: Int>(values: Self<T, N>, index: Int): T;
+pub Array.$getIndex := fn<T: Type, N: Int>(values: Self<T, N>, index: Int): T #host;
 
 /** Replaces the element at zero-based `index` in fixed-length array `values`, faulting on out-of-bounds access. */
-pub Array.$setIndex := fn<T: Type, N: Int>(values: mut Self<T, N>, index: Int, value: T): Unit;
+pub Array.$setIndex := fn<T: Type, N: Int>(values: mut Self<T, N>, index: Int, value: T): Unit #host;
 
 /** Returns the element at zero-based `index` in fixed-length array `values`, skipping bounds checks when `-fno-check-unchecked` is active. */
-pub Array.uncheckedGet := fn<T: Type, N: Int>(values: Self<T, N>, index: Int): T;
+pub Array.uncheckedGet := fn<T: Type, N: Int>(values: Self<T, N>, index: Int): T #host;
 
 /** Replaces the element at zero-based `index` in fixed-length array `values`, skipping bounds checks when `-fno-check-unchecked` is active. */
-pub Array.uncheckedSet := fn<T: Type, N: Int>(values: mut Self<T, N>, index: Int, value: T): Unit;
+pub Array.uncheckedSet := fn<T: Type, N: Int>(values: mut Self<T, N>, index: Int, value: T): Unit #host;
 
 /** True when fixed-length array `values` has zero elements. */
 pub Array.isEmpty := fn<T: Type, N: Int>(values: Self<T, N>): Bool {

@@ -1,22 +1,22 @@
 /* Core set operations. */
 
 /** Inserts `value` into `s` in O(1). */
-pub Set.add := fn<T>(s: mut Self<T>, value: T): Unit;
+pub Set.add := fn<T>(s: mut Self<T>, value: T): Unit #host;
 
 /** True when `s` contains `value` in O(1). */
-pub Set.has := fn<T>(s: Self<T>, value: T): Bool;
+pub Set.has := fn<T>(s: Self<T>, value: T): Bool #host;
 
 /** Removes `value` and returns true when it was present in O(1). */
-pub Set.remove := fn<T>(s: mut Self<T>, value: T): Bool;
+pub Set.remove := fn<T>(s: mut Self<T>, value: T): Bool #host;
 
 /** Returns the number of elements in `s` in O(1). */
-pub Set.size := fn<T>(s: Self<T>): Int;
+pub Set.size := fn<T>(s: Self<T>): Int #host;
 
 /** Removes all elements from `s` in O(1). */
-pub Set.clear := fn<T>(s: mut Self<T>): Unit;
+pub Set.clear := fn<T>(s: mut Self<T>): Unit #host;
 
 /** Returns all elements in insertion order in O(n). */
-pub Set.values := fn<T>(s: Self<T>): List<T>;
+pub Set.values := fn<T>(s: Self<T>): List<T> #host;
 
 /** True when `s` contains zero elements. */
 pub Set.isEmpty := fn<T>(s: Self<T>): Bool {

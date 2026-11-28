@@ -22,37 +22,37 @@ BYTE_MIN := 0;
 BYTE_MAX := 255;
 
 /** Returns `"missing"`, `"file"`, `"dir"`, or `"other"` for the resolved filesystem entry at `path`. */
-pub kind := fn(path: String): String;
+pub kind := fn(path: String): String #host;
 
 /** Opens `path` as a synchronous `io.Reader` (recording open errors on the returned handle). */
-pub openReader := fn(path: String): io.Reader;
+pub openReader := fn(path: String): io.Reader #host;
 
 /** Opens `path` for writing as a synchronous `io.Writer`, creating or truncating the file. */
-pub openWriter := fn(path: String): io.Writer;
+pub openWriter := fn(path: String): io.Writer #host;
 
 /** Opens `path` for appending as a synchronous `io.Writer`, creating the file when absent. */
-pub openAppender := fn(path: String): io.Writer;
+pub openAppender := fn(path: String): io.Writer #host;
 
 /** Returns direct entry names in directory `path` in sorted order, faulting when `path` cannot be read as a directory. */
-pub listDir := fn(path: String): List<String>;
+pub listDir := fn(path: String): List<String> #host;
 
 /** Ensures directory `path` and any missing parent directories exist. */
-pub makeDir := fn(path: String): (ok: Bool, error: String);
+pub makeDir := fn(path: String): (ok: Bool, error: String) #host;
 
 /** Removes `path` recursively if present, succeeding when already absent. */
-pub remove := fn(path: String): (ok: Bool, error: String);
+pub remove := fn(path: String): (ok: Bool, error: String) #host;
 
 /** Copies a file or directory recursively from `fromPath` to `toPath`, replacing an existing destination. */
-pub copy := fn(fromPath: String, toPath: String): (ok: Bool, error: String);
+pub copy := fn(fromPath: String, toPath: String): (ok: Bool, error: String) #host;
 
 /** Creates a symbolic link at `linkPath` pointing to `targetPath`. */
-pub symlink := fn(targetPath: String, linkPath: String): (ok: Bool, error: String);
+pub symlink := fn(targetPath: String, linkPath: String): (ok: Bool, error: String) #host;
 
 /** Resolves symlinks and relative segments in `path` to its canonical real path. */
-pub realPath := fn(path: String): (ok: Bool, path: String, error: String);
+pub realPath := fn(path: String): (ok: Bool, path: String, error: String) #host;
 
 /** Creates a new unique temporary directory whose name starts with `prefix`. */
-pub makeTempDir := fn(prefix: String): (ok: Bool, path: String, error: String);
+pub makeTempDir := fn(prefix: String): (ok: Bool, path: String, error: String) #host;
 
 /** Validates that every integer in `bytes` fits in `0..255`. */
 validateBytes := fn(bytes: List<Int>): (ok: Bool, error: String) {

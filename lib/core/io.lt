@@ -19,43 +19,43 @@ READ_CHUNK_BYTES := 65536;
 READ_LINE_STEP_BYTES := 1;
 
 /** Writes display values to the host output stream without adding a newline. */
-pub output := fn(...values): Unit;
+pub output := fn(...values): Unit #host;
 
 /** Writes display values to the host output stream followed by one newline. */
-pub outputLine := fn(...values): Unit;
+pub outputLine := fn(...values): Unit #host;
 
 /** Writes one message to the host error stream followed by one newline. */
-pub errorLine := fn(text: String): Unit;
+pub errorLine := fn(text: String): Unit #host;
 
 /** Returns the command-line arguments following the generated program entry. */
-pub inputArgs := fn(): List<String>;
+pub inputArgs := fn(): List<String> #host;
 
 /** Reads all remaining standard input; `prompt` is optional at call sites, but this provisional declaration cannot express that yet. */
-pub inputAll := fn(prompt: String): String;
+pub inputAll := fn(prompt: String): String #host;
 
 /** Reads one input line; `prompt` is optional at call sites, but this provisional declaration cannot express that yet. */
-pub inputLine := fn(prompt: String): String;
+pub inputLine := fn(prompt: String): String #host;
 
 /** Reads one signed Int token; `prompt` is optional at call sites, but this provisional declaration cannot express that yet. */
-pub inputInt := fn(prompt: String): Int;
+pub inputInt := fn(prompt: String): Int #host;
 
 /** Reads one finite Float token; `prompt` is optional at call sites, but this provisional declaration cannot express that yet. */
-pub inputFloat := fn(prompt: String): Float;
+pub inputFloat := fn(prompt: String): Float #host;
 
 /** Terminates the generated program with `status`. */
-pub exit := fn(status: Int): Unit;
+pub exit := fn(status: Int): Unit #host;
 
 /** Returns the shared synchronous standard-input `Reader`. */
-pub Reader.stdin := fn(): Self;
+pub Reader.stdin := fn(): Self #host;
 
 /** Returns the shared synchronous standard-output `Writer`. */
-pub Writer.stdout := fn(): Self;
+pub Writer.stdout := fn(): Self #host;
 
 /** Returns the shared synchronous standard-error `Writer`. */
-pub Writer.stderr := fn(): Self;
+pub Writer.stderr := fn(): Self #host;
 
 /** Creates an in-memory `Reader` backed by raw `0..255` byte values. */
-pub Reader.fromBytes := fn(bytes: List<Int>): Self;
+pub Reader.fromBytes := fn(bytes: List<Int>): Self #host;
 
 /** Creates an in-memory `Reader` backed by UTF-8 bytes of `text`. */
 pub Reader.fromText := fn(text: String): Self {
@@ -63,28 +63,28 @@ pub Reader.fromText := fn(text: String): Self {
 };
 
 /** Creates an in-memory `Writer` accumulating written bytes. */
-pub Writer.buffer := fn(): Self;
+pub Writer.buffer := fn(): Self #host;
 
 /** Returns raw `0..255` byte values currently accumulated in buffer `writer`. */
-pub Writer.bytes := fn(writer: Self): List<Int>;
+pub Writer.bytes := fn(writer: Self): List<Int> #host;
 
 /** Decodes accumulated bytes in buffer `writer` as strict UTF-8 text. */
-pub Writer.text := fn(writer: Self): (ok: Bool, text: String, error: String);
+pub Writer.text := fn(writer: Self): (ok: Bool, text: String, error: String) #host;
 
 /** Clears accumulated bytes in buffer `writer`. */
-pub Writer.clear := fn(writer: Self): Unit;
+pub Writer.clear := fn(writer: Self): Unit #host;
 
 /** True when `reader` is open and has no recorded error. */
-pub Reader.ok := fn(reader: Self): Bool;
+pub Reader.ok := fn(reader: Self): Bool #host;
 
 /** True when `reader` has reached end-of-stream. */
-pub Reader.atEof := fn(reader: Self): Bool;
+pub Reader.atEof := fn(reader: Self): Bool #host;
 
 /** Returns the recorded error message on `reader`, or empty text. */
-pub Reader.error := fn(reader: Self): String;
+pub Reader.error := fn(reader: Self): String #host;
 
 /** Reads up to `maxBytes` bytes synchronously from `reader`, returning `[]` on EOF or error. */
-pub Reader.read := fn(reader: Self, maxBytes: Int): List<Int>;
+pub Reader.read := fn(reader: Self, maxBytes: Int): List<Int> #host;
 
 /** Decodes accumulated line bytes as strict UTF-8 into a single `readLine` result record. */
 decodeLineBytes := fn(lineBytes: List<Int>): (ok: Bool, line: String, eof: Bool, error: String) {
@@ -151,16 +151,16 @@ pub Reader.readLine := fn(reader: Self): (ok: Bool, line: String, eof: Bool, err
 };
 
 /** Closes `reader` when backed by an owned resource. */
-pub Reader.close := fn(reader: Self): (ok: Bool, error: String);
+pub Reader.close := fn(reader: Self): (ok: Bool, error: String) #host;
 
 /** True when `writer` is open and has no recorded error. */
-pub Writer.ok := fn(writer: Self): Bool;
+pub Writer.ok := fn(writer: Self): Bool #host;
 
 /** Returns the recorded error message on `writer`, or empty text. */
-pub Writer.error := fn(writer: Self): String;
+pub Writer.error := fn(writer: Self): String #host;
 
 /** Writes raw `0..255` byte values synchronously to `writer`. */
-pub Writer.write := fn(writer: Self, bytes: List<Int>): (ok: Bool, written: Int, error: String);
+pub Writer.write := fn(writer: Self, bytes: List<Int>): (ok: Bool, written: Int, error: String) #host;
 
 /** Writes UTF-8 `text` synchronously to `writer`. */
 pub Writer.writeText := fn(writer: Self, text: String): (ok: Bool, error: String) {
@@ -174,10 +174,10 @@ pub Writer.writeLine := fn(writer: Self, text: String): (ok: Bool, error: String
 };
 
 /** Flushes buffered output on `writer` if supported. */
-pub Writer.flush := fn(writer: Self): (ok: Bool, error: String);
+pub Writer.flush := fn(writer: Self): (ok: Bool, error: String) #host;
 
 /** Closes `writer` when backed by an owned resource. */
-pub Writer.close := fn(writer: Self): (ok: Bool, error: String);
+pub Writer.close := fn(writer: Self): (ok: Bool, error: String) #host;
 
 /** Writes `bytes` to `writer` and closes the stream, returning any write or close error. */
 pub Writer.writeAndClose := fn(writer: Self, bytes: List<Int>): (ok: Bool, error: String) {

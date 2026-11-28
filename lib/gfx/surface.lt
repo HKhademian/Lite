@@ -62,46 +62,46 @@ pub CYAN := color.CYAN;
 pub MAGENTA := color.MAGENTA;
 
 /** Opens an abstract drawing surface with the requested logical title and dimensions. */
-pub Surface.open := fn(title: String, width: Int, height: Int): Self;
+pub Surface.open := fn(title: String, width: Int, height: Int): Self #host;
 
 /** Polls current surface state and input events for the next frame. */
-pub Surface.poll := fn(surface: Self): FrameInput;
+pub Surface.poll := fn(surface: Self): FrameInput #host;
 
 /** Presents the current frame to the backing display target. */
-pub Surface.present := fn(surface: Self): Unit;
+pub Surface.present := fn(surface: Self): Unit #host;
 
 /** Closes the surface and releases its host resources. */
-pub Surface.close := fn(surface: Self): Unit;
+pub Surface.close := fn(surface: Self): Unit #host;
 
 /** Frame callback invoked once per frame by `Surface.run`; return `false` to stop the loop. */
 pub FrameCallback := alias fn(FrameInput): Bool;
 
 /** Runs a portable host-driven frame loop (`poll -> onFrame -> present`) across desktop, headless, and browser hosts until the surface closes or `onFrame` returns `false`. */
-pub Surface.run := fn(surface: Self, onFrame: FrameCallback): Unit;
+pub Surface.run := fn(surface: Self, onFrame: FrameCallback): Unit #host;
 
 /** Clears the entire surface to `fill`. */
-pub Surface.clear := fn(surface: Self, fill: Color): Unit;
+pub Surface.clear := fn(surface: Self, fill: Color): Unit #host;
 
 /** Fills `area` with `fill`. */
-pub Surface.fillRect := fn(surface: Self, area: Rect, fill: Color): Unit;
+pub Surface.fillRect := fn(surface: Self, area: Rect, fill: Color): Unit #host;
 
 /** Strokes the outline of `area` with thickness `lineWidth` and color `stroke`. */
-pub Surface.strokeRect := fn(surface: Self, area: Rect, lineWidth: Float, stroke: Color): Unit;
+pub Surface.strokeRect := fn(surface: Self, area: Rect, lineWidth: Float, stroke: Color): Unit #host;
 
 /** Fills a circle centered at `center` with `radius` and color `fill`. */
-pub Surface.fillCircle := fn(surface: Self, center: Point, radius: Float, fill: Color): Unit;
+pub Surface.fillCircle := fn(surface: Self, center: Point, radius: Float, fill: Color): Unit #host;
 
 /** Strokes a line segment from `start` to `finish` with thickness `lineWidth` and color `stroke`. */
-pub Surface.strokeLine := fn(surface: Self, start: Point, finish: Point, lineWidth: Float, stroke: Color): Unit;
+pub Surface.strokeLine := fn(surface: Self, start: Point, finish: Point, lineWidth: Float, stroke: Color): Unit #host;
 
 /** Draws `content` at `at` using logical pixel height `size` and color `fill`. */
-pub Surface.drawText := fn(surface: Self, content: String, at: Point, size: Float, fill: Color): Unit;
+pub Surface.drawText := fn(surface: Self, content: String, at: Point, size: Float, fill: Color): Unit #host;
 
 /** Captures the current surface contents to an image file at `outPath` (backend-encoded PNG). */
-pub Surface.capture := fn(surface: Self, outPath: String): (ok: Bool, error: String);
+pub Surface.capture := fn(surface: Self, outPath: String): (ok: Bool, error: String) #host;
 
 /** Sets the target frame rate in frames per second (`<= 0.0` releases the cap and runs uncapped; default is `60.0`). */
-pub Surface.setTargetFps := fn(surface: Self, fps: Float): Unit;
+pub Surface.setTargetFps := fn(surface: Self, fps: Float): Unit #host;
 
 /** Sets the target frame time in milliseconds (`<= 0.0` releases the cap and runs uncapped). */
 pub Surface.setFrameTimeMs := fn(surface: Self, ms: Float): Unit {
@@ -118,19 +118,19 @@ pub Surface.uncapFrameRate := fn(surface: Self): Unit {
 };
 
 /** Reads live performance and resource vitals (frame count, frame time, FPS, CPU time, and resident memory bytes). */
-pub Surface.vitals := fn(surface: Self): Vitals;
+pub Surface.vitals := fn(surface: Self): Vitals #host;
 
 /** Plays a short synthesized sine tone (`frequency` Hz, `durationMs` ms, `volume` 1..100) asynchronously on desktop hosts. */
-pub Surface.playTone := fn(surface: Self, frequency: Int, durationMs: Int, volume: Int): Unit;
+pub Surface.playTone := fn(surface: Self, frequency: Int, durationMs: Int, volume: Int): Unit #host;
 
 /** Returns passive window geometry (`x`, `y`, `width`, `height`) and `fullscreen` state for `surface`. */
-pub Surface.bounds := fn(surface: Self): Bounds;
+pub Surface.bounds := fn(surface: Self): Bounds #host;
 
 /** Resizes `surface` and its backing framebuffer to `width x height` logical pixels. */
-pub Surface.resize := fn(surface: Self, width: Int, height: Int): Unit;
+pub Surface.resize := fn(surface: Self, width: Int, height: Int): Unit #host;
 
 /** Enters or exits native fullscreen mode on desktop hosts. */
-pub Surface.setFullscreen := fn(surface: Self, enabled: Bool): Unit;
+pub Surface.setFullscreen := fn(surface: Self, enabled: Bool): Unit #host;
 
 /** Returns the current logical width of `surface` in pixels. */
 pub Surface.width := fn(surface: Self): Int {
@@ -165,34 +165,34 @@ pub Surface.toggleFullscreen := fn(surface: Self): Unit {
 };
 
 /** True while key `key` is currently held down on `surface`. */
-pub Surface.isKeyDown := fn(surface: Self, key: String): Bool;
+pub Surface.isKeyDown := fn(surface: Self, key: String): Bool #host;
 
 /** True only on the frame key `key` transitions from up to down on `surface`. */
-pub Surface.isKeyPressed := fn(surface: Self, key: String): Bool;
+pub Surface.isKeyPressed := fn(surface: Self, key: String): Bool #host;
 
 /** True only on the frame key `key` transitions from down to up on `surface`. */
-pub Surface.isKeyReleased := fn(surface: Self, key: String): Bool;
+pub Surface.isKeyReleased := fn(surface: Self, key: String): Bool #host;
 
 /** True only on the frame the primary pointer button transitions from up to down. */
-pub Surface.isPointerPressed := fn(surface: Self): Bool;
+pub Surface.isPointerPressed := fn(surface: Self): Bool #host;
 
 /** True only on the frame the primary pointer button transitions from down to up. */
-pub Surface.isPointerReleased := fn(surface: Self): Bool;
+pub Surface.isPointerReleased := fn(surface: Self): Bool #host;
 
 /** Vertical scroll wheel delta accumulated since the previous frame. */
-pub Surface.wheelDelta := fn(surface: Self): Float;
+pub Surface.wheelDelta := fn(surface: Self): Float #host;
 
 /** Restricts subsequent drawing calls on `surface` to `area`. */
-pub Surface.setClipRect := fn(surface: Self, area: Rect): Unit;
+pub Surface.setClipRect := fn(surface: Self, area: Rect): Unit #host;
 
 /** Clears the active clipping rectangle so drawing spans the full surface. */
-pub Surface.clearClipRect := fn(surface: Self): Unit;
+pub Surface.clearClipRect := fn(surface: Self): Unit #host;
 
 /** Fills the solid triangle `(a, b, c)` on `surface` with color `fill`. */
-pub Surface.fillTriangle := fn(surface: Self, a: Point, b: Point, c: Point, fill: Color): Unit;
+pub Surface.fillTriangle := fn(surface: Self, a: Point, b: Point, c: Point, fill: Color): Unit #host;
 
 /** Allocates a transparent `width x height` offscreen RGBA texture. */
-pub Texture.create := fn(width: Int, height: Int): Self;
+pub Texture.create := fn(width: Int, height: Int): Self #host;
 
 /** Returns the texture width in pixels. */
 pub Texture.width := fn(tex: Self): Int {
@@ -205,19 +205,19 @@ pub Texture.height := fn(tex: Self): Int {
 };
 
 /** Writes color `fill` directly to pixel `(x, y)` inside offscreen texture `tex`. */
-pub Texture.setPixel := fn(tex: Self, x: Int, y: Int, fill: Color): Unit;
+pub Texture.setPixel := fn(tex: Self, x: Int, y: Int, fill: Color): Unit #host;
 
 /** Alpha-blends offscreen texture `tex` onto `surface` at top-left `at`. */
-pub Surface.blit := fn(surface: Self, tex: Texture, at: Point): Unit;
+pub Surface.blit := fn(surface: Self, tex: Texture, at: Point): Unit #host;
 
 /** Alpha-blends offscreen texture `tex` scaled to `dest` on `surface`. */
-pub Surface.blitScaled := fn(surface: Self, tex: Texture, dest: Rect): Unit;
+pub Surface.blitScaled := fn(surface: Self, tex: Texture, dest: Rect): Unit #host;
 
 /** Releases offscreen texture `tex` and recycles its handle slot. */
-pub Texture.destroy := fn(tex: Self): Unit;
+pub Texture.destroy := fn(tex: Self): Unit #host;
 
 /** Captures a checkpoint for per-frame scratch strings (O(1) no-op on GC targets, slab rewind on C11). */
-pub scratchMark := fn(): Int;
+pub scratchMark := fn(): Int #host;
 
 /** Reclaims frame-scratch strings allocated after `mark` (O(1) no-op on GC targets, frees transient C11 slabs). */
-pub scratchRewind := fn(mark: Int): Unit;
+pub scratchRewind := fn(mark: Int): Unit #host;

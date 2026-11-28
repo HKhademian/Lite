@@ -2,16 +2,16 @@
 
 
 /** Returns monotonic elapsed time in nanoseconds suitable for duration measurements. */
-pub monotonicNs := fn(): Int;
+pub monotonicNs := fn(): Int #host;
 
 /** Returns wall-clock nanoseconds since the Unix epoch. */
-pub epochNs := fn(): Int;
+pub epochNs := fn(): Int #host;
 
 /** Blocks execution synchronously for at least `ms` milliseconds when `ms > 0`. */
-pub sleepMs := fn(ms: Int): Unit;
+pub sleepMs := fn(ms: Int): Unit #host;
 
 /** Returns the current local calendar date formatted as `YYYY-MM-DD`. */
-pub localDate := fn(): String;
+pub localDate := fn(): String #host;
 
 /** Returns wall-clock milliseconds since the Unix epoch. */
 pub epochMs := fn(): Int {

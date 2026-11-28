@@ -1,4 +1,4 @@
 /* Provisional external TypeScript stripping host bindings backed by Node `node:module`. */
 
 /** Strips TypeScript annotations from `source`, returning runnable JavaScript or an error. */
-pub stripTypes := fn(source: String): (ok: Bool, code: String, error: String);
+pub stripTypes := fn(source: String): (ok: Bool, code: String, error: String) #host;

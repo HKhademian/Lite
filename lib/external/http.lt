@@ -1,7 +1,7 @@
 /* Provisional external HTTP client and static-file server host bindings. */
 
 /** Fetches `url` synchronously with `"Key: Value"` request `headers` and writes non-empty `2xx` bodies to `outPath`. */
-pub fetchToFile := fn(url: String, outPath: String, timeoutMs: Int, headers: List<String>): (ok: Bool, status: Int, byteCount: Int, retryAfter: String, error: String);
+pub fetchToFile := fn(url: String, outPath: String, timeoutMs: Int, headers: List<String>): (ok: Bool, status: Int, byteCount: Int, retryAfter: String, error: String) #host;
 
 /** Serves static files from `siteDir` (and `/brand/` from `brandDir`) on `host:port`. */
-pub serveStatic := fn(siteDir: String, brandDir: String, host: String, port: Int): Int;
+pub serveStatic := fn(siteDir: String, brandDir: String, host: String, port: Int): Int #host;

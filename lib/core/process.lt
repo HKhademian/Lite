@@ -4,33 +4,33 @@ file := import "core/file";
 io := import "core/io";
 
 /** Returns the current process working directory. */
-pub cwd := fn(): String;
+pub cwd := fn(): String #host;
 
 /** Returns the host runtime executable path. */
-pub execPath := fn(): String;
+pub execPath := fn(): String #host;
 
 /** Returns the executed entry path when running directly from a script entry, or `""`. */
-pub entryPath := fn(): String;
+pub entryPath := fn(): String #host;
 
 /** Returns the host operating system identifier (such as `"darwin"` or `"linux"`). */
-pub platform := fn(): String;
+pub platform := fn(): String #host;
 
 /** Returns the host CPU architecture identifier (such as `"arm64"` or `"x64"`). */
-pub arch := fn(): String;
+pub arch := fn(): String #host;
 
 /** Returns the host runtime version string. */
-pub runtimeVersion := fn(): String;
+pub runtimeVersion := fn(): String #host;
 
 /** Reads environment variable `name`, reporting whether it is set in the process environment. */
-pub envGet := fn(name: String): (found: Bool, value: String);
+pub envGet := fn(name: String): (found: Bool, value: String) #host;
 
 /** Runs `command` with `args`; empty `cwd` inherits current directory, `envOverrides` applies `KEY=VALUE` entries, and `capture` pipes stdout/stderr with `stdinText` instead of inheriting stdio. */
 pub run := fn(command: String, args: List<String>, cwd: String, envOverrides: List<String>, capture: Bool,
-stdinText: String): (status: Int, stdout: String, stderr: String, error: String);
+stdinText: String): (status: Int, stdout: String, stderr: String, error: String) #host;
 
 /** Runs `command` with `args`, raw `stdinBytes`, and `timeoutMs` (`<= 0` disables timeout), writing captured stdout/stderr bytes to `stdoutPath` and `stderrPath`. */
 pub runBytes := fn(command: String, args: List<String>, cwd: String, envOverrides: List<String>, timeoutMs: Int,
-stdinBytes: List<Int>, stdoutPath: String, stderrPath: String): (status: Int, error: String);
+stdinBytes: List<Int>, stdoutPath: String, stderrPath: String): (status: Int, error: String) #host;
 
 /** Runs `command` with `args`, feeding `stdinReader` and streaming captured stdout/stderr synchronously into `stdoutWriter` and `stderrWriter`. */
 pub runStreams := fn(

@@ -28,100 +28,100 @@ pub Float64x2 := alias Simd<Float, 2>;
 pub Float64x4 := alias Simd<Float, 4>;
 
 /** Constructs a `Simd<T, N>` vector with every lane set to `value`. */
-pub Simd.splat := fn<T: Type, N: Int>(value: T): Self<T, N>;
+pub Simd.splat := fn<T: Type, N: Int>(value: T): Self<T, N> #host;
 
 /** Constructs a `Simd<T, N>` vector from a fixed-length array `[T; N]`. */
-pub Simd.fromArray := fn<T: Type, N: Int>(values: [T; N]): Self<T, N>;
+pub Simd.fromArray := fn<T: Type, N: Int>(values: [T; N]): Self<T, N> #host;
 
 /** Loads `N` contiguous lanes starting at `slice[offset..offset + N)`, faulting on out-of-bounds access. */
-pub Simd.load := fn<T: Type, N: Int>(slice: sliceLib.Slice<T>, offset: Int): Self<T, N>;
+pub Simd.load := fn<T: Type, N: Int>(slice: sliceLib.Slice<T>, offset: Int): Self<T, N> #host;
 
 /** Returns the compile-time target lane count for `SimdNative<T>` (`16 / sizeof(T)` for 128-bit baseline). */
-pub Simd.nativeLanes := fn<T: Type>(): Int;
+pub Simd.nativeLanes := fn<T: Type>(): Int #host;
 
 /** Returns the fixed compile-time lane count `N` of `v`. */
-pub Simd.lanes := fn<T: Type, N: Int>(v: Self<T, N>): Int;
+pub Simd.lanes := fn<T: Type, N: Int>(v: Self<T, N>): Int #host;
 
 /** Copies all lanes of `v` into a fixed-length array `[T; N]` in lane order `0..N-1`. */
-pub Simd.toArray := fn<T: Type, N: Int>(v: Self<T, N>): [T; N];
+pub Simd.toArray := fn<T: Type, N: Int>(v: Self<T, N>): [T; N] #host;
 
 /** Returns the lane value at zero-based `index`, faulting on out-of-bounds access. */
-pub Simd.get := fn<T: Type, N: Int>(v: Self<T, N>, index: Int): T;
+pub Simd.get := fn<T: Type, N: Int>(v: Self<T, N>, index: Int): T #host;
 
 /** Indexing alias for `Simd.get`. */
-pub Simd.$getIndex := fn<T: Type, N: Int>(v: Self<T, N>, index: Int): T;
+pub Simd.$getIndex := fn<T: Type, N: Int>(v: Self<T, N>, index: Int): T #host;
 
 /** Returns a new vector with lane `index` replaced by `value`, faulting on out-of-bounds access. */
-pub Simd.withLane := fn<T: Type, N: Int>(v: Self<T, N>, index: Int, value: T): Self<T, N>;
+pub Simd.withLane := fn<T: Type, N: Int>(v: Self<T, N>, index: Int, value: T): Self<T, N> #host;
 
 /** Stores all `N` lanes of `v` into `dst[offset..offset + N)`, faulting on out-of-bounds access. */
-pub Simd.store := fn<T: Type, N: Int>(v: Self<T, N>, dst: mut sliceLib.Slice<T>, offset: Int): Unit;
+pub Simd.store := fn<T: Type, N: Int>(v: Self<T, N>, dst: mut sliceLib.Slice<T>, offset: Int): Unit #host;
 
 /** Lane-wise checked addition (`a[i] + b[i]`), faulting on overflow or non-finite float results. */
-pub Simd.add := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.add := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise checked subtraction (`a[i] - b[i]`), faulting on overflow or non-finite float results. */
-pub Simd.sub := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.sub := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise checked multiplication (`a[i] * b[i]`), faulting on overflow or non-finite float results. */
-pub Simd.mul := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.mul := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise checked division (`a[i] / b[i]`), faulting on division by zero, `MIN / -1`, or non-finite float results. */
-pub Simd.div := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.div := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise checked negation (`-v[i]`) for signed integer or float vectors. */
-pub Simd.neg := fn<T: Type, N: Int>(v: Self<T, N>): Self<T, N>;
+pub Simd.neg := fn<T: Type, N: Int>(v: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise checked absolute value (`|v[i]|`) for signed integer or float vectors. */
-pub Simd.abs := fn<T: Type, N: Int>(v: Self<T, N>): Self<T, N>;
+pub Simd.abs := fn<T: Type, N: Int>(v: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise minimum of `a` and `b`. */
-pub Simd.min := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.min := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise maximum of `a` and `b`. */
-pub Simd.max := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.max := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise two's-complement wraparound addition for integer vectors. */
-pub Simd.wrappingAdd := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.wrappingAdd := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise two's-complement wraparound subtraction for integer vectors. */
-pub Simd.wrappingSub := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.wrappingSub := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise two's-complement wraparound multiplication for integer vectors. */
-pub Simd.wrappingMul := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.wrappingMul := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise bitwise AND for integer vectors. */
-pub Simd.bitAnd := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.bitAnd := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise bitwise OR for integer vectors. */
-pub Simd.bitOr := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.bitOr := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise bitwise XOR for integer vectors. */
-pub Simd.bitXor := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N>;
+pub Simd.bitXor := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise bitwise complement for integer vectors. */
-pub Simd.bitNot := fn<T: Type, N: Int>(v: Self<T, N>): Self<T, N>;
+pub Simd.bitNot := fn<T: Type, N: Int>(v: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise single-rounding fused multiply-add (`a * b + c`) for float vectors. */
-pub Simd.fma := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>, c: Self<T, N>): Self<T, N>;
+pub Simd.fma := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>, c: Self<T, N>): Self<T, N> #host;
 
 /** Lane-wise square root for float vectors, faulting when any lane is negative. */
-pub Simd.sqrt := fn<T: Type, N: Int>(v: Self<T, N>): Self<T, N>;
+pub Simd.sqrt := fn<T: Type, N: Int>(v: Self<T, N>): Self<T, N> #host;
 
 /** Strict left-to-right checked sum of all lanes (`(((v[0] + v[1]) + v[2]) + ...)`). */
-pub Simd.reduceAdd := fn<T: Type, N: Int>(v: Self<T, N>): T;
+pub Simd.reduceAdd := fn<T: Type, N: Int>(v: Self<T, N>): T #host;
 
 /** Strict left-to-right wrapping sum of all lanes for integer vectors. */
-pub Simd.wrappingReduceAdd := fn<T: Type, N: Int>(v: Self<T, N>): T;
+pub Simd.wrappingReduceAdd := fn<T: Type, N: Int>(v: Self<T, N>): T #host;
 
 /** Minimum lane value across `v`. */
-pub Simd.reduceMin := fn<T: Type, N: Int>(v: Self<T, N>): T;
+pub Simd.reduceMin := fn<T: Type, N: Int>(v: Self<T, N>): T #host;
 
 /** Maximum lane value across `v`. */
-pub Simd.reduceMax := fn<T: Type, N: Int>(v: Self<T, N>): T;
+pub Simd.reduceMax := fn<T: Type, N: Int>(v: Self<T, N>): T #host;
 
 /** Checked lane-wise dot product `a.mul(b).reduceAdd()`. */
-pub Simd.dot := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): T;
+pub Simd.dot := fn<T: Type, N: Int>(a: Self<T, N>, b: Self<T, N>): T #host;
 
 /** Lane-wise blend returning `whenTrue[i]` where `mask[i]` is `true`, otherwise `whenFalse[i]`. */
-pub Simd.select := fn<T: Type, N: Int>(whenTrue: Self<T, N>, whenFalse: Self<T, N>, mask: [Bool; N]): Self<T, N>;
+pub Simd.select := fn<T: Type, N: Int>(whenTrue: Self<T, N>, whenFalse: Self<T, N>, mask: [Bool; N]): Self<T, N> #host;

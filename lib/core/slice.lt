@@ -1,7 +1,7 @@
 /* Core zero-copy borrowed contiguous slice operations. */
 
 /** Returns the number of elements in borrowed slice `values`. */
-pub Slice.length := fn<T>(values: Self<T>): Int;
+pub Slice.length := fn<T>(values: Self<T>): Int #host;
 
 /** True when borrowed slice `values` has zero elements. */
 pub Slice.isEmpty := fn<T>(values: Self<T>): Bool {
@@ -9,19 +9,19 @@ pub Slice.isEmpty := fn<T>(values: Self<T>): Bool {
 };
 
 /** Returns the element at zero-based `index` in borrowed slice `values`, faulting when out of bounds. */
-pub Slice.$getIndex := fn<T>(values: Self<T>, index: Int): T;
+pub Slice.$getIndex := fn<T>(values: Self<T>, index: Int): T #host;
 
 /** Replaces the element at zero-based `index` in mutable borrowed slice `values`, faulting when out of bounds. */
-pub Slice.$setIndex := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
+pub Slice.$setIndex := fn<T>(values: mut Self<T>, index: Int, value: T): Unit #host;
 
 /** Returns the element at zero-based `index` in `values`, skipping bounds checks when `-fno-check-unchecked` is active. */
-pub Slice.uncheckedGet := fn<T>(values: Self<T>, index: Int): T;
+pub Slice.uncheckedGet := fn<T>(values: Self<T>, index: Int): T #host;
 
 /** Replaces the element at zero-based `index` in mutable `values`, skipping bounds checks when `-fno-check-unchecked` is active. */
-pub Slice.uncheckedSet := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
+pub Slice.uncheckedSet := fn<T>(values: mut Self<T>, index: Int, value: T): Unit #host;
 
 /** Splits borrowed slice `values` into two contiguous halves `(values[0..mid), values[mid..len))`. */
-pub Slice.splitAt := fn<T>(values: Self<T>, mid: Int): (left: Slice<T>, right: Slice<T>);
+pub Slice.splitAt := fn<T>(values: Self<T>, mid: Int): (left: Slice<T>, right: Slice<T>) #host;
 
 /** Materializes an independent owning `List<T>` copy of the elements viewed by `values`. */
-pub Slice.toList := fn<T>(values: Self<T>): List<T>;
+pub Slice.toList := fn<T>(values: Self<T>): List<T> #host;

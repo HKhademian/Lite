@@ -6,7 +6,7 @@ io := import "core/io";
 text := import "core/text";
 
 /** Generates `count` cryptographically strong random `0..255` byte values. */
-pub randomBytes := fn(count: Int): List<Int>;
+pub randomBytes := fn(count: Int): List<Int> #host;
 
 b64Alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 hexAlphabet := "0123456789abcdef";

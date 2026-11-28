@@ -10,11 +10,13 @@ Item := alias (kind: String, name: String, runtime: String, code: String, intVal
 /** Collection of items matching `frontend-ir.Items`. */
 Items := alias List<Item>;
 
-/** True when `moduleIdentity` is a verified `lite.core.*`, `lite.external.*`, or `lite.gfx.*` host module identity. */
+/** True when `moduleIdentity` is a verified `lite.core.*`, `lite.type.*`, `lite.external.*`, `lite.gfx.*`, or `lite.ds.arena.v1` host module identity. */
 pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {
     moduleIdentity.startsWithAt(0, "lite.core.") or
+    moduleIdentity.startsWithAt(0, "lite.type.") or
     moduleIdentity.startsWithAt(0, "lite.external.") or
-    moduleIdentity.startsWithAt(0, "lite.gfx.")
+    moduleIdentity.startsWithAt(0, "lite.gfx.") or
+    moduleIdentity == "lite.ds.arena.v1"
 };
 
 /** Normalizes one canonical parameter/result kind for host ABI matching by unwrapping nominal `distinct` wrappers to `Name@BaseKind`. */

@@ -10,43 +10,43 @@ pub OrderedScalar := alias Int | Int8 | Int16 | Int32 | Float | Float32;
 pub Equatable := alias OrderedScalar | String | Bool;
 
 /** Appends `value` to the end of `values`. */
-pub List.pushBack := fn<T>(values: mut Self<T>, value: T): Unit;
+pub List.pushBack := fn<T>(values: mut Self<T>, value: T): Unit #host;
 
 /** Removes and returns the last element of `values`, faulting when empty. */
-pub List.popBack := fn<T>(values: mut Self<T>): T;
+pub List.popBack := fn<T>(values: mut Self<T>): T #host;
 
 /** Prepends `value` to the front of `values`. */
-pub List.pushFront := fn<T>(values: mut Self<T>, value: T): Unit;
+pub List.pushFront := fn<T>(values: mut Self<T>, value: T): Unit #host;
 
 /** Removes and returns the first element of `values`, faulting when empty. */
-pub List.popFront := fn<T>(values: mut Self<T>): T;
+pub List.popFront := fn<T>(values: mut Self<T>): T #host;
 
 /** Returns the number of elements in `values`. */
-pub List.length := fn<T>(values: Self<T>): Int;
+pub List.length := fn<T>(values: Self<T>): Int #host;
 
 /** Replaces the element at zero-based `index` in `values`, faulting when out of bounds. */
-pub List.setAt := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
+pub List.setAt := fn<T>(values: mut Self<T>, index: Int, value: T): Unit #host;
 
 /** Returns a new list containing the half-open slice `values[start..end)`. */
-pub List.slice := fn<T>(values: Self<T>, start: Int, end: Int): List<T>;
+pub List.slice := fn<T>(values: Self<T>, start: Int, end: Int): List<T> #host;
 
 /** Returns a new list with the elements of `values` in reverse order. */
-pub List.reverse := fn<T>(values: Self<T>): List<T>;
+pub List.reverse := fn<T>(values: Self<T>): List<T> #host;
 
 /** Removes all elements from `values`. */
-pub List.clear := fn<T>(values: mut Self<T>): Unit;
+pub List.clear := fn<T>(values: mut Self<T>): Unit #host;
 
 /** Returns the element at zero-based `index`, faulting when out of bounds. */
-pub List.$getIndex := fn<T>(values: Self<T>, index: Int): T;
+pub List.$getIndex := fn<T>(values: Self<T>, index: Int): T #host;
 
 /** Replaces the element at zero-based `index` via `values[index] = value`. */
-pub List.$setIndex := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
+pub List.$setIndex := fn<T>(values: mut Self<T>, index: Int, value: T): Unit #host;
 
 /** Returns the element at zero-based `index`, skipping bounds checks when `-fno-check-unchecked` is active. */
-pub List.uncheckedGet := fn<T>(values: Self<T>, index: Int): T;
+pub List.uncheckedGet := fn<T>(values: Self<T>, index: Int): T #host;
 
 /** Replaces the element at zero-based `index`, skipping bounds checks when `-fno-check-unchecked` is active. */
-pub List.uncheckedSet := fn<T>(values: mut Self<T>, index: Int, value: T): Unit;
+pub List.uncheckedSet := fn<T>(values: mut Self<T>, index: Int, value: T): Unit #host;
 
 /** True when `values` has zero elements. */
 pub List.isEmpty := fn<T>(values: Self<T>): Bool {

@@ -896,13 +896,10 @@ rejectMisplacedTag := fn(source: String, position: Int, prefix: String, message:
 /** Rejects an unparenthesized `@tag { ... }` at the start of a header condition while preserving `@tag.field` metadata reads. */
 rejectHeaderBlockTag := fn(source: String, position: Int, prefix: String, constructName: String): Unit { syntax.rejectHeaderBlockTag(source, position, prefix, constructName); };
 
-/** Probes a top-level fn/type-op terminator in prepass (accepts `#host;` and legacy `;` during Step 2.1a). */
+/** Probes a top-level fn/type-op `#host;` terminator in prepass. */
 probeHostTerminator := fn(source: String, position: Int, prefix: String): (isHost: Bool, semiAt: Int) {
     size := source.length();
     pos := skipTrivia(source, position, prefix);
-    if pos < size and source.at(pos) == ";" {
-        return (isHost = true, semiAt = pos);
-    }
     if pos < size and source.at(pos) == "#" {
         tagPos := skipTrivia(source, pos + 1, prefix);
         if tagPos < size and source.at(tagPos).isNameStart() {
@@ -918,12 +915,12 @@ probeHostTerminator := fn(source: String, position: Int, prefix: String): (isHos
     (isHost = false, semiAt = -1)
 };
 
-/** Parses an optional `#host;` (or legacy `;` during Step 2.1a) terminator after a top-level function header, enforcing host-module scope. */
+/** Parses an optional `#host;` terminator after a top-level function header, enforcing host-module scope and rejecting bare bodyless `;`. */
 parseHostDirective := fn(source: String, position: Int, prefix: String, moduleIdentity: String): (isHost: Bool, next: Int) {
     size := source.length();
     pos := skipTrivia(source, position, prefix);
     if pos < size and source.at(pos) == ";" {
-        return (isHost = true, next = skipTrivia(source, pos + 1, prefix));
+        failAt(source, pos, prefix, "bodyless function declarations require #host; and are only allowed in host modules or interface definitions");
     }
     if pos < size and source.at(pos) == "#" {
         tagPos := skipTrivia(source, pos + 1, prefix);
