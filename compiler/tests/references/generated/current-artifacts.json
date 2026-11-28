@@ -1,7 +1,7 @@
 {
-  "note": "Post-Phase 18 inline layout attributes (#packed, #align(N), #no_niche) on record/enum declarations with hard cutover from leading @... layout attrs. All 69 TS and C corpus artifact hashes and Phases 6–18 verified.",
+  "note": "Post-Phase 18 package-local $preload.lt and explicit module-owned Rc/Slice/Simd/SimdNative/SoA. All 69 TS and C corpus artifact hashes and Phases 5–18 verified.",
   "recorded": "2026-11-28",
-  "sourceSha256": "c704fca51ae88d979d9f6302f7a02a0f877b79cb8ae975dd7dbd651cf2878e8a",
+  "sourceSha256": "9a6690270ef0522e00a78a7f66ee88f38a623edc4dcbadf35696e682031ef1e6",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
