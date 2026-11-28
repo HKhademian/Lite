@@ -1,0 +1,265 @@
+/** 3D unit quaternions and TRS spatial transforms (`math/transform`) across TS and C11. */
+
+math := import "math/scalar";
+vec := import "math/vector";
+mat := import "math/matrix";
+
+/** Unit-convention 3D rotation quaternion `(x, y, z, w)`. */
+pub Quat := record {
+    x: Float;
+    y: Float;
+    z: Float;
+    w: Float;
+}
+
+/** Identity rotation quaternion `(0, 0, 0, 1)`. */
+pub QUAT_IDENTITY := Quat { x = 0.0, y = 0.0, z = 0.0, w = 1.0 };
+
+/** Returns the identity rotation quaternion `(0, 0, 0, 1)`. */
+pub Quat.identity := fn(): Self {
+    QUAT_IDENTITY
+};
+
+/** Constructs a quaternion directly from `(x, y, z, w)` components. */
+pub Quat.fromXYZW := fn(x: Float, y: Float, z: Float, w: Float): Self {
+    Self { x = x, y = y, z = z, w = w }
+};
+
+/** Euclidean squared norm `x^2 + y^2 + z^2 + w^2`. */
+pub Quat.lengthSq := fn(q: Self): Float {
+    (q.x * q.x) + (q.y * q.y) + (q.z * q.z) + (q.w * q.w)
+};
+
+/** Euclidean norm of quaternion `q`. */
+pub Quat.length := fn(q: Self): Float {
+    math.sqrt(q.lengthSq())
+};
+
+/** Returns normalized unit quaternion, or `QUAT_IDENTITY` when near zero. */
+pub Quat.normalize := fn(q: Self): Self {
+    lenSq := q.lengthSq();
+    if lenSq <= 0.000000000001 {
+        return QUAT_IDENTITY;
+    }
+    inv := 1.0 / math.sqrt(lenSq);
+    Self { x = q.x * inv, y = q.y * inv, z = q.z * inv, w = q.w * inv }
+};
+
+/** Returns quaternion conjugate `(-x, -y, -z, w)` (exact inverse for unit quaternions). */
+pub Quat.conjugate := fn(q: Self): Self {
+    Self { x = 0.0 - q.x, y = 0.0 - q.y, z = 0.0 - q.z, w = q.w }
+};
+
+/** 4D quaternion dot product `a . b`. */
+pub Quat.dot := fn(a: Self, b: Self): Float {
+    (a.x * b.x) + (a.y * b.y) + (a.z * b.z) + (a.w * b.w)
+};
+
+/** Hamilton quaternion product `a * b` (applies `b` first, then `a`). */
+pub Quat.mul := fn(a: Self, b: Self): Self {
+    Self {
+        x = (a.w * b.x) + (a.x * b.w) + (a.y * b.z) - (a.z * b.y),
+        y = (a.w * b.y) - (a.x * b.z) + (a.y * b.w) + (a.z * b.x),
+        z = (a.w * b.z) + (a.x * b.y) - (a.y * b.x) + (a.z * b.w),
+        w = (a.w * b.w) - (a.x * b.x) - (a.y * b.y) - (a.z * b.z)
+    }
+};
+
+/** Constructs a unit rotation quaternion rotating `radians` counter-clockwise around `axis`. */
+pub Quat.fromAxisAngle := fn(axis: vec.FVec3, radians: Float): Self {
+    lenSq := axis.lengthSq();
+    if lenSq <= 0.000000000001 {
+        return QUAT_IDENTITY;
+    }
+    invLen := 1.0 / math.sqrt(lenSq);
+    half := radians * 0.5;
+    s := math.sin(half);
+    Self {
+        x = axis.x() * invLen * s,
+        y = axis.y() * invLen * s,
+        z = axis.z() * invLen * s,
+        w = math.cos(half)
+    }
+};
+
+/** Constructs a unit quaternion from Euler angles `(pitchX, yawY, rollZ)` in intrinsic `Y * X * Z` order (radians). */
+pub Quat.fromEuler := fn(pitchX: Float, yawY: Float, rollZ: Float): Self {
+    hx := pitchX * 0.5;
+    hy := yawY * 0.5;
+    hz := rollZ * 0.5;
+    sx := math.sin(hx); cx := math.cos(hx);
+    sy := math.sin(hy); cy := math.cos(hy);
+    sz := math.sin(hz); cz := math.cos(hz);
+    /* Y * X * Z */
+    raw := Self {
+        x = (cy * sx * cz) + (sy * cx * sz),
+        y = (sy * cx * cz) - (cy * sx * sz),
+        z = (cy * cx * sz) - (sy * sx * cz),
+        w = (cy * cx * cz) + (sy * sx * sz)
+    };
+    raw.normalize()
+};
+
+/** Rotates 3D vector `v` by unit quaternion `q`. */
+pub Quat.rotateVec := fn(q: Self, v: vec.FVec3): vec.FVec3 {
+    u := vec.vec3(q.x, q.y, q.z);
+    t := u.cross(v).scale(2.0);
+    v.add(t.scale(q.w)).add(u.cross(t))
+};
+
+/** Shortest-arc spherical linear interpolation (normalized nlerp/slerp blend) between `a` and `b` at `t` in `0.0..1.0`. */
+pub Quat.slerp := fn(a: Self, b: Self, t: Float): Self {
+    clampedT := math.clamp(t, 0.0, 1.0);
+    na := a.normalize();
+    var nb := b.normalize();
+    var d := na.dot(nb);
+    if d < 0.0 {
+        nb = Self { x = 0.0 - nb.x, y = 0.0 - nb.y, z = 0.0 - nb.z, w = 0.0 - nb.w };
+        d = 0.0 - d;
+    }
+    if d > 0.9995 {
+        lin := Self {
+            x = math.lerp(na.x, nb.x, clampedT),
+            y = math.lerp(na.y, nb.y, clampedT),
+            z = math.lerp(na.z, nb.z, clampedT),
+            w = math.lerp(na.w, nb.w, clampedT)
+        };
+        return lin.normalize();
+    }
+    /* Compute half-angle theta = atan2(sqrt(1 - d^2), d) without requiring acos */
+    sinTheta := math.sqrt(math.max(0.0, 1.0 - (d * d)));
+    theta := math.atan2(sinTheta, d);
+    w0 := math.sin((1.0 - clampedT) * theta) / sinTheta;
+    w1 := math.sin(clampedT * theta) / sinTheta;
+    out := Self {
+        x = (na.x * w0) + (nb.x * w1),
+        y = (na.y * w0) + (nb.y * w1),
+        z = (na.z * w0) + (nb.z * w1),
+        w = (na.w * w0) + (nb.w * w1)
+    };
+    out.normalize()
+};
+
+/** Converts unit quaternion `q` into a right-handed 4x4 rotation matrix. */
+pub Quat.toMat4 := fn(q: Self): mat.FMat4 {
+    nq := q.normalize();
+    xx := nq.x * nq.x;
+    yy := nq.y * nq.y;
+    zz := nq.z * nq.z;
+    xy := nq.x * nq.y;
+    xz := nq.x * nq.z;
+    yz := nq.y * nq.z;
+    wx := nq.w * nq.x;
+    wy := nq.w * nq.y;
+    wz := nq.w * nq.z;
+    mat.Mat.from([
+    vec.vec4(1.0 - 2.0 * (yy + zz), 2.0 * (xy - wz), 2.0 * (xz + wy), 0.0),
+    vec.vec4(2.0 * (xy + wz), 1.0 - 2.0 * (xx + zz), 2.0 * (yz - wx), 0.0),
+    vec.vec4(2.0 * (xz - wy), 2.0 * (yz + wx), 1.0 - 2.0 * (xx + yy), 0.0),
+    vec.vec4(0.0, 0.0, 0.0, 1.0)
+    ])
+};
+
+/** 3D spatial transform storing world/local `position`, `rotation` quaternion, and non-uniform `scale`. */
+pub Transform3D := record {
+    position: vec.FVec3;
+    rotation: Quat;
+    scale: vec.FVec3;
+}
+
+/** Returns the identity 3D transform at origin with identity rotation and unit scale `(1, 1, 1)`. */
+pub Transform3D.identity := fn(): Self {
+    Self {
+        position = vec.ZERO3,
+        rotation = QUAT_IDENTITY,
+        scale = vec.vec3(1.0, 1.0, 1.0)
+    }
+};
+
+/** Constructs a translation-only 3D transform at `pos`. */
+pub Transform3D.fromPosition := fn(pos: vec.FVec3): Self {
+    Self {
+        position = pos,
+        rotation = QUAT_IDENTITY,
+        scale = vec.vec3(1.0, 1.0, 1.0)
+    }
+};
+
+/** Constructs a 3D transform from explicit `position`, `rotation` quaternion, and `scale`. */
+pub Transform3D.fromTRS := fn(position: vec.FVec3, rotation: Quat, scale: vec.FVec3): Self {
+    Self { position = position, rotation = rotation.normalize(), scale = scale }
+};
+
+/** Constructs a 3D transform from `position`, Euler angles `(pitchX, yawY, rollZ)`, and `scale`. */
+pub Transform3D.fromEuler := fn(position: vec.FVec3, pitchX: Float, yawY: Float, rollZ: Float, scale: vec.FVec3): Self {
+    Self {
+        position = position,
+        rotation = Quat.fromEuler(pitchX, yawY, rollZ),
+        scale = scale
+    }
+};
+
+/** Composes the 4x4 TRS transformation matrix `T * R * S`. */
+pub Transform3D.toMat4 := fn(t: Self): mat.FMat4 {
+    nq := t.rotation.normalize();
+    xx := nq.x * nq.x;
+    yy := nq.y * nq.y;
+    zz := nq.z * nq.z;
+    xy := nq.x * nq.y;
+    xz := nq.x * nq.z;
+    yz := nq.y * nq.z;
+    wx := nq.w * nq.x;
+    wy := nq.w * nq.y;
+    wz := nq.w * nq.z;
+    sx := t.scale.x();
+    sy := t.scale.y();
+    sz := t.scale.z();
+    mat.Mat.from([
+    vec.vec4((1.0 - 2.0 * (yy + zz)) * sx, (2.0 * (xy - wz)) * sy, (2.0 * (xz + wy)) * sz, t.position.x()),
+    vec.vec4((2.0 * (xy + wz)) * sx, (1.0 - 2.0 * (xx + zz)) * sy, (2.0 * (yz - wx)) * sz, t.position.y()),
+    vec.vec4((2.0 * (xz - wy)) * sx, (2.0 * (yz + wx)) * sy, (1.0 - 2.0 * (xx + yy)) * sz, t.position.z()),
+    vec.vec4(0.0, 0.0, 0.0, 1.0)
+    ])
+};
+
+/** Local forward unit vector (`-Z` rotated by `t.rotation`). */
+pub Transform3D.forward := fn(t: Self): vec.FVec3 {
+    t.rotation.rotateVec(vec.vec3(0.0, 0.0, -1.0))
+};
+
+/** Local right unit vector (`+X` rotated by `t.rotation`). */
+pub Transform3D.right := fn(t: Self): vec.FVec3 {
+    t.rotation.rotateVec(vec.UNIT_X3)
+};
+
+/** Local up unit vector (`+Y` rotated by `t.rotation`). */
+pub Transform3D.up := fn(t: Self): vec.FVec3 {
+    t.rotation.rotateVec(vec.UNIT_Y3)
+};
+
+/** Transforms local 3D point `p` into parent/world space via scale -> rotate -> translate. */
+pub Transform3D.transformPoint := fn(t: Self, p: vec.FVec3): vec.FVec3 {
+    scaled := p.mul(t.scale);
+    t.rotation.rotateVec(scaled).add(t.position)
+};
+
+/** Combines `parent` and `child` transforms (`parent * child`). */
+pub Transform3D.combine := fn(parent: Self, child: Self): Self {
+    scaledPos := child.position.mul(parent.scale);
+    worldPos := parent.rotation.rotateVec(scaledPos).add(parent.position);
+    Self {
+        position = worldPos,
+        rotation = parent.rotation.mul(child.rotation).normalize(),
+        scale = parent.scale.mul(child.scale)
+    }
+};
+
+/** Interpolates position, slerped rotation, and scale between `a` and `b` at `alpha` in `0.0..1.0`. */
+pub Transform3D.lerp := fn(a: Self, b: Self, alpha: Float): Self {
+    t := math.clamp(alpha, 0.0, 1.0);
+    Self {
+        position = a.position.lerp(b.position, t),
+        rotation = a.rotation.slerp(b.rotation, t),
+        scale = a.scale.lerp(b.scale, t)
+    }
+};

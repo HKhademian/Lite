@@ -217,6 +217,55 @@ pub Mat.transformPoint3 := fn(m: Self<Float, 4, 4>, p: vec.FVec3): vec.FVec3 {
     }
 };
 
+/** Transforms 3D direction `d` by 4x4 matrix `m` (`w = 0`, ignoring translation). */
+pub Mat.transformDir3 := fn(m: Self<Float, 4, 4>, d: vec.FVec3): vec.FVec3 {
+    v := m.mulVec(vec.vec4(d.x(), d.y(), d.z(), 0.0));
+    vec.vec3(v.x(), v.y(), v.z())
+};
+
+/** Cofactor-adjugate inverse of a 4x4 `Float` matrix, or `.None` when singular. */
+pub Mat.inverse := fn(m: Self<Float, 4, 4>): Option<Self<Float, 4, 4>> {
+    r0 := m.rows[0].data;
+    r1 := m.rows[1].data;
+    r2 := m.rows[2].data;
+    r3 := m.rows[3].data;
+
+    c00 := minor3(r1, r2, r3, 1, 2, 3);
+    c10 := 0.0 - minor3(r1, r2, r3, 0, 2, 3);
+    c20 := minor3(r1, r2, r3, 0, 1, 3);
+    c30 := 0.0 - minor3(r1, r2, r3, 0, 1, 2);
+
+    det := (r0[0] * c00) + (r0[1] * c10) + (r0[2] * c20) + (r0[3] * c30);
+    if math.abs(det) <= 0.000000000001 {
+        return .None;
+    }
+    invDet := 1.0 / det;
+
+    c01 := 0.0 - minor3(r0, r2, r3, 1, 2, 3);
+    c11 := minor3(r0, r2, r3, 0, 2, 3);
+    c21 := 0.0 - minor3(r0, r2, r3, 0, 1, 3);
+    c31 := minor3(r0, r2, r3, 0, 1, 2);
+
+    c02 := minor3(r0, r1, r3, 1, 2, 3);
+    c12 := 0.0 - minor3(r0, r1, r3, 0, 2, 3);
+    c22 := minor3(r0, r1, r3, 0, 1, 3);
+    c32 := 0.0 - minor3(r0, r1, r3, 0, 1, 2);
+
+    c03 := 0.0 - minor3(r0, r1, r2, 1, 2, 3);
+    c13 := minor3(r0, r1, r2, 0, 2, 3);
+    c23 := 0.0 - minor3(r0, r1, r2, 0, 1, 3);
+    c33 := minor3(r0, r1, r2, 0, 1, 2);
+
+    .Some(Self<Float, 4, 4> {
+        rows = [
+        vec.vec4(c00 * invDet, c01 * invDet, c02 * invDet, c03 * invDet),
+        vec.vec4(c10 * invDet, c11 * invDet, c12 * invDet, c13 * invDet),
+        vec.vec4(c20 * invDet, c21 * invDet, c22 * invDet, c23 * invDet),
+        vec.vec4(c30 * invDet, c31 * invDet, c32 * invDet, c33 * invDet)
+        ]
+    })
+};
+
 /* ============================================================================
  * 2D & 3D Transform Constructors (Static Type Operations)
  * ============================================================================ */
@@ -231,22 +280,22 @@ pub Mat.rotation2 := fn(radians: Float): Self<Float, 2, 2> {
 /** 2D affine translation matrix in homogeneous 3x3 form. */
 pub Mat.translate2 := fn(tx: Float, ty: Float): Self<Float, 3, 3> {
     Self<Float, 3, 3> {
-    rows = [
-    vec.vec3(1.0, 0.0, tx),
-    vec.vec3(0.0, 1.0, ty),
-    vec.vec3(0.0, 0.0, 1.0)
-    ]
+        rows = [
+        vec.vec3(1.0, 0.0, tx),
+        vec.vec3(0.0, 1.0, ty),
+        vec.vec3(0.0, 0.0, 1.0)
+        ]
     }
 };
 
 /** 2D affine scale matrix in homogeneous 3x3 form. */
 pub Mat.scale2 := fn(sx: Float, sy: Float): Self<Float, 3, 3> {
     Self<Float, 3, 3> {
-    rows = [
-    vec.vec3(sx, 0.0, 0.0),
-    vec.vec3(0.0, sy, 0.0),
-    vec.vec3(0.0, 0.0, 1.0)
-    ]
+        rows = [
+        vec.vec3(sx, 0.0, 0.0),
+        vec.vec3(0.0, sy, 0.0),
+        vec.vec3(0.0, 0.0, 1.0)
+        ]
     }
 };
 
@@ -255,35 +304,35 @@ pub Mat.rotate2 := fn(radians: Float): Self<Float, 3, 3> {
     c := math.cos(radians);
     s := math.sin(radians);
     Self<Float, 3, 3> {
-    rows = [
-    vec.vec3(c, 0.0 - s, 0.0),
-    vec.vec3(s, c, 0.0),
-    vec.vec3(0.0, 0.0, 1.0)
-    ]
+        rows = [
+        vec.vec3(c, 0.0 - s, 0.0),
+        vec.vec3(s, c, 0.0),
+        vec.vec3(0.0, 0.0, 1.0)
+        ]
     }
 };
 
 /** 3D translation matrix in homogeneous 4x4 form. */
 pub Mat.translate3 := fn(tx: Float, ty: Float, tz: Float): Self<Float, 4, 4> {
     Self<Float, 4, 4> {
-    rows = [
-    vec.vec4(1.0, 0.0, 0.0, tx),
-    vec.vec4(0.0, 1.0, 0.0, ty),
-    vec.vec4(0.0, 0.0, 1.0, tz),
-    vec.vec4(0.0, 0.0, 0.0, 1.0)
-    ]
+        rows = [
+        vec.vec4(1.0, 0.0, 0.0, tx),
+        vec.vec4(0.0, 1.0, 0.0, ty),
+        vec.vec4(0.0, 0.0, 1.0, tz),
+        vec.vec4(0.0, 0.0, 0.0, 1.0)
+        ]
     }
 };
 
 /** 3D scale matrix in homogeneous 4x4 form. */
 pub Mat.scale3 := fn(sx: Float, sy: Float, sz: Float): Self<Float, 4, 4> {
     Self<Float, 4, 4> {
-    rows = [
-    vec.vec4(sx, 0.0, 0.0, 0.0),
-    vec.vec4(0.0, sy, 0.0, 0.0),
-    vec.vec4(0.0, 0.0, sz, 0.0),
-    vec.vec4(0.0, 0.0, 0.0, 1.0)
-    ]
+        rows = [
+        vec.vec4(sx, 0.0, 0.0, 0.0),
+        vec.vec4(0.0, sy, 0.0, 0.0),
+        vec.vec4(0.0, 0.0, sz, 0.0),
+        vec.vec4(0.0, 0.0, 0.0, 1.0)
+        ]
     }
 };
 
@@ -292,12 +341,12 @@ pub Mat.rotateX := fn(radians: Float): Self<Float, 4, 4> {
     c := math.cos(radians);
     s := math.sin(radians);
     Self<Float, 4, 4> {
-    rows = [
-    vec.vec4(1.0, 0.0, 0.0, 0.0),
-    vec.vec4(0.0, c, 0.0 - s, 0.0),
-    vec.vec4(0.0, s, c, 0.0),
-    vec.vec4(0.0, 0.0, 0.0, 1.0)
-    ]
+        rows = [
+        vec.vec4(1.0, 0.0, 0.0, 0.0),
+        vec.vec4(0.0, c, 0.0 - s, 0.0),
+        vec.vec4(0.0, s, c, 0.0),
+        vec.vec4(0.0, 0.0, 0.0, 1.0)
+        ]
     }
 };
 
@@ -306,12 +355,12 @@ pub Mat.rotateY := fn(radians: Float): Self<Float, 4, 4> {
     c := math.cos(radians);
     s := math.sin(radians);
     Self<Float, 4, 4> {
-    rows = [
-    vec.vec4(c, 0.0, s, 0.0),
-    vec.vec4(0.0, 1.0, 0.0, 0.0),
-    vec.vec4(0.0 - s, 0.0, c, 0.0),
-    vec.vec4(0.0, 0.0, 0.0, 1.0)
-    ]
+        rows = [
+        vec.vec4(c, 0.0, s, 0.0),
+        vec.vec4(0.0, 1.0, 0.0, 0.0),
+        vec.vec4(0.0 - s, 0.0, c, 0.0),
+        vec.vec4(0.0, 0.0, 0.0, 1.0)
+        ]
     }
 };
 
@@ -320,12 +369,12 @@ pub Mat.rotateZ := fn(radians: Float): Self<Float, 4, 4> {
     c := math.cos(radians);
     s := math.sin(radians);
     Self<Float, 4, 4> {
-    rows = [
-    vec.vec4(c, 0.0 - s, 0.0, 0.0),
-    vec.vec4(s, c, 0.0, 0.0),
-    vec.vec4(0.0, 0.0, 1.0, 0.0),
-    vec.vec4(0.0, 0.0, 0.0, 1.0)
-    ]
+        rows = [
+        vec.vec4(c, 0.0 - s, 0.0, 0.0),
+        vec.vec4(s, c, 0.0, 0.0),
+        vec.vec4(0.0, 0.0, 1.0, 0.0),
+        vec.vec4(0.0, 0.0, 0.0, 1.0)
+        ]
     }
 };
 
@@ -337,11 +386,54 @@ pub Mat.perspective := fn(fovYRad: Float, aspect: Float, near: Float, far: Float
     f := if s == 0.0 { 1.0 } else { c / s };
     nf := 1.0 / (near - far);
     Self<Float, 4, 4> {
-    rows = [
-    vec.vec4(if aspect == 0.0 { f } else { f / aspect }, 0.0, 0.0, 0.0),
-    vec.vec4(0.0, f, 0.0, 0.0),
-    vec.vec4(0.0, 0.0, (far + near) * nf, (2.0 * far * near) * nf),
-    vec.vec4(0.0, 0.0, -1.0, 0.0)
-    ]
+        rows = [
+        vec.vec4(if aspect == 0.0 { f } else { f / aspect }, 0.0, 0.0, 0.0),
+        vec.vec4(0.0, f, 0.0, 0.0),
+        vec.vec4(0.0, 0.0, (far + near) * nf, (2.0 * far * near) * nf),
+        vec.vec4(0.0, 0.0, -1.0, 0.0)
+        ]
+    }
+};
+
+/** Right-handed orthographic projection matrix mapping `[left, right] x [bottom, top] x [-near, -far]` to NDC `[-1, 1]^3`. */
+pub Mat.ortho := fn(left: Float, right: Float, bottom: Float, top: Float, near: Float, far: Float): Self<Float, 4, 4> {
+    rl := right - left;
+    tb := top - bottom;
+    fnSpan := far - near;
+    sx := if math.abs(rl) <= 0.000000000001 { 1.0 } else { 2.0 / rl };
+    sy := if math.abs(tb) <= 0.000000000001 { 1.0 } else { 2.0 / tb };
+    sz := if math.abs(fnSpan) <= 0.000000000001 { -1.0 } else { -2.0 / fnSpan };
+    tx := if math.abs(rl) <= 0.000000000001 { 0.0 } else { (0.0 - (right + left)) / rl };
+    ty := if math.abs(tb) <= 0.000000000001 { 0.0 } else { (0.0 - (top + bottom)) / tb };
+    tz := if math.abs(fnSpan) <= 0.000000000001 { 0.0 } else { (0.0 - (far + near)) / fnSpan };
+    Self<Float, 4, 4> {
+        rows = [
+        vec.vec4(sx, 0.0, 0.0, tx),
+        vec.vec4(0.0, sy, 0.0, ty),
+        vec.vec4(0.0, 0.0, sz, tz),
+        vec.vec4(0.0, 0.0, 0.0, 1.0)
+        ]
+    }
+};
+
+/** Right-handed view matrix looking from `eye` toward `target` with world `up` vector (camera looks down `-Z`). */
+pub Mat.lookAt := fn(eye: vec.FVec3, target: vec.FVec3, up: vec.FVec3): Self<Float, 4, 4> {
+    fwdRaw := target.sub(eye);
+    fwd := if fwdRaw.lengthSq() <= 0.000000000001 { vec.vec3(0.0, 0.0, -1.0) } else { fwdRaw.normalize() };
+    upNorm := if up.lengthSq() <= 0.000000000001 { vec.vec3(0.0, 1.0, 0.0) } else { up.normalize() };
+    var rightRaw := fwd.cross(upNorm);
+    if rightRaw.lengthSq() <= 0.000000000001 {
+        fallbackUp := if math.abs(fwd.y()) < 0.99 { vec.vec3(0.0, 1.0, 0.0) } else { vec.vec3(0.0, 0.0, 1.0) };
+        rightRaw = fwd.cross(fallbackUp);
+    }
+    right := rightRaw.normalize();
+    u := right.cross(fwd);
+    Self<Float, 4, 4> {
+        rows = [
+        vec.vec4(right.x(), right.y(), right.z(), 0.0 - right.dot(eye)),
+        vec.vec4(u.x(), u.y(), u.z(), 0.0 - u.dot(eye)),
+        vec.vec4(0.0 - fwd.x(), 0.0 - fwd.y(), 0.0 - fwd.z(), fwd.dot(eye)),
+        vec.vec4(0.0, 0.0, 0.0, 1.0)
+        ]
     }
 };
