@@ -2,6 +2,7 @@ diagLib := import "core/diag";
 collections := import "core/list";
 tb := import "core/text-builder";
 frontend := import "./frontend";
+types := import "./frontend-types";
 interfaces := import "./interfaces";
 contexts := import "./contexts";
 overloads := import "./overloads";
@@ -294,7 +295,7 @@ collectPublicDeclsWithVisited := fn(graph: frontend.Items, path: String, seenPat
         else if inside {
             if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
                 mut result.pushBack(item);
-            } else if item.kind == frontend.ITEM_KIND_IMPORT and (item.code == "pub_unpack" or item.code == "pub_alias") {
+            } else if item.kind == frontend.ITEM_KIND_IMPORT and (item.code == "pub_unpack" or item.code == "pub_alias" or item.code == "pub_destruct") {
                 mut reexportImports.pushBack(item);
             }
         }
@@ -305,6 +306,9 @@ collectPublicDeclsWithVisited := fn(graph: frontend.Items, path: String, seenPat
             subDecls := self(graph, depPath, nextSeen);
             if imp.code == "pub_unpack" {
                 loop subDecls as sd { mut result.pushBack(sd); }
+            } else if imp.code == "pub_destruct" {
+                destrDecls := selectDestructuredExports(subDecls, imp.name, imp.textValue, path);
+                loop destrDecls as dd { mut result.pushBack(dd); }
             } else {
                 mut result.pushBack((kind = frontend.ITEM_KIND_MODULE_ALIAS, name = imp.name, runtime = moduleKeyForPath(graph, depPath),
                 code = moduleIdentityForPath(graph, depPath), intValue = 0, textValue = depPath));
@@ -425,6 +429,43 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
     }
     result
 }
+
+/** Selects and renames requested `(localName, exportedName)` declarations from `subDecls`, failing if any export is missing. */
+selectDestructuredExports := fn(subDecls: frontend.Items, encodedBindings: String, importSpec: String, prefix: String): frontend.Items {
+    mut out: frontend.Items = [];
+    var pos := 0;
+    loop pos < encodedBindings.length() {
+        locDec := types.decodeLengthPrefixedAt(encodedBindings, pos);
+        if locDec.next < 0 { break; }
+        expDec := types.decodeLengthPrefixedAt(encodedBindings, locDec.next);
+        if expDec.next < 0 { break; }
+        pos = expDec.next;
+        localName := locDec.text;
+        exportedName := expDec.text;
+        var matched := false;
+        loop subDecls as sd {
+            if sd.name == exportedName {
+                matched = true;
+                mut out.pushBack((kind = sd.kind, name = localName, runtime = sd.runtime,
+                code = sd.code, intValue = sd.intValue, textValue = sd.textValue));
+            } else if sd.name.startsWithAt(0, exportedName + ".") {
+                matched = true;
+                suffix := sd.name.slice(exportedName.length(), sd.name.length());
+                mut out.pushBack((kind = sd.kind, name = localName + suffix, runtime = sd.runtime,
+                code = sd.code, intValue = sd.intValue, textValue = sd.textValue));
+            }
+        }
+        if not matched {
+            diagLib.fail(prefix, "module " + importSpec + " has no public export " + exportedName);
+        }
+    }
+    out
+};
+
+/** Builds selectively imported declarations from `path` using encoded `(localName, exportedName)` bindings. */
+moduleDestructuredExports := fn(graph: frontend.Items, path: String, encodedBindings: String, importSpec: String, prefix: String): frontend.Items {
+    selectDestructuredExports(modulePublicDeclarations(graph, path), encodedBindings, importSpec, prefix)
+};
 
 /** Builds one aliased module namespace from its source-declared public interface. */
 moduleAliasExports := fn(graph: frontend.Items, path: String, modAlias: String): frontend.Items {
@@ -687,6 +728,8 @@ coreModuleExports := fn(graph: frontend.Items, modPath: String): frontend.Items 
             } else if moduleProcessed(graph, item.code) {
                 incoming := if item.textValue == "unpack" or item.textValue == "pub_unpack" {
                     modulePublicDeclarations(graph, item.code)
+                } else if item.textValue == "destruct" or item.textValue == "pub_destruct" {
+                    moduleDestructuredExports(graph, item.code, item.runtime, item.code, modPath)
                 } else {
                     moduleAliasExports(graph, item.code, item.runtime)
                 };
@@ -1011,11 +1054,13 @@ initialGraph: frontend.Items, projectRoot: String, cwd: String, builtinSpecs: Li
         if moduleProcessed(graph, depPath) {
             incomingClauseExports := if clause.code == "unpack" or clause.code == "pub_unpack" {
                 modulePublicDeclarations(graph, depPath)
+            } else if clause.code == "destruct" or clause.code == "pub_destruct" {
+                moduleDestructuredExports(graph, depPath, clause.name, clause.textValue, path)
             } else {
                 moduleAliasExports(graph, depPath, clause.name)
             };
             importedExports = appendModuleExports(importedExports, incomingClauseExports, path);
-        } else if clause.code =!= "unpack" and clause.code =!= "pub_unpack" {
+        } else if clause.code =!= "unpack" and clause.code =!= "pub_unpack" and clause.code =!= "destruct" and clause.code =!= "pub_destruct" {
             cyclicFamily := coreCycleFamilyExports(depPath, clause.name);
             if cyclicFamily.length() > 0 {
                 importedExports = appendModuleExports(importedExports, cyclicFamily, path);

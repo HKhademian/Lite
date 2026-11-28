@@ -1,0 +1,24 @@
+{
+  "id": "case.scope.names.destructured-import",
+  "kind": "feature",
+  "source": "destructured-import.lts",
+  "features": [
+    "feature.bindings.names.lookup",
+    "feature.io.reporting.report-values"
+  ],
+  "cases": [
+    {
+      "name": "destructured-import-shorthand-and-rename",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "7 5\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

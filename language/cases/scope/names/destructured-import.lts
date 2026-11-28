@@ -1,0 +1,6 @@
+{ outputLine } := import "core/io";
+{ magnitude = abs, =clamp } := import "math/scalar";
+
+n := magnitude(-7);
+c := clamp(n, 0, 5);
+outputLine(n, c);

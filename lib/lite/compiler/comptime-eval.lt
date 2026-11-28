@@ -376,6 +376,20 @@ resultKind: String, isHostBuiltin: Bool, aliases: List<AliasDecl>): Unit {
     mut ctFnIdxByModName.set(key, indices);
 };
 
+/** Aliases an already-registered function runtime under `name` inside `moduleKey` for comptime calls on imported functions. */
+pub aliasModuleFn := fn(moduleKey: String, name: String, runtime: String): Unit {
+    if name == "" or runtime == "" { return; }
+    rtRes := ctFnIdxByRt.get(runtime);
+    if not rtRes.found { return; }
+    key := moduleKey + "\t" + name;
+    prevList := ctFnIdxByModName.get(key);
+    mut indices: List<Int> = if prevList.found { prevList.value } else { [] };
+    if not indices.contains(rtRes.value) {
+        mut indices.pushBack(rtRes.value);
+        mut ctFnIdxByModName.set(key, indices);
+    }
+};
+
 /** Canonicalizes and records a filesystem path accessed during `comptime { ... }` for `--trace-json` dependency tracking. */
 pub recordTracedFile := fn(rawPath: String): Unit {
     if rawPath == "" { return; }

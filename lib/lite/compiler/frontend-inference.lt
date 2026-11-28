@@ -2,6 +2,7 @@
 
 listLib := import "core/list";
 textLib := import "core/text";
+tb := import "core/text-builder";
 numeric := import "./numeric-literals";
 ir := import "./frontend-ir";
 sym := import "./symbol-table";
@@ -1323,8 +1324,10 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                     afterBrace := if parenDepth == 0 { syntax.skipTrivia(source, blockEnd, prefix) } else { -1 };
                     if afterBrace >= 0 and source.startsWithAt(afterBrace, ":=") {
                         rhsPos := syntax.skipTrivia(source, afterBrace + 2, prefix);
-                        mut decls.pushBack((kind = ir.DECL_KIND_FUTURE_DESTR, name = "", runtime = ir.DECL_BIND_VAL, code = position.toText(),
-                        intValue = position, textValue = rhsPos.toText()));
+                        if not source.wordAt(rhsPos, "import") {
+                            mut decls.pushBack((kind = ir.DECL_KIND_FUTURE_DESTR, name = "", runtime = ir.DECL_BIND_VAL, code = position.toText(),
+                            intValue = position, textValue = rhsPos.toText()));
+                        }
                         position = rhsPos;
                         continue;
                     }
@@ -1368,6 +1371,13 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
             name := source.slice(nameStart, afterName);
             if name == "pub" {
                 declStart := syntax.skipTrivia(source, afterName, prefix);
+                if declStart < size and source.at(declStart) == "{" {
+                    endBr := syntax.scanBraceEnd(source, declStart, prefix);
+                    if endBr >= 0 {
+                        position = endBr;
+                        continue;
+                    }
+                }
                 if declStart < size and source.at(declStart).isNameStart() {
                     declEnd := source.skipName(declStart);
                     operator := syntax.skipTrivia(source, declEnd, prefix);
@@ -1755,6 +1765,106 @@ pub parseImportClause := fn(target: String, source: String, position: Int, modAl
     parseImportClauseWithMode(target, source, position, modAlias, "", prefix)
 };
 
+/** True when `{ ... }` at `openBracePos` is immediately followed by `:= import`. */
+pub isDestructuredImportAt := fn(source: String, openBracePos: Int, prefix: String): Bool {
+    size := source.length();
+    if openBracePos < 0 or openBracePos >= size or source.at(openBracePos) =!= "{" {
+        return false;
+    }
+    closed := syntax.scanBraceEnd(source, openBracePos, prefix);
+    if closed < 0 { return false; }
+    afterBrace := syntax.skipTrivia(source, closed, prefix);
+    if not source.startsWithAt(afterBrace, ":=") { return false; }
+    rhsStart := syntax.skipTrivia(source, afterBrace + 2, prefix);
+    source.wordAt(rhsStart, "import")
+};
+
+/** Parses one top-level `[pub] { Name, =Name, Local = Exported } := import "path";` clause. */
+pub parseDestructuredImportClause := fn(target: String, source: String, openBracePos: Int, isPub: Bool, prefix: String): Item {
+    size := source.length();
+    var cursor := syntax.skipTrivia(source, openBracePos + 1, prefix);
+    if cursor < size and source.at(cursor) == "}" {
+        syntax.failAt(source, cursor, prefix, "destructured import requires at least one binding");
+    }
+    mut encoded: tb.TextBuilder;
+    mut seenLocals: List<String> = [];
+    loop cursor < size {
+        if source.at(cursor) == "}" {
+            cursor = cursor + 1;
+            break;
+        }
+        var localName := "";
+        var exportedName := "";
+        clausePos := cursor;
+        if syntax.isSingleEquals(source, cursor) {
+            nStart := syntax.skipTrivia(source, cursor + 1, prefix);
+            if nStart >= size or not source.at(nStart).isNameStart() {
+                syntax.failAt(source, nStart, prefix, "expected export name after = in destructured import");
+            }
+            nEnd := source.skipName(nStart);
+            nWord := source.slice(nStart, nEnd);
+            if syntax.isReservedWord(nWord) { syntax.unsupportedFeature(source, nStart, nWord, prefix); }
+            if nWord == "_" { syntax.failAt(source, nStart, prefix, "destructured import cannot use wildcard _"); }
+            localName = nWord;
+            exportedName = nWord;
+            cursor = syntax.skipTrivia(source, nEnd, prefix);
+        } else if source.at(cursor).isNameStart() {
+            nEnd := source.skipName(cursor);
+            firstWord := source.slice(cursor, nEnd);
+            if syntax.isReservedWord(firstWord) { syntax.unsupportedFeature(source, cursor, firstWord, prefix); }
+            if firstWord == "_" { syntax.failAt(source, cursor, prefix, "destructured import cannot use wildcard _"); }
+            afterFirst := syntax.skipTrivia(source, nEnd, prefix);
+            if syntax.isSingleEquals(source, afterFirst) {
+                rhsStart := syntax.skipTrivia(source, afterFirst + 1, prefix);
+                if rhsStart >= size or not source.at(rhsStart).isNameStart() {
+                    syntax.failAt(source, rhsStart, prefix, "expected exported name after = in destructured import");
+                }
+                rhsEnd := source.skipName(rhsStart);
+                rhsWord := source.slice(rhsStart, rhsEnd);
+                if syntax.isReservedWord(rhsWord) { syntax.unsupportedFeature(source, rhsStart, rhsWord, prefix); }
+                if rhsWord == "_" { syntax.failAt(source, rhsStart, prefix, "destructured import cannot use wildcard _"); }
+                localName = firstWord;
+                exportedName = rhsWord;
+                cursor = syntax.skipTrivia(source, rhsEnd, prefix);
+            } else {
+                localName = firstWord;
+                exportedName = firstWord;
+                cursor = afterFirst;
+            }
+        } else {
+            syntax.failAt(source, cursor, prefix, "expected binding name inside destructured import");
+        }
+        if seenLocals.contains(localName) {
+            syntax.failAt(source, clausePos, prefix, "duplicate import binding " + localName);
+        }
+        mut seenLocals.pushBack(localName);
+        mut encoded.append(types.encodeLengthPrefixedText(localName));
+        mut encoded.append(types.encodeLengthPrefixedText(exportedName));
+        if cursor < size and source.at(cursor) == "," {
+            cursor = syntax.skipTrivia(source, cursor + 1, prefix);
+            if cursor < size and source.at(cursor) == "}" {
+                cursor = cursor + 1;
+                break;
+            }
+        } else if cursor < size and source.at(cursor) == "}" {
+            cursor = cursor + 1;
+            break;
+        } else {
+            syntax.failAt(source, cursor, prefix, "expected , or } in destructured import");
+        }
+    }
+    afterClose := syntax.skipTrivia(source, cursor, prefix);
+    if not source.startsWithAt(afterClose, ":=") {
+        syntax.failAt(source, afterClose, prefix, "expected := import after destructured import bindings");
+    }
+    impPos := syntax.skipTrivia(source, afterClose + 2, prefix);
+    if not source.wordAt(impPos, "import") {
+        syntax.failAt(source, impPos, prefix, "expected import after :=");
+    }
+    base := parseImportClauseWithMode(target, source, impPos, encoded.build(), if isPub { "pub_destruct" } else { "destruct" }, prefix);
+    base
+};
+
 /** Collects top-level import clauses before parsing so imported declarations can seed the importing file's symbol table. */
 pub collectImportClauses := fn(target: String, source: String, prefix: String): Items {
     mut imports: Items = [];
@@ -1767,6 +1877,12 @@ pub collectImportClauses := fn(target: String, source: String, prefix: String): 
         if ch == "\"" {
             position = syntax.skipAliasString(source, position);
         } else if ch == "{" {
+            if isDestructuredImportAt(source, position, prefix) {
+                imported := parseDestructuredImportClause(target, source, position, false, prefix);
+                mut imports.pushBack(imported);
+                position = imported.intValue;
+                continue;
+            }
             closed := syntax.scanBraceEnd(source, position, prefix);
             if closed < 0 { break; }
             position = closed;
@@ -1775,6 +1891,12 @@ pub collectImportClauses := fn(target: String, source: String, prefix: String): 
             name := source.slice(position, nameEnd);
             if name == "pub" {
                 afterPub := syntax.skipTrivia(source, nameEnd, prefix);
+                if afterPub < size and source.at(afterPub) == "{" {
+                    imported := parseDestructuredImportClause(target, source, afterPub, true, prefix);
+                    mut imports.pushBack(imported);
+                    position = imported.intValue;
+                    continue;
+                }
                 if afterPub < size and source.at(afterPub).isNameStart() {
                     pubEnd := source.skipName(afterPub);
                     pubWord := source.slice(afterPub, pubEnd);

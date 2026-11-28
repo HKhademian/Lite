@@ -2458,6 +2458,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 }
                 (mut functions).pushBack((name = exported.name, runtime = exported.runtime, result = exported.code,
                 first = first, count = exported.intValue, declAt = -1));
+                if exported.name.indexOf(".", 0) < 0 and exported.runtime =!= "" {
+                    comptimeEval.aliasModuleFn(moduleKey, exported.name, exported.runtime);
+                }
                 if not inPreloadDecls and exported.name.indexOf(".", 0) < 0 and existingImpFns.length() == 0 {
                     mut blockDecls.pushBack((name = exported.name, depth = 0));
                 }
@@ -2492,6 +2495,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if exported.intValue > 0 {
                 impCtId := exported.intValue - 1;
                 comptimeEval.registerLocalCtVal(exported.runtime, impCtId);
+                if exported.name.indexOf(".", 0) < 0 {
+                    comptimeEval.registerLocalCtVal("$mod:" + moduleKey + "." + exported.name, impCtId);
+                }
                 ctTok := comptimeEval.comptimeValToken(exported.code, impCtId);
                 if ctTok =!= "" {
                     expCtDepth := if inPreloadDecls { -1 } else { 0 };
@@ -3694,6 +3700,15 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 continue;
             }
         }
+        if ch == "{" and infer.isDestructuredImportAt(source, position, prefix) {
+            if blockCount =!= 0 {
+                failAt(source, position, prefix, "import is only allowed at top level");
+            }
+            imported := infer.parseDestructuredImportClause(target, source, position, false, prefix);
+            mut items.pushBack(imported);
+            position = imported.intValue;
+            continue;
+        }
         scanDestr := expr.scanDestructureStart(source, position, size, prefix);
         destructureOpen := scanDestr.openPos;
         destructureMutable := scanDestr.isMutable;
@@ -3703,7 +3718,11 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if not source.startsWithAt(afterTarget, ":=") {
                 failAt(source, afterTarget, prefix, "expected := after " + destructure.shape + " destructuring target");
             }
-            rhs := parseInitializerExpression(target, source, skipTrivia(source, afterTarget + 2, prefix), prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
+            rhsCheck := skipTrivia(source, afterTarget + 2, prefix);
+            if source.wordAt(rhsCheck, "import") {
+                failAt(source, rhsCheck, prefix, if destructureMutable { "import cannot use var" } else { "import is only allowed at top level" });
+            }
+            rhs := parseInitializerExpression(target, source, rhsCheck, prefix, locals, functions, functionParams, currentName, "", stmtCtxs, aliases);
             if target == TARGET_TS and currentLive and not currentStopped {
                 checkTraceSafety(source, destructureOpen, prefix, rhs.code, currentName, maxFutureAt, locals, functions, futureValues, items);
                 locals = mergeOuterCallableUpdatesFromCode(locals, rhs.code);
@@ -4073,6 +4092,12 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 failAt(source, nameStart, prefix, "pub is only allowed on top-level declarations");
             }
             declarationStart := skipTrivia(source, position, prefix);
+            if declarationStart < size and source.at(declarationStart) == "{" {
+                imported := infer.parseDestructuredImportClause(target, source, declarationStart, true, prefix);
+                mut items.pushBack(imported);
+                position = imported.intValue;
+                continue;
+            }
             if declarationStart >= size or not source.at(declarationStart).isNameStart() {
                 failAt(source, declarationStart, prefix, "expected a declaration after pub");
             }
@@ -4552,6 +4577,15 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     importedOutputName = builtinsAbi.coreOutputName(functions[functionIndex].runtime);
                     importedOutputOpen = skipTrivia(source, memberEnd, prefix);
                 }
+            }
+        } else if not isDeclFollow and position < size and source.at(position) == "(" and moduleIndex < 0 {
+            unqualFnIdx := findFunction(functions, name);
+            if unqualFnIdx >= 0 and builtinsAbi.coreOutputName(functions[unqualFnIdx].runtime) =!= "" {
+                if isLtModule and blockCount == 0 {
+                    failAt(source, nameStart, prefix, "top-level runtime statement is not allowed in .lt module");
+                }
+                importedOutputName = builtinsAbi.coreOutputName(functions[unqualFnIdx].runtime);
+                importedOutputOpen = position;
             }
         }
         if importedOutputName =!= "" {
