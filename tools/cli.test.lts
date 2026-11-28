@@ -283,7 +283,7 @@ probePaths: List<String> = [
 "compiler/package.json", "lib/lite", "compiler/manifests",
 "compiler/bootstrap/igniter", "compiler/bootstrap/igniter.ts", "compiler/bootstrap/seed.ts",
 "igniter/artifacts.ts", "igniter/package.json", "igniter/tsconfig.json",
-"tools/src/cli.lts", "tools/src/fmt.lts", "tools/src/internal", "lib/core", "lib/data"
+"tools/src/cli.lts", "tools/src/fmt.lts", "tools/src/internal", "lib/$preload.lt", "lib/core", "lib/data"
 ];
 loop probePaths as rel {
     copyRepoTree(probeDir, rel);
@@ -404,7 +404,7 @@ if ccProbe.status == 0 {
     "package.json", "config/versions.json", "lib/lite", "compiler/manifests",
     "compiler/bootstrap/compiler.c", "compiler/bootstrap/seed.ts",
     "tools/src/ignite.lts", "tools/src/cli.lts", "tools/src/fmt.lts",
-    "lib/core", "lib/data", "tools/src/internal", "lib/external"
+    "lib/$preload.lt", "lib/core", "lib/data", "tools/src/internal", "lib/external"
     ];
     loop cProbePaths as rel {
         copyRepoTree(cProbeDir, rel);
