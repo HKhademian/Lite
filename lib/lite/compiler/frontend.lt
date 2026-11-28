@@ -1249,6 +1249,10 @@ resolveOwnedTypeOpTarget := fn(source: String, nameStart: Int, prefix: String, a
     if entry.target.startsWithAt(0, "@gentpl:") {
         pDec := types.decodeLengthPrefixedAt(entry.target, 8);
         tplBody := if pDec.next >= 0 { entry.target.slice(pDec.next, entry.target.length()) } else { "" };
+        if tplBody.startsWithAt(0, "Iface<") {
+            return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false, isAliasTarget = false, aliasName = "", aliasTargetKind = "",
+            error = "cannot attach operation to interface " + typeName);
+        }
         ownerKey := types.typeOpOwnerKey(tplBody);
         isNomT := types.isRecordKind(tplBody) or types.isEnumKind(tplBody) or types.isDistinctKind(tplBody);
         if isNomT and ownerKey =!= "" {
