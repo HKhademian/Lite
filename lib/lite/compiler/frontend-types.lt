@@ -7258,7 +7258,7 @@ pub parseTypeOpHeader := fn(source: String, position: Int, prefix: String, alias
                 }
                 typeStart := cursor;
                 typed := parseFunctionType(source, typeStart, prefix, scopedAliases, genericType);
-                if count == 0 and source.wordAt(typeStart, "Self") and typeOpOwnerKey(typed.kind) == ownerKey {
+                if count == 0 and source.wordAt(typeStart, "Self") and (typeOpOwnerKey(typed.kind) == ownerKey or ownerKey.startsWithAt(0, "$alias:")) {
                     hasSelfRecv = true;
                 }
                 if access =!= "" and not isGenericCoreOwner(typeName) and not isGenericParamName(genericType, distinctBaseKind(typed.kind)) and not isMutContainerKind(typed.kind) {

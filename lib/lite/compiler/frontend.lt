@@ -217,6 +217,9 @@ pub ITEM_KIND_ASSIGN_INT := ir.ITEM_KIND_ASSIGN_INT;
 pub ITEM_KIND_ASSIGN_STRING := ir.ITEM_KIND_ASSIGN_STRING;
 pub ITEM_KIND_ASSIGN_BOOL := ir.ITEM_KIND_ASSIGN_BOOL;
 pub ITEM_KIND_ASSIGN_FLOAT := ir.ITEM_KIND_ASSIGN_FLOAT;
+pub isAliasOpKey := ir.isAliasOpKey;
+pub parseAliasOpKey := ir.parseAliasOpKey;
+pub renameAliasOpKey := ir.renameAliasOpKey;
 ITEM_KIND_LOCAL_UNIT := ir.ITEM_KIND_LOCAL_UNIT;
 ITEM_KIND_VAR_UNIT := ir.ITEM_KIND_VAR_UNIT;
 
@@ -1108,13 +1111,13 @@ parseExpressionItem := fn(target: String, source: String, position: Int, prefix:
 };
 
 /** Collects aliases, `pub` declarations, inner-alias hints, root functions, root values, and root assignments in a single pass over module source. */
-/** Resolves `typeName` as an owned nominal type declaration in the current module (or a verified core built-in owner). Rejects transparent aliases and foreign types. */
-resolveOwnedTypeOpTarget := fn(source: String, nameStart: Int, prefix: String, aliases: List<AliasDecl>, moduleIdentity: String, typeName: String): (ok: Bool, ownerKind: String, ownerKey: String, selfTarget: String, isGenericOwner: Bool, error: String) {
+/** Resolves `typeName` as an owned nominal type, local transparent alias, or core built-in owner; rejects unknown or foreign types. */
+resolveOwnedTypeOpTarget := fn(source: String, nameStart: Int, prefix: String, aliases: List<AliasDecl>, moduleKey: String, moduleIdentity: String, typeName: String, allowUnresolved: Bool): (ok: Bool, ownerKind: String, ownerKey: String, selfTarget: String, isGenericOwner: Bool, isAliasTarget: Bool, aliasName: String, aliasTargetKind: String, error: String) {
     coreOwner := types.coreBuiltinOwnerType(moduleIdentity, typeName);
     if coreOwner =!= "" {
         isGen := types.isGenericCoreOwner(coreOwner);
         selfT := if isGen { "$Family:" + coreOwner } else { coreOwner };
-        return (ok = true, ownerKind = coreOwner, ownerKey = coreOwner, selfTarget = selfT, isGenericOwner = isGen, error = "");
+        return (ok = true, ownerKind = coreOwner, ownerKey = coreOwner, selfTarget = selfT, isGenericOwner = isGen, isAliasTarget = false, aliasName = "", aliasTargetKind = "", error = "");
     }
     var foundIdx := -1;
     var i := 0;
@@ -1124,41 +1127,111 @@ resolveOwnedTypeOpTarget := fn(source: String, nameStart: Int, prefix: String, a
         }
         i = i + 1;
     }
-    if foundIdx < 0 {
-        return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
-        error = "cannot attach operation to unknown or foreign type " + typeName + "; operations may only be attached in the owning module of a record, enum, or built-in type");
+    if foundIdx < 0 or aliases[foundIdx].at < 0 {
+        return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false, isAliasTarget = false, aliasName = "", aliasTargetKind = "",
+        error = "cannot attach operation to unknown or foreign type " + typeName + "; operations may only be attached to a locally declared type, alias, or built-in type");
     }
     entry := aliases[foundIdx];
-    if entry.at >= 0 and entry.target.startsWithAt(0, "@genraw:") {
+    if entry.target.startsWithAt(0, "Iface<") {
+        return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false, isAliasTarget = false, aliasName = "", aliasTargetKind = "",
+        error = "cannot attach operation to interface " + typeName);
+    }
+    if entry.target.startsWithAt(0, "@genraw:") {
         pDec := types.decodeLengthPrefixedAt(entry.target, 8);
         innerRaw := if pDec.next >= 0 { entry.target.slice(pDec.next, entry.target.length()) } else { "" };
-        if not innerRaw.startsWithAt(0, "@recraw:") and not innerRaw.startsWithAt(0, "@enumraw:") and not innerRaw.startsWithAt(0, "@distraw:") {
-            return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
-            error = "cannot attach operation to alias or foreign type " + typeName + "; operations may only be attached to an owned record, enum, distinct, or built-in type");
+        if innerRaw.startsWithAt(0, "@gentpl:") or innerRaw.startsWithAt(0, "Iface<") {
+            return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false, isAliasTarget = false, aliasName = "", aliasTargetKind = "",
+            error = "cannot attach operation to interface " + typeName);
         }
         emptySeen: List<String> = [];
         resolvedParams := types.resolveComptimeParamSpecs(source, nameStart, prefix, aliases, pDec.text);
         tplKind := types.resolveGenericTypeText(source, nameStart, prefix, aliases, innerRaw, resolvedParams, emptySeen);
-        ownerKey := types.typeOpOwnerKey(tplKind);
+        isNomGen := innerRaw.startsWithAt(0, "@recraw:") or innerRaw.startsWithAt(0, "@enumraw:") or innerRaw.startsWithAt(0, "@distraw:");
+        selfTarget := "@gentpl:" + types.encodeLengthPrefixedText(resolvedParams) + tplKind;
+        if isNomGen {
+            ownerKey := types.typeOpOwnerKey(tplKind);
+            if ownerKey == "" {
+                return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false, isAliasTarget = false, aliasName = "", aliasTargetKind = "",
+                error = "cannot attach operation to non-nominal type " + typeName);
+            }
+            return (ok = true, ownerKind = tplKind, ownerKey = ownerKey, selfTarget = selfTarget, isGenericOwner = true, isAliasTarget = false, aliasName = "", aliasTargetKind = "", error = "");
+        }
+        aliasScopeKey := "$alias:" + moduleKey + "#" + typeName;
+        return (ok = true, ownerKind = tplKind, ownerKey = aliasScopeKey, selfTarget = selfTarget, isGenericOwner = true, isAliasTarget = true, aliasName = typeName, aliasTargetKind = selfTarget, error = "");
+    }
+    if entry.target.startsWithAt(0, "@gentpl:") {
+        pDec := types.decodeLengthPrefixedAt(entry.target, 8);
+        tplBody := if pDec.next >= 0 { entry.target.slice(pDec.next, entry.target.length()) } else { "" };
+        ownerKey := types.typeOpOwnerKey(tplBody);
+        isNomT := types.isRecordKind(tplBody) or types.isEnumKind(tplBody) or types.isDistinctKind(tplBody);
+        if isNomT and ownerKey =!= "" {
+            return (ok = true, ownerKind = tplBody, ownerKey = ownerKey, selfTarget = entry.target, isGenericOwner = true, isAliasTarget = false, aliasName = "", aliasTargetKind = "", error = "");
+        }
+        aliasScopeKey := "$alias:" + moduleKey + "#" + typeName;
+        return (ok = true, ownerKind = tplBody, ownerKey = aliasScopeKey, selfTarget = entry.target, isGenericOwner = true, isAliasTarget = true, aliasName = typeName, aliasTargetKind = entry.target, error = "");
+    }
+    isNomRaw := entry.target.startsWithAt(0, "@recraw:") or entry.target.startsWithAt(0, "@enumraw:") or entry.target.startsWithAt(0, "@distraw:");
+    emptySeen: List<String> = [];
+    ownerKind := if entry.target.startsWithAt(0, "$Kind:") {
+        entry.target.slice(6, entry.target.length())
+    } else if allowUnresolved {
+        canRes := types.canResolveTypeAt(entry.target, 0, prefix, aliases, "", emptySeen, 32);
+        if not canRes.ok {
+            return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false, isAliasTarget = false, aliasName = "", aliasTargetKind = "", error = "unresolved alias " + typeName);
+        }
+        canRes.kind
+    } else {
+        resolveTypeText(source, nameStart, prefix, aliases, entry.target, emptySeen)
+    };
+    if isNomRaw {
+        ownerKey := types.typeOpOwnerKey(ownerKind);
         if ownerKey == "" {
-            return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
+            return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false, isAliasTarget = false, aliasName = "", aliasTargetKind = "",
             error = "cannot attach operation to non-nominal type " + typeName);
         }
-        selfTarget := "@gentpl:" + types.encodeLengthPrefixedText(resolvedParams) + tplKind;
-        return (ok = true, ownerKind = tplKind, ownerKey = ownerKey, selfTarget = selfTarget, isGenericOwner = true, error = "");
+        return (ok = true, ownerKind = ownerKind, ownerKey = ownerKey, selfTarget = ownerKind, isGenericOwner = false, isAliasTarget = false, aliasName = "", aliasTargetKind = "", error = "");
     }
-    if entry.at < 0 or (not entry.target.startsWithAt(0, "@recraw:") and not entry.target.startsWithAt(0, "@enumraw:") and not entry.target.startsWithAt(0, "@distraw:")) {
-        return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
-        error = "cannot attach operation to alias or foreign type " + typeName + "; operations may only be attached to an owned record, enum, distinct, or built-in type");
+    aliasScopeKey := "$alias:" + moduleKey + "#" + typeName;
+    (ok = true, ownerKind = ownerKind, ownerKey = aliasScopeKey, selfTarget = ownerKind, isGenericOwner = false, isAliasTarget = true, aliasName = typeName, aliasTargetKind = ownerKind, error = "")
+};
+
+/** Returns empty string if `(opKey, opSigKey)` does not collide with visible nominal/alias ops on `targetKind`, else error text. */
+checkTypeOpCollision := fn(functions: List<FunctionInfo>, typeOpKey: String, isStatic: Bool, nominalOwnerKey: String, targetKind: String, opName: String, opSigKey: String, qualName: String, declAt: Int, checkRuntime: String): String {
+    if nominalOwnerKey =!= "" {
+        nomKey := (if isStatic { "$statictypeop:" } else { "$typeop:" }) + nominalOwnerKey + "." + opName;
+        loop sym.findFunctions(functions, nomKey) as eoi {
+            f := functions[eoi];
+            sameDecl := declAt >= 0 and f.declAt == declAt;
+            sameRt := checkRuntime =!= "" and f.runtime == checkRuntime;
+            if not sameDecl and not sameRt and overloads.fnSigKeyFor(f.runtime) == opSigKey {
+                if f.name == typeOpKey {
+                    return "duplicate type operation " + qualName;
+                }
+                return "operation " + qualName + " collides with existing operation on " + types.displayKind(targetKind);
+            }
+        }
     }
-    emptySeen: List<String> = [];
-    ownerKind := resolveTypeText(source, nameStart, prefix, aliases, entry.target, emptySeen);
-    ownerKey := types.typeOpOwnerKey(ownerKind);
-    if ownerKey == "" {
-        return (ok = false, ownerKind = "", ownerKey = "", selfTarget = "", isGenericOwner = false,
-        error = "cannot attach operation to non-nominal type " + typeName);
+    if targetKind =!= "" {
+        suffix := "\t" + targetKind + "\t" + opName;
+        var fi := 0;
+        loop functions as f {
+            if ir.isAliasOpKey(f.name) and f.name.endsWith(suffix) {
+                sameDecl := declAt >= 0 and f.declAt == declAt;
+                sameRt := checkRuntime =!= "" and f.runtime == checkRuntime;
+                if not sameDecl and not sameRt {
+                    ak := ir.parseAliasOpKey(f.name);
+                    if ak.ok and ak.opName == opName and ak.targetKind == targetKind and overloads.fnSigKeyFor(f.runtime) == opSigKey {
+                        if f.name == typeOpKey {
+                            return "duplicate type operation " + qualName;
+                        }
+                        return "operation " + qualName + " collides with existing alias operation on " + types.displayKind(targetKind);
+                    }
+                }
+            }
+            fi = fi + 1;
+        }
     }
-    (ok = true, ownerKind = ownerKind, ownerKey = ownerKey, selfTarget = ownerKind, isGenericOwner = false, error = "")
+    ""
 };
 
 /** Parses and registers one `<Name> := interface[<TypeParams>] { ... }` definition. */
@@ -2471,13 +2544,31 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             loop existingImpOps as eoi {
                 if functions[eoi].runtime == exported.runtime { alreadyImpOp = true; break; }
             }
+            if not alreadyImpOp and ir.isAliasOpKey(exported.name) {
+                loop functions as fExisting {
+                    if ir.isAliasOpKey(fExisting.name) and fExisting.runtime == exported.runtime {
+                        alreadyImpOp = true;
+                        break;
+                    }
+                }
+            }
             if not alreadyImpOp {
                 contexts.registerFnContext(exported.runtime, contexts.extractCtxKindFromParams(exported.textValue));
                 opGenP := if exported.runtime.startsWithAt(0, "$gen:") {
                     tIdx := generics.findTemplate(exported.runtime.slice(5, exported.runtime.length()));
                     if tIdx >= 0 { generics.getTemplate(tIdx).genericParams } else { "" }
                 } else { "" };
-                opSig := overloads.overloadSigKey(exported.name.startsWithAt(0, "$statictypeop:"), opGenP, exported.textValue, exported.intValue);
+                opSig := overloads.overloadSigKey(exported.name.startsWithAt(0, "$statictypeop:") or exported.name.startsWithAt(0, "$staticaliasop:"), opGenP, exported.textValue, exported.intValue);
+                if ir.isAliasOpKey(exported.name) {
+                    ak := ir.parseAliasOpKey(exported.name);
+                    if ak.ok {
+                        impColErr := checkTypeOpCollision(functions, exported.name, ak.isStatic, types.typeOpOwnerKey(ak.targetKind), ak.targetKind, ak.opName, opSig, ak.aliasName + "." + ak.opName, -1, exported.runtime);
+                        if impColErr =!= "" {
+                            diagLib.fail(prefix, impColErr);
+                        }
+                        comptimeEval.registerAliasOpFn(moduleKey, ak.targetKind, ak.opName, exported.runtime);
+                    }
+                }
                 overloads.registerFnSig(exported.runtime, opSig, opGenP, exported.textValue);
                 first := parameterTotal;
                 loop splitPipeEntries(exported.textValue, exported.intValue) as expParam {
@@ -2495,8 +2586,23 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if exported.intValue > 0 {
                 impCtId := exported.intValue - 1;
                 comptimeEval.registerLocalCtVal(exported.runtime, impCtId);
-                if exported.name.indexOf(".", 0) < 0 {
+                if exported.name.indexOf(".", 0) < 0 or ir.isTypeOrAliasPropTag(exported.textValue) {
                     comptimeEval.registerLocalCtVal("$mod:" + moduleKey + "." + exported.name, impCtId);
+                }
+                if ir.isTypeOrAliasPropTag(exported.textValue) {
+                    if exported.textValue.startsWithAt(0, "$typeprop:") {
+                        tPropSuf := exported.textValue.slice(10, exported.textValue.length());
+                        comptimeEval.registerLocalCtVal("$mod:" + moduleKey + ".$prop:" + tPropSuf, impCtId);
+                    } else if exported.textValue.startsWithAt(0, "$aliasprop:") {
+                        tIdxA := exported.textValue.indexOf("\t", 11);
+                        if tIdxA >= 0 {
+                            restA := exported.textValue.slice(tIdxA + 1, exported.textValue.length());
+                            tIdxB := restA.indexOf("\t", 0);
+                            if tIdxB >= 0 {
+                                comptimeEval.registerLocalCtVal("$mod:" + moduleKey + ".$prop:" + restA.slice(0, tIdxB) + "." + restA.slice(tIdxB + 1, restA.length()), impCtId);
+                            }
+                        }
+                    }
                 }
                 ctTok := comptimeEval.comptimeValToken(exported.code, impCtId);
                 if ctTok =!= "" {
@@ -2504,9 +2610,15 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     mut aliases.pushBack((name = "$ctv:" + exported.name, target = ctTok, at = -1, end = 0, depth = expCtDepth));
                 }
             }
+            impValDepth := if inPreloadDecls { -1 } else { 0 };
             (mut locals).pushBack((name = exported.name, runtime = exported.runtime, kind = exported.code,
-            mutable = false, writable = false, depth = if inPreloadDecls { -1 } else { 0 }, constant = false, code = exported.runtime,
+            mutable = false, writable = false, depth = impValDepth, constant = false, code = exported.runtime,
             intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+            if ir.isTypeOrAliasPropTag(exported.textValue) {
+                (mut locals).pushBack((name = exported.textValue, runtime = exported.runtime, kind = exported.code,
+                mutable = false, writable = false, depth = impValDepth, constant = false, code = exported.runtime,
+                intValue = 0, textValue = "", initState = INIT_STATE_INIT));
+            }
             if not inPreloadDecls and exported.name.indexOf(".", 0) < 0 {
                 mut blockDecls.pushBack((name = exported.name, depth = 0));
             }
@@ -2634,7 +2746,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                 tName := qualName.slice(0, dotPos);
                 oName := qualName.slice(dotPos + 1, qualName.length());
                 opAt := decl.intValue;
-                owner := resolveOwnedTypeOpTarget(source, opAt, prefix, aliases, moduleIdentity, tName);
+                owner := resolveOwnedTypeOpTarget(source, opAt, prefix, aliases, moduleKey, moduleIdentity, tName, true);
                 if owner.ok {
                     headerPos := parseDigits(decl.textValue, 0, decl.textValue.length());
                     scopedSelf := types.withSelfAlias(aliases, owner.selfTarget, 0);
@@ -2646,13 +2758,16 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         if types.containsDynKind(header.result) {
                             failAt(source, opAt, prefix, "borrowed dyn Interface cannot escape via function return type");
                         }
-                        typeOpKey := (if header.hasSelfRecv { "$typeop:" } else { "$statictypeop:" }) + owner.ownerKey + "." + oName;
+                        typeOpKey := if owner.isAliasTarget {
+                            ir.makeAliasOpKey(not header.hasSelfRecv, moduleKey, tName, owner.aliasTargetKind, oName)
+                        } else {
+                            (if header.hasSelfRecv { "$typeop:" } else { "$statictypeop:" }) + owner.ownerKey + "." + oName
+                        };
                         sigKey := overloads.overloadSigKey(not header.hasSelfRecv, header.genericType, header.params, header.count);
                         existingOpCands := sym.findFunctions(functions, typeOpKey);
-                        var dupOpSig := false;
-                        loop existingOpCands as eoi {
-                            if overloads.fnSigKeyFor(functions[eoi].runtime) == sigKey { dupOpSig = true; break; }
-                        }
+                        nomOwnerForCol := if owner.isAliasTarget { types.typeOpOwnerKey(owner.aliasTargetKind) } else { owner.ownerKey };
+                        targetForCol := if owner.isAliasTarget { owner.aliasTargetKind } else { owner.ownerKind };
+                        dupOpSig := checkTypeOpCollision(functions, typeOpKey, not header.hasSelfRecv, nomOwnerForCol, targetForCol, oName, sigKey, qualName, opAt, "") =!= "";
                         ovOrd := existingOpCands.length();
                         ovSuffix := if ovOrd > 0 { "$ov" + ovOrd.toText() } else { "" };
                         afterHdr := skipTrivia(source, header.next, prefix);
@@ -2686,6 +2801,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                                 ));
                             }
                             comptimeEval.registerFnDef(fnRuntime, qualName, moduleKey, moduleIdentity, source, prefix, afterHdr + 1, opBodyEndFuture - 1, header.params, header.count, header.result, false, aliases);
+                            if owner.isAliasTarget {
+                                comptimeEval.registerAliasOpFn(moduleKey, owner.aliasTargetKind, oName, fnRuntime);
+                            }
                             contexts.registerFnContext(fnRuntime, contexts.extractCtxKindFromParams(header.params));
                             overloads.registerFnSig(fnRuntime, sigKey, header.genericType, header.params);
                             (mut functions).pushBack((name = typeOpKey, runtime = fnRuntime, result = header.result,
@@ -2862,7 +2980,7 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                             infHPos = parseDigits(dInf.textValue, 0, dInf.textValue.length());
                             dotP := dInf.name.indexOf(".", 0);
                             if dotP > 0 {
-                                oInf := resolveOwnedTypeOpTarget(source, infFn.declAt, prefix, aliases, moduleIdentity, dInf.name.slice(0, dotP));
+                                oInf := resolveOwnedTypeOpTarget(source, infFn.declAt, prefix, aliases, moduleKey, moduleIdentity, dInf.name.slice(0, dotP), true);
                                 if oInf.ok { infAliases = types.withSelfAlias(aliases, oInf.selfTarget, 0); }
                             }
                             break;
@@ -4145,6 +4263,10 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     }
                     pubOpEnd := source.skipName(pubOpScan);
                     declarationOperator = skipTrivia(source, pubOpEnd, prefix);
+                    if declarationOperator < size and source.at(declarationOperator) == ":" and not source.startsWithAt(declarationOperator, ":=") {
+                        annTypeOp := types.parseLocalType(source, declarationOperator + 1, prefix, aliases);
+                        declarationOperator = skipTrivia(source, annTypeOp.next, prefix);
+                    }
                 }
                 if not source.startsWithAt(declarationOperator, ":=") {
                     failAt(source, declarationOperator, prefix, "expected := after published declaration name");
@@ -5894,18 +6016,131 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
             if opScan < size and source.at(opScan) == "$" { opScan = opScan + 1; }
             if opScan < size and source.at(opScan).isNameStart() {
                 opEnd := source.skipName(opScan);
-                afterOp := skipTrivia(source, opEnd, prefix);
+                var afterOp := skipTrivia(source, opEnd, prefix);
+                var hasPropAnn := false;
+                var propAnnKind := "";
+                if afterOp < size and source.at(afterOp) == ":" and not source.startsWithAt(afterOp, ":=") {
+                    propAnn := parseLocalType(source, afterOp + 1, prefix, aliases);
+                    if propAnn.writable { failAt(source, afterOp, prefix, "static property cannot use mut annotation"); }
+                    hasPropAnn = true;
+                    propAnnKind = propAnn.kind;
+                    afterOp = skipTrivia(source, propAnn.next, prefix);
+                }
                 if source.startsWithAt(afterOp, ":=") {
                     afterOpDecl := skipTrivia(source, afterOp + 2, prefix);
-                    if not source.wordAt(afterOpDecl, "fn") {
-                        failAt(source, afterOpDecl, prefix, "type-attached declaration " + name + "." + source.slice(opStart, opEnd) + " must be a fn");
-                    }
                     opName := source.slice(opStart, opEnd);
                     qualName := name + "." + opName;
+                    if not source.wordAt(afterOpDecl, "fn") {
+                        if opName.startsWithAt(0, "$") {
+                            failAt(source, opStart, prefix, "compiler hook " + opName + " on " + name + " must be a fn");
+                        }
+                        owner := resolveOwnedTypeOpTarget(source, nameStart, prefix, aliases, moduleKey, moduleIdentity, name, false);
+                        if not owner.ok {
+                            failAt(source, nameStart, prefix, owner.error);
+                        }
+                        if owner.isGenericOwner {
+                            failAt(source, opStart, prefix, "static property " + qualName + " requires a concrete type or alias");
+                        }
+                        if types.isEnumKind(owner.ownerKind) and types.enumCaseIndex(owner.ownerKind, opName) >= 0 {
+                            failAt(source, opStart, prefix, "static property " + qualName + " collides with enum case " + opName);
+                        }
+                        if types.isEnumKind(owner.ownerKind) and (opName == "value" or opName == "from") and types.enumBackingKind(owner.ownerKind) =!= "" {
+                            what := if opName == "from" { "built-in from" } else { "value" };
+                            failAt(source, opStart, prefix, "static property " + qualName + " collides with enum backing " + what);
+                        }
+                        if localIndex(locals, qualName) >= 0 or findFunction(functions, "$statictypeop:" + owner.ownerKey + "." + opName) >= 0 or
+                        findFunction(functions, "$typeop:" + owner.ownerKey + "." + opName) >= 0 {
+                            failAt(source, opStart, prefix, "duplicate static member " + qualName);
+                        }
+                        propTag := if owner.isAliasTarget {
+                            "$aliasprop:" + moduleKey + "#" + name + "\t" + owner.aliasTargetKind + "\t" + opName
+                        } else {
+                            "$typeprop:" + owner.ownerKey + "." + opName
+                        };
+                        if localIndex(locals, propTag) >= 0 {
+                            failAt(source, opStart, prefix, "duplicate static property " + qualName);
+                        }
+                        propExp := if hasPropAnn {
+                            propAnnKind
+                        } else if afterOpDecl < size and (source.at(afterOpDecl) == "{" or source.at(afterOpDecl) == ".") {
+                            owner.ownerKind
+                        } else {
+                            ""
+                        };
+                        rawPropParsed := parseInitializerExpression(target, source, afterOpDecl, prefix, locals, functions, functionParams, currentName, propExp, stmtCtxs, aliases);
+                        propInitState := ctx.extractPartialInitState(rawPropParsed.textValue);
+                        var parsedProp := (kind = rawPropParsed.kind, code = rawPropParsed.code, intValue = rawPropParsed.intValue, textValue = ctx.stripPartialInitTag(rawPropParsed.textValue), constant = rawPropParsed.constant, next = rawPropParsed.next);
+                        if hasPropAnn and not isCompatibleKind(propAnnKind, parsedProp.kind) {
+                            failAt(source, afterOpDecl, prefix, "cannot initialize " + qualName + " of type " + displayKind(propAnnKind) + " with " + displayKind(parsedProp.kind));
+                        }
+                        effPropKind := if hasPropAnn { propAnnKind } else { parsedProp.kind };
+                        if hasPropAnn and effPropKind =!= parsedProp.kind {
+                            parsedProp = (kind = effPropKind, code = assignValueCode(target, effPropKind, parsedProp.kind, parsedProp.code), intValue = parsedProp.intValue, textValue = parsedProp.textValue, constant = parsedProp.constant, next = parsedProp.next);
+                        }
+                        var stage1PropCtId := -1;
+                        if isLtModule and propInitState == INIT_STATE_INIT {
+                            parsedProp = stage1EvalTopLevelInit(target, source, afterOpDecl, prefix, moduleKey, "", parsedProp, aliases, locals);
+                            stage1PropCtId = comptimeEval.lookupMaterializedCode(parsedProp.code);
+                        }
+                        locals = checkStatementTrace(target, source, nameStart, prefix, parsedProp.code, false, "", currentName, maxFutureAt, locals, functions, futureValues, items, currentLive and not currentStopped);
+                        rejectNonValueBinding(source, nameStart, prefix, parsedProp.kind, qualName);
+                        propWritable := if types.isSliceKind(parsedProp.kind) { sliceBorrows.sliceExprIsMutable(parsedProp.textValue) } else { false };
+                        propBorrow := sliceBorrows.borrowTagForBinding(parsedProp.kind, propWritable, parsedProp.textValue);
+                        if not propBorrow.ok { failAt(source, nameStart, prefix, propBorrow.error); }
+                        propStmtNext := consumeStatementEnd(source, parsedProp.next, prefix);
+                        if propStmtNext < 0 { failAt(source, skipTrivia(source, parsedProp.next, prefix), prefix, "expected ; after static property " + qualName); }
+                        propRuntime := moduleValueRuntime(target, moduleKey, name + "$" + opName);
+                        var propCtId := if stage1PropCtId >= 0 { comptimeEval.registerLocalCtVal(propRuntime, stage1PropCtId); stage1PropCtId }
+                        else if propInitState == INIT_STATE_INIT { comptimeEval.registerScalarOrMatLocal(propRuntime, parsedProp.kind, parsedProp.constant, parsedProp.intValue, parsedProp.textValue, parsedProp.code) }
+                        else { -1 };
+                        if propCtId < 0 and propInitState == INIT_STATE_INIT and not isLtModule and not parsedProp.constant and parsedProp.kind =!= VALUE_KIND_NEVER {
+                            specProp := comptimeEval.tryEvalPureSpeculative(source, afterOpDecl, parsedProp.next, prefix, moduleKey, parsedProp.kind, aliases, collectVisibleCtBindings(locals));
+                            if specProp.ok {
+                                comptimeEval.registerLocalCtVal(propRuntime, specProp.valId);
+                                propCtId = specProp.valId;
+                            }
+                        }
+                        if propCtId >= 0 and propInitState == INIT_STATE_INIT {
+                            comptimeEval.registerLocalCtVal("$mod:" + moduleKey + "." + qualName, propCtId);
+                            comptimeEval.registerLocalCtVal("$mod:" + moduleKey + ".$prop:" + (if owner.isAliasTarget { owner.aliasTargetKind } else { owner.ownerKey }) + "." + opName, propCtId);
+                        }
+                        position = propStmtNext;
+                        propLocalCode := if target == TARGET_TS and containsFnKind(parsedProp.kind) {
+                            if propInitState == INIT_STATE_INIT { computeCallableRhsDeps(parsedProp.code) } else { "" }
+                        } else { parsedProp.code };
+                        mut locals.pushBack((name = qualName, runtime = propRuntime, kind = parsedProp.kind,
+                        mutable = false, writable = propWritable, depth = 0, constant = if propInitState == INIT_STATE_INIT { parsedProp.constant } else { false }, code = propLocalCode,
+                        intValue = parsedProp.intValue, textValue = propBorrow.textValue, initState = propInitState));
+                        mut locals.pushBack((name = propTag, runtime = propRuntime, kind = parsedProp.kind,
+                        mutable = false, writable = propWritable, depth = 0, constant = if propInitState == INIT_STATE_INIT { parsedProp.constant } else { false }, code = propLocalCode,
+                        intValue = parsedProp.intValue, textValue = propBorrow.textValue, initState = propInitState));
+                        if publishedValues.has(qualName) {
+                            mut items.pushBack((kind = ITEM_KIND_PUBLIC_VALUE, name = qualName, runtime = propRuntime, code = parsedProp.kind,
+                            intValue = if propCtId >= 0 { propCtId + 1 } else { 0 }, textValue = propTag));
+                        }
+                        if currentLive and not currentStopped {
+                            itemPropCode := if propInitState == INIT_STATE_INIT { copiedValueCode(target, parsedProp.kind, parsedProp.code) } else { parsedProp.code };
+                            valDeclPrefix := if propInitState == INIT_STATE_INIT { ITEM_PREFIX_LOCAL } else { ITEM_PREFIX_VAR };
+                            if propInitState == INIT_STATE_INIT and isHostModuleIdentity(moduleIdentity) {
+                                mut items.pushBack((kind = ITEM_KIND_PURE_GLOBAL, name = propRuntime, runtime = propRuntime, code = "", intValue = 0, textValue = ""));
+                            }
+                            propItemInt := if propInitState =!= INIT_STATE_INIT and target == TARGET_C and types.cTypeNeedsDrop(parsedProp.kind) { 1 } else { parsedProp.intValue };
+                            mut items.pushBack((kind = valDeclPrefix + storageKind(parsedProp.kind), name = qualName, runtime = propRuntime,
+                            code = itemPropCode, intValue = propItemInt, textValue = itemTextPayload(parsedProp)));
+                            if codeHasRawTransfer(itemPropCode) {
+                                mut transferCodes.pushBack(itemPropCode);
+                                transferCount = transferCount + 1;
+                            }
+                        }
+                        continue;
+                    }
+                    if hasPropAnn {
+                        failAt(source, afterOp, prefix, "unexpected type annotation before := fn on " + qualName);
+                    }
                     if opName.startsWithAt(0, "$") and opName =!= "$getIndex" and opName =!= "$setIndex" {
                         failAt(source, opStart, prefix, "unknown compiler hook " + opName + " on " + name);
                     }
-                    owner := resolveOwnedTypeOpTarget(source, nameStart, prefix, aliases, moduleIdentity, name);
+                    owner := resolveOwnedTypeOpTarget(source, nameStart, prefix, aliases, moduleKey, moduleIdentity, name, false);
                     if not owner.ok {
                         failAt(source, nameStart, prefix, owner.error);
                     }
@@ -5916,6 +6151,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         what := if opName == "from" { "built-in from" } else { "value" };
                         failAt(source, opStart, prefix, "cannot declare operation " + qualName + ": collides with enum backing " + what);
                     }
+                    if localIndex(locals, qualName) >= 0 {
+                        failAt(source, opStart, prefix, "operation " + qualName + " collides with existing static property " + qualName);
+                    }
                     position = skipTrivia(source, afterOpDecl + 2, prefix);
                     opHeaderPos := position;
                     header := types.parseTypeOpHeader(source, opHeaderPos, prefix, aliases, name, opName, owner.selfTarget, owner.ownerKey, owner.isGenericOwner);
@@ -5925,13 +6163,18 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     if types.containsDynKind(header.result) {
                         failAt(source, nameStart, prefix, "borrowed dyn Interface cannot escape via function return type");
                     }
-                    typeOpKey := (if header.hasSelfRecv { "$typeop:" } else { "$statictypeop:" }) + owner.ownerKey + "." + opName;
+                    typeOpKey := if owner.isAliasTarget {
+                        ir.makeAliasOpKey(not header.hasSelfRecv, moduleKey, name, owner.aliasTargetKind, opName)
+                    } else {
+                        (if header.hasSelfRecv { "$typeop:" } else { "$statictypeop:" }) + owner.ownerKey + "." + opName
+                    };
                     opSigKey := overloads.overloadSigKey(not header.hasSelfRecv, header.genericType, header.params, header.count);
                     existingOpCands := sym.findFunctions(functions, typeOpKey);
-                    loop existingOpCands as eoi {
-                        if functions[eoi].declAt =!= nameStart and overloads.fnSigKeyFor(functions[eoi].runtime) == opSigKey {
-                            failAt(source, nameStart, prefix, "duplicate type operation " + qualName);
-                        }
+                    nomOwnerForCol := if owner.isAliasTarget { types.typeOpOwnerKey(owner.aliasTargetKind) } else { owner.ownerKey };
+                    targetForCol := if owner.isAliasTarget { owner.aliasTargetKind } else { owner.ownerKind };
+                    colErr := checkTypeOpCollision(functions, typeOpKey, not header.hasSelfRecv, nomOwnerForCol, targetForCol, opName, opSigKey, qualName, nameStart, "");
+                    if colErr =!= "" {
+                        failAt(source, nameStart, prefix, colErr);
                     }
                     preOpIdx := sym.findFunctionAt(functions, typeOpKey, nameStart);
                     wasPreRegisteredOp := preOpIdx >= 0;
@@ -5990,6 +6233,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         }
                         contexts.registerFnContext(genRuntime, contexts.extractCtxKindFromParams(header.params));
                         overloads.registerFnSig(genRuntime, opSigKey, header.genericType, header.params);
+                        if owner.isAliasTarget {
+                            comptimeEval.registerAliasOpFn(moduleKey, owner.aliasTargetKind, opName, genRuntime);
+                        }
                         if isPubOp {
                             mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE_OP, name = typeOpKey, runtime = genRuntime, code = header.result,
                             intValue = header.count, textValue = header.params));
@@ -6011,10 +6257,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                     opDefRes := expr.resolveFnParamDefaults(target, source, prefix, opHeaderPos, -1, header.params, header.count, opPreLocals, functions, functionParams, typeOpKey, scopedOpDefAliases, stmtCtxs, 0, false);
                     effOpParams := opDefRes.resolvedParams;
                     finalOpSigKey := overloads.overloadSigKey(not header.hasSelfRecv, "", effOpParams, header.count);
-                    loop sym.findFunctions(functions, typeOpKey) as eoi2 {
-                        if functions[eoi2].declAt =!= nameStart and overloads.fnSigKeyFor(functions[eoi2].runtime) == finalOpSigKey {
-                            failAt(source, nameStart, prefix, "duplicate type operation " + qualName);
-                        }
+                    finalColErr := checkTypeOpCollision(functions, typeOpKey, not header.hasSelfRecv, nomOwnerForCol, targetForCol, opName, finalOpSigKey, qualName, nameStart, "");
+                    if finalColErr =!= "" {
+                        failAt(source, nameStart, prefix, finalColErr);
                     }
                     if wasPreRegisteredOp {
                         preOp := functions[preOpIdx];
@@ -6028,6 +6273,9 @@ moduleIdentityIn: String, neededFns: String, skipSoftBuiltins: Bool, builtinSpec
                         first = parameterTotal, count = header.count, declAt = nameStart));
                     }
                     comptimeEval.registerFnDef(functionRuntime, qualName, moduleKey, moduleIdentity, source, prefix, position, opBodyEnd - 1, effOpParams, header.count, header.result, false, aliases);
+                    if owner.isAliasTarget {
+                        comptimeEval.registerAliasOpFn(moduleKey, owner.aliasTargetKind, opName, functionRuntime);
+                    }
                     overloads.registerFnSig(functionRuntime, finalOpSigKey, "", effOpParams);
                     if isPubOp {
                         mut items.pushBack((kind = ITEM_KIND_PUBLIC_TYPE_OP, name = typeOpKey, runtime = functionRuntime, code = header.result,

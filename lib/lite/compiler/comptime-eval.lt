@@ -200,6 +200,7 @@ mut ctPool: List<CtCell> = [];
 mut ctFnDefs: List<CtFnDef> = [];
 mut ctFnIdxByRt: Map<String, Int>;
 mut ctFnIdxByModName: Map<String, List<Int>>;
+mut ctAliasOpsByKey: Map<String, List<Int>>;
 mut ctModules: Map<String, CtModuleMeta>;
 mut ctImportsByMod: Map<String, List<CtModuleImport>>;
 mut ctValByRuntime: Map<String, Int>;
@@ -222,6 +223,7 @@ pub resetComptimeState := fn(): Unit {
     mut ctFnDefs.clear();
     mut ctFnIdxByRt.clear();
     mut ctFnIdxByModName.clear();
+    mut ctAliasOpsByKey.clear();
     mut ctModules.clear();
     mut ctImportsByMod.clear();
     mut ctValByRuntime.clear();
@@ -388,6 +390,26 @@ pub aliasModuleFn := fn(moduleKey: String, name: String, runtime: String): Unit 
         mut indices.pushBack(rtRes.value);
         mut ctFnIdxByModName.set(key, indices);
     }
+};
+
+/** Registers a scoped `Alias.op` implementation under `(moduleKey, targetKind, opName)` for comptime dispatch. */
+pub registerAliasOpFn := fn(moduleKey: String, targetKind: String, opName: String, runtime: String): Unit {
+    if targetKind == "" or opName == "" or runtime == "" { return; }
+    rtRes := ctFnIdxByRt.get(runtime);
+    if not rtRes.found { return; }
+    key := moduleKey + "\t" + targetKind + "\t" + opName;
+    prevList := ctAliasOpsByKey.get(key);
+    mut indices: List<Int> = if prevList.found { prevList.value } else { [] };
+    if not indices.contains(rtRes.value) {
+        mut indices.pushBack(rtRes.value);
+        mut ctAliasOpsByKey.set(key, indices);
+    }
+};
+
+/** Looks up registered scoped `Alias.op` `CtFnDef` indices by `(moduleKey, targetKind, opName)`. */
+findAliasOpIndicesInModule := fn(moduleKey: String, targetKind: String, opName: String): List<Int> {
+    res := ctAliasOpsByKey.get(moduleKey + "\t" + targetKind + "\t" + opName);
+    if res.found { res.value } else { [] }
 };
 
 /** Canonicalizes and records a filesystem path accessed during `comptime { ... }` for `--trace-json` dependency tracking. */
@@ -3123,6 +3145,13 @@ evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: 
             return invokeCtFnDef(chosen, textArgs, labels, mut budget);
         }
     }
+    aliasOpCands := findAliasOpIndicesInModule(frame.moduleKey, recv.kind, methodName);
+    if aliasOpCands.length() > 0 {
+        mut allAliasArgs: List<Int> = [recvId];
+        loop args as a { mut allAliasArgs.pushBack(a); }
+        chosenA := selectOverloadFnDef(aliasOpCands, allAliasArgs.length() - labels.length(), labels);
+        return invokeCtFnDefWithTypeArgs(chosenA, [], allAliasArgs, labels, mut budget);
+    }
     CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsupported compile-time method call ." + methodName }
 };
 
@@ -3604,6 +3633,20 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             cands2 := if cands.length() > 0 { cands } else { findFnIndicesInModule(frame.moduleKey, dName + "." + cName) };
             chosen := selectOverloadFnDef(cands2, callA.args.length() - callA.labels.length(), callA.labels);
             res = invokeCtFnDef(chosen, callA.args, callA.labels, mut budget);
+        } else if expectedKind =!= "" {
+            var ctPropId := lookupLocalCtVal("$mod:" + frame.moduleKey + ".$prop:" + expectedKind + "." + cName);
+            if ctPropId < 0 {
+                oKey := types.typeOpOwnerKey(expectedKind);
+                if oKey =!= "" {
+                    ctPropId = lookupLocalCtVal("$mod:" + frame.moduleKey + ".$prop:" + oKey + "." + cName);
+                }
+            }
+            if ctPropId >= 0 {
+                resNext = cEnd;
+                res = CtOutcome { ok = true, valId = ctPropId, flow = FlowKind.None, error = "" };
+            } else {
+                return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve ." + cName + " at compile time" }, next = cEnd);
+            }
         } else {
             return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve ." + cName + " at compile time" }, next = cEnd);
         }
@@ -3763,6 +3806,14 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                         inv := invokeCtFnDefWithTypeArgs(chosen, splitCanonicalNominalArgs(nomK), callA.args, callA.labels, mut budget);
                         if inv.flow =!= FlowKind.None { return (outcome = inv, next = callA.next); }
                         return evalPostfixChain(source, callA.next, limitPos, prefix, inv.valId, "", mut frame, mut budget);
+                    } else {
+                        modPropVal := lookupLocalCtVal("$mod:" + tModKey + "." + mName + "." + opName);
+                        if modPropVal >= 0 {
+                            return evalPostfixChain(source, opEnd, limitPos, prefix, modPropVal, "", mut frame, mut budget);
+                        }
+                        if not types.isEnumKind(nomK) {
+                            return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unknown compile-time static member " + name + "." + mName + "." + opName }, next = opEnd);
+                        }
                     }
                 }
                 if afterM < limitPos and source.at(afterM) == "(" {
@@ -3841,7 +3892,22 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                         cands := findFnIndicesInModule(frame.moduleKey, name + "." + opName);
                         dispN := baseNominalName(nomK);
                         candsDisp := if cands.length() > 0 or dispN == "" { cands } else { findFnIndicesInModule(frame.moduleKey, dispN + "." + opName) };
-                        cands2 := if candsDisp.length() > 0 { candsDisp } else { findFnIndicesInModule("lib$core$text", name + "." + opName) };
+                        ownerK := types.typeOpOwnerKey(nomK);
+                        var ownerMod := "";
+                        if ownerK =!= "" {
+                            hashPos := ownerK.indexOf("#", 0);
+                            colonPos := ownerK.indexOf(":", 0);
+                            if colonPos >= 0 and hashPos > colonPos { ownerMod = ownerK.slice(colonPos + 1, hashPos); }
+                        }
+                        candsOwner := if candsDisp.length() > 0 or ownerMod == "" {
+                            candsDisp
+                        } else if dispN =!= "" {
+                            findFnIndicesInModule(ownerMod, dispN + "." + opName)
+                        } else {
+                            findFnIndicesInModule(ownerMod, name + "." + opName)
+                        };
+                        candsAlias := if candsOwner.length() > 0 { candsOwner } else { findAliasOpIndicesInModule(frame.moduleKey, nomK, opName) };
+                        cands2 := if candsAlias.length() > 0 { candsAlias } else { findFnIndicesInModule("lib$core$text", name + "." + opName) };
                         cands3 := if cands2.length() > 0 { cands2 } else { findFnIndicesInModule("lib_s_core_s_text", name + "." + opName) };
                         chosen := selectOverloadFnDef(cands3, callA.args.length() - callA.labels.length(), callA.labels);
                         res = invokeCtFnDefWithTypeArgs(chosen, splitCanonicalNominalArgs(nomK), callA.args, callA.labels, mut budget);
@@ -3851,7 +3917,13 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     resNext = opE;
                     res = CtOutcome { ok = true, valId = makeEnumVal(nomK, ci, opName, [], mut budget), flow = FlowKind.None, error = "" };
                 } else {
-                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unknown compile-time static member " + name + "." + opName }, next = opE);
+                    propCtId := lookupLocalCtVal("$mod:" + frame.moduleKey + "." + name + "." + opName);
+                    if propCtId >= 0 {
+                        resNext = opE;
+                        res = CtOutcome { ok = true, valId = propCtId, flow = FlowKind.None, error = "" };
+                    } else {
+                        return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unknown compile-time static member " + name + "." + opName }, next = opE);
+                    }
                 }
             } else if afterName < limitPos and (source.at(afterName) == "(" or source.at(afterName) == "<") {
                 /* Local fn binding or module function call, possibly `f<...>(...)` */

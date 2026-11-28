@@ -3765,7 +3765,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             } else {
                 emptySeen: List<String> = [];
                 canRes := types.canResolveTypeAt(source, nameStart, prefix, aliases, "", emptySeen, 32);
-                if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind) and types.typeOpOwnerKey(canRes.kind) == "") {
+                if not canRes.ok {
                     return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
                 }
                 resolvedType = canRes.kind;
@@ -3781,9 +3781,6 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                 emptySeen: List<String> = [];
                 resolvedType = types.resolveAliasKind(source, nameStart, prefix, aliases, name, emptySeen);
                 typeOwnerKey = types.typeOpOwnerKey(resolvedType);
-                if not types.isEnumKind(resolvedType) and not types.isRecordKind(resolvedType) and not types.isDistinctKind(resolvedType) and typeOwnerKey == "" {
-                    syntax.failAt(source, nameStart, prefix, "enum case access requires an enum type, got " + types.displayKind(resolvedType));
-                }
             }
         }
         memberStart := syntax.skipTrivia(source, dotPos + 1, prefix);
@@ -3809,6 +3806,15 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                 return parseEnumFromCall(target, source, resolvedType, memberEnd, memberStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
             }
         }
+        propIdx := findStaticTypeProperty(source, memberStart, prefix, locals, if not isTypeApp { name + "." + memberName } else { "" }, typeOwnerKey, resolvedType, memberName, inferMode);
+        if propIdx >= 0 {
+            pEntry := locals[propIdx];
+            afterMember := syntax.skipTrivia(source, memberEnd, prefix);
+            if not inferMode and afterMember < source.length() and source.at(afterMember) == "(" and not types.isFnKind(pEntry.kind) {
+                syntax.failAt(source, memberStart, prefix, "static property " + name + "." + memberName + " is not callable");
+            }
+            return (kind = pEntry.kind, code = pEntry.code, intValue = pEntry.intValue, textValue = pEntry.textValue, constant = pEntry.constant, next = memberEnd);
+        }
         if numeric.isIntKind(typeOwnerKey) and memberName == "trunc" {
             openTrunc := syntax.expectSymbol(source, syntax.skipTrivia(source, memberEnd, prefix), "(", prefix);
             truncArg := parseBinaryCtx(target, source, openTrunc, prefix, locals, functions, params, currentName, "", 0, ctxs, iifeDepth, inferMode, "", aliases);
@@ -3828,27 +3834,25 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                 locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases
             );
         }
-        if typeOwnerKey =!= "" {
-            opCands := findAllTypeOps(functions, typeOwnerKey, memberName);
-            if opCands.length() > 1 {
-                dispType := if resolvedType =!= "" { types.displayKind(resolvedType) } else { name };
-                ovTopCode := ["$ovtop:", typeOwnerKey, memberName, resolvedType, aliasParamsCsv, aliasTplKind, nameStart.toText(), memberStart.toText()].join("\n");
-                return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = ovTopCode, intValue = opCands[0],
-                textValue = dispType + "." + memberName, constant = false, next = memberEnd);
-            } else if opCands.length() == 1 {
-                opIdx := opCands[0];
-                opRes := resolveTypeQualifiedOp(
-                source, memberStart, prefix, opIdx, memberName, typeOwnerKey,
-                resolvedType, aliasParamsCsv, aliasTplKind, functions, params, inferMode
-                );
-                if not opRes.ok {
-                    return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
-                }
-                dispType := if resolvedType =!= "" { types.displayKind(resolvedType) } else { name };
-                opCode := nameStart.toText() + (if opRes.initBindings =!= "" { "|" + opRes.initBindings } else { "" });
-                return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = opCode, intValue = opIdx,
-                textValue = dispType + "." + memberName, constant = false, next = memberEnd);
+        opCands := findAllTypeOpsForKind(functions, typeOwnerKey, resolvedType, aliasTplKind, memberName);
+        if opCands.length() > 1 {
+            dispType := if resolvedType =!= "" { types.displayKind(resolvedType) } else { name };
+            ovTopCode := ["$ovtop:", typeOwnerKey, memberName, resolvedType, aliasParamsCsv, aliasTplKind, nameStart.toText(), memberStart.toText()].join("\n");
+            return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = ovTopCode, intValue = opCands[0],
+            textValue = dispType + "." + memberName, constant = false, next = memberEnd);
+        } else if opCands.length() == 1 {
+            opIdx := opCands[0];
+            opRes := resolveTypeQualifiedOp(
+            source, memberStart, prefix, opIdx, memberName, typeOwnerKey,
+            resolvedType, aliasParamsCsv, aliasTplKind, functions, params, inferMode
+            );
+            if not opRes.ok {
+                return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = start);
             }
+            dispType := if resolvedType =!= "" { types.displayKind(resolvedType) } else { name };
+            opCode := nameStart.toText() + (if opRes.initBindings =!= "" { "|" + opRes.initBindings } else { "" });
+            return (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = opCode, intValue = opIdx,
+            textValue = dispType + "." + memberName, constant = false, next = memberEnd);
         }
         if types.isEnumKind(resolvedType) {
             syntax.failAt(source, memberStart, prefix, "enum " + types.enumDisplayName(resolvedType) + " has no case " + memberName);
@@ -4266,15 +4270,15 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
         }
         ownerKey := types.typeOpOwnerKey(normExp);
         isEnumCase := types.isEnumKind(normExp) and types.enumCaseIndex(normExp, fieldName) >= 0;
+        propIdx := findStaticTypeProperty(source, fieldStart, prefix, locals, "", ownerKey, normExp, fieldName, inferMode);
+        hasStaticProp := propIdx >= 0;
         mut staticCands: List<Int> = [];
         var hasInstOp := false;
-        if ownerKey =!= "" {
-            loop findAllTypeOps(functions, ownerKey, fieldName) as ci {
-                if isStaticTypeOp(functions[ci]) {
-                    mut staticCands.pushBack(ci);
-                } else {
-                    hasInstOp = true;
-                }
+        loop findAllTypeOpsForKind(functions, ownerKey, normExp, "", fieldName) as ci {
+            if isStaticTypeOp(functions[ci]) {
+                mut staticCands.pushBack(ci);
+            } else {
+                hasInstOp = true;
             }
         }
         isNumStatic := ownerKey =!= "" and isNumericHardBuiltin(ownerKey, fieldName, true);
@@ -4284,16 +4288,26 @@ resolveLeadingDotExpr := fn(target: String, source: String, start: Int, prefix: 
             syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + "; qualify as " +
             types.enumDisplayName(normExp) + "." + fieldName + " or @tag." + fieldName);
         }
-        if (staticCands.length() > 0 or isNumStatic) and hasLoopMeta {
+        if (staticCands.length() > 0 or isNumStatic or hasStaticProp) and hasLoopMeta {
             syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + "; qualify as " +
             types.displayKind(normExp) + "." + fieldName + " or @tag." + fieldName);
         }
-        if isEnumCase and (staticCands.length() > 0 or isNumStatic) {
-            syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + " on " + types.displayKind(normExp) + "; both an enum case and a static operation exist");
+        if isEnumCase and (staticCands.length() > 0 or isNumStatic or hasStaticProp) {
+            syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + " on " + types.displayKind(normExp) + "; both an enum case and a static member exist");
+        }
+        if hasStaticProp and (staticCands.length() > 0 or isNumStatic) {
+            syntax.failAt(source, start, prefix, "ambiguous leading-dot ." + fieldName + " on " + types.displayKind(normExp) + "; both a static property and a static operation exist");
         }
         if isEnumCase {
             caseIdx := types.enumCaseIndex(normExp, fieldName);
             return parseEnumCaseConstruct(target, source, normExp, fieldName, caseIdx, fieldEnd, fieldStart, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
+        }
+        if hasStaticProp {
+            pEntry := locals[propIdx];
+            if not inferMode and isCallOrGen and not types.isFnKind(pEntry.kind) {
+                syntax.failAt(source, fieldStart, prefix, "contextual static property ." + fieldName + " is not callable");
+            }
+            return (kind = pEntry.kind, code = pEntry.code, intValue = pEntry.intValue, textValue = pEntry.textValue, constant = pEntry.constant, next = fieldEnd);
         }
         if isNumStatic {
             if afterField >= size or source.at(afterField) =!= "(" {
@@ -11868,8 +11882,7 @@ pub hasIndexHook := fn(kind: String, opName: String, functions: List<FunctionInf
         return true;
     }
     ownerKey := types.typeOpOwnerKey(kind);
-    if ownerKey == "" { return false; }
-    sym.findFunction(functions, "$typeop:" + ownerKey + "." + opName) >= 0
+    findAllTypeOpsForKind(functions, ownerKey, kind, "", opName).length() > 0
 };
 
 /** True when `kind` implements `core/interface.Index` (or `IndexMut` when `isMut`). */
@@ -11922,13 +11935,11 @@ pub resolveIndexHookOp := fn(target: String, source: String, errPos: Int, prefix
         return (found = true, runtime = rt, keyKind = ir.VALUE_KIND_INT, valKind = elK, resultKind = resK);
     }
     ownerKey := types.typeOpOwnerKey(receiverKind);
-    if ownerKey == "" {
+    idxCands := findAllTypeOpsForKind(functions, ownerKey, receiverKind, "", opName);
+    if idxCands.length() == 0 {
         return (found = false, runtime = "", keyKind = "", valKind = "", resultKind = "");
     }
-    opIdx := sym.findFunction(functions, "$typeop:" + ownerKey + "." + opName);
-    if opIdx < 0 {
-        return (found = false, runtime = "", keyKind = "", valKind = "", resultKind = "");
-    }
+    opIdx := idxCands[0];
     info := functions[opIdx];
     rawRecv := types.paramKindOf(params[info.first]);
     recvBase := if rawRecv.startsWithAt(0, "mut ") { rawRecv.slice(4, rawRecv.length()) } else { rawRecv };
@@ -16247,7 +16258,7 @@ findTypeOp := fn(functions: List<FunctionInfo>, ownerKey: String, opName: String
     sym.findFunction(functions, "$statictypeop:" + ownerKey + "." + opName)
 };
 
-/** Returns all instance and static type-operation candidate indices registered for `ownerKey.opName`. */
+/** Returns all instance and static type-operation candidate indices registered for `ownerKey.opName` (nominal and scoped aliases). */
 findAllTypeOps := fn(functions: List<FunctionInfo>, ownerKey: String, opName: String): List<Int> {
     mut out: List<Int> = sym.findFunctions(functions, "$typeop:" + ownerKey + "." + opName);
     loop sym.findFunctions(functions, "$statictypeop:" + ownerKey + "." + opName) as si {
@@ -16256,9 +16267,86 @@ findAllTypeOps := fn(functions: List<FunctionInfo>, ownerKey: String, opName: St
     out
 };
 
+/** Returns nominal type ops for `ownerKey` plus visible scoped alias ops matching concrete `targetKind` or generic `aliasTplKind`. */
+findAllTypeOpsForKind := fn(functions: List<FunctionInfo>, ownerKey: String, targetKind: String, aliasTplKind: String, opName: String): List<Int> {
+    mut out: List<Int> = if ownerKey =!= "" { findAllTypeOps(functions, ownerKey, opName) } else { [] };
+    mut seenRts: List<String> = [];
+    loop out as oi {
+        if functions[oi].runtime =!= "" { mut seenRts.pushBack(functions[oi].runtime); }
+    }
+    tabOp := "\t" + opName;
+    var fi := 0;
+    loop functions as f {
+        if ir.isAliasOpKey(f.name) and f.name.endsWith(tabOp) and not seenRts.contains(f.runtime) {
+            ak := ir.parseAliasOpKey(f.name);
+            if ak.ok and ak.opName == opName {
+                var matched := false;
+                if targetKind =!= "" {
+                    if ak.targetKind == targetKind {
+                        matched = true;
+                    } else if ak.targetKind.startsWithAt(0, "@gentpl:") {
+                        pDec := types.decodeLengthPrefixedAt(ak.targetKind, 8);
+                        if pDec.next >= 0 {
+                            tplBody := ak.targetKind.slice(pDec.next, ak.targetKind.length());
+                            mut tmpB: Map<String, String>;
+                            if generics.unifyKindMut(pDec.text, tplBody, targetKind, mut tmpB) == "" {
+                                matched = true;
+                            }
+                        }
+                    }
+                } else if aliasTplKind =!= "" and ak.targetKind == aliasTplKind {
+                    matched = true;
+                } else if aliasTplKind =!= "" and ak.targetKind.startsWithAt(0, "@gentpl:") {
+                    pDec2 := types.decodeLengthPrefixedAt(ak.targetKind, 8);
+                    if pDec2.next >= 0 and ak.targetKind.slice(pDec2.next, ak.targetKind.length()) == aliasTplKind {
+                        matched = true;
+                    }
+                }
+                if matched {
+                    if f.runtime =!= "" { mut seenRts.pushBack(f.runtime); }
+                    mut out.pushBack(fi);
+                }
+            }
+        }
+        fi = fi + 1;
+    }
+    out
+};
+
+/** Looks up a static `Type.PROP` or `Alias.PROP` local entry by explicit qualified name, nominal owner key, or scoped alias target kind. */
+findStaticTypeProperty := fn(source: String, errPos: Int, prefix: String, locals: List<Local>, qualName: String, ownerKey: String, targetKind: String, propName: String, inferMode: Bool): Int {
+    if qualName =!= "" {
+        qIdx := sym.localIndex(locals, qualName);
+        if qIdx >= 0 { return qIdx; }
+    }
+    if ownerKey =!= "" {
+        tIdx := sym.localIndex(locals, "$typeprop:" + ownerKey + "." + propName);
+        if tIdx >= 0 { return tIdx; }
+    }
+    if targetKind =!= "" {
+        suffix := "\t" + targetKind + "\t" + propName;
+        var hitIdx := -1;
+        var hitRuntime := "";
+        var li := 0;
+        loop locals as loc {
+            if loc.name.startsWithAt(0, "$aliasprop:") and loc.name.endsWith(suffix) {
+                if hitIdx < 0 {
+                    hitIdx = li;
+                    hitRuntime = loc.runtime;
+                } else if loc.runtime =!= hitRuntime and not inferMode {
+                    syntax.failAt(source, errPos, prefix, "ambiguous contextual ." + propName + "; qualify with explicit alias name");
+                }
+            }
+            li = li + 1;
+        }
+        if hitIdx >= 0 { return hitIdx; }
+    }
+    -1
+};
+
 /** True when a type-attached operation is static/type-level (declared without an explicit `Self` receiver first parameter). */
 isStaticTypeOp := fn(opInfo: FunctionInfo): Bool {
-    opInfo.name.startsWithAt(0, "$statictypeop:")
+    opInfo.name.startsWithAt(0, "$statictypeop:") or opInfo.name.startsWithAt(0, "$staticaliasop:")
 };
 
 /** Validates a type-qualified `Type.op` or `Alias.op` reference and extracts pre-bound generic arguments. */
@@ -16586,10 +16674,7 @@ parseMutReceiverCallExpr := fn(target: String, source: String, mutStart: Int, mN
             return parseDynMethodDotCall(target, source, labelStart, afterLabel, recvParsed, recvIdx, label, true, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
         }
         ownerKey := types.typeOpOwnerKey(curKind);
-        opCands := if ownerKey =!= "" { findAllTypeOps(functions, ownerKey, label) } else {
-            emptyOps: List<Int> = [];
-            emptyOps
-        };
+        opCands := findAllTypeOpsForKind(functions, ownerKey, curKind, "", label);
         var opIdx := if opCands.length() > 0 { opCands[0] } else { -1 };
         if opIdx < 0 {
             emptyIfaces: List<String> = [];
@@ -16768,7 +16853,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                     } else if inferMode {
                                         emptySeen: List<String> = [];
                                         canRes := types.canResolveTypeAt(qualified, 0, prefix, aliases, "", emptySeen, 32);
-                                        if not canRes.ok or (not types.isEnumKind(canRes.kind) and not types.isRecordKind(canRes.kind) and not types.isDistinctKind(canRes.kind) and types.typeOpOwnerKey(canRes.kind) == "") {
+                                        if not canRes.ok {
                                             return (kind = "", code = "", intValue = 0, textValue = "", constant = false, next = exprStart);
                                         }
                                         modTypeKind = canRes.kind;
@@ -16777,9 +16862,6 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                         emptySeen: List<String> = [];
                                         modTypeKind = types.resolveAliasKind(source, labelStart, prefix, aliases, qualified, emptySeen);
                                         modTypeOwnerKey = types.typeOpOwnerKey(modTypeKind);
-                                        if not types.isEnumKind(modTypeKind) and not types.isRecordKind(modTypeKind) and not types.isDistinctKind(modTypeKind) and modTypeOwnerKey == "" {
-                                            syntax.failAt(source, labelStart, prefix, "enum case access requires an enum type, got " + types.displayKind(modTypeKind));
-                                        }
                                     }
                                 }
                             } else {
@@ -16833,10 +16915,19 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                                     }
                                 }
                                 if not handledModMember {
-                                    modOpCands := if modTypeOwnerKey =!= "" { findAllTypeOps(functions, modTypeOwnerKey, caseName) } else {
-                                        emptyModOps: List<Int> = [];
-                                        emptyModOps
-                                    };
+                                    modPropIdx := findStaticTypeProperty(source, caseStart, prefix, locals, if not isModTypeApp { qualified + "." + caseName } else { "" }, modTypeOwnerKey, modTypeKind, caseName, inferMode);
+                                    if modPropIdx >= 0 {
+                                        mp := locals[modPropIdx];
+                                        afterCase := syntax.skipTrivia(source, caseEnd, prefix);
+                                        if not inferMode and afterCase < source.length() and source.at(afterCase) == "(" and not types.isFnKind(mp.kind) {
+                                            syntax.failAt(source, caseStart, prefix, "static property " + qualified + "." + caseName + " is not callable");
+                                        }
+                                        left = (kind = mp.kind, code = mp.code, intValue = mp.intValue, textValue = mp.textValue, constant = mp.constant, next = caseEnd);
+                                        handledModMember = true;
+                                    }
+                                }
+                                if not handledModMember {
+                                    modOpCands := findAllTypeOpsForKind(functions, modTypeOwnerKey, modTypeKind, modAliasTplKind, caseName);
                                     if modOpCands.length() > 1 {
                                         ovModTopCode := ["$ovtop:", modTypeOwnerKey, caseName, modTypeKind, modAliasParamsCsv, modAliasTplKind, exprStart.toText(), caseStart.toText()].join("\n");
                                         left = (kind = ir.VALUE_KIND_MODULE_FUNCTION, code = ovModTopCode, intValue = modOpCands[0],
@@ -16997,10 +17088,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                     left = parseDynMethodDotCall(target, source, labelStart, afterOpLabel, left, curRecvLocalIdx, label, false, prefix, locals, functions, params, currentName, ctxs, iifeDepth, inferMode, aliases);
                 } else {
                     ownerKey := types.typeOpOwnerKey(left.kind);
-                    opCands := if ownerKey =!= "" { findAllTypeOps(functions, ownerKey, label) } else {
-                        emptyRoOps: List<Int> = [];
-                        emptyRoOps
-                    };
+                    opCands := findAllTypeOpsForKind(functions, ownerKey, left.kind, "", label);
                     var opIdx := if opCands.length() > 0 { opCands[0] } else { -1 };
                     afterOpLabel := syntax.skipTrivia(source, labelEnd, prefix);
                     if opIdx < 0 and not (types.isSoaKind(left.kind) and (afterOpLabel >= sourceLen or source.at(afterOpLabel) =!= "(")) {
@@ -17232,7 +17320,7 @@ parsePostfixChain := fn(target: String, source: String, exprStart: Int, initialL
                         ovAliasTpl = ovParts[5];
                         errPos = syntax.parseDigits(ovParts[6], 0, ovParts[6].length());
                         ovMemberErrPos = syntax.parseDigits(ovParts[7], 0, ovParts[7].length());
-                        rawOvCands := findAllTypeOps(functions, ovOwner, ovMember);
+                        rawOvCands := findAllTypeOpsForKind(functions, ovOwner, ovResType, ovAliasTpl, ovMember);
                         if isOvStaticTop {
                             mut filteredOv: List<Int> = [];
                             loop rawOvCands as rci {

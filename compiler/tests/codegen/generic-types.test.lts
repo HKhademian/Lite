@@ -351,11 +351,20 @@ expectRejectBoth("recursive-generic-record",
 "Node := record<T: Type> { val: T; next: Node<T>; }\n",
 "recursive type alias Node");
 
-expectRejectBoth("attach-op-to-generic-alias",
+runBoth("attach-op-to-generic-alias",
+"io := import \"core/io\";\n" +
 "Box := record<T: Type> { value: T; }\n" +
 "AliasBox := alias<T: Type> Box<T>;\n" +
-"AliasBox.get := fn<T: Type>(b: Self<T>): T { b.value };\n",
-"cannot attach operation to alias or foreign type AliasBox");
+"AliasBox.get := fn<T: Type>(b: Self<T>): T { b.value };\n" +
+"a := AliasBox<Int> { value = 42 };\n" +
+"b := Box<String> { value = \"hi\" };\n" +
+"io.outputLine(a.get(), b.get());\n",
+"42 hi\n");
+
+expectRejectBoth("attach-op-to-generic-interface-rejected",
+"I := interface<T: Type> { get: fn(self: Self): T; }\n" +
+"I.get := fn<T: Type>(b: Self<T>): T { b };\n",
+"cannot attach operation to interface I");
 
 expectRejectBoth("bare-self-on-generic-owner",
 "Box := record<T: Type> { value: T; }\n" +

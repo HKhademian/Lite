@@ -293,7 +293,8 @@ collectPublicDeclsWithVisited := fn(graph: frontend.Items, path: String, seenPat
         if item.kind == frontend.ITEM_KIND_MODULE_START { inside = item.name == path; }
         else if item.kind == frontend.ITEM_KIND_MODULE_END and inside { break; }
         else if inside {
-            if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE {
+            if item.kind == frontend.ITEM_KIND_PUBLIC_FUNCTION or item.kind == frontend.ITEM_KIND_PUBLIC_VALUE or item.kind == frontend.ITEM_KIND_PUBLIC_TYPE or
+            (item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and frontend.isAliasOpKey(item.name)) {
                 mut result.pushBack(item);
             } else if item.kind == frontend.ITEM_KIND_IMPORT and (item.code == "pub_unpack" or item.code == "pub_alias" or item.code == "pub_destruct") {
                 mut reexportImports.pushBack(item);
@@ -419,7 +420,9 @@ appendTransitiveTypeOps := fn(graph: frontend.Items, existing: frontend.Items, s
             insideSkip = skipModPath =!= "" and item.name == skipModPath;
         } else if item.kind == frontend.ITEM_KIND_MODULE_END {
             insideSkip = false;
-        } else if not insideSkip and (item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP or item.kind == frontend.ITEM_KIND_PUBLIC_IMPL) {
+        } else if not insideSkip and (
+        (item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and not frontend.isAliasOpKey(item.name)) or
+        item.kind == frontend.ITEM_KIND_PUBLIC_IMPL) {
             opDedupKey := item.kind + "|" + item.name + "|" + item.runtime;
             if not seenOps.has(opDedupKey) {
                 mut seenOps.add(opDedupKey);
@@ -444,7 +447,15 @@ selectDestructuredExports := fn(subDecls: frontend.Items, encodedBindings: Strin
         exportedName := expDec.text;
         var matched := false;
         loop subDecls as sd {
-            if sd.name == exportedName {
+            if sd.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and frontend.isAliasOpKey(sd.name) {
+                ak := frontend.parseAliasOpKey(sd.name);
+                if ak.ok and ak.aliasName == exportedName {
+                    matched = true;
+                    nextOpName := if localName =!= exportedName { frontend.renameAliasOpKey(sd.name, localName) } else { sd.name };
+                    mut out.pushBack((kind = sd.kind, name = nextOpName, runtime = sd.runtime,
+                    code = sd.code, intValue = sd.intValue, textValue = sd.textValue));
+                }
+            } else if sd.name == exportedName {
                 matched = true;
                 mut out.pushBack((kind = sd.kind, name = localName, runtime = sd.runtime,
                 code = sd.code, intValue = sd.intValue, textValue = sd.textValue));
@@ -472,8 +483,12 @@ moduleAliasExports := fn(graph: frontend.Items, path: String, modAlias: String):
     mut result: frontend.Items = [(kind = frontend.ITEM_KIND_MODULE_ALIAS, name = modAlias, runtime = moduleKeyForPath(graph, path), code = moduleIdentityForPath(graph, path),
     intValue = 0, textValue = path)];
     loop modulePublicDeclarations(graph, path) as item {
-        mut result.pushBack((kind = item.kind, name = modAlias + "." + item.name, runtime = item.runtime,
-        code = item.code, intValue = item.intValue, textValue = item.textValue));
+        if item.kind == frontend.ITEM_KIND_PUBLIC_TYPE_OP and frontend.isAliasOpKey(item.name) {
+            mut result.pushBack(item);
+        } else {
+            mut result.pushBack((kind = item.kind, name = modAlias + "." + item.name, runtime = item.runtime,
+            code = item.code, intValue = item.intValue, textValue = item.textValue));
+        }
     }
     result
 }

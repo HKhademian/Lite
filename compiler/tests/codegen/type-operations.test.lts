@@ -275,11 +275,20 @@ expectRejectBoth("generic-concrete-first-param-is-static",
 "q := b.createFrom(1);\n",
 "is a type-level operation with no Self receiver");
 
-expectRejectBoth("alias-attachment",
+runBoth("alias-attachment",
+"io := import \"core/io\";\n" +
 "P := record { hp: Int; }\n" +
 "AliasP := alias P;\n" +
-"AliasP.get := fn(p: Self): Int { p.hp };\n",
-"cannot attach operation to alias or foreign type AliasP");
+"AliasP.get := fn(p: Self): Int { p.hp };\n" +
+"AliasP.ZERO := AliasP { hp = 0 };\n" +
+"a: AliasP = { hp = 7 };\n" +
+"p := P { hp = 9 };\n" +
+"io.outputLine(a.get(), p.get(), AliasP.ZERO.get());\n",
+"7 9 0\n");
+
+expectRejectBoth("unknown-type-attachment",
+"MissingP.get := fn(p: Self): Int { 1 };\n",
+"cannot attach operation to unknown or foreign type MissingP");
 
 expectRejectBoth("field-collision",
 "P := record { hp: Int; }\n" +

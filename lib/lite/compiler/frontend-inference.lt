@@ -1387,12 +1387,17 @@ pub collectModuleDecls := fn(target: String, source: String, prefix: String, mod
                         if opScan < size and source.at(opScan) == "$" { opScan = opScan + 1; }
                         if opScan < size and source.at(opScan).isNameStart() {
                             opEnd := source.skipName(opScan);
-                            afterOp := syntax.skipTrivia(source, opEnd, prefix);
+                            var afterOp := syntax.skipTrivia(source, opEnd, prefix);
+                            if afterOp < size and source.at(afterOp) == ":" and not source.startsWithAt(afterOp, ":=") {
+                                afterOp = syntax.skipTrivia(source, skipTypeAnnotationSpan(source, afterOp + 1, size, prefix), prefix);
+                            }
                             if source.startsWithAt(afterOp, ":=") {
                                 valStart := syntax.skipTrivia(source, afterOp + 2, prefix);
+                                qualName := source.slice(declStart, declEnd) + "." + source.slice(opStart, opEnd);
                                 if source.wordAt(valStart, "fn") {
-                                    qualName := source.slice(declStart, declEnd) + "." + source.slice(opStart, opEnd);
                                     mut decls.pushBack((kind = ir.DECL_KIND_PUB_TYPE_OP, name = qualName, runtime = "", code = "", intValue = declStart, textValue = ""));
+                                } else {
+                                    mut decls.pushBack((kind = ir.DECL_KIND_PUB_VAL, name = qualName, runtime = "", code = "", intValue = 0, textValue = ""));
                                 }
                             }
                         }

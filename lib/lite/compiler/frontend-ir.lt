@@ -566,4 +566,55 @@ pub targetFloatTruncCode := fn(target: String, dstIntKind: String, srcFloatKind:
 pub targetNumericBuiltinCode := fn(target: String, kind: String, opName: String, a0: String, a1: String, a2: String, srcKind: String, position: Int, tupleStructTag: String): String {
     if target == TARGET_TS { tsLiteral.numericBuiltinCode(kind, opName, a0, a1, a2, srcKind, position) }
     else { cLiteral.numericBuiltinCode(kind, opName, a0, a1, a2, srcKind, position, tupleStructTag) }
+};
+
+/** True when `name` is a scoped alias operation key (`$aliasop:` or `$staticaliasop:`). */
+pub isAliasOpKey := fn(name: String): Bool {
+    name.startsWithAt(0, "$aliasop:") or name.startsWithAt(0, "$staticaliasop:")
+};
+
+/** Builds a scoped alias operation key encoding scope, target kind, and operation name. */
+pub makeAliasOpKey := fn(isStatic: Bool, moduleKey: String, aliasName: String, targetKind: String, opName: String): String {
+    (if isStatic { "$staticaliasop:" } else { "$aliasop:" }) + moduleKey + "#" + aliasName + "\t" + targetKind + "\t" + opName
+};
+
+/** Decodes a scoped alias operation key into `(ok, isStatic, modKey, aliasName, targetKind, opName)`. */
+pub parseAliasOpKey := fn(name: String): (ok: Bool, isStatic: Bool, modKey: String, aliasName: String, targetKind: String, opName: String) {
+    var isStatic := false;
+    var prefixLen := 0;
+    if name.startsWithAt(0, "$aliasop:") {
+        prefixLen = 9;
+    } else if name.startsWithAt(0, "$staticaliasop:") {
+        isStatic = true;
+        prefixLen = 15;
+    } else {
+        return (ok = false, isStatic = false, modKey = "", aliasName = "", targetKind = "", opName = "");
+    }
+    firstTab := name.indexOf("\t", prefixLen);
+    if firstTab < 0 {
+        return (ok = false, isStatic = false, modKey = "", aliasName = "", targetKind = "", opName = "");
+    }
+    scopePart := name.slice(prefixLen, firstTab);
+    hashPos := scopePart.indexOf("#", 0);
+    modKey := if hashPos >= 0 { scopePart.slice(0, hashPos) } else { "" };
+    aliasName := if hashPos >= 0 { scopePart.slice(hashPos + 1, scopePart.length()) } else { scopePart };
+    secondTab := name.indexOf("\t", firstTab + 1);
+    if secondTab < 0 {
+        return (ok = false, isStatic = false, modKey = "", aliasName = "", targetKind = "", opName = "");
+    }
+    targetKind := name.slice(firstTab + 1, secondTab);
+    opName := name.slice(secondTab + 1, name.length());
+    (ok = true, isStatic = isStatic, modKey = modKey, aliasName = aliasName, targetKind = targetKind, opName = opName)
+};
+
+/** Rewrites the alias name inside a scoped alias operation key. */
+pub renameAliasOpKey := fn(name: String, newAliasName: String): String {
+    p := parseAliasOpKey(name);
+    if not p.ok { return name; }
+    makeAliasOpKey(p.isStatic, p.modKey, newAliasName, p.targetKind, p.opName)
+};
+
+/** True when `tag` encodes a static property lookup tag (`$typeprop:` or `$aliasprop:`). */
+pub isTypeOrAliasPropTag := fn(tag: String): Bool {
+    tag.startsWithAt(0, "$typeprop:") or tag.startsWithAt(0, "$aliasprop:")
 }

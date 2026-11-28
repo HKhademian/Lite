@@ -158,12 +158,12 @@ distinctSrc :=
 "}\n";
 
 runBoth("distinct-and-cast", distinctSrc,
-    "0 0 true false\n" +
-    "true true true 43 100 true\n" +
-    "true true true true\n" +
-    "Mittens:10 Bolt:9 Mittens 10\n" +
-    "20 7 2 Lin true\n" +
-    "true\n"
+"0 0 true false\n" +
+"true true true 43 100 true\n" +
+"true true true true\n" +
+"Mittens:10 Bolt:9 Mittens 10\n" +
+"20 7 2 Lin true\n" +
+"true\n"
 );
 
 /* 3. Cross-module `pub alias`, `pub distinct`, and `pub` type-attached op. */
@@ -226,8 +226,173 @@ expectRejectBoth("distinct-base-method-hidden", "Cat := record { name: String; }
 expectRejectBoth("distinct-mut-primitive-rejected", "U := distinct Int; mut u: U = cast(1);", "mut requires");
 expectRejectBoth("distinct-mut-inferred-primitive-rejected", "U := distinct Int; mut u := cast<U>(1);", "mut requires");
 expectRejectBoth("distinct-unit-rejected", "V := distinct Unit;", "unsupported distinct underlying type Unit");
-expectRejectBoth("op-on-alias-rejected", "Cat := record { x: Int; } A := alias Cat; A.op := fn(me: Self): Int { 1 };", "cannot attach operation to alias or foreign type A");
+expectRejectBoth("op-on-unknown-type-rejected", "MissingType.op := fn(me: Self): Int { 1 };", "cannot attach operation to unknown or foreign type MissingType");
 expectRejectBoth("legacy-type-top-level-rejected", "N := type Int;", "legacy ':= type' was replaced");
 expectRejectBoth("legacy-type-block-rejected", "{ N := type Int; }", "legacy ':= type' was replaced");
+
+/* 5. Static Type.PROP / Alias.PROP, contextual .PROP, and scoped Alias.op (TS + C11 + ASan/UBSan + comptime + scoping isolation) */
+pathMod := import "core/path";
+proc := import "core/process";
+
+emptyBytes := fn(): List<Int> {
+    xs: List<Int> = [];
+    xs
+};
+
+staticAndAliasSingle :=
+"io := import \"core/io\";\n" +
+"Vec := record<T: Type, N: Int> { data: [T; N]; };\n" +
+"FVec2 := alias Vec<Float, 2>;\n" +
+"FVec3 := alias Vec<Float, 3>;\n" +
+"FVec2.ZERO := FVec2 { data = [0.0, 0.0] };\n" +
+"FVec2.SCALE: Float := 2.5;\n" +
+"FVec2.x := fn(v: Self): Float { v.data[0] };\n" +
+"FVec2.y := fn(v: Self): Float { v.data[1] };\n" +
+"FVec2.unitX := fn(): Self { FVec2 { data = [1.0, 0.0] } };\n" +
+"FVec3.ZERO := { data = [0.0, 0.0, 0.0] };\n" +
+"Marker := record { tag: Int; };\n" +
+"Marker.DEFAULT := { tag = 7 };\n" +
+"MyFloat := alias Float64;\n" +
+"MyFloat.MY_EPS := 0.125;\n" +
+"Pair := alias (a: Int, b: Int);\n" +
+"Pair.ORIGIN := (a = 10, b = 20);\n" +
+"Pair.sum := fn(p: Self): Int { p.a + p.b };\n" +
+"v2 := Vec<Float, 2> { data = [3.0, 4.0] };\n" +
+"z2: FVec2 = .ZERO;\n" +
+"z3: FVec3 = .ZERO;\n" +
+"m0: Marker = .DEFAULT;\n" +
+"u := FVec2.unitX();\n" +
+"ct := comptime { Pair.ORIGIN.sum().toText() + \":\" + FVec2.SCALE.toText() + \":\" + MyFloat.MY_EPS.toText() + \":\" + m0.tag.toText() };\n" +
+"io.outputLine(v2.x(), v2.y(), u.x(), z2.x(), z3.data[2], FVec2.SCALE, Marker.DEFAULT.tag, Pair.ORIGIN.sum(), ct);\n";
+runBoth("static-prop-and-scoped-alias-single", staticAndAliasSingle, "3 4 1 0 0 2.5 7 30 30:2.5:0.125:7\n");
+
+/* Multi-module scoped visibility & non-transitive isolation + narrowed generic isolation */
+modDir := file.makeTempDir("lite-alias-scope-");
+test.check("makeTempDir alias scope: " + modDir.error, modDir.ok);
+
+_wVecBase := file.writeText(pathMod.join(modDir.path, "vec_base.lt"),
+"pub Vec := record<T: Type, N: Int> { data: [T; N]; };\n" +
+"pub Vec.dim := fn<T: Type, N: Int>(v: Self<T, N>): Int { _d := v; N };\n"
+);
+_wVecExt := file.writeText(pathMod.join(modDir.path, "vec_ext.lt"),
+"pub { Vec } := import \"./vec_base\";\n" +
+"pub FVec2 := alias Vec<Float, 2>;\n" +
+"pub FVec3 := alias Vec<Float, 3>;\n" +
+"pub FVec2.ZERO := FVec2 { data = [0.0, 0.0] };\n" +
+"pub FVec2.x := fn(v: Self): Float { v.data[0] };\n" +
+"pub FVec3.ZERO := FVec3 { data = [0.0, 0.0, 0.0] };\n" +
+"pub FVec3.z := fn(v: Self): Float { v.data[2] };\n"
+);
+_wVecMid := file.writeText(pathMod.join(modDir.path, "vec_mid.lt"),
+"{ Vec, FVec2 } := import \"./vec_ext\";\n" +
+"pub makeRaw2 := fn(): Vec<Float, 2> { Vec<Float, 2> { data = [FVec2.x(Vec<Float, 2> { data = [5.0, 6.0] }), 6.0] } };\n"
+);
+
+modOkMain := pathMod.join(modDir.path, "ok_main.lts");
+_wOkMain := file.writeText(modOkMain,
+"io := import \"core/io\";\n" +
+"{ Vec, V2 = FVec2 } := import \"./vec_ext\";\n" +
+"ext := import \"./vec_ext\";\n" +
+"raw2 := Vec<Float, 2> { data = [7.0, 8.0] };\n" +
+"ct := comptime { Vec<Float, 2>.dim(raw2).toText() + \":\" + ext.FVec2.ZERO.x().toText() };\n" +
+"io.outputLine(raw2.x(), raw2.dim(), ext.FVec2.ZERO.x(), V2.ZERO.x(), ct);\n"
+);
+
+okTsComp := compilerTest.compileFile(tsComp, modDir.path, [modOkMain]);
+test.checkInt("alias scope multi-module TS compile: " + okTsComp.stderr, 0, okTsComp.status);
+okTsRun := compilerTest.checkAndRunTs(root, okTsComp.stdout);
+test.checkInt("alias scope multi-module TS run: " + okTsRun.stderr, 0, okTsRun.status);
+test.checkText("alias scope multi-module TS stdout", "7 2 0 0 2:0\n", okTsRun.stdout);
+
+if ccInfo.available {
+    okCComp := compilerTest.compileFile(cComp, modDir.path, [modOkMain]);
+    test.checkInt("alias scope multi-module C compile: " + okCComp.stderr, 0, okCComp.status);
+    cPath := pathMod.join(modDir.path, "prog.c");
+    _wC := file.writeText(cPath, okCComp.stdout);
+    sanBin := pathMod.join(modDir.path, "prog_san");
+    ccOut := pathMod.join(modDir.path, "cc.out");
+    ccErr := pathMod.join(modDir.path, "cc.err");
+    ccRes := proc.runBytes(ccInfo.cc, ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-fsanitize=address,undefined", "-DLITE_ALLOC_SYSTEM", cPath, "-o", sanBin, "-lm"], modDir.path, [], 30000, emptyBytes(), ccOut, ccErr);
+    test.checkInt("alias scope C cc san: " + file.readText(ccErr).text, 0, ccRes.status);
+    runOut := pathMod.join(modDir.path, "run.out");
+    runErr := pathMod.join(modDir.path, "run.err");
+    runRes := proc.runBytes(sanBin, [], modDir.path, ["LITE_CHECK_LEAKS=1"], 10000, emptyBytes(), runOut, runErr);
+    test.checkInt("alias scope C san run: " + file.readText(runErr).text, 0, runRes.status);
+    test.checkText("alias scope C san stderr", "", file.readText(runErr).text);
+    test.checkText("alias scope C stdout parity", "7 2 0 0 2:0\n", file.readText(runOut).text);
+}
+
+assertModErrBoth := fn(label: String, mainSrc: String, expectedErr: String): Unit {
+    badP := pathMod.join(modDir.path, "bad.lts");
+    _wb := file.writeText(badP, mainSrc);
+    tR := compilerTest.compileFile(tsComp, modDir.path, [badP]);
+    test.checkInt(label + " ts status", 2, tR.status);
+    test.check(label + " ts stderr: " + tR.stderr, tR.stderr.contains(expectedErr));
+    if ccInfo.available {
+        cR := compilerTest.compileFile(cComp, modDir.path, [badP]);
+        test.checkInt(label + " c status", 2, cR.status);
+        test.check(label + " c stderr: " + cR.stderr, cR.stderr.contains(expectedErr));
+    }
+};
+
+/* Importing only base or mid does NOT leak ext's FVec2.x */
+assertModErrBoth("alias-op-not-visible-from-base",
+"{ Vec } := import \"./vec_base\";\nv := Vec<Float, 2> { data = [1.0, 2.0] };\n_x := v.x();\n",
+"has no field or operation x");
+assertModErrBoth("alias-op-not-leaked-through-mid",
+"{ makeRaw2 } := import \"./vec_mid\";\nv := makeRaw2();\n_x := v.x();\n",
+"has no field or operation x");
+/* Destructuring only FVec3 does NOT import FVec2.x or allow FVec2.x on Vec<Float, 3> */
+assertModErrBoth("alias-op-destructured-selective",
+"{ Vec, FVec3 } := import \"./vec_ext\";\nv2 := Vec<Float, 2> { data = [1.0, 2.0] };\n_x := v2.x();\n",
+"has no field or operation x");
+assertModErrBoth("narrowed-generic-alias-op-dim-mismatch",
+"{ Vec, FVec2 } := import \"./vec_ext\";\nv3 := Vec<Float, 3> { data = [1.0, 2.0, 3.0] };\n_x := v3.x();\n",
+"has no field or operation x");
+/* Direct attachment to foreign imported nominal type without local alias is still rejected */
+assertModErrBoth("foreign-type-op-still-rejected",
+"{ Vec } := import \"./vec_base\";\nVec.extra := fn<T: Type, N: Int>(v: Self<T, N>): Int { N };\n",
+"cannot attach operation to unknown or foreign type Vec");
+/* Cross-module overload collision between two alias extensions on the same type */
+_wExtA := file.writeText(pathMod.join(modDir.path, "ext_a.lt"),
+"pub A := alias Float;\npub A.bump := fn(x: Self): Float { x + 1.0 };\n"
+);
+_wExtB := file.writeText(pathMod.join(modDir.path, "ext_b.lt"),
+"pub B := alias Float;\npub B.bump := fn(x: Self): Float { x + 2.0 };\n"
+);
+assertModErrBoth("cross-module-alias-op-collision",
+"ea := import \"./ext_a\";\neb := import \"./ext_b\";\n",
+"collides with existing");
+
+_rmModDir := file.remove(modDir.path);
+
+expectRejectBoth("same-module-alias-op-collision-with-base",
+"Box := record { x: Int; }\nBox.val := fn(b: Self): Int { b.x };\nMyBox := alias Box;\nMyBox.val := fn(b: Self): Int { b.x + 1 };\n",
+"collides with existing operation");
+expectRejectBoth("same-module-two-alias-ops-collision",
+"A := alias Float;\nB := alias Float;\nA.tag := fn(x: Self): Int { 1 };\nB.tag := fn(x: Self): Int { 2 };\n",
+"collides with existing alias operation");
+expectRejectBoth("static-prop-enum-case-collision",
+"Status := enum : Int { Ok = 1; };\nStatus.Ok := 2;\n",
+"collides with enum case Ok");
+expectRejectBoth("static-prop-foreign-builtin-rejected",
+"Float64.MY_EPS := 0.001;\n",
+"cannot attach operation to unknown or foreign type Float64");
+expectRejectBoth("static-prop-generic-owner-rejected",
+"Vec := record<T: Type, N: Int> { data: [T; N]; }\nVec.LEN_ZERO := 0;\n",
+"requires a concrete type or alias");
+expectRejectBoth("static-prop-not-callable",
+"K := record { x: Int; }\nK.VER := 1;\ny := K.VER();\n",
+"is not callable");
+
+runBoth("generic-alias-scoped-op",
+"io := import \"core/io\";\n" +
+"Box := record<T: Type> { value: T; }\n" +
+"AliasBox := alias<T: Type> Box<T>;\n" +
+"AliasBox.get := fn<T: Type>(b: Self<T>): T { b.value };\n" +
+"a := AliasBox<Int> { value = 42 };\n" +
+"b := Box<String> { value = \"hi\" };\n" +
+"io.outputLine(a.get(), b.get());\n",
+"42 hi\n");
 
 test.done("alias-and-distinct");

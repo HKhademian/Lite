@@ -298,7 +298,7 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
                 rawRhs := source.slice(rhsStart, scanPos);
                 normRhs := normalizeSignature(rawRhs);
                 var kind := "const";
-                if normRhs.wordAt(0, "alias") or normRhs.wordAt(0, "distinct") or normRhs.wordAt(0, "record") or normRhs.wordAt(0, "enum") {
+                if normRhs.wordAt(0, "alias") or normRhs.wordAt(0, "distinct") or normRhs.wordAt(0, "record") or normRhs.wordAt(0, "enum") or normRhs.wordAt(0, "interface") {
                     kind = "type";
                 } else if normRhs.wordAt(0, "fn") or normRhs.startsWithAt(0, "fn<") or normRhs.startsWithAt(0, "fn(") {
                     kind = "fn";
