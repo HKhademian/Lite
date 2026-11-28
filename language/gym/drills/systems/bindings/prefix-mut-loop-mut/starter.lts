@@ -1,0 +1,14 @@
+io := import "core/io";
+
+scale := io.inputInt();
+n := io.inputInt();
+xs: mut List<Int> = [];
+var i := 0;
+loop i < n {
+    mut xs.pushBack(io.inputInt());
+    i += 1;
+}
+loop mut xs {
+    .item *= scale;
+}
+io.outputLine(xs);

@@ -1,0 +1,24 @@
+io := import "core/io";
+
+n := io.inputInt();
+mut xs: List<Int> = [];
+var i := 0;
+loop i < n {
+    mut xs.pushBack(io.inputInt());
+    i += 1;
+}
+leftDelta := io.inputInt();
+rightDelta := io.inputInt();
+
+addDelta := fn(s: mut Slice<Int>, delta: Int): Unit {
+    loop mut s { .item += delta; }
+};
+
+mid := n :/ 2;
+do {
+    mut view := mut xs[0..n];
+    (left, right) := mut view.splitAt(mid);
+    addDelta(mut left, leftDelta);
+    addDelta(mut right, rightDelta);
+}
+io.outputLine(xs);

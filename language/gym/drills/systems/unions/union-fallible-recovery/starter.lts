@@ -1,0 +1,6 @@
+io := import "core/io";
+errs := import "core/error";
+
+v := io.inputInt();
+_ := errs.Error.new("Input", "non-positive");
+io.outputLine(v);

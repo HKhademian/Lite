@@ -1,0 +1,5 @@
+io := import "core/io";
+
+p := io.inputInt();
+t := io.inputInt();
+io.outputLine("port=" + p.toText() + " timeout=" + t.toText());

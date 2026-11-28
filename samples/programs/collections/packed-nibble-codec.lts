@@ -1,0 +1,41 @@
+/* Packed Nibble Codec — bit-packed Slice<Int4> & Slice<Bool>, UInt8/Int4 bitops, @packed header, Option<T>, and Rc<T>. */
+
+io := import "core/io";
+opt := import "core/option";
+
+@packed
+PacketMeta := record {
+    version: UInt4;
+    flags: UInt4;
+    totalBytes: UInt16;
+};
+
+packPair := fn(hi: UInt4, lo: UInt4): UInt8 {
+    cast<UInt8>(hi).shiftLeft(4).bitOr(cast<UInt8>(lo))
+};
+
+mut nibbles: [Int4; 6] = [3, -2, 5, 7, -4, 1];
+mut flags: [Bool; 6] = [true, false, true, true, false, false];
+
+do {
+    mut nibView := mut nibbles[0..6];
+    (left, right) := mut nibView.splitAt(3);
+    loop mut left { .item = .item.wrappingAdd(1); }
+    loop mut right { .item = .item.wrappingSub(1); }
+}
+
+do {
+    mut flagView := mut flags[0..6];
+    (fa, fb) := mut flagView.splitAt(3);
+    loop mut fa { .item = not .item; }
+    loop mut fb { .item = true; }
+}
+
+encoded := packPair(10, 6);
+meta := PacketMeta { version = 2, flags = 9, totalBytes = 6 };
+optVersion: opt.Option<UInt4> = .Some(meta.version);
+verOut := if .Some(v) := optVersion { cast<Int>(v) } else { 0 };
+sharedTag := Rc.create(encoded);
+
+io.outputLine("nibbles:", nibbles[0], nibbles[1], nibbles[3], nibbles[5]);
+io.outputLine("flags:", flags[0], flags[3], "byte:", sharedTag.get(), "ver:", verOut);

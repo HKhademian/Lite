@@ -1,0 +1,43 @@
+io := import "core/io";
+errs := import "core/error";
+
+PortErr := enum { BadPort(Int); };
+impl errs.ToError for PortErr {
+    toError := fn(self: PortErr): errs.Error {
+        match self {
+            .BadPort(p) { errs.Error.withCode("PortErr", "invalid port " + p.toText(), 400) }
+        }
+    };
+};
+
+TimeoutErr := enum { BadTimeout(Int); };
+impl errs.ToError for TimeoutErr {
+    toError := fn(self: TimeoutErr): errs.Error {
+        match self {
+            .BadTimeout(t) { errs.Error.withCode("TimeoutErr", "invalid timeout " + t.toText(), 422) }
+        }
+    };
+};
+
+checkPort := fn(p: Int): Int ! PortErr {
+    if p < 1024 or p > 65535 { return .err(.BadPort(p)); }
+    p
+};
+
+checkTimeout := fn(t: Int): Int ! TimeoutErr {
+    if t < 1 or t > 300 { return .err(.BadTimeout(t)); }
+    t
+};
+
+buildCfg := fn(p: Int, t: Int): String! {
+    vp := checkPort(p)!;
+    vt := checkTimeout(t)!;
+    "port=" + vp.toText() + " timeout=" + vt.toText()
+};
+
+p := io.inputInt();
+t := io.inputInt();
+io.outputLine(match buildCfg(p, t) {
+    .ok(s) { s }
+    .err(e) { e.format() }
+});

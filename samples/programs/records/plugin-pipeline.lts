@@ -1,0 +1,50 @@
+/* Plugin Pipeline — nominal interface/impl, associated types, defaults, dyn dispatch, lexical contexts, and overloading. */
+
+io := import "core/io";
+
+Metric := interface {
+    Value: Type;
+    measure: fn(self: Self): Self.Value;
+};
+
+Stage := interface {
+    label: fn(self: Self): String;
+    render := fn(self: Self): String { "<" + self.label() + ">" };
+};
+
+FilterStage := record { name: String; passed: Int; };
+impl Stage for FilterStage {
+    label := fn(self: FilterStage): String { self.name + ":" + self.passed.toText() };
+};
+impl Metric for FilterStage {
+    Value := Int;
+    measure := fn(self: FilterStage): Int { self.passed };
+};
+
+FormatStage := record { tag: String; };
+impl Stage for FormatStage {
+    label := fn(self: FormatStage): String { self.tag };
+    render := fn(self: FormatStage): String { "[" + self.label() + "]" };
+};
+
+context pipelineId := "main";
+context mut stepNo: Int = 0;
+
+fmtMetric := fn(n: Int): String { "count=" + n.toText() };
+fmtMetric := fn(s: String): String { "note=" + s };
+
+runStage := fn(s: dyn Stage) context(pipelineId: String, stepNo: mut Int): Unit {
+    stepNo += 1;
+    io.outputLine(pipelineId, stepNo, s.render());
+};
+
+readMetric := fn<T: Type<Metric>>(m: T): T.Value { m.measure() };
+
+flt := FilterStage { name = "dedup", passed = 18 };
+fmt := FormatStage { tag = "json" };
+
+runStage(flt);
+context (pipelineId = "audit") {
+    runStage(fmt);
+}
+io.outputLine(fmtMetric(readMetric(flt)), fmtMetric("done"));

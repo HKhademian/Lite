@@ -1,0 +1,21 @@
+io := import "core/io";
+
+BIAS := comptime { 2 + 3 };
+makeWin := fn(start = 0, width = 4, end = start + width): (start: Int, end: Int) {
+    (=start, =end)
+};
+mk := alias makeWin;
+
+wideScore := fn(v: Int | String): Int {
+    if v: Int { v * 2 } else { v.length() }
+};
+intAdapter: fn(Int): (Int | String) = wideScore;
+
+start := io.inputInt();
+width := io.inputInt();
+w := if start < 0 { mk() } else { mk(start = start, width = width) };
+box := { base = w.start, end = w.end + BIAS };
+res := intAdapter(box.end);
+adapted := match res { n: Int { n.toText() } s: String { s } };
+
+io.outputLine("end=" + box.end.toText() + " adapted=" + adapted);

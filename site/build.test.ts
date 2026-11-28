@@ -330,9 +330,10 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     }
   }
   const learnIndex = readFileSync(join(out, 'learn/index.html'), 'utf8');
-  assert(learnIndex.includes('0 / 28 completed'));
+  assert(learnIndex.includes('0 / 32 completed'));
   assert(learnIndex.includes('Track 0 — Getting Started'));
   assert(learnIndex.includes('Track 7 — Standalone Project Tutorials'));
+  assert(learnIndex.includes('Track 8 — Modern Systems: Slices, Interfaces, Fallibles &amp; Comptime'));
   assert(learnIndex.includes('id="learn-search"'));
   assert(learnIndex.includes('data-learn-env="play"'));
   for (const learnRel of [
@@ -366,9 +367,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(helloLearnHtml.includes('href="../../docs/design/start-here.html#prepare-the-checkout" data-lite-kind="doc">local setup</a>'));
 
   const gymIndex = readFileSync(join(out, 'gym/index.html'), 'utf8');
-  assert(gymIndex.includes('0 / 56 solved'));
-  assert(gymIndex.includes('>Drills (27)</button>'));
-  assert(gymIndex.includes('>Workouts (29)</button>'));
+  assert(gymIndex.includes('0 / 64 solved'));
+  assert(gymIndex.includes('>Drills (31)</button>'));
+  assert(gymIndex.includes('>Workouts (33)</button>'));
   assert(gymIndex.includes('Export JSON'));
   assert(gymIndex.includes('Import JSON'));
   assert(gymIndex.includes('id="gym-search"'));
@@ -448,9 +449,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     modules: number;
   };
   assert.equal(buildMeta.samples, showcaseSamples.length);
-  assert.equal(buildMeta.lessons, 25);
+  assert.equal(buildMeta.lessons, 29);
   assert.equal(buildMeta.tutorials, 3);
-  assert.equal(buildMeta.gymExercises, 56);
+  assert.equal(buildMeta.gymExercises, 64);
   const modulePages = readdirSync(join(out, 'modules'), { recursive: true })
     .filter(file => file !== 'index.html' && file.endsWith('.html'));
   assert.equal(buildMeta.modules, modulePages.length);

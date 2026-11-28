@@ -1,0 +1,69 @@
+/* Fallible Config Parser — A | B unions, T!, ToError, postfix ! propagation, else(err) recovery, if patterns, and { ... } records. */
+
+io := import "core/io";
+errs := import "core/error";
+
+ConfigErr := enum {
+    EmptyKey;
+    InvalidPort(Int);
+};
+
+impl errs.ToError for ConfigErr {
+    toError := fn(self: ConfigErr): errs.Error {
+        match self {
+            .EmptyKey { errs.Error.new("ConfigErr", "empty key") }
+            .InvalidPort(p) { errs.Error.withCode("ConfigErr", "bad port " + p.toText(), 400) }
+        }
+    };
+};
+
+ConfigVal := alias Int | Bool | String;
+
+formatCfg := fn(v: ConfigVal): String {
+    match v {
+        n: Int { "int:" + n.toText() }
+        b: Bool { "bool:" + b.toText() }
+        s: String { "str:" + s }
+    }
+};
+
+validatePort := fn(port: Int): Int ! ConfigErr {
+    if port < 1024 or port > 65535 {
+        return .err(.InvalidPort(port));
+    }
+    port
+};
+
+buildEntry := fn(key: String, rawPort: Int): (name: String, port: Int)! {
+    if key == "" {
+        return .err(ConfigErr.EmptyKey);
+    }
+    p := validatePort(rawPort)!;
+    (=key, port = p)
+};
+
+makeDefaults := fn(host = "localhost", port = 8080, retries = 3): (host: String, port: Int, retries: Int) {
+    (=host, =port, =retries)
+};
+
+okEntry := buildEntry("api", 8443) else(e) { (name = "fallback", port = 8000) };
+badEntry := buildEntry("bad", 80) else(e) { (name = "fallback", port = 8000) };
+errReport := match buildEntry("bad", 80) {
+    .ok(ent) { ent.name }
+    .err(e) { e.format() }
+};
+
+summary := do {
+    def := makeDefaults();
+    { service = okEntry.name, port = okEntry.port, defRetries = def.retries, val = formatCfg(true) }
+};
+
+valA: ConfigVal = 42;
+valDesc := match valA {
+    n: Int { formatCfg(n + 8) }
+    : Bool { "bool" }
+    : String { "str" }
+};
+
+io.outputLine(summary.service, summary.port, summary.defRetries, summary.val);
+io.outputLine(badEntry.name, badEntry.port, errReport, valDesc);

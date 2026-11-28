@@ -233,12 +233,12 @@ test('stripLiteTs strips typed get/set accessors in live mut-record boxes', () =
   assert.equal(res, 5n);
 });
 
-test('verifyGymCorpus compiles and executes all 56 Gym starters and solutions', () => {
+test('verifyGymCorpus compiles and executes all 64 Gym starters and solutions', () => {
   const result = verifyGymCorpus();
-  assert.equal(result.exerciseCount, 56);
-  assert.equal(result.drillCount, 27);
-  assert.equal(result.kataCount, 29);
-  assert(result.caseCount >= 224, `expected at least 224 test cases, got ${String(result.caseCount)}`);
+  assert.equal(result.exerciseCount, 64);
+  assert.equal(result.drillCount, 31);
+  assert.equal(result.kataCount, 33);
+  assert(result.caseCount >= 256, `expected at least 256 test cases, got ${String(result.caseCount)}`);
 });
 
 interface LearnHelperModule {

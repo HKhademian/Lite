@@ -1,0 +1,16 @@
+io := import "core/io";
+errs := import "core/error";
+
+checkScale := fn(v: Int): Int! {
+    if v <= 0 {
+        return .err(errs.Error.new("Input", "non-positive"));
+    }
+    v * 10
+};
+
+v := io.inputInt();
+out: Int | String = checkScale(v) else(e) { "err:" + e.message };
+io.outputLine(match out {
+    n: Int { "ok:" + n.toText() }
+    s: String { s }
+});

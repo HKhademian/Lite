@@ -1,0 +1,15 @@
+io := import "core/io";
+
+Show := interface {
+    label: fn(self: Self): String;
+    banner := fn(self: Self): String { "[" + self.label() + "]" };
+};
+
+MetricBox := record { tag: String; val: Int; };
+
+renderDyn := fn(s: dyn Show): String { s.banner() };
+
+name := io.inputLine().trim();
+n := io.inputInt();
+box := MetricBox { tag = name, val = n };
+io.outputLine(renderDyn(box));

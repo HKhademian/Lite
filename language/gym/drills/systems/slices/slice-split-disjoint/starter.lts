@@ -1,0 +1,13 @@
+io := import "core/io";
+
+n := io.inputInt();
+mut xs: List<Int> = [];
+var i := 0;
+loop i < n {
+    mut xs.pushBack(io.inputInt());
+    i += 1;
+}
+leftDelta := io.inputInt();
+rightDelta := io.inputInt();
+_ := leftDelta + rightDelta;
+io.outputLine(xs);

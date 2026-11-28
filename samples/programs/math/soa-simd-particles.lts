@@ -1,0 +1,71 @@
+/* SoA Particle Integrator — comptime constants, SoA<Particle>, Float32x4 SIMD columns, and disjoint Slice splitAt. */
+
+io := import "core/io";
+simd := import "core/simd";
+
+Particle := record {
+    x: Float32;
+    y: Float32;
+    vx: Float32;
+    vy: Float32;
+    energy: Int;
+};
+
+STEPS := comptime { 4 };
+
+integrateSimd := fn(
+    x: mut Slice<Float32>,
+    y: mut Slice<Float32>,
+    vx: Slice<Float32>,
+    vy: Slice<Float32>,
+    dt: Float32,
+): Unit {
+    n := x.length();
+    dtv := simd.Float32x4.splat(dt);
+    var i := 0;
+    loop i + 4 <= n {
+        px := simd.Float32x4.load(x, i);
+        py := simd.Float32x4.load(y, i);
+        pvx := simd.Float32x4.load(vx, i);
+        pvy := simd.Float32x4.load(vy, i);
+        pvx.fma(dtv, px).store(mut x, i);
+        pvy.fma(dtv, py).store(mut y, i);
+        i += 4;
+    }
+    loop i < n {
+        x[i] = vx[i].fma(dt, x[i]);
+        y[i] = vy[i].fma(dt, y[i]);
+        i += 1;
+    }
+};
+
+boostEnergy := fn(s: mut Slice<Int>, delta: Int): Unit {
+    loop mut s { .item += delta; }
+};
+
+mut swarm: SoA<Particle> = SoA.withCapacity(8);
+loop 0..8 as i {
+    mut swarm.pushBack(Particle {
+        x = cast<Float32>(i),
+        y = cast<Float32>(i * 2),
+        vx = cast<Float32>(1.5),
+        vy = cast<Float32>(-0.5),
+        energy = 10 + i,
+    });
+}
+
+var step := 0;
+loop step < STEPS {
+    integrateSimd(mut swarm.x, mut swarm.y, swarm.vx, swarm.vy, cast<Float32>(0.5));
+    step += 1;
+}
+
+do {
+    mut es := mut swarm.energy;
+    (left, right) := mut es.splitAt(4);
+    boostEnergy(mut left, 5);
+    boostEnergy(mut right, 20);
+}
+
+io.outputLine("particles:", swarm.length(), "p0:", swarm[0].x, swarm[0].y, swarm[0].energy);
+io.outputLine("p7:", swarm[7].x, swarm[7].y, swarm[7].energy);

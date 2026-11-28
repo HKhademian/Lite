@@ -1,0 +1,22 @@
+io := import "core/io";
+
+context envTag := "default";
+context mut hits: Int = 0;
+
+fmt := fn(v: Int): String { "n=" + v.toText() };
+fmt := fn(v: String): String { "s=" + v };
+
+emitAudit := fn(text: String) context(envTag: String, hits: mut Int): String {
+    hits += 1;
+    envTag + "#" + hits.toText() + ":" + text
+};
+
+env := io.inputLine().trim();
+var msg := io.inputLine().trim();
+if msg == "" { msg = io.inputLine().trim(); }
+code := io.inputInt();
+
+line1 := context (envTag = env) { emitAudit(fmt(code)) };
+line2 := emitAudit(fmt(msg));
+io.outputLine(line1);
+io.outputLine(line2);

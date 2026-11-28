@@ -519,6 +519,78 @@
           "docs": ["language/learn/handbook/getting-started/overview-and-setup.md"]
         }
       ]
+    },
+    {
+      "id": "systems",
+      "order": 8,
+      "title": "Track 8 — Modern Systems: Slices, Interfaces, Fallibles & Comptime",
+      "summary": "Zero-copy Slice<T> & splitAt, @packed Option<T> & Simd/SoA, nominal interfaces & lexical contexts, unions & T! fallibles, comptime & structural records.",
+      "lessons": [
+        {
+          "id": "learn.systems.slices.slices-simd-and-layout",
+          "slug": "slices-simd-and-layout",
+          "title": "Slices, splitAt, @packed Option, SIMD & SoA",
+          "kind": "lesson",
+          "domain": "systems",
+          "subGroup": "slices",
+          "environment": "universal",
+          "guideFile": "language/learn/lessons/systems/slices/slices-simd-and-layout.md",
+          "sourceFile": "language/showcases/types/slices/slices-simd-and-soa.lts",
+          "helperModules": [],
+          "stdin": "",
+          "args": [],
+          "teaches": ["Slice<T>", "splitAt", "@packed", "Option<T>", "Simd<T, N>", "SoA<R>", "Rc<T>"],
+          "docs": ["language/learn/handbook/types/slices-simd-and-layout.md", "docs/slices.md", "docs/c11-memory-and-codegen-plan.md"]
+        },
+        {
+          "id": "learn.systems.interfaces.interfaces-contexts-and-overloading",
+          "slug": "interfaces-contexts-and-overloading",
+          "title": "Interfaces, Associated Types, Contexts & Overloads",
+          "kind": "lesson",
+          "domain": "systems",
+          "subGroup": "interfaces",
+          "environment": "universal",
+          "guideFile": "language/learn/lessons/systems/interfaces/interfaces-contexts-and-overloading.md",
+          "sourceFile": "language/showcases/types/interfaces/interfaces-contexts-and-overloads.lts",
+          "helperModules": [],
+          "stdin": "",
+          "args": [],
+          "teaches": ["interface", "impl", "dyn", "context(...)", "overloading"],
+          "docs": ["language/learn/handbook/types/interfaces-contexts-and-overloading.md", "docs/composition-and-interfaces.md", "docs/tags-and-contexts.md"]
+        },
+        {
+          "id": "learn.systems.unions.unions-fallibles-and-flow",
+          "slug": "unions-fallibles-and-flow",
+          "title": "Plain Unions, Definite Init & Fallible T! Pipelines",
+          "kind": "lesson",
+          "domain": "systems",
+          "subGroup": "unions",
+          "environment": "universal",
+          "guideFile": "language/learn/lessons/systems/unions/unions-fallibles-and-flow.md",
+          "sourceFile": "language/showcases/types/unions/unions-and-fallible-pipeline.lts",
+          "helperModules": [],
+          "stdin": "",
+          "args": [],
+          "teaches": ["A | B", "= ?", "T ! E", "T!", "ToError", "!", "else(err)"],
+          "docs": ["language/learn/handbook/types/unions-fallibles-and-errors.md", "docs/union-normalization.md", "docs/fallible-types-and-error-composition.md"]
+        },
+        {
+          "id": "learn.systems.comptime.comptime-records-and-defaults",
+          "slug": "comptime-records-and-defaults",
+          "title": "Comptime, Structural Records, Defaults & Variance",
+          "kind": "lesson",
+          "domain": "systems",
+          "subGroup": "comptime",
+          "environment": "universal",
+          "guideFile": "language/learn/lessons/systems/comptime/comptime-records-and-defaults.md",
+          "sourceFile": "language/showcases/execution/comptime/comptime-and-structural-records.lts",
+          "helperModules": [],
+          "stdin": "",
+          "args": [],
+          "teaches": ["comptime", "{ ... }", "alias", "defaults", "?:", "variance"],
+          "docs": ["language/learn/handbook/execution/comptime-defaults-and-variance.md", "docs/compile-time-evaluation.md", "docs/callable-value-variance.md"]
+        }
+      ]
     }
   ]
 }

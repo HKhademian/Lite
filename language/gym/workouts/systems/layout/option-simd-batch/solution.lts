@@ -1,0 +1,23 @@
+io := import "core/io";
+opt := import "core/option";
+simd := import "core/simd";
+
+Sample := record { val: Int32; };
+
+mut rows: SoA<Sample> = SoA.withCapacity(4);
+var i := 0;
+loop i < 4 {
+    mut rows.pushBack(Sample { val = cast<Int32>(io.inputInt()) });
+    i += 1;
+}
+scale := cast<Int32>(io.inputInt());
+
+v := simd.Int32x4.load(rows.val, 0).mul(simd.Int32x4.splat(scale));
+sumVal := cast<Int>(v.reduceAdd());
+maybePos: opt.Option<Int> = if sumVal > 0 { .Some(sumVal) } else { .None };
+
+if .Some(n) := maybePos {
+    io.outputLine(n);
+} else {
+    io.outputLine("empty");
+}

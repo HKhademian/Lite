@@ -1600,6 +1600,230 @@
         { "name": "heal-negative-dmg", "stdin": "0 0 -10\n", "args": [], "expectedStdout": "10 20 100 | 10 20 110\n" },
         { "name": "full-hit", "stdin": "2 8 100\n", "args": [], "expectedStdout": "10 20 100 | 12 28 0\n" }
       ]
+    },
+    {
+      "id": "drills.systems.bindings.prefix-mut-loop-mut",
+      "slug": "prefix-mut-loop-mut",
+      "title": "Prefix mut Declarations & loop mut Updates",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "systems",
+      "subGroup": "bindings",
+      "promptFile": "language/gym/drills/systems/bindings/prefix-mut-loop-mut/README.md",
+      "starterFile": "language/gym/drills/systems/bindings/prefix-mut-loop-mut/starter.lts",
+      "solutionFile": "language/gym/drills/systems/bindings/prefix-mut-loop-mut/solution.lts",
+      "brokenStarterSyntax": true,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Move `mut` before the variable name (`mut xs: List<Int> = [];`).",
+        "Keep `loop mut xs { .item *= scale; }` to double/scale elements in place."
+      ],
+      "relatedDocs": ["language/learn/handbook/control/conditionals-match-and-loops.md", "docs/mut-qualifier-placement.md"],
+      "relatedLessons": ["learn.systems.slices.slices-simd-and-layout"],
+      "visibleCases": [
+        { "name": "scale-three", "stdin": "3\n4\n1\n2\n3\n4\n", "args": [], "expectedStdout": "[3, 6, 9, 12]\n" },
+        { "name": "scale-neg", "stdin": "-2\n3\n5\n-1\n0\n", "args": [], "expectedStdout": "[-10, 2, 0]\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero-scale", "stdin": "0\n2\n9\n8\n", "args": [], "expectedStdout": "[0, 0]\n" },
+        { "name": "single", "stdin": "7\n1\n6\n", "args": [], "expectedStdout": "[42]\n" }
+      ]
+    },
+    {
+      "id": "drills.systems.slices.slice-split-disjoint",
+      "slug": "slice-split-disjoint",
+      "title": "Disjoint Mutable Slices via splitAt(mid)",
+      "mode": "drill",
+      "belt": "amber",
+      "domain": "systems",
+      "subGroup": "slices",
+      "promptFile": "language/gym/drills/systems/slices/slice-split-disjoint/README.md",
+      "starterFile": "language/gym/drills/systems/slices/slice-split-disjoint/starter.lts",
+      "solutionFile": "language/gym/drills/systems/slices/slice-split-disjoint/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Split `mut view := mut xs[0..n];` at `n :/ 2` using `(left, right) := mut view.splitAt(mid);`.",
+        "Update both slices in place inside a `do { ... }` block before reading `xs`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/slices-simd-and-layout.md", "docs/slices.md"],
+      "relatedLessons": ["learn.systems.slices.slices-simd-and-layout"],
+      "visibleCases": [
+        { "name": "even-len", "stdin": "4\n10\n20\n30\n40\n1\n100\n", "args": [], "expectedStdout": "[11, 21, 130, 140]\n" },
+        { "name": "odd-len", "stdin": "5\n1\n2\n3\n4\n5\n10\n-1\n", "args": [], "expectedStdout": "[11, 12, 2, 3, 4]\n" }
+      ],
+      "hiddenCases": [
+        { "name": "two-elems", "stdin": "2\n5\n8\n2\n3\n", "args": [], "expectedStdout": "[7, 11]\n" },
+        { "name": "no-op-zero-left", "stdin": "3\n7\n8\n9\n5\n0\n", "args": [], "expectedStdout": "[12, 8, 9]\n" }
+      ]
+    },
+    {
+      "id": "drills.systems.interfaces.interface-dyn-dispatch",
+      "slug": "interface-dyn-dispatch",
+      "title": "Nominal interface/impl & dyn Dispatch",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "systems",
+      "subGroup": "interfaces",
+      "promptFile": "language/gym/drills/systems/interfaces/interface-dyn-dispatch/README.md",
+      "starterFile": "language/gym/drills/systems/interfaces/interface-dyn-dispatch/starter.lts",
+      "solutionFile": "language/gym/drills/systems/interfaces/interface-dyn-dispatch/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "compile-error",
+      "hints": [
+        "Nominal conformance in Lite is explicit: add `impl Show for MetricBox { ... }`.",
+        "Define `label := fn(self: MetricBox): String { self.tag + \"=\" + self.val.toText() };`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/interfaces-contexts-and-overloading.md", "docs/composition-and-interfaces.md"],
+      "relatedLessons": ["learn.systems.interfaces.interfaces-contexts-and-overloading"],
+      "visibleCases": [
+        { "name": "cpu", "stdin": "cpu\n85\n", "args": [], "expectedStdout": "[cpu=85]\n" },
+        { "name": "mem", "stdin": "mem\n1024\n", "args": [], "expectedStdout": "[mem=1024]\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero", "stdin": "idle\n0\n", "args": [], "expectedStdout": "[idle=0]\n" },
+        { "name": "neg", "stdin": "delta\n-7\n", "args": [], "expectedStdout": "[delta=-7]\n" }
+      ]
+    },
+    {
+      "id": "drills.systems.unions.union-fallible-recovery",
+      "slug": "union-fallible-recovery",
+      "title": "Union Narrowing & Fallible else(err)",
+      "mode": "drill",
+      "belt": "emerald",
+      "domain": "systems",
+      "subGroup": "unions",
+      "promptFile": "language/gym/drills/systems/unions/union-fallible-recovery/README.md",
+      "starterFile": "language/gym/drills/systems/unions/union-fallible-recovery/starter.lts",
+      "solutionFile": "language/gym/drills/systems/unions/union-fallible-recovery/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Return `.err(errs.Error.new(\"Input\", \"non-positive\"))` for `v <= 0`.",
+        "Recover locally with `checkScale(v) else(e) { \"err:\" + e.message }` and `match` on `Int | String`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/unions-fallibles-and-errors.md", "docs/fallible-types-and-error-composition.md"],
+      "relatedLessons": ["learn.systems.unions.unions-fallibles-and-flow"],
+      "visibleCases": [
+        { "name": "valid", "stdin": "6\n", "args": [], "expectedStdout": "ok:60\n" },
+        { "name": "zero", "stdin": "0\n", "args": [], "expectedStdout": "err:non-positive\n" }
+      ],
+      "hiddenCases": [
+        { "name": "negative", "stdin": "-9\n", "args": [], "expectedStdout": "err:non-positive\n" },
+        { "name": "one", "stdin": "1\n", "args": [], "expectedStdout": "ok:10\n" }
+      ]
+    },
+    {
+      "id": "workouts.systems.layout.option-simd-batch",
+      "slug": "option-simd-batch",
+      "title": "Option<T>, SoA<R> & Int32x4 SIMD Batch",
+      "mode": "kata",
+      "belt": "emerald",
+      "domain": "systems",
+      "subGroup": "layout",
+      "promptFile": "language/gym/workouts/systems/layout/option-simd-batch/README.md",
+      "starterFile": "language/gym/workouts/systems/layout/option-simd-batch/starter.lts",
+      "solutionFile": "language/gym/workouts/systems/layout/option-simd-batch/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Load `rows.val` via `simd.Int32x4.load(rows.val, 0)` and scale with `.mul(simd.Int32x4.splat(scale))`.",
+        "Bind the `Option<Int>` with `if .Some(n) := maybePos { ... }`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/slices-simd-and-layout.md", "docs/c11-memory-and-codegen-plan.md"],
+      "relatedLessons": ["learn.systems.slices.slices-simd-and-layout"],
+      "visibleCases": [
+        { "name": "positive-sum", "stdin": "1\n2\n3\n4\n10\n", "args": [], "expectedStdout": "100\n" },
+        { "name": "negative-sum", "stdin": "1\n-5\n2\n-1\n3\n", "args": [], "expectedStdout": "empty\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero-scale", "stdin": "5\n6\n7\n8\n0\n", "args": [], "expectedStdout": "empty\n" },
+        { "name": "double-negative", "stdin": "-1\n-2\n-3\n-4\n-2\n", "args": [], "expectedStdout": "20\n" }
+      ]
+    },
+    {
+      "id": "workouts.systems.contexts.context-overload-audit",
+      "slug": "context-overload-audit",
+      "title": "Lexical context(...) & Overloaded Formatters",
+      "mode": "kata",
+      "belt": "emerald",
+      "domain": "systems",
+      "subGroup": "contexts",
+      "promptFile": "language/gym/workouts/systems/contexts/context-overload-audit/README.md",
+      "starterFile": "language/gym/workouts/systems/contexts/context-overload-audit/starter.lts",
+      "solutionFile": "language/gym/workouts/systems/contexts/context-overload-audit/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Declare module-level `context envTag := \"default\";` and `context mut hits: Int = 0;`.",
+        "Use `context (envTag = env) { emitAudit(fmt(code)) }` for the first call and ambient `emitAudit(fmt(msg))` for the second."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/interfaces-contexts-and-overloading.md", "docs/tags-and-contexts.md"],
+      "relatedLessons": ["learn.systems.interfaces.interfaces-contexts-and-overloading"],
+      "visibleCases": [
+        { "name": "prod-boot", "stdin": "prod\nready\n200\n", "args": [], "expectedStdout": "prod#1:n=200\ndefault#2:s=ready\n" },
+        { "name": "stage-err", "stdin": "stage\nretry\n503\n", "args": [], "expectedStdout": "stage#1:n=503\ndefault#2:s=retry\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero-code", "stdin": "dev\nok\n0\n", "args": [], "expectedStdout": "dev#1:n=0\ndefault#2:s=ok\n" },
+        { "name": "neg-code", "stdin": "qa\nfail\n-4\n", "args": [], "expectedStdout": "qa#1:n=-4\ndefault#2:s=fail\n" }
+      ]
+    },
+    {
+      "id": "workouts.systems.unions.fallible-pipeline-bang",
+      "slug": "fallible-pipeline-bang",
+      "title": "Fallible Pipeline with ! & ToError",
+      "mode": "kata",
+      "belt": "obsidian",
+      "domain": "systems",
+      "subGroup": "unions",
+      "promptFile": "language/gym/workouts/systems/unions/fallible-pipeline-bang/README.md",
+      "starterFile": "language/gym/workouts/systems/unions/fallible-pipeline-bang/starter.lts",
+      "solutionFile": "language/gym/workouts/systems/unions/fallible-pipeline-bang/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Implement `errs.ToError` on both `PortErr` and `TimeoutErr` so `!` converts errors into `errs.Error`.",
+        "Use `checkPort(p)!` and `checkTimeout(t)!` inside `buildCfg(p: Int, t: Int): String!`."
+      ],
+      "relatedDocs": ["language/learn/handbook/types/unions-fallibles-and-errors.md", "docs/fallible-types-and-error-composition.md"],
+      "relatedLessons": ["learn.systems.unions.unions-fallibles-and-flow"],
+      "visibleCases": [
+        { "name": "valid", "stdin": "8080\n30\n", "args": [], "expectedStdout": "port=8080 timeout=30\n" },
+        { "name": "bad-port", "stdin": "80\n30\n", "args": [], "expectedStdout": "PortErr(400): invalid port 80\n" }
+      ],
+      "hiddenCases": [
+        { "name": "bad-timeout", "stdin": "8443\n999\n", "args": [], "expectedStdout": "TimeoutErr(422): invalid timeout 999\n" },
+        { "name": "min-boundaries", "stdin": "1024\n1\n", "args": [], "expectedStdout": "port=1024 timeout=1\n" }
+      ]
+    },
+    {
+      "id": "workouts.systems.comptime.comptime-records-defaults",
+      "slug": "comptime-records-defaults",
+      "title": "comptime, Structural Records, Defaults & Variance",
+      "mode": "kata",
+      "belt": "obsidian",
+      "domain": "systems",
+      "subGroup": "comptime",
+      "promptFile": "language/gym/workouts/systems/comptime/comptime-records-defaults/README.md",
+      "starterFile": "language/gym/workouts/systems/comptime/comptime-records-defaults/starter.lts",
+      "solutionFile": "language/gym/workouts/systems/comptime/comptime-records-defaults/solution.lts",
+      "brokenStarterSyntax": false,
+      "expectedStarterFailure": "wrong-output",
+      "hints": [
+        "Compute `BIAS := comptime { 2 + 3 };` and use it in `makeWin`'s `end` default parameter.",
+        "Assign `wideScore: fn(Int | String): Int` into `fn(Int): (Int | String)` to adapt parameter and return variance."
+      ],
+      "relatedDocs": ["language/learn/handbook/execution/comptime-defaults-and-variance.md", "docs/compile-time-evaluation.md", "docs/callable-value-variance.md"],
+      "relatedLessons": ["learn.systems.comptime.comptime-records-and-defaults"],
+      "visibleCases": [
+        { "name": "explicit", "stdin": "10\n6\n", "args": [], "expectedStdout": "end=21 adapted=42\n" },
+        { "name": "defaults-on-neg", "stdin": "-1\n99\n", "args": [], "expectedStdout": "end=9 adapted=18\n" }
+      ],
+      "hiddenCases": [
+        { "name": "zero-inputs", "stdin": "0\n0\n", "args": [], "expectedStdout": "end=5 adapted=10\n" },
+        { "name": "large-width", "stdin": "3\n20\n", "args": [], "expectedStdout": "end=28 adapted=56\n" }
+      ]
     }
   ]
 }
