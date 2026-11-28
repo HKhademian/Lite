@@ -1,9 +1,5 @@
 # Imports, Visibility & Core I/O
 
-This runnable example uses the current compiler's `:= alias` syntax for
-transparent type aliases. The selected replacement is `:= alias`. See
-[aliases and distinct type declarations](lite://doc/type-aliases).
-
 Lite keeps module dependencies explicit and local: every external capability enters a file through a named `import` binding, and only symbols marked `pub` leave a module.
 
 ## Namespace Imports & `pub` Contracts
@@ -28,12 +24,14 @@ pub summarize := fn(values: List<Int>): Stats {
 };
 ```
 
-Consumers can import a module as a namespace alias or destructure specific exports (`[pub] { Name, =Name, Local = Exported } := import "...";`) without pulling private helpers into scope:
+Consumers can import a module (such as `"./helpers/math-stats.lts"` or `"math/scalar"`) as a namespace alias or destructure specific exports (`[pub] { Name, =Name, Local = Exported } := import "...";`) without pulling private helpers into scope:
 
 ```lite
-stats := import "./helpers/math-stats.lts";
-{ summarize, factor = scaleFactor } := import "./helpers/math-stats.lts";
-/* `stats.hiddenBoost` is private and cannot be accessed here */
+io := import "core/io";
+scalar := import "math/scalar";
+{ clamp, pi = PI } := import "math/scalar";
+
+io.outputLine(scalar.abs(-7), clamp(15, 0, 10), pi > 3.14);
 ```
 
 Note that `.lts` extension scripts and `.lt` module files contain no hidden prelude—every module declares its own imports cleanly.
@@ -50,7 +48,7 @@ Shipped modules documented in [Modules](lite://module) (`type/*`, `core/*`, `mat
 | Environment | Modules | Where it runs |
 | --- | --- | --- |
 | **Browser + CLI (`type/*`, `core/*`)** | `type/int`, `type/float`, `type/bool`, `type/string`, `type/list`, `type/array`, `type/map`, `type/set`, `type/option`, `type/error`, `type/slice`, `type/number`, `type/rc`, `type/simd`, `type/soa`, `core/io`, `core/crypto`, `core/source`, `core/test`, `core/diag`, `core/interface`, `core/text-builder` | Runs everywhere: Browser Worker, CLI TS & native C11 |
-| **Browser + CLI (`math/*`, `ds/*`, `data/*`, `extra/*`)** | `math/scalar`, `math/random`, `math/vector`, `math/matrix`, `math/geom`, `ds/grid`, `ds/arena`, `ds/pool`, `ds/intern`, `ds/lru`, `ds/ring`, `ds/deque`, `ds/heap`, `ds/bitset`, `ds/sparse`, `ds/spatial`, `data/json`, `data/csv`, `gfx/color`, `core/timer` | Pure Lite math, geometry, data structures, codecs & allocators on TS & C11 |
+| **Browser + CLI (`math/*`, `ds/*`, `data/*`, `gfx/color`)** | `math/scalar`, `math/random`, `math/vector`, `math/matrix`, `math/geom`, `ds/grid`, `ds/arena`, `ds/pool`, `ds/intern`, `ds/lru`, `ds/ring`, `ds/deque`, `ds/heap`, `ds/bitset`, `ds/sparse`, `ds/spatial`, `data/json`, `data/csv`, `gfx/color`, `core/timer` | Pure Lite math, geometry, data structures, codecs & allocators on TS & C11 |
 | **Lite Play & Surfaces** | `gfx/canvas`, `gfx/surface`, `gfx/board`, `media/audio` | Browser Play Canvas, `./bin/lite play` desktop stage & headless tests |
 | **CLI / Host OS** | `core/file`, `core/path`, `core/process`, `core/time` | Requires local `./bin/lite run` or native C11 host OS access |
 

@@ -118,17 +118,16 @@ io.outputLine(Point.sum(p), p.sum(), pairSum);
 
 ## Typed Sets `Set<T>`
 
-Store unique scalar or nominal `enum` values with `Set<T>`. Sets zero-initialize empty, require `mut Set<T>` for mutating [type/set](lite://module/type/set) calls (`add`, `remove`, `clear`), copy independently on assignment, and iterate elements in insertion order:
+Store unique scalar or nominal `enum` values with `Set<T>`. Sets zero-initialize empty, require `mut Set<T>` for mutating [type/set](lite://module/type/set) operations (`mut tags.add(...)`, `remove`, `clear`), copy independently on assignment, and iterate elements in insertion order:
 
 ```lite
 io := import "core/io";
-set := import "type/set";
 
 mut tags: Set<String>;
-set.add(mut tags, "lite");
-set.add(mut tags, "typed");
-set.add(mut tags, "lite");
-io.outputLine(tags, set.size(tags), set.has(tags, "lite"));
+mut tags.add("lite");
+mut tags.add("typed");
+mut tags.add("lite");
+io.outputLine(tags, tags.size(), tags.has("lite"));
 ```
 
 See [Tuples & Patterns](lite://doc/tuples-and-patterns), [Records](lite://doc/records), [Enums & Variants](lite://doc/enums-and-variants), [Aggregate Patterns](lite://doc/aggregate-patterns), [Arrays](lite://doc/arrays), [Lists](lite://doc/lists), [Typed Maps](lite://doc/maps), [Typed Sets](lite://doc/sets), and [Type Aliases](lite://doc/type-aliases).

@@ -39,6 +39,7 @@ pub detectSourceEnvironment := fn(source: String): String {
                 return "cli";
             }
             if source.startsWithAt(p, "\"gfx/canvas\"")
+            or source.startsWithAt(p, "\"gfx/surface\"")
             or source.startsWithAt(p, "\"media/audio\"")
             or source.startsWithAt(p, "\"gfx/board\"") {
                 return "play";
@@ -347,7 +348,7 @@ pub collectPlaygroundLibraryJson := fn(rootDir: String, samplesJson: String): (o
             if not srcRead.ok {
                 return (ok = false, jsonText = "", error = "missing sample file " + relFile + ": " + srcRead.error);
             }
-            isPlay := relFile.startsWithAt(0, "samples/graphics/") or relFile.startsWithAt(0, "samples/games/");
+            isPlay := relFile.startsWithAt(0, "samples/graphics/") or relFile.startsWithAt(0, "samples/games/") or relFile.startsWithAt(0, "samples/3d/");
             slug := nextAvailableSlug(mut usedSamples, sid);
             mut items.pushBack(buildItemJson(
             "sample/" + slug, slug, "sample", if isPlay { "Play" } else { "Sample" }, ttl,

@@ -50,10 +50,19 @@ export function deriveLibraryTags(
     }
   }
 
-  if (/import\s+"extra\/canvas"/.test(src) || /\bcanvas\.(create|play|clear|fillRect|setPixel)\b/.test(src)) tags.add('canvas');
-  if (/import\s+"extra\/surface"/.test(src) || /\bsurface\./.test(src)) tags.add('surface');
-  if (/import\s+"extra\/audio"/.test(src) || /\baudio\.(tone|play)\b/.test(src)) tags.add('audio');
-  if (/import\s+"extra\/board"/.test(src) || /\bboard\./.test(src)) tags.add('board');
+  if (/import\s+"gfx\/canvas"/.test(src) || /\bcanvas\.(create|play|clear|fillRect|setPixel)\b/.test(src)) tags.add('canvas');
+  if (/import\s+"gfx\/surface"/.test(src) || /\bSurface\.open\b/.test(src)) {
+    tags.add('surface');
+    tags.add('play');
+  }
+  if (/import\s+"media\/audio"/.test(src) || /\baudio\.(tone|playNote)\b/.test(src)) tags.add('audio');
+  if (/import\s+"gfx\/board"/.test(src) || /\bboard\./.test(src)) tags.add('board');
+  if (/import\s+"gfx\/color"/.test(src)) tags.add('color');
+  if (/import\s+"gfx\/(camera|scene)"/.test(src)) {
+    tags.add('3d');
+    tags.add('graphics');
+  }
+  if (/import\s+"ui\/im"/.test(src)) tags.add('ui');
   if (
     item.environment === 'play' ||
     /\bcanvas\.play\s*\(/.test(src) ||
@@ -87,16 +96,16 @@ export function deriveLibraryTags(
   }
   if (/import\s+"core\/(file|path)"/.test(src)) tags.add('file');
   if (item.environment === 'cli' || /import\s+"core\/process"/.test(src)) tags.add('cli');
-  if (/import\s+"core\/math"/.test(src) || /import\s+"extra\/(matrix|vector)"/.test(src)) tags.add('math');
-  if (/import\s+"core\/random"/.test(src)) tags.add('random');
+  if (/import\s+"math\/(scalar|vector|matrix|geom|transform)"/.test(src)) tags.add('math');
+  if (/import\s+"math\/random"/.test(src)) tags.add('random');
   if (/import\s+"core\/crypto"/.test(src)) tags.add('crypto');
-  if (/import\s+"core\/(text|unicode|format)"/.test(src)) tags.add('text');
-  if (/import\s+"core\/text"/.test(src)) {
+  if (/import\s+"type\/string"/.test(src) || /import\s+"core\/text-builder"/.test(src)) tags.add('text');
+  if (/import\s+"type\/string"/.test(src)) {
     tags.add('char');
     tags.add('character');
   }
   if (
-    /import\s+"core\/unicode"/.test(src) ||
+    /import\s+"type\/string"/.test(src) ||
     /\b(unicode|utf-?8)\b/.test(titleLower + ' ' + fileLower) ||
     /\b(utf8Encode|fromUtf8Strict|fromUtf8Lossy|utf8DecodeStrict|utf16Encode|fromUtf16Strict|isValidUtf8|toCodePoints|fromCodePoints|fromCodePoint|codePointAt)\b/.test(src)
   ) {
