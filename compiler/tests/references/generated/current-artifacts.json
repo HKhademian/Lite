@@ -1,7 +1,7 @@
 {
-  "note": "Post-Phase 18 package-local $preload.lt and explicit module-owned Rc/Slice/Simd/SimdNative/SoA. All 69 TS and C corpus artifact hashes and Phases 5–18 verified.",
+  "note": "Post-Phase 18 compiler source reorganization into lib/lite/compiler/. All 69 TS and C corpus artifact hashes and Phases 5–18 verified.",
   "recorded": "2026-11-28",
-  "sourceSha256": "9a6690270ef0522e00a78a7f66ee88f38a623edc4dcbadf35696e682031ef1e6",
+  "sourceSha256": "eac7523289332359feae5cf3b83245c6e233f21c21dc8212734a45319a6c26a0",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
