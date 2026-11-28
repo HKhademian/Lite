@@ -1,6 +1,6 @@
 /** Nominal interface definitions, explicit conformance (`impl`) registry, and cross-module metadata codecs. */
 
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** One associated type declaration in an interface (`Name: Type[<Bound>] [= Default]`). */
 pub InterfaceAssocType := record {

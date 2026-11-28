@@ -1,4 +1,4 @@
-verify := import "util/verify";
+verify := import "../../tools/src/internal/verify";
 test := import "core/test";
 
 test.checkBool("usage mentions --coverage", true, verify.usageText().indexOf("--coverage", 0) >= 0);

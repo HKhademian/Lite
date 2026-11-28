@@ -5,10 +5,10 @@ list := import "core/list";
 path := import "core/path";
 text := import "core/text";
 json := import "data/json";
-mdHtml := import "util/markdown-html";
+mdHtml := import "data/markdown-html";
 siteLib := import "./library";
 siteTools := import "./tools";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 escapeHtml := siteTools.escapeSiteHtml;
 

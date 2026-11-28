@@ -6,9 +6,9 @@ proc := import "core/process";
 text := import "core/text";
 path := import "core/path";
 json := import "data/json";
-docsUtil := import "util/docs";
-casesUtil := import "util/cases";
-project := import "util/project";
+docsUtil := import "./internal/docs";
+casesUtil := import "./internal/cases";
+project := import "./internal/project";
 
 failDoctor := fn(message: String): Unit {
     io.errorLine(message);

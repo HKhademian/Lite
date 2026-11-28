@@ -23,7 +23,7 @@ ctx := import "./frontend-context";
 sliceBorrows := import "./slice-borrows";
 comptimeEval := import "./comptime-eval";
 textLib := import "core/text";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** One parsed expression matching `frontend-ir.Parsed`. */
 Parsed := alias (kind: String, code: String, intValue: Int, textValue: String, constant: Bool, next: Int);

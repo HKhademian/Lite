@@ -5,9 +5,9 @@ text := import "core/text";
 list := import "core/list";
 path := import "core/path";
 json := import "data/json";
-md := import "util/markdown";
+md := import "data/markdown";
 docgen := import "lite/docgen";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** Default directory names excluded when discovering repository Markdown files. */
 pub defaultIgnoredDirs := fn(): List<String> {

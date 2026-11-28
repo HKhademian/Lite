@@ -1,8 +1,8 @@
 /** Builds Project Euler benchmark items (`benchmark/challenges/tools/build_benchmark_euler.ts`). */
 
 io := import "core/io";
-project := import "util/project";
-challenges := import "util/challenges";
+project := import "./internal/project";
+challenges := import "./internal/challenges";
 
 run := fn(): Int {
     root := project.findRepoRoot();

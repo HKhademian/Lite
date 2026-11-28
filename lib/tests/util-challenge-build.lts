@@ -1,8 +1,8 @@
-chBuild := import "util/challenge-build";
-challenges := import "util/challenges";
+chBuild := import "../../tools/src/internal/challenge-build";
+challenges := import "../../tools/src/internal/challenges";
 fs := import "core/file";
 path := import "core/path";
-project := import "util/project";
+project := import "../../tools/src/internal/project";
 test := import "core/test";
 
 test.checkText("slugify basic", "breadth-first-search", chBuild.slugifyText("Breadth-First Search"));

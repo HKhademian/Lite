@@ -1,8 +1,8 @@
 /** CLI entrypoint collecting Playground library items JSON (`site/playground-library.ts`). */
 
-cli := import "util/cli";
+cli := import "./internal/cli";
 io := import "core/io";
-project := import "util/project";
+project := import "./internal/project";
 siteLib := import "../../site/src/library";
 
 run := fn(rawArgs: List<String>): Unit {

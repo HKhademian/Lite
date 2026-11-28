@@ -2,7 +2,7 @@
 
 fs := import "core/file";
 text := import "core/text";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** Structured result of checking or formatting a file on disk. */
 pub FormatFileResult := record {

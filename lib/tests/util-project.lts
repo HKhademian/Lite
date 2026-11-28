@@ -1,4 +1,4 @@
-project := import "util/project";
+project := import "../../tools/src/internal/project";
 test := import "core/test";
 
 root := project.findRepoRoot();

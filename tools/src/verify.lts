@@ -1,10 +1,10 @@
 /** Standalone verifier command (`lite-verify`); verifies declarative manifests or `language/verifications`. */
 
 io := import "core/io";
-cli := import "util/cli";
-project := import "util/project";
-cases := import "util/cases";
-verify := import "util/verify";
+cli := import "./internal/cli";
+project := import "./internal/project";
+cases := import "./internal/cases";
+verify := import "./internal/verify";
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "verifier", "verify");

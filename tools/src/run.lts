@@ -2,7 +2,7 @@
 
 io := import "core/io";
 runner := import "lite/runner";
-project := import "util/project";
+project := import "./internal/project";
 
 usageExit := fn(): Unit {
     io.errorLine("Usage: ./bin/lite run [--target ts|c] [-O0|-O1|-O2|-O3] [--builtin-mode SPEC]... [--play [--scale N] [--fps N|--uncap] [--capture PNG]] file.lts [-- argument ...]");

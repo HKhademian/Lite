@@ -2,7 +2,7 @@ crypto := import "core/crypto";
 fs := import "core/file";
 test := import "core/test";
 path := import "core/path";
-streams := import "util/streams";
+streams := import "../../tools/src/internal/streams";
 
 tmp := fs.makeTempDir("lite-util-streams-");
 test.checkBool("temp dir ok", true, tmp.ok);

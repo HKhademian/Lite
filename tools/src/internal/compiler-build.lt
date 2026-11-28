@@ -2,7 +2,7 @@
 
 fs := import "core/file";
 proc := import "core/process";
-project := import "util/project";
+project := import "./project";
 crypto := import "core/crypto";
 text := import "core/text";
 list := import "core/list";

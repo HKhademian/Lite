@@ -1,9 +1,9 @@
 /** Host entrypoint target for compiler/C release packaging (`compiler/scripts/release.ts`). */
 
 io := import "core/io";
-cli := import "util/cli";
-project := import "util/project";
-compRel := import "util/compiler-release";
+cli := import "./internal/cli";
+project := import "./internal/project";
+compRel := import "./internal/compiler-release";
 
 run := fn(): Int {
     root := project.findRepoRoot();

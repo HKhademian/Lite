@@ -4,7 +4,7 @@ sourceLib := import "core/source";
 diag := import "core/diag";
 numeric := import "./numeric-literals";
 io := import "core/io";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** One lexical token: kind, decoded text, source offset and 1-based line/column. */
 pub Token := alias (kind: String, text: String, offset: Int, line: Int, column: Int);

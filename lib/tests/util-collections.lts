@@ -1,6 +1,6 @@
 /** Dual-target tests for `util/collections` O(n log n) sorts and O(n) Set/Map helpers. */
 
-collections := import "util/collections";
+collections := import "core/list";
 test := import "core/test";
 text := import "core/text";
 

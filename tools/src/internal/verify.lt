@@ -3,16 +3,16 @@
 io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
-project := import "util/project";
+project := import "./project";
 crypto := import "core/crypto";
 text := import "core/text";
 time := import "core/time";
 list := import "core/list";
 path := import "core/path";
 json := import "data/json";
-streams := import "util/streams";
-cases := import "util/cases";
-compilerBuild := import "util/compiler-build";
+streams := import "./streams";
+cases := import "./cases";
+compilerBuild := import "./compiler-build";
 pool := import "external/pool";
 
 KIND_FEATURE := "feature";
@@ -642,11 +642,11 @@ computeRuntimeHash := fn(rootDir: String, compilerDeps: List<String>): (ok: Bool
     "igniter/package-lock.json",
     "tools/src/ignite.lts",
     "tools/src/verify.lts",
-    "lib/util/verify.lt",
-    "lib/util/cases.lt",
-    "lib/util/streams.lt",
+    "tools/src/internal/verify.lt",
+    "tools/src/internal/cases.lt",
+    "tools/src/internal/streams.lt",
     "lib/data/json.lt",
-    "lib/util/compiler-build.lt",
+    "tools/src/internal/compiler-build.lt",
     "tools/src/compiler-build.lts",
     "compiler/bootstrap/igniter.ts",
     "compiler/bootstrap/seed.ts"
@@ -961,13 +961,13 @@ invalidatesVerification := fn(relPath: String): Bool {
     "igniter/package-lock.json",
     "language/verifications/features.json",
     "language/verifications/schema/verification.schema.json",
-    "lib/util/compiler-build.lt",
+    "tools/src/internal/compiler-build.lt",
     "tools/src/compiler-build.lts",
     "tools/src/ignite.lts",
     "tools/src/verify.lts",
-    "lib/util/verify.lt",
-    "lib/util/cases.lt",
-    "lib/util/streams.lt",
+    "tools/src/internal/verify.lt",
+    "tools/src/internal/cases.lt",
+    "tools/src/internal/streams.lt",
     "lib/data/json.lt"
     ];
     if exact.contains(relPath) { return true; }

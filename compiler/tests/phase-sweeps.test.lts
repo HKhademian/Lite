@@ -6,12 +6,12 @@ path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
 pool := import "external/pool";
-compilerBuild := import "util/compiler-build";
-compilerTest := import "util/compiler-test";
-corpus := import "util/corpus";
+compilerBuild := import "../../tools/src/internal/compiler-build";
+compilerTest := import "../../tools/src/internal/compiler-test";
+corpus := import "../../tools/src/internal/corpus";
 json := import "data/json";
-project := import "util/project";
-streams := import "util/streams";
+project := import "../../tools/src/internal/project";
+streams := import "../../tools/src/internal/streams";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

@@ -5,10 +5,10 @@ path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
 pool := import "external/pool";
-cases := import "util/cases";
-compilerBuild := import "util/compiler-build";
+cases := import "../../tools/src/internal/cases";
+compilerBuild := import "../../tools/src/internal/compiler-build";
 json := import "data/json";
-project := import "util/project";
+project := import "../../tools/src/internal/project";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

@@ -1,9 +1,9 @@
 /** Host entrypoint target for text-cache artifact comparison (`benchmark/text-cache.ts`). */
 
 io := import "core/io";
-cli := import "util/cli";
-project := import "util/project";
-benchUtil := import "util/benchmark";
+cli := import "./internal/cli";
+project := import "./internal/project";
+benchUtil := import "./internal/benchmark";
 
 run := fn(): Int {
     root := project.findRepoRoot();

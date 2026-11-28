@@ -4,8 +4,8 @@ fs := import "core/file";
 io := import "core/io";
 list := import "core/list";
 path := import "core/path";
-cfetch := import "util/challenge-fetch";
-project := import "util/project";
+cfetch := import "./internal/challenge-fetch";
+project := import "./internal/project";
 
 failFetch := fn(message: String): Int {
     io.errorLine("FAIL: " + message);

@@ -1,7 +1,7 @@
 /** Standalone compiler router (`lite-compile`); munches target selection and forwards to `bin/lite-compile-<target>`. */
 
 io := import "core/io";
-project := import "util/project";
+project := import "./internal/project";
 
 TARGET_TS := "ts";
 TARGET_C := "c";

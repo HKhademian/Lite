@@ -1,9 +1,9 @@
 /* Phase 7 verification: borrowed zero-copy Slice<T>, mut slices, splitAt suspension/disjointness, String.bytes(), and compile-time/runtime rejections on TS & C11. */
 
 test := import "core/test";
-compilerBuild := import "util/compiler-build";
-compilerTest := import "util/compiler-test";
-project := import "util/project";
+compilerBuild := import "../../../tools/src/internal/compiler-build";
+compilerTest := import "../../../tools/src/internal/compiler-test";
+project := import "../../../tools/src/internal/project";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

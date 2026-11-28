@@ -6,7 +6,7 @@ path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
 json := import "data/json";
-project := import "util/project";
+project := import "../../tools/src/internal/project";
 
 rawRoot := project.findRepoRoot();
 test.check("repo root found", rawRoot =!= "");

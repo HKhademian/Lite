@@ -1,7 +1,7 @@
-compRel := import "util/compiler-release";
+compRel := import "../../tools/src/internal/compiler-release";
 fs := import "core/file";
 path := import "core/path";
-project := import "util/project";
+project := import "../../tools/src/internal/project";
 test := import "core/test";
 
 root := project.findRepoRoot();

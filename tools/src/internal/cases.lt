@@ -3,13 +3,13 @@
 fs := import "core/file";
 io := import "core/io";
 proc := import "core/process";
-project := import "util/project";
+project := import "./project";
 crypto := import "core/crypto";
 text := import "core/text";
 list := import "core/list";
 path := import "core/path";
 json := import "data/json";
-streams := import "util/streams";
+streams := import "./streams";
 
 CASE_KIND_TOOL := "tool";
 CASE_KIND_FEATURE := "feature";

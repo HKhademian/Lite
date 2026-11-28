@@ -1,7 +1,7 @@
 /** Pure RFC-8259 JSON scanner, typed reader, and O(N) string serializer (`data/json`) across TS and C11. */
 
 text := import "core/text";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** Top-level value classification at a JSON token offset. */
 pub JsonKind := enum {

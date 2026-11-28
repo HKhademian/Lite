@@ -1,6 +1,6 @@
 /** Phase 11 function/method overload signature canonicalization, side-table metadata, and specificity comparison. */
 
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 contexts := import "./contexts";
 types := import "./frontend-types";
 generics := import "./generics";

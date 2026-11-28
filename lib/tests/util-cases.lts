@@ -1,5 +1,5 @@
-cases := import "util/cases";
-project := import "util/project";
+cases := import "../../tools/src/internal/cases";
+project := import "../../tools/src/internal/project";
 path := import "core/path";
 test := import "core/test";
 json := import "data/json";

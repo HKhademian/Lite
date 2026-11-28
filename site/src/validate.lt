@@ -5,7 +5,7 @@ path := import "core/path";
 proc := import "core/process";
 text := import "core/text";
 intern := import "ds/intern";
-challenges := import "util/challenges";
+challenges := import "../../tools/src/internal/challenges";
 json := import "data/json";
 
 replaceAllText := fn(source: String, needle: String, replacement: String): String {

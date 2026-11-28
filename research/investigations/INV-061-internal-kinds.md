@@ -10,9 +10,9 @@ Should token, value, stage and case kinds have centralized named values and
 derived types? Preserve readability, discriminated-union narrowing, exhaustiveness,
 serialized spellings, direct Node execution and generated bootstrap continuity.
 
-- [Semantic verification](../../lib/util/verify.lt) originally had literal unions for kinds/targets in `igniter/verify.ts` before migrating to Lite.
-- [Compiler fixtures](../../lib/util/corpus.lt) originally used typed program/rejected categories in `igniter/test-fixtures.ts` before migrating to Lite.
-- [Declarative cases](../../lib/util/cases.lt) originally used local named `as const` values in `tools/cases.ts` before migrating to Lite;
+- [Semantic verification](../../tools/src/internal/verify.lt) originally had literal unions for kinds/targets in `igniter/verify.ts` before migrating to Lite.
+- [Compiler fixtures](../../tools/src/internal/corpus.lt) originally used typed program/rejected categories in `igniter/test-fixtures.ts` before migrating to Lite.
+- [Declarative cases](../../tools/src/internal/cases.lt) originally used local named `as const` values in `tools/cases.ts` before migrating to Lite;
   that local use did not decide a project-wide refactor.
 - [The Lite lexer](../../lib/lite/compiler/lexer.lt) stores String kinds and uses
   zero-argument canonical accessors because its source subset lacks enums and

@@ -1,5 +1,5 @@
-project := import "util/project";
-rel := import "util/release";
+project := import "../../tools/src/internal/project";
+rel := import "../../tools/src/internal/release";
 test := import "core/test";
 json := import "data/json";
 

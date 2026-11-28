@@ -5,7 +5,7 @@ http := import "external/http";
 io := import "core/io";
 path := import "core/path";
 proc := import "core/process";
-project := import "util/project";
+project := import "./internal/project";
 
 run := fn(): Int {
     root := project.findRepoRoot();

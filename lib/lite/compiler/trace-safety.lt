@@ -2,7 +2,7 @@
 
 listLib := import "core/list";
 textLib := import "core/text";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 ir := import "./frontend-ir";
 sym := import "./symbol-table";
 syntax := import "./frontend-syntax";

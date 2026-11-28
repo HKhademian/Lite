@@ -4,15 +4,15 @@ io := import "core/io";
 fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
-project := import "util/project";
+project := import "./project";
 text := import "core/text";
 list := import "core/list";
 crypto := import "core/crypto";
 time := import "core/time";
 json := import "data/json";
-streams := import "util/streams";
-cases := import "util/cases";
-corpus := import "util/corpus";
+streams := import "./streams";
+cases := import "./cases";
+corpus := import "./corpus";
 
 /** Parses non-negative JSON decimal ms text (e.g. `12.345`) into rounded integer microseconds. */
 pub parseMsToMicros := fn(source: String, objPos: Int, key: String): (ok: Bool, micros: Int) {
@@ -568,8 +568,8 @@ pub runCompilerPerformanceCommand := fn(rootDir: String, args: List<String>): In
 
     toolPaths: List<String> = [
     "benchmark/compiler-performance.ts", "tools/src/compiler-performance.lts",
-    "lib/util/benchmark.lt", "lib/util/corpus.lt", "tools/src/compiler-worker.lts",
-    "lib/external/bench.lt", "lib/util/compiler-build.lt", "igniter/artifacts.ts"
+    "tools/src/internal/benchmark.lt", "tools/src/internal/corpus.lt", "tools/src/compiler-worker.lts",
+    "lib/external/bench.lt", "tools/src/internal/compiler-build.lt", "igniter/artifacts.ts"
     ];
     toolsJsonRes := corpus.toolIdentitiesJson(rootDir, toolPaths);
     if not toolsJsonRes.ok {

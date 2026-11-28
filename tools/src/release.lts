@@ -7,9 +7,9 @@ text := import "core/text";
 crypto := import "core/crypto";
 path := import "core/path";
 json := import "data/json";
-project := import "util/project";
-rel := import "util/release";
-tb := import "util/text-builder";
+project := import "./internal/project";
+rel := import "./internal/release";
+tb := import "core/text-builder";
 
 failRelease := fn(workToClean: String, message: String): Unit {
     if workToClean =!= "" {

@@ -3,9 +3,9 @@
 fs := import "core/file";
 path := import "core/path";
 text := import "core/text";
-collections := import "util/collections";
+collections := import "core/list";
 json := import "data/json";
-mdHtml := import "util/markdown-html";
+mdHtml := import "data/markdown-html";
 siteTools := import "./tools";
 
 escapeHtml := siteTools.escapeSiteHtml;

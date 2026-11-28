@@ -1,6 +1,6 @@
 /** CLI entrypoint validating all built site references in `dist/site/` (`site/lite-uri.ts`). */
 
-cli := import "util/cli";
+cli := import "./internal/cli";
 io := import "core/io";
 siteValidate := import "../../site/src/validate";
 

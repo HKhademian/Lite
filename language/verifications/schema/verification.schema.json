@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lite.local/schema/verification.schema.json",
   "title": "Lite verification case",
-  "description": "One feature or artifact verification manifest consumed by lib/util/verify.lts.",
+  "description": "One feature or artifact verification manifest consumed by tools/src/internal/verify.lt.",
   "type": "object",
   "additionalProperties": false,
   "required": [

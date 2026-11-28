@@ -1,6 +1,6 @@
 fs := import "core/file";
 test := import "core/test";
-docs := import "util/docs";
+docs := import "../../tools/src/internal/docs";
 path := import "core/path";
 
 tmpRes := fs.makeTempDir("lite-util-docs-");

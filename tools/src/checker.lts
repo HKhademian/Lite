@@ -4,9 +4,9 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 path := import "core/path";
-project := import "util/project";
-compilerBuild := import "util/compiler-build";
-cases := import "util/cases";
+project := import "./internal/project";
+compilerBuild := import "./internal/compiler-build";
+cases := import "./internal/cases";
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "checker", "check");

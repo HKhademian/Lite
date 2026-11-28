@@ -165,7 +165,8 @@ function isolatedCheckout(): string {
   const coreLibs = readdirSync(join(root, 'lib/core')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/core/${f}`);
   const dataLibs = readdirSync(join(root, 'lib/data')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/data/${f}`);
   const externalLibs = readdirSync(join(root, 'lib/external')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/external/${f}`);
-  const utilLibs = readdirSync(join(root, 'lib/util')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/util/${f}`);
+  const liteLibs = readdirSync(join(root, 'lib/lite')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/lite/${f}`);
+  const internalToolLibs = readdirSync(join(root, 'tools/src/internal')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `tools/src/internal/${f}`);
   const siteLibs = readdirSync(join(root, 'site/src')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `site/src/${f}`);
   const paths = new Set([
     'bin/lite', 'bin/lite-compile', 'bin/lite-compile-ts', 'bin/lite-compile-c', 'bin/lite-check', 'bin/lite-run', 'bin/lite-verify',
@@ -174,7 +175,7 @@ function isolatedCheckout(): string {
     'config/versions.json',
     'compiler/bootstrap/igniter', 'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/tsconfig.json',
-    ...dependencies, ...toolSources, ...coreLibs, ...dataLibs, ...externalLibs, ...utilLibs, ...siteLibs,
+    ...dependencies, ...toolSources, ...coreLibs, ...dataLibs, ...externalLibs, ...liteLibs, ...internalToolLibs, ...siteLibs,
   ]);
   for (const path of paths) {
     const destination = join(directory, path);
@@ -451,7 +452,7 @@ test('default verifier selects consumers after compiler changes and ignores inve
     const git = join(directory, 'git');
     const changedEnv = { ...env, PATH: directory + delimiter + env.PATH };
     // Supply a changed-file listing without editing compiler source or the real Git index.
-    for (const path of ['lib/util/compiler-build.lt', 'lib/lite/compiler/c-literals.lt', 'lib/lite/compiler/frontend.lt',
+    for (const path of ['tools/src/internal/compiler-build.lt', 'lib/lite/compiler/c-literals.lt', 'lib/lite/compiler/frontend.lt',
       'compiler/manifests/c.json', 'lib/core/int.lt']) {
       writeFileSync(git, `#!/bin/sh\nprintf '%s\\n' ' M ${path}'\n`);
       chmodSync(git, 0o755);

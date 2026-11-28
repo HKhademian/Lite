@@ -3,10 +3,9 @@
 fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
-compilerBuild := import "util/compiler-build";
-mdHtml := import "util/markdown-html";
-project := import "util/project";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
+mdHtml := import "data/markdown-html";
+toolHost := import "./tool-host";
 
 /** Supported output target platform for `buildScript`. */
 pub TargetPlatform := enum { Native; Macos; Linux; Windows; Headless; Web; };
@@ -228,7 +227,7 @@ findTsCompiler := fn(root: String): (ok: Bool, path: String, error: String) {
     if envTs.found and envTs.value =!= "" and fs.kind(envTs.value) == fs.FILE_KIND_FILE {
         return (ok = true, path = envTs.value, error = "");
     }
-    sel := compilerBuild.selectCompilerPath(root, "ts");
+    sel := toolHost.selectCompilerPath(root, "ts");
     (ok = sel.ok, path = sel.path, error = sel.error)
 };
 
@@ -271,7 +270,7 @@ pub buildScript := fn(opts: BuildOptions): BuildResult {
     emptyEnv: List<String> = [];
 
     if opts.platform == TargetPlatform.Web {
-        root := project.findRepoRoot();
+        root := toolHost.findRepoRoot();
         tsSel := findTsCompiler(root);
         if not tsSel.ok {
             fs.remove(tempDir.path);
@@ -284,7 +283,7 @@ pub buildScript := fn(opts: BuildOptions): BuildResult {
         (mut tsArgs).pushBack(opts.scriptPath);
         mut tsArgs.pushBack("--out");
         mut tsArgs.pushBack(tsArtifact);
-        tsRes := proc.run(project.nodeExecPath(), appendStr(tsSel.path, tsArgs), "", emptyEnv, true, "");
+        tsRes := proc.run(toolHost.nodeExecPath(), appendStr(tsSel.path, tsArgs), "", emptyEnv, true, "");
         if tsRes.error =!= "" {
             fs.remove(tempDir.path);
             return failBuild(1, "lite build: " + tsRes.error, "");
@@ -307,7 +306,7 @@ pub buildScript := fn(opts: BuildOptions): BuildResult {
         "let js = stripLiteTs(raw).replace(/\\bexport function main\\b/, 'function main'); " +
         "js = js.replace(/<\\/script/gi, '<\\\\/script'); " +
         "writeFileSync(process.argv[3], js, 'utf8');";
-        stripRes := proc.run(project.nodeExecPath(), ["--input-type=module", "-e", stripScript, stripTsPath, tsArtifact, jsArtifact], "", emptyEnv, true, "");
+        stripRes := proc.run(toolHost.nodeExecPath(), ["--input-type=module", "-e", stripScript, stripTsPath, tsArtifact, jsArtifact], "", emptyEnv, true, "");
         if stripRes.error =!= "" or stripRes.status =!= 0 {
             fs.remove(tempDir.path);
             errMsg := if stripRes.error =!= "" { "lite build: " + stripRes.error } else { "" };
@@ -347,8 +346,8 @@ pub buildScript := fn(opts: BuildOptions): BuildResult {
             return failBuild(compiled.status, "", compiled.stderr);
         }
     } else {
-        root := project.findRepoRoot();
-        sel := compilerBuild.selectCompilerPath(root, "c");
+        root := toolHost.findRepoRoot();
+        sel := toolHost.selectCompilerPath(root, "c");
         if not sel.ok {
             fs.remove(tempDir.path);
             return failBuild(1, "lite build: " + sel.error, "");
@@ -357,7 +356,7 @@ pub buildScript := fn(opts: BuildOptions): BuildResult {
         if not opts.hasOpt { mut nodeArgs.pushBack("-O1"); }
         loop opts.compileOpts as opt { mut nodeArgs.pushBack(opt); }
         (mut nodeArgs).pushBack(opts.scriptPath);
-        compiled := proc.run(project.nodeExecPath(), nodeArgs, "", emptyEnv, true, "");
+        compiled := proc.run(toolHost.nodeExecPath(), nodeArgs, "", emptyEnv, true, "");
         if compiled.error =!= "" {
             fs.remove(tempDir.path);
             return failBuild(1, "lite build: " + compiled.error, "");

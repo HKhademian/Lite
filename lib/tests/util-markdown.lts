@@ -1,4 +1,4 @@
-md := import "util/markdown";
+md := import "data/markdown";
 list := import "core/list";
 test := import "core/test";
 

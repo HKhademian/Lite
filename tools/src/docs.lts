@@ -6,9 +6,9 @@ path := import "core/path";
 proc := import "core/process";
 text := import "core/text";
 docgen := import "lite/docgen";
-docsUtil := import "util/docs";
-mdHtml := import "util/markdown-html";
-project := import "util/project";
+docsUtil := import "./internal/docs";
+mdHtml := import "data/markdown-html";
+project := import "./internal/project";
 
 splitNonEmptyLines := fn(raw: String): List<String> {
     mut lines: List<String> = [];

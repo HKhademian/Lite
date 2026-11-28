@@ -6,10 +6,10 @@ path := import "core/path";
 text := import "core/text";
 list := import "core/list";
 time := import "core/time";
-collections := import "util/collections";
+collections := import "core/list";
 json := import "data/json";
-md := import "util/markdown";
-challenges := import "util/challenges";
+md := import "data/markdown";
+challenges := import "./challenges";
 
 /** Converts display text to a lowercase URL slug (`"A & B"` -> `"a-and-b"`). */
 pub slugifyText := fn(value: String): String {

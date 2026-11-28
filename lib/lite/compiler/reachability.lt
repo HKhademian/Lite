@@ -2,7 +2,7 @@
 
 integer := import "core/int";
 textLib := import "core/text";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 ir := import "./frontend-ir";
 optCfg := import "./opt-config";
 syntax := import "./frontend-syntax";

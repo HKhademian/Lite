@@ -4,9 +4,9 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-cases := import "util/cases";
-compilerBuild := import "util/compiler-build";
-project := import "util/project";
+cases := import "../../tools/src/internal/cases";
+compilerBuild := import "../../tools/src/internal/compiler-build";
+project := import "../../tools/src/internal/project";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

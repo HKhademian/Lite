@@ -3,7 +3,7 @@ emitFmt := import "./emit-format";
 optCfg := import "./opt-config";
 frontend := import "./frontend";
 io := import "core/io";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 var tsOutUseWriter := false;
 var tsOutWriter: io.Writer;

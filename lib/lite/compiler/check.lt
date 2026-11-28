@@ -5,7 +5,7 @@ parser := import "./parser";
 numeric := import "./numeric-literals";
 diag := import "core/diag";
 io := import "core/io";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** One top-level symbol: kind, name, detail text and source position. */
 pub Symbol := alias (kind: String, name: String, detail: String, offset: Int, line: Int, column: Int);

@@ -1,9 +1,9 @@
 /** Selects and builds generated TS compiler and TS-hosted C emitter metadata (`compiler/scripts/build.ts`). */
 
 io := import "core/io";
-project := import "util/project";
-compilerBuild := import "util/compiler-build";
-corpus := import "util/corpus";
+project := import "./internal/project";
+compilerBuild := import "./internal/compiler-build";
+corpus := import "./internal/corpus";
 
 run := fn(rawArgs: List<String>): Int {
     mut args: List<String> = rawArgs;

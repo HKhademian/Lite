@@ -1,7 +1,7 @@
 /** CLI entrypoint for `/docs/` discovery, Markdown rendering, and portal page generation (`site/docs-pages.ts`). */
 
 io := import "core/io";
-project := import "util/project";
+project := import "./internal/project";
 siteDocs := import "../../site/src/docs";
 
 run := fn(rawArgs: List<String>): Unit {

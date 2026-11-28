@@ -7,7 +7,7 @@ path := import "core/path";
 proc := import "core/process";
 time := import "core/time";
 json := import "data/json";
-project := import "util/project";
+project := import "./internal/project";
 
 /** Returns CLI usage text for `lite bootstrap`. */
 usageText := fn(): String {

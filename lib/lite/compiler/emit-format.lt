@@ -1,6 +1,6 @@
 /** Shared token-aware structured formatter for emitted TypeScript and C11 target code. */
 
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** True when `name` is a clean ASCII target identifier that cannot collide with JS/TS/C keywords or standard headers. */
 pub isSafeTargetIdent := fn(name: String, isC: Bool): Bool {

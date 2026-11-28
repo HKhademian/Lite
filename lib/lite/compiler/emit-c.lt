@@ -7,7 +7,7 @@ optCfg := import "./opt-config";
 diagLib := import "core/diag";
 io := import "core/io";
 textLib := import "core/text";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 var cOutUseWriter := false;
 var cCompactEmit := false;

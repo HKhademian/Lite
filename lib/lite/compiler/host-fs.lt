@@ -6,7 +6,7 @@ fs := import "core/file";
 io := import "core/io";
 path := import "core/path";
 textLib := import "core/text";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 frontend := import "./frontend";
 optCfg := import "./opt-config";
 

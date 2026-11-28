@@ -1,8 +1,8 @@
 /** Challenge corpus builder (`benchmark/challenges/tools/build.ts`). */
 
 io := import "core/io";
-project := import "util/project";
-chBuild := import "util/challenge-build";
+project := import "./internal/project";
+chBuild := import "./internal/challenge-build";
 
 run := fn(): Int {
     root := project.findRepoRoot();

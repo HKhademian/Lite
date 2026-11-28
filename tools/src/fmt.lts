@@ -5,7 +5,7 @@ fs := import "core/file";
 io := import "core/io";
 path := import "core/path";
 proc := import "core/process";
-project := import "util/project";
+project := import "./internal/project";
 
 run := fn(rawArgs: List<String>): Unit {
     project.handleVersionFlag(rawArgs, "formatter", "fmt");

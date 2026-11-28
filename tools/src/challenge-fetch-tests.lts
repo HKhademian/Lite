@@ -3,10 +3,10 @@
 fs := import "core/file";
 io := import "core/io";
 path := import "core/path";
-cfetch := import "util/challenge-fetch";
-challenges := import "util/challenges";
+cfetch := import "./internal/challenge-fetch";
+challenges := import "./internal/challenges";
 json := import "data/json";
-project := import "util/project";
+project := import "./internal/project";
 
 run := fn(rawArgs: List<String>): Int {
     loop rawArgs as arg {

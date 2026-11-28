@@ -3,7 +3,7 @@ test := import "core/test";
 path := import "core/path";
 json := import "data/json";
 docgen := import "lite/docgen";
-project := import "util/project";
+project := import "../../tools/src/internal/project";
 
 sampleModule := "/* Example universal module. */\n\n/** Hidden private constant doc. */\npriv := 1;\n\n/** Public alias type. */\npub Pair := alias (a: Int, b: Int);\n\n/** Host signature with multiline params. */\npub probe := fn(\n    first: String,\n    second: Int\n): Bool;\n\n/** Normal implemented fn. */\npub add := fn(x: Int, y: Int): Int {\n    x + y\n}\n";
 

@@ -6,10 +6,10 @@ path := import "core/path";
 text := import "core/text";
 list := import "core/list";
 crypto := import "core/crypto";
-collections := import "util/collections";
+collections := import "core/list";
 json := import "data/json";
-md := import "util/markdown";
-tb := import "util/text-builder";
+md := import "data/markdown";
+tb := import "core/text-builder";
 
 pub readNormalizedText := fn(filePath: String): (ok: Bool, text: String, error: String) {
     res := fs.readText(filePath);

@@ -2,7 +2,7 @@
 
 text := import "core/text";
 json := import "data/json";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** Escapes HTML special characters (`&`, `<`, `>`, `"`, `'`). */
 pub escapeSiteHtml := fn(raw: String): String {
@@ -92,7 +92,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     "Materializes and verifies Lite-written CLI tools into `dist/tools/` (native C11 binaries by default, or TypeScript with `--target ts`) against `compiler/bootstrap/seed.ts`.",
     "Runs repository verification suites (quiet smoke suite by default, `--fast`, `--full` release-grade sweep, `--unit NAME`, or `--cases` declarative fixture runner).",
     "Verifies dual-target TS and C11 compilation, strict typechecking, and runtime outputs across declarative `.case.json` and artifact manifests; `--coverage` checks documented feature/example parity.",
-    "Searches repository Markdown documentation, extracts clean HTML/TOC/module API JSON via `util/markdown-html` and `lite/docgen`, or validates all local links with `--check`.",
+    "Searches repository Markdown documentation, extracts clean HTML/TOC/module API JSON via `data/markdown-html` and `lite/docgen`, or validates all local links with `--check`.",
     "Checks repository health, compiler seed integrity, layout consistency, and documentation structure.",
     "Benchmarks verified compiler workloads (`bench`) or packages a reproducible source snapshot (`release`)."
     ];

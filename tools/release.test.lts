@@ -5,9 +5,9 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 test := import "core/test";
-challenges := import "util/challenges";
+challenges := import "./src/internal/challenges";
 json := import "data/json";
-project := import "util/project";
+project := import "./src/internal/project";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

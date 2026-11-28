@@ -6,9 +6,9 @@ proc := import "core/process";
 text := import "core/text";
 path := import "core/path";
 json := import "data/json";
-project := import "util/project";
-rel := import "util/release";
-unitTests := import "util/unit-tests";
+project := import "./internal/project";
+rel := import "./internal/release";
+unitTests := import "./internal/unit-tests";
 
 failCi := fn(message: String): Unit {
     io.errorLine(message);

@@ -3,9 +3,8 @@
 fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
-compilerBuild := import "util/compiler-build";
-project := import "util/project";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
+toolHost := import "./tool-host";
 
 /** Execution target backend for `runScript` (`Ts` or `C`). */
 pub RunTarget := enum { Ts; C; };
@@ -452,8 +451,8 @@ pub runScript := fn(opts: RunOptions): RunResult {
     }
 
     targetName := if opts.target == RunTarget.C { "c" } else { "ts" };
-    root := project.findRepoRoot();
-    sel := compilerBuild.selectCompilerPath(root, targetName);
+    root := toolHost.findRepoRoot();
+    sel := toolHost.selectCompilerPath(root, targetName);
     if not sel.ok {
         return failRun(1, "lite run: " + sel.error, "");
     }
@@ -493,7 +492,7 @@ pub runScript := fn(opts: RunOptions): RunResult {
         mut compileArgs.pushBack(opt);
     }
     (mut compileArgs).pushBack(compileInput);
-    compiled := proc.run(project.nodeExecPath(), compileArgs, "", emptyEnv, true, "");
+    compiled := proc.run(toolHost.nodeExecPath(), compileArgs, "", emptyEnv, true, "");
     if compiled.error =!= "" {
         fs.remove(tempDir.path);
         return failRun(1, "lite run: " + compiled.error, "");
@@ -587,7 +586,7 @@ pub runScript := fn(opts: RunOptions): RunResult {
     var tsStatus := 0;
     var tsErr := "";
     loop true {
-        execRes := proc.run(project.nodeExecPath(), entryArgs, "", runEnv, false, "");
+        execRes := proc.run(toolHost.nodeExecPath(), entryArgs, "", runEnv, false, "");
         tsStatus = execRes.status;
         tsErr = execRes.error;
         if opts.play.enabled and tsErr == "" and tsStatus == 42 {

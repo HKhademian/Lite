@@ -1,9 +1,9 @@
 /* Map<K, V>: typed key-value maps, indexing, core/map intrinsics, iteration, value semantics, and diagnostics. */
 
 test := import "core/test";
-compilerBuild := import "util/compiler-build";
-compilerTest := import "util/compiler-test";
-project := import "util/project";
+compilerBuild := import "../../../tools/src/internal/compiler-build";
+compilerTest := import "../../../tools/src/internal/compiler-test";
+project := import "../../../tools/src/internal/project";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

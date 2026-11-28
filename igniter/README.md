@@ -847,7 +847,7 @@ remain unchanged. This is not proof of the full
 20-lesson or larger-language contract.
 
 Project-level feature and artifact verification is `./bin/lite verify`, backed by
-[lib/util/verify.lts](lite://repo/lib/util/verify.lt) and [language/verifications/](lite://repo/language/verifications/README.md). The
+[verify.lt](lite://repo/tools/src/internal/verify.lt) and [language/verifications/](lite://repo/language/verifications/README.md). The
 first slice has 36 feature cases and 39 artifact manifests (19 examples, 20 samples). Verification results
 and native C builds are cached under the gitignored `dist/` directory.
 The default smoke suite is intended for quick local feedback. `--fast` runs the broad
@@ -880,7 +880,7 @@ self-hosted build. See [INV-061 evidence](lite://repo/research/investigations/IN
 The Lite-written compiler now lives in [compiler/](lite://doc/compiler/overview), not
 in the runnable example list. It has one shared front-end and separate TS/C
 emitters connected with Lite namespace imports. Each manifest selects one root;
-the Lite import visitor traverses its graph and [compiler-build.lts](lite://repo/lib/util/compiler-build.lt)
+the Lite import visitor traverses its graph and [compiler-build.lt](lite://repo/tools/src/internal/compiler-build.lt)
 supplies selection and records the exact dependencies. Module namespaces are
 available to compiler source; package resolution remains open.
 

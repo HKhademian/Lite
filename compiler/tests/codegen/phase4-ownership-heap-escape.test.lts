@@ -2,12 +2,12 @@
    Tier 2 VM slab heap (lt_heap), const * + restrict borrowing, Move-on-Last-Use,
    Scope Data Stack escape promotion, stack closures, and ASan+UBSan+LITE_CHECK_LEAKS=1 parity. */
 
-compilerBuild := import "util/compiler-build";
-compilerTest := import "util/compiler-test";
+compilerBuild := import "../../../tools/src/internal/compiler-build";
+compilerTest := import "../../../tools/src/internal/compiler-test";
 fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
-project := import "util/project";
+project := import "../../../tools/src/internal/project";
 test := import "core/test";
 
 root := project.findRepoRoot();

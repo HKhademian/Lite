@@ -2,8 +2,8 @@
 
 text := import "core/text";
 json := import "data/json";
-md := import "util/markdown";
-tb := import "util/text-builder";
+md := import "data/markdown";
+tb := import "core/text-builder";
 
 /** Escapes HTML special characters (`&`, `<`, `>`, `"`). */
 pub escapeHtml := fn(raw: String): String {

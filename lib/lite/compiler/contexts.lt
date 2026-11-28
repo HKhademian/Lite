@@ -1,6 +1,6 @@
 /** Phase 10 lexical context slot codecs, canonical `Ctx<...>` helpers, and ambient `$context.lt` / callable context registries. */
 
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** One resolved context slot requirement inside canonical `Ctx<slot:Kind,...>`. */
 pub CtxSlot := record {

@@ -5,8 +5,8 @@ fs := import "core/file";
 proc := import "core/process";
 path := import "core/path";
 json := import "data/json";
-project := import "util/project";
-cases := import "util/cases";
+project := import "./internal/project";
+cases := import "./internal/cases";
 
 splitNonEmptyCsv := fn(raw: String): List<String> {
     mut out: List<String> = [];

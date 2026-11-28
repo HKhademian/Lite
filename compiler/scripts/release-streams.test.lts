@@ -3,10 +3,10 @@
 fs := import "core/file";
 path := import "core/path";
 test := import "core/test";
-challenges := import "util/challenges";
+challenges := import "../../tools/src/internal/challenges";
 json := import "data/json";
-project := import "util/project";
-rel := import "util/release";
+project := import "../../tools/src/internal/project";
+rel := import "../../tools/src/internal/release";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

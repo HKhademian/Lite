@@ -1,6 +1,6 @@
 /** CLI entrypoint emitting `/tools/` body HTML and search entries JSON (`site/tools-page.ts`). */
 
-cli := import "util/cli";
+cli := import "./internal/cli";
 io := import "core/io";
 siteTools := import "../../site/src/tools";
 

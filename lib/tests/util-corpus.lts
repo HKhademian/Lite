@@ -1,5 +1,5 @@
-corpus := import "util/corpus";
-project := import "util/project";
+corpus := import "../../tools/src/internal/corpus";
+project := import "../../tools/src/internal/project";
 test := import "core/test";
 
 allowed: List<String> = ["out", "artifact"];

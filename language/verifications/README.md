@@ -88,7 +88,7 @@ compiler fixtures.
 
 The JSON Schema is [schema/verification.schema.json](lite://repo/language/verifications/schema/verification.schema.json).
 The runner performs equivalent structural validation in
-[lib/util/verify.lts](lite://repo/lib/util/verify.lt).
+[tools/src/internal/verify.lt](lite://repo/tools/src/internal/verify.lt).
 
 ## Runner
 

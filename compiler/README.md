@@ -17,7 +17,7 @@ and sample, and source-file coverage. It includes exact-source boundary probes
 and a reproducible audit script; it is an inventory, not a priority list or a new
 language decision.
 
-[`compiler-build.lts`](lite://repo/lib/util/compiler-build.lt) checks the one seed's SHA-256 and reads only each manifest's
+[`compiler-build.lt`](lite://repo/tools/src/internal/compiler-build.lt) checks the one seed's SHA-256 and reads only each manifest's
 root source. The generated Lite import visitor discovers and opens dependencies;
 its trace supplies source hashes and import edges for cache validation. Changed
 graphs are compiled by the selected seed and strictly typechecked before
@@ -71,7 +71,7 @@ status and the manifest schema are recorded in:
   current emitted-artifact hashes for all 69 program cases; the P0 hashes remain
   in `tests/references/generated/baseline-artifacts.json`.
 
-`lite-compile-ts` selects the generated TS compiler via [`compiler-build.lts`](lite://repo/lib/util/compiler-build.lt) and invokes it directly; Lite reads imported source units via `core/file` in [`src/host-fs.lts`](lite://repo/lib/lite/compiler/host-fs.lt). The handwritten interpreter, source bridge, and bundle CLI are retired. P2 adds the provisional
+`lite-compile-ts` selects the generated TS compiler via [`compiler-build.lt`](lite://repo/tools/src/internal/compiler-build.lt) and invokes it directly; Lite reads imported source units via `core/file` in [`src/host-fs.lts`](lite://repo/lib/lite/compiler/host-fs.lt). The handwritten interpreter, source bridge, and bundle CLI are retired. P2 adds the provisional
 L0 helpers under [`../lib/core/`](lite://repo/lib/README.md): checked Int, text, source
 positions, diagnostics, formatting and list search. P3 adds the Lite lexer and
 P4 the parser under `src/`; `runtime/ts/` contains the P6 runtime support.

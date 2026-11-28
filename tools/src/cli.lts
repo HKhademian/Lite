@@ -1,8 +1,8 @@
 /** Lite CLI router (`./bin/lite`); delegates subcommands to the dedicated tool entrypoints. */
 
 io := import "core/io";
-cli := import "util/cli";
-project := import "util/project";
+cli := import "./internal/cli";
+project := import "./internal/project";
 
 usageText := fn(): String {
     "Usage: ./bin/lite <command> [options]\n\nCommands:\n" +

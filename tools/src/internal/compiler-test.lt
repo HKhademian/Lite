@@ -4,9 +4,9 @@ crypto := import "core/crypto";
 fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
-project := import "util/project";
+project := import "./project";
 test := import "core/test";
-cases := import "util/cases";
+cases := import "./cases";
 json := import "data/json";
 
 /** Result of compiling or executing a Lite program or compiler phase driver. */

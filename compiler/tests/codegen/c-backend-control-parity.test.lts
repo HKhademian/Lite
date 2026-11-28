@@ -1,9 +1,9 @@
 /* End-to-end C11 vs TS parity tests for Phase C10a: tagged blocks/conditionals/loops, then, finally (including LIFO unwinding on early return/goto), and break/continue payloads. */
 
 test := import "core/test";
-compilerBuild := import "util/compiler-build";
-compilerTest := import "util/compiler-test";
-project := import "util/project";
+compilerBuild := import "../../../tools/src/internal/compiler-build";
+compilerTest := import "../../../tools/src/internal/compiler-test";
+project := import "../../../tools/src/internal/project";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

@@ -2,8 +2,8 @@
 
 io := import "core/io";
 fs := import "core/file";
-project := import "util/project";
-compilerBuild := import "util/compiler-build";
+project := import "./internal/project";
+compilerBuild := import "./internal/compiler-build";
 
 usageExit := fn(): Unit {
     io.errorLine("Usage: ./bin/lite-compile-ts [-O0|-O1|-O2|-O3|-Os] [--builtin-mode SPEC]... file.lts");

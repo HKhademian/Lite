@@ -2,8 +2,8 @@
 
 io := import "core/io";
 path := import "core/path";
-cfetch := import "util/challenge-fetch";
-project := import "util/project";
+cfetch := import "./internal/challenge-fetch";
+project := import "./internal/project";
 
 run := fn(rawArgs: List<String>): Int {
     loop rawArgs as arg {

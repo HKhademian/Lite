@@ -1,6 +1,6 @@
 siteDocs := import "../../site/src/docs";
 json := import "data/json";
-project := import "util/project";
+project := import "../../tools/src/internal/project";
 test := import "core/test";
 
 test.checkText("rel same dir", "../spec/index.html", siteDocs.relativeHref("docs/handbook/overview-and-setup.html", "docs/spec/index.html"));

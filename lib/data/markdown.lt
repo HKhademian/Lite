@@ -1,6 +1,6 @@
 /** Provisional Markdown parsing, heading/anchor extraction, link scanning, and fence checks. */
 
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 findLineEnd := fn(source: String, start: Int, size: Int): Int {
     idx := source.indexOf("\n", start);

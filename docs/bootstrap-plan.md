@@ -498,7 +498,7 @@ this phase.
 **Goal:** make stage 0 usable as a repeatable bootstrap driver.
 
 - [x] **Manifest metadata:** validate target and ordered relative roots through
-      `validateManifestFile` in [`lib/util/compiler-build.lts`](lite://repo/lib/util/compiler-build.lt). Lite owns
+      `validateManifestFile` in [`compiler-build.lt`](lite://repo/tools/src/internal/compiler-build.lt). Lite owns
       source traversal, cycle handling, and source identities; no bundle loader
       or line-map assembler remains.
 - [x] **Driver:** compile a bundle for a target; pass the logical source name

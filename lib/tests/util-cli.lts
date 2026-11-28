@@ -1,5 +1,5 @@
 text := import "core/text";
-cli := import "util/cli";
+cli := import "../../tools/src/internal/cli";
 test := import "core/test";
 
 sepArgs: List<String> = ["--", "a.lts", "--", "--flag"];

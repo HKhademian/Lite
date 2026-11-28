@@ -1,7 +1,7 @@
 /* TypeScript backend for the temporary Lite compiler. */
 
 numeric := import "./numeric-literals";
-tb := import "util/text-builder";
+tb := import "core/text-builder";
 
 /** Maps a restricted Lite scalar kind to its TypeScript type. */
 pub tsScalarType := fn(kind: String): String {

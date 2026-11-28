@@ -4,15 +4,15 @@ io := import "core/io";
 fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
-project := import "util/project";
+project := import "./project";
 text := import "core/text";
 list := import "core/list";
 crypto := import "core/crypto";
 json := import "data/json";
-streams := import "util/streams";
-cases := import "util/cases";
-rel := import "util/release";
-corpus := import "util/corpus";
+streams := import "./streams";
+cases := import "./cases";
+rel := import "./release";
+corpus := import "./corpus";
 
 usageLine := fn(): String {
     "Usage: node compiler/scripts/release.ts prepare|finalize OUT | native OUT SOURCES"

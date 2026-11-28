@@ -1,9 +1,9 @@
 /* Multi-level optimization flags: -O0, -O1 (default), -O2, -O3, and --opt=0..3 on TS and C compilers. */
 
 test := import "core/test";
-compilerBuild := import "util/compiler-build";
-compilerTest := import "util/compiler-test";
-project := import "util/project";
+compilerBuild := import "../../../tools/src/internal/compiler-build";
+compilerTest := import "../../../tools/src/internal/compiler-test";
+project := import "../../../tools/src/internal/project";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

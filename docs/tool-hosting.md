@@ -3,7 +3,7 @@
 Status: active migration, updated 2026-11-17.
 
 Self-hosting remains a compiler requirement. LiteLang tools live in `tools/src/*.lts`
-and `lib/util/*.lts`, and are compiled into untracked `dist/tools/*.ts` artifacts
+and `tools/src/internal/*.lt`, and are compiled into untracked `dist/tools/*.ts` artifacts
 during ignition (`./bin/lite-ignite [--check]`, `node compiler/bootstrap/igniter.ts [--check]`,
 or automatically on demand when invoking any `bin/lite*` symlink). No pre-generated
 tool or compiler artifacts are checked into source control outside the single

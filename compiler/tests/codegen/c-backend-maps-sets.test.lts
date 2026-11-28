@@ -1,9 +1,9 @@
 /* End-to-end C11 execution tests for Phase C5b: Map<K, V> and Set<T> literals, indexing, core/map & core/set intrinsics, value-copy, loops, and output formatting. */
 
 test := import "core/test";
-compilerBuild := import "util/compiler-build";
-compilerTest := import "util/compiler-test";
-project := import "util/project";
+compilerBuild := import "../../../tools/src/internal/compiler-build";
+compilerTest := import "../../../tools/src/internal/compiler-test";
+project := import "../../../tools/src/internal/project";
 
 root := project.findRepoRoot();
 test.check("repo root found", root =!= "");

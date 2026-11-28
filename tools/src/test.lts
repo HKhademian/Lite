@@ -1,8 +1,8 @@
 /** Standalone declarative case test runner (`lite test --cases` / `lite verify FILE.json`). */
 
 io := import "core/io";
-project := import "util/project";
-cases := import "util/cases";
+project := import "./internal/project";
+cases := import "./internal/cases";
 
 run := fn(rawArgs: List<String>): Unit {
     io.exit(cases.runCaseCli(project.findRepoRoot(), rawArgs));

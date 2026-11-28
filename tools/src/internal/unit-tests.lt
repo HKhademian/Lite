@@ -3,11 +3,11 @@
 io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
-project := import "util/project";
+project := import "./project";
 path := import "core/path";
 pool := import "external/pool";
-cases := import "util/cases";
-compilerBuild := import "util/compiler-build";
+cases := import "./cases";
+compilerBuild := import "./compiler-build";
 json := import "data/json";
 
 unitTestUsage := fn(): String {

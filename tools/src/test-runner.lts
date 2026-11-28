@@ -4,10 +4,10 @@ io := import "core/io";
 fs := import "core/file";
 proc := import "core/process";
 path := import "core/path";
-cases := import "util/cases";
-project := import "util/project";
-unitTests := import "util/unit-tests";
-verify := import "util/verify";
+cases := import "./internal/cases";
+project := import "./internal/project";
+unitTests := import "./internal/unit-tests";
+verify := import "./internal/verify";
 
 smokeTestFiles := fn(): List<String> {
     files: List<String> = [

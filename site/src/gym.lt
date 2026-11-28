@@ -2,7 +2,7 @@
 
 text := import "core/text";
 lru := import "ds/lru";
-challenges := import "util/challenges";
+challenges := import "../../tools/src/internal/challenges";
 json := import "data/json";
 siteTools := import "./tools";
 

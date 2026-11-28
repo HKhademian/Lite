@@ -2,7 +2,7 @@
 
 io := import "core/io";
 builder := import "lite/builder";
-project := import "util/project";
+project := import "./internal/project";
 
 usageText := fn(): String {
     "Usage: ./bin/lite build [--platform native|macos|linux|windows|headless|web] [--web] [--headless] [-O0|-O1|-O2|-O3|-Os] [--cc-opt -O0|-O1|-O2|-O3|-Os] [--sanitize] [--builtin-mode SPEC]... [-o OUTPUT] [--keep-c] [--keep-ts] [--quiet] file.lts"

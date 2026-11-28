@@ -3,9 +3,9 @@
 fs := import "core/file";
 io := import "core/io";
 path := import "core/path";
-cfetch := import "util/challenge-fetch";
+cfetch := import "./internal/challenge-fetch";
 json := import "data/json";
-project := import "util/project";
+project := import "./internal/project";
 
 extractEulerNumber := fn(entryPath: String): (ok: Bool, num: Int) {
     if not entryPath.startsWithAt(0, "python/p") or not entryPath.endsWith(".py") or entryPath.length() =!= 14 {

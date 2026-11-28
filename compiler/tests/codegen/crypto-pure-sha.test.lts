@@ -1,13 +1,13 @@
 /* Pure-Lite SHA-256 and SHA-512 verification using [UInt32; 64]/[UInt64; 80] and native bitwise/rotate/wrapping builtins. */
 
-compilerBuild := import "util/compiler-build";
-compilerTest := import "util/compiler-test";
+compilerBuild := import "../../../tools/src/internal/compiler-build";
+compilerTest := import "../../../tools/src/internal/compiler-test";
 crypto := import "core/crypto";
 fs := import "core/file";
 io := import "core/io";
 path := import "core/path";
 proc := import "core/process";
-project := import "util/project";
+project := import "../../../tools/src/internal/project";
 test := import "core/test";
 
 root := project.findRepoRoot();
