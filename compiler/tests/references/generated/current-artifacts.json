@@ -1,7 +1,7 @@
 {
-  "note": "Phase 18 (post-Phase 7–10 hardening: interface associated types Type[<Bound>][=Default] & default method bodies across dyn/generic/bodyless/cross-module impls; C/FFI NULL context ambient default shims, ContextPanic without defaults, unused-context diagnostics with '_' opt-out & escaping mut/borrowed closure rejection; bit-packed Bool/Int1..4/UInt1..4 slices with non-byte splitAt, loop mut break flush & leak-free toList; float-niche finite ingress & Option<Float64/32/16/8> qNaN packing). All 69 TS and C corpus artifact hashes and Phases 6–18 verified.",
-  "recorded": "2026-11-27",
-  "sourceSha256": "9f3dd5229b7e37b43d70067f7188801f5aef7084551f6c76e066f1b924293332",
+  "note": "Post-Phase 18 inline layout attributes (#packed, #align(N), #no_niche) on record/enum declarations with hard cutover from leading @... layout attrs. All 69 TS and C corpus artifact hashes and Phases 6–18 verified.",
+  "recorded": "2026-11-28",
+  "sourceSha256": "c704fca51ae88d979d9f6302f7a02a0f877b79cb8ae975dd7dbd651cf2878e8a",
   "programCases": 69,
   "rejectedCases": 25,
   "artifacts": [
