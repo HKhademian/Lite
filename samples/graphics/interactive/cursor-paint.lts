@@ -1,8 +1,8 @@
 /* High-res pointer canvas: move to mist, drag or click to paint, swatches or 1-4 pick color. */
 
-audio := import "extra/audio";
-board := import "extra/board";
-canvas := import "extra/canvas";
+audio := import "media/audio";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.play(width = 240, height = 160, title = "Pointer Paint · Drag to Paint, Space Clears");

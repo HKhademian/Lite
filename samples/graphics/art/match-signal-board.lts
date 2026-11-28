@@ -1,7 +1,7 @@
 /* 360x240 RGBA telemetry signal board styled via subject-based match over records, comparisons, and guards. */
 
-board := import "extra/board";
-canvas := import "extra/canvas";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 Sensor := record {

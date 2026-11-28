@@ -1,4 +1,4 @@
-/* Optional 2D shape, sprite, and pixel-grid helpers built on extra/canvas. */
+/* Optional 2D shape, sprite, and pixel-grid helpers built on gfx/canvas. */
 
 canvas := import "./canvas";
 

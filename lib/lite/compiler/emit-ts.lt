@@ -305,7 +305,7 @@ usesExternal := fn(calls: String): Bool {
     usesBuiltin(calls, "extPoolCpuCount") or usesBuiltin(calls, "extPoolRunJson")
 }
 
-/** True when any emitted item calls an `extra/canvas` surface or drawing binding. */
+/** True when any emitted item calls an `gfx/canvas` surface or drawing binding. */
 usesExtraCanvas := fn(calls: String): Bool {
     usesBuiltin(calls, "extraCanvasOpen") or usesBuiltin(calls, "extraCanvasPoll") or
     usesBuiltin(calls, "extraCanvasPresent") or usesBuiltin(calls, "extraCanvasClose") or
@@ -2019,7 +2019,7 @@ emitExternalHelpers := fn(calls: String): Unit {
     outLine("");
 }
 
-/** Emits the self-contained `extra/canvas` desktop + headless runtime for TS programs. */
+/** Emits the self-contained `gfx/canvas` desktop + headless runtime for TS programs. */
 emitExtraCanvasHelpers := fn(calls: String): Unit {
     if not usesExtraCanvas(calls) { return; }
     usesTexture := usesBuiltin(calls, "extraCanvasCreateTexture") or usesBuiltin(calls, "extraCanvasSetTexturePixel") or

@@ -1,8 +1,8 @@
 /* Polyphonic chord pad: click cards or press Keys 1-4 to sound C, F, G, or Am triads. */
 
-audio := import "extra/audio";
-board := import "extra/board";
-canvas := import "extra/canvas";
+audio := import "media/audio";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.play(width = 320, height = 180, title = "Chord Pad · Click Cards or Keys 1-4");

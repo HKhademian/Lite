@@ -1,7 +1,7 @@
 /* Animated miniature solar orbit using integer LUT waypoints and concentric rings. */
 
-board := import "extra/board";
-canvas := import "extra/canvas";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.play(width = 320, height = 220, title = "Solar Orbit");

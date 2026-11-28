@@ -84,7 +84,7 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     ];
     cmdSummaries: List<String> = [
     "Compiles a Lite source file to a temporary TypeScript or native C11 artifact and executes it immediately, forwarding arguments and stdin.",
-    "Launches interactive `extra/canvas` and `extra/audio` Play games in a native resizable/fullscreenable desktop window (`extra/surface` + Play Stage bar, `F` fullscreen, `T` FPS, `F12` bar).",
+    "Launches interactive `gfx/canvas` and `media/audio` Play games in a native resizable/fullscreenable desktop window (`gfx/surface` + Play Stage bar, `F` fullscreen, `T` FPS, `F12` bar).",
     "Compiles a Lite source file through the C11 backend and links a standalone native executable with zero Node.js runtime dependency.",
     "Emits generated TypeScript (`--target ts`) or standalone C11 (`--target c`) to stdout with `-O0..-O3/-Os` optimization levels. Direct wrappers `./bin/lite-compile-ts` and `./bin/lite-compile-c` target each backend directly.",
     "Parses, typechecks, and validates execution-trace safety on a Lite file across both TS and C11 without executing it.",
@@ -244,8 +244,8 @@ pub buildToolsPayloadJson := fn(repoUrl: String): String {
     + "        TypeScript inspection supports <strong>Program</strong>, <strong>Portable</strong>, and <strong>Full</strong> code views.\n"
     + "      </p>\n"
     + "      <p>\n"
-    + "        Interactive graphics and audio programs import <a href=\"../modules/extra/canvas.html\"><code>extra/canvas</code></a>,\n"
-    + "        <a href=\"../modules/extra/board.html\"><code>extra/board</code></a>, and <a href=\"../modules/extra/audio.html\"><code>extra/audio</code></a>,\n"
+    + "        Interactive graphics and audio programs import <a href=\"../modules/gfx/canvas.html\"><code>extra/canvas</code></a>,\n"
+    + "        <a href=\"../modules/gfx/board.html\"><code>extra/board</code></a>, and <a href=\"../modules/media/audio.html\"><code>extra/audio</code></a>,\n"
     + "        defining optional top-level hooks:\n"
     + "      </p>\n"
     + "      <div class=\"md-table-wrap\">\n"

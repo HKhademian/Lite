@@ -1,7 +1,7 @@
 /* Minimal extra/canvas + extra/audio starter: runs identically in Browser Play and natively via `./bin/lite play`. */
 
-audio := import "extra/audio";
-canvas := import "extra/canvas";
+audio := import "media/audio";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.play(width = 320, height = 180, title = "Hello Play · Space/Click Chime");

@@ -8,8 +8,8 @@
  *   LITE_CANVAS_HEADLESS=1 ./bin/lite run --target c samples/programs/gui/bouncing-canvas.lts -- --bench 300 --uncapped
  */
 
-canvas := import "extra/surface";
-color := import "extra/color";
+canvas := import "gfx/surface";
+color := import "gfx/color";
 io := import "core/io";
 proc := import "core/process";
 

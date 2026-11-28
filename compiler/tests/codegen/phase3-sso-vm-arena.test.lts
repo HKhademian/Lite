@@ -62,7 +62,7 @@ if ccInfo.available {
 
     genSrc := [
         "io := import \"core/io\";",
-        "surf := import \"extra/surface\";",
+        "surf := import \"gfx/surface\";",
         "mk := surf.scratchMark();",
         "p1 := \"éééééééééé\" + \"abcde\";",
         "len1 := p1.length();",
@@ -92,7 +92,7 @@ if ccInfo.available {
 
     loopSrc := [
         "io := import \"core/io\";",
-        "surf := import \"extra/surface\";",
+        "surf := import \"gfx/surface\";",
         "win := surf.Surface.open(\"Phase3Loop\", 64, 48);",
         "win.uncapFrameRate();",
         "var frames := 0;",

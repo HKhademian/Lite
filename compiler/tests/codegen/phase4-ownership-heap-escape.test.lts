@@ -246,7 +246,7 @@ if ccInfo.available {
     /* 3. 10,000-frame surface headless loop with stack closure + LITE_CHECK_LEAKS=1 */
     surfSrc := [
         "io := import \"core/io\";",
-        "surf := import \"extra/surface\";",
+        "surf := import \"gfx/surface\";",
         "var frames := 0;",
         "var warmAllocs := 0;",
         "var warmLive := 0;",

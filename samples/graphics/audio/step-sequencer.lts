@@ -1,8 +1,8 @@
 /* 4x4 step sequencer: click pads to toggle notes on/off, Space pauses or resumes playhead. */
 
-audio := import "extra/audio";
-board := import "extra/board";
-canvas := import "extra/canvas";
+audio := import "media/audio";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.play(width = 320, height = 200, title = "Step Sequencer · Click Cells, Space Pause");

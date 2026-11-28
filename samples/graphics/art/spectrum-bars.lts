@@ -1,7 +1,7 @@
 /* High-res RGBA color spectrum cards and alpha-blended luminance overlay bars. */
 
-board := import "extra/board";
-canvas := import "extra/canvas";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.create(width = 340, height = 200, title = "Spectrum & Alpha Bars");

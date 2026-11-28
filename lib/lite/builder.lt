@@ -5,7 +5,7 @@ path := import "core/path";
 proc := import "core/process";
 tb := import "core/text-builder";
 mdHtml := import "data/markdown-html";
-toolHost := import "./tool-host";
+toolHost := import "./internal/tool-host";
 
 /** Supported output target platform for `buildScript`. */
 pub TargetPlatform := enum { Native; Macos; Linux; Windows; Headless; Web; };

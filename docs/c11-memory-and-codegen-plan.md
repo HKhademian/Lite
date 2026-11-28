@@ -61,7 +61,7 @@ All random system `malloc`/`calloc`/`realloc`/`free` calls in user and stdlib ru
 
 1. **Tier 1 — VM-Reserved Data Stacks (`lt_vm_arena`, Goose/Jai model):**
    - Virtual reservation via POSIX `mmap`/`mprotect`/`madvise(MADV_DONTNEED)`, Windows `VirtualAlloc`, or chunked 64 KB Wasm32 fallback (chained segments on reserve exhaustion; `MemoryFault` only on true OS OOM).
-   - **Frame Temp Stack:** automatically checkpointed and rewound in 1 instruction per `extra/surface` frame tick, keeping a 1–2 MB hot committed floor (zero steady-state page faults) while returning large transient spikes to the OS. Invalidates `lt_utf8_cache` via arena generation so reused addresses never read stale metadata.
+   - **Frame Temp Stack:** automatically checkpointed and rewound in 1 instruction per `gfx/surface` frame tick, keeping a 1–2 MB hot committed floor (zero steady-state page faults) while returning large transient spikes to the OS. Invalidates `lt_utf8_cache` via arena generation so reused addresses never read stale metadata.
    - **Scope Data Stacks:** compiler escape analysis routes provably non-escaping local `List`, `TextBuilder`, and external `String` allocations onto scope-bound bump stacks (`sp = mark` on exit, dense linear L1/L2 cache locality).
 2. **Tier 2 — VM Slab Heap (`lt_heap`) + Deterministic Single-Owner Cleanup:**
    - Pre-reserved 2 MB VM superblocks partitioned by power-of-two size classes (16 B..32 KB) plus direct VM spans (> 32 KB), keeping consecutive heap allocations localized.

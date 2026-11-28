@@ -71,7 +71,7 @@ function scanTopLevelSource(source: string): string {
         i += 1;
       }
       const lit = source.slice(start, i);
-      if (braceDepth === 0 && (lit === '"extra/canvas"' || lit === '"extra/audio"')) {
+      if (braceDepth === 0 && (lit === '"gfx/canvas"' || lit === '"media/audio"')) {
         out.push(lit);
       } else if (braceDepth === 0) {
         out.push('""');
@@ -127,11 +127,11 @@ function countBracesOutsideStrings(line: string): number {
   return delta;
 }
 
-/** Appends a false-guarded keepalive block when `source` imports `extra/canvas` or `extra/audio`. */
+/** Appends a false-guarded keepalive block when `source` imports `gfx/canvas` or `media/audio`. */
 export function appendPlayKeepalive(source: string): string | null {
   const topLevel = scanTopLevelSource(source);
-  const canvasMatch = /(?:^|[;\n}])\s*(?:pub\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*:=\s*import\s+"extra\/canvas"/.exec(topLevel);
-  const audioMatch = /(?:^|[;\n}])\s*(?:pub\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*:=\s*import\s+"extra\/audio"/.exec(topLevel);
+  const canvasMatch = /(?:^|[;\n}])\s*(?:pub\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*:=\s*import\s+"gfx\/canvas"/.exec(topLevel);
+  const audioMatch = /(?:^|[;\n}])\s*(?:pub\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*:=\s*import\s+"media\/audio"/.exec(topLevel);
 
   const canvasAlias = canvasMatch?.[1];
   const audioAlias = audioMatch?.[1];

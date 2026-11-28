@@ -165,7 +165,10 @@ function isolatedCheckout(): string {
   const coreLibs = readdirSync(join(root, 'lib/core')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/core/${f}`);
   const dataLibs = readdirSync(join(root, 'lib/data')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/data/${f}`);
   const externalLibs = readdirSync(join(root, 'lib/external')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/external/${f}`);
+  const gfxLibs = readdirSync(join(root, 'lib/gfx')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/gfx/${f}`);
+  const mediaLibs = readdirSync(join(root, 'lib/media')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/media/${f}`);
   const liteLibs = readdirSync(join(root, 'lib/lite')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/lite/${f}`);
+  const liteInternalLibs = readdirSync(join(root, 'lib/lite/internal')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `lib/lite/internal/${f}`);
   const internalToolLibs = readdirSync(join(root, 'tools/src/internal')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `tools/src/internal/${f}`);
   const siteLibs = readdirSync(join(root, 'site/src')).filter(f => f.endsWith('.lt') || f.endsWith('.lts')).map(f => `site/src/${f}`);
   const paths = new Set([
@@ -175,7 +178,7 @@ function isolatedCheckout(): string {
     'config/versions.json',
     'compiler/bootstrap/igniter', 'compiler/bootstrap/igniter.ts', 'compiler/bootstrap/seed.ts', 'compiler/bootstrap/tsconfig.json',
     'compiler/manifests/ts.json', 'compiler/manifests/c.json', 'igniter/tsconfig.json',
-    ...dependencies, ...toolSources, ...coreLibs, ...dataLibs, ...externalLibs, ...liteLibs, ...internalToolLibs, ...siteLibs,
+    ...dependencies, ...toolSources, ...coreLibs, ...dataLibs, ...externalLibs, ...gfxLibs, ...mediaLibs, ...liteLibs, ...liteInternalLibs, ...internalToolLibs, ...siteLibs,
   ]);
   for (const path of paths) {
     const destination = join(directory, path);

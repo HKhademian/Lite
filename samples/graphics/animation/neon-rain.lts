@@ -1,7 +1,7 @@
 /* Neon digital rain animation using multiple streak columns and fading RGBA tails. */
 
-board := import "extra/board";
-canvas := import "extra/canvas";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.play(width = 320, height = 200, title = "Neon Rain");

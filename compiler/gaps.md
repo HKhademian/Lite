@@ -215,7 +215,7 @@ Keep dependencies explicit; split a topic further when its contracts warrant it.
   flow and complete runtime/memory support. Audit TS-only acceptance explicitly.
 - [ ] **C11 heap reclamation:** generated C11 allocates strings (`lt_str_alloc` /
   `malloc`), collections (`List`, `Map`, `Set`), and stream buffers without
-  automatic freeing until process exit (only `extra/surface` has opt-in
+  automatic freeing until process exit (only `gfx/surface` has opt-in
   `scratchMark`/`scratchRewind` string-slab checkpoints). Batch C11 tools
   therefore retain intermediate allocations in RSS until exit; see
   [current C11 runtime allocation behavior](lite://doc/memory-and-performance#current-c11-runtime-allocation-behavior-gap)

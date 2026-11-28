@@ -100,7 +100,7 @@ export type GraphGymSeed = Readonly<{
 
 const KNOWN_TOOL_COMMANDS: readonly Readonly<{ slug: string; title: string; summary: string }>[] = [
   { slug: 'run', title: './bin/lite run', summary: 'Compile and execute a Lite source file immediately.' },
-  { slug: 'play', title: './bin/lite play', summary: 'Launch interactive extra/canvas Play games in a native desktop window.' },
+  { slug: 'play', title: './bin/lite play', summary: 'Launch interactive gfx/canvas Play games in a native desktop window.' },
   { slug: 'build', title: './bin/lite build', summary: 'Compile a Lite source file into a standalone native C11 executable.' },
   { slug: 'compile', title: './bin/lite compile', summary: 'Emit generated TypeScript or C11 source cleanly.' },
   { slug: 'check', title: './bin/lite check', summary: 'Parse, typecheck, and check execution-trace safety.' },
@@ -449,10 +449,10 @@ export class LiteAcademyGraph {
     inList.push(edge);
   }
 
-  /** Scans Lite source for `import "core/..."` and `import "extra/..."` and records module-import edges. */
+  /** Scans Lite source for `import "<ns>/..."` across shipped library namespaces and records module-import edges. */
   recordModuleImportsFromSource(fromUri: string, liteSource: string): void {
     if (!this.#nodes.has(fromUri)) return;
-    const re = /\bimport\s+"((?:core|extra)\/[a-zA-Z0-9_-]+)"/g;
+    const re = /\bimport\s+"((?:core|math|ds|data|gfx|media|lite)\/[a-zA-Z0-9_-]+)"/g;
     for (let m = re.exec(liteSource); m !== null; m = re.exec(liteSource)) {
       const modId = m[1];
       if (!modId) continue;

@@ -1,8 +1,8 @@
-/** Abstract, target-independent 2D desktop & headless drawing surface (`lite.extra.surface.v1`). */
+/** Abstract, target-independent 2D desktop & headless drawing surface (`lite.gfx.surface.v1`). */
 
-color := import "extra/color";
+color := import "gfx/color";
 
-/** Opaque color value re-exported from `extra/color`. */
+/** Opaque color value re-exported from `gfx/color`. */
 pub Color := alias color.Color;
 
 /** 2D point in logical surface coordinates. */

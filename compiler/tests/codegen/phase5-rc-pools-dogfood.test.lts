@@ -345,7 +345,7 @@ if ccInfo.available {
     ].join("\n");
     gameMainSrc := [
         "io := import \"core/io\";",
-        "surf := import \"extra/surface\";",
+        "surf := import \"gfx/surface\";",
         "assets := import \"./assets\";",
         "world := import \"./world\";",
         "mut gWorld := world.createWorld(16);",

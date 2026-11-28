@@ -1,9 +1,9 @@
 /* Zero-churn interactive particle fountain powered by ds/pool, ds/sparse, ds/arena, extra/canvas, and extra/audio. */
 
 arena := import "ds/arena";
-audio := import "extra/audio";
-board := import "extra/board";
-canvas := import "extra/canvas";
+audio := import "media/audio";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 pool := import "ds/pool";
 sparse := import "ds/sparse";

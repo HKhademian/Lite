@@ -38,7 +38,7 @@ function renderOpsSvg(width: number, height: number, ops: readonly bigint[], tit
   return `<svg class="play-preview-svg" viewBox="0 0 ${String(width)} ${String(height)}" shape-rendering="crispEdges" role="img" aria-label="Initial frame preview for ${escapeHtml(title)}">${rects.join('')}</svg>`;
 }
 
-/** Executes the static/init canvas setup of a compiled Lite program and returns an SVG preview if `extra/canvas` is present. */
+/** Executes the static/init canvas setup of a compiled Lite program and returns an SVG preview if `gfx/canvas` is present. */
 export function captureCanvasPreview(generatedTs: string, title: string): string | undefined {
   const snapFn = generatedTs.match(/\bfunction (liteFn\$[a-zA-Z0-9_$]+\$litePlayCanvasSnapshot)\b/)?.[1];
   const opsFn = generatedTs.match(/\bfunction (liteFn\$[a-zA-Z0-9_$]+\$litePlayCanvasTakeOps)\b/)?.[1];

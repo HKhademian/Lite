@@ -344,7 +344,7 @@ Status: **implementation gap, tracked 2026-11-26**.
 
 The current generated C11 backend allocates dynamic strings (`lt_str_alloc` bump slab and `malloc`), list/map/set backing storage (`malloc`/`realloc`), and stream buffers without automatic scope-exit freeing or reference-count reclamation. Process memory allocated by C11 programs is currently reclaimed only when the process exits.
 
-The only explicit reclamation facility emitted today is `extra/surface`'s opt-in frame-scoped string slab checkpoint (`scratchMark` / `scratchRewind`) for interactive render loops.
+The only explicit reclamation facility emitted today is `gfx/surface`'s opt-in frame-scoped string slab checkpoint (`scratchMark` / `scratchRewind`) for interactive render loops.
 
 In short-lived CLI commands this behavior stays invisible, while long-running or batch C11 programs (such as `site-docs`, which renders hundreds of HTML pages and serializes JSON) retain intermediate allocations for the process lifetime so peak RSS grows proportionally to total allocated bytes rather than the live working set. Near-term mitigations in stdlib and tools include:
 

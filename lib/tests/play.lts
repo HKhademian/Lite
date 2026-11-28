@@ -1,6 +1,6 @@
-audio := import "extra/audio";
-board := import "extra/board";
-canvas := import "extra/canvas";
+audio := import "media/audio";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 test := import "core/test";
 
 countList := fn(values: List<Int>): Int {

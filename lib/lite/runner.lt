@@ -4,7 +4,7 @@ fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";
 tb := import "core/text-builder";
-toolHost := import "./tool-host";
+toolHost := import "./internal/tool-host";
 
 /** Execution target backend for `runScript` (`Ts` or `C`). */
 pub RunTarget := enum { Ts; C; };
@@ -153,7 +153,7 @@ pub hasTopLevelFn := fn(source: String, fnName: String): Bool {
     false
 };
 
-/** Wraps canvas callback `source` in Lite's desktop `--play` stage runner driving `extra/surface`. */
+/** Wraps canvas callback `source` in Lite's desktop `--play` stage runner driving `gfx/surface`. */
 pub buildPlayWrapper := fn(
 source: String,
 canvasAlias: String,
@@ -175,11 +175,11 @@ capturePath: String
     hasResize := hasTopLevelFn(source, "onSurfaceResize");
 
     header :=
-    "__lpSurf := import \"extra/surface\";\n" +
+    "__lpSurf := import \"gfx/surface\";\n" +
     "__lpIo := import \"core/io\";\n" +
     "__lpTime := import \"core/time\";\n";
 
-    var footer := "\n/* --- Desktop Play host driver (extra/canvas + extra/audio -> extra/surface) --- */\n";
+    var footer := "\n/* --- Desktop Play host driver (gfx/canvas + media/audio -> gfx/surface) --- */\n";
     footer = footer +
     "__lpFloorInt := fn(v: Float): Int {\n" +
     "    if v <= 0.0 { return 0; }\n" +
@@ -470,7 +470,7 @@ pub runScript := fn(opts: RunOptions): RunResult {
             fs.remove(tempDir.path);
             return failRun(1, "lite run: " + srcRead.error, "");
         }
-        canvasAlias := findModuleAlias(srcRead.text, "extra/canvas");
+        canvasAlias := findModuleAlias(srcRead.text, "gfx/canvas");
         if canvasAlias =!= "" {
             resolvedCapture := if opts.play.capturePath == "" { "" } else { path.resolve(proc.cwd(), opts.play.capturePath) };
             wrapped := buildPlayWrapper(

@@ -77,7 +77,7 @@ test.check("write helloScript", fs.writeText(helloScript, "io := import \"core/i
 
 runRes := runner.runScript(runner.defaultRunOptions(helloScript));
 test.check("runner runs helloScript on TS: " + runRes.error + runRes.stderr, runRes.ok and runRes.status == 0);
-test.checkText("runner finds canvas alias", "cv", runner.findModuleAlias("cv := import \"extra/canvas\";\n", "extra/canvas"));
+test.checkText("runner finds canvas alias", "cv", runner.findModuleAlias("cv := import \"gfx/canvas\";\n", "gfx/canvas"));
 test.check("runner detects top-level hook", runner.hasTopLevelFn("pub onCanvasUpdate := fn(dt: Float): Int { 0 }\n", "onCanvasUpdate"));
 
 nativeExe := path.join(tmpDir, "hello-bin");

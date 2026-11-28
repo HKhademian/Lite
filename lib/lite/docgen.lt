@@ -1,4 +1,4 @@
-/** Module API documentation extractor across `lib/core`, `lib/math`, `lib/ds`, `lib/data`, and `lib/extra`. */
+/** Module API documentation extractor across `lib/core`, `lib/math`, `lib/ds`, `lib/data`, `lib/gfx`, `lib/media`, and `lib/lite`. */
 
 fs := import "core/file";
 text := import "core/text";
@@ -155,9 +155,21 @@ firstParameterIsReceiver := fn(source: String, paramsAt: Int, line: Int): Bool {
 
 /** Classifies a module namespace and name into `"universal"`, `"play"`, or `"cli"`. */
 classifyEnvironment := fn(namespace: String, name: String): String {
-    if namespace == "extra" {
-        if name == "canvas" or name == "audio" or name == "board" or name == "surface" {
+    if namespace == "gfx" {
+        if name == "canvas" or name == "board" or name == "surface" {
             return "play";
+        }
+        return "universal";
+    }
+    if namespace == "media" {
+        if name == "audio" {
+            return "play";
+        }
+        return "universal";
+    }
+    if namespace == "lite" {
+        if name == "builder" or name == "runner" or name == "compiler" or name == "docgen" or name == "formatter" {
+            return "cli";
         }
         return "universal";
     }
@@ -342,9 +354,9 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
     ",\"symbols\":[" + symbolsJson.join(",") + "]}"
 };
 
-/** Extracts sorted module API documentation records across `lib/core`, `lib/math`, `lib/ds`, `lib/data`, and `lib/extra` `.lt` files under `rootDir`. */
+/** Extracts sorted module API documentation records across `lib/{core,math,ds,data,gfx,media,lite}` `.lt` files under `rootDir`. */
 pub extractAllModulesJson := fn(rootDir: String): String {
-    namespaces: List<String> = ["core", "math", "ds", "data", "extra"];
+    namespaces: List<String> = ["core", "math", "ds", "data", "gfx", "media", "lite"];
     mut modJsonEntries: List<String> = [];
     loop namespaces as ns {
         nsDir := path.join(rootDir, "lib/" + ns);

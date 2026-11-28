@@ -1,4 +1,4 @@
-/** Nominal fixed-timestep accumulators, cooldowns, and monotonic stopwatches (`extra/timer`). */
+/** Nominal fixed-timestep accumulators, cooldowns, and monotonic stopwatches (`core/timer`). */
 
 time := import "core/time";
 

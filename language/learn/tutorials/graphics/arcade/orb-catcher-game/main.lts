@@ -1,8 +1,8 @@
 /* Project Tutorial 3: Play Canvas & Audio mini-game — catch falling orbs with A/D, Arrows, or mouse. */
 
-audio := import "extra/audio";
-board := import "extra/board";
-canvas := import "extra/canvas";
+audio := import "media/audio";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 
 ctx := canvas.play(width = 240, height = 160, title = "Orb Catcher · Move: Arrows / Pointer · Space: Reset");
 bg := canvas.rgb(12, 16, 28);

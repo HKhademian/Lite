@@ -19,7 +19,7 @@ tmpDir := tmpRes.path;
 appPath := path.join(tmpDir, "demo_stage.lts");
 appSrc :=
 "io := import \"core/io\";\n" +
-"surf := import \"extra/surface\";\n" +
+"surf := import \"gfx/surface\";\n" +
 "win := surf.Surface.open(\"PlatformDemo\", 24, 16);\n" +
 "win.uncapFrameRate();\n" +
 "var moved := 0;\n" +

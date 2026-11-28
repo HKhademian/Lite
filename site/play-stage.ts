@@ -305,7 +305,7 @@ export interface AudioPlayer {
   isMuted: () => boolean;
 }
 
-/** Creates a safe Web Audio tone synthesizer for `extra/audio` events. */
+/** Creates a safe Web Audio tone synthesizer for `media/audio` events. */
 export function createAudioPlayer(): AudioPlayer {
   let muted = false;
   let audioCtx: AudioCtxLike | null = null;
@@ -730,7 +730,7 @@ export interface CreateCanvasSurfaceHostOptions {
   cancelAnimationFrame?: (id: number) => void;
 }
 
-/** Creates an embeddable `extra/surface` host bound directly to any HTML `<canvas>` element. */
+/** Creates an embeddable `gfx/surface` host bound directly to any HTML `<canvas>` element. */
 export function createCanvasSurfaceHost(
   canvas: StageCanvasLike,
   options: CreateCanvasSurfaceHostOptions = {},

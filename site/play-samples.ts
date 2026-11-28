@@ -25,7 +25,7 @@ export const playGroups: readonly PlayGroup[] = [
   {
     id: 'play-art',
     title: 'Canvas Art',
-    description: 'High-resolution static compositions blending translucent RGBA layers, shapes, and frames (`extra/canvas` + `extra/board`).',
+    description: 'High-resolution static compositions blending translucent RGBA layers, shapes, and frames (`gfx/canvas` + `gfx/board`).',
     folder: 'samples/graphics/art',
     badge: 'RGBA Art',
   },
@@ -46,7 +46,7 @@ export const playGroups: readonly PlayGroup[] = [
   {
     id: 'play-audio',
     title: 'Audio & Synth',
-    description: 'Web Audio tones, polyphonic triads, keyboards, and grid step sequencers using `extra/audio`.',
+    description: 'Web Audio tones, polyphonic triads, keyboards, and grid step sequencers using `media/audio`.',
     folder: 'samples/graphics/audio',
     badge: 'Audio',
   },
@@ -121,7 +121,7 @@ export const playSamples: readonly PlaySample[] = [
     id: 'play-hello',
     group: 'play-animation',
     title: 'Hello Play — Minimal Starter',
-    note: 'Compact extra/canvas + extra/audio boilerplate with bounce chimes, Space reverse, and click-to-place; runs in Browser Play and natively via ./bin/lite play (320×180).',
+    note: 'Compact gfx/canvas + media/audio boilerplate with bounce chimes, Space reverse, and click-to-place; runs in Browser Play and natively via ./bin/lite play (320×180).',
     file: 'samples/graphics/animation/hello-play.lts',
     args: [],
     stdin: '',

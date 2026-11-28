@@ -2271,13 +2271,13 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     },
     canvas: {
       title: "Canvas Scene",
-      code: 'canvas := import "extra/canvas";\\n\\n_ctx := canvas.create(width = 160, height = 100, title = "Lite Canvas");\\ncanvas.clear(canvas.rgb(11, 12, 14));\\ncanvas.fillRect(20, 20, 120, 60, canvas.rgb(201, 123, 20));\\ncanvas.fillRect(36, 36, 88, 28, canvas.rgb(240, 180, 90));\\n',
+      code: 'canvas := import "gfx/canvas";\\n\\n_ctx := canvas.create(width = 160, height = 100, title = "Lite Canvas");\\ncanvas.clear(canvas.rgb(11, 12, 14));\\ncanvas.fillRect(20, 20, 120, 60, canvas.rgb(201, 123, 20));\\ncanvas.fillRect(36, 36, 88, 28, canvas.rgb(240, 180, 90));\\n',
       stdin: "",
       args: "",
     },
     play: {
       title: "Play Loop",
-      code: 'canvas := import "extra/canvas";\\n\\nvar x := 10;\\n_ctx := canvas.play(width = 160, height = 96, title = "Moving Block");\\nonCanvasUpdate := fn(dt: Float): Int {\\n  _dt := dt;\\n  x = (x + 2) % 140;\\n  canvas.clear(canvas.rgb(20, 18, 16));\\n  canvas.fillRect(x, 36, 20, 20, canvas.rgb(240, 180, 90));\\n  0\\n};\\ncanvas.clear(canvas.rgb(20, 18, 16));\\ncanvas.fillRect(x, 36, 20, 20, canvas.rgb(240, 180, 90));\\n',
+      code: 'canvas := import "gfx/canvas";\\n\\nvar x := 10;\\n_ctx := canvas.play(width = 160, height = 96, title = "Moving Block");\\nonCanvasUpdate := fn(dt: Float): Int {\\n  _dt := dt;\\n  x = (x + 2) % 140;\\n  canvas.clear(canvas.rgb(20, 18, 16));\\n  canvas.fillRect(x, 36, 20, 20, canvas.rgb(240, 180, 90));\\n  0\\n};\\ncanvas.clear(canvas.rgb(20, 18, 16));\\ncanvas.fillRect(x, 36, 20, 20, canvas.rgb(240, 180, 90));\\n',
       stdin: "",
       args: "",
     },

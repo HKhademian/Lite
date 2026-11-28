@@ -82,7 +82,7 @@ test.check("corpus makeTempDir", corpusTmpRes.ok);
 corpusTmp := corpusTmpRes.path;
 corpusDirs: List<String> = [
 "language/examples", "language/showcases", "language/learn/tutorials",
-"language/gym", "samples", "lib/core", "lib/extra"
+"language/gym", "samples", "lib/core", "lib/gfx", "lib/media"
 ];
 noIgnore: List<String> = [];
 mut copiedFiles: List<String> = [];

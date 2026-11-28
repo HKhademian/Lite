@@ -76,11 +76,19 @@ renderModuleSidebar := fn(
 modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts: List<Int>, activeId: String
 ): String {
     prefix := "../../modules/";
-    grpNss: List<String> = ["core", "math", "ds", "data", "extra"];
-    grpLabels: List<String> = ["Core Modules (core/*)", "Math Modules (math/*)", "Data Structures (ds/*)", "Data & Codecs (data/*)", "Play & Extra (extra/*)"];
+    grpNss: List<String> = ["core", "math", "ds", "data", "gfx", "media", "lite"];
+    grpLabels: List<String> = [
+    "Core Modules (core/*)",
+    "Math Modules (math/*)",
+    "Data Structures (ds/*)",
+    "Data & Codecs (data/*)",
+    "Graphics (gfx/*)",
+    "Media & Audio (media/*)",
+    "Compiler & Tooling (lite/*)"
+    ];
     mut grpBlocks: List<String> = [];
     var gi := 0;
-    loop gi < 5 {
+    loop gi < 7 {
         ns := grpNss[gi];
         mut items: List<String> = [];
         var mi := 0;
@@ -221,13 +229,17 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     var mathCount := 0;
     var dsCount := 0;
     var dataCount := 0;
-    var extraCount := 0;
+    var gfxCount := 0;
+    var mediaCount := 0;
+    var liteCount := 0;
     var totalSymbols := 0;
     mut coreCards: List<String> = [];
     mut mathCards: List<String> = [];
     mut dsCards: List<String> = [];
     mut dataCards: List<String> = [];
-    mut extraCards: List<String> = [];
+    mut gfxCards: List<String> = [];
+    mut mediaCards: List<String> = [];
+    mut liteCards: List<String> = [];
 
     var mi := 0;
     loop mi < modCount {
@@ -243,7 +255,9 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         else if mNs == "math" { mathCount = mathCount + 1; }
         else if mNs == "ds" { dsCount = dsCount + 1; }
         else if mNs == "data" { dataCount = dataCount + 1; }
-        else if mNs == "extra" { extraCount = extraCount + 1; }
+        else if mNs == "gfx" { gfxCount = gfxCount + 1; }
+        else if mNs == "media" { mediaCount = mediaCount + 1; }
+        else if mNs == "lite" { liteCount = liteCount + 1; }
 
         symsF := json.findField(inputJson, mp, "symbols");
         sOffs := json.arrayOffsets(inputJson, symsF.valuePos);
@@ -279,7 +293,9 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         else if mNs == "math" { mut mathCards.pushBack(card); }
         else if mNs == "ds" { mut dsCards.pushBack(card); }
         else if mNs == "data" { mut dataCards.pushBack(card); }
-        else if mNs == "extra" { mut extraCards.pushBack(card); }
+        else if mNs == "gfx" { mut gfxCards.pushBack(card); }
+        else if mNs == "media" { mut mediaCards.pushBack(card); }
+        else if mNs == "lite" { mut liteCards.pushBack(card); }
         mi = mi + 1;
     }
 
@@ -287,7 +303,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "  <h1>Standard &amp; Play Modules</h1>\n"
     + "  <p class=\"hero-lead\">\n"
     + "    Reference documentation extracted directly from all " + modCount.toText() + " shipped Lite modules\n"
-    + "    (" + coreCount.toText() + " <code>core/*</code>, " + mathCount.toText() + " <code>math/*</code>, " + dsCount.toText() + " <code>ds/*</code>, " + dataCount.toText() + " <code>data/*</code>, " + extraCount.toText() + " <code>extra/*</code>; " + totalSymbols.toText() + " public symbols).\n"
+    + "    (" + coreCount.toText() + " <code>core/*</code>, " + mathCount.toText() + " <code>math/*</code>, " + dsCount.toText() + " <code>ds/*</code>, " + dataCount.toText() + " <code>data/*</code>, " + gfxCount.toText() + " <code>gfx/*</code>, " + mediaCount.toText() + " <code>media/*</code>, " + liteCount.toText() + " <code>lite/*</code>; " + totalSymbols.toText() + " public symbols).\n"
     + "  </p>\n"
     + "  <p>Search by module or symbol name. Each module page shows its import path, public symbols, and where it runs. Try <a href=\"core/io.html\"><code>core/io</code></a> for input and output, or read <a href=\"../docs/handbook/imports-visibility-and-io.html\">how imports work</a> in the Handbook. Module APIs are provisional.</p>\n"
     + "  <div class=\"filter-pills\" role=\"group\" aria-label=\"Filter modules by environment\">\n"
@@ -334,13 +350,31 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "    " + dataCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
-    + "<section class=\"section\" id=\"extra-modules\">\n"
+    + "<section class=\"section\" id=\"gfx-modules\">\n"
     + "  <div class=\"section-head\">\n"
-    + "    <h2>Play &amp; Extra Modules (<code>extra/*</code>)</h2>\n"
-    + "    <span class=\"code-card-meta\">" + extraCount.toText() + " modules</span>\n"
+    + "    <h2>Graphics Modules (<code>gfx/*</code>)</h2>\n"
+    + "    <span class=\"code-card-meta\">" + gfxCount.toText() + " modules</span>\n"
     + "  </div>\n"
     + "  <div class=\"portal-grid\">\n"
-    + "    " + extraCards.join("\n") + "\n"
+    + "    " + gfxCards.join("\n") + "\n"
+    + "  </div>\n"
+    + "</section>\n\n"
+    + "<section class=\"section\" id=\"media-modules\">\n"
+    + "  <div class=\"section-head\">\n"
+    + "    <h2>Media &amp; Audio Modules (<code>media/*</code>)</h2>\n"
+    + "    <span class=\"code-card-meta\">" + mediaCount.toText() + " modules</span>\n"
+    + "  </div>\n"
+    + "  <div class=\"portal-grid\">\n"
+    + "    " + mediaCards.join("\n") + "\n"
+    + "  </div>\n"
+    + "</section>\n\n"
+    + "<section class=\"section\" id=\"lite-modules\">\n"
+    + "  <div class=\"section-head\">\n"
+    + "    <h2>Compiler &amp; Tooling Modules (<code>lite/*</code>)</h2>\n"
+    + "    <span class=\"code-card-meta\">" + liteCount.toText() + " modules</span>\n"
+    + "  </div>\n"
+    + "  <div class=\"portal-grid\">\n"
+    + "    " + liteCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<script>\n"
@@ -372,7 +406,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "</script>";
 
     mut pagesJson: List<String> = [
-    "{\"relPath\":\"modules/index.html\",\"title\":\"Modules — Lite\",\"description\":\"Reference documentation for Lite core/*, math/*, ds/*, data/*, and extra/* modules and their public APIs.\",\"basePath\":\"../\",\"body\":" + json.quoteString(indexBody) + "}"
+    "{\"relPath\":\"modules/index.html\",\"title\":\"Modules — Lite\",\"description\":\"Reference documentation for Lite core/*, math/*, ds/*, data/*, gfx/*, media/*, and lite/* modules and their public APIs.\",\"basePath\":\"../\",\"body\":" + json.quoteString(indexBody) + "}"
     ];
     mut searchEntriesJson: List<String> = [];
 

@@ -38,9 +38,9 @@ pub detectSourceEnvironment := fn(source: String): String {
             or source.startsWithAt(p, "\"core/time\"") {
                 return "cli";
             }
-            if source.startsWithAt(p, "\"extra/canvas\"")
-            or source.startsWithAt(p, "\"extra/audio\"")
-            or source.startsWithAt(p, "\"extra/board\"") {
+            if source.startsWithAt(p, "\"gfx/canvas\"")
+            or source.startsWithAt(p, "\"media/audio\"")
+            or source.startsWithAt(p, "\"gfx/board\"") {
                 return "play";
             }
         }

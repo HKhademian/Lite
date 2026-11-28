@@ -9201,7 +9201,7 @@ emitCVmArenaHelpers := fn(calls: Set<String>): Unit {
     }
 };
 
-/** True when any emitted item calls an `extra/canvas` surface or drawing builtin. */
+/** True when any emitted item calls an `gfx/canvas` surface or drawing builtin. */
 usesExtraCanvasBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$extraCanvasOpen(") or usesIntHelper(calls, "lite$extraCanvasPoll(") or
     usesIntHelper(calls, "lite$extraCanvasPresent(") or usesIntHelper(calls, "lite$extraCanvasClose(") or
@@ -9222,7 +9222,7 @@ usesExtraCanvasBuiltins := fn(calls: Set<String>): Bool {
     usesIntHelper(calls, "lite$extraCanvasScratchMark(") or usesIntHelper(calls, "lite$extraCanvasScratchRewind(")
 };
 
-/** Emits the self-contained C11 `extra/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder + vitals). */
+/** Emits the self-contained C11 `gfx/canvas` runtime (native macOS AppKit/CoreGraphics window + headless RGBA framebuffer + PNG encoder + vitals). */
 emitCExtraCanvasHelpers := fn(calls: Set<String>): Unit {
     if not usesExtraCanvasBuiltins(calls) { return; }
     surfTag := frontend.cStructTag("(handle:Int)");

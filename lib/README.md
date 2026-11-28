@@ -27,17 +27,21 @@ shape, and `Mat2<T>` through `Mat4<T>`, `IMat2` through `IMat4`, or
 
 See [grids](lite://module/ds/grid), [pools](lite://module/ds/pool), and other data structures in the generated reference.
 
-## Data & Codecs (`lib/data/` — 2 modules)
+## Data & Codecs (`lib/data/` — 4 modules)
 
-Use [JSON](lite://module/data/json) or [CSV](lite://module/data/csv) for the corresponding data format.
+Use [JSON](lite://module/data/json), [CSV](lite://module/data/csv), [Markdown](lite://module/data/markdown), or [Markdown HTML](lite://module/data/markdown-html).
 
-## Play & Extra Modules (`lib/extra/` — 6 modules)
+## Graphics Modules (`lib/gfx/` — 4 modules)
 
-Start with [Canvas](lite://module/extra/canvas) for drawing or [Surface](lite://module/extra/surface) for portable interactive applications.
+Start with [Canvas](lite://module/gfx/canvas) for drawing or [Surface](lite://module/gfx/surface) for portable interactive applications, backed by [Color](lite://module/gfx/color) and [Board](lite://module/gfx/board).
+
+## Media & Tooling Modules (`lib/media/`, `lib/lite/`)
+
+Use [Audio](lite://module/media/audio) for PCM/WebAudio tones, [Timer](lite://module/core/timer) for fixed-timestep loops and cooldowns, and `lite/*` barrels for reusable lexer, parser, checker, compiler, formatter, docgen, builder, and runner APIs.
 
 ## Running Library Tests
 
-All `lib/{core,math,ds,data,extra}/*` suites run under dual-target TS and native C11 (with ASan/UBSan):
+All `lib/{core,math,ds,data,gfx,media,lite}/*` suites run under dual-target TS and native C11 (with ASan/UBSan):
 
 ```sh
 ./bin/lite test --unit libraries

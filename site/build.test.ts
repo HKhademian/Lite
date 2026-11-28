@@ -108,7 +108,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   const searchIndex = JSON.parse(readFileSync(join(out, 'search-index.json'), 'utf8')) as Array<{ kind: string; title: string; href: string; keywords: string; subtitle: string; badge?: string }>;
   assert(searchIndex.length > showcaseSamples.length + 100);
   assert(searchIndex.some((entry) => entry.kind === 'module' && entry.href === 'modules/core/text.html'));
-  assert(searchIndex.some((entry) => entry.kind === 'symbol' && entry.title === 'extra/canvas.fillRect'));
+  assert(searchIndex.some((entry) => entry.kind === 'symbol' && entry.title === 'gfx/canvas.fillRect'));
   assert(searchIndex.some((entry) => entry.kind === 'tool' && entry.title === 'lite fmt'));
   const quickstartEntry = searchIndex.find(entry => entry.href === 'docs/design/start-here.html');
   assert(quickstartEntry?.subtitle.includes('Quickstart, local setup'));
@@ -134,9 +134,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'modules/core/test.html',
     'modules/core/text.html',
     'modules/core/time.html',
-    'modules/extra/audio.html',
-    'modules/extra/board.html',
-    'modules/extra/canvas.html',
+    'modules/media/audio.html',
+    'modules/gfx/board.html',
+    'modules/gfx/canvas.html',
   ]) {
     assert(existsSync(join(out, modRel)), `missing module detail page: ${modRel}`);
   }
@@ -167,7 +167,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   }
   const coreFileHtml = readFileSync(join(out, 'modules/core/file.html'), 'utf8');
   assert(coreFileHtml.includes('CLI / Host OS'));
-  const extraCanvasHtml = readFileSync(join(out, 'modules/extra/canvas.html'), 'utf8');
+  const extraCanvasHtml = readFileSync(join(out, 'modules/gfx/canvas.html'), 'utf8');
   assert(extraCanvasHtml.includes('Lite Play'));
   assert(extraCanvasHtml.includes('id="fillRect"'));
   assert(extraCanvasHtml.includes('Used in Showcases &amp; Gallery'));
@@ -631,9 +631,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   }
   assert(gallery.includes('class="play-preview-svg"'), 'missing gallery SVG preview thumbnails');
   const stdlib = JSON.parse(readFileSync(join(out, 'playground', 'stdlib.json'), 'utf8')) as Record<string, unknown>;
-  assert('extra/canvas' in stdlib);
-  assert('extra/board' in stdlib);
-  assert('extra/audio' in stdlib);
+  assert('gfx/canvas' in stdlib);
+  assert('gfx/board' in stdlib);
+  assert('media/audio' in stdlib);
   for (const sample of showcaseSamples) {
     assert(existsSync(join(out, 'playground', 'samples', `${sample.id}.json`)), `missing playground payload for ${sample.id}`);
   }
@@ -726,7 +726,7 @@ test('emitted playground compiler.js and stdlib.json compile and run Lite code',
   const sample = JSON.parse(readFileSync(join(out, 'playground', 'samples', 'double-sum.json'), 'utf8')) as { source: string; stdin: string; output: string };
   const stdinBytes = new TextEncoder().encode(sample.source);
   const vfsFiles = new Map<string, Uint8Array>();
-  const vfsDirs = new Set<string>(['/project', '/project/lib', '/project/lib/core', '/project/lib/math', '/project/lib/ds', '/project/lib/extra']);
+  const vfsDirs = new Set<string>(['/project', '/project/lib', '/project/lib/core', '/project/lib/math', '/project/lib/ds', '/project/lib/gfx']);
   for (const entry of Object.values(stdlib)) {
     const p = `/project/${entry.path}`;
     vfsFiles.set(p, new TextEncoder().encode(entry.text));
@@ -872,7 +872,7 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
     assert(cRes.c?.includes('int main(void)'));
 
     const playCSrc = [
-      'canvas := import "extra/canvas";',
+      'canvas := import "gfx/canvas";',
       'ctx := canvas.play(16, 12, "WorkerC");',
       'helper := fn(v: Int): Int { v + 1 };',
       'onCanvasUpdate := fn(dt: Float): Int {',
@@ -921,7 +921,7 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
       id: 4,
       action: 'run',
       source: [
-        'canvas := import "extra/canvas";',
+        'canvas := import "gfx/canvas";',
         'ctx := canvas.create(width = 8, height = 6, title = "Static");',
         'canvas.clear(canvas.rgba(10, 20, 30, 128));',
         'canvas.setPixel(2, 3, canvas.rgb(255, 0, 0));',
@@ -945,8 +945,8 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
       id: 5,
       action: 'run',
       source: [
-        'audio := import "extra/audio";',
-        'canvas := import "extra/canvas";',
+        'audio := import "media/audio";',
+        'canvas := import "gfx/canvas";',
         'ctx := canvas.play(width = 16, height = 12, title = "Live");',
         'bg := canvas.rgb(0, 0, 0);',
         'var x := 1;',
@@ -1004,7 +1004,7 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
       id: 9,
       action: 'run',
       source: [
-        'canvas := import "extra/canvas";',
+        'canvas := import "gfx/canvas";',
         'ctx := canvas.play(width = 4, height = 4, title = "Alias");',
         'canvas_onUpdate := fn(dt: Float): Int { voidDt := dt; canvas.clear(canvas.rgb(1, 2, 3)); 0 }',
       ].join('\n'),
@@ -1020,7 +1020,7 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
       id: 10,
       action: 'run',
       source: [
-        'surf := import "extra/surface";',
+        'surf := import "gfx/surface";',
         'win := surf.Surface.open("StaticSurf", 4, 4);',
         'win.clear(surf.RED);',
         'win.present();',
@@ -1047,7 +1047,7 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
       id: 11,
       action: 'run',
       source: [
-        'surf := import "extra/surface";',
+        'surf := import "gfx/surface";',
         'win := surf.Surface.open("LiveSurf", 8, 6);',
         'var x := 1.0;',
         'win.run(fn(inp: surf.FrameInput): Bool {',
@@ -1102,7 +1102,7 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
       id: 14,
       action: 'run',
       source: [
-        'cv := import "extra/canvas";',
+        'cv := import "gfx/canvas";',
         '_c := cv.create(width = 4, height = 4, title = "ShowPixel");',
         'cv.clear(cv.rgb(10, 20, 30));',
         'cv.setPixel(1, 0, cv.rgb(255, 0, 0));',
@@ -1135,7 +1135,7 @@ test('emitted playground worker.js compiles and runs edited Lite code', async ()
       id: 15,
       action: 'run',
       source: [
-        'cv := import "extra/canvas";',
+        'cv := import "gfx/canvas";',
         '_c := cv.play(width = 4, height = 4, title = "StartPixel");',
         'var x := 0;',
         'cv.start(fn(dt: Float): Int {',
@@ -2642,7 +2642,7 @@ test('play C keepalive preserves Play callbacks across -O0..-O3 and C Program/Po
     assert.match(programC, /^static\s+void\s+onCanvasKeyDown\(lt_str\s+key\)\s*\{$/m, `-O${lv} Program C missing onCanvasKeyDown`);
     assert.match(programC, /^static\s+void\s+onCanvasPointerDown\(/m, `-O${lv} Program C missing onCanvasPointerDown`);
     assert(programC.includes('int main(void) {'), `-O${lv} Program C missing int main`);
-    assert(!programC.includes('lt_m_lib_s_extra_s_color__BLACK ='), `-O${lv} Program C leaked module color init`);
+    assert(!programC.includes('lt_m_lib_s_gfx_s_color__BLACK ='), `-O${lv} Program C leaked module color init`);
   }
 });
 
@@ -2658,7 +2658,7 @@ test('renderFrameToImageData copies direct rgba buffers and createCanvasSurfaceH
 
   const compiler = buildTsCompiler();
   const src = [
-    'surf := import "extra/surface";',
+    'surf := import "gfx/surface";',
     'win := surf.Surface.open("MountTest", 6, 4);',
     'var x := 0.0;',
     'win.run(fn(inp: surf.FrameInput): Bool {',

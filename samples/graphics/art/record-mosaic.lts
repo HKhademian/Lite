@@ -1,7 +1,7 @@
 /* 360x240 translucent RGBA card mosaic driven by nominal records, =name shorthand, and aggregate destructuring. */
 
-board := import "extra/board";
-canvas := import "extra/canvas";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 Tile := record {

@@ -7,7 +7,7 @@ test := import "core/test";
 
 test.checkText("slug title", "Two Sum Sample", siteLib.slugToTitle("language/examples/two-sum_sample.lts"));
 test.checkText("env cli", "cli", siteLib.detectSourceEnvironment("fs := import \"core/file\";\nio := import \"core/io\";\n"));
-test.checkText("env play", "play", siteLib.detectSourceEnvironment("cv := import \"extra/canvas\";\n"));
+test.checkText("env play", "play", siteLib.detectSourceEnvironment("cv := import \"gfx/canvas\";\n"));
 test.checkText("env universal", "universal", siteLib.detectSourceEnvironment("io := import \"core/io\";\n"));
 
 tmpRes := fs.makeTempDir("lite-site-lib-test-");

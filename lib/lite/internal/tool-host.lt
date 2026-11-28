@@ -1,6 +1,6 @@
 /* Internal host-discovery helpers shared by `lite/builder` and `lite/runner` with zero repo-tool dependencies. */
 
-hostFs := import "./compiler/host-fs";
+hostFs := import "../compiler/host-fs";
 fs := import "core/file";
 path := import "core/path";
 proc := import "core/process";

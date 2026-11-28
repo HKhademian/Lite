@@ -10,11 +10,11 @@ Item := alias (kind: String, name: String, runtime: String, code: String, intVal
 /** Collection of items matching `frontend-ir.Items`. */
 Items := alias List<Item>;
 
-/** True when `moduleIdentity` is a verified `lite.core.*`, `lite.external.*`, or `lite.extra.*` host module identity. */
+/** True when `moduleIdentity` is a verified `lite.core.*`, `lite.external.*`, or `lite.gfx.*` host module identity. */
 pub isHostModuleIdentity := fn(moduleIdentity: String): Bool {
     moduleIdentity.startsWithAt(0, "lite.core.") or
     moduleIdentity.startsWithAt(0, "lite.external.") or
-    moduleIdentity.startsWithAt(0, "lite.extra.")
+    moduleIdentity.startsWithAt(0, "lite.gfx.")
 };
 
 /** Normalizes one canonical parameter/result kind for host ABI matching by unwrapping nominal `distinct` wrappers to `Name@BaseKind`. */
@@ -58,9 +58,9 @@ normalizeHostAbiParams := fn(rawParams: String): String {
     out.join("|")
 };
 
-/** Resolves a bodyless `lib/extra/` declaration when its module identity and ABI match. */
+/** Resolves a bodyless `lib/gfx/` declaration when its module identity and ABI match. */
 extraHostFunction := fn(moduleIdentity: String, name: String, rawParams: String, rawResult: String): String {
-    if moduleIdentity == "lite.extra.surface.v1" {
+    if moduleIdentity == "lite.gfx.surface.v1" {
         params := normalizeHostAbiParams(rawParams);
         result := normalizeHostAbiKind(rawResult);
         pt := "(x:Float,y:Float)";
@@ -149,7 +149,7 @@ pub coreHostFunction := fn(moduleIdentity: String, name: String, rawParams: Stri
     if moduleIdentity.startsWithAt(0, "lite.external.") {
         return externalHostFunction(moduleIdentity, name, params, result);
     }
-    if moduleIdentity.startsWithAt(0, "lite.extra.") {
+    if moduleIdentity.startsWithAt(0, "lite.gfx.") {
         return extraHostFunction(moduleIdentity, name, params, result);
     }
     if moduleIdentity == "lite.core.io.v1" {

@@ -1,8 +1,8 @@
 /* Brick breaker game: move paddle with Left/Right or pointer; clear all 18 RGBA bricks! */
 
-audio := import "extra/audio";
-board := import "extra/board";
-canvas := import "extra/canvas";
+audio := import "media/audio";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 math := import "math/scalar";
 

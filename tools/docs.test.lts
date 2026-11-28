@@ -175,7 +175,7 @@ test.check("rendered[1].html has data-fence", html1.indexOf("data-fence=\"0\"", 
 modRes := runDocs(["--modules-json"], root, "");
 test.checkInt("docs --modules-json status: " + modRes.stderr, 0, modRes.status);
 modOffsets := json.arrayOffsets(modRes.stdout, 0);
-test.checkInt("modules count", 49, modOffsets.length());
+test.checkInt("modules count", 58, modOffsets.length());
 
 var foundIo := false;
 var foundCanvas := false;
@@ -198,9 +198,9 @@ loop modOffsets as mPos {
             }
         }
         test.check("core/io has host outputLine", hasOutLine);
-    } else if id == "extra/canvas" {
+    } else if id == "gfx/canvas" {
         foundCanvas = true;
-        test.checkText("extra/canvas env", "play", env);
+        test.checkText("gfx/canvas env", "play", env);
         var hasColor := false;
         loop symOffsets as sPos {
             sKind := json.readFieldString(modRes.stdout, sPos, "kind").value;
@@ -209,14 +209,14 @@ loop modOffsets as mPos {
                 hasColor = true;
             }
         }
-        test.check("extra/canvas has type Color", hasColor);
+        test.check("gfx/canvas has type Color", hasColor);
     } else if id == "core/file" {
         foundFile = true;
         test.checkText("core/file env", "cli", env);
     }
 }
 test.check("core/io found", foundIo);
-test.check("extra/canvas found", foundCanvas);
+test.check("gfx/canvas found", foundCanvas);
 test.check("core/file found", foundFile);
 
 /* 5. docs --check validates lite:// and lite:/ internal URIs, fragments, and module symbols offline */

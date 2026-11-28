@@ -1,6 +1,6 @@
-/* Beginner pixel-graphics canvas layered on top of `extra/surface` and `extra/audio`. */
+/* Beginner pixel-graphics canvas layered on top of `gfx/surface` and `media/audio`. */
 
-audioLib := import "./audio";
+audioLib := import "media/audio";
 colorLib := import "./color";
 surfLib := import "./surface";
 
@@ -191,7 +191,7 @@ defaultScale := fn(width: Int): Int {
     if width <= 240 { 3 } else if width <= 480 { 2 } else { 1 }
 }
 
-/** Renders any queued `extra/canvas` pixel buffer, draw ops, and `extra/audio` tones onto `win`, returning the updated draw count. */
+/** Renders any queued `gfx/canvas` pixel buffer, draw ops, and `media/audio` tones onto `win`, returning the updated draw count. */
 pub flushToSurface := fn(win: surfLib.Surface, scale: Int, lastDrawCount: Int, muted: Bool): Int {
     effScale := if scale < 1 { 1 } else { scale };
     scaleF := effScale * 1.0;
@@ -242,7 +242,7 @@ pub flushToSurface := fn(win: surfLib.Surface, scale: Int, lastDrawCount: Int, m
     nextDraw
 }
 
-/** Presents a static `extra/canvas` composition through `extra/surface`. */
+/** Presents a static `gfx/canvas` composition through `gfx/surface`. */
 pub show := fn(): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 { return; }
     scale := defaultScale(canvasWidth);
@@ -252,7 +252,7 @@ pub show := fn(): Unit {
     win.close();
 }
 
-/** Runs an animated `extra/canvas` update callback through `extra/surface` until closed or `onUpdate` returns non-zero. */
+/** Runs an animated `gfx/canvas` update callback through `gfx/surface` until closed or `onUpdate` returns non-zero. */
 pub start := fn(onUpdate: fn(Float): Int): Unit {
     if canvasWidth <= 0 or canvasHeight <= 0 { return; }
     scale := defaultScale(canvasWidth);

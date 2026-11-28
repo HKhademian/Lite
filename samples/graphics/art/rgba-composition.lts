@@ -1,7 +1,7 @@
 /* High-resolution RGBA composition with sky gradient and translucent glass circles. */
 
-board := import "extra/board";
-canvas := import "extra/canvas";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.create(width = 360, height = 240, title = "Layered RGBA Composition");

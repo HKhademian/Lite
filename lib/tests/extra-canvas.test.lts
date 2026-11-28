@@ -1,4 +1,4 @@
-/* Dual-target (TS + C11) tests for abstract `extra/color` and `extra/canvas` APIs. */
+/* Dual-target (TS + C11) tests for abstract `gfx/color` and `gfx/canvas` APIs. */
 
 fs := import "core/file";
 path := import "core/path";
@@ -24,8 +24,8 @@ cPng := path.join(tmpDir, "c.png");
 
 makeSrc := fn(outPng: String): String {
     "io := import \"core/io\";\n" +
-    "color := import \"extra/color\";\n" +
-    "canvas := import \"extra/surface\";\n" +
+    "color := import \"gfx/color\";\n" +
+    "canvas := import \"gfx/surface\";\n" +
     "\n" +
     "zero: color.Color;\n" +
     "io.outputLine(zero.red8(), zero.green8(), zero.blue8(), zero.alpha8());\n" +
@@ -127,7 +127,7 @@ if ccInfo.available {
     /* 3. C11 AddressSanitizer + UBSan + 5,000-frame RSS stability leak gate (with frame-scratch HUD strings, triangles, clipping, and texture blits) */
     leakSrc :=
     "io := import \"core/io\";\n" +
-    "canvas := import \"extra/surface\";\n" +
+    "canvas := import \"gfx/surface\";\n" +
     "surf := canvas.Surface.open(\"LeakCheck\", 160, 120);\n" +
     "surf.uncapFrameRate();\n" +
     "spr := canvas.Texture.create(4, 4);\n" +
@@ -176,7 +176,7 @@ if ccInfo.available {
 /* 4. Host-driven `surface.run` callback loop parity (TS + C11) */
 runSrc :=
 "io := import \"core/io\";\n" +
-"surf := import \"extra/surface\";\n" +
+"surf := import \"gfx/surface\";\n" +
 "win := surf.Surface.open(\"RunLoop\", 32, 24);\n" +
 "win.uncapFrameRate();\n" +
 "var frames := 0;\n" +
@@ -218,10 +218,10 @@ if ccInfo.available {
     test.checkText("run loop c stdout parity", tsRunLoopExec.stdout, cRunLoopExec.stdout);
 }
 
-/* 5. Rebased `extra/canvas` (`unsetPixel`, `show`, `start`) dual-target parity (TS + C11) */
+/* 5. Rebased `gfx/canvas` (`unsetPixel`, `show`, `start`) dual-target parity (TS + C11) */
 rebasedSrc :=
 "io := import \"core/io\";\n" +
-"cv := import \"extra/canvas\";\n" +
+"cv := import \"gfx/canvas\";\n" +
 "_c0 := cv.create(width = 8, height = 6, title = \"StaticPixel\");\n" +
 "cv.clear(cv.rgb(10, 20, 30));\n" +
 "cv.setPixel(2, 2, cv.rgb(255, 0, 0));\n" +

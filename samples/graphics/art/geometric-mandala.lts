@@ -1,7 +1,7 @@
 /* Radial geometric mandala combining concentric RGBA circles and symmetric spokes. */
 
-board := import "extra/board";
-canvas := import "extra/canvas";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.create(width = 320, height = 240, title = "Geometric Mandala");

@@ -69,6 +69,7 @@ function coreModuleIdentity(relPath: string): string {
     case 'lib/core/process.lt': return 'lite.core.process.v1';
     case 'lib/core/crypto.lt': return 'lite.core.crypto.v1';
     case 'lib/core/time.lt': return 'lite.core.time.v1';
+    case 'lib/gfx/surface.lt': return 'lite.gfx.surface.v1';
     default: return '';
   }
 }
@@ -77,7 +78,7 @@ function computeSampleCacheSalt(tsCompiler: CompilerBuild): string {
   const h = createHash('sha256');
   h.update('v1\0');
   h.update(readFileSync(tsCompiler.path));
-  for (const rel of ['lib/extra/canvas.lt', 'lib/extra/board.lt', 'lib/extra/audio.lt', 'lib/math/scalar.lt', 'lib/math/random.lt', 'lib/ds/pool.lt', 'lib/ds/arena.lt', 'lib/ds/sparse.lt']) {
+  for (const rel of ['site/play-keepalive.ts', 'site/canvas-preview.ts', 'lib/gfx/canvas.lt', 'lib/gfx/board.lt', 'lib/gfx/surface.lt', 'lib/gfx/color.lt', 'lib/media/audio.lt', 'lib/core/timer.lt', 'lib/math/scalar.lt', 'lib/math/random.lt', 'lib/ds/pool.lt', 'lib/ds/arena.lt', 'lib/ds/sparse.lt']) {
     const p = resolve(root, rel);
     if (existsSync(p)) { h.update('\0' + rel + '\0'); h.update(readFileSync(p)); }
   }
@@ -373,14 +374,21 @@ export function buildSite(options?: BuildSiteOptions): void {
   const playStageJs = stripTypeScriptTypes(readFileSync(join(root, 'site', 'play-stage.ts'), 'utf8'), { mode: 'strip' });
 
   const stdlib: Record<string, Readonly<{ path: string; display: string; identity: string; text: string }>> = {};
-  for (const ns of ['core', 'math', 'ds', 'data', 'extra'] as const) {
-    const libDir = join(root, 'lib', ns);
-    for (const name of readdirSync(libDir).filter(f => f.endsWith('.lt')).sort()) {
-      const relPath = `lib/${ns}/${name}`;
-      const text = readFileSync(join(libDir, name), 'utf8');
-      const modName = `${ns}/${name.slice(0, -3)}`;
-      stdlib[modName] = { path: relPath, display: relPath, identity: coreModuleIdentity(relPath), text };
+  const collectStdlibDir = (ns: string, dir: string, modPrefix: string, relPrefix: string): void => {
+    if (!existsSync(dir)) return;
+    for (const ent of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (ent.isDirectory()) {
+        collectStdlibDir(ns, join(dir, ent.name), `${modPrefix}/${ent.name}`, `${relPrefix}/${ent.name}`);
+      } else if (ent.name.endsWith('.lt')) {
+        const relPath = `${relPrefix}/${ent.name}`;
+        const text = readFileSync(join(dir, ent.name), 'utf8');
+        const modName = `${modPrefix}/${ent.name.slice(0, -3)}`;
+        stdlib[modName] = { path: relPath, display: relPath, identity: coreModuleIdentity(relPath), text };
+      }
     }
+  };
+  for (const ns of ['core', 'math', 'ds', 'data', 'gfx', 'media'] as const) {
+    collectStdlibDir(ns, join(root, 'lib', ns), ns, `lib/${ns}`);
   }
   const preloadRelPath = 'lib/$preload.lt';
   stdlib['$preload'] = {

@@ -8,7 +8,7 @@ Lite keeps module dependencies explicit and local: every external capability ent
 
 ## Namespace Imports & `pub` Contracts
 
-Import standard helpers with `"core/..."` (or Play modules with `"extra/..."`) or sibling files with a relative path (`"./helpers/math-stats.lts"`):
+Import standard helpers with `"core/..."` (or Play modules with `"gfx/..."` / `"media/..."`) or sibling files with a relative path (`"./helpers/math-stats.lts"`):
 
 ```lite
 /* helpers/math-stats.lts */
@@ -49,8 +49,8 @@ All 39 modules documented in [Modules](lite://module) (`15 core/*` + `5 math/*` 
 | Environment | Modules | Where it runs |
 | --- | --- | --- |
 | **Browser + CLI (`core/*`)** | `core/io`, `core/int`, `core/text`, `core/list`, `core/array`, `core/map`, `core/set`, `core/crypto`, `core/source`, `core/test`, `core/diag` | Runs everywhere: Browser Worker, CLI TS & native C11 |
-| **Browser + CLI (`math/*`, `ds/*`, `data/*`, `extra/*`)** | `math/scalar`, `math/random`, `math/vector`, `math/matrix`, `math/geom`, `ds/grid`, `ds/arena`, `ds/pool`, `ds/intern`, `ds/lru`, `ds/ring`, `ds/deque`, `ds/heap`, `ds/bitset`, `ds/sparse`, `ds/spatial`, `data/json`, `data/csv`, `extra/color`, `extra/timer` | Pure Lite math, geometry, data structures, codecs & allocators on TS & C11 |
-| **Lite Play & Surfaces** | `extra/canvas`, `extra/surface`, `extra/board`, `extra/audio` | Browser Play Canvas, `./bin/lite play` desktop stage & headless tests |
+| **Browser + CLI (`math/*`, `ds/*`, `data/*`, `extra/*`)** | `math/scalar`, `math/random`, `math/vector`, `math/matrix`, `math/geom`, `ds/grid`, `ds/arena`, `ds/pool`, `ds/intern`, `ds/lru`, `ds/ring`, `ds/deque`, `ds/heap`, `ds/bitset`, `ds/sparse`, `ds/spatial`, `data/json`, `data/csv`, `gfx/color`, `core/timer` | Pure Lite math, geometry, data structures, codecs & allocators on TS & C11 |
+| **Lite Play & Surfaces** | `gfx/canvas`, `gfx/surface`, `gfx/board`, `media/audio` | Browser Play Canvas, `./bin/lite play` desktop stage & headless tests |
 | **CLI / Host OS** | `core/file`, `core/path`, `core/process`, `core/time` | Requires local `./bin/lite run` or native C11 host OS access |
 
 ## Reading Input, Arguments & Exiting Explicitly

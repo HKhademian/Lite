@@ -515,7 +515,7 @@
           "helperModules": [],
           "stdin": "",
           "args": [],
-          "teaches": ["extra/canvas", "extra/board", "extra/audio", "onCanvasUpdate"],
+          "teaches": ["gfx/canvas", "gfx/board", "media/audio", "onCanvasUpdate"],
           "docs": ["language/learn/handbook/getting-started/overview-and-setup.md"]
         }
       ]

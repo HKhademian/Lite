@@ -1,8 +1,8 @@
 /* Interactive studio lamp: click the bulb or press Space/Enter to toggle glow & chime. */
 
-audio := import "extra/audio";
-board := import "extra/board";
-canvas := import "extra/canvas";
+audio := import "media/audio";
+board := import "gfx/board";
+canvas := import "gfx/canvas";
 io := import "core/io";
 
 ctx := canvas.play(width = 280, height = 180, title = "Studio Lamp · Click or Space");
