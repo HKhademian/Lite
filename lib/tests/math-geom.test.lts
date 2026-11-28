@@ -175,7 +175,12 @@ functionalSrc :=
 "    and ivGen2.x() == 3 and ivGen2.y() == 4\n" +
 "    and near(fvGen2.cross2(vec.vec2(1.0, 2.0)), 2.0)\n" +
 "    and vec.ZERO2.x() == 0.0 and vec.ZERO2.y() == 0.0\n" +
-"    and vec.ZERO4.w() == 0.0;\n" +
+"    and vec.ZERO4.w() == 0.0\n" +
+"    and vec.Vec2.of(3, 4).y() == 4\n" +
+"    and near(vec.FVec3.of(1.0, 2.0, 3.0).z(), 3.0)\n" +
+"    and vec.IVec4.of(1, 2, 3, 4).w() == 4\n" +
+"    and near(vec.FVec2.ZERO.x(), 0.0) and near(vec.FVec3.UNIT_X.x(), 1.0)\n" +
+"    and near(vec.FVec3.UNIT_Y.y(), 1.0) and near(vec.FVec3.UNIT_Z.z(), 1.0);\n" +
 "io.outputLine(\"geom\", geomCheck and arrCheck);\n";
 
 expectedOut :=

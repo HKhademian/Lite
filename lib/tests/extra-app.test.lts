@@ -58,9 +58,14 @@ functionalSrc :=
 "i2: mat.Mat2<Int> = mat.IMat2.zeroed();\n" +
 "i3: mat.Mat3<Int> = mat.IMat3.zeroed();\n" +
 "i4: mat.Mat4<Int> = mat.IMat4.zeroed();\n" +
+"n2 := mat.Mat2.rotation(math.PI * 0.5).mulVec(vec.FVec2.of(1.0, 0.0));\n" +
+"n3 := mat.Mat3.translation(2.0, 3.0).mul(mat.Mat3.scaling(2.0, 4.0)).mul(mat.Mat3.rotation(0.0)).transformPoint2(vec.Vec2.of(1.0, 1.0));\n" +
+"n4 := mat.Mat4.translation(1.0, 2.0, 3.0).mul(mat.Mat4.scaling(2.0, 2.0, 2.0)).transformPoint3(vec.FVec3.UNIT_X);\n" +
 "io.outputLine(\"matrix aliases\", i23.rowsCount() == 2 and i23.colsCount() == 3 and i23.at(1, 2) == 6,\n" +
 "    f32.rowsCount() == 3 and f32.colsCount() == 2 and near(f32.at(0, 1), 2.0),\n" +
-"    i2.at(1, 1) == 0, i3.at(2, 2) == 0, i4.at(3, 3) == 0);\n" +
+"    i2.at(1, 1) == 0, i3.at(2, 2) == 0, i4.at(3, 3) == 0,\n" +
+"    near(mat.FMat2.IDENTITY.det(), 1.0) and near(mat.FMat3.IDENTITY.det(), 1.0) and near(mat.FMat4.IDENTITY.det(), 1.0),\n" +
+"    near(n2.y(), 1.0) and near(n3.x(), 4.0) and near(n3.y(), 7.0) and near(n4.x(), 3.0) and near(n4.z(), 3.0));\n" +
 "\n" +
 "/* 3. ds/grid */\n" +
 "mut g := grid.IntGrid.create(8, 6, 0);\n" +
@@ -90,7 +95,7 @@ functionalSrc :=
 expectedOut :=
 "vec true true true true true true true true true true\n" +
 "mat true true true true true true true true true true true\n" +
-"matrix aliases true true true true true\n" +
+"matrix aliases true true true true true true true\n" +
 "grid 8 6 7 -1 6 9\n" +
 "fgrid true true\n" +
 "timer 2 true 2 false true true true true\n";

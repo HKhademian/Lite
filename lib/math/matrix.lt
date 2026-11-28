@@ -231,9 +231,9 @@ pub Mat.inverse := fn(m: Self<Float, 4, 4>): Option<Self<Float, 4, 4>> {
     r3 := m.rows[3].data;
 
     c00 := minor3(r1, r2, r3, 1, 2, 3);
-    c10 := 0.0 - minor3(r1, r2, r3, 0, 2, 3);
+    c10 := -minor3(r1, r2, r3, 0, 2, 3);
     c20 := minor3(r1, r2, r3, 0, 1, 3);
-    c30 := 0.0 - minor3(r1, r2, r3, 0, 1, 2);
+    c30 := -minor3(r1, r2, r3, 0, 1, 2);
 
     det := (r0[0] * c00) + (r0[1] * c10) + (r0[2] * c20) + (r0[3] * c30);
     if math.abs(det) <= 0.000000000001 {
@@ -241,19 +241,19 @@ pub Mat.inverse := fn(m: Self<Float, 4, 4>): Option<Self<Float, 4, 4>> {
     }
     invDet := 1.0 / det;
 
-    c01 := 0.0 - minor3(r0, r2, r3, 1, 2, 3);
+    c01 := -minor3(r0, r2, r3, 1, 2, 3);
     c11 := minor3(r0, r2, r3, 0, 2, 3);
-    c21 := 0.0 - minor3(r0, r2, r3, 0, 1, 3);
+    c21 := -minor3(r0, r2, r3, 0, 1, 3);
     c31 := minor3(r0, r2, r3, 0, 1, 2);
 
     c02 := minor3(r0, r1, r3, 1, 2, 3);
-    c12 := 0.0 - minor3(r0, r1, r3, 0, 2, 3);
+    c12 := -minor3(r0, r1, r3, 0, 2, 3);
     c22 := minor3(r0, r1, r3, 0, 1, 3);
-    c32 := 0.0 - minor3(r0, r1, r3, 0, 1, 2);
+    c32 := -minor3(r0, r1, r3, 0, 1, 2);
 
-    c03 := 0.0 - minor3(r0, r1, r2, 1, 2, 3);
+    c03 := -minor3(r0, r1, r2, 1, 2, 3);
     c13 := minor3(r0, r1, r2, 0, 2, 3);
-    c23 := 0.0 - minor3(r0, r1, r2, 0, 1, 3);
+    c23 := -minor3(r0, r1, r2, 0, 1, 3);
     c33 := minor3(r0, r1, r2, 0, 1, 2);
 
     .Some(Self<Float, 4, 4> {
@@ -274,7 +274,34 @@ pub Mat.inverse := fn(m: Self<Float, 4, 4>): Option<Self<Float, 4, 4>> {
 pub Mat.rotation2 := fn(radians: Float): Self<Float, 2, 2> {
     c := math.cos(radians);
     s := math.sin(radians);
-    Self<Float, 2, 2> { rows = [vec.vec2(c, 0.0 - s), vec.vec2(s, c)] }
+    Self<Float, 2, 2> { rows = [vec.vec2(c, -s), vec.vec2(s, c)] }
+};
+
+/** Narrowed 2x2 counter-clockwise rotation constructor on `Mat2`. */
+pub Mat2.rotation := fn(radians: Float): Self<Float> {
+    Mat.rotation2(radians)
+};
+
+/** 2x2 `Float` identity constant. */
+pub FMat2.IDENTITY := Mat<Float, 2, 2> { rows = [vec.vec2(1.0, 0.0), vec.vec2(0.0, 1.0)] };
+
+/** 3x3 `Float` identity constant. */
+pub FMat3.IDENTITY := Mat<Float, 3, 3> {
+    rows = [
+    vec.vec3(1.0, 0.0, 0.0),
+    vec.vec3(0.0, 1.0, 0.0),
+    vec.vec3(0.0, 0.0, 1.0)
+    ]
+};
+
+/** 4x4 `Float` identity constant. */
+pub FMat4.IDENTITY := Mat<Float, 4, 4> {
+    rows = [
+    vec.vec4(1.0, 0.0, 0.0, 0.0),
+    vec.vec4(0.0, 1.0, 0.0, 0.0),
+    vec.vec4(0.0, 0.0, 1.0, 0.0),
+    vec.vec4(0.0, 0.0, 0.0, 1.0)
+    ]
 };
 
 /** 2D affine translation matrix in homogeneous 3x3 form. */
@@ -288,6 +315,11 @@ pub Mat.translate2 := fn(tx: Float, ty: Float): Self<Float, 3, 3> {
     }
 };
 
+/** Narrowed 2D affine translation constructor on `Mat3`. */
+pub Mat3.translation := fn(tx: Float, ty: Float): Self<Float> {
+    Mat.translate2(tx, ty)
+};
+
 /** 2D affine scale matrix in homogeneous 3x3 form. */
 pub Mat.scale2 := fn(sx: Float, sy: Float): Self<Float, 3, 3> {
     Self<Float, 3, 3> {
@@ -299,17 +331,27 @@ pub Mat.scale2 := fn(sx: Float, sy: Float): Self<Float, 3, 3> {
     }
 };
 
+/** Narrowed 2D affine scale constructor on `Mat3`. */
+pub Mat3.scaling := fn(sx: Float, sy: Float): Self<Float> {
+    Mat.scale2(sx, sy)
+};
+
 /** 2D affine rotation matrix by `radians` in homogeneous 3x3 form. */
 pub Mat.rotate2 := fn(radians: Float): Self<Float, 3, 3> {
     c := math.cos(radians);
     s := math.sin(radians);
     Self<Float, 3, 3> {
         rows = [
-        vec.vec3(c, 0.0 - s, 0.0),
+        vec.vec3(c, -s, 0.0),
         vec.vec3(s, c, 0.0),
         vec.vec3(0.0, 0.0, 1.0)
         ]
     }
+};
+
+/** Narrowed 2D affine rotation constructor on `Mat3`. */
+pub Mat3.rotation := fn(radians: Float): Self<Float> {
+    Mat.rotate2(radians)
 };
 
 /** 3D translation matrix in homogeneous 4x4 form. */
@@ -324,6 +366,11 @@ pub Mat.translate3 := fn(tx: Float, ty: Float, tz: Float): Self<Float, 4, 4> {
     }
 };
 
+/** Narrowed 3D translation constructor on `Mat4`. */
+pub Mat4.translation := fn(tx: Float, ty: Float, tz: Float): Self<Float> {
+    Mat.translate3(tx, ty, tz)
+};
+
 /** 3D scale matrix in homogeneous 4x4 form. */
 pub Mat.scale3 := fn(sx: Float, sy: Float, sz: Float): Self<Float, 4, 4> {
     Self<Float, 4, 4> {
@@ -336,6 +383,11 @@ pub Mat.scale3 := fn(sx: Float, sy: Float, sz: Float): Self<Float, 4, 4> {
     }
 };
 
+/** Narrowed 3D scale constructor on `Mat4`. */
+pub Mat4.scaling := fn(sx: Float, sy: Float, sz: Float): Self<Float> {
+    Mat.scale3(sx, sy, sz)
+};
+
 /** 3D rotation matrix around the X axis by `radians`. */
 pub Mat.rotateX := fn(radians: Float): Self<Float, 4, 4> {
     c := math.cos(radians);
@@ -343,7 +395,7 @@ pub Mat.rotateX := fn(radians: Float): Self<Float, 4, 4> {
     Self<Float, 4, 4> {
         rows = [
         vec.vec4(1.0, 0.0, 0.0, 0.0),
-        vec.vec4(0.0, c, 0.0 - s, 0.0),
+        vec.vec4(0.0, c, -s, 0.0),
         vec.vec4(0.0, s, c, 0.0),
         vec.vec4(0.0, 0.0, 0.0, 1.0)
         ]
@@ -358,7 +410,7 @@ pub Mat.rotateY := fn(radians: Float): Self<Float, 4, 4> {
         rows = [
         vec.vec4(c, 0.0, s, 0.0),
         vec.vec4(0.0, 1.0, 0.0, 0.0),
-        vec.vec4(0.0 - s, 0.0, c, 0.0),
+        vec.vec4(-s, 0.0, c, 0.0),
         vec.vec4(0.0, 0.0, 0.0, 1.0)
         ]
     }
@@ -370,7 +422,7 @@ pub Mat.rotateZ := fn(radians: Float): Self<Float, 4, 4> {
     s := math.sin(radians);
     Self<Float, 4, 4> {
         rows = [
-        vec.vec4(c, 0.0 - s, 0.0, 0.0),
+        vec.vec4(c, -s, 0.0, 0.0),
         vec.vec4(s, c, 0.0, 0.0),
         vec.vec4(0.0, 0.0, 1.0, 0.0),
         vec.vec4(0.0, 0.0, 0.0, 1.0)
@@ -403,9 +455,9 @@ pub Mat.ortho := fn(left: Float, right: Float, bottom: Float, top: Float, near: 
     sx := if math.abs(rl) <= 0.000000000001 { 1.0 } else { 2.0 / rl };
     sy := if math.abs(tb) <= 0.000000000001 { 1.0 } else { 2.0 / tb };
     sz := if math.abs(fnSpan) <= 0.000000000001 { -1.0 } else { -2.0 / fnSpan };
-    tx := if math.abs(rl) <= 0.000000000001 { 0.0 } else { (0.0 - (right + left)) / rl };
-    ty := if math.abs(tb) <= 0.000000000001 { 0.0 } else { (0.0 - (top + bottom)) / tb };
-    tz := if math.abs(fnSpan) <= 0.000000000001 { 0.0 } else { (0.0 - (far + near)) / fnSpan };
+    tx := if math.abs(rl) <= 0.000000000001 { 0.0 } else { -(right + left) / rl };
+    ty := if math.abs(tb) <= 0.000000000001 { 0.0 } else { -(top + bottom) / tb };
+    tz := if math.abs(fnSpan) <= 0.000000000001 { 0.0 } else { -(far + near) / fnSpan };
     Self<Float, 4, 4> {
         rows = [
         vec.vec4(sx, 0.0, 0.0, tx),
@@ -430,9 +482,9 @@ pub Mat.lookAt := fn(eye: vec.FVec3, target: vec.FVec3, up: vec.FVec3): Self<Flo
     u := right.cross(fwd);
     Self<Float, 4, 4> {
         rows = [
-        vec.vec4(right.x(), right.y(), right.z(), 0.0 - right.dot(eye)),
-        vec.vec4(u.x(), u.y(), u.z(), 0.0 - u.dot(eye)),
-        vec.vec4(0.0 - fwd.x(), 0.0 - fwd.y(), 0.0 - fwd.z(), fwd.dot(eye)),
+        vec.vec4(right.x(), right.y(), right.z(), -right.dot(eye)),
+        vec.vec4(u.x(), u.y(), u.z(), -u.dot(eye)),
+        vec.vec4(-fwd.x(), -fwd.y(), -fwd.z(), fwd.dot(eye)),
         vec.vec4(0.0, 0.0, 0.0, 1.0)
         ]
     }

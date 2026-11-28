@@ -118,9 +118,9 @@ pub floorToInt := fn(x: Float): Int {
     if x >= 0.0 {
         floorNonNegInt(x)
     } else {
-        ax := 0.0 - x;
+        ax := -x;
         k := floorNonNegInt(ax);
-        if k == ax { 0 - k } else { 0 - (k + 1) }
+        if k == ax { -k } else { -(k + 1) }
     }
 };
 
@@ -186,15 +186,15 @@ wrapAngle := fn(rad: Float): Float {
 pub sin := fn(rad: Float): Float {
     var x := wrapAngle(rad);
     if x > HALF_PI { x = PI - x; }
-    else if x < (0.0 - HALF_PI) { x = (0.0 - PI) - x; }
+    else if x < -HALF_PI { x = -PI - x; }
     x2 := x * x;
     var term := x;
     var sum := x;
-    term = (0.0 - term * x2) / 6.0; sum = sum + term;
-    term = (0.0 - term * x2) / 20.0; sum = sum + term;
-    term = (0.0 - term * x2) / 42.0; sum = sum + term;
-    term = (0.0 - term * x2) / 72.0; sum = sum + term;
-    term = (0.0 - term * x2) / 110.0; sum = sum + term;
+    term = -(term * x2) / 6.0; sum = sum + term;
+    term = -(term * x2) / 20.0; sum = sum + term;
+    term = -(term * x2) / 42.0; sum = sum + term;
+    term = -(term * x2) / 72.0; sum = sum + term;
+    term = -(term * x2) / 110.0; sum = sum + term;
     sum
 };
 
@@ -213,15 +213,15 @@ atanSmall := fn(u: Float): Float {
     u2 := u * u;
     var p := u;
     var sum := u;
-    p = 0.0 - (p * u2); sum = sum + (p / 3.0);
-    p = 0.0 - (p * u2); sum = sum + (p / 5.0);
-    p = 0.0 - (p * u2); sum = sum + (p / 7.0);
-    p = 0.0 - (p * u2); sum = sum + (p / 9.0);
-    p = 0.0 - (p * u2); sum = sum + (p / 11.0);
-    p = 0.0 - (p * u2); sum = sum + (p / 13.0);
-    p = 0.0 - (p * u2); sum = sum + (p / 15.0);
-    p = 0.0 - (p * u2); sum = sum + (p / 17.0);
-    p = 0.0 - (p * u2); sum = sum + (p / 19.0);
+    p = -(p * u2); sum = sum + (p / 3.0);
+    p = -(p * u2); sum = sum + (p / 5.0);
+    p = -(p * u2); sum = sum + (p / 7.0);
+    p = -(p * u2); sum = sum + (p / 9.0);
+    p = -(p * u2); sum = sum + (p / 11.0);
+    p = -(p * u2); sum = sum + (p / 13.0);
+    p = -(p * u2); sum = sum + (p / 15.0);
+    p = -(p * u2); sum = sum + (p / 17.0);
+    p = -(p * u2); sum = sum + (p / 19.0);
     sum
 };
 
@@ -231,7 +231,7 @@ pub atan := fn(x: Float): Float {
     var ax := x;
     if ax < 0.0 {
         neg = true;
-        ax = 0.0 - ax;
+        ax = -ax;
     }
     var inv := false;
     if ax > 1.0 {
@@ -246,7 +246,7 @@ pub atan := fn(x: Float): Float {
     }
     var res := base + atanSmall(ax);
     if inv { res = HALF_PI - res; }
-    if neg { 0.0 - res } else { res }
+    if neg { -res } else { res }
 };
 
 /** Two-argument arctangent returning the angle in `[-PI, PI]` for `(y, x)`. */
@@ -260,7 +260,7 @@ pub atan2 := fn(y: Float, x: Float): Float {
     } else if y > 0.0 {
         HALF_PI
     } else if y < 0.0 {
-        0.0 - HALF_PI
+        -HALF_PI
     } else {
         0.0
     }

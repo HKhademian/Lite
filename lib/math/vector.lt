@@ -56,6 +56,39 @@ pub Vec.zeroed := fn<T: Type<math.Numeric>, N: Int>(): Self<T, N> {
     res
 };
 
+/** Constructs a 2D generic vector `Vec2<T>` from `(x, y)`. */
+pub Vec2.of := fn<T: Type<math.Numeric>>(x: T, y: T): Self<T> {
+    Vec<T, 2> { data = [x, y] }
+};
+
+/** Constructs a 3D generic vector `Vec3<T>` from `(x, y, z)`. */
+pub Vec3.of := fn<T: Type<math.Numeric>>(x: T, y: T, z: T): Self<T> {
+    Vec<T, 3> { data = [x, y, z] }
+};
+
+/** Constructs a 4D generic vector `Vec4<T>` from `(x, y, z, w)`. */
+pub Vec4.of := fn<T: Type<math.Numeric>>(x: T, y: T, z: T, w: T): Self<T> {
+    Vec<T, 4> { data = [x, y, z, w] }
+};
+
+/** Zero 2D `Float` vector `(0, 0)`. */
+pub FVec2.ZERO := FVec2.zeroed();
+
+/** Zero 3D `Float` vector `(0, 0, 0)`. */
+pub FVec3.ZERO := FVec3.zeroed();
+
+/** Zero 4D `Float` vector `(0, 0, 0, 0)`. */
+pub FVec4.ZERO := FVec4.zeroed();
+
+/** Unit 3D X axis `(1, 0, 0)`. */
+pub FVec3.UNIT_X := Vec3<Float>.of(1.0, 0.0, 0.0);
+
+/** Unit 3D Y axis `(0, 1, 0)`. */
+pub FVec3.UNIT_Y := Vec3<Float>.of(0.0, 1.0, 0.0);
+
+/** Unit 3D Z axis `(0, 0, 1)`. */
+pub FVec3.UNIT_Z := Vec3<Float>.of(0.0, 0.0, 1.0);
+
 /** Constructs a 2D generic vector `Vec2<T>`. */
 pub vec2 := fn<T: Type<math.Numeric>>(x: T, y: T): Vec2<T> {
     Vec<T, 2> { data = [x, y] }
@@ -72,22 +105,22 @@ pub vec4 := fn<T: Type<math.Numeric>>(x: T, y: T, z: T, w: T): Vec4<T> {
 };
 
 /** Zero 2D `Float` vector `(0, 0)`. */
-pub ZERO2 := FVec2.zeroed();
+pub ZERO2 := FVec2.ZERO;
 
 /** Zero 3D `Float` vector `(0, 0, 0)`. */
-pub ZERO3 := FVec3.zeroed();
+pub ZERO3 := FVec3.ZERO;
 
 /** Zero 4D `Float` vector `(0, 0, 0, 0)`. */
-pub ZERO4 := FVec4.zeroed();
+pub ZERO4 := FVec4.ZERO;
 
 /** Unit X axis `(1, 0, 0)`. */
-pub UNIT_X3 := vec3(1.0, 0.0, 0.0);
+pub UNIT_X3 := FVec3.UNIT_X;
 
 /** Unit Y axis `(0, 1, 0)`. */
-pub UNIT_Y3 := vec3(0.0, 1.0, 0.0);
+pub UNIT_Y3 := FVec3.UNIT_Y;
 
 /** Unit Z axis `(0, 0, 1)`. */
-pub UNIT_Z3 := vec3(0.0, 0.0, 1.0);
+pub UNIT_Z3 := FVec3.UNIT_Z;
 
 /** Compile-time component count `N` of `v`. */
 pub Vec.dim := fn<T: Type<math.Numeric>, N: Int>(v: Self<T, N>): Int {
@@ -259,7 +292,7 @@ pub Vec.rotate := fn(v: Self<Float, 2>, radians: Float): Self<Float, 2> {
 
 /** Returns the 90-degree counter-clockwise perpendicular 2D vector `(-y, x)`. */
 pub Vec.perp := fn(v: Self<Float, 2>): Self<Float, 2> {
-    vec2(0.0 - v.y(), v.x())
+    vec2(-v.y(), v.x())
 };
 
 /** Clamps the magnitude of 2D `Float` vector `v` to at most `maxLen`. */
