@@ -1,0 +1,16 @@
+io := import "core/io";
+
+User := record {
+    name: String;
+    score: Int;
+};
+
+u := User { name = "Ada", score = 92 };
+{ name, score } := u;
+
+summary := match u {
+    { >= 90 = score, name } { name + ":high:" + score.toText() }
+    { name, score } { name + ":" + score.toText() }
+};
+
+io.outputLine(name, score, summary);

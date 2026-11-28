@@ -189,7 +189,7 @@ badRecSrc: List<String> = [
 "Student := record { name: String; grade: Int; }\nstudent := Student { name = \"Ali\", grade = 12, }\nStudent { studentName = name, studentGrade = grade, } := student;\n",
 "User := record { name: String; age: Int; }\nu := User { name = \"Ali\", name = \"Sam\" }\n",
 "User := record { name: String; age: Int; }\nu := User { unknown = 1 }\n",
-"User := record { name: String; }\nu := User { name = \"A\" }\n{ name } := u;\n",
+"User := record { name: String; }\nu := User { name = \"A\" }\n{ _ } := u;\n",
 "Node := record { next: Node; }\nx: Node;\n",
 "A := record { b: B; }\nB := record { a: A; }\nx: A;\n",
 "User := record { x: Int; }\nf := fn(): User { {} }\n",
@@ -204,7 +204,7 @@ badRecErr: List<String> = [
 "construction-shaped record pattern is not allowed",
 "duplicate record field name",
 "record User has no field unknown",
-"expected = sourceField or : Type in record pattern clause name",
+"use _ = sourceField to discard a field",
 "recursive type alias Node",
 "recursive type alias A",
 "function f must return User",
@@ -216,5 +216,21 @@ loop bi < 13 {
     compilerTest.assertCompileErrorContains(root, tsComp, "bad record " + badRecSrc[bi], badRecSrc[bi], badRecErr[bi]);
     bi = bi + 1;
 }
+
+/* Bare { name } record destructuring shorthand (TS + C11 parity) */
+bareRecSrc :=
+"io := import \"core/io\";\n" +
+"Addr := record { city: String; zip: Int; };\n" +
+"Person := record { name: String; age: Int; addr: Addr; };\n" +
+"p := Person { name = \"Ada\", age = 31, addr = { city = \"Bern\", zip = 3000 } };\n" +
+"{ name, age, addr } := p;\n" +
+"{ pName = name, pAddr: Addr = addr } := p;\n" +
+"var { city } := addr;\n" +
+"city = city + \"!\";\n" +
+"io.outputLine(name, age, pName, addr.zip, city);\n";
+compilerTest.assertCompileRunTs(root, tsComp, "bare record destructuring TS", bareRecSrc, "Ada 31 Ada 3000 Bern!\n");
+cBareRec := compilerTest.compileCheckRunC(root, cComp, compilerTest.probeCc().cc, bareRecSrc, "", "");
+test.checkInt("bare record destructuring C: " + cBareRec.stderr, 0, cBareRec.status);
+test.checkText("bare record destructuring C stdout", "Ada 31 Ada 3000 Bern!\n", cBareRec.stdout);
 
 test.done("records");

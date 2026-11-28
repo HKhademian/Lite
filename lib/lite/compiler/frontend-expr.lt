@@ -3239,13 +3239,11 @@ pub parseAggregatePattern := fn(source: String, openPos: Int, prefix: String, al
                 clauseMode = "named";
                 clauseEnd = syntax.skipTrivia(source, fieldEnd, prefix);
             } else if shape == "record" {
-                if expectedKind =!= "" {
-                    if bindName == "_" { syntax.failAt(source, bindStart, prefix, "expected = sourceField after _"); }
-                    sourceField = bindName;
-                    clauseMode = "named";
-                } else {
-                    syntax.failAt(source, checkEqPos, prefix, "expected = sourceField or : Type in record pattern clause " + bindName);
+                if bindName == "_" {
+                    syntax.failAt(source, bindStart, prefix, if expectedKind =!= "" { "expected = sourceField after _" } else { "use _ = sourceField to discard a field" });
                 }
+                sourceField = bindName;
+                clauseMode = "named";
             }
         }
         if shape == "record" and bindName =!= "_" { mut seenRecBinds.pushBack(bindName); }
@@ -9186,7 +9184,17 @@ parseMatchPatternAtom := fn(target: String, source: String, start: Int, prefix: 
                         recBindings = mergePatBindings(recBindings, fieldName + "\t" + fieldKind + "\t" + propExpr + "\n", source, cCursor, prefix);
                         cCursor = syntax.skipTrivia(source, ty.next, prefix);
                     } else {
-                        syntax.failAt(source, afterName, prefix, "expected = sourceField or : Type in record pattern clause " + fieldName);
+                        if fieldName == "_" {
+                            syntax.failAt(source, cCursor, prefix, "use _ = sourceField to discard a field");
+                        }
+                        fieldKind := types.recordFieldKind(subjKind, fieldName);
+                        if fieldKind == "" {
+                            syntax.failAt(source, cCursor, prefix, "record " + types.recordDisplayName(subjKind) + " has no field " + fieldName);
+                        }
+                        recProp1 := types.recordComponentProp(subjKind, fieldName);
+                        propExpr := "(" + subjCode + ")." + (if target == ir.TARGET_C { types.cFieldName(recProp1) } else { recProp1 });
+                        recBindings = mergePatBindings(recBindings, fieldName + "\t" + fieldKind + "\t" + propExpr + "\n", source, cCursor, prefix);
+                        cCursor = afterName;
                     }
                 }
             }

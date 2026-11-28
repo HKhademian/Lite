@@ -125,7 +125,7 @@ badSrc: List<String> = [
 "x := match (1, 2) { (1, a) or (2, b) { 1 } _ { 0 } };",
 "xs: List<Int> = [1, 2]; x := match xs { [a, b] { a + b } _ { 0 } };",
 "x := match [1, 2] { [a, b, c] { a } _ { 0 } };",
-"User := record { name: String; }; u := User { name = \"A\" }; x := match u { { name } { 1 } _ { 0 } };",
+"User := record { name: String; }; u := User { name = \"A\" }; x := match u { { _ } { 1 } _ { 0 } };",
 "User := record { name: String; }; u := User { name = \"A\" }; x := match u { { = missing } { 1 } _ { 0 } };",
 "x := match 1 { 1 { 10 } _ { \"str\" } };"
 ];
@@ -142,7 +142,7 @@ badErr: List<String> = [
 "or pattern alternatives must bind the same names with matching types",
 "cannot match runtime-sized List<Int> with fixed-array pattern; fixed array required",
 "array pattern expected 3 elements, got 2",
-"expected = sourceField or : Type in record pattern clause name",
+"use _ = sourceField to discard a field",
 "record User has no field missing",
 "value match arms must have the same kind"
 ];
@@ -194,5 +194,26 @@ sideEffectSubjSrc :=
 "v := match bump() { _ { \"done\" } };\n" +
 "io.outputLine(v);\n";
 compilerTest.assertCompileRunTs(root, tsComp, "side-effect subject match TS run", sideEffectSubjSrc, "side\ndone\n");
+
+/* Bare { field } record patterns inside match (TS + C11 parity) */
+bareMatchSrc :=
+"io := import \"core/io\";\n" +
+"Entry := record { name: String; score: Int; active: Bool; };\n" +
+"evalEntry := fn(e: Entry): String {\n" +
+"    match e {\n" +
+"        { name, score, false = active } { name + \":off\" }\n" +
+"        { >= 90 = score, name } { name + \":top\" }\n" +
+"        { name, score } { name + \":\" + score.toText() }\n" +
+"    }\n" +
+"};\n" +
+"io.outputLine(\n" +
+"    evalEntry(Entry { name = \"A\", score = 95, active = true }),\n" +
+"    evalEntry(Entry { name = \"B\", score = 70, active = true }),\n" +
+"    evalEntry(Entry { name = \"C\", score = 99, active = false })\n" +
+");\n";
+compilerTest.assertCompileRunTs(root, tsComp, "bare record match TS", bareMatchSrc, "A:top B:70 C:off\n");
+cBareMatch := compilerTest.compileCheckRunC(root, cComp, compilerTest.probeCc().cc, bareMatchSrc, "", "");
+test.checkInt("bare record match C: " + cBareMatch.stderr, 0, cBareMatch.status);
+test.checkText("bare record match C stdout", "A:top B:70 C:off\n", cBareMatch.stdout);
 
 test.done("subject-match");

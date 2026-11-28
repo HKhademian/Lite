@@ -1,3 +1,0 @@
-User := record { name: String; };
-user := User { name = "Ada" };
-{ name } := user;

@@ -1,0 +1,25 @@
+{
+  "id": "case.types.patterns.bare-record-pattern",
+  "kind": "feature",
+  "source": "bare-record-pattern.lts",
+  "features": [
+    "feature.types.records.nominal-records",
+    "feature.control.branching.subject-match",
+    "feature.io.reporting.report-values"
+  ],
+  "cases": [
+    {
+      "name": "bare-record-destructure-and-match",
+      "stdin": {
+        "text": ""
+      },
+      "stdout": {
+        "text": "Ada 92 Ada:high:92\n"
+      },
+      "stderr": {
+        "text": ""
+      },
+      "exitCode": 0
+    }
+  ]
+}

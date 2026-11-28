@@ -1,1 +1,0 @@
-language/cases/types/patterns/reject-bare-record-pattern.lts:3:8: expected = sourceField or : Type in record pattern clause name
