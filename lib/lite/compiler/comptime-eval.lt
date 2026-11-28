@@ -1886,13 +1886,24 @@ applyBinaryVal := fn(op: String, lId: Int, rId: Int, budget: mut EvalBudget): Ct
         if (op == "/" or op == "%" or op == ":/" or op == ":%") and bv == cast<UInt64>(0) {
             return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsigned division by zero in compile-time evaluation" };
         }
+        u64Max: UInt64 = 18446744073709551615;
+        if op == "+" and bv > u64Max - av {
+            return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsigned overflow in compile-time evaluation" };
+        }
+        if op == "-" and av < bv {
+            return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsigned underflow in compile-time evaluation" };
+        }
+        if op == "*" and av =!= cast<UInt64>(0) and bv > u64Max / av {
+            return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsigned overflow in compile-time evaluation" };
+        }
         rv := if op == "+" { av + bv }
-        else if op == "-" {
-            if av < bv { return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsigned underflow in compile-time evaluation" }; }
-            av - bv
-        } else if op == "*" { av * bv }
+        else if op == "-" { av - bv }
+        else if op == "*" { av * bv }
         else if op == "/" or op == ":/" { av / bv }
         else { av % bv };
+        if rk =!= ir.VALUE_KIND_UINT64 and (rv > cast<UInt64>(9223372036854775807) or not numeric.intKindFits(rk, cast<Int>(rv))) {
+            return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "integer outside " + rk + " range" };
+        }
         return CtOutcome { ok = true, valId = makeUIntVal(rv, rk, mut budget), flow = FlowKind.None, error = "" };
     }
     lf := if l.tag == CellTag.Float { l.floatVal } else { cast<Float>(l.intVal) };
@@ -3418,7 +3429,12 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             tKind := if types.isTupleKind(expectedKind) { expectedKind } else { "Tuple<" + tParts.join(",") + ">" };
             res = CtOutcome { ok = true, valId = makeTupleVal(tKind, vals, lbls, mut budget), flow = FlowKind.None, error = "" };
         } else {
-            ev := evalExprAt(source, innerCur, limitPos, prefix, expectedKind, mut frame, mut budget);
+            var innerExp := expectedKind;
+            if numeric.isNumericKind(expectedKind) {
+                groupEnd := syntax.scanParenEnd(source, start, prefix);
+                if groupEnd >= 0 and syntax.binaryFollows(source, groupEnd, prefix, 0) { innerExp = ""; }
+            }
+            ev := evalExprAt(source, innerCur, limitPos, prefix, innerExp, mut frame, mut budget);
             if ev.outcome.flow =!= FlowKind.None { return ev; }
             closeP := syntax.skipTrivia(source, ev.next, prefix);
             resNext = if closeP < limitPos and source.at(closeP) == ")" { closeP + 1 } else { closeP };
@@ -3427,7 +3443,8 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
     } else if ch == "+" or ch == "-" {
         afterSign := syntax.skipTrivia(source, start + 1, prefix);
         if afterSign < limitPos and source.at(afterSign).isDigit() {
-            numP := syntax.parseNumber(ir.TARGET_TS, source, start, prefix, expectedKind, 0);
+            litExp := if ch == "-" { expectedKind } else { "" };
+            numP := syntax.parseNumberWithDefaults(ir.TARGET_TS, source, start, prefix, litExp, 0, types.defaultIntKind(frame.aliases, prefix), types.defaultFloatKind(frame.aliases, prefix));
             resNext = numP.next;
             if numeric.isFloatKind(numP.kind) {
                 rawNum := source.slice(start, numP.next);
@@ -3459,7 +3476,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             }
         }
     } else if ch.isDigit() {
-        numP := syntax.parseNumber(ir.TARGET_TS, source, start, prefix, expectedKind, 0);
+        numP := syntax.parseNumberWithDefaults(ir.TARGET_TS, source, start, prefix, expectedKind, 0, types.defaultIntKind(frame.aliases, prefix), types.defaultFloatKind(frame.aliases, prefix));
         resNext = numP.next;
         if numeric.isFloatKind(numP.kind) {
             rawNum := source.slice(start, numP.next);
@@ -3712,14 +3729,48 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             resNext = if closeP < limitPos and source.at(closeP) == ")" { closeP + 1 } else { closeP };
             vCell := ctPool[ev.outcome.valId];
             var cVid := ev.outcome.valId;
-            if numeric.isFloatKind(dstK) and vCell.tag == CellTag.Int { cVid = makeFloatVal(cast<Float>(vCell.intVal), dstK, mut budget); }
-            else if numeric.isSignedIntKind(dstK) and vCell.tag == CellTag.UInt {
+            if numeric.isFloatKind(dstK) and vCell.tag == CellTag.Int {
+                fv := cast<Float>(vCell.intVal);
+                if (dstK == ir.VALUE_KIND_FLOAT8 and (fv > 448.0 or fv < -448.0)) or (dstK == ir.VALUE_KIND_FLOAT16 and (fv > 65504.0 or fv < -65504.0)) {
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "float outside " + dstK + " range" }, next = resNext);
+                }
+                cVid = makeFloatVal(fv, dstK, mut budget);
+            } else if numeric.isFloatKind(dstK) and vCell.tag == CellTag.UInt {
                 uv := parseUInt64Text(vCell.strVal);
-                cVid = makeIntVal(cast<Int>(if uv.ok { uv.value } else { cast<UInt64>(0) }), dstK, mut budget);
+                uVal := if uv.ok { uv.value } else { cast<UInt64>(0) };
+                if not uv.ok or (dstK == ir.VALUE_KIND_FLOAT8 and uVal > cast<UInt64>(448)) or (dstK == ir.VALUE_KIND_FLOAT16 and uVal > cast<UInt64>(65504)) or uVal > cast<UInt64>(9223372036854775807) {
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "float outside " + dstK + " range" }, next = resNext);
+                }
+                cVid = makeFloatVal(cast<Float>(cast<Int>(uVal)), dstK, mut budget);
+            } else if numeric.isFloatKind(dstK) and vCell.tag == CellTag.Float {
+                if (dstK == ir.VALUE_KIND_FLOAT8 and (vCell.floatVal > 448.0 or vCell.floatVal < -448.0)) or (dstK == ir.VALUE_KIND_FLOAT16 and (vCell.floatVal > 65504.0 or vCell.floatVal < -65504.0)) {
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "float outside " + dstK + " range" }, next = resNext);
+                }
+                cVid = makeFloatVal(vCell.floatVal, dstK, mut budget);
+            } else if numeric.isSignedIntKind(dstK) and vCell.tag == CellTag.UInt {
+                uv := parseUInt64Text(vCell.strVal);
+                uVal := if uv.ok { uv.value } else { cast<UInt64>(0) };
+                if not uv.ok or uVal > cast<UInt64>(9223372036854775807) or not numeric.intKindFits(dstK, cast<Int>(uVal)) {
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "integer outside " + dstK + " range" }, next = resNext);
+                }
+                cVid = makeIntVal(cast<Int>(uVal), dstK, mut budget);
             } else if numeric.isUnsignedIntKind(dstK) and vCell.tag == CellTag.Int {
+                if vCell.intVal < 0 or (dstK =!= ir.VALUE_KIND_UINT64 and not numeric.intKindFits(dstK, vCell.intVal)) {
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "integer outside " + dstK + " range" }, next = resNext);
+                }
                 cVid = makeUIntVal(cast<UInt64>(vCell.intVal), dstK, mut budget);
             } else if numeric.isSignedIntKind(dstK) and vCell.tag == CellTag.Int {
+                if not numeric.intKindFits(dstK, vCell.intVal) {
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "integer outside " + dstK + " range" }, next = resNext);
+                }
                 cVid = makeIntVal(vCell.intVal, dstK, mut budget);
+            } else if numeric.isUnsignedIntKind(dstK) and vCell.tag == CellTag.UInt {
+                uv := parseUInt64Text(vCell.strVal);
+                uVal := if uv.ok { uv.value } else { cast<UInt64>(0) };
+                if not uv.ok or (dstK =!= ir.VALUE_KIND_UINT64 and (uVal > cast<UInt64>(9223372036854775807) or not numeric.intKindFits(dstK, cast<Int>(uVal)))) {
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "integer outside " + dstK + " range" }, next = resNext);
+                }
+                cVid = makeUIntVal(uVal, dstK, mut budget);
             } else if dstK =!= "" and (types.isDistinctKind(dstK) or types.isDistinctKind(vCell.kind)) {
                 cVid = allocCell(CtCell {
                     tag = vCell.tag, kind = dstK, intVal = vCell.intVal,

@@ -513,7 +513,7 @@ parseUnarySignExpr := fn(target: String, source: String, start: Int, ch: String,
     after := syntax.skipTrivia(source, start + 1, prefix);
     if after < source.length() and source.at(after).isDigit() {
         litExpected := if ch == "-" { expected } else { "" };
-        return syntax.parseNumber(target, source, start, prefix, litExpected, minimum);
+        return syntax.parseNumberWithDefaults(target, source, start, prefix, litExpected, minimum, types.defaultIntKind(aliases, prefix), types.defaultFloatKind(aliases, prefix));
     }
     operand := parseBinaryCtx(target, source, start + 1, prefix, locals, functions, params, currentName, "", 30, ctxs, iifeDepth, inferMode, "", aliases);
     operandLoopId := types.loopValMarkerId(operand.kind);
@@ -3762,7 +3762,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
                 }
                 syntax.failAt(source, dotPos, prefix, "expected { or . after type " + types.displayKind(resolvedType));
             }
-        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or numeric.isNumericKind(name) or (types.findAlias(aliases, name) < 0 and numeric.numericAliasKind(name) =!= "") {
+        } else if name == "List" or name == "Map" or name == "Set" or name == "Array" or name == "String" or (types.findAlias(aliases, name) < 0 and (numeric.isNumericKind(name) or numeric.numericAliasKind(name) =!= "")) {
             numAlias := numeric.numericAliasKind(name);
             typeOwnerKey = if numAlias =!= "" { numAlias } else { name };
         } else if types.builtinFamilyFromAlias(aliases, name) =!= "" {
@@ -18067,7 +18067,8 @@ parseBinaryOperatorChain := fn(target: String, source: String, exprStart: Int, i
         rightMinimum := if operator.text == "**" { level } else { level + 1 };
         rightExpected := if (operator.text == "==" or operator.text == "=!=") and (types.isEnumKind(left.kind) or types.isDistinctKind(left.kind) or types.isResultKind(left.kind)) { left.kind }
         else if operator.text =!= "**" and numeric.isUnsignedIntKind(left.kind) { left.kind }
-        else if operator.text =!= "**" and (left.kind == ir.VALUE_KIND_FLOAT8 or left.kind == ir.VALUE_KIND_FLOAT16) { left.kind }
+        else if operator.text =!= "**" and (left.kind == ir.VALUE_KIND_FLOAT8 or left.kind == ir.VALUE_KIND_FLOAT16 or left.kind == ir.VALUE_KIND_INT) { left.kind }
+        else if operator.text =!= "**" and left.kind == ir.VALUE_KIND_FLOAT { "$FloatBin" }
         else { "" };
         leftNf := if not inferMode { extractNarrowMeta(left.textValue) } else { (trueFacts = "", falseFacts = "") };
         rightLocals := if operator.text == "and" and leftNf.trueFacts =!= "" {
@@ -18426,7 +18427,7 @@ pub parseBinaryCtx := fn(target: String, source: String, position: Int, prefix: 
     } else if ch == "+" or ch == "-" {
         left = parseUnarySignExpr(target, source, start, ch, prefix, locals, functions, params, currentName, expected, minimum, ctxs, iifeDepth, inferMode, aliases);
     } else if ch.isDigit() {
-        left = syntax.parseNumber(target, source, start, prefix, expected, minimum);
+        left = syntax.parseNumberWithDefaults(target, source, start, prefix, expected, minimum, types.defaultIntKind(aliases, prefix), types.defaultFloatKind(aliases, prefix));
     } else if ch == "\"" {
         left = syntax.parseText(target, source, start, prefix);
     } else if ch == "[" {

@@ -1,4 +1,6 @@
-/** Default Lite package preload: exposes Option<T> and Slice<T> directly in root scopes. */
+/* Package-level automatic prelude: exposed as shadowed unprefixed defaults in every user module. */
 
 pub import "type/option";
 pub import "type/slice";
+pub { Byte, Int } := import "type/int";
+pub { Float, Double } := import "type/float";

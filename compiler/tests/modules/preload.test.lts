@@ -206,4 +206,53 @@ _o3 := fs.writeText(outsideLeak, "lm := import \"../custom_pkg/libmod\";\np := P
 outsideLeakFail := compilerTest.compileFile(tsComp, outsideDir, ["--out", path.join(outsideDir, "ol.ts"), outsideLeak]);
 test.check("imported module preload does not leak across packages (got: " + outsideLeakFail.stderr + ")", outsideLeakFail.status =!= 0 and outsideLeakFail.stderr.contains("Pair"));
 
+/* 8. Default lib/$preload.lt exposes Byte, Int, Float, Double and static bounds */
+defaultNumSrc := [
+"io := import \"core/io\";",
+"b: Byte = Byte.MAX;",
+"d: Double = 2.5;",
+"f: Float = d + Float.MIN;",
+"i: Int = 42;",
+"io.outputLine(b, i, f > 2.0, Int8.MIN);"
+].join("\n");
+runParity("default preload Byte+Int+Float+Double", defaultNumSrc, "preload-default-num.lts", "255 42 true -128\n");
+
+/* 9. Package-local $preload.lt overriding Int/Float rebinds lexical defaults while keeping Int64/Float64 intact */
+narrowPkgDir := path.join(tmpRoot, "narrow_pkg");
+_m4 := fs.makeDir(narrowPkgDir);
+_n1 := fs.writeText(path.join(narrowPkgDir, "$preload.lt"), "pub Int := alias Int32;\npub Float := alias Float32;\n");
+narrowApp := path.join(narrowPkgDir, "app.lts");
+_n2 := fs.writeText(narrowApp, [
+"io := import \"core/io\";",
+"takes32 := fn(a: Int32, f: Float32): Float32 { cast<Float32>(a) + f };",
+"x := 40;",
+"y := 1.5;",
+"sum := 1 + 2;",
+"fsum := 1.5 + 2.5;",
+"big: Int64 = 5000000000;",
+"dbl: Float64 = 2.25;",
+"fmax64 := cast<Float64>(Float.MAX);",
+"io.outputLine(takes32(x, y), sum, fsum, big > 4000000000, dbl, Int.MAX == 2147483647, fmax64 > 3.0e38 and fmax64 < 1.0e39);"
+].join("\n") + "\n");
+tsNarrowOut := path.join(narrowPkgDir, "app.ts");
+tsNarrowComp := compilerTest.compileFile(tsComp, narrowPkgDir, ["--out", tsNarrowOut, narrowApp]);
+test.checkInt("narrow $preload.lt TS compile: " + tsNarrowComp.stderr, 0, tsNarrowComp.status);
+tsNarrowRun := runNodeTs(tsNarrowOut, narrowPkgDir);
+test.checkInt("narrow $preload.lt TS run: " + tsNarrowRun.stderr, 0, tsNarrowRun.status);
+test.checkText("narrow $preload.lt TS output", "41.5 3 4 true 2.25 true true\n", tsNarrowRun.stdout);
+if ccInfo.available {
+    cNarrowOut := path.join(narrowPkgDir, "app.c");
+    cNarrowComp := compilerTest.compileFile(cComp, narrowPkgDir, ["--out", cNarrowOut, narrowApp]);
+    test.checkInt("narrow $preload.lt C compile: " + cNarrowComp.stderr, 0, cNarrowComp.status);
+    cNarrowBin := path.join(narrowPkgDir, "app_bin");
+    cNarrowRun := compileAndRunCSan(ccInfo.cc, narrowPkgDir, cNarrowOut, cNarrowBin);
+    test.checkInt("narrow $preload.lt C run: " + cNarrowRun.stderr, 0, cNarrowRun.status);
+    test.checkText("narrow $preload.lt C output", "41.5 3 4 true 2.25 true true\n", cNarrowRun.stdout);
+}
+
+narrowOverflowApp := path.join(narrowPkgDir, "overflow.lts");
+_n3 := fs.writeText(narrowOverflowApp, "x := 5000000000;\n");
+narrowOverflowFail := compilerTest.compileFile(tsComp, narrowPkgDir, ["--out", path.join(narrowPkgDir, "ov.ts"), narrowOverflowApp]);
+test.check("narrow Int32 default rejects >Int32 literal (got: " + narrowOverflowFail.stderr + ")", narrowOverflowFail.status =!= 0 and narrowOverflowFail.stderr.contains("outside Int32 range"));
+
 test.done("preload");

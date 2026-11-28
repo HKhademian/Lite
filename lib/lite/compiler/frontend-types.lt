@@ -5369,6 +5369,16 @@ resolveScalarAliasKind := fn(aliases: List<AliasDecl>, rawName: String, prefix: 
             end = end - 1;
         }
         name := cur.slice(clean, end);
+        if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == "Double" {
+            idx := findAlias(activeAliases, name);
+            if idx >= 0 {
+                item := activeAliases[idx];
+                cur = if (item.target).startsWithAt(0, "$Kind:") { (item.target).slice(6, (item.target).length()) } else { item.target };
+                activeAliases = aliasesUpToDepth(activeAliases, item.depth);
+                hops = hops + 1;
+                continue;
+            }
+        }
         if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or
         name == ir.VALUE_KIND_BOOL or numeric.isNarrowNumericKind(name) {
             return name;
@@ -5387,6 +5397,18 @@ resolveScalarAliasKind := fn(aliases: List<AliasDecl>, rawName: String, prefix: 
         hops = hops + 1;
     }
     ""
+};
+
+/** Resolves the lexical `Int` alias in scope to its underlying integer kind, defaulting to `"Int"`. */
+pub defaultIntKind := fn(aliases: List<AliasDecl>, prefix: String): String {
+    resolved := resolveScalarAliasKind(aliases, ir.VALUE_KIND_INT, prefix);
+    if resolved =!= "" and numeric.isIntKind(resolved) { resolved } else { ir.VALUE_KIND_INT }
+};
+
+/** Resolves the lexical `Float` alias in scope to its underlying float kind, defaulting to `"Float"`. */
+pub defaultFloatKind := fn(aliases: List<AliasDecl>, prefix: String): String {
+    resolved := resolveScalarAliasKind(aliases, ir.VALUE_KIND_FLOAT, prefix);
+    if resolved =!= "" and numeric.isFloatKind(resolved) { resolved } else { ir.VALUE_KIND_FLOAT }
 };
 
 /** Resolves a raw discrete comptime parameter type (`Int`, `Bool`, `String`, or payload-free `Enum`) non-destructively. */
@@ -6493,11 +6515,14 @@ parseTypeBaseAtomWithSeen := fn(errSource: String, errPos: Int, useLocalErr: Boo
         return (kind = "SoA<" + recParsed.kind + ">", next = close + 1);
     }
     if isGenericParamName(genericType, name) { return (kind = name, next = after); }
-    if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT or numeric.isNarrowNumericKind(name) {
-        return (kind = name, next = after);
+    isOverridableNum := name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == "Double";
+    if not (isOverridableNum and findAlias(aliases, name) >= 0) {
+        if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT or numeric.isNarrowNumericKind(name) {
+            return (kind = name, next = after);
+        }
+        numericKind := numeric.numericAliasKind(name);
+        if numericKind =!= "" { return (kind = numericKind, next = after); }
     }
-    numericKind := numeric.numericAliasKind(name);
-    if numericKind =!= "" { return (kind = numericKind, next = after); }
     index := findAlias(aliases, name);
     if index >= 0 {
         aliasItem := aliases[index];
@@ -8726,14 +8751,17 @@ canResolveTypeBaseAtomAt := fn(source: String, position: Int, prefix: String, al
         }
         return (ok = true, kind = "SoA<" + recRes.kind + ">", next = close + 1);
     }
-    if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT {
-        return (ok = true, kind = name, next = afterName);
-    }
-    if numeric.numericAliasKind(name) =!= "" {
-        return (ok = true, kind = numeric.numericAliasKind(name), next = afterName);
-    }
-    if numeric.isNarrowNumericKind(name) {
-        return (ok = true, kind = name, next = afterName);
+    isOverridableNum := name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == "Double";
+    if not (isOverridableNum and findAlias(aliases, name) >= 0) {
+        if name == ir.VALUE_KIND_INT or name == ir.VALUE_KIND_FLOAT or name == ir.VALUE_KIND_STRING or name == ir.VALUE_KIND_BOOL or name == ir.VALUE_KIND_UNIT {
+            return (ok = true, kind = name, next = afterName);
+        }
+        if numeric.numericAliasKind(name) =!= "" {
+            return (ok = true, kind = numeric.numericAliasKind(name), next = afterName);
+        }
+        if numeric.isNarrowNumericKind(name) {
+            return (ok = true, kind = name, next = afterName);
+        }
     }
     if isGenericParamName(genericType, name) {
         return (ok = true, kind = name, next = afterName);
