@@ -22,6 +22,9 @@ describe := fn(v: Value): String {
 io.outputLine(describe(41), describe("lite"), describe(false));
 ```
 
+> [!NOTE]
+> On the current C11 backend, match the full union value directly (as shown above) rather than passing a residual flow-narrowed union binding (for example, after `if v: Int { return ... }`) into `match v { ... }`, which is a tracked C11 typedef-emission limitation in [compiler gaps](lite://doc/compiler/gaps).
+
 ## Optional Values (`Option<T>`)
 
 Use [core/option](lite://module/core/option) (`Option<T>`, `.Some(v)`, `.None`) whenever absence is a normal outcome. Both `if .Some(x) := opt` and `match` extract the payload cleanly:

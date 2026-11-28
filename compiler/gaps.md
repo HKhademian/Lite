@@ -6,6 +6,7 @@ As of **Phase 18 (`a8114176`)**, the Lite compiler reaches a three-generation se
 
 - **Transitive context overrides across third-party wrappers:** signatures omitting an ambient `context` currently preserve C/FFI default shims, while propagating nested `context(...)` overrides across third-party wrappers that hide the context remains deferred (`docs/c11-memory-and-codegen-plan.md#8-open-items-phases-711`).
 - **Flat panic capture (`({ ... })?`):** `LP-0009` flat panic capture alongside returned errors remains open (`docs/fallible-types-and-error-composition.md`), while ordinary `T ! E` / `T!` / `!` / `else(err)` shipped in Phase 15.
+- **C11 `match` on flow-narrowed union bindings:** passing a union variable narrowed by an earlier guard (for example, `v: Int | String | Bool` after `if v: Int { return ... }`) directly into `match v { ... }` hits a C11 codegen missing-typedef error (`lt_s_*`) for the residual sub-union. Workaround: `match` the full un-narrowed union directly (or use chained `if v: Member` guards), which compiles cleanly on both TS and C11.
 - **Standalone CLI / C11 refinements:** optional `core/set` C11 parity if needed beyond `Map`/`List`/slice collections, fixed-point decimal numerics, and supplementary-character diagnostic column alignment (code-point vs UTF-16 offset edge case).
 - **Language-level design items:** implicit whole-package preloading (`docs/packages-and-preload.md`) and general record field-by-field/spread partial initialization (`docs/record-initialization.md`).
 

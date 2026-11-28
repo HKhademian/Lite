@@ -34,4 +34,5 @@ Both TypeScript and native C11 targets share the self-hosted frontend and pass 3
 ## Remaining deferred items
 
 - Whole-program implicit preload rules ([preload design](lite://doc/packages-and-preload)) and automatic flat `({ ... })?` panic capture ([LP-0009](lite://doc/failure-capture-and-unwrapping)) remain open design work.
+- **Known C11 union edge case:** matching a flow-narrowed union binding directly (e.g., `match v` after `if v: Int { return ... }`) hits a missing C11 typedef (`lt_s_*`) for the residual sub-union; matching the full union directly compiles cleanly on both TS and C11 (tracked in [compiler gaps](lite://doc/compiler/gaps)).
 - See [compiler gaps](lite://doc/compiler/gaps) and the [C11 memory and codegen plan](lite://doc/c11-memory-and-codegen-plan) for post-Phase-18 optimization and refinement items.
