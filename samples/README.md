@@ -58,8 +58,17 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [step-sequencer](lite://play/play-step-sequencer) — `320x200` toggleable 4×4 grid step sequencer.
 - [tone-keyboard](lite://play/play-tone-keyboard) — `320x180` clickable C-major octave keyboard (`1`–`8`).
 
-## Games (`games/arcade/`)
+## 3D Scenes (`3d/`)
+
+- [orbital-orrery](lite://play/play-orbital-orrery) — `480x300` interactive 3D solar system with orbit drag/wheel camera, planetary rings, moons, and `ui/im` controls.
+- [terrain-flyover](lite://play/play-terrain-flyover) — `480x300` procedural heightmap alpine terrain flyover with fog, glider craft, and autopilot/WASD flight controls.
+- [lit-polyhedra-studio](lite://play/play-lit-polyhedra-studio) — `480x300` lit 3D primitive inspector with live light azimuth/elevation sliders and material toggles.
+
+## Games (`games/arcade/`, `games/3d/`)
 
 - [paddle-pong](lite://play/play-paddle-pong) — `320x200` two-paddle Pong with AI tracking and audio cues.
 - [brick-breaker](lite://play/play-brick-breaker) — `320x200` RGBA brick breaker with paddle controls and chimes.
 - [grid-snake](lite://play/play-grid-snake) — `320x192` snake game using `List<Cell>` queue ops.
+- [tunnel-racer](lite://play/play-tunnel-racer) — `480x300` 3D star-tunnel racer with banking craft, procedural rings, obstacle gates, and shields.
+- [voxel-arena](lite://play/play-voxel-arena) — `480x300` 3D tank combat arena with hierarchical turret aim, chasing drones, and wave progression.
+- [tower-defense](lite://play/play-tower-defense) — `480x300` tactical grid tower defense with 3 typed tower classes, frost/splash effects, and `ui/im` shop HUD.

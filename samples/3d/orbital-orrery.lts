@@ -1,0 +1,192 @@
+/** Interactive 3D solar system orrery with orbit camera, planetary rings, moons, and live `ui/im` HUD controls. */
+
+math := import "math/scalar";
+vec := import "math/vector";
+xform := import "math/transform";
+color := import "gfx/color";
+surf := import "gfx/surface";
+camera := import "gfx/camera";
+scene := import "gfx/scene";
+im := import "ui/im";
+proc := import "core/process";
+
+W := 480;
+H := 300;
+hlEnv := proc.envGet("LITE_CANVAS_HEADLESS");
+headless := hlEnv.found and hlEnv.value == "1";
+
+win := surf.Surface.open("Orbital Orrery 3D", W, H);
+
+sunMesh := scene.Mesh.sphere(1.25, 10, 14);
+planetMesh := scene.Mesh.sphere(0.62, 8, 12);
+moonMesh := scene.Mesh.sphere(0.24, 6, 8);
+outerMesh := scene.Mesh.octahedron(0.45);
+ringMesh := scene.Mesh.torus(1.05, 0.11, 14, 5);
+beaconMesh := scene.Mesh.pyramid(0.32, 0.45);
+
+mut sc := scene.Scene.new();
+mut sc.setLight(scene.DirectionalLight.new(vec.vec3(-0.6, -0.75, -0.45), color.Color.fromRgb(1.0, 0.96, 0.88), 1.15));
+
+mut orb := camera.OrbitCamera.new(vec.ZERO3, 0.55, 0.42, 13.5);
+mut ui := im.UiState.new();
+
+var tSec := 0.0;
+var speed := 1.0;
+var paused := false;
+var wireframe := false;
+var dragging := false;
+var prevPtrX := 0.0;
+var prevPtrY := 0.0;
+var frame := 0;
+
+/* Deterministic starfield coordinates baked at startup */
+mut starX: List<Float> = [];
+mut starY: List<Float> = [];
+mut starB: List<Float> = [];
+var si := 0;
+loop si < 48 {
+    sx := (((si * 97 + 19) % 479) * 1.0);
+    sy := (((si * 173 + 41) % 299) * 1.0);
+    sb := 0.25 + (((si * 29) % 75) * 0.01);
+    mut starX.pushBack(sx);
+    mut starY.pushBack(sy);
+    mut starB.pushBack(sb);
+    si += 1;
+}
+
+bg := color.Color.fromRgb(0.03, 0.04, 0.09);
+gridCol := color.Color.fromRgba(0.32, 0.48, 0.78, 0.22);
+sunCol := color.Color.fromRgb(1.0, 0.72, 0.22);
+mercuryCol := color.Color.fromRgb(0.72, 0.78, 0.86);
+earthCol := color.Color.fromRgb(0.24, 0.62, 0.96);
+moonCol := color.Color.fromRgb(0.84, 0.86, 0.90);
+saturnCol := color.Color.fromRgb(0.92, 0.76, 0.48);
+ringCol := color.Color.fromRgb(0.76, 0.68, 0.56);
+cometCol := color.Color.fromRgb(0.32, 0.95, 0.78);
+
+fmtTenths := fn(v: Float): String {
+    t := math.floorToInt((v * 10.0) + 0.5);
+    whole := t / 10;
+    frac := t - (whole * 10);
+    whole.toText() + "." + math.abs(frac).toText()
+};
+
+win.run(fn(inp: surf.FrameInput): Bool {
+    if not inp.open or inp.key == "Escape" or inp.key == "q" {
+        return false;
+    }
+    dt := math.min(0.05, math.max(0.001, (inp.deltaMs * 0.001)));
+
+    if inp.key == " " {
+        paused = not paused;
+        win.playTone(if paused { 330 } else { 523 }, 45, 22);
+    }
+    if win.isKeyDown("ArrowLeft") or win.isKeyDown("a") { mut orb.orbit(-1.5 * dt, 0.0); }
+    if win.isKeyDown("ArrowRight") or win.isKeyDown("d") { mut orb.orbit(1.5 * dt, 0.0); }
+    if win.isKeyDown("ArrowUp") or win.isKeyDown("w") { mut orb.orbit(0.0, 1.1 * dt); }
+    if win.isKeyDown("ArrowDown") or win.isKeyDown("s") { mut orb.orbit(0.0, -1.1 * dt); }
+    wheel := win.wheelDelta();
+    if wheel =!= 0.0 {
+        mut orb.zoom(wheel * 0.012);
+    }
+
+    if not paused {
+        tSec = tSec + (dt * speed);
+    }
+
+    /* Rebuild dynamic orbital scene */
+    mut sc.clear();
+
+    sunMat := scene.Material {
+        baseColor = sunCol,
+        ambient = 0.78,
+        diffuse = 0.25,
+        specular = 0.35,
+        shininess = 12.0,
+        wireframe = wireframe,
+        doubleSided = false
+    };
+    mut sc.add(sunMesh, xform.Transform3D.fromEuler(vec.ZERO3, 0.0, tSec * 0.5, 0.0, vec.vec3(1.0, 1.0, 1.0)), sunMat);
+
+    /* Inner metallic planet */
+    mAng := tSec * 1.45;
+    mPos := vec.vec3(math.cos(mAng) * 2.55, math.sin(mAng * 1.3) * 0.16, math.sin(mAng) * 2.55);
+    mut sc.add(moonMesh, xform.Transform3D.fromEuler(mPos, 0.2, tSec * 2.1, 0.0, vec.vec3(1.25, 1.25, 1.25)), scene.Material.glossy(mercuryCol).withWireframe(wireframe));
+
+    /* Blue water world + orbiting moon */
+    eAng := tSec * 0.85 + 1.1;
+    ePos := vec.vec3(math.cos(eAng) * 4.45, 0.0, math.sin(eAng) * 4.45);
+    mut sc.add(planetMesh, xform.Transform3D.fromEuler(ePos, 0.22, tSec * 1.5, 0.0, vec.vec3(0.85, 0.85, 0.85)), scene.Material.glossy(earthCol).withWireframe(wireframe));
+    moonPos := ePos.add(vec.vec3(math.cos(tSec * 3.1) * 1.15, math.sin(tSec * 2.2) * 0.18, math.sin(tSec * 3.1) * 1.15));
+    mut sc.add(moonMesh, xform.Transform3D.fromPosition(moonPos), scene.Material.matte(moonCol).withWireframe(wireframe));
+
+    /* Tilted ringed gas giant */
+    sAng := tSec * 0.45 + 3.4;
+    sPos := vec.vec3(math.cos(sAng) * 7.2, 0.25 * math.sin(sAng), math.sin(sAng) * 7.2);
+    mut sc.add(planetMesh, xform.Transform3D.fromEuler(sPos, 0.35, tSec * 0.9, 0.18, vec.vec3(1.15, 1.15, 1.15)), scene.Material.matte(saturnCol).withWireframe(wireframe));
+    mut sc.add(ringMesh, xform.Transform3D.fromEuler(sPos, 0.35, tSec * 0.3, 0.28, vec.vec3(1.15, 0.55, 1.15)), scene.Material.matte(ringCol).withWireframe(wireframe));
+
+    /* Outer crystal beacon */
+    oAng := 0.0 - (tSec * 0.32) + 0.8;
+    oPos := vec.vec3(math.cos(oAng) * 9.4, math.sin(tSec * 0.9) * 0.65, math.sin(oAng) * 9.4);
+    mut sc.add(outerMesh, xform.Transform3D.fromEuler(oPos, tSec, tSec * 1.2, 0.0, vec.vec3(1.0, 1.0, 1.0)), scene.Material.glossy(cometCol).withWireframe(wireframe));
+    mut sc.add(beaconMesh, xform.Transform3D.fromEuler(oPos.add(vec.vec3(0.0, 0.75, 0.0)), 0.0, tSec * 2.0, 0.0, vec.vec3(1.0, 1.0, 1.0)), scene.Material.glossy(color.WHITE).withWireframe(wireframe));
+
+    /* Background stars */
+    win.clear(bg);
+    var bi := 0;
+    loop bi < 48 {
+        twinkle := 0.65 + 0.35 * math.sin((tSec * 2.4) + (bi * 0.7));
+        scol := color.Color.fromRgba(0.75, 0.88, 1.0, starB[bi] * twinkle);
+        win.fillCircle(surf.point(starX[bi], starY[bi]), if bi % 6 == 0 { 1.4 } else { 0.9 }, scol);
+        bi += 1;
+    }
+
+    cam := orb.toCamera((W * 1.0) / (H * 1.0));
+    scene.renderWireframeGrid(win, cam, W * 1.0, H * 1.0, 5, 2.0, -0.9, gridCol);
+    stats := sc.render(win, cam, W * 1.0, H * 1.0);
+
+    /* Immediate UI overlay */
+    mut ui.beginFrame(win, inp);
+    im.panel(mut ui, win, surf.rect(10.0, 10.0, 156.0, 138.0), "ORBITAL ORRERY 3D");
+    im.mutedLabel(ui, win, "Drag/Arrows: Orbit  Wheel: Zoom", 18.0, 26.0, 8.0);
+    paused = im.toggle(mut ui, win, 101, surf.rect(18.0, 40.0, 140.0, 20.0), "Pause Orbit [Space]", paused);
+    wireframe = im.toggle(mut ui, win, 102, surf.rect(18.0, 64.0, 140.0, 20.0), "Wireframe Overlay", wireframe);
+    speed = im.slider(mut ui, win, 103, surf.rect(18.0, 88.0, 140.0, 18.0), "Speed: " + fmtTenths(speed) + "x", speed, 0.1, 3.0);
+    if im.button(mut ui, win, 104, surf.rect(18.0, 110.0, 66.0, 20.0), "Top View") {
+        orb.yaw = 0.2;
+        orb.pitch = 1.25;
+        orb.distance = 16.5;
+        win.playTone(660, 45, 20);
+    }
+    if im.button(mut ui, win, 105, surf.rect(92.0, 110.0, 66.0, 20.0), "Reset Cam") {
+        orb.target = vec.ZERO3;
+        orb.yaw = 0.55;
+        orb.pitch = 0.42;
+        orb.distance = 13.5;
+        speed = 1.0;
+        win.playTone(440, 45, 20);
+    }
+    im.badge(ui, win, "TRIS " + stats.drawnTriangles.toText(), surf.rect(10.0, 268.0, 88.0, 20.0), color.Color.fromRgba(0.10, 0.16, 0.28, 0.85));
+    mut ui.endFrame();
+
+    if inp.pointerDown and not ui.wantsPointer() {
+        if dragging {
+            dx := inp.pointerX - prevPtrX;
+            dy := inp.pointerY - prevPtrY;
+            mut orb.orbit((0.0 - dx) * 0.012, dy * 0.012);
+        }
+        dragging = true;
+        prevPtrX = inp.pointerX;
+        prevPtrY = inp.pointerY;
+    } else {
+        dragging = false;
+    }
+
+    frame += 1;
+    if headless and frame >= 2 {
+        return false;
+    }
+    true
+});
+win.close();

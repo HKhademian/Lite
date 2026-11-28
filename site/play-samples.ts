@@ -1,6 +1,6 @@
 /** Playable folder-grouped canvas, animation, interactive, audio, and game showcases. */
 
-export type PlayGroupId = 'play-art' | 'play-animation' | 'play-interactive' | 'play-audio' | 'play-games';
+export type PlayGroupId = 'play-art' | 'play-animation' | 'play-interactive' | 'play-audio' | 'play-3d' | 'play-games';
 
 export type PlayGroup = Readonly<{
   id: PlayGroupId;
@@ -51,9 +51,16 @@ export const playGroups: readonly PlayGroup[] = [
     badge: 'Audio',
   },
   {
+    id: 'play-3d',
+    title: '3D Scenes',
+    description: 'Real-time 3D software scenes rendered with `gfx/camera`, `gfx/scene`, `math/transform`, and `ui/im` HUD controls.',
+    folder: 'samples/3d',
+    badge: '3D',
+  },
+  {
     id: 'play-games',
     title: 'Games',
-    description: 'Complete playable mini-games combining high-res canvas rendering, state lists, input hooks, and sound cues.',
+    description: 'Complete playable 2D and 3D games combining surface rendering, `ui/im` overlays, input handling, and synthesized audio.',
     folder: 'samples/games',
     badge: 'Game',
   },
@@ -248,6 +255,35 @@ export const playSamples: readonly PlaySample[] = [
     stdin: '',
   },
 
+  /* 3D Scenes */
+  {
+    id: 'play-orbital-orrery',
+    group: 'play-3d',
+    title: 'Orbital Orrery 3D',
+    note: 'Interactive 3D solar system with orbit drag/wheel camera, planetary rings, moons, and `ui/im` time controls (480×300).',
+    file: 'samples/3d/orbital-orrery.lts',
+    args: [],
+    stdin: '',
+  },
+  {
+    id: 'play-terrain-flyover',
+    group: 'play-3d',
+    title: 'Alpine Terrain Flyover 3D',
+    note: 'Procedural heightmap biomes, distance fog, banking glider craft, and autopilot/manual WASD flight controls (480×300).',
+    file: 'samples/3d/terrain-flyover.lts',
+    args: [],
+    stdin: '',
+  },
+  {
+    id: 'play-lit-polyhedra-studio',
+    group: 'play-3d',
+    title: 'Lit Polyhedra Studio 3D',
+    note: 'Inspect procedural 3D primitives over a wireframe grid with live light azimuth/elevation sliders and material toggles (480×300).',
+    file: 'samples/3d/lit-polyhedra-studio.lts',
+    args: [],
+    stdin: '',
+  },
+
   /* Games */
   {
     id: 'play-paddle-pong',
@@ -273,6 +309,33 @@ export const playSamples: readonly PlaySample[] = [
     title: 'Grid Snake',
     note: 'Growable snake tracked with `core/list` queue pushFront/popBack, Arrows/WASD steering, and fruit chimes.',
     file: 'samples/games/arcade/grid-snake.lts',
+    args: [],
+    stdin: '',
+  },
+  {
+    id: 'play-tunnel-racer',
+    group: 'play-games',
+    title: '3D Tunnel Racer',
+    note: 'High-speed 3D star-tunnel racer with banking craft, procedural obstacle gates, shields, boost, and audio cues (480×300).',
+    file: 'samples/games/3d/tunnel-racer.lts',
+    args: [],
+    stdin: '',
+  },
+  {
+    id: 'play-voxel-arena',
+    group: 'play-games',
+    title: '3D Voxel Tank Arena',
+    note: '3D arena combat with hierarchical hull/turret transforms, ray-aimed cannon fire, chasing drones, and waves (480×300).',
+    file: 'samples/games/3d/voxel-arena.lts',
+    args: [],
+    stdin: '',
+  },
+  {
+    id: 'play-tower-defense',
+    group: 'play-games',
+    title: 'Tower Defense Tactical',
+    note: 'Grid tactical tower defense with 3 typed tower classes, splash & frost effects, wave progression, and `ui/im` shop HUD (480×300).',
+    file: 'samples/games/arcade/tower-defense.lts',
     args: [],
     stdin: '',
   },

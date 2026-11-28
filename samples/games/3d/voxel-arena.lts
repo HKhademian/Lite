@@ -1,0 +1,294 @@
+/** 3D voxel tank arena game with twin hull/turret transforms, chasing drones, projectiles, waves, and HUD. */
+
+math := import "math/scalar";
+vec := import "math/vector";
+xform := import "math/transform";
+color := import "gfx/color";
+surf := import "gfx/surface";
+camera := import "gfx/camera";
+scene := import "gfx/scene";
+im := import "ui/im";
+proc := import "core/process";
+
+Shot := record {
+    x: Float;
+    z: Float;
+    vx: Float;
+    vz: Float;
+    life: Float;
+}
+
+Drone := record {
+    x: Float;
+    z: Float;
+    hp: Int;
+    angle: Float;
+}
+
+W := 480;
+H := 300;
+hlEnv := proc.envGet("LITE_CANVAS_HEADLESS");
+headless := hlEnv.found and hlEnv.value == "1";
+
+win := surf.Surface.open("3D Voxel Tank Arena", W, H);
+tankHullMesh := scene.Mesh.box(1.15, 0.45, 1.45);
+tankTurretMesh := scene.Mesh.box(0.7, 0.35, 0.75);
+barrelMesh := scene.Mesh.box(0.18, 0.16, 0.95);
+pillarMesh := scene.Mesh.box(1.1, 1.8, 1.1);
+droneMesh := scene.Mesh.octahedron(0.55);
+shotMesh := scene.Mesh.sphere(0.18, 5, 6);
+floorMesh := scene.Mesh.plane(16.0, 16.0, 4, 4);
+
+mut sc := scene.Scene.new();
+mut sc.setLight(scene.DirectionalLight.new(vec.vec3(-0.45, -0.85, -0.35), color.Color.fromRgb(1.0, 0.96, 0.90), 1.1));
+mut ui := im.UiState.new();
+
+var playerX := 0.0;
+var playerZ := 0.0;
+var hullYaw := 0.0;
+var turretYaw := 0.0;
+var hp := 100;
+var score := 0;
+var wave := 1;
+var fireCooldown := 0.0;
+var gameOver := false;
+var seed := 9101;
+var frame := 0;
+
+mut shots: List<Shot> = [];
+mut drones: List<Drone> = [];
+
+nextRand := fn(): Float {
+    seed = ((seed * 1664525) + 1013904223) % 2147483647;
+    ((seed % 10000) * 1.0) / 10000.0
+};
+
+spawnWave := fn(waveNum: Int): Unit {
+    count := 3 + waveNum;
+    var i := 0;
+    loop i < count {
+        ang := ((i * 1.0) / (count * 1.0)) * math.TAU;
+        rad := 5.6 + (nextRand() * 1.2);
+        mut drones.pushBack(Drone { x = math.cos(ang) * rad, z = math.sin(ang) * rad, hp = 1 + (waveNum / 3), angle = 0.0 });
+        i += 1;
+    }
+};
+
+resetArena := fn(): Unit {
+    playerX = 0.0;
+    playerZ = 0.0;
+    hullYaw = 0.0;
+    turretYaw = 0.0;
+    hp = 100;
+    score = 0;
+    wave = 1;
+    fireCooldown = 0.0;
+    gameOver = false;
+    mut shots.clear();
+    mut drones.clear();
+    spawnWave(1);
+};
+
+resetArena();
+
+pillarXs: List<Float> = [-3.6, 3.6, -3.6, 3.6];
+pillarZs: List<Float> = [-3.6, -3.6, 3.6, 3.6];
+
+win.run(fn(inp: surf.FrameInput): Bool {
+    if not inp.open or inp.key == "Escape" or inp.key == "q" {
+        return false;
+    }
+    dt := math.min(0.05, math.max(0.001, inp.deltaMs * 0.001));
+
+    if gameOver and (inp.key == " " or inp.key == "r") {
+        resetArena();
+        win.playTone(523, 55, 22);
+    }
+
+    camPos := vec.vec3(playerX * 0.45, 9.2, playerZ * 0.45 + 10.6);
+    camTarget := vec.vec3(playerX * 0.65, 0.2, playerZ * 0.65);
+    cam := camera.Camera3D.perspective(camPos, camTarget, vec.UNIT_Y3, math.PI / 3.4, (W * 1.0) / (H * 1.0), 0.3, 45.0);
+
+    if not gameOver {
+        var mx := 0.0;
+        var mz := 0.0;
+        if win.isKeyDown("a") or win.isKeyDown("ArrowLeft") { mx = -1.0; }
+        if win.isKeyDown("d") or win.isKeyDown("ArrowRight") { mx = 1.0; }
+        if win.isKeyDown("w") or win.isKeyDown("ArrowUp") { mz = -1.0; }
+        if win.isKeyDown("s") or win.isKeyDown("ArrowDown") { mz = 1.0; }
+
+        moveVec := vec.vec3(mx, 0.0, mz);
+        if moveVec.lengthSq() > 0.01 {
+            dir := moveVec.normalize();
+            playerX = math.clamp(playerX + (dir.x() * 4.4 * dt), -6.8, 6.8);
+            playerZ = math.clamp(playerZ + (dir.z() * 4.4 * dt), -6.8, 6.8);
+            hullYaw = math.atan2(0.0 - dir.x(), 0.0 - dir.z());
+            /* Push tank clear of arena pillars */
+            var pi := 0;
+            loop pi < 4 {
+                dxP := playerX - pillarXs[pi];
+                dzP := playerZ - pillarZs[pi];
+                if math.abs(dxP) < 1.15 and math.abs(dzP) < 1.15 {
+                    if math.abs(dxP) > math.abs(dzP) {
+                        playerX = pillarXs[pi] + (if dxP >= 0.0 { 1.15 } else { -1.15 });
+                    } else {
+                        playerZ = pillarZs[pi] + (if dzP >= 0.0 { 1.15 } else { -1.15 });
+                    }
+                }
+                pi += 1;
+            }
+        }
+
+        /* Aim turret toward mouse ray intersection on y=0.4 plane */
+        match cam.unprojectRay(inp.pointerX, inp.pointerY, W * 1.0, H * 1.0) {
+            .None { }
+            .Some(ray) {
+                if math.abs(ray.dir.y()) > 0.01 {
+                    tPlane := (0.4 - ray.origin.y()) / ray.dir.y();
+                    if tPlane > 0.0 {
+                        hit := ray.origin.add(ray.dir.scale(tPlane));
+                        aimX := hit.x() - playerX;
+                        aimZ := hit.z() - playerZ;
+                        if (aimX * aimX + aimZ * aimZ) > 0.04 {
+                            turretYaw = math.atan2(0.0 - aimX, 0.0 - aimZ);
+                        }
+                    }
+                }
+            }
+        }
+
+        if fireCooldown > 0.0 { fireCooldown = math.max(0.0, fireCooldown - dt); }
+        wantFire := win.isKeyDown(" ") or inp.pointerDown;
+        if wantFire and fireCooldown <= 0.0 {
+            fireCooldown = 0.22;
+            fx := 0.0 - math.sin(turretYaw);
+            fz := 0.0 - math.cos(turretYaw);
+            mut shots.pushBack(Shot { x = playerX + (fx * 0.9), z = playerZ + (fz * 0.9), vx = fx * 14.0, vz = fz * 14.0, life = 1.2 });
+            win.playTone(460, 35, 18);
+        }
+
+        /* Update shots */
+        mut nextShots: List<Shot> = [];
+        var si := 0;
+        loop si < shots.length() {
+            var sh := shots[si];
+            sh.x = sh.x + (sh.vx * dt);
+            sh.z = sh.z + (sh.vz * dt);
+            sh.life = sh.life - dt;
+            var keep := sh.life > 0.0 and math.abs(sh.x) <= 7.8 and math.abs(sh.z) <= 7.8;
+            if keep {
+                var di := 0;
+                loop di < drones.length() {
+                    var dr := drones[di];
+                    dxD := sh.x - dr.x;
+                    dzD := sh.z - dr.z;
+                    if (dxD * dxD + dzD * dzD) < 0.68 {
+                        dr.hp = dr.hp - 1;
+                        drones[di] = dr;
+                        keep = false;
+                        score += 25;
+                        win.playTone(if dr.hp <= 0 { 698 } else { 340 }, 45, 22);
+                        break;
+                    }
+                    di += 1;
+                }
+            }
+            if keep { mut nextShots.pushBack(sh); }
+            si += 1;
+        }
+        mut shots.clear();
+        loop nextShots as ns { mut shots.pushBack(ns); }
+
+        /* Update chasing drones */
+        mut nextDrones: List<Drone> = [];
+        var di2 := 0;
+        loop di2 < drones.length() {
+            var dr := drones[di2];
+            if dr.hp > 0 {
+                toPX := playerX - dr.x;
+                toPZ := playerZ - dr.z;
+                distSq := (toPX * toPX) + (toPZ * toPZ);
+                if distSq > 0.001 {
+                    invD := 1.0 / math.sqrt(distSq);
+                    dSpd := 1.65 + (wave * 0.18);
+                    dr.x = dr.x + (toPX * invD * dSpd * dt);
+                    dr.z = dr.z + (toPZ * invD * dSpd * dt);
+                }
+                dr.angle = dr.angle + (2.6 * dt);
+                if distSq < 0.95 {
+                    hp = math.max(0, hp - 20);
+                    win.playTone(130, 120, 32);
+                    if hp <= 0 { gameOver = true; }
+                } else {
+                    mut nextDrones.pushBack(dr);
+                }
+            }
+            di2 += 1;
+        }
+        mut drones.clear();
+        loop nextDrones as nd { mut drones.pushBack(nd); }
+        if drones.length() == 0 and not gameOver {
+            wave += 1;
+            hp = math.min(100, hp + 15);
+            spawnWave(wave);
+            win.playTone(659, 80, 24);
+        }
+    }
+
+    mut sc.clear();
+    mut sc.add(floorMesh, xform.Transform3D.fromPosition(vec.vec3(0.0, -0.35, 0.0)), scene.Material.matte(color.Color.fromRgb(0.16, 0.21, 0.28)));
+
+    pillarMat := scene.Material.matte(color.Color.fromRgb(0.38, 0.44, 0.56));
+    var pi2 := 0;
+    loop pi2 < 4 {
+        mut sc.add(pillarMesh, xform.Transform3D.fromPosition(vec.vec3(pillarXs[pi2], 0.55, pillarZs[pi2])), pillarMat);
+        pi2 += 1;
+    }
+
+    hullTx := xform.Transform3D.fromEuler(vec.vec3(playerX, 0.0, playerZ), 0.0, hullYaw, 0.0, vec.vec3(1.0, 1.0, 1.0));
+    turretTx := xform.Transform3D.fromEuler(vec.vec3(playerX, 0.36, playerZ), 0.0, turretYaw, 0.0, vec.vec3(1.0, 1.0, 1.0));
+    barrelTx := turretTx.combine(xform.Transform3D.fromPosition(vec.vec3(0.0, 0.02, -0.62)));
+    mut sc.add(tankHullMesh, hullTx, scene.Material.matte(color.Color.fromRgb(0.20, 0.62, 0.86)));
+    mut sc.add(tankTurretMesh, turretTx, scene.Material.glossy(color.Color.fromRgb(0.32, 0.80, 0.98)));
+    mut sc.add(barrelMesh, barrelTx, scene.Material.glossy(color.Color.fromRgb(0.86, 0.90, 0.96)));
+
+    droneMat := scene.Material.glossy(color.Color.fromRgb(0.95, 0.34, 0.42));
+    var di3 := 0;
+    loop di3 < drones.length() {
+        dr := drones[di3];
+        mut sc.add(droneMesh, xform.Transform3D.fromEuler(vec.vec3(dr.x, 0.28, dr.z), dr.angle * 0.5, dr.angle, 0.0, vec.vec3(1.0, 1.0, 1.0)), droneMat);
+        di3 += 1;
+    }
+    shotMat := scene.Material.glossy(color.YELLOW);
+    var si2 := 0;
+    loop si2 < shots.length() {
+        sh := shots[si2];
+        mut sc.add(shotMesh, xform.Transform3D.fromPosition(vec.vec3(sh.x, 0.36, sh.z)), shotMat);
+        si2 += 1;
+    }
+
+    win.clear(color.Color.fromRgb(0.05, 0.07, 0.12));
+    _ := sc.render(win, cam, W * 1.0, H * 1.0);
+
+    mut ui.beginFrame(win, inp);
+    im.panel(mut ui, win, surf.rect(10.0, 10.0, 184.0, 74.0), "VOXEL TANK ARENA 3D");
+    im.label(ui, win, "WAVE " + wave.toText() + "   SCORE " + score.toText(), 18.0, 28.0, 11.0);
+    im.progressBar(ui, win, surf.rect(18.0, 44.0, 166.0, 11.0), (hp * 1.0) / 100.0, if hp > 35 { color.GREEN } else { color.RED });
+    im.mutedLabel(ui, win, "WASD: Drive  Mouse+Click/Space: Fire", 18.0, 62.0, 8.0);
+    if gameOver {
+        im.panel(mut ui, win, surf.rect(136.0, 102.0, 208.0, 86.0), "TANK DESTROYED");
+        im.label(ui, win, "WAVE " + wave.toText() + "  SCORE " + score.toText(), 160.0, 128.0, 12.0);
+        if im.button(mut ui, win, 501, surf.rect(176.0, 152.0, 128.0, 24.0), "Restart [Space]") {
+            resetArena();
+            win.playTone(523, 55, 22);
+        }
+    }
+    mut ui.endFrame();
+
+    frame += 1;
+    if headless and frame >= 2 {
+        return false;
+    }
+    true
+});
+win.close();

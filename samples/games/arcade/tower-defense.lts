@@ -1,0 +1,396 @@
+/** Tactical grid tower defense with 3 typed tower classes, winding path, multi-wave enemies, `ui/im` shop HUD, and audio cues. */
+
+math := import "math/scalar";
+color := import "gfx/color";
+surf := import "gfx/surface";
+im := import "ui/im";
+proc := import "core/process";
+
+TowerKind := enum: Int {
+    Laser = 0;
+    Cannon = 1;
+    Frost = 2;
+}
+
+towerCost := fn(kind: TowerKind): Int {
+    match kind {
+        .Laser { 40 }
+        .Cannon { 65 }
+        .Frost { 50 }
+    }
+};
+
+towerRange := fn(kind: TowerKind): Float {
+    match kind {
+        .Laser { 88.0 }
+        .Cannon { 76.0 }
+        .Frost { 82.0 }
+    }
+};
+
+towerColor := fn(kind: TowerKind): color.Color {
+    match kind {
+        .Laser { color.CYAN }
+        .Cannon { color.Color.fromRgb(0.98, 0.56, 0.18) }
+        .Frost { color.Color.fromRgb(0.45, 0.85, 1.0) }
+    }
+};
+
+Tower := record {
+    gx: Int;
+    gy: Int;
+    kind: TowerKind;
+    cooldown: Float;
+    aimX: Float;
+    aimY: Float;
+    beamTimer: Float;
+}
+
+Creep := record {
+    wpIdx: Int;
+    progress: Float;
+    x: Float;
+    y: Float;
+    hp: Float;
+    maxHp: Float;
+    speed: Float;
+    slowTimer: Float;
+    reward: Int;
+}
+
+W := 480;
+H := 300;
+TILE := 28.0;
+OX := 16.0;
+OY := 22.0;
+
+hlEnv := proc.envGet("LITE_CANVAS_HEADLESS");
+headless := hlEnv.found and hlEnv.value == "1";
+
+win := surf.Surface.open("Tower Defense Tactical", W, H);
+mut ui := im.UiState.new();
+
+/* Path waypoints in tile coordinates (columns 0..10, rows 0..8) */
+wpCol: List<Int> = [0, 3, 3, 7, 7, 10];
+wpRow: List<Int> = [2, 2, 6, 6, 1, 1];
+
+isPathTile := fn(c: Int, r: Int): Bool {
+    if r == 2 and c >= 0 and c <= 3 { return true; }
+    if c == 3 and r >= 2 and r <= 6 { return true; }
+    if r == 6 and c >= 3 and c <= 7 { return true; }
+    if c == 7 and r >= 1 and r <= 6 { return true; }
+    if r == 1 and c >= 7 and c <= 10 { return true; }
+    false
+};
+
+tileCenter := fn(c: Int, r: Int): (x: Float, y: Float) {
+    (x = OX + (c * TILE) + (TILE * 0.5), y = OY + (r * TILE) + (TILE * 0.5))
+};
+
+var gold := 120;
+var lives := 10;
+var wave := 1;
+var score := 0;
+var selectedKind := TowerKind.Laser;
+var fastForward := false;
+var spawnLeft := 0;
+var spawnTimer := 0.0;
+var wavePause := 1.0;
+var gameOver := false;
+var frame := 0;
+
+mut towers: List<Tower> = [];
+mut creeps: List<Creep> = [];
+
+findTowerAt := fn(c: Int, r: Int): Int {
+    var i := 0;
+    loop i < towers.length() {
+        if towers[i].gx == c and towers[i].gy == r { return i; }
+        i += 1;
+    }
+    -1
+};
+
+resetTd := fn(): Unit {
+    gold = 120;
+    lives = 10;
+    wave = 1;
+    score = 0;
+    selectedKind = TowerKind.Laser;
+    fastForward = false;
+    spawnLeft = 5;
+    spawnTimer = 0.4;
+    wavePause = 0.0;
+    gameOver = false;
+    mut towers.clear();
+    mut creeps.clear();
+    /* Place 1 starter laser tower near bend (4, 3) */
+    mut towers.pushBack(Tower { gx = 4, gy = 3, kind = TowerKind.Laser, cooldown = 0.0, aimX = 0.0, aimY = 0.0, beamTimer = 0.0 });
+};
+
+resetTd();
+
+win.run(fn(inp: surf.FrameInput): Bool {
+    if not inp.open or inp.key == "Escape" or inp.key == "q" {
+        return false;
+    }
+    rawDt := math.min(0.05, math.max(0.001, inp.deltaMs * 0.001));
+    dt := if fastForward { rawDt * 2.0 } else { rawDt };
+
+    if inp.key == "1" { selectedKind = TowerKind.Laser; }
+    else if inp.key == "2" { selectedKind = TowerKind.Cannon; }
+    else if inp.key == "3" { selectedKind = TowerKind.Frost; }
+    else if inp.key == " " and gameOver {
+        resetTd();
+        win.playTone(523, 55, 22);
+    }
+
+    if not gameOver {
+        /* Wave spawning */
+        if spawnLeft > 0 {
+            spawnTimer = spawnTimer - dt;
+            if spawnTimer <= 0.0 {
+                spawnLeft -= 1;
+                spawnTimer = 0.95;
+                p0 := tileCenter(wpCol[0], wpRow[0]);
+                hpMax := 24.0 + (wave * 11.0);
+                mut creeps.pushBack(Creep { wpIdx = 0, progress = 0.0, x = p0.x, y = p0.y, hp = hpMax, maxHp = hpMax, speed = 34.0 + (wave * 2.5), slowTimer = 0.0, reward = 12 });
+            }
+        } else if creeps.length() == 0 {
+            wavePause = wavePause + dt;
+            if wavePause >= 1.5 {
+                wavePause = 0.0;
+                wave += 1;
+                spawnLeft = 5 + (wave * 2);
+                spawnTimer = 0.3;
+                win.playTone(659, 60, 20);
+            }
+        }
+
+        /* Advance creeps */
+        mut nextCreeps: List<Creep> = [];
+        var ci := 0;
+        loop ci < creeps.length() {
+            var cr := creeps[ci];
+            if cr.slowTimer > 0.0 { cr.slowTimer = math.max(0.0, cr.slowTimer - dt); }
+            effSpeed := if cr.slowTimer > 0.0 { cr.speed * 0.5 } else { cr.speed };
+            if cr.wpIdx + 1 < wpCol.length() {
+                a := tileCenter(wpCol[cr.wpIdx], wpRow[cr.wpIdx]);
+                b := tileCenter(wpCol[cr.wpIdx + 1], wpRow[cr.wpIdx + 1]);
+                segLen := math.max(1.0, math.abs(b.x - a.x) + math.abs(b.y - a.y));
+                cr.progress = cr.progress + ((effSpeed * dt) / segLen);
+                loop cr.progress >= 1.0 and cr.wpIdx + 1 < wpCol.length() {
+                    cr.progress = cr.progress - 1.0;
+                    cr.wpIdx += 1;
+                }
+                if cr.wpIdx + 1 >= wpCol.length() {
+                    lives -= 1;
+                    win.playTone(155, 90, 28);
+                    if lives <= 0 {
+                        lives = 0;
+                        gameOver = true;
+                    }
+                    ci += 1;
+                    continue;
+                }
+                na := tileCenter(wpCol[cr.wpIdx], wpRow[cr.wpIdx]);
+                nb := tileCenter(wpCol[cr.wpIdx + 1], wpRow[cr.wpIdx + 1]);
+                cr.x = math.lerp(na.x, nb.x, cr.progress);
+                cr.y = math.lerp(na.y, nb.y, cr.progress);
+            }
+            if cr.hp > 0.0 {
+                mut nextCreeps.pushBack(cr);
+            }
+            ci += 1;
+        }
+        mut creeps.clear();
+        loop nextCreeps as nc { mut creeps.pushBack(nc); }
+
+        /* Tower targeting & firing */
+        var ti := 0;
+        loop ti < towers.length() {
+            var tw := towers[ti];
+            if tw.cooldown > 0.0 { tw.cooldown = math.max(0.0, tw.cooldown - dt); }
+            if tw.beamTimer > 0.0 { tw.beamTimer = math.max(0.0, tw.beamTimer - dt); }
+            tc := tileCenter(tw.gx, tw.gy);
+            rng := towerRange(tw.kind);
+            if tw.cooldown <= 0.0 and creeps.length() > 0 {
+                var bestIdx := -1;
+                var bestScore := -1.0;
+                var ci2 := 0;
+                loop ci2 < creeps.length() {
+                    cr := creeps[ci2];
+                    dx := cr.x - tc.x;
+                    dy := cr.y - tc.y;
+                    if (dx * dx + dy * dy) <= (rng * rng) {
+                        prog := (cr.wpIdx * 10.0) + cr.progress;
+                        if prog > bestScore {
+                            bestScore = prog;
+                            bestIdx = ci2;
+                        }
+                    }
+                    ci2 += 1;
+                }
+                if bestIdx >= 0 {
+                    var target := creeps[bestIdx];
+                    tw.aimX = target.x;
+                    tw.aimY = target.y;
+                    tw.beamTimer = 0.14;
+                    match tw.kind {
+                        .Laser {
+                            tw.cooldown = 0.42;
+                            target.hp = target.hp - 12.0;
+                            creeps[bestIdx] = target;
+                            win.playTone(740, 22, 12);
+                        }
+                        .Cannon {
+                            tw.cooldown = 1.05;
+                            var ci3 := 0;
+                            loop ci3 < creeps.length() {
+                                var splash := creeps[ci3];
+                                sdx := splash.x - target.x;
+                                sdy := splash.y - target.y;
+                                if (sdx * sdx + sdy * sdy) <= (38.0 * 38.0) {
+                                    splash.hp = splash.hp - 18.0;
+                                    creeps[ci3] = splash;
+                                }
+                                ci3 += 1;
+                            }
+                            win.playTone(220, 45, 18);
+                        }
+                        .Frost {
+                            tw.cooldown = 0.65;
+                            target.hp = target.hp - 7.0;
+                            target.slowTimer = 2.2;
+                            creeps[bestIdx] = target;
+                            win.playTone(587, 25, 14);
+                        }
+                    }
+                }
+            }
+            towers[ti] = tw;
+            ti += 1;
+        }
+
+        /* Collect defeated creeps */
+        mut survivors: List<Creep> = [];
+        var ci4 := 0;
+        loop ci4 < creeps.length() {
+            cr := creeps[ci4];
+            if cr.hp <= 0.0 {
+                gold += cr.reward;
+                score += cr.reward * 5;
+            } else {
+                mut survivors.pushBack(cr);
+            }
+            ci4 += 1;
+        }
+        mut creeps.clear();
+        loop survivors as scItem { mut creeps.pushBack(scItem); }
+    }
+
+    /* Render board */
+    win.clear(color.Color.fromRgb(0.05, 0.07, 0.11));
+    var r := 0;
+    loop r < 9 {
+        var c := 0;
+        loop c < 11 {
+            rx := OX + (c * TILE);
+            ry := OY + (r * TILE);
+            cellRect := surf.rect(rx, ry, TILE - 1.0, TILE - 1.0);
+            if isPathTile(c, r) {
+                win.fillRect(cellRect, color.Color.fromRgb(0.18, 0.21, 0.28));
+            } else {
+                win.fillRect(cellRect, color.Color.fromRgb(0.09, 0.14, 0.19));
+                win.strokeRect(cellRect, 1.0, color.Color.fromRgba(0.24, 0.36, 0.48, 0.35));
+            }
+            c += 1;
+        }
+        r += 1;
+    }
+
+    /* Towers & beams */
+    var ti2 := 0;
+    loop ti2 < towers.length() {
+        tw := towers[ti2];
+        tc := tileCenter(tw.gx, tw.gy);
+        tCol := towerColor(tw.kind);
+        win.fillCircle(surf.point(tc.x, tc.y), 10.0, tCol.withAlphaFloat(0.25));
+        win.fillRect(surf.rect(tc.x - 7.0, tc.y - 7.0, 14.0, 14.0), tCol);
+        if tw.beamTimer > 0.0 {
+            win.strokeLine(surf.point(tc.x, tc.y), surf.point(tw.aimX, tw.aimY), if tw.kind == TowerKind.Cannon { 3.0 } else { 1.8 }, tCol);
+        }
+        ti2 += 1;
+    }
+
+    /* Creeps & HP bars */
+    var ci5 := 0;
+    loop ci5 < creeps.length() {
+        cr := creeps[ci5];
+        bodyCol := if cr.slowTimer > 0.0 { color.Color.fromRgb(0.42, 0.84, 1.0) } else { color.Color.fromRgb(0.95, 0.28, 0.38) };
+        win.fillCircle(surf.point(cr.x, cr.y), 7.5, bodyCol);
+        win.fillRect(surf.rect(cr.x - 8.0, cr.y - 12.0, 16.0 * math.clamp(cr.hp / cr.maxHp, 0.0, 1.0), 3.0), color.GREEN);
+        ci5 += 1;
+    }
+
+    /* Immediate UI Side Shop */
+    mut ui.beginFrame(win, inp);
+    im.panel(mut ui, win, surf.rect(334.0, 14.0, 136.0, 272.0), "COMMAND HUD");
+    im.label(ui, win, "GOLD: " + gold.toText(), 344.0, 34.0, 11.0);
+    im.label(ui, win, "LIVES: " + lives.toText() + "   WAVE: " + wave.toText(), 344.0, 50.0, 10.0);
+    im.label(ui, win, "SCORE: " + score.toText(), 344.0, 66.0, 10.0);
+    im.mutedLabel(ui, win, "Select Tower + Click Tile:", 344.0, 88.0, 8.0);
+    if im.button(mut ui, win, 601, surf.rect(344.0, 104.0, 116.0, 24.0), "1 Laser ($40)") {
+        selectedKind = TowerKind.Laser;
+        win.playTone(520, 30, 15);
+    }
+    if im.button(mut ui, win, 602, surf.rect(344.0, 134.0, 116.0, 24.0), "2 Cannon ($65)") {
+        selectedKind = TowerKind.Cannon;
+        win.playTone(440, 30, 15);
+    }
+    if im.button(mut ui, win, 603, surf.rect(344.0, 164.0, 116.0, 24.0), "3 Frost ($50)") {
+        selectedKind = TowerKind.Frost;
+        win.playTone(620, 30, 15);
+    }
+    fastForward = im.toggle(mut ui, win, 604, surf.rect(344.0, 200.0, 116.0, 22.0), "2x Speed", fastForward);
+    if im.button(mut ui, win, 605, surf.rect(344.0, 230.0, 116.0, 22.0), "Reset Map") {
+        resetTd();
+        win.playTone(523, 50, 20);
+    }
+    im.mutedLabel(ui, win, "Active: " + (if selectedKind == TowerKind.Laser { "Laser" } else if selectedKind == TowerKind.Cannon { "Cannon" } else { "Frost" }), 344.0, 264.0, 9.0);
+
+    /* Hover preview & tile placement on grid */
+    if not ui.wantsPointer() and not gameOver {
+        hc := math.floorToInt((inp.pointerX - OX) / TILE);
+        hr := math.floorToInt((inp.pointerY - OY) / TILE);
+        if hc >= 0 and hc < 11 and hr >= 0 and hr < 9 and not isPathTile(hc, hr) and findTowerAt(hc, hr) < 0 {
+            htc := tileCenter(hc, hr);
+            canAfford := gold >= towerCost(selectedKind);
+            prevCol := if canAfford { towerColor(selectedKind) } else { color.RED };
+            win.strokeRect(surf.rect(OX + (hc * TILE), OY + (hr * TILE), TILE - 1.0, TILE - 1.0), 1.5, prevCol);
+            win.fillCircle(surf.point(htc.x, htc.y), towerRange(selectedKind), prevCol.withAlphaFloat(0.10));
+            if win.isPointerPressed() and canAfford {
+                gold -= towerCost(selectedKind);
+                mut towers.pushBack(Tower { gx = hc, gy = hr, kind = selectedKind, cooldown = 0.0, aimX = 0.0, aimY = 0.0, beamTimer = 0.0 });
+                win.playTone(660, 40, 20);
+            }
+        }
+    }
+
+    if gameOver {
+        im.panel(mut ui, win, surf.rect(86.0, 102.0, 208.0, 86.0), "BASE OVERRUN");
+        im.label(ui, win, "FINAL SCORE: " + score.toText(), 116.0, 128.0, 12.0);
+        if im.button(mut ui, win, 606, surf.rect(126.0, 152.0, 128.0, 24.0), "Retry [Space]") {
+            resetTd();
+            win.playTone(523, 55, 22);
+        }
+    }
+    mut ui.endFrame();
+
+    frame += 1;
+    if headless and frame >= 2 {
+        return false;
+    }
+    true
+});
+win.close();

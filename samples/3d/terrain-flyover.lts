@@ -1,0 +1,210 @@
+/** Procedural 3D Alpine terrain flyover with elevation shading, fog, glider craft, and `ui/im` flight controls. */
+
+math := import "math/scalar";
+vec := import "math/vector";
+xform := import "math/transform";
+color := import "gfx/color";
+surf := import "gfx/surface";
+camera := import "gfx/camera";
+scene := import "gfx/scene";
+im := import "ui/im";
+proc := import "core/process";
+
+W := 480;
+H := 300;
+hlEnv := proc.envGet("LITE_CANVAS_HEADLESS");
+headless := hlEnv.found and hlEnv.value == "1";
+
+terrainHeight := fn(x: Float, z: Float): Float {
+    r1 := math.sin(x * 0.34) * math.cos(z * 0.28) * 1.9;
+    r2 := math.sin((x + z) * 0.17) * 1.25;
+    r3 := math.cos((x * 0.62) - (z * 0.51)) * 0.45;
+    r1 + r2 + r3
+};
+
+buildTerrain := fn(cx: Float, cz: Float, span: Float, gridN: Int): scene.Mesh {
+    var half := span * 0.5;
+    step := span / (gridN * 1.0);
+    mut verts: List<vec.FVec3> = [];
+    mut idxs: List<Int> = [];
+    var gz := 0;
+    loop gz <= gridN {
+        wz := cz - half + (gz * step);
+        var gx := 0;
+        loop gx <= gridN {
+            wx := cx - half + (gx * step);
+            wy := terrainHeight(wx, wz);
+            mut verts.pushBack(vec.vec3(wx, wy, wz));
+            gx += 1;
+        }
+        gz += 1;
+    }
+    stride := gridN + 1;
+    var z := 0;
+    loop z < gridN {
+        var x := 0;
+        loop x < gridN {
+            tl := z * stride + x;
+            tr := tl + 1;
+            bl := (z + 1) * stride + x;
+            br := bl + 1;
+            mut idxs.pushBack(tl); mut idxs.pushBack(bl); mut idxs.pushBack(br);
+            mut idxs.pushBack(tl); mut idxs.pushBack(br); mut idxs.pushBack(tr);
+            x += 1;
+        }
+        z += 1;
+    }
+    scene.Mesh { vertices = verts, indices = idxs }
+};
+
+colorForElevation := fn(y: Float): color.Color {
+    if y < -1.1 {
+        color.Color.fromRgb(0.14, 0.36, 0.68)
+    } else if y < -0.2 {
+        color.Color.fromRgb(0.22, 0.58, 0.46)
+    } else if y < 1.1 {
+        color.Color.fromRgb(0.32, 0.64, 0.36)
+    } else if y < 2.2 {
+        color.Color.fromRgb(0.56, 0.52, 0.46)
+    } else {
+        color.Color.fromRgb(0.92, 0.95, 0.98)
+    }
+};
+
+gliderFuse := scene.Mesh.box(0.45, 0.25, 1.45);
+gliderWing := scene.Mesh.box(2.1, 0.08, 0.48);
+gliderTail := scene.Mesh.pyramid(0.42, 0.45);
+
+win := surf.Surface.open("Alpine Terrain Flyover 3D", W, H);
+mut sc := scene.Scene.new();
+skyTop := color.Color.fromRgb(0.14, 0.24, 0.44);
+fogCol := color.Color.fromRgb(0.46, 0.60, 0.78);
+mut sc.setLight(scene.DirectionalLight.new(vec.vec3(-0.45, -0.82, 0.35), color.Color.fromRgb(1.0, 0.94, 0.84), 1.05));
+mut sc.setFog(fogCol, 8.0, 26.0);
+
+mut ui := im.UiState.new();
+var pos := vec.vec3(0.0, 4.2, 6.0);
+var heading := 0.0;
+var speed := 4.5;
+var altitudeBias := 4.2;
+var autopilot := true;
+var wireframe := false;
+var tSec := 0.0;
+var frame := 0;
+
+win.run(fn(inp: surf.FrameInput): Bool {
+    if not inp.open or inp.key == "Escape" or inp.key == "q" {
+        return false;
+    }
+    dt := math.min(0.05, math.max(0.001, inp.deltaMs * 0.001));
+    tSec = tSec + dt;
+
+    if inp.key == " " {
+        autopilot = not autopilot;
+        win.playTone(if autopilot { 587 } else { 392 }, 40, 20);
+    }
+
+    var turnRate := 0.0;
+    if win.isKeyDown("ArrowLeft") or win.isKeyDown("a") {
+        autopilot = false;
+        turnRate = 1.25;
+    }
+    if win.isKeyDown("ArrowRight") or win.isKeyDown("d") {
+        autopilot = false;
+        turnRate = -1.25;
+    }
+    if win.isKeyDown("ArrowUp") or win.isKeyDown("w") {
+        altitudeBias = math.clamp(altitudeBias + (2.5 * dt), 2.2, 9.0);
+    }
+    if win.isKeyDown("ArrowDown") or win.isKeyDown("s") {
+        altitudeBias = math.clamp(altitudeBias - (2.5 * dt), 2.2, 9.0);
+    }
+    if autopilot {
+        turnRate = math.sin(tSec * 0.42) * 0.35;
+    }
+
+    heading = heading + (turnRate * dt);
+    fwd := vec.vec3(0.0 - math.sin(heading), 0.0, 0.0 - math.cos(heading));
+    groundY := terrainHeight(pos.x(), pos.z());
+    targetY := math.max(altitudeBias, groundY + 1.8);
+    nextY := math.lerp(pos.y(), targetY, math.min(1.0, dt * 3.5));
+    pos = vec.vec3(pos.x() + (fwd.x() * speed * dt), nextY, pos.z() + (fwd.z() * speed * dt));
+
+    /* Quantize terrain mesh origin so triangle vertices stay stable over world coords */
+    snapStep := 2.4;
+    snapX := math.floor(pos.x() / snapStep) * snapStep;
+    snapZ := math.floor(pos.z() / snapStep) * snapStep;
+    fwdCenter := vec.vec3(snapX + (fwd.x() * 7.2), 0.0, snapZ + (fwd.z() * 7.2));
+    terrainMesh := buildTerrain(fwdCenter.x(), fwdCenter.z(), 24.0, 10);
+
+    /* Split terrain cells into elevation bands as separate triangle subsets to color biomes cleanly */
+    mut waterIdx: List<Int> = [];
+    mut grassIdx: List<Int> = [];
+    mut rockIdx: List<Int> = [];
+    mut snowIdx: List<Int> = [];
+    iCount := terrainMesh.indices.length();
+    var ti := 0;
+    loop ti < iCount - 2 {
+        ia := terrainMesh.indices[ti];
+        ib := terrainMesh.indices[ti + 1];
+        ic := terrainMesh.indices[ti + 2];
+        avgY := (terrainMesh.vertices[ia].y() + terrainMesh.vertices[ib].y() + terrainMesh.vertices[ic].y()) / 3.0;
+        if avgY < -0.8 {
+            mut waterIdx.pushBack(ia); mut waterIdx.pushBack(ib); mut waterIdx.pushBack(ic);
+        } else if avgY < 0.75 {
+            mut grassIdx.pushBack(ia); mut grassIdx.pushBack(ib); mut grassIdx.pushBack(ic);
+        } else if avgY < 1.85 {
+            mut rockIdx.pushBack(ia); mut rockIdx.pushBack(ib); mut rockIdx.pushBack(ic);
+        } else {
+            mut snowIdx.pushBack(ia); mut snowIdx.pushBack(ib); mut snowIdx.pushBack(ic);
+        }
+        ti += 3;
+    }
+
+    mut sc.clear();
+    if waterIdx.length() > 0 {
+        mut sc.add(scene.Mesh { vertices = terrainMesh.vertices, indices = waterIdx }, xform.Transform3D.identity(), scene.Material.glossy(colorForElevation(-1.5)).withWireframe(wireframe));
+    }
+    if grassIdx.length() > 0 {
+        mut sc.add(scene.Mesh { vertices = terrainMesh.vertices, indices = grassIdx }, xform.Transform3D.identity(), scene.Material.matte(colorForElevation(0.2)).withWireframe(wireframe));
+    }
+    if rockIdx.length() > 0 {
+        mut sc.add(scene.Mesh { vertices = terrainMesh.vertices, indices = rockIdx }, xform.Transform3D.identity(), scene.Material.matte(colorForElevation(1.4)).withWireframe(wireframe));
+    }
+    if snowIdx.length() > 0 {
+        mut sc.add(scene.Mesh { vertices = terrainMesh.vertices, indices = snowIdx }, xform.Transform3D.identity(), scene.Material.glossy(colorForElevation(2.6)).withWireframe(wireframe));
+    }
+
+    /* Banked glider craft ahead of camera */
+    craftPos := pos.add(fwd.scale(4.2)).add(vec.vec3(0.0, -0.55, 0.0));
+    craftRot := xform.Quat.fromEuler(0.0, heading, 0.0 - (turnRate * 0.45));
+    craftTx := xform.Transform3D.fromTRS(craftPos, craftRot, vec.vec3(1.0, 1.0, 1.0));
+    mut sc.add(gliderFuse, craftTx, scene.Material.glossy(color.Color.fromRgb(0.95, 0.34, 0.24)).withWireframe(wireframe));
+    mut sc.add(gliderWing, craftTx, scene.Material.glossy(color.Color.fromRgb(0.94, 0.96, 0.99)).withWireframe(wireframe));
+    tailTx := craftTx.combine(xform.Transform3D.fromPosition(vec.vec3(0.0, 0.22, 0.55)));
+    mut sc.add(gliderTail, tailTx, scene.Material.matte(color.Color.fromRgb(0.18, 0.72, 0.96)).withWireframe(wireframe));
+
+    /* Sky horizon gradient */
+    win.clear(skyTop);
+    win.fillRect(surf.rect(0.0, H * 0.34, W * 1.0, H * 0.26), fogCol.withAlphaFloat(0.62));
+    win.fillRect(surf.rect(0.0, H * 0.56, W * 1.0, H * 0.44), color.Color.fromRgb(0.14, 0.22, 0.32));
+
+    cam := camera.Camera3D.perspective(pos.add(vec.vec3(0.0, 0.9, 0.0)), craftPos.add(fwd.scale(5.5)), vec.UNIT_Y3, math.PI / 3.2, (W * 1.0) / (H * 1.0), 0.3, 45.0);
+    stats := sc.render(win, cam, W * 1.0, H * 1.0);
+
+    mut ui.beginFrame(win, inp);
+    im.panel(mut ui, win, surf.rect(10.0, 10.0, 162.0, 118.0), "ALPINE FLYOVER 3D");
+    im.mutedLabel(ui, win, "WASD/Arrows: Steer & Alt", 18.0, 26.0, 8.0);
+    autopilot = im.toggle(mut ui, win, 201, surf.rect(18.0, 40.0, 146.0, 20.0), "Autopilot [Space]", autopilot);
+    wireframe = im.toggle(mut ui, win, 202, surf.rect(18.0, 64.0, 146.0, 20.0), "Wireframe Mesh", wireframe);
+    speed = im.slider(mut ui, win, 203, surf.rect(18.0, 88.0, 146.0, 18.0), "Airspeed", speed, 1.5, 9.0);
+    im.badge(ui, win, "ALT " + math.floorToInt(pos.y() * 100.0).toText() + "m  TRIS " + stats.drawnTriangles.toText(), surf.rect(10.0, 268.0, 164.0, 20.0), color.Color.fromRgba(0.08, 0.12, 0.20, 0.84));
+    mut ui.endFrame();
+
+    frame += 1;
+    if headless and frame >= 2 {
+        return false;
+    }
+    true
+});
+win.close();

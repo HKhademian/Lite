@@ -1,0 +1,156 @@
+/** Lit 3D polyhedra & material studio with selectable primitives, directional lighting sliders, and render telemetry. */
+
+math := import "math/scalar";
+vec := import "math/vector";
+xform := import "math/transform";
+color := import "gfx/color";
+surf := import "gfx/surface";
+camera := import "gfx/camera";
+scene := import "gfx/scene";
+im := import "ui/im";
+proc := import "core/process";
+
+ShapeKind := enum: Int {
+    Torus = 0;
+    Cube = 1;
+    Sphere = 2;
+    Cylinder = 3;
+    Octahedron = 4;
+    Pyramid = 5;
+}
+
+shapeName := fn(kind: ShapeKind): String {
+    match kind {
+        .Torus { "Torus" }
+        .Cube { "Cube" }
+        .Sphere { "Sphere" }
+        .Cylinder { "Cylinder" }
+        .Octahedron { "Octahedron" }
+        .Pyramid { "Pyramid" }
+    }
+};
+
+nextShape := fn(kind: ShapeKind): ShapeKind {
+    match kind {
+        .Torus { ShapeKind.Cube }
+        .Cube { ShapeKind.Sphere }
+        .Sphere { ShapeKind.Cylinder }
+        .Cylinder { ShapeKind.Octahedron }
+        .Octahedron { ShapeKind.Pyramid }
+        .Pyramid { ShapeKind.Torus }
+    }
+};
+
+W := 480;
+H := 300;
+hlEnv := proc.envGet("LITE_CANVAS_HEADLESS");
+headless := hlEnv.found and hlEnv.value == "1";
+
+win := surf.Surface.open("Lit Polyhedra Studio 3D", W, H);
+
+torusM := scene.Mesh.torus(1.35, 0.45, 16, 8);
+cubeM := scene.Mesh.cube(1.95);
+sphereM := scene.Mesh.sphere(1.35, 10, 14);
+cylM := scene.Mesh.cylinder(1.0, 2.2, 12);
+octM := scene.Mesh.octahedron(1.55);
+pyrM := scene.Mesh.pyramid(2.0, 2.2);
+plinthM := scene.Mesh.cylinder(1.9, 0.35, 16);
+
+mut sc := scene.Scene.new();
+mut orb := camera.OrbitCamera.new(vec.vec3(0.0, 0.3, 0.0), 0.72, 0.48, 6.8);
+mut ui := im.UiState.new();
+
+var activeShape := ShapeKind.Torus;
+var hue := 198.0;
+var lightAzimuth := 0.85;
+var lightElev := 0.95;
+var glossy := true;
+var wireframe := false;
+var autoSpin := true;
+var spinAngle := 0.0;
+var dragging := false;
+var prevPtrX := 0.0;
+var prevPtrY := 0.0;
+var frame := 0;
+
+win.run(fn(inp: surf.FrameInput): Bool {
+    if not inp.open or inp.key == "Escape" or inp.key == "q" {
+        return false;
+    }
+    dt := math.min(0.05, math.max(0.001, inp.deltaMs * 0.001));
+
+    if inp.key == " " {
+        activeShape = nextShape(activeShape);
+        win.playTone(523 + (activeShape.value * 55), 45, 22);
+    }
+    if win.isKeyDown("ArrowLeft") { mut orb.orbit(-1.5 * dt, 0.0); }
+    if win.isKeyDown("ArrowRight") { mut orb.orbit(1.5 * dt, 0.0); }
+    if win.isKeyDown("ArrowUp") { mut orb.orbit(0.0, 1.0 * dt); }
+    if win.isKeyDown("ArrowDown") { mut orb.orbit(0.0, -1.0 * dt); }
+    wheel := win.wheelDelta();
+    if wheel =!= 0.0 { mut orb.zoom(wheel * 0.01); }
+
+    if autoSpin { spinAngle = spinAngle + (0.9 * dt); }
+
+    /* Compute dynamic directional light from azimuth & elevation sliders */
+    lx := math.cos(lightElev) * math.cos(lightAzimuth);
+    ly := math.sin(lightElev);
+    lz := math.cos(lightElev) * math.sin(lightAzimuth);
+    mut sc.setLight(scene.DirectionalLight.new(vec.vec3(0.0 - lx, 0.0 - ly, 0.0 - lz), color.Color.fromRgb(1.0, 0.97, 0.92), 1.1));
+
+    mesh := match activeShape {
+        .Torus { torusM }
+        .Cube { cubeM }
+        .Sphere { sphereM }
+        .Cylinder { cylM }
+        .Octahedron { octM }
+        .Pyramid { pyrM }
+    };
+
+    albedo := color.Color.fromHsl(hue, 0.82, 0.56);
+    baseMat := if glossy { scene.Material.glossy(albedo) } else { scene.Material.matte(albedo) };
+    mut sc.clear();
+    mut sc.add(plinthM, xform.Transform3D.fromPosition(vec.vec3(0.0, -1.45, 0.0)), scene.Material.matte(color.Color.fromRgb(0.22, 0.26, 0.34)));
+    mut sc.add(mesh, xform.Transform3D.fromEuler(vec.vec3(0.0, 0.35, 0.0), spinAngle * 0.35, spinAngle, 0.0, vec.vec3(1.0, 1.0, 1.0)), baseMat.withWireframe(wireframe));
+
+    win.clear(color.Color.fromRgb(0.06, 0.08, 0.13));
+    cam := orb.toCamera((W * 1.0) / (H * 1.0));
+    scene.renderWireframeGrid(win, cam, W * 1.0, H * 1.0, 4, 1.4, -1.63, color.Color.fromRgba(0.45, 0.65, 0.92, 0.24));
+    stats := sc.render(win, cam, W * 1.0, H * 1.0);
+
+    mut ui.beginFrame(win, inp);
+    im.panel(mut ui, win, surf.rect(10.0, 10.0, 158.0, 184.0), "POLYHEDRA STUDIO");
+    if im.button(mut ui, win, 301, surf.rect(18.0, 28.0, 142.0, 20.0), "Mesh: " + shapeName(activeShape)) {
+        activeShape = nextShape(activeShape);
+        win.playTone(587 + (activeShape.value * 45), 40, 20);
+    }
+    glossy = im.toggle(mut ui, win, 302, surf.rect(18.0, 52.0, 142.0, 18.0), "Specular Glossy", glossy);
+    wireframe = im.toggle(mut ui, win, 303, surf.rect(18.0, 74.0, 142.0, 18.0), "Wireframe Edges", wireframe);
+    autoSpin = im.toggle(mut ui, win, 304, surf.rect(18.0, 96.0, 142.0, 18.0), "Auto Spin", autoSpin);
+    hue = im.slider(mut ui, win, 305, surf.rect(18.0, 118.0, 142.0, 16.0), "Hue", hue, 0.0, 360.0);
+    lightAzimuth = im.slider(mut ui, win, 306, surf.rect(18.0, 138.0, 142.0, 16.0), "Light Azimuth", lightAzimuth, 0.0, math.TAU);
+    lightElev = im.slider(mut ui, win, 307, surf.rect(18.0, 158.0, 142.0, 16.0), "Light Height", lightElev, 0.2, 1.45);
+    im.mutedLabel(ui, win, "Space: Next Mesh  Drag: Orbit", 18.0, 179.0, 8.0);
+    im.badge(ui, win, "DRAWN " + stats.drawnTriangles.toText() + " / CULLED " + stats.culledTriangles.toText(), surf.rect(10.0, 268.0, 180.0, 20.0), color.Color.fromRgba(0.10, 0.16, 0.28, 0.85));
+    mut ui.endFrame();
+
+    if inp.pointerDown and not ui.wantsPointer() {
+        if dragging {
+            dx := inp.pointerX - prevPtrX;
+            dy := inp.pointerY - prevPtrY;
+            mut orb.orbit((0.0 - dx) * 0.012, dy * 0.012);
+        }
+        dragging = true;
+        prevPtrX = inp.pointerX;
+        prevPtrY = inp.pointerY;
+    } else {
+        dragging = false;
+    }
+
+    frame += 1;
+    if headless and frame >= 2 {
+        return false;
+    }
+    true
+});
+win.close();

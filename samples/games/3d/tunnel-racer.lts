@@ -1,0 +1,214 @@
+/** High-speed 3D star-tunnel racer with banking craft, procedural rings, obstacle gates, shields, and audio cues. */
+
+math := import "math/scalar";
+vec := import "math/vector";
+xform := import "math/transform";
+color := import "gfx/color";
+surf := import "gfx/surface";
+camera := import "gfx/camera";
+scene := import "gfx/scene";
+im := import "ui/im";
+proc := import "core/process";
+
+Obstacle := record {
+    x: Float;
+    y: Float;
+    z: Float;
+    w: Float;
+    h: Float;
+    passed: Bool;
+}
+
+W := 480;
+H := 300;
+hlEnv := proc.envGet("LITE_CANVAS_HEADLESS");
+headless := hlEnv.found and hlEnv.value == "1";
+
+win := surf.Surface.open("3D Tunnel Racer", W, H);
+shipBody := scene.Mesh.box(0.85, 0.24, 1.35);
+shipWing := scene.Mesh.box(1.9, 0.08, 0.48);
+gateMesh := scene.Mesh.box(1.0, 1.0, 0.6);
+ringMesh := scene.Mesh.torus(4.2, 0.14, 14, 4);
+
+mut sc := scene.Scene.new();
+mut sc.setLight(scene.DirectionalLight.new(vec.vec3(-0.3, -0.7, -0.6), color.Color.fromRgb(0.95, 0.98, 1.0), 1.15));
+mut sc.setFog(color.Color.fromRgb(0.03, 0.05, 0.12), 14.0, 42.0);
+mut ui := im.UiState.new();
+
+var shipX := 0.0;
+var shipY := -0.9;
+var vx := 0.0;
+var vy := 0.0;
+var speed := 18.0;
+var score := 0;
+var shield := 3;
+var combo := 1;
+var invulnTimer := 0.0;
+var gameOver := false;
+var elapsed := 0.0;
+var seed := 1337;
+var frame := 0;
+
+nextRand := fn(): Float {
+    seed = ((seed * 1103515245) + 12345) % 2147483647;
+    ((seed % 10000) * 1.0) / 10000.0
+};
+
+mut obstacles: List<Obstacle> = [];
+mut ringZs: List<Float> = [];
+
+resetGame := fn(): Unit {
+    shipX = 0.0;
+    shipY = -0.9;
+    vx = 0.0;
+    vy = 0.0;
+    speed = 18.0;
+    score = 0;
+    shield = 3;
+    combo = 1;
+    invulnTimer = 0.0;
+    gameOver = false;
+    mut obstacles.clear();
+    var oi := 0;
+    loop oi < 7 {
+        ox := (nextRand() - 0.5) * 4.4;
+        oy := -1.35 + (nextRand() * 2.2);
+        mut obstacles.pushBack(Obstacle { x = ox, y = oy, z = -14.0 - (oi * 5.8), w = 1.25, h = 1.25, passed = false });
+        oi += 1;
+    }
+    mut ringZs.clear();
+    var ri := 0;
+    loop ri < 7 {
+        mut ringZs.pushBack(0.0 - (ri * 6.0));
+        ri += 1;
+    }
+};
+
+resetGame();
+
+cam := camera.Camera3D.perspective(vec.vec3(0.0, 0.45, 4.4), vec.vec3(0.0, -0.25, -14.0), vec.UNIT_Y3, math.PI / 3.0, (W * 1.0) / (H * 1.0), 0.2, 55.0);
+
+win.run(fn(inp: surf.FrameInput): Bool {
+    if not inp.open or inp.key == "Escape" or inp.key == "q" {
+        return false;
+    }
+    dt := math.min(0.05, math.max(0.001, inp.deltaMs * 0.001));
+    elapsed = elapsed + dt;
+
+    if gameOver and (inp.key == " " or inp.key == "r") {
+        resetGame();
+        win.playTone(523, 60, 25);
+    }
+
+    var ax := 0.0;
+    var ay := 0.0;
+    if not gameOver {
+        if win.isKeyDown("ArrowLeft") or win.isKeyDown("a") { ax = -18.0; }
+        if win.isKeyDown("ArrowRight") or win.isKeyDown("d") { ax = 18.0; }
+        if win.isKeyDown("ArrowUp") or win.isKeyDown("w") { ay = 14.0; }
+        if win.isKeyDown("ArrowDown") or win.isKeyDown("s") { ay = -14.0; }
+        boost := if win.isKeyDown(" ") { 1.45 } else { 1.0 };
+
+        vx = (vx + (ax * dt)) * math.max(0.0, 1.0 - (5.5 * dt));
+        vy = (vy + (ay * dt)) * math.max(0.0, 1.0 - (5.5 * dt));
+        shipX = math.clamp(shipX + (vx * dt), -2.55, 2.55);
+        shipY = math.clamp(shipY + (vy * dt), -1.75, 1.45);
+        speed = math.min(34.0, speed + (0.35 * dt));
+        if invulnTimer > 0.0 { invulnTimer = math.max(0.0, invulnTimer - dt); }
+
+        travel := speed * boost * dt;
+        var ri := 0;
+        loop ri < ringZs.length() {
+            var rz := ringZs[ri] + travel;
+            if rz > 3.5 { rz = rz - 42.0; }
+            ringZs[ri] = rz;
+            ri += 1;
+        }
+
+        var oi := 0;
+        loop oi < obstacles.length() {
+            var ob := obstacles[oi];
+            ob.z = ob.z + travel;
+            if not ob.passed and ob.z > 0.25 {
+                ob.passed = true;
+                score += 10 * combo;
+                if combo < 8 and score % 80 == 0 {
+                    combo += 1;
+                    win.playTone(784, 35, 18);
+                }
+            }
+            /* Check ship collision around z == 0 */
+            if invulnTimer <= 0.0 and ob.z > -0.85 and ob.z < 0.75 {
+                if math.abs(ob.x - shipX) < (ob.w * 0.62 + 0.45) and math.abs(ob.y - shipY) < (ob.h * 0.62 + 0.25) {
+                    shield -= 1;
+                    combo = 1;
+                    invulnTimer = 1.1;
+                    win.playTone(145, 140, 35);
+                    if shield <= 0 {
+                        gameOver = true;
+                    }
+                }
+            }
+            if ob.z > 4.2 {
+                ob.z = ob.z - 40.6;
+                ob.x = (nextRand() - 0.5) * 4.4;
+                ob.y = -1.35 + (nextRand() * 2.2);
+                ob.passed = false;
+            }
+            obstacles[oi] = ob;
+            oi += 1;
+        }
+    }
+
+    mut sc.clear();
+    ringMat := scene.Material.matte(color.Color.fromRgb(0.22, 0.56, 0.92));
+    var ri2 := 0;
+    loop ri2 < ringZs.length() {
+        mut sc.add(ringMesh, xform.Transform3D.fromEuler(vec.vec3(0.0, 0.0, ringZs[ri2]), math.HALF_PI, 0.0, elapsed * 0.25, vec.vec3(1.0, 1.0, 1.0)), ringMat);
+        ri2 += 1;
+    }
+
+    blockMat := scene.Material.glossy(color.Color.fromRgb(0.95, 0.30, 0.42));
+    var oi2 := 0;
+    loop oi2 < obstacles.length() {
+        ob := obstacles[oi2];
+        mut sc.add(gateMesh, xform.Transform3D.fromEuler(vec.vec3(ob.x, ob.y, ob.z), 0.0, 0.0, elapsed * 0.6 + (oi2 * 0.4), vec.vec3(ob.w, ob.h, 1.0)), blockMat);
+        oi2 += 1;
+    }
+
+    /* Player interceptor ship */
+    flashSkip := invulnTimer > 0.0 and math.floorToInt(invulnTimer * 16.0) % 2 == 1;
+    if not flashSkip {
+        roll := math.clamp(0.0 - (vx * 0.09), -0.65, 0.65);
+        pitch := math.clamp(vy * 0.06, -0.35, 0.35);
+        shipTx := xform.Transform3D.fromEuler(vec.vec3(shipX, shipY, 0.0), pitch, 0.0, roll, vec.vec3(1.0, 1.0, 1.0));
+        mut sc.add(shipBody, shipTx, scene.Material.glossy(color.Color.fromRgb(0.24, 0.88, 0.98)));
+        mut sc.add(shipWing, shipTx, scene.Material.glossy(color.Color.fromRgb(0.94, 0.97, 1.0)));
+    }
+
+    win.clear(color.Color.fromRgb(0.02, 0.03, 0.08));
+    _ := sc.render(win, cam, W * 1.0, H * 1.0);
+
+    mut ui.beginFrame(win, inp);
+    im.panel(mut ui, win, surf.rect(10.0, 10.0, 174.0, 82.0), "STAR TUNNEL RACER");
+    im.label(ui, win, "SCORE " + score.toText() + "   x" + combo.toText(), 18.0, 28.0, 11.0);
+    im.mutedLabel(ui, win, "SHIELD", 18.0, 46.0, 8.0);
+    im.progressBar(ui, win, surf.rect(58.0, 44.0, 116.0, 11.0), (shield * 1.0) / 3.0, if shield > 1 { color.Color.fromRgb(0.24, 0.86, 0.62) } else { color.RED });
+    im.mutedLabel(ui, win, "WASD/Arrows: Steer  Space: Boost", 18.0, 62.0, 8.0);
+    if gameOver {
+        im.panel(mut ui, win, surf.rect(136.0, 102.0, 208.0, 86.0), "HULL BREACHED");
+        im.label(ui, win, "FINAL SCORE: " + score.toText(), 164.0, 128.0, 12.0);
+        if im.button(mut ui, win, 401, surf.rect(176.0, 152.0, 128.0, 24.0), "Play Again [Space]") {
+            resetGame();
+            win.playTone(523, 60, 25);
+        }
+    }
+    mut ui.endFrame();
+
+    frame += 1;
+    if headless and frame >= 2 {
+        return false;
+    }
+    true
+});
+win.close();
