@@ -35,6 +35,15 @@ makeSrc := fn(outPng: String): String {
     "io.outputLine(mid.red8(), mid.alpha8());\n" +
     "h := color.Color.fromHsl(120.0, 1.0, 0.5);\n" +
     "io.outputLine(h.red8(), h.green8(), h.blue8());\n" +
+    "r8 := color.Rgba8.fromColor(c1);\n" +
+    "u32p := r8.packU32();\n" +
+    "r8u := color.Rgba8.unpackU32(u32p);\n" +
+    "r16 := color.Rgba16.fromColor(color.Color.RED);\n" +
+    "r32 := color.Rgba32.fromColor(color.Color.CYAN);\n" +
+    "rf16 := color.RgbaF16.fromColor(color.Color.BLUE);\n" +
+    "rf32 := color.RgbaF32.fromColor(color.Color.GREEN);\n" +
+    "rf64 := color.RgbaF64.fromColor(color.Color.YELLOW);\n" +
+    "io.outputLine(cast<Int>(r8u.r), cast<Int>(r8u.g), cast<Int>(r16.r), cast<Int>(r32.g), rf16.toColor().blue8(), rf32.toColor().green8(), rf64.toColor().red8());\n" +
     "\n" +
     "surf := canvas.Surface.open(\"Test\", 64, 48);\n" +
     "inp := surf.poll();\n" +
@@ -83,6 +92,7 @@ expected :=
 "255 128 0 255\n" +
 "128 255\n" +
 "0 255 0\n" +
+"255 128 65535 4294967295 255 255 255\n" +
 "true 64 48\n" +
 "4 4 false false false false false 0\n" +
 "1 true true true true true\n" +

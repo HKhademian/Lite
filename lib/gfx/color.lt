@@ -1,5 +1,34 @@
 /** Abstract, encoding-independent color values and color-space helpers. */
 
+/** Supported scalar channel storage types for packed/typed `Rgba<T>` colors. */
+pub ColorChannel := alias Byte | UInt16 | UInt32 | Float16 | Float32 | Float;
+
+/** Generic #packed 4-channel RGBA color parameterized over channel scalar type `T`. */
+pub Rgba := record<T: Type<ColorChannel>> #packed {
+    r: T;
+    g: T;
+    b: T;
+    a: T;
+}
+
+/** Packed 4x8-bit unsigned integer RGBA color (`0..255` per channel, 4 bytes packed). */
+pub Rgba8 := alias Rgba<Byte>;
+
+/** Packed 4x16-bit unsigned integer RGBA color (`0..65535` per channel). */
+pub Rgba16 := alias Rgba<UInt16>;
+
+/** Packed 4x32-bit unsigned integer RGBA color (`0..4294967295` per channel). */
+pub Rgba32 := alias Rgba<UInt32>;
+
+/** Packed 4x16-bit half-float RGBA color. */
+pub RgbaF16 := alias Rgba<Float16>;
+
+/** Packed 4x32-bit single-precision float RGBA color. */
+pub RgbaF32 := alias Rgba<Float32>;
+
+/** Packed 4x64-bit double-precision float RGBA color. */
+pub RgbaF64 := alias Rgba<Float>;
+
 RawColor := alias (r: Float, g: Float, b: Float, a: Float);
 
 /** Opaque nominal color value; zero-initialized `Color` is transparent black. */
@@ -30,10 +59,10 @@ pub Color.fromRgb := fn(r: Float, g: Float, b: Float): Self {
 /** Constructs a color from 8-bit integer RGBA channel values in `0..255`. */
 pub Color.fromRgba8 := fn(r: Int, g: Int, b: Int, a: Int): Self {
     cast((
-        r = clampByte(r) / 255.0,
-        g = clampByte(g) / 255.0,
-        b = clampByte(b) / 255.0,
-        a = clampByte(a) / 255.0
+    r = clampByte(r) / 255.0,
+    g = clampByte(g) / 255.0,
+    b = clampByte(b) / 255.0,
+    a = clampByte(a) / 255.0
     ))
 };
 
@@ -66,10 +95,10 @@ pub Color.fromHsla := fn(hueDeg: Float, saturation: Float, lightness: Float, alp
     q := if l < 0.5 { l * (1.0 + s) } else { l + s - l * s };
     p := 2.0 * l - q;
     cast((
-        r = hueToRgb(p, q, h + 1.0 / 3.0),
-        g = hueToRgb(p, q, h),
-        b = hueToRgb(p, q, h - 1.0 / 3.0),
-        a = a
+    r = hueToRgb(p, q, h + 1.0 / 3.0),
+    g = hueToRgb(p, q, h),
+    b = hueToRgb(p, q, h - 1.0 / 3.0),
+    a = a
     ))
 };
 
@@ -90,19 +119,23 @@ pub Color.blueFloat := fn(c: Self): Float { cast<RawColor>(c).b };
 /** Reads the alpha channel as a normalized `Float` (`0.0..1.0`). */
 pub Color.alphaFloat := fn(c: Self): Float { cast<RawColor>(c).a };
 
-toByte := fn(v: Float): Int {
-    scaled := clampUnit(v) * 255.0 + 0.5;
+quantizeChannel := fn(v: Float, maxInt: Int): Int {
+    scaled := clampUnit(v) * (maxInt * 1.0) + 0.5;
     var lo := 0;
-    var hi := 255;
+    var hi := maxInt;
     loop lo < hi {
         mid := (lo + hi + 1) / 2;
-        if mid <= scaled {
+        if (mid * 1.0) <= scaled {
             lo = mid;
         } else {
             hi = mid - 1;
         }
     }
     lo
+};
+
+toByte := fn(v: Float): Int {
+    quantizeChannel(v, 255)
 };
 
 /** Reads the red channel quantized to `0..255`. */
@@ -148,36 +181,218 @@ pub Color.mix := fn(a: Self, b: Color, t: Float): Self {
     ra := cast<RawColor>(a);
     rb := cast<RawColor>(b);
     cast((
-        r = ra.r * inv + rb.r * k,
-        g = ra.g * inv + rb.g * k,
-        b = ra.b * inv + rb.b * k,
-        a = ra.a * inv + rb.a * k
+    r = ra.r * inv + rb.r * k,
+    g = ra.g * inv + rb.g * k,
+    b = ra.b * inv + rb.b * k,
+    a = ra.a * inv + rb.a * k
     ))
 };
 
+/** Constructs an `Rgba<T>` from explicit channel components. */
+pub Rgba.of := fn<T: Type<ColorChannel>>(r: T, g: T, b: T, a: T): Self<T> {
+    Self<T> { =r, =g, =b, =a }
+};
+
+/** Constructs a packed 8-bit `Rgba8` from `(r, g, b, a)` channel bytes. */
+pub Rgba8.of := fn(r: Byte, g: Byte, b: Byte, a: Byte): Self {
+    Self { =r, =g, =b, =a }
+};
+
+/** Quantizes a normalized `Color` into packed 8-bit `Rgba8`. */
+pub Rgba8.fromColor := fn(c: Color): Self {
+    Self {
+        r = cast<Byte>(toByte(c.redFloat())),
+        g = cast<Byte>(toByte(c.greenFloat())),
+        b = cast<Byte>(toByte(c.blueFloat())),
+        a = cast<Byte>(toByte(c.alphaFloat()))
+    }
+};
+
+/** Converts packed 8-bit `Rgba8` to normalized `Color`. */
+pub Rgba8.toColor := fn(c: Self): Color {
+    Color.fromRgba(
+    cast<Int>(c.r) / 255.0,
+    cast<Int>(c.g) / 255.0,
+    cast<Int>(c.b) / 255.0,
+    cast<Int>(c.a) / 255.0
+    )
+};
+
+/** Packs 8-bit RGBA channels into one 32-bit `UInt32` (`0xRRGGBBAA`). */
+pub Rgba8.packU32 := fn(c: Self): UInt32 {
+    r32 := cast<UInt32>(c.r).shiftLeft(24);
+    g32 := cast<UInt32>(c.g).shiftLeft(16);
+    b32 := cast<UInt32>(c.b).shiftLeft(8);
+    a32 := cast<UInt32>(c.a);
+    r32.bitOr(g32).bitOr(b32).bitOr(a32)
+};
+
+/** Unpacks one 32-bit `UInt32` (`0xRRGGBBAA`) into `Rgba8`. */
+pub Rgba8.unpackU32 := fn(packed: UInt32): Self {
+    mask: UInt32 = 255;
+    Self {
+        r = cast<Byte>(packed.shiftRight(24).bitAnd(mask)),
+        g = cast<Byte>(packed.shiftRight(16).bitAnd(mask)),
+        b = cast<Byte>(packed.shiftRight(8).bitAnd(mask)),
+        a = cast<Byte>(packed.bitAnd(mask))
+    }
+};
+
+/** Constructs a 16-bit `Rgba16` from `(r, g, b, a)` channels. */
+pub Rgba16.of := fn(r: UInt16, g: UInt16, b: UInt16, a: UInt16): Self {
+    Self { =r, =g, =b, =a }
+};
+
+/** Quantizes a normalized `Color` into 16-bit `Rgba16`. */
+pub Rgba16.fromColor := fn(c: Color): Self {
+    Self {
+        r = cast<UInt16>(quantizeChannel(c.redFloat(), 65535)),
+        g = cast<UInt16>(quantizeChannel(c.greenFloat(), 65535)),
+        b = cast<UInt16>(quantizeChannel(c.blueFloat(), 65535)),
+        a = cast<UInt16>(quantizeChannel(c.alphaFloat(), 65535))
+    }
+};
+
+/** Converts 16-bit `Rgba16` to normalized `Color`. */
+pub Rgba16.toColor := fn(c: Self): Color {
+    Color.fromRgba(
+    cast<Int>(c.r) / 65535.0,
+    cast<Int>(c.g) / 65535.0,
+    cast<Int>(c.b) / 65535.0,
+    cast<Int>(c.a) / 65535.0
+    )
+};
+
+/** Constructs a 32-bit `Rgba32` from `(r, g, b, a)` channels. */
+pub Rgba32.of := fn(r: UInt32, g: UInt32, b: UInt32, a: UInt32): Self {
+    Self { =r, =g, =b, =a }
+};
+
+/** Quantizes a normalized `Color` into 32-bit `Rgba32`. */
+pub Rgba32.fromColor := fn(c: Color): Self {
+    Self {
+        r = cast<UInt32>(quantizeChannel(c.redFloat(), 4294967295)),
+        g = cast<UInt32>(quantizeChannel(c.greenFloat(), 4294967295)),
+        b = cast<UInt32>(quantizeChannel(c.blueFloat(), 4294967295)),
+        a = cast<UInt32>(quantizeChannel(c.alphaFloat(), 4294967295))
+    }
+};
+
+/** Converts 32-bit `Rgba32` to normalized `Color`. */
+pub Rgba32.toColor := fn(c: Self): Color {
+    Color.fromRgba(
+    cast<Int>(c.r) / 4294967295.0,
+    cast<Int>(c.g) / 4294967295.0,
+    cast<Int>(c.b) / 4294967295.0,
+    cast<Int>(c.a) / 4294967295.0
+    )
+};
+
+/** Constructs a half-float `RgbaF16` from `(r, g, b, a)` channels. */
+pub RgbaF16.of := fn(r: Float16, g: Float16, b: Float16, a: Float16): Self {
+    Self { =r, =g, =b, =a }
+};
+
+/** Converts a normalized `Color` into half-float `RgbaF16`. */
+pub RgbaF16.fromColor := fn(c: Color): Self {
+    Self {
+        r = cast<Float16>(c.redFloat()),
+        g = cast<Float16>(c.greenFloat()),
+        b = cast<Float16>(c.blueFloat()),
+        a = cast<Float16>(c.alphaFloat())
+    }
+};
+
+/** Converts half-float `RgbaF16` to normalized `Color`. */
+pub RgbaF16.toColor := fn(c: Self): Color {
+    Color.fromRgba(cast<Float>(c.r), cast<Float>(c.g), cast<Float>(c.b), cast<Float>(c.a))
+};
+
+/** Constructs a 32-bit float `RgbaF32` from `(r, g, b, a)` channels. */
+pub RgbaF32.of := fn(r: Float32, g: Float32, b: Float32, a: Float32): Self {
+    Self { =r, =g, =b, =a }
+};
+
+/** Converts a normalized `Color` into 32-bit float `RgbaF32`. */
+pub RgbaF32.fromColor := fn(c: Color): Self {
+    Self {
+        r = cast<Float32>(c.redFloat()),
+        g = cast<Float32>(c.greenFloat()),
+        b = cast<Float32>(c.blueFloat()),
+        a = cast<Float32>(c.alphaFloat())
+    }
+};
+
+/** Converts 32-bit float `RgbaF32` to normalized `Color`. */
+pub RgbaF32.toColor := fn(c: Self): Color {
+    Color.fromRgba(cast<Float>(c.r), cast<Float>(c.g), cast<Float>(c.b), cast<Float>(c.a))
+};
+
+/** Constructs a 64-bit float `RgbaF64` from `(r, g, b, a)` channels. */
+pub RgbaF64.of := fn(r: Float, g: Float, b: Float, a: Float): Self {
+    Self { =r, =g, =b, =a }
+};
+
+/** Converts a normalized `Color` into 64-bit float `RgbaF64`. */
+pub RgbaF64.fromColor := fn(c: Color): Self {
+    Self { r = c.redFloat(), g = c.greenFloat(), b = c.blueFloat(), a = c.alphaFloat() }
+};
+
+/** Converts 64-bit float `RgbaF64` to normalized `Color`. */
+pub RgbaF64.toColor := fn(c: Self): Color {
+    Color.fromRgba(c.r, c.g, c.b, c.a)
+};
+
 /** Transparent black (`0, 0, 0, 0`). */
-pub TRANSPARENT := Color.fromRgba(0.0, 0.0, 0.0, 0.0);
+pub Color.TRANSPARENT := Color.fromRgba(0.0, 0.0, 0.0, 0.0);
 
 /** Opaque black. */
-pub BLACK := Color.fromRgb(0.0, 0.0, 0.0);
+pub Color.BLACK := Color.fromRgb(0.0, 0.0, 0.0);
 
 /** Opaque white. */
-pub WHITE := Color.fromRgb(1.0, 1.0, 1.0);
+pub Color.WHITE := Color.fromRgb(1.0, 1.0, 1.0);
 
 /** Pure red. */
-pub RED := Color.fromRgb(1.0, 0.0, 0.0);
+pub Color.RED := Color.fromRgb(1.0, 0.0, 0.0);
 
 /** Pure green. */
-pub GREEN := Color.fromRgb(0.0, 1.0, 0.0);
+pub Color.GREEN := Color.fromRgb(0.0, 1.0, 0.0);
 
 /** Pure blue. */
-pub BLUE := Color.fromRgb(0.0, 0.0, 1.0);
+pub Color.BLUE := Color.fromRgb(0.0, 0.0, 1.0);
 
 /** Pure yellow. */
-pub YELLOW := Color.fromRgb(1.0, 1.0, 0.0);
+pub Color.YELLOW := Color.fromRgb(1.0, 1.0, 0.0);
 
 /** Pure cyan. */
-pub CYAN := Color.fromRgb(0.0, 1.0, 1.0);
+pub Color.CYAN := Color.fromRgb(0.0, 1.0, 1.0);
 
 /** Pure magenta. */
-pub MAGENTA := Color.fromRgb(1.0, 0.0, 1.0);
+pub Color.MAGENTA := Color.fromRgb(1.0, 0.0, 1.0);
+
+/** Transparent black (`0, 0, 0, 0`). */
+pub TRANSPARENT := Color.TRANSPARENT;
+
+/** Opaque black. */
+pub BLACK := Color.BLACK;
+
+/** Opaque white. */
+pub WHITE := Color.WHITE;
+
+/** Pure red. */
+pub RED := Color.RED;
+
+/** Pure green. */
+pub GREEN := Color.GREEN;
+
+/** Pure blue. */
+pub BLUE := Color.BLUE;
+
+/** Pure yellow. */
+pub YELLOW := Color.YELLOW;
+
+/** Pure cyan. */
+pub CYAN := Color.CYAN;
+
+/** Pure magenta. */
+pub MAGENTA := Color.MAGENTA;
