@@ -27,6 +27,7 @@ import { extractLiteUrisFromMarkdown, LiteAcademyGraph, parseLiteUri, relativeWe
 import { appendPlayKeepalive, stripPlayKeepaliveC, stripPlayKeepaliveTs } from './play-keepalive.ts';
 import { createCanvasSurfaceHost, createPlayStage, createWorkerClient, mapPointerToCell, renderFrameToImageData } from './play-stage.ts';
 import { playGroups, playSamples } from './play-samples.ts';
+import { renderPlaygroundClientScript } from './playground-client.ts';
 import { stripLiteTs } from './strip-ts.ts';
 import { renderCodeEditorBlock, renderCodeModeBar, renderGeneratedToolbar, renderSplitHandle } from './ui-blocks.ts';
 
@@ -2827,4 +2828,128 @@ test('surface host exposes keysDown, edge transitions, wheelDelta, and playgroun
   const workerSrc = readFileSync(join(root, 'site', 'playground-worker.ts'), 'utf8');
   assert(workerSrc.includes("action === 'wheel'"), 'playground-worker should handle wheel messages');
   assert(workerSrc.includes('heldKeys'), 'playground-worker should maintain heldKeys across keyDown/keyUp');
+});
+
+test('STARTER_TEMPLATES and runnable library.json items compile cleanly', async () => {
+  const out = join(root, 'dist', 'site');
+  const compilerUrl = pathToFileURL(join(out, 'playground', 'compiler.js')).href;
+  const imported = await import(compilerUrl) as { main: (w?: (t: string) => void) => string };
+  const stdlib = JSON.parse(readFileSync(join(out, 'playground', 'stdlib.json'), 'utf8')) as Record<string, { path: string; display: string; identity: string; text: string }>;
+  const library = JSON.parse(readFileSync(join(out, 'playground', 'library.json'), 'utf8')) as Array<{
+    id: string;
+    slug: string;
+    badge: string;
+    file: string;
+    source: string;
+    extraModules?: Record<string, { path: string; text: string }>;
+  }>;
+
+  const clientScript = renderPlaygroundClientScript('[]', '');
+  const tplMatch = clientScript.match(/const STARTER_TEMPLATES = (\{[\s\S]*?\n  \});/);
+  assert(tplMatch, 'STARTER_TEMPLATES object not found in renderPlaygroundClientScript');
+  const starterTemplates = runInNewContext(`(${tplMatch[1]})`) as Record<string, { title: string; code: string }>;
+  assert(Object.keys(starterTemplates).length >= 6, 'expected all playground starter templates');
+
+  const baseVfs = new Map<string, Uint8Array>();
+  const baseDirs = new Set<string>(['/project', '/project/lib']);
+  for (const entry of Object.values(stdlib)) {
+    const p = `/project/${entry.path}`;
+    baseVfs.set(p, new TextEncoder().encode(entry.text));
+    const segs = p.split('/');
+    for (let i = 2; i < segs.length; i += 1) baseDirs.add(segs.slice(0, i).join('/'));
+  }
+  const normVfs = (p: string): string => {
+    const raw = String(p).startsWith('/') ? String(p) : `/project/${String(p)}`;
+    const segs: string[] = [];
+    for (const seg of raw.split('/')) {
+      if (!seg || seg === '.') continue;
+      if (seg === '..') segs.pop();
+      else segs.push(seg);
+    }
+    return `/${segs.join('/')}`;
+  };
+
+  const compileWithVfs = (entryPath: string, source: string, extraModules?: Record<string, { path: string; text: string }>): void => {
+    const vfs = new Map(baseVfs);
+    const dirs = new Set(baseDirs);
+    if (extraModules) {
+      for (const m of Object.values(extraModules)) {
+        const mp = normVfs(`/project/${m.path}`);
+        vfs.set(mp, new TextEncoder().encode(m.text));
+        const segs = mp.split('/');
+        for (let i = 2; i < segs.length; i += 1) dirs.add(segs.slice(0, i).join('/'));
+      }
+    }
+    const ep = normVfs(entryPath);
+    const epSegs = ep.split('/');
+    for (let i = 2; i < epSegs.length; i += 1) dirs.add(epSegs.slice(0, i).join('/'));
+    const stdinBytes = new TextEncoder().encode(source);
+    vfs.set(ep, stdinBytes);
+
+    let offset = 0;
+    let stderr = '';
+    const prevProcess = globalThis.process;
+    const stubProcess = {
+      argv: ['node', '/project/compiler.js', '--stdin', '--name', ep, '--root', ep],
+      platform: 'linux',
+      cwd: (): string => '/project',
+      exit(code: number): never {
+        throw new Error(`EXIT:${code}:${stderr}`);
+      },
+      getBuiltinModule(name: string) {
+        assert.equal(name, 'node:fs');
+        return {
+          statSync(p: string) {
+            const k = normVfs(p);
+            if (vfs.has(k)) return { isFile: () => true, isDirectory: () => false };
+            if (dirs.has(k)) return { isFile: () => false, isDirectory: () => true };
+            throw Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' });
+          },
+          realpathSync(p: string): string {
+            const k = normVfs(p);
+            if (vfs.has(k) || dirs.has(k)) return k;
+            throw Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' });
+          },
+          readFileSync(p: string): Uint8Array {
+            const k = normVfs(p);
+            const data = vfs.get(k);
+            if (data !== undefined) return data;
+            throw Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' });
+          },
+          readSync(_fd: number, buf: Uint8Array, bufOffset: number, length: number): number {
+            if (offset >= stdinBytes.length) return 0;
+            const n = Math.min(length, stdinBytes.length - offset);
+            buf.set(stdinBytes.subarray(offset, offset + n), bufOffset);
+            offset += n;
+            return n;
+          },
+          writeSync(fd: number, data: string | Uint8Array): number {
+            const txt = typeof data === 'string' ? data : new TextDecoder().decode(data);
+            if (fd === 2) stderr += txt;
+            return txt.length;
+          },
+          fstatSync: (): { size: number } => ({ size: stdinBytes.length }),
+        };
+      },
+    };
+    (globalThis as unknown as { process: typeof stubProcess }).process = stubProcess;
+    try {
+      imported.main(() => {});
+      assert.equal(stderr, '', `unexpected compiler stderr for ${ep}: ${stderr}`);
+    } finally {
+      globalThis.process = prevProcess;
+    }
+  };
+
+  for (const [key, tpl] of Object.entries(starterTemplates)) {
+    compileWithVfs(`/project/starter-${key}.lts`, tpl.code);
+  }
+
+  let checkedLibraryCount = 0;
+  for (const item of library) {
+    if (item.badge === 'Reject Case' || item.badge === 'Drill') continue;
+    compileWithVfs(`/project/${item.file || 'playground.lts'}`, item.source, item.extraModules);
+    checkedLibraryCount += 1;
+  }
+  assert(checkedLibraryCount >= 280, `expected >= 280 compiled library items, got ${checkedLibraryCount}`);
 });
