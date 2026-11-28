@@ -22,9 +22,76 @@ generics := import "./generics";
 /** Transparent type alias matching `frontend-ir.AliasDecl`. */
 AliasDecl := alias (name: String, target: String, at: Int, end: Int, depth: Int);
 
+/** Compile-time value heap cell discriminator. */
+CellTag := enum {
+    Unit;
+    Bool;
+    Int;
+    UInt;
+    Float;
+    Str;
+    Enum;
+    Tuple;
+    Record;
+    List;
+    Array;
+    Map;
+    Set;
+    Union;
+    Result;
+    Fn;
+    Reader;
+    Writer;
+};
+
+CellTag.name := fn(t: Self): String {
+    match t {
+        .Unit { "unit" }
+        .Bool { "bool" }
+        .Int { "int" }
+        .UInt { "uint" }
+        .Float { "float" }
+        .Str { "str" }
+        .Enum { "enum" }
+        .Tuple { "tuple" }
+        .Record { "record" }
+        .List { "list" }
+        .Array { "array" }
+        .Map { "map" }
+        .Set { "set" }
+        .Union { "union" }
+        .Result { "result" }
+        .Fn { "fn" }
+        .Reader { "reader" }
+        .Writer { "writer" }
+    }
+};
+
+/** Control-flow outcome tag for compile-time evaluation. */
+pub FlowKind := enum {
+    None;
+    Return;
+    Break;
+    Continue;
+    Panic;
+    PropErr;
+};
+
+/** Canonical display spelling for `f`. */
+pub FlowKind.name := fn(f: Self): String {
+    match f {
+        .None { "" }
+        .Return { "return" }
+        .Break { "break" }
+        .Continue { "continue" }
+        .Panic { "panic" }
+        .PropErr { "prop_err" }
+    }
+};
+
 /** Indexed compile-time value cell (avoids recursive nominal types in C11 self-hosting). */
 pub CtCell := record {
-    tag: String;
+    tag: CellTag;
     kind: String;
     intVal: Int;
     floatVal: Float;
@@ -90,7 +157,7 @@ CtFrame := record {
 pub CtOutcome := record {
     ok: Bool;
     valId: Int;
-    flow: String;
+    flow: FlowKind;
     error: String;
 };
 
@@ -121,32 +188,6 @@ pub EffectCheckResult := record {
     reason: String;
     pos: Int;
 };
-
-pub FLOW_NONE := "";
-pub FLOW_RETURN := "return";
-pub FLOW_BREAK := "break";
-pub FLOW_CONTINUE := "continue";
-pub FLOW_PANIC := "panic";
-pub FLOW_PROP_ERR := "prop_err";
-
-TAG_UNIT := "unit";
-TAG_BOOL := "bool";
-TAG_INT := "int";
-TAG_UINT := "uint";
-TAG_FLOAT := "float";
-TAG_STR := "str";
-TAG_ENUM := "enum";
-TAG_TUPLE := "tuple";
-TAG_RECORD := "record";
-TAG_LIST := "list";
-TAG_ARRAY := "array";
-TAG_MAP := "map";
-TAG_SET := "set";
-TAG_UNION := "union";
-TAG_RESULT := "result";
-TAG_FN := "fn";
-TAG_READER := "reader";
-TAG_WRITER := "writer";
 
 DEFAULT_MAX_STEPS := 100000;
 DEFAULT_MAX_NEW_CELLS := 65536;
@@ -377,7 +418,7 @@ unboundedBudget := fn(): EvalBudget {
 
 makeUnitVal := fn(budget: mut EvalBudget): Int {
     if ctUnitCellId >= 0 { return ctUnitCellId; }
-    ctUnitCellId = allocCell(CtCell { tag = TAG_UNIT, kind = ir.VALUE_KIND_UNIT, intVal = 0, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget);
+    ctUnitCellId = allocCell(CtCell { tag = CellTag.Unit, kind = ir.VALUE_KIND_UNIT, intVal = 0, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget);
     ctUnitCellId
 };
 
@@ -385,51 +426,51 @@ makeBoolVal := fn(b: Bool, kind: String, budget: mut EvalBudget): Int {
     if kind == "" or kind == ir.VALUE_KIND_BOOL {
         if b and ctTrueCellId >= 0 { return ctTrueCellId; }
         if not b and ctFalseCellId >= 0 { return ctFalseCellId; }
-        id := allocCell(CtCell { tag = TAG_BOOL, kind = ir.VALUE_KIND_BOOL, intVal = if b { 1 } else { 0 }, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget);
+        id := allocCell(CtCell { tag = CellTag.Bool, kind = ir.VALUE_KIND_BOOL, intVal = if b { 1 } else { 0 }, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget);
         if b { ctTrueCellId = id; } else { ctFalseCellId = id; }
         return id;
     }
-    allocCell(CtCell { tag = TAG_BOOL, kind = kind, intVal = if b { 1 } else { 0 }, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.Bool, kind = kind, intVal = if b { 1 } else { 0 }, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget)
 };
 
 makeIntVal := fn(v: Int, kind: String, budget: mut EvalBudget): Int {
     k := if kind == "" { ir.VALUE_KIND_INT } else { kind };
-    allocCell(CtCell { tag = TAG_INT, kind = k, intVal = v, floatVal = 0.0, strVal = v.toText(), children = [], keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.Int, kind = k, intVal = v, floatVal = 0.0, strVal = v.toText(), children = [], keys = [] }, mut budget)
 };
 
 makeUIntVal := fn(v: UInt64, kind: String, budget: mut EvalBudget): Int {
     k := if kind == "" { ir.VALUE_KIND_UINT64 } else { kind };
-    allocCell(CtCell { tag = TAG_UINT, kind = k, intVal = 0, floatVal = 0.0, strVal = v.toText(), children = [], keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.UInt, kind = k, intVal = 0, floatVal = 0.0, strVal = v.toText(), children = [], keys = [] }, mut budget)
 };
 
 makeFloatVal := fn(v: Float, kind: String, budget: mut EvalBudget): Int {
     k := if kind == "" { ir.VALUE_KIND_FLOAT } else { kind };
-    allocCell(CtCell { tag = TAG_FLOAT, kind = k, intVal = 0, floatVal = v, strVal = v.toText(), children = [], keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.Float, kind = k, intVal = 0, floatVal = v, strVal = v.toText(), children = [], keys = [] }, mut budget)
 };
 
 makeStrVal := fn(s: String, kind: String, budget: mut EvalBudget): Int {
     k := if kind == "" { ir.VALUE_KIND_STRING } else { kind };
-    allocCell(CtCell { tag = TAG_STR, kind = k, intVal = 0, floatVal = 0.0, strVal = s, children = [], keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.Str, kind = k, intVal = 0, floatVal = 0.0, strVal = s, children = [], keys = [] }, mut budget)
 };
 
 makeEnumVal := fn(kind: String, caseIdx: Int, caseName: String, args: List<Int>, budget: mut EvalBudget): Int {
-    allocCell(CtCell { tag = TAG_ENUM, kind = kind, intVal = caseIdx, floatVal = 0.0, strVal = caseName, children = args, keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.Enum, kind = kind, intVal = caseIdx, floatVal = 0.0, strVal = caseName, children = args, keys = [] }, mut budget)
 };
 
 makeTupleVal := fn(kind: String, elems: List<Int>, labels: List<String>, budget: mut EvalBudget): Int {
-    allocCell(CtCell { tag = TAG_TUPLE, kind = kind, intVal = 0, floatVal = 0.0, strVal = "", children = elems, keys = labels }, mut budget)
+    allocCell(CtCell { tag = CellTag.Tuple, kind = kind, intVal = 0, floatVal = 0.0, strVal = "", children = elems, keys = labels }, mut budget)
 };
 
 makeRecordVal := fn(kind: String, vals: List<Int>, fieldNames: List<String>, budget: mut EvalBudget): Int {
-    allocCell(CtCell { tag = TAG_RECORD, kind = kind, intVal = 0, floatVal = 0.0, strVal = "", children = vals, keys = fieldNames }, mut budget)
+    allocCell(CtCell { tag = CellTag.Record, kind = kind, intVal = 0, floatVal = 0.0, strVal = "", children = vals, keys = fieldNames }, mut budget)
 };
 
 makeListVal := fn(kind: String, elems: List<Int>, budget: mut EvalBudget): Int {
-    allocCell(CtCell { tag = TAG_LIST, kind = kind, intVal = 0, floatVal = 0.0, strVal = "", children = elems, keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.List, kind = kind, intVal = 0, floatVal = 0.0, strVal = "", children = elems, keys = [] }, mut budget)
 };
 
 makeArrayVal := fn(kind: String, elems: List<Int>, budget: mut EvalBudget): Int {
-    allocCell(CtCell { tag = TAG_ARRAY, kind = kind, intVal = elems.length(), floatVal = 0.0, strVal = "", children = elems, keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.Array, kind = kind, intVal = elems.length(), floatVal = 0.0, strVal = "", children = elems, keys = [] }, mut budget)
 };
 
 makeMapVal := fn(kind: String, mapKeys: List<String>, keyIds: List<Int>, valIds: List<Int>, budget: mut EvalBudget): Int {
@@ -440,43 +481,43 @@ makeMapVal := fn(kind: String, mapKeys: List<String>, keyIds: List<Int>, valIds:
         mut interleaved.pushBack(valIds[i]);
         i = i + 1;
     }
-    allocCell(CtCell { tag = TAG_MAP, kind = kind, intVal = keyIds.length(), floatVal = 0.0, strVal = "", children = interleaved, keys = mapKeys }, mut budget)
+    allocCell(CtCell { tag = CellTag.Map, kind = kind, intVal = keyIds.length(), floatVal = 0.0, strVal = "", children = interleaved, keys = mapKeys }, mut budget)
 };
 
 makeSetVal := fn(kind: String, setKeys: List<String>, elemIds: List<Int>, budget: mut EvalBudget): Int {
-    allocCell(CtCell { tag = TAG_SET, kind = kind, intVal = elemIds.length(), floatVal = 0.0, strVal = "", children = elemIds, keys = setKeys }, mut budget)
+    allocCell(CtCell { tag = CellTag.Set, kind = kind, intVal = elemIds.length(), floatVal = 0.0, strVal = "", children = elemIds, keys = setKeys }, mut budget)
 };
 
 makeUnionVal := fn(unionKind: String, memberIdx: Int, innerValId: Int, budget: mut EvalBudget): Int {
     c := ctPool[innerValId];
-    if c.tag == TAG_UNION {
+    if c.tag == CellTag.Union {
         mems := types.unionMembers(unionKind);
         origMems := types.unionMembers(c.kind);
         if c.intVal >= 0 and c.intVal < origMems.length() {
             origM := origMems[c.intVal];
             newIdx := types.unionMemberIndex(unionKind, origM);
             if newIdx >= 0 and c.children.length() > 0 {
-                return allocCell(CtCell { tag = TAG_UNION, kind = unionKind, intVal = newIdx, floatVal = 0.0, strVal = "", children = [c.children[0]], keys = [] }, mut budget);
+                return allocCell(CtCell { tag = CellTag.Union, kind = unionKind, intVal = newIdx, floatVal = 0.0, strVal = "", children = [c.children[0]], keys = [] }, mut budget);
             }
         }
         return makeUnitVal(mut budget);
     }
-    allocCell(CtCell { tag = TAG_UNION, kind = unionKind, intVal = memberIdx, floatVal = 0.0, strVal = "", children = [innerValId], keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.Union, kind = unionKind, intVal = memberIdx, floatVal = 0.0, strVal = "", children = [innerValId], keys = [] }, mut budget)
 };
 
 makeResultVal := fn(resKind: String, isErr: Bool, payloadValId: Int, budget: mut EvalBudget): Int {
-    allocCell(CtCell { tag = TAG_RESULT, kind = resKind, intVal = if isErr { 1 } else { 0 }, floatVal = 0.0, strVal = "", children = [payloadValId], keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.Result, kind = resKind, intVal = if isErr { 1 } else { 0 }, floatVal = 0.0, strVal = "", children = [payloadValId], keys = [] }, mut budget)
 };
 
 makeFnRefVal := fn(fnKind: String, runtime: String, budget: mut EvalBudget): Int {
-    allocCell(CtCell { tag = TAG_FN, kind = fnKind, intVal = 0, floatVal = 0.0, strVal = runtime, children = [], keys = [] }, mut budget)
+    allocCell(CtCell { tag = CellTag.Fn, kind = fnKind, intVal = 0, floatVal = 0.0, strVal = runtime, children = [], keys = [] }, mut budget)
 };
 
 /** Clones mutable collection cells by value when copied to another binding or returned from a call. */
 cloneValIfContainer := fn(valId: Int, kind: String, budget: mut EvalBudget): Int {
     if valId < 0 or valId >= ctPool.length() { return valId; }
     c := ctPool[valId];
-    if c.tag == TAG_LIST or c.tag == TAG_ARRAY or c.tag == TAG_RECORD or c.tag == TAG_TUPLE or c.tag == TAG_MAP or c.tag == TAG_SET or c.tag == TAG_UNION or c.tag == TAG_RESULT or (c.tag == TAG_ENUM and c.children.length() > 0) {
+    if c.tag == CellTag.List or c.tag == CellTag.Array or c.tag == CellTag.Record or c.tag == CellTag.Tuple or c.tag == CellTag.Map or c.tag == CellTag.Set or c.tag == CellTag.Union or c.tag == CellTag.Result or (c.tag == CellTag.Enum and c.children.length() > 0) {
         mut newChildren: List<Int> = [];
         loop c.children as cid {
             mut newChildren.pushBack(self(cid, "", mut budget));
@@ -509,29 +550,29 @@ tickStep := fn(budget: mut EvalBudget): (ok: Bool, msg: String) {
 /** Constructs a canonical map/set lookup key from a scalar key cell. */
 scalarKeyString := fn(valId: Int): String {
     c := ctPool[valId];
-    if c.tag == TAG_STR { return "S:" + c.strVal; }
-    if c.tag == TAG_INT { return "I:" + c.intVal.toText(); }
-    if c.tag == TAG_UINT { return "U:" + c.strVal; }
-    if c.tag == TAG_BOOL { return "B:" + c.intVal.toText(); }
-    if c.tag == TAG_ENUM { return "E:" + c.kind + "#" + c.intVal.toText(); }
-    "K:" + c.tag + ":" + c.strVal
+    if c.tag == CellTag.Str { return "S:" + c.strVal; }
+    if c.tag == CellTag.Int { return "I:" + c.intVal.toText(); }
+    if c.tag == CellTag.UInt { return "U:" + c.strVal; }
+    if c.tag == CellTag.Bool { return "B:" + c.intVal.toText(); }
+    if c.tag == CellTag.Enum { return "E:" + c.kind + "#" + c.intVal.toText(); }
+    "K:" + c.tag.name() + ":" + c.strVal
 };
 
 /** Formats any compile-time value cell for `io.output` / `toText` diagnostics. */
 formatCtVal := fn(valId: Int): String {
     if valId < 0 or valId >= ctPool.length() { return "Unit"; }
     c := ctPool[valId];
-    if c.tag == TAG_UNIT { return "Unit"; }
-    if c.tag == TAG_BOOL { return if c.intVal =!= 0 { "true" } else { "false" }; }
-    if c.tag == TAG_INT { return c.intVal.toText(); }
-    if c.tag == TAG_UINT or c.tag == TAG_FLOAT or c.tag == TAG_STR { return c.strVal; }
-    if c.tag == TAG_ENUM {
+    if c.tag == CellTag.Unit { return "Unit"; }
+    if c.tag == CellTag.Bool { return if c.intVal =!= 0 { "true" } else { "false" }; }
+    if c.tag == CellTag.Int { return c.intVal.toText(); }
+    if c.tag == CellTag.UInt or c.tag == CellTag.Float or c.tag == CellTag.Str { return c.strVal; }
+    if c.tag == CellTag.Enum {
         if c.children.length() == 0 { return c.strVal; }
         mut parts: List<String> = [];
         loop c.children as cid { mut parts.pushBack(self(cid)); }
         return c.strVal + "(" + parts.join(", ") + ")";
     }
-    if c.tag == TAG_TUPLE {
+    if c.tag == CellTag.Tuple {
         mut parts: List<String> = [];
         var i := 0;
         loop i < c.children.length() {
@@ -542,7 +583,7 @@ formatCtVal := fn(valId: Int): String {
         }
         return if c.children.length() == 1 { "(" + parts[0] + ",)" } else { "(" + parts.join(", ") + ")" };
     }
-    if c.tag == TAG_RECORD {
+    if c.tag == CellTag.Record {
         recName := types.recordDisplayName(c.kind);
         if c.children.length() == 0 { return recName + " {}"; }
         mut parts: List<String> = [];
@@ -553,15 +594,15 @@ formatCtVal := fn(valId: Int): String {
         }
         return recName + " { " + parts.join(", ") + " }";
     }
-    if c.tag == TAG_LIST or c.tag == TAG_ARRAY or c.tag == TAG_SET {
+    if c.tag == CellTag.List or c.tag == CellTag.Array or c.tag == CellTag.Set {
         mut parts: List<String> = [];
         loop c.children as cid { mut parts.pushBack(self(cid)); }
         return "[" + parts.join(", ") + "]";
     }
-    if c.tag == TAG_UNION and c.children.length() > 0 {
+    if c.tag == CellTag.Union and c.children.length() > 0 {
         return self(c.children[0]);
     }
-    if c.tag == TAG_RESULT and c.children.length() > 0 {
+    if c.tag == CellTag.Result and c.children.length() > 0 {
         if c.intVal == 0 { return ".ok(" + self(c.children[0]) + ")"; }
         return ".err(" + self(c.children[0]) + ")";
     }
@@ -574,22 +615,22 @@ ctValuesEqual := fn(aId: Int, bId: Int): Bool {
     if aId < 0 or bId < 0 or aId >= ctPool.length() or bId >= ctPool.length() { return false; }
     a := ctPool[aId];
     b := ctPool[bId];
-    if a.tag == TAG_UNION and a.children.length() > 0 {
-        if b.tag == TAG_UNION and b.children.length() > 0 {
+    if a.tag == CellTag.Union and a.children.length() > 0 {
+        if b.tag == CellTag.Union and b.children.length() > 0 {
             return self(a.children[0], b.children[0]) and ctPool[a.children[0]].kind == ctPool[b.children[0]].kind;
         }
         return self(a.children[0], bId) and ctPool[a.children[0]].kind == b.kind;
     }
-    if b.tag == TAG_UNION and b.children.length() > 0 {
+    if b.tag == CellTag.Union and b.children.length() > 0 {
         return self(aId, b.children[0]) and a.kind == ctPool[b.children[0]].kind;
     }
     if a.tag =!= b.tag { return false; }
-    if a.tag == TAG_UNIT { return true; }
-    if a.tag == TAG_BOOL or a.tag == TAG_INT { return a.intVal == b.intVal; }
-    if a.tag == TAG_UINT or a.tag == TAG_STR { return a.strVal == b.strVal; }
-    if a.tag == TAG_FLOAT { return a.floatVal == b.floatVal; }
-    if a.tag == TAG_ENUM { return a.intVal == b.intVal and a.children.length() == 0 and b.children.length() == 0; }
-    if a.tag == TAG_RESULT {
+    if a.tag == CellTag.Unit { return true; }
+    if a.tag == CellTag.Bool or a.tag == CellTag.Int { return a.intVal == b.intVal; }
+    if a.tag == CellTag.UInt or a.tag == CellTag.Str { return a.strVal == b.strVal; }
+    if a.tag == CellTag.Float { return a.floatVal == b.floatVal; }
+    if a.tag == CellTag.Enum { return a.intVal == b.intVal and a.children.length() == 0 and b.children.length() == 0; }
+    if a.tag == CellTag.Result {
         if a.intVal =!= b.intVal { return false; }
         if a.children.length() == 0 or b.children.length() == 0 { return true; }
         return self(a.children[0], b.children[0]);
@@ -781,15 +822,15 @@ coerceCtValue := fn(targetKind: String, actualKind: String, valId: Int, budget: 
     }
     c := ctPool[valId];
     if numeric.isFloatKind(targetKind) and numeric.isNumericKind(actualKind) {
-        fVal := if c.tag == TAG_INT { cast<Float>(c.intVal) }
-        else if c.tag == TAG_FLOAT { c.floatVal }
+        fVal := if c.tag == CellTag.Int { cast<Float>(c.intVal) }
+        else if c.tag == CellTag.Float { c.floatVal }
         else { 0.0 };
         return makeFloatVal(fVal, targetKind, mut budget);
     }
-    if numeric.isSignedIntKind(targetKind) and numeric.isSignedIntKind(actualKind) and c.tag == TAG_INT {
+    if numeric.isSignedIntKind(targetKind) and numeric.isSignedIntKind(actualKind) and c.tag == CellTag.Int {
         return makeIntVal(c.intVal, targetKind, mut budget);
     }
-    if numeric.isUnsignedIntKind(targetKind) and numeric.isUnsignedIntKind(actualKind) and c.tag == TAG_UINT {
+    if numeric.isUnsignedIntKind(targetKind) and numeric.isUnsignedIntKind(actualKind) and c.tag == CellTag.UInt {
         uRes := parseUInt64Text(c.strVal);
         return makeUIntVal(if uRes.ok { uRes.value } else { cast<UInt64>(0) }, targetKind, mut budget);
     }
@@ -816,7 +857,7 @@ coerceCtValue := fn(targetKind: String, actualKind: String, valId: Int, budget: 
         okExp := types.resultOkKind(targetKind);
         errExp := types.resultErrKind(targetKind);
         if types.isResultKind(actualKind) {
-            if c.tag == TAG_RESULT and c.children.length() > 0 {
+            if c.tag == CellTag.Result and c.children.length() > 0 {
                 if c.intVal == 0 {
                     coercedOk := self(okExp, types.resultOkKind(actualKind), c.children[0], mut budget);
                     return makeResultVal(targetKind, false, coercedOk, mut budget);
@@ -1175,17 +1216,17 @@ decodeStringLiteral := fn(source: String, start: Int, prefix: String): (ok: Bool
 /** Checks integer arithmetic with overflow panic matching runtime Lite behavior. */
 evalCheckedIntBin := fn(op: String, lVal: Int, rVal: Int, kind: String, budget: mut EvalBudget): CtOutcome {
     if (op == "/" or op == "%" or op == ":/" or op == ":%") and rVal == 0 {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "integer division by zero in compile-time evaluation" };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "integer division by zero in compile-time evaluation" };
     }
     folded := ctx.tryFoldInteger(op, lVal, rVal);
     if not folded.ok or not numeric.intKindFits(kind, folded.value) {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "integer overflow in compile-time evaluation (" + op + ")" };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "integer overflow in compile-time evaluation (" + op + ")" };
     }
     vid := makeIntVal(folded.value, kind, mut budget);
-    CtOutcome { ok = true, valId = vid, flow = FLOW_NONE, error = "" }
+    CtOutcome { ok = true, valId = vid, flow = FlowKind.None, error = "" }
 };
 
-/** Evaluates Float arithmetic (`+ - * / **`), returning FLOW_PANIC if non-finite without tripping compiler runtime panics. */
+/** Evaluates Float arithmetic (`+ - * / **`), returning FlowKind.Panic if non-finite without tripping compiler runtime panics. */
 evalFloatBin := fn(op: String, lVal: Float, rVal: Float, kind: String, budget: mut EvalBudget): CtOutcome {
     dblMax := 1.7976931348623157e308;
     absF := fn(x: Float): Float { if x < 0.0 { 0.0 - x } else { x } };
@@ -1204,7 +1245,7 @@ evalFloatBin := fn(op: String, lVal: Float, rVal: Float, kind: String, budget: m
         if ar > 1.0 and al > dblMax / ar { overflows = true; }
     } else if op == "/" {
         if rVal == 0.0 {
-            return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "float division by zero in compile-time evaluation" };
+            return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "float division by zero in compile-time evaluation" };
         }
         if ar < 1.0 and al > dblMax * ar { overflows = true; }
     } else {
@@ -1216,7 +1257,7 @@ evalFloatBin := fn(op: String, lVal: Float, rVal: Float, kind: String, budget: m
         }
     }
     if overflows {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "non-finite floating value in compile-time evaluation" };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "non-finite floating value in compile-time evaluation" };
     }
     res := if op == "+" { lVal + rVal }
     else if op == "-" { lVal - rVal }
@@ -1224,27 +1265,27 @@ evalFloatBin := fn(op: String, lVal: Float, rVal: Float, kind: String, budget: m
     else if op == "/" { lVal / rVal }
     else { lVal ** rVal };
     vid := makeFloatVal(res, kind, mut budget);
-    CtOutcome { ok = true, valId = vid, flow = FLOW_NONE, error = "" }
+    CtOutcome { ok = true, valId = vid, flow = FlowKind.None, error = "" }
 };
 
 /** Evaluates a comparison operator between two scalar or union/result values. */
 evalComparisonOp := fn(op: String, aId: Int, bId: Int): Bool {
     a := ctPool[aId];
     b := ctPool[bId];
-    if a.tag == TAG_UNION or b.tag == TAG_UNION or a.tag == TAG_RESULT or b.tag == TAG_RESULT {
+    if a.tag == CellTag.Union or b.tag == CellTag.Union or a.tag == CellTag.Result or b.tag == CellTag.Result {
         eq := ctValuesEqual(aId, bId);
         return if op == "==" { eq } else { not eq };
     }
-    if a.tag == TAG_STR and b.tag == TAG_STR {
+    if a.tag == CellTag.Str and b.tag == CellTag.Str {
         return ctx.compareTexts(op, a.strVal, b.strVal);
     }
-    if a.tag == TAG_BOOL and b.tag == TAG_BOOL {
+    if a.tag == CellTag.Bool and b.tag == CellTag.Bool {
         return ctx.compareBools(op, a.intVal =!= 0, b.intVal =!= 0);
     }
-    if (a.tag == TAG_INT or a.tag == TAG_ENUM) and (b.tag == TAG_INT or b.tag == TAG_ENUM) {
+    if (a.tag == CellTag.Int or a.tag == CellTag.Enum) and (b.tag == CellTag.Int or b.tag == CellTag.Enum) {
         return ctx.compareIntegers(op, a.intVal, b.intVal);
     }
-    if a.tag == TAG_UINT and b.tag == TAG_UINT {
+    if a.tag == CellTag.UInt and b.tag == CellTag.UInt {
         au := parseUInt64Text(a.strVal);
         bu := parseUInt64Text(b.strVal);
         av := if au.ok { au.value } else { cast<UInt64>(0) };
@@ -1256,9 +1297,9 @@ evalComparisonOp := fn(op: String, aId: Int, bId: Int): Bool {
         if op == ">" or op == "<!" { return av > bv; }
         return av >= bv;
     }
-    if a.tag == TAG_FLOAT or b.tag == TAG_FLOAT {
-        af := if a.tag == TAG_FLOAT { a.floatVal } else { cast<Float>(a.intVal) };
-        bf := if b.tag == TAG_FLOAT { b.floatVal } else { cast<Float>(b.intVal) };
+    if a.tag == CellTag.Float or b.tag == CellTag.Float {
+        af := if a.tag == CellTag.Float { a.floatVal } else { cast<Float>(a.intVal) };
+        bf := if b.tag == CellTag.Float { b.floatVal } else { cast<Float>(b.intVal) };
         if op == "==" { return af == bf; }
         if op == "=!=" { return af =!= bf; }
         if op == "<" { return af < bf; }
@@ -1277,7 +1318,7 @@ evalComparisonOp := fn(op: String, aId: Int, bId: Int): Bool {
 valueMatchesType := fn(valId: Int, targetKind: String): Bool {
     if valId < 0 or valId >= ctPool.length() { return false; }
     c := ctPool[valId];
-    actualKind := if c.tag == TAG_UNION and c.children.length() > 0 {
+    actualKind := if c.tag == CellTag.Union and c.children.length() > 0 {
         ctPool[c.children[0]].kind
     } else {
         c.kind
@@ -1298,7 +1339,7 @@ skipToMatchingClose := fn(source: String, openPos: Int, openCh: String, closeCh:
 /** Evaluates one host builtin call (`modIdentity`, `opName`) at compile time using `core` host APIs. */
 evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, budget: mut EvalBudget): CtOutcome {
     if not budget.allowEffects and isEffectfulHostBuiltin(modIdentity, opName) {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = opName + " requires an explicit comptime { ... } block" };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = opName + " requires an explicit comptime { ... } block" };
     }
     if modIdentity == "lite.core.io.v1" {
         if opName == "output" {
@@ -1306,49 +1347,49 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             loop args as a { mut parts.pushBack(formatCtVal(a)); }
             txt := parts.join("");
             if ctStdoutIsArtifact { io.errorLine(txt); } else { io.output(txt); }
-            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "outputLine" {
             mut parts: List<String> = [];
             loop args as a { mut parts.pushBack(formatCtVal(a)); }
             txt := parts.join(" ");
             if ctStdoutIsArtifact { io.errorLine(txt); } else { io.outputLine(txt); }
-            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "errorLine" {
             msg := if args.length() > 0 { formatCtVal(args[0]) } else { "" };
             io.errorLine(msg);
-            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "inputAll" {
             pr := if args.length() > 0 { formatCtVal(args[0]) } else { "" };
             s := io.inputAll(pr);
-            return CtOutcome { ok = true, valId = makeStrVal(s, "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(s, "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "inputLine" {
             pr := if args.length() > 0 { formatCtVal(args[0]) } else { "" };
             s := io.inputLine(pr);
-            return CtOutcome { ok = true, valId = makeStrVal(s, "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(s, "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "inputInt" {
             pr := if args.length() > 0 { formatCtVal(args[0]) } else { "" };
             n := io.inputInt(pr);
-            return CtOutcome { ok = true, valId = makeIntVal(n, "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeIntVal(n, "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "inputFloat" {
             pr := if args.length() > 0 { formatCtVal(args[0]) } else { "" };
             f := io.inputFloat(pr);
-            return CtOutcome { ok = true, valId = makeFloatVal(f, "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeFloatVal(f, "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "inputArgs" {
             raw := io.inputArgs();
             mut ids: List<Int> = [];
             loop raw as r { mut ids.pushBack(makeStrVal(r, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<String>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<String>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "exit" {
             code := if args.length() > 0 { ctPool[args[0]].intVal } else { 1 };
-            return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "comptime called io.exit(" + code.toText() + ")" };
+            return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "comptime called io.exit(" + code.toText() + ")" };
         }
         if opName == "Reader.stdin" or opName == "Reader.fromBytes" {
             rdr := if opName == "Reader.stdin" { io.Reader.stdin() } else {
@@ -1360,25 +1401,25 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             };
             rid := ctReaders.length();
             mut ctReaders.pushBack(rdr);
-            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = TAG_READER, kind = "Distinct<lib/core/io#0#Reader;>", intVal = rid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = CellTag.Reader, kind = "Distinct<lib/core/io#0#Reader;>", intVal = rid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Writer.buffer" or opName == "Writer.stdout" or opName == "Writer.stderr" {
             wr := if opName == "Writer.buffer" { io.Writer.buffer() } else if opName == "Writer.stdout" { io.Writer.stdout() } else { io.Writer.stderr() };
             wid := ctWriters.length();
             mut ctWriters.pushBack(wr);
-            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = TAG_WRITER, kind = "Distinct<lib/core/io#0#Writer;>", intVal = wid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = CellTag.Writer, kind = "Distinct<lib/core/io#0#Writer;>", intVal = wid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Reader.ok" and args.length() > 0 {
             rid := ctPool[args[0]].intVal;
-            return CtOutcome { ok = true, valId = makeBoolVal(ctReaders[rid].ok(), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeBoolVal(ctReaders[rid].ok(), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Reader.atEof" and args.length() > 0 {
             rid := ctPool[args[0]].intVal;
-            return CtOutcome { ok = true, valId = makeBoolVal(ctReaders[rid].atEof(), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeBoolVal(ctReaders[rid].atEof(), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Reader.error" and args.length() > 0 {
             rid := ctPool[args[0]].intVal;
-            return CtOutcome { ok = true, valId = makeStrVal(ctReaders[rid].error(), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(ctReaders[rid].error(), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Reader.read" and args.length() >= 2 {
             rid := ctPool[args[0]].intVal;
@@ -1386,21 +1427,21 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             bs := ctReaders[rid].read(maxB);
             mut ids: List<Int> = [];
             loop bs as b { mut ids.pushBack(makeIntVal(b, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
         if (opName == "Reader.close" or opName == "close") and args.length() > 0 {
             rid := ctPool[args[0]].intVal;
-            if ctPool[args[0]].tag == TAG_READER {
+            if ctPool[args[0]].tag == CellTag.Reader {
                 res := ctReaders[rid].close();
                 okId := makeBoolVal(res.ok, "", mut budget);
                 errId := makeStrVal(res.error, "", mut budget);
-                return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,error:String>", [okId, errId], ["ok", "error"], mut budget), flow = FLOW_NONE, error = "" };
+                return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,error:String>", [okId, errId], ["ok", "error"], mut budget), flow = FlowKind.None, error = "" };
             }
-            if ctPool[args[0]].tag == TAG_WRITER {
+            if ctPool[args[0]].tag == CellTag.Writer {
                 res := ctWriters[rid].close();
                 okId := makeBoolVal(res.ok, "", mut budget);
                 errId := makeStrVal(res.error, "", mut budget);
-                return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,error:String>", [okId, errId], ["ok", "error"], mut budget), flow = FLOW_NONE, error = "" };
+                return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,error:String>", [okId, errId], ["ok", "error"], mut budget), flow = FlowKind.None, error = "" };
             }
         }
         if opName == "Writer.bytes" and args.length() > 0 {
@@ -1408,7 +1449,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             bs := ctWriters[wid].bytes();
             mut ids: List<Int> = [];
             loop bs as b { mut ids.pushBack(makeIntVal(b, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Writer.text" and args.length() > 0 {
             wid := ctPool[args[0]].intVal;
@@ -1416,25 +1457,25 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             okId := makeBoolVal(res.ok, "", mut budget);
             txtId := makeStrVal(res.text, "", mut budget);
             errId := makeStrVal(res.error, "", mut budget);
-            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,text:String,error:String>", [okId, txtId, errId], ["ok", "text", "error"], mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,text:String,error:String>", [okId, txtId, errId], ["ok", "text", "error"], mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Writer.clear" and args.length() > 0 {
             wid := ctPool[args[0]].intVal;
             ctWriters[wid].clear();
-            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Reader.fromText" and args.length() > 0 {
             rdr := io.Reader.fromText(formatCtVal(args[0]));
             rid := ctReaders.length();
             mut ctReaders.pushBack(rdr);
-            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = TAG_READER, kind = "Distinct<lib/core/io#0#Reader;>", intVal = rid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = CellTag.Reader, kind = "Distinct<lib/core/io#0#Reader;>", intVal = rid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Reader.readAll" and args.length() > 0 {
             rid := ctPool[args[0]].intVal;
             bs := ctReaders[rid].readAll();
             mut ids: List<Int> = [];
             loop bs as b { mut ids.pushBack(makeIntVal(b, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Reader.readAllText" and args.length() > 0 {
             rid := ctPool[args[0]].intVal;
@@ -1442,7 +1483,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome {
                 ok = true,
                 valId = makeTupleVal("Tuple<ok:Bool,text:String,error:String>", [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.text, "", mut budget), makeStrVal(res.error, "", mut budget)], ["ok", "text", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "Reader.readLine" and args.length() > 0 {
@@ -1451,7 +1492,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome {
                 ok = true,
                 valId = makeTupleVal("Tuple<ok:Bool,line:String,eof:Bool,error:String>", [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.line, "", mut budget), makeBoolVal(res.eof, "", mut budget), makeStrVal(res.error, "", mut budget)], ["ok", "line", "eof", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "Reader.copyTo" and args.length() >= 2 {
@@ -1461,16 +1502,16 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome {
                 ok = true,
                 valId = makeTupleVal("Tuple<ok:Bool,copied:Int,error:String>", [makeBoolVal(res.ok, "", mut budget), makeIntVal(res.copied, "", mut budget), makeStrVal(res.error, "", mut budget)], ["ok", "copied", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "Writer.ok" and args.length() > 0 {
             wid := ctPool[args[0]].intVal;
-            return CtOutcome { ok = true, valId = makeBoolVal(ctWriters[wid].ok(), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeBoolVal(ctWriters[wid].ok(), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Writer.error" and args.length() > 0 {
             wid := ctPool[args[0]].intVal;
-            return CtOutcome { ok = true, valId = makeStrVal(ctWriters[wid].error(), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(ctWriters[wid].error(), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Writer.writeText" and args.length() >= 2 {
             wid := ctPool[args[0]].intVal;
@@ -1478,7 +1519,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome {
                 ok = true,
                 valId = makeTupleVal("Tuple<ok:Bool,error:String>", [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.error, "", mut budget)], ["ok", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "Writer.writeLine" and args.length() >= 2 {
@@ -1487,7 +1528,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome {
                 ok = true,
                 valId = makeTupleVal("Tuple<ok:Bool,error:String>", [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.error, "", mut budget)], ["ok", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "Writer.flush" and args.length() > 0 {
@@ -1496,7 +1537,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome {
                 ok = true,
                 valId = makeTupleVal("Tuple<ok:Bool,error:String>", [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.error, "", mut budget)], ["ok", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "Writer.close" and args.length() > 0 {
@@ -1505,7 +1546,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome {
                 ok = true,
                 valId = makeTupleVal("Tuple<ok:Bool,error:String>", [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.error, "", mut budget)], ["ok", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "Writer.write" and args.length() >= 2 {
@@ -1516,7 +1557,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             okId := makeBoolVal(res.ok, "", mut budget);
             wrId := makeIntVal(res.written, "", mut budget);
             errId := makeStrVal(res.error, "", mut budget);
-            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,written:Int,error:String>", [okId, wrId, errId], ["ok", "written", "error"], mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,written:Int,error:String>", [okId, wrId, errId], ["ok", "written", "error"], mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "Writer.writeAndClose" and args.length() >= 2 {
             wid := ctPool[args[0]].intVal;
@@ -1525,14 +1566,14 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             res := ctWriters[wid].writeAndClose(bs);
             okId := makeBoolVal(res.ok, "", mut budget);
             errId := makeStrVal(res.error, "", mut budget);
-            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,error:String>", [okId, errId], ["ok", "error"], mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,error:String>", [okId, errId], ["ok", "error"], mut budget), flow = FlowKind.None, error = "" };
         }
     }
     if modIdentity == "lite.core.file.v1" {
         if opName == "kind" and args.length() > 0 {
             p := formatCtVal(args[0]);
             recordTracedFile(p);
-            return CtOutcome { ok = true, valId = makeStrVal(fs.kind(p), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(fs.kind(p), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "openReader" and args.length() > 0 {
             p := formatCtVal(args[0]);
@@ -1540,25 +1581,25 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             rdr := fs.openReader(p);
             rid := ctReaders.length();
             mut ctReaders.pushBack(rdr);
-            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = TAG_READER, kind = "Distinct<lib/core/io#0#Reader;>", intVal = rid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = CellTag.Reader, kind = "Distinct<lib/core/io#0#Reader;>", intVal = rid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FlowKind.None, error = "" };
         }
         if (opName == "openWriter" or opName == "openAppender") and args.length() > 0 {
             p := formatCtVal(args[0]);
             wr := if opName == "openWriter" { fs.openWriter(p) } else { fs.openAppender(p) };
             wid := ctWriters.length();
             mut ctWriters.pushBack(wr);
-            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = TAG_WRITER, kind = "Distinct<lib/core/io#0#Writer;>", intVal = wid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = allocCell(CtCell { tag = CellTag.Writer, kind = "Distinct<lib/core/io#0#Writer;>", intVal = wid, floatVal = 0.0, strVal = "", children = [], keys = [] }, mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "listDir" and args.length() > 0 {
             p := formatCtVal(args[0]);
             recordTracedFile(p);
             if fs.kind(p) =!= fs.FILE_KIND_DIR {
-                return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot list non-directory " + p };
+                return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot list non-directory " + p };
             }
             entries := fs.listDir(p);
             mut ids: List<Int> = [];
             loop entries as e { mut ids.pushBack(makeStrVal(e, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<String>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<String>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "realPath" and args.length() > 0 {
             p := formatCtVal(args[0]);
@@ -1567,7 +1608,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             okId := makeBoolVal(res.ok, "", mut budget);
             pId := makeStrVal(res.path, "", mut budget);
             errId := makeStrVal(res.error, "", mut budget);
-            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,path:String,error:String>", [okId, pId, errId], ["ok", "path", "error"], mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,path:String,error:String>", [okId, pId, errId], ["ok", "path", "error"], mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "readText" and args.length() > 0 {
             p := formatCtVal(args[0]);
@@ -1578,7 +1619,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
                 valId = makeTupleVal("Tuple<ok:Bool,text:String,error:String>",
                 [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.text, "", mut budget), makeStrVal(res.error, "", mut budget)],
                 ["ok", "text", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "readBytes" and args.length() > 0 {
@@ -1587,7 +1628,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             bs := fs.readBytes(p);
             mut ids: List<Int> = [];
             loop bs as b { mut ids.pushBack(makeIntVal(b, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
         if (opName == "writeText" or opName == "appendText") and args.length() >= 2 {
             p := formatCtVal(args[0]);
@@ -1598,7 +1639,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
                 valId = makeTupleVal("Tuple<ok:Bool,error:String>",
                 [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.error, "", mut budget)],
                 ["ok", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if (opName == "writeBytes" or opName == "appendBytes") and args.length() >= 2 {
@@ -1611,7 +1652,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
                 valId = makeTupleVal("Tuple<ok:Bool,error:String>",
                 [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.error, "", mut budget)],
                 ["ok", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "makeDir" or opName == "remove" or opName == "copy" or opName == "symlink" or opName == "makeTempDir" {
@@ -1622,7 +1663,7 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
                 okId := makeBoolVal(res.ok, "", mut budget);
                 pId := makeStrVal(res.path, "", mut budget);
                 errId := makeStrVal(res.error, "", mut budget);
-                return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,path:String,error:String>", [okId, pId, errId], ["ok", "path", "error"], mut budget), flow = FLOW_NONE, error = "" };
+                return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,path:String,error:String>", [okId, pId, errId], ["ok", "path", "error"], mut budget), flow = FlowKind.None, error = "" };
             }
             res := if opName == "makeDir" { fs.makeDir(p) }
             else if opName == "remove" { fs.remove(p) }
@@ -1630,19 +1671,19 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             else { fs.symlink(p, p2) };
             okId := makeBoolVal(res.ok, "", mut budget);
             errId := makeStrVal(res.error, "", mut budget);
-            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,error:String>", [okId, errId], ["ok", "error"], mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<ok:Bool,error:String>", [okId, errId], ["ok", "error"], mut budget), flow = FlowKind.None, error = "" };
         }
     }
     if modIdentity == "lite.core.process.v1" {
-        if opName == "cwd" { return CtOutcome { ok = true, valId = makeStrVal(proc.cwd(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if opName == "execPath" { return CtOutcome { ok = true, valId = makeStrVal(proc.execPath(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if opName == "entryPath" { return CtOutcome { ok = true, valId = makeStrVal(proc.entryPath(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if opName == "platform" { return CtOutcome { ok = true, valId = makeStrVal(proc.platform(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if opName == "arch" { return CtOutcome { ok = true, valId = makeStrVal(proc.arch(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if opName == "runtimeVersion" { return CtOutcome { ok = true, valId = makeStrVal(proc.runtimeVersion(), "", mut budget), flow = FLOW_NONE, error = "" }; }
+        if opName == "cwd" { return CtOutcome { ok = true, valId = makeStrVal(proc.cwd(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if opName == "execPath" { return CtOutcome { ok = true, valId = makeStrVal(proc.execPath(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if opName == "entryPath" { return CtOutcome { ok = true, valId = makeStrVal(proc.entryPath(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if opName == "platform" { return CtOutcome { ok = true, valId = makeStrVal(proc.platform(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if opName == "arch" { return CtOutcome { ok = true, valId = makeStrVal(proc.arch(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if opName == "runtimeVersion" { return CtOutcome { ok = true, valId = makeStrVal(proc.runtimeVersion(), "", mut budget), flow = FlowKind.None, error = "" }; }
         if opName == "envGet" and args.length() > 0 {
             res := proc.envGet(formatCtVal(args[0]));
-            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<found:Bool,value:String>", [makeBoolVal(res.found, "", mut budget), makeStrVal(res.value, "", mut budget)], ["found", "value"], mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<found:Bool,value:String>", [makeBoolVal(res.found, "", mut budget), makeStrVal(res.value, "", mut budget)], ["found", "value"], mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "run" and args.length() >= 6 {
             cmd := formatCtVal(args[0]);
@@ -1659,51 +1700,51 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
                 valId = makeTupleVal("Tuple<status:Int,stdout:String,stderr:String,error:String>",
                 [makeIntVal(res.status, "", mut budget), makeStrVal(res.stdout, "", mut budget), makeStrVal(res.stderr, "", mut budget), makeStrVal(res.error, "", mut budget)],
                 ["status", "stdout", "stderr", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
     }
     if modIdentity == "lite.core.time.v1" {
-        if opName == "monotonicNs" { return CtOutcome { ok = true, valId = makeIntVal(time.monotonicNs(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if opName == "epochNs" { return CtOutcome { ok = true, valId = makeIntVal(time.epochNs(), "", mut budget), flow = FLOW_NONE, error = "" }; }
+        if opName == "monotonicNs" { return CtOutcome { ok = true, valId = makeIntVal(time.monotonicNs(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if opName == "epochNs" { return CtOutcome { ok = true, valId = makeIntVal(time.epochNs(), "", mut budget), flow = FlowKind.None, error = "" }; }
         if opName == "sleepMs" and args.length() > 0 {
             time.sleepMs(ctPool[args[0]].intVal);
-            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         }
-        if opName == "localDate" { return CtOutcome { ok = true, valId = makeStrVal(time.localDate(), "", mut budget), flow = FLOW_NONE, error = "" }; }
+        if opName == "localDate" { return CtOutcome { ok = true, valId = makeStrVal(time.localDate(), "", mut budget), flow = FlowKind.None, error = "" }; }
     }
     if modIdentity == "lite.core.crypto.v1" and opName == "randomBytes" and args.length() > 0 {
         bs := crypto.randomBytes(ctPool[args[0]].intVal);
         mut ids: List<Int> = [];
         loop bs as b { mut ids.pushBack(makeIntVal(b, "", mut budget)); }
-        return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FLOW_NONE, error = "" };
+        return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
     }
     if modIdentity == "lite.core.text.v1" {
         if opName == "String.length" and args.length() > 0 {
-            return CtOutcome { ok = true, valId = makeIntVal(ctPool[args[0]].strVal.length(), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeIntVal(ctPool[args[0]].strVal.length(), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "String.at" and args.length() >= 2 {
             s := ctPool[args[0]].strVal;
             idx := ctPool[args[1]].intVal;
             if idx < 0 or idx >= s.length() {
-                return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "String.at index " + idx.toText() + " out of bounds" };
+                return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "String.at index " + idx.toText() + " out of bounds" };
             }
-            return CtOutcome { ok = true, valId = makeStrVal(s.at(idx), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(s.at(idx), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "String.slice" and args.length() >= 3 {
             s := ctPool[args[0]].strVal;
             a := ctPool[args[1]].intVal;
             b := ctPool[args[2]].intVal;
             if a < 0 or b < a or b > s.length() {
-                return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "String.slice(" + a.toText() + ", " + b.toText() + ") out of bounds" };
+                return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "String.slice(" + a.toText() + ", " + b.toText() + ") out of bounds" };
             }
-            return CtOutcome { ok = true, valId = makeStrVal(s.slice(a, b), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(s.slice(a, b), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "String.toCodePoints" and args.length() > 0 {
             cps := ctPool[args[0]].strVal.toCodePoints();
             mut ids: List<Int> = [];
             loop cps as cp { mut ids.pushBack(makeIntVal(cp, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
         if opName == "String.fromCodePoints" and args.length() > 0 {
             mut cps: List<Int> = [];
@@ -1712,29 +1753,29 @@ evalHostBuiltinCall := fn(modIdentity: String, opName: String, args: List<Int>, 
             return CtOutcome {
                 ok = true,
                 valId = makeTupleVal("Tuple<ok:Bool,text:String,error:String>", [makeBoolVal(res.ok, "", mut budget), makeStrVal(res.text, "", mut budget), makeStrVal(res.error, "", mut budget)], ["ok", "text", "error"], mut budget),
-                flow = FLOW_NONE, error = ""
+                flow = FlowKind.None, error = ""
             };
         }
         if opName == "Float.toText" or opName == "Float32.toText" {
-            return CtOutcome { ok = true, valId = makeStrVal(ctPool[args[0]].floatVal.toText(), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(ctPool[args[0]].floatVal.toText(), "", mut budget), flow = FlowKind.None, error = "" };
         }
     }
     if modIdentity == "lite.core.int.v1" {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unsupported host int builtin " + opName + " in comptime" };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsupported host int builtin " + opName + " in comptime" };
     }
     if modIdentity == "lite.core.diag.v1" {
         if opName == "fail" {
             msg := if args.length() >= 2 { formatCtVal(args[0]) + ":" + formatCtVal(args[1]) } else if args.length() == 1 { formatCtVal(args[0]) } else { "diag.fail" };
-            return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = msg };
+            return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = msg };
         }
         if opName == "expect" and args.length() >= 3 {
             if ctPool[args[1]].intVal == 0 {
-                return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = formatCtVal(args[0]) + ":" + formatCtVal(args[2]) };
+                return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = formatCtVal(args[0]) + ":" + formatCtVal(args[2]) };
             }
-            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         }
     }
-    CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unsupported compile-time host operation " + modIdentity + "." + opName }
+    CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsupported compile-time host operation " + modIdentity + "." + opName }
 };
 
 /** Applies an arithmetic or comparison operator token to two scalar compile-time values. */
@@ -1742,21 +1783,21 @@ applyBinaryVal := fn(op: String, lId: Int, rId: Int, budget: mut EvalBudget): Ct
     l := ctPool[lId];
     r := ctPool[rId];
     if op == "==" or op == "=!=" or op == "<" or op == "<=" or op == ">" or op == ">=" or op == "<!" or op == "<!=" or op == ">!" or op == ">!=" {
-        return CtOutcome { ok = true, valId = makeBoolVal(evalComparisonOp(op, lId, rId), "", mut budget), flow = FLOW_NONE, error = "" };
+        return CtOutcome { ok = true, valId = makeBoolVal(evalComparisonOp(op, lId, rId), "", mut budget), flow = FlowKind.None, error = "" };
     }
-    if op == "+" and l.tag == TAG_STR and r.tag == TAG_STR {
-        return CtOutcome { ok = true, valId = makeStrVal(l.strVal + r.strVal, "", mut budget), flow = FLOW_NONE, error = "" };
+    if op == "+" and l.tag == CellTag.Str and r.tag == CellTag.Str {
+        return CtOutcome { ok = true, valId = makeStrVal(l.strVal + r.strVal, "", mut budget), flow = FlowKind.None, error = "" };
     }
     if op == "**" {
-        lf := if l.tag == TAG_FLOAT { l.floatVal } else { cast<Float>(l.intVal) };
-        rf := if r.tag == TAG_FLOAT { r.floatVal } else { cast<Float>(r.intVal) };
+        lf := if l.tag == CellTag.Float { l.floatVal } else { cast<Float>(l.intVal) };
+        rf := if r.tag == CellTag.Float { r.floatVal } else { cast<Float>(r.intVal) };
         return evalFloatBin("**", lf, rf, ir.VALUE_KIND_FLOAT, mut budget);
     }
-    if l.tag == TAG_INT and r.tag == TAG_INT {
+    if l.tag == CellTag.Int and r.tag == CellTag.Int {
         resK := numeric.promoteNumericKind(l.kind, r.kind);
         return evalCheckedIntBin(op, l.intVal, r.intVal, if resK =!= "" { resK } else { ir.VALUE_KIND_INT }, mut budget);
     }
-    if l.tag == TAG_UINT and r.tag == TAG_UINT {
+    if l.tag == CellTag.UInt and r.tag == CellTag.UInt {
         resK := numeric.promoteNumericKind(l.kind, r.kind);
         rk := if resK =!= "" { resK } else { ir.VALUE_KIND_UINT64 };
         au := parseUInt64Text(l.strVal);
@@ -1764,19 +1805,19 @@ applyBinaryVal := fn(op: String, lId: Int, rId: Int, budget: mut EvalBudget): Ct
         av := if au.ok { au.value } else { cast<UInt64>(0) };
         bv := if bu.ok { bu.value } else { cast<UInt64>(0) };
         if (op == "/" or op == "%" or op == ":/" or op == ":%") and bv == cast<UInt64>(0) {
-            return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unsigned division by zero in compile-time evaluation" };
+            return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsigned division by zero in compile-time evaluation" };
         }
         rv := if op == "+" { av + bv }
         else if op == "-" {
-            if av < bv { return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unsigned underflow in compile-time evaluation" }; }
+            if av < bv { return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsigned underflow in compile-time evaluation" }; }
             av - bv
         } else if op == "*" { av * bv }
         else if op == "/" or op == ":/" { av / bv }
         else { av % bv };
-        return CtOutcome { ok = true, valId = makeUIntVal(rv, rk, mut budget), flow = FLOW_NONE, error = "" };
+        return CtOutcome { ok = true, valId = makeUIntVal(rv, rk, mut budget), flow = FlowKind.None, error = "" };
     }
-    lf := if l.tag == TAG_FLOAT { l.floatVal } else { cast<Float>(l.intVal) };
-    rf := if r.tag == TAG_FLOAT { r.floatVal } else { cast<Float>(r.intVal) };
+    lf := if l.tag == CellTag.Float { l.floatVal } else { cast<Float>(l.intVal) };
+    rf := if r.tag == CellTag.Float { r.floatVal } else { cast<Float>(r.intVal) };
     resK := numeric.promoteNumericKind(l.kind, r.kind);
     evalFloatBin(op, lf, rf, if numeric.isFloatKind(resK) { resK } else { ir.VALUE_KIND_FLOAT }, mut budget)
 };
@@ -1810,13 +1851,13 @@ selectOverloadFnDef := fn(indices: List<Int>, posArgCount: Int, namedLabels: Lis
 /** Evaluates a sequence of statements `[startPos, limitPos)` in `source` using `frame` and `budget`. */
 evalStmtRange := fn(source: String, startPos: Int, limitPos: Int, prefix: String, expectedKind: String, frame: mut CtFrame, budget: mut EvalBudget): CtOutcome {
     t := tickStep(mut budget);
-    if not t.ok { return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = t.msg }; }
+    if not t.ok { return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = t.msg }; }
     modMetaRes := ctModules.get(frame.moduleKey);
     var cursor := syntax.skipItemSeparators(source, startPos, prefix);
     var lastVal := makeUnitVal(mut budget);
     loop cursor < limitPos {
         tLoop := tickStep(mut budget);
-        if not tLoop.ok { return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = tLoop.msg }; }
+        if not tLoop.ok { return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = tLoop.msg }; }
         if source.at(cursor) == "}" { break; }
         stmtStart := cursor;
         /* Skip metadata / type declarations that produce no runtime statements */
@@ -1868,16 +1909,16 @@ evalStmtRange := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             if varKw == "" and mutKw == "" and prefixKw == "" {
                 if name == "return" {
                     if afterName < limitPos and source.at(afterName) == ";" {
-                        return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_RETURN, error = "" };
+                        return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.Return, error = "" };
                     }
                     rv := evalExprAt(source, afterName, limitPos, prefix, expectedKind, mut frame, mut budget);
-                    if rv.outcome.flow =!= FLOW_NONE { return rv.outcome; }
+                    if rv.outcome.flow =!= FlowKind.None { return rv.outcome; }
                     retEnd := syntax.skipTrivia(source, rv.next, prefix);
                     coercedRet := coerceCtValue(expectedKind, ctPool[rv.outcome.valId].kind, cloneValIfContainer(rv.outcome.valId, "", mut budget), mut budget);
                     if retEnd < limitPos and source.at(retEnd) == ";" {
                         cursor = syntax.skipItemSeparators(source, retEnd + 1, prefix);
                     }
-                    return CtOutcome { ok = true, valId = coercedRet, flow = FLOW_RETURN, error = "" };
+                    return CtOutcome { ok = true, valId = coercedRet, flow = FlowKind.Return, error = "" };
                 }
                 if name == "break" or name == "continue" {
                     var scan := afterName;
@@ -1891,12 +1932,12 @@ evalStmtRange := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     }
                     if name == "break" and scan < limitPos and source.at(scan) =!= ";" {
                         br := evalExprAt(source, scan, limitPos, prefix, "", mut frame, mut budget);
-                        if br.outcome.flow =!= FLOW_NONE { return br.outcome; }
+                        if br.outcome.flow =!= FlowKind.None { return br.outcome; }
                         bVal = br.outcome.valId;
                         hasVal = true;
                         scan = syntax.skipTrivia(source, br.next, prefix);
                     }
-                    flowTag := if name == "break" { FLOW_BREAK } else { FLOW_CONTINUE };
+                    flowTag := if name == "break" { FlowKind.Break } else { FlowKind.Continue };
                     return CtOutcome { ok = true, valId = bVal, flow = flowTag, error = tagTxt };
                 }
             }
@@ -1920,7 +1961,7 @@ evalStmtRange := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 if source.startsWithAt(afterName, ":=") {
                     rhsStart := syntax.skipTrivia(source, afterName + 2, prefix);
                     rhsRes := evalExprAt(source, rhsStart, limitPos, prefix, "", mut frame, mut budget);
-                    if rhsRes.outcome.flow =!= FLOW_NONE { return rhsRes.outcome; }
+                    if rhsRes.outcome.flow =!= FlowKind.None { return rhsRes.outcome; }
                     valId := cloneValIfContainer(rhsRes.outcome.valId, "", mut budget);
                     vKind := ctPool[valId].kind;
                     frameSetOrPush(mut frame, name, valId, isMut, vKind);
@@ -1932,7 +1973,7 @@ evalStmtRange := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 /* `: Type [= init]` */
                 tyRes := resolveCtTypeAt(source, afterName + 1, prefix, frame.aliases);
                 if not tyRes.ok {
-                    return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve compile-time type" };
+                    return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve compile-time type" };
                 }
                 annKind := tyRes.kind;
                 afterTy := syntax.skipTrivia(source, tyRes.next, prefix);
@@ -1946,7 +1987,7 @@ evalStmtRange := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                         nextPos = resEnd;
                     } else {
                         rhsRes := evalExprAt(source, rhsS, limitPos, prefix, annKind, mut frame, mut budget);
-                        if rhsRes.outcome.flow =!= FLOW_NONE { return rhsRes.outcome; }
+                        if rhsRes.outcome.flow =!= FlowKind.None { return rhsRes.outcome; }
                         valId = coerceCtValue(annKind, ctPool[rhsRes.outcome.valId].kind, cloneValIfContainer(rhsRes.outcome.valId, "", mut budget), mut budget);
                         nextPos = rhsRes.next;
                     }
@@ -1963,7 +2004,7 @@ evalStmtRange := fn(source: String, startPos: Int, limitPos: Int, prefix: String
 
         /* Assignment target or expression statement */
         exprRes := evalStmtExprOrAssign(source, stmtStart, limitPos, prefix, expectedKind, mut frame, mut budget);
-        if exprRes.outcome.flow =!= FLOW_NONE { return exprRes.outcome; }
+        if exprRes.outcome.flow =!= FlowKind.None { return exprRes.outcome; }
         afterExpr := syntax.skipTrivia(source, exprRes.next, prefix);
         if afterExpr < limitPos and source.at(afterExpr) == ";" {
             cursor = syntax.skipItemSeparators(source, afterExpr + 1, prefix);
@@ -1973,7 +2014,7 @@ evalStmtRange := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             cursor = syntax.skipItemSeparators(source, afterExpr, prefix);
         }
     }
-    CtOutcome { ok = true, valId = lastVal, flow = FLOW_NONE, error = "" }
+    CtOutcome { ok = true, valId = lastVal, flow = FlowKind.None, error = "" }
 };
 
 /** Evaluates a statement which may be an lvalue assignment `(mut) lhs op= rhs` or ordinary expression. */
@@ -1996,7 +2037,7 @@ evalStmtExprOrAssign := fn(source: String, stmtStart: Int, limitPos: Int, prefix
             var chainOk := true;
             if postPos < limitPos and source.at(postPos) == "[" {
                 idxR := evalExprAt(source, postPos + 1, limitPos, prefix, "", mut frame, mut budget);
-                if idxR.outcome.flow =!= FLOW_NONE { return (outcome = idxR.outcome, next = idxR.next); }
+                if idxR.outcome.flow =!= FlowKind.None { return (outcome = idxR.outcome, next = idxR.next); }
                 afterIdx := syntax.skipTrivia(source, idxR.next, prefix);
                 if afterIdx < limitPos and source.at(afterIdx) == "]" {
                     hasIndex = true;
@@ -2017,30 +2058,30 @@ evalStmtExprOrAssign := fn(source: String, stmtStart: Int, limitPos: Int, prefix
                 if compOp.width > 0 or syntax.isSingleEquals(source, postPos) {
                     opW := if compOp.width > 0 { compOp.width } else { 1 };
                     rhsRes := evalExprAt(source, postPos + opW, limitPos, prefix, "", mut frame, mut budget);
-                    if rhsRes.outcome.flow =!= FLOW_NONE { return (outcome = rhsRes.outcome, next = rhsRes.next); }
+                    if rhsRes.outcome.flow =!= FlowKind.None { return (outcome = rhsRes.outcome, next = rhsRes.next); }
                     b := frame.bindings[bindIdx];
                     curId := b.valId;
                     rhsId := rhsRes.outcome.valId;
                     if not hasIndex and not hasField {
                         newId := if compOp.width > 0 {
                             ap := applyBinaryVal(compOp.baseOp, curId, rhsId, mut budget);
-                            if ap.flow =!= FLOW_NONE { return (outcome = ap, next = rhsRes.next); }
+                            if ap.flow =!= FlowKind.None { return (outcome = ap, next = rhsRes.next); }
                             ap.valId
                         } else {
                             coerceCtValue(b.kind, ctPool[rhsId].kind, cloneValIfContainer(rhsId, "", mut budget), mut budget)
                         };
                         mut frame.bindings.setAt(bindIdx, CtBinding { name = b.name, valId = newId, mutable = b.mutable, kind = b.kind });
-                        return (outcome = CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" }, next = rhsRes.next);
+                        return (outcome = CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" }, next = rhsRes.next);
                     }
                     if hasIndex {
                         c := ctPool[curId];
                         if idxVal < 0 or idxVal >= c.children.length() {
-                            return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "index " + idxVal.toText() + " out of bounds" }, next = rhsRes.next);
+                            return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "index " + idxVal.toText() + " out of bounds" }, next = rhsRes.next);
                         }
                         oldEl := c.children[idxVal];
                         newEl := if compOp.width > 0 {
                             ap := applyBinaryVal(compOp.baseOp, oldEl, rhsId, mut budget);
-                            if ap.flow =!= FLOW_NONE { return (outcome = ap, next = rhsRes.next); }
+                            if ap.flow =!= FlowKind.None { return (outcome = ap, next = rhsRes.next); }
                             ap.valId
                         } else { cloneValIfContainer(rhsId, "", mut budget) };
                         mut newCh: List<Int> = c.children;
@@ -2050,7 +2091,7 @@ evalStmtExprOrAssign := fn(source: String, stmtStart: Int, limitPos: Int, prefix
                             valId = allocCell(CtCell { tag = c.tag, kind = c.kind, intVal = c.intVal, floatVal = c.floatVal, strVal = c.strVal, children = newCh, keys = c.keys }, mut budget),
                             mutable = b.mutable, kind = b.kind
                         });
-                        return (outcome = CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" }, next = rhsRes.next);
+                        return (outcome = CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" }, next = rhsRes.next);
                     }
                     if hasField {
                         c := ctPool[curId];
@@ -2064,7 +2105,7 @@ evalStmtExprOrAssign := fn(source: String, stmtStart: Int, limitPos: Int, prefix
                             oldF := c.children[hit];
                             newF := if compOp.width > 0 {
                                 ap := applyBinaryVal(compOp.baseOp, oldF, rhsId, mut budget);
-                                if ap.flow =!= FLOW_NONE { return (outcome = ap, next = rhsRes.next); }
+                                if ap.flow =!= FlowKind.None { return (outcome = ap, next = rhsRes.next); }
                                 ap.valId
                             } else { cloneValIfContainer(rhsId, "", mut budget) };
                             mut newCh: List<Int> = c.children;
@@ -2074,7 +2115,7 @@ evalStmtExprOrAssign := fn(source: String, stmtStart: Int, limitPos: Int, prefix
                                 valId = allocCell(CtCell { tag = c.tag, kind = c.kind, intVal = c.intVal, floatVal = c.floatVal, strVal = c.strVal, children = newCh, keys = c.keys }, mut budget),
                                 mutable = b.mutable, kind = b.kind
                             });
-                            return (outcome = CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" }, next = rhsRes.next);
+                            return (outcome = CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" }, next = rhsRes.next);
                         }
                     }
                 }
@@ -2103,11 +2144,11 @@ evalBracedBlock := fn(source: String, openBrace: Int, prefix: String, expectedKi
         if finOpen < source.length() and source.at(finOpen) == "{" {
             finClose := syntax.scanBraceEnd(source, finOpen, prefix);
             endCursor = finClose;
-            if res.flow =!= FLOW_PANIC {
+            if res.flow =!= FlowKind.Panic {
                 finLen := frame.bindings.length();
                 finRes := evalStmtRange(source, finOpen + 1, finClose - 1, prefix, "", mut frame, mut budget);
                 loop frame.bindings.length() > finLen { _pop2 := mut frame.bindings.popBack(); }
-                if finRes.flow == FLOW_PANIC {
+                if finRes.flow == FlowKind.Panic {
                     return (outcome = finRes, next = finClose);
                 }
             }
@@ -2119,14 +2160,14 @@ evalBracedBlock := fn(source: String, openBrace: Int, prefix: String, expectedKi
 /** Evaluates one call to a resolved `CtFnDef` or generic template with explicit/inferred type arguments. */
 invokeCtFnDefWithTypeArgs := fn(defIdx: Int, explicitTypeArgs: List<String>, args: List<Int>, namedLabels: List<String>, budget: mut EvalBudget): CtOutcome {
     if defIdx < 0 or defIdx >= ctFnDefs.length() {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unknown compile-time function" };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unknown compile-time function" };
     }
     def := ctFnDefs[defIdx];
     if def.isHostBuiltin {
         return evalHostBuiltinCall(def.moduleIdentity, def.name, args, mut budget);
     }
     if budget.depth >= budget.maxDepth {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "compile-time recursion exceeded depth limit (" + budget.maxDepth.toText() + ")" };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "compile-time recursion exceeded depth limit (" + budget.maxDepth.toText() + ")" };
     }
     var mut fnAliases: List<AliasDecl> = def.aliases;
     var effParamsEncoded := def.paramsEncoded;
@@ -2237,17 +2278,17 @@ invokeCtFnDefWithTypeArgs := fn(defIdx: Int, explicitTypeArgs: List<String>, arg
     budget.depth = budget.depth + 1;
     bodyRes := evalStmtRange(def.source, def.bodyStart, def.bodyEnd, def.prefix, effResultKind, mut fnFrame, mut budget);
     budget.depth = budget.depth - 1;
-    if bodyRes.flow == FLOW_RETURN {
-        return CtOutcome { ok = true, valId = coerceCtValue(effResultKind, ctPool[bodyRes.valId].kind, bodyRes.valId, mut budget), flow = FLOW_NONE, error = "" };
+    if bodyRes.flow == FlowKind.Return {
+        return CtOutcome { ok = true, valId = coerceCtValue(effResultKind, ctPool[bodyRes.valId].kind, bodyRes.valId, mut budget), flow = FlowKind.None, error = "" };
     }
-    if bodyRes.flow == FLOW_PROP_ERR {
-        return CtOutcome { ok = true, valId = bodyRes.valId, flow = FLOW_NONE, error = "" };
+    if bodyRes.flow == FlowKind.PropErr {
+        return CtOutcome { ok = true, valId = bodyRes.valId, flow = FlowKind.None, error = "" };
     }
-    if bodyRes.flow =!= FLOW_NONE {
+    if bodyRes.flow =!= FlowKind.None {
         return bodyRes;
     }
     if effResultKind =!= "" {
-        return CtOutcome { ok = true, valId = coerceCtValue(effResultKind, ctPool[bodyRes.valId].kind, bodyRes.valId, mut budget), flow = FLOW_NONE, error = "" };
+        return CtOutcome { ok = true, valId = coerceCtValue(effResultKind, ctPool[bodyRes.valId].kind, bodyRes.valId, mut budget), flow = FlowKind.None, error = "" };
     }
     bodyRes
 };
@@ -2265,14 +2306,14 @@ evalCallArgs := fn(source: String, openParen: Int, prefix: String, frame: mut Ct
     var sawNamed := false;
     loop cursor < source.length() {
         if source.at(cursor) == ")" {
-            return CtCallArgs { ok = true, outcome = CtOutcome { ok = true, valId = -1, flow = FLOW_NONE, error = "" }, args = args, labels = labels, next = cursor + 1 };
+            return CtCallArgs { ok = true, outcome = CtOutcome { ok = true, valId = -1, flow = FlowKind.None, error = "" }, args = args, labels = labels, next = cursor + 1 };
         }
         if syntax.isSingleEquals(source, cursor) {
             shStart := syntax.skipTrivia(source, cursor + 1, prefix);
             shEnd := source.skipName(shStart);
             shName := source.slice(shStart, shEnd);
             valR := evalExprAt(source, shStart, source.length(), prefix, "", mut frame, mut budget);
-            if valR.outcome.flow =!= FLOW_NONE {
+            if valR.outcome.flow =!= FlowKind.None {
                 return CtCallArgs { ok = false, outcome = valR.outcome, args = args, labels = labels, next = valR.next };
             }
             mut args.pushBack(valR.outcome.valId);
@@ -2283,7 +2324,7 @@ evalCallArgs := fn(source: String, openParen: Int, prefix: String, frame: mut Ct
             if source.wordAt(cursor, "mut") {
                 cursor = syntax.skipTrivia(source, cursor + 3, prefix);
                 valR := evalExprAt(source, cursor, source.length(), prefix, "", mut frame, mut budget);
-                if valR.outcome.flow =!= FLOW_NONE {
+                if valR.outcome.flow =!= FlowKind.None {
                     return CtCallArgs { ok = false, outcome = valR.outcome, args = args, labels = labels, next = valR.next };
                 }
                 mut args.pushBack(valR.outcome.valId);
@@ -2296,7 +2337,7 @@ evalCallArgs := fn(source: String, openParen: Int, prefix: String, frame: mut Ct
                     lblName := source.slice(cursor, nEnd);
                     valStart := syntax.skipTrivia(source, afterN + 1, prefix);
                     valR := evalExprAt(source, valStart, source.length(), prefix, "", mut frame, mut budget);
-                    if valR.outcome.flow =!= FLOW_NONE {
+                    if valR.outcome.flow =!= FlowKind.None {
                         return CtCallArgs { ok = false, outcome = valR.outcome, args = args, labels = labels, next = valR.next };
                     }
                     mut args.pushBack(valR.outcome.valId);
@@ -2305,7 +2346,7 @@ evalCallArgs := fn(source: String, openParen: Int, prefix: String, frame: mut Ct
                     cursor = syntax.skipTrivia(source, valR.next, prefix);
                 } else {
                     valR := evalExprAt(source, cursor, source.length(), prefix, "", mut frame, mut budget);
-                    if valR.outcome.flow =!= FLOW_NONE {
+                    if valR.outcome.flow =!= FlowKind.None {
                         return CtCallArgs { ok = false, outcome = valR.outcome, args = args, labels = labels, next = valR.next };
                     }
                     mut args.pushBack(valR.outcome.valId);
@@ -2315,7 +2356,7 @@ evalCallArgs := fn(source: String, openParen: Int, prefix: String, frame: mut Ct
             }
         } else {
             valR := evalExprAt(source, cursor, source.length(), prefix, "", mut frame, mut budget);
-            if valR.outcome.flow =!= FLOW_NONE {
+            if valR.outcome.flow =!= FlowKind.None {
                 return CtCallArgs { ok = false, outcome = valR.outcome, args = args, labels = labels, next = valR.next };
             }
             mut args.pushBack(valR.outcome.valId);
@@ -2329,9 +2370,9 @@ evalCallArgs := fn(source: String, openParen: Int, prefix: String, frame: mut Ct
         }
     }
     if cursor < source.length() and source.at(cursor) == ")" {
-        return CtCallArgs { ok = true, outcome = CtOutcome { ok = true, valId = -1, flow = FLOW_NONE, error = "" }, args = args, labels = labels, next = cursor + 1 };
+        return CtCallArgs { ok = true, outcome = CtOutcome { ok = true, valId = -1, flow = FlowKind.None, error = "" }, args = args, labels = labels, next = cursor + 1 };
     }
-    CtCallArgs { ok = false, outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "expected ) in compile-time call" }, args = args, labels = labels, next = cursor }
+    CtCallArgs { ok = false, outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "expected ) in compile-time call" }, args = args, labels = labels, next = cursor }
 };
 
 /** Attempts to match one pattern against `subjValId`, binding any pattern variables into `frame` when matched. */
@@ -2357,7 +2398,7 @@ tryMatchCtPattern := fn(source: String, patStart: Int, limitPos: Int, prefix: St
             afterC := syntax.skipTrivia(source, cEnd, prefix);
             var ok := false;
             var mut payloadIds: List<Int> = [];
-            if subCell.tag == TAG_RESULT {
+            if subCell.tag == CellTag.Result {
                 if cName == "ok" and subCell.intVal == 0 {
                     ok = true;
                     if subCell.children.length() > 0 { mut payloadIds.pushBack(subCell.children[0]); }
@@ -2365,7 +2406,7 @@ tryMatchCtPattern := fn(source: String, patStart: Int, limitPos: Int, prefix: St
                     ok = true;
                     if subCell.children.length() > 0 { mut payloadIds.pushBack(subCell.children[0]); }
                 }
-            } else if subCell.tag == TAG_ENUM and subCell.strVal == cName {
+            } else if subCell.tag == CellTag.Enum and subCell.strVal == cName {
                 ok = true;
                 payloadIds = subCell.children;
             }
@@ -2392,17 +2433,17 @@ tryMatchCtPattern := fn(source: String, patStart: Int, limitPos: Int, prefix: St
             }
         } else if source.at(cursor) == "\"" or source.at(cursor).isDigit() or source.at(cursor) == "-" {
             litR := evalExprAt(source, cursor, limitPos, prefix, "", mut frame, mut budget);
-            eq := if litR.outcome.flow == FLOW_NONE { ctValuesEqual(subjValId, litR.outcome.valId) } else { false };
+            eq := if litR.outcome.flow == FlowKind.None { ctValuesEqual(subjValId, litR.outcome.valId) } else { false };
             (matched = eq, next = litR.next)
         } else if source.wordAt(cursor, "true") or source.wordAt(cursor, "false") {
             bEnd := source.skipName(cursor);
             bVal := source.slice(cursor, bEnd) == "true";
-            eq := subCell.tag == TAG_BOOL and (subCell.intVal =!= 0) == bVal;
+            eq := subCell.tag == CellTag.Bool and (subCell.intVal =!= 0) == bVal;
             (matched = eq, next = bEnd)
         } else if source.at(cursor) == "(" {
             var tCur := syntax.skipTrivia(source, cursor + 1, prefix);
             var tIdx := 0;
-            var tOk := subCell.tag == TAG_TUPLE;
+            var tOk := subCell.tag == CellTag.Tuple;
             loop tCur < limitPos and source.at(tCur) =!= ")" {
                 if tOk and tIdx < subCell.children.length() {
                     sp := self(source, tCur, limitPos, prefix, subCell.children[tIdx], mut frame, mut budget);
@@ -2426,7 +2467,7 @@ tryMatchCtPattern := fn(source: String, patStart: Int, limitPos: Int, prefix: St
                 /* `name: Type` union pattern */
                 tyR := resolveCtTypeAt(source, afterN + 1, prefix, frame.aliases);
                 if tyR.ok and valueMatchesType(subjValId, tyR.kind) {
-                    unw := if subCell.tag == TAG_UNION and subCell.children.length() > 0 { subCell.children[0] } else { subjValId };
+                    unw := if subCell.tag == CellTag.Union and subCell.children.length() > 0 { subCell.children[0] } else { subjValId };
                     frameSetOrPush(mut frame, pName, unw, false, ctPool[unw].kind);
                     (matched = true, next = tyR.next)
                 } else {
@@ -2438,7 +2479,7 @@ tryMatchCtPattern := fn(source: String, patStart: Int, limitPos: Int, prefix: St
                 cE := source.skipName(cS);
                 cName := source.slice(cS, cE);
                 afterC := syntax.skipTrivia(source, cE, prefix);
-                var ok := subCell.tag == TAG_ENUM and subCell.strVal == cName;
+                var ok := subCell.tag == CellTag.Enum and subCell.strVal == cName;
                 if afterC < limitPos and source.at(afterC) == "(" {
                     var pCur := syntax.skipTrivia(source, afterC + 1, prefix);
                     var pIdx := 0;
@@ -2483,11 +2524,11 @@ evalIfExpr := fn(source: String, ifStart: Int, limitPos: Int, prefix: String, ex
     var cursor := syntax.skipTrivia(source, ifStart + 2, prefix);
     var endPos := ifStart;
     var taken := false;
-    var resultOutcome := CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+    var resultOutcome := CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
     loop true {
         openBrace := syntax.scanIfHeaderOpen(source, cursor, prefix);
         if openBrace >= limitPos or source.at(openBrace) =!= "{" {
-            return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "expected { after if condition" }, next = cursor);
+            return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "expected { after if condition" }, next = cursor);
         }
         closeBrace := syntax.scanBraceEnd(source, openBrace, prefix);
         endPos = closeBrace;
@@ -2503,7 +2544,7 @@ evalIfExpr := fn(source: String, ifStart: Int, limitPos: Int, prefix: String, ex
                 if bindOp >= 0 {
                     rhsStart := syntax.skipTrivia(source, bindOp + 2, prefix);
                     srcR := evalExprAt(source, rhsStart, segLimit, prefix, "", mut frame, mut budget);
-                    if srcR.outcome.flow =!= FLOW_NONE {
+                    if srcR.outcome.flow =!= FlowKind.None {
                         loop frame.bindings.length() > savedLen { _p := mut frame.bindings.popBack(); }
                         return (outcome = srcR.outcome, next = closeBrace);
                     }
@@ -2511,7 +2552,7 @@ evalIfExpr := fn(source: String, ifStart: Int, limitPos: Int, prefix: String, ex
                     if not patR.matched { condTrue = false; break; }
                 } else {
                     condR := evalExprAt(source, segPos, segLimit, prefix, ir.VALUE_KIND_BOOL, mut frame, mut budget);
-                    if condR.outcome.flow =!= FLOW_NONE {
+                    if condR.outcome.flow =!= FlowKind.None {
                         loop frame.bindings.length() > savedLen { _p := mut frame.bindings.popBack(); }
                         return (outcome = condR.outcome, next = closeBrace);
                     }
@@ -2526,7 +2567,7 @@ evalIfExpr := fn(source: String, ifStart: Int, limitPos: Int, prefix: String, ex
                 resultOutcome = brR.outcome;
                 endPos = brR.next;
                 loop frame.bindings.length() > savedLen { _p := mut frame.bindings.popBack(); }
-                if resultOutcome.flow =!= FLOW_NONE { return (outcome = resultOutcome, next = syntax.scanIfChainEnd(source, ifStart, prefix, false, true)); }
+                if resultOutcome.flow =!= FlowKind.None { return (outcome = resultOutcome, next = syntax.scanIfChainEnd(source, ifStart, prefix, false, true)); }
             } else {
                 loop frame.bindings.length() > savedLen { _p := mut frame.bindings.popBack(); }
             }
@@ -2567,12 +2608,12 @@ evalMatchExpr := fn(source: String, matchStart: Int, limitPos: Int, prefix: Stri
     var subjId := -1;
     if scan.isSubject {
         subR := evalExprAt(source, syntax.skipTrivia(source, matchStart + 5, prefix), scan.openPos, prefix, "", mut frame, mut budget);
-        if subR.outcome.flow =!= FLOW_NONE { return (outcome = subR.outcome, next = syntax.scanBraceEnd(source, scan.openPos, prefix)); }
+        if subR.outcome.flow =!= FlowKind.None { return (outcome = subR.outcome, next = syntax.scanBraceEnd(source, scan.openPos, prefix)); }
         subjId = subR.outcome.valId;
     }
     closeBrace := syntax.scanBraceEnd(source, scan.openPos, prefix);
     var cursor := syntax.skipTrivia(source, scan.openPos + 1, prefix);
-    var resOutcome := CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+    var resOutcome := CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
     var matchedArm := false;
     loop cursor < closeBrace - 1 {
         if source.at(cursor) == "}" { break; }
@@ -2589,7 +2630,7 @@ evalMatchExpr := fn(source: String, matchStart: Int, limitPos: Int, prefix: Stri
                     afterP := syntax.skipTrivia(source, pRes.next, prefix);
                     if afterP < bodyOpen and source.wordAt(afterP, "and") {
                         gRes := evalExprAt(source, afterP + 3, bodyOpen, prefix, ir.VALUE_KIND_BOOL, mut frame, mut budget);
-                        if gRes.outcome.flow =!= FLOW_NONE {
+                        if gRes.outcome.flow =!= FlowKind.None {
                             loop frame.bindings.length() > savedLen { _p := mut frame.bindings.popBack(); }
                             return (outcome = gRes.outcome, next = closeBrace);
                         }
@@ -2601,7 +2642,7 @@ evalMatchExpr := fn(source: String, matchStart: Int, limitPos: Int, prefix: Stri
                     armOk = true;
                 } else {
                     gRes := evalExprAt(source, cursor, bodyOpen, prefix, ir.VALUE_KIND_BOOL, mut frame, mut budget);
-                    if gRes.outcome.flow =!= FLOW_NONE {
+                    if gRes.outcome.flow =!= FlowKind.None {
                         loop frame.bindings.length() > savedLen { _p := mut frame.bindings.popBack(); }
                         return (outcome = gRes.outcome, next = closeBrace);
                     }
@@ -2625,7 +2666,7 @@ evalMatchExpr := fn(source: String, matchStart: Int, limitPos: Int, prefix: Stri
 evalLoopExpr := fn(source: String, loopStart: Int, limitPos: Int, prefix: String, expectedKind: String, frame: mut CtFrame, budget: mut EvalBudget): (outcome: CtOutcome, next: Int) {
     var cur := syntax.skipTrivia(source, loopStart + 4, prefix);
     if cur >= limitPos {
-        return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "invalid loop" }, next = cur);
+        return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "invalid loop" }, next = cur);
     }
     var hdrIsMut := false;
     if source.wordAt(cur, "mut") {
@@ -2659,9 +2700,9 @@ evalLoopExpr := fn(source: String, loopStart: Int, limitPos: Int, prefix: String
     rangeOp := findTopLevelRangeOp(source, cur, hdrEnd, prefix);
     if rangeOp.found {
         loR := evalExprAt(source, cur, rangeOp.pos, prefix, ir.VALUE_KIND_INT, mut frame, mut budget);
-        if loR.outcome.flow =!= FLOW_NONE { return (outcome = loR.outcome, next = closeBrace); }
+        if loR.outcome.flow =!= FlowKind.None { return (outcome = loR.outcome, next = closeBrace); }
         hiR := evalExprAt(source, rangeOp.pos + rangeOp.width, hdrEnd, prefix, ir.VALUE_KIND_INT, mut frame, mut budget);
-        if hiR.outcome.flow =!= FLOW_NONE { return (outcome = hiR.outcome, next = closeBrace); }
+        if hiR.outcome.flow =!= FlowKind.None { return (outcome = hiR.outcome, next = closeBrace); }
         isIterLoop = true;
         isRangeLoop = true;
         rangeStart = ctPool[loR.outcome.valId].intVal;
@@ -2669,17 +2710,17 @@ evalLoopExpr := fn(source: String, loopStart: Int, limitPos: Int, prefix: String
     } else if not isIterLoop {
         /* Also test whether header evaluates to Int (count loop) or List/Array/String/Set */
         probeR := evalExprAt(source, cur, hdrEnd, prefix, "", mut frame, mut budget);
-        if probeR.outcome.flow =!= FLOW_NONE { return (outcome = probeR.outcome, next = closeBrace); }
+        if probeR.outcome.flow =!= FlowKind.None { return (outcome = probeR.outcome, next = closeBrace); }
         pc := ctPool[probeR.outcome.valId];
-        if pc.tag == TAG_BOOL {
+        if pc.tag == CellTag.Bool {
             isIterLoop = false;
-        } else if pc.tag == TAG_INT or pc.tag == TAG_LIST or pc.tag == TAG_ARRAY or pc.tag == TAG_SET {
+        } else if pc.tag == CellTag.Int or pc.tag == CellTag.List or pc.tag == CellTag.Array or pc.tag == CellTag.Set {
             isIterLoop = true;
             colValId = probeR.outcome.valId;
         }
     } else {
         srcR := evalExprAt(source, cur, hdrEnd, prefix, "", mut frame, mut budget);
-        if srcR.outcome.flow =!= FLOW_NONE { return (outcome = srcR.outcome, next = closeBrace); }
+        if srcR.outcome.flow =!= FlowKind.None { return (outcome = srcR.outcome, next = closeBrace); }
         colValId = srcR.outcome.valId;
     }
 
@@ -2691,10 +2732,10 @@ evalLoopExpr := fn(source: String, loopStart: Int, limitPos: Int, prefix: String
     var breakExit := false;
 
     if isIterLoop {
-        colCell := if colValId >= 0 { ctPool[colValId] } else { CtCell { tag = TAG_INT, kind = ir.VALUE_KIND_INT, intVal = 0, floatVal = 0.0, strVal = "", children = [], keys = [] } };
+        colCell := if colValId >= 0 { ctPool[colValId] } else { CtCell { tag = CellTag.Int, kind = ir.VALUE_KIND_INT, intVal = 0, floatVal = 0.0, strVal = "", children = [], keys = [] } };
         totalLen := if isRangeLoop {
             if rangeEnd > rangeStart { rangeEnd - rangeStart } else { 0 }
-        } else if colCell.tag == TAG_INT {
+        } else if colCell.tag == CellTag.Int {
             colCell.intVal
         } else {
             colCell.children.length()
@@ -2703,10 +2744,10 @@ evalLoopExpr := fn(source: String, loopStart: Int, limitPos: Int, prefix: String
         var idx := 0;
         loop idx < totalLen {
             tStep := tickStep(mut budget);
-            if not tStep.ok { return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = tStep.msg }, next = closeBrace); }
+            if not tStep.ok { return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = tStep.msg }, next = closeBrace); }
             elemId := if isRangeLoop {
                 makeIntVal(rangeStart + idx, "", mut budget)
-            } else if colCell.tag == TAG_INT {
+            } else if colCell.tag == CellTag.Int {
                 makeIntVal(idx, "", mut budget)
             } else {
                 colCell.children[idx]
@@ -2730,12 +2771,12 @@ evalLoopExpr := fn(source: String, loopStart: Int, limitPos: Int, prefix: String
                 }
             }
             loop frame.bindings.length() > savedLen { _p := mut frame.bindings.popBack(); }
-            if brR.flow == FLOW_BREAK {
+            if brR.flow == FlowKind.Break {
                 breakExit = true;
                 loopResult = brR.valId;
                 break;
             }
-            if brR.flow == FLOW_RETURN or brR.flow == FLOW_PANIC or brR.flow == FLOW_PROP_ERR {
+            if brR.flow == FlowKind.Return or brR.flow == FlowKind.Panic or brR.flow == FlowKind.PropErr {
                 frame.loopCount = savedLoopCount;
                 frame.loopIndex = savedLoopIndex;
                 frame.loopItemId = savedLoopItem;
@@ -2748,18 +2789,18 @@ evalLoopExpr := fn(source: String, loopStart: Int, limitPos: Int, prefix: String
         var iterCount := 0;
         loop true {
             tStep := tickStep(mut budget);
-            if not tStep.ok { return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = tStep.msg }, next = closeBrace); }
+            if not tStep.ok { return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = tStep.msg }, next = closeBrace); }
             condR := evalExprAt(source, cur, hdrEnd, prefix, ir.VALUE_KIND_BOOL, mut frame, mut budget);
-            if condR.outcome.flow =!= FLOW_NONE { return (outcome = condR.outcome, next = closeBrace); }
+            if condR.outcome.flow =!= FlowKind.None { return (outcome = condR.outcome, next = closeBrace); }
             if ctPool[condR.outcome.valId].intVal == 0 { break; }
             frame.loopIndex = iterCount;
             brR := evalBracedBlock(source, openBrace, prefix, "", mut frame, mut budget);
-            if brR.outcome.flow == FLOW_BREAK {
+            if brR.outcome.flow == FlowKind.Break {
                 breakExit = true;
                 loopResult = brR.outcome.valId;
                 break;
             }
-            if brR.outcome.flow == FLOW_RETURN or brR.outcome.flow == FLOW_PANIC or brR.outcome.flow == FLOW_PROP_ERR {
+            if brR.outcome.flow == FlowKind.Return or brR.outcome.flow == FlowKind.Panic or brR.outcome.flow == FlowKind.PropErr {
                 frame.loopCount = savedLoopCount;
                 frame.loopIndex = savedLoopIndex;
                 frame.loopItemId = savedLoopItem;
@@ -2779,7 +2820,7 @@ evalLoopExpr := fn(source: String, loopStart: Int, limitPos: Int, prefix: String
             endPos = thenClose;
             if not breakExit {
                 thR := evalBracedBlock(source, thenOpen, prefix, expectedKind, mut frame, mut budget);
-                if thR.outcome.flow =!= FLOW_NONE {
+                if thR.outcome.flow =!= FlowKind.None {
                     frame.loopCount = savedLoopCount;
                     frame.loopIndex = savedLoopIndex;
                     frame.loopItemId = savedLoopItem;
@@ -2794,71 +2835,71 @@ evalLoopExpr := fn(source: String, loopStart: Int, limitPos: Int, prefix: String
     frame.loopIndex = savedLoopIndex;
     frame.loopItemId = savedLoopItem;
     frame.hasLoopItem = savedHasItem;
-    (outcome = CtOutcome { ok = true, valId = loopResult, flow = FLOW_NONE, error = "" }, next = endPos)
+    (outcome = CtOutcome { ok = true, valId = loopResult, flow = FlowKind.None, error = "" }, next = endPos)
 };
 
 /** Dispatches method call `recvValId.methodName(args)` on built-in primitive/collection types, records, or `impl`s. */
 evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: String, args: List<Int>, labels: List<String>, frame: mut CtFrame, budget: mut EvalBudget): CtOutcome {
     recv := ctPool[recvId];
-    if recv.tag == TAG_STR {
-        if methodName == "length" { return CtOutcome { ok = true, valId = makeIntVal(recv.strVal.length(), "", mut budget), flow = FLOW_NONE, error = "" }; }
+    if recv.tag == CellTag.Str {
+        if methodName == "length" { return CtOutcome { ok = true, valId = makeIntVal(recv.strVal.length(), "", mut budget), flow = FlowKind.None, error = "" }; }
         if methodName == "at" and args.length() >= 1 {
             idx := ctPool[args[0]].intVal;
             if idx < 0 or idx >= recv.strVal.length() {
-                return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "String.at index out of bounds" };
+                return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "String.at index out of bounds" };
             }
-            return CtOutcome { ok = true, valId = makeStrVal(recv.strVal.at(idx), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(recv.strVal.at(idx), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "slice" and args.length() >= 2 {
             a := ctPool[args[0]].intVal;
             b := ctPool[args[1]].intVal;
             if a < 0 or b < a or b > recv.strVal.length() {
-                return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "String.slice out of bounds" };
+                return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "String.slice out of bounds" };
             }
-            return CtOutcome { ok = true, valId = makeStrVal(recv.strVal.slice(a, b), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(recv.strVal.slice(a, b), "", mut budget), flow = FlowKind.None, error = "" };
         }
-        if methodName == "trim" { return CtOutcome { ok = true, valId = makeStrVal(recv.strVal.trim(), "", mut budget), flow = FLOW_NONE, error = "" }; }
+        if methodName == "trim" { return CtOutcome { ok = true, valId = makeStrVal(recv.strVal.trim(), "", mut budget), flow = FlowKind.None, error = "" }; }
         if methodName == "toInt" {
             r := recv.strVal.toInt();
-            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<value:Int,ok:Bool>", [makeIntVal(r.value, "", mut budget), makeBoolVal(r.ok, "", mut budget)], ["value", "ok"], mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<value:Int,ok:Bool>", [makeIntVal(r.value, "", mut budget), makeBoolVal(r.ok, "", mut budget)], ["value", "ok"], mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "indexOf" and args.length() >= 2 {
-            return CtOutcome { ok = true, valId = makeIntVal(recv.strVal.indexOf(formatCtVal(args[0]), ctPool[args[1]].intVal), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeIntVal(recv.strVal.indexOf(formatCtVal(args[0]), ctPool[args[1]].intVal), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "startsWithAt" and args.length() >= 2 {
-            return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.startsWithAt(ctPool[args[0]].intVal, formatCtVal(args[1])), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.startsWithAt(ctPool[args[0]].intVal, formatCtVal(args[1])), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "endsWith" and args.length() >= 1 {
-            return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.endsWith(formatCtVal(args[0])), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.endsWith(formatCtVal(args[0])), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "split" and args.length() >= 1 {
             parts := recv.strVal.split(formatCtVal(args[0]));
             mut ids: List<Int> = [];
             loop parts as p { mut ids.pushBack(makeStrVal(p, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<String>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<String>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "toCodePoints" {
             cps := recv.strVal.toCodePoints();
             mut ids: List<Int> = [];
             loop cps as cp { mut ids.pushBack(makeIntVal(cp, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "utf8Encode" {
             bs := recv.strVal.utf8Encode();
             mut ids: List<Int> = [];
             loop bs as b { mut ids.pushBack(makeIntVal(b, "", mut budget)); }
-            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeListVal("List<Int>", ids, mut budget), flow = FlowKind.None, error = "" };
         }
-        if methodName == "isDigit" { return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.isDigit(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if methodName == "isNameStart" { return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.isNameStart(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if methodName == "isNameContinue" { return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.isNameContinue(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if methodName == "toText" { return CtOutcome { ok = true, valId = recvId, flow = FLOW_NONE, error = "" }; }
+        if methodName == "isDigit" { return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.isDigit(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if methodName == "isNameStart" { return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.isNameStart(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if methodName == "isNameContinue" { return CtOutcome { ok = true, valId = makeBoolVal(recv.strVal.isNameContinue(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if methodName == "toText" { return CtOutcome { ok = true, valId = recvId, flow = FlowKind.None, error = "" }; }
     }
-    if recv.tag == TAG_INT {
-        if methodName == "toText" { return CtOutcome { ok = true, valId = makeStrVal(recv.intVal.toText(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if methodName == "abs" { return CtOutcome { ok = true, valId = makeIntVal(recv.intVal.abs(), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if methodName == "min" and args.length() >= 1 { return CtOutcome { ok = true, valId = makeIntVal(recv.intVal.min(ctPool[args[0]].intVal), "", mut budget), flow = FLOW_NONE, error = "" }; }
-        if methodName == "max" and args.length() >= 1 { return CtOutcome { ok = true, valId = makeIntVal(recv.intVal.max(ctPool[args[0]].intVal), "", mut budget), flow = FLOW_NONE, error = "" }; }
+    if recv.tag == CellTag.Int {
+        if methodName == "toText" { return CtOutcome { ok = true, valId = makeStrVal(recv.intVal.toText(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if methodName == "abs" { return CtOutcome { ok = true, valId = makeIntVal(recv.intVal.abs(), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if methodName == "min" and args.length() >= 1 { return CtOutcome { ok = true, valId = makeIntVal(recv.intVal.min(ctPool[args[0]].intVal), "", mut budget), flow = FlowKind.None, error = "" }; }
+        if methodName == "max" and args.length() >= 1 { return CtOutcome { ok = true, valId = makeIntVal(recv.intVal.max(ctPool[args[0]].intVal), "", mut budget), flow = FlowKind.None, error = "" }; }
         if methodName == "checkedAdd" or methodName == "checkedSub" or methodName == "checkedMul" or methodName == "checkedDiv" or methodName == "checkedRem" or methodName == "floorDiv" or methodName == "floorMod" {
             rhs := ctPool[args[0]].intVal;
             r := if methodName == "checkedAdd" { recv.intVal.checkedAdd(rhs) }
@@ -2868,51 +2909,51 @@ evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: 
             else if methodName == "checkedRem" { recv.intVal.checkedRem(rhs) }
             else if methodName == "floorDiv" { recv.intVal.floorDiv(rhs) }
             else { recv.intVal.floorMod(rhs) };
-            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<value:Int,ok:Bool>", [makeIntVal(r.value, "", mut budget), makeBoolVal(r.ok, "", mut budget)], ["value", "ok"], mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<value:Int,ok:Bool>", [makeIntVal(r.value, "", mut budget), makeBoolVal(r.ok, "", mut budget)], ["value", "ok"], mut budget), flow = FlowKind.None, error = "" };
         }
     }
-    if recv.tag == TAG_BOOL and methodName == "toText" {
-        return CtOutcome { ok = true, valId = makeStrVal(if recv.intVal =!= 0 { "true" } else { "false" }, "", mut budget), flow = FLOW_NONE, error = "" };
+    if recv.tag == CellTag.Bool and methodName == "toText" {
+        return CtOutcome { ok = true, valId = makeStrVal(if recv.intVal =!= 0 { "true" } else { "false" }, "", mut budget), flow = FlowKind.None, error = "" };
     }
-    if recv.tag == TAG_FLOAT and methodName == "toText" {
-        return CtOutcome { ok = true, valId = makeStrVal(recv.floatVal.toText(), "", mut budget), flow = FLOW_NONE, error = "" };
+    if recv.tag == CellTag.Float and methodName == "toText" {
+        return CtOutcome { ok = true, valId = makeStrVal(recv.floatVal.toText(), "", mut budget), flow = FlowKind.None, error = "" };
     }
-    if recv.tag == TAG_LIST or recv.tag == TAG_ARRAY {
-        if methodName == "length" { return CtOutcome { ok = true, valId = makeIntVal(recv.children.length(), "", mut budget), flow = FLOW_NONE, error = "" }; }
+    if recv.tag == CellTag.List or recv.tag == CellTag.Array {
+        if methodName == "length" { return CtOutcome { ok = true, valId = makeIntVal(recv.children.length(), "", mut budget), flow = FlowKind.None, error = "" }; }
         if methodName == "join" and args.length() >= 1 {
             sep := formatCtVal(args[0]);
             mut parts: List<String> = [];
             loop recv.children as cid { mut parts.pushBack(formatCtVal(cid)); }
-            return CtOutcome { ok = true, valId = makeStrVal(parts.join(sep), "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeStrVal(parts.join(sep), "", mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "contains" and args.length() >= 1 {
             var found := false;
             loop recv.children as cid { if ctValuesEqual(cid, args[0]) { found = true; break; } }
-            return CtOutcome { ok = true, valId = makeBoolVal(found, "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeBoolVal(found, "", mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "pushBack" and args.length() >= 1 {
             mut ch: List<Int> = recv.children;
             mut ch.pushBack(cloneValIfContainer(args[0], "", mut budget));
             mut ctPool.setAt(recvId, CtCell { tag = recv.tag, kind = recv.kind, intVal = recv.intVal, floatVal = recv.floatVal, strVal = recv.strVal, children = ch, keys = recv.keys });
-            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "popBack" {
             if recv.children.length() == 0 {
-                return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "popBack on empty list in compile-time evaluation" };
+                return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "popBack on empty list in compile-time evaluation" };
             }
             mut ch: List<Int> = recv.children;
             popped := mut ch.popBack();
             mut ctPool.setAt(recvId, CtCell { tag = recv.tag, kind = recv.kind, intVal = recv.intVal, floatVal = recv.floatVal, strVal = recv.strVal, children = ch, keys = recv.keys });
-            return CtOutcome { ok = true, valId = popped, flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = popped, flow = FlowKind.None, error = "" };
         }
     }
-    if recv.tag == TAG_MAP {
-        if methodName == "length" { return CtOutcome { ok = true, valId = makeIntVal(recv.keys.length(), "", mut budget), flow = FLOW_NONE, error = "" }; }
+    if recv.tag == CellTag.Map {
+        if methodName == "length" { return CtOutcome { ok = true, valId = makeIntVal(recv.keys.length(), "", mut budget), flow = FlowKind.None, error = "" }; }
         if methodName == "has" and args.length() >= 1 {
             kStr := scalarKeyString(args[0]);
             var found := false;
             loop recv.keys as k { if k == kStr { found = true; break; } }
-            return CtOutcome { ok = true, valId = makeBoolVal(found, "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeBoolVal(found, "", mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "set" and args.length() >= 2 {
             kStr := scalarKeyString(args[0]);
@@ -2928,8 +2969,8 @@ evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: 
                 mut newCh.pushBack(cloneValIfContainer(args[0], "", mut budget));
                 mut newCh.pushBack(cloneValIfContainer(args[1], "", mut budget));
             }
-            mut ctPool.setAt(recvId, CtCell { tag = TAG_MAP, kind = recv.kind, intVal = newKeys.length(), floatVal = 0.0, strVal = "", children = newCh, keys = newKeys });
-            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            mut ctPool.setAt(recvId, CtCell { tag = CellTag.Map, kind = recv.kind, intVal = newKeys.length(), floatVal = 0.0, strVal = "", children = newCh, keys = newKeys });
+            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "get" and args.length() >= 1 {
             kStr := scalarKeyString(args[0]);
@@ -2939,19 +2980,19 @@ evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: 
             valKind := types.mapValueKind(recv.kind);
             if hit >= 0 {
                 vId := recv.children[hit * 2 + 1];
-                return CtOutcome { ok = true, valId = makeTupleVal("Tuple<found:Bool,value:" + valKind + ">", [makeBoolVal(true, "", mut budget), vId], ["found", "value"], mut budget), flow = FLOW_NONE, error = "" };
+                return CtOutcome { ok = true, valId = makeTupleVal("Tuple<found:Bool,value:" + valKind + ">", [makeBoolVal(true, "", mut budget), vId], ["found", "value"], mut budget), flow = FlowKind.None, error = "" };
             }
             zId := makeZeroCtVal(valKind, mut budget, frame.aliases, frame.moduleKey);
-            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<found:Bool,value:" + valKind + ">", [makeBoolVal(false, "", mut budget), zId], ["found", "value"], mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeTupleVal("Tuple<found:Bool,value:" + valKind + ">", [makeBoolVal(false, "", mut budget), zId], ["found", "value"], mut budget), flow = FlowKind.None, error = "" };
         }
     }
-    if recv.tag == TAG_SET {
-        if methodName == "length" { return CtOutcome { ok = true, valId = makeIntVal(recv.keys.length(), "", mut budget), flow = FLOW_NONE, error = "" }; }
+    if recv.tag == CellTag.Set {
+        if methodName == "length" { return CtOutcome { ok = true, valId = makeIntVal(recv.keys.length(), "", mut budget), flow = FlowKind.None, error = "" }; }
         if methodName == "has" and args.length() >= 1 {
             kStr := scalarKeyString(args[0]);
             var found := false;
             loop recv.keys as k { if k == kStr { found = true; break; } }
-            return CtOutcome { ok = true, valId = makeBoolVal(found, "", mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeBoolVal(found, "", mut budget), flow = FlowKind.None, error = "" };
         }
         if methodName == "add" and args.length() >= 1 {
             kStr := scalarKeyString(args[0]);
@@ -2962,15 +3003,15 @@ evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: 
                 mut newCh: List<Int> = recv.children;
                 mut newKeys.pushBack(kStr);
                 mut newCh.pushBack(cloneValIfContainer(args[0], "", mut budget));
-                mut ctPool.setAt(recvId, CtCell { tag = TAG_SET, kind = recv.kind, intVal = newKeys.length(), floatVal = 0.0, strVal = "", children = newCh, keys = newKeys });
+                mut ctPool.setAt(recvId, CtCell { tag = CellTag.Set, kind = recv.kind, intVal = newKeys.length(), floatVal = 0.0, strVal = "", children = newCh, keys = newKeys });
             }
-            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            return CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         }
     }
-    if recv.tag == TAG_READER or recv.tag == TAG_WRITER {
+    if recv.tag == CellTag.Reader or recv.tag == CellTag.Writer {
         mut fullArgs: List<Int> = [recvId];
         loop args as a { mut fullArgs.pushBack(a); }
-        fullOp := if recv.tag == TAG_READER { "Reader." + methodName } else { "Writer." + methodName };
+        fullOp := if recv.tag == CellTag.Reader { "Reader." + methodName } else { "Writer." + methodName };
         return evalHostBuiltinCall("lite.core.io.v1", fullOp, fullArgs, mut budget);
     }
     /* Look up registered `Type.op` in active module or owner module */
@@ -2995,7 +3036,7 @@ evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: 
         }
     }
     /* Also check `lib/core/text` soft methods cleanly */
-    if recv.tag == TAG_STR {
+    if recv.tag == CellTag.Str {
         mut textArgs: List<Int> = [recvId];
         loop args as a { mut textArgs.pushBack(a); }
         tIdx := findFnIndicesInModule("lib$core$text", "String." + methodName);
@@ -3005,13 +3046,13 @@ evalMethodCall := fn(source: String, methodName: String, recvId: Int, recvName: 
             return invokeCtFnDef(chosen, textArgs, labels, mut budget);
         }
     }
-    CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unsupported compile-time method call ." + methodName }
+    CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsupported compile-time method call ." + methodName }
 };
 
 /** Parses and evaluates a postfix chain (`[idx]`, `.field`, `.method(...)`, `(args)`, `!`) on `baseId`. */
 evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: String, baseId: Int, baseName: String, frame: mut CtFrame, budget: mut EvalBudget): (outcome: CtOutcome, next: Int) {
     if exprStart > 0 and source.at(exprStart - 1) == "}" {
-        return (outcome = CtOutcome { ok = true, valId = baseId, flow = FLOW_NONE, error = "" }, next = exprStart);
+        return (outcome = CtOutcome { ok = true, valId = baseId, flow = FlowKind.None, error = "" }, next = exprStart);
     }
     var curId := baseId;
     var curName := baseName;
@@ -3056,7 +3097,7 @@ evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: St
                 callA := evalCallArgs(source, argParen, prefix, mut frame, mut budget);
                 if not callA.ok { return (outcome = callA.outcome, next = callA.next); }
                 resM := evalMethodCall(source, fName, curId, curName, callA.args, callA.labels, mut frame, mut budget);
-                if resM.flow =!= FLOW_NONE { return (outcome = resM, next = callA.next); }
+                if resM.flow =!= FlowKind.None { return (outcome = resM, next = callA.next); }
                 curId = resM.valId;
                 curName = "";
                 rawNext = callA.next;
@@ -3078,20 +3119,20 @@ evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: St
                 cursor = syntax.skipTrivia(source, fEnd, prefix);
                 continue;
             }
-            return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unknown compile-time field ." + fName }, next = fEnd);
+            return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unknown compile-time field ." + fName }, next = fEnd);
         } else if ch == "[" {
             idxR := evalExprAt(source, cursor + 1, limitPos, prefix, "", mut frame, mut budget);
-            if idxR.outcome.flow =!= FLOW_NONE { return (outcome = idxR.outcome, next = idxR.next); }
+            if idxR.outcome.flow =!= FlowKind.None { return (outcome = idxR.outcome, next = idxR.next); }
             afterIdx := syntax.skipTrivia(source, idxR.next, prefix);
             cell := ctPool[curId];
             if afterIdx < limitPos and source.at(afterIdx) == "." and afterIdx + 1 < limitPos and source.at(afterIdx + 1) == "." {
                 /* Slice `xs[a..b]` -> represent as temporary List/Array view for `.toList()` or indexing */
                 endR := evalExprAt(source, afterIdx + 2, limitPos, prefix, "", mut frame, mut budget);
-                if endR.outcome.flow =!= FLOW_NONE { return (outcome = endR.outcome, next = endR.next); }
+                if endR.outcome.flow =!= FlowKind.None { return (outcome = endR.outcome, next = endR.next); }
                 a := ctPool[idxR.outcome.valId].intVal;
                 b := ctPool[endR.outcome.valId].intVal;
                 if a < 0 or b < a or b > cell.children.length() {
-                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "slice bounds out of range in compile-time evaluation" }, next = endR.next);
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "slice bounds out of range in compile-time evaluation" }, next = endR.next);
                 }
                 mut subElems: List<Int> = [];
                 var si := a;
@@ -3106,7 +3147,7 @@ evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: St
             }
             idxVal := ctPool[idxR.outcome.valId].intVal;
             if idxVal < 0 or idxVal >= cell.children.length() {
-                return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "index " + idxVal.toText() + " out of bounds (length " + cell.children.length().toText() + ")" }, next = afterIdx);
+                return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "index " + idxVal.toText() + " out of bounds (length " + cell.children.length().toText() + ")" }, next = afterIdx);
             }
             curId = cell.children[idxVal];
             curName = "";
@@ -3115,17 +3156,17 @@ evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: St
             continue;
         } else if ch == "(" {
             cell := ctPool[curId];
-            if cell.tag =!= TAG_FN {
-                return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot invoke non-function value at compile time" }, next = cursor);
+            if cell.tag =!= CellTag.Fn {
+                return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot invoke non-function value at compile time" }, next = cursor);
             }
             callA := evalCallArgs(source, cursor, prefix, mut frame, mut budget);
             if not callA.ok { return (outcome = callA.outcome, next = callA.next); }
             rtIdx := ctFnIdxByRt.get(cell.strVal);
             if not rtIdx.found {
-                return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "missing function definition for " + cell.strVal }, next = callA.next);
+                return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "missing function definition for " + cell.strVal }, next = callA.next);
             }
             invR := invokeCtFnDef(rtIdx.value, callA.args, callA.labels, mut budget);
-            if invR.flow =!= FLOW_NONE { return (outcome = invR, next = callA.next); }
+            if invR.flow =!= FlowKind.None { return (outcome = invR, next = callA.next); }
             curId = invR.valId;
             curName = "";
             rawNext = callA.next;
@@ -3133,8 +3174,8 @@ evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: St
             continue;
         } else if ch == "!" and not source.startsWithAt(cursor, "!=") {
             cell := ctPool[curId];
-            if cell.tag =!= TAG_RESULT {
-                return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "postfix ! on non-Result compile-time value" }, next = cursor + 1);
+            if cell.tag =!= CellTag.Result {
+                return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "postfix ! on non-Result compile-time value" }, next = cursor + 1);
             }
             if cell.intVal == 0 {
                 curId = if cell.children.length() > 0 { cell.children[0] } else { makeUnitVal(mut budget) };
@@ -3167,7 +3208,7 @@ evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: St
                             }
                             if toErrIdx >= 0 {
                                 convR := invokeCtFnDef(toErrIdx, [errPayloadId], [], mut budget);
-                                if convR.flow =!= FLOW_NONE { return (outcome = convR, next = cursor + 1); }
+                                if convR.flow =!= FlowKind.None { return (outcome = convR, next = cursor + 1); }
                                 convErrId = convR.valId;
                             }
                         }
@@ -3175,22 +3216,22 @@ evalPostfixChain := fn(source: String, exprStart: Int, limitPos: Int, prefix: St
                 }
             }
             propVal := makeResultVal(outResK, true, convErrId, mut budget);
-            return (outcome = CtOutcome { ok = true, valId = propVal, flow = FLOW_PROP_ERR, error = "" }, next = cursor + 1);
+            return (outcome = CtOutcome { ok = true, valId = propVal, flow = FlowKind.PropErr, error = "" }, next = cursor + 1);
         } else {
             break;
         }
     }
-    (outcome = CtOutcome { ok = true, valId = curId, flow = FLOW_NONE, error = "" }, next = rawNext)
+    (outcome = CtOutcome { ok = true, valId = curId, flow = FlowKind.None, error = "" }, next = rawNext)
 };
 
 /** Evaluates one primary expression (literals, records, lists/maps, names, calls, `if`/`match`/`loop`/`do`/`comptime`) + postfix chain. */
 evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String, expectedKind: String, frame: mut CtFrame, budget: mut EvalBudget): (outcome: CtOutcome, next: Int) {
     start := syntax.skipTrivia(source, startPos, prefix);
     if start >= limitPos {
-        return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unexpected end of compile-time expression" }, next = start);
+        return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unexpected end of compile-time expression" }, next = start);
     }
     ch := source.at(start);
-    var res := CtOutcome { ok = true, valId = -1, flow = FLOW_NONE, error = "" };
+    var res := CtOutcome { ok = true, valId = -1, flow = FlowKind.None, error = "" };
     var resNext := start;
     var baseName := "";
 
@@ -3208,7 +3249,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     shS := syntax.skipTrivia(source, tCur + 1, prefix);
                     lbl = source.slice(shS, source.skipName(shS));
                     ev := evalExprAt(source, shS, limitPos, prefix, "", mut frame, mut budget);
-                    if ev.outcome.flow =!= FLOW_NONE { return (outcome = ev.outcome, next = ev.next); }
+                    if ev.outcome.flow =!= FlowKind.None { return (outcome = ev.outcome, next = ev.next); }
                     mut vals.pushBack(ev.outcome.valId);
                     mut lbls.pushBack(lbl);
                     tCur = syntax.skipTrivia(source, ev.next, prefix);
@@ -3223,7 +3264,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     }
                     compK := if types.isTupleKind(expectedKind) and ti < types.tupleComponentCount(expectedKind) { types.tupleComponent(expectedKind, ti).kind } else { "" };
                     ev := evalExprAt(source, tCur, limitPos, prefix, compK, mut frame, mut budget);
-                    if ev.outcome.flow =!= FLOW_NONE { return (outcome = ev.outcome, next = ev.next); }
+                    if ev.outcome.flow =!= FlowKind.None { return (outcome = ev.outcome, next = ev.next); }
                     mut vals.pushBack(ev.outcome.valId);
                     mut lbls.pushBack(lbl);
                     tCur = syntax.skipTrivia(source, ev.next, prefix);
@@ -3241,10 +3282,10 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 pi = pi + 1;
             }
             tKind := if types.isTupleKind(expectedKind) { expectedKind } else { "Tuple<" + tParts.join(",") + ">" };
-            res = CtOutcome { ok = true, valId = makeTupleVal(tKind, vals, lbls, mut budget), flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = makeTupleVal(tKind, vals, lbls, mut budget), flow = FlowKind.None, error = "" };
         } else {
             ev := evalExprAt(source, innerCur, limitPos, prefix, expectedKind, mut frame, mut budget);
-            if ev.outcome.flow =!= FLOW_NONE { return ev; }
+            if ev.outcome.flow =!= FlowKind.None { return ev; }
             closeP := syntax.skipTrivia(source, ev.next, prefix);
             resNext = if closeP < limitPos and source.at(closeP) == ")" { closeP + 1 } else { closeP };
             res = ev.outcome;
@@ -3258,29 +3299,29 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 rawNum := source.slice(start, numP.next);
                 fRes := parseFloatText(rawNum);
                 fv := if fRes.ok { fRes.value } else { 0.0 };
-                res = CtOutcome { ok = true, valId = makeFloatVal(fv, numP.kind, mut budget), flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = makeFloatVal(fv, numP.kind, mut budget), flow = FlowKind.None, error = "" };
             } else if numeric.isUnsignedIntKind(numP.kind) {
                 rawU := source.slice(start, numP.next);
                 uRes := parseUInt64Text(rawU);
-                res = CtOutcome { ok = true, valId = makeUIntVal(if uRes.ok { uRes.value } else { cast<UInt64>(0) }, numP.kind, mut budget), flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = makeUIntVal(if uRes.ok { uRes.value } else { cast<UInt64>(0) }, numP.kind, mut budget), flow = FlowKind.None, error = "" };
             } else {
-                res = CtOutcome { ok = true, valId = makeIntVal(numP.intValue, numP.kind, mut budget), flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = makeIntVal(numP.intValue, numP.kind, mut budget), flow = FlowKind.None, error = "" };
             }
         } else {
             opR := evalPrimaryAt(source, afterSign, limitPos, prefix, "", mut frame, mut budget);
-            if opR.outcome.flow =!= FLOW_NONE { return opR; }
+            if opR.outcome.flow =!= FlowKind.None { return opR; }
             resNext = opR.next;
             oc := ctPool[opR.outcome.valId];
             if ch == "+" {
                 res = opR.outcome;
-            } else if oc.tag == TAG_FLOAT {
-                res = CtOutcome { ok = true, valId = makeFloatVal(-oc.floatVal, oc.kind, mut budget), flow = FLOW_NONE, error = "" };
+            } else if oc.tag == CellTag.Float {
+                res = CtOutcome { ok = true, valId = makeFloatVal(-oc.floatVal, oc.kind, mut budget), flow = FlowKind.None, error = "" };
             } else {
                 neg := oc.intVal.checkedNeg();
                 if not neg.ok or not numeric.intKindFits(oc.kind, neg.value) {
-                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "integer negation overflow in compile-time evaluation" }, next = resNext);
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "integer negation overflow in compile-time evaluation" }, next = resNext);
                 }
-                res = CtOutcome { ok = true, valId = makeIntVal(neg.value, oc.kind, mut budget), flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = makeIntVal(neg.value, oc.kind, mut budget), flow = FlowKind.None, error = "" };
             }
         }
     } else if ch.isDigit() {
@@ -3289,18 +3330,18 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
         if numeric.isFloatKind(numP.kind) {
             rawNum := source.slice(start, numP.next);
             fRes := parseFloatText(rawNum);
-            res = CtOutcome { ok = true, valId = makeFloatVal(if fRes.ok { fRes.value } else { 0.0 }, numP.kind, mut budget), flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = makeFloatVal(if fRes.ok { fRes.value } else { 0.0 }, numP.kind, mut budget), flow = FlowKind.None, error = "" };
         } else if numeric.isUnsignedIntKind(numP.kind) {
             rawU := source.slice(start, numP.next);
             uRes := parseUInt64Text(rawU);
-            res = CtOutcome { ok = true, valId = makeUIntVal(if uRes.ok { uRes.value } else { cast<UInt64>(0) }, numP.kind, mut budget), flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = makeUIntVal(if uRes.ok { uRes.value } else { cast<UInt64>(0) }, numP.kind, mut budget), flow = FlowKind.None, error = "" };
         } else {
-            res = CtOutcome { ok = true, valId = makeIntVal(numP.intValue, numP.kind, mut budget), flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = makeIntVal(numP.intValue, numP.kind, mut budget), flow = FlowKind.None, error = "" };
         }
     } else if ch == "\"" {
         lit := decodeStringLiteral(source, start, prefix);
         resNext = lit.next;
-        res = CtOutcome { ok = true, valId = makeStrVal(lit.text, ir.VALUE_KIND_STRING, mut budget), flow = FLOW_NONE, error = "" };
+        res = CtOutcome { ok = true, valId = makeStrVal(lit.text, ir.VALUE_KIND_STRING, mut budget), flow = FlowKind.None, error = "" };
     } else if ch == "[" {
         var cur := syntax.skipTrivia(source, start + 1, prefix);
         isMapT := types.isMapKind(expectedKind);
@@ -3311,14 +3352,14 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             else if isSetT { makeSetVal(expectedKind, [], [], mut budget) }
             else if types.isArrayKind(expectedKind) { makeArrayVal(expectedKind, [], mut budget) }
             else { makeListVal(if expectedKind =!= "" { expectedKind } else { "List<Int>" }, [], mut budget) };
-            res = CtOutcome { ok = true, valId = vid, flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = vid, flow = FlowKind.None, error = "" };
         } else {
             elExp := if types.isListKind(expectedKind) { types.listElementKind(expectedKind) }
             else if types.isArrayKind(expectedKind) { types.arrayElementKind(expectedKind) }
             else if isSetT { types.setElementKind(expectedKind) }
             else if isMapT { types.mapKeyKind(expectedKind) } else { "" };
             firstR := evalExprAt(source, cur, limitPos, prefix, elExp, mut frame, mut budget);
-            if firstR.outcome.flow =!= FLOW_NONE { return firstR; }
+            if firstR.outcome.flow =!= FlowKind.None { return firstR; }
             afterFirst := syntax.skipTrivia(source, firstR.next, prefix);
             if afterFirst < limitPos and syntax.isSingleEquals(source, afterFirst) {
                 /* Map `[k = v, ...]` */
@@ -3330,7 +3371,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 loop true {
                     vExp := if isMapT { types.mapValueKind(expectedKind) } else { "" };
                     vR := evalExprAt(source, eqPos + 1, limitPos, prefix, vExp, mut frame, mut budget);
-                    if vR.outcome.flow =!= FLOW_NONE { return vR; }
+                    if vR.outcome.flow =!= FlowKind.None { return vR; }
                     ks := scalarKeyString(kId);
                     var hit := -1;
                     var i := 0;
@@ -3347,7 +3388,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                         cur = syntax.skipTrivia(source, cur + 1, prefix);
                         if cur < limitPos and source.at(cur) == "]" { break; }
                         kR := evalExprAt(source, cur, limitPos, prefix, elExp, mut frame, mut budget);
-                        if kR.outcome.flow =!= FLOW_NONE { return kR; }
+                        if kR.outcome.flow =!= FlowKind.None { return kR; }
                         kId = kR.outcome.valId;
                         eqPos = syntax.skipTrivia(source, kR.next, prefix);
                     } else { break; }
@@ -3355,12 +3396,12 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 resNext = if cur < limitPos and source.at(cur) == "]" { cur + 1 } else { cur };
                 kK := if isMapT { types.mapKeyKind(expectedKind) } else { ctPool[mKeyIds[0]].kind };
                 vK := if isMapT { types.mapValueKind(expectedKind) } else { ctPool[mValIds[0]].kind };
-                res = CtOutcome { ok = true, valId = makeMapVal("Map<" + kK + "," + vK + ">", mKeys, mKeyIds, mValIds, mut budget), flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = makeMapVal("Map<" + kK + "," + vK + ">", mKeys, mKeyIds, mValIds, mut budget), flow = FlowKind.None, error = "" };
             } else if afterFirst < limitPos and source.at(afterFirst) == ";" {
                 /* Repeat `[elem; count]` */
                 nStart := syntax.skipTrivia(source, afterFirst + 1, prefix);
                 nR := evalExprAt(source, nStart, limitPos, prefix, ir.VALUE_KIND_INT, mut frame, mut budget);
-                if nR.outcome.flow =!= FLOW_NONE { return nR; }
+                if nR.outcome.flow =!= FlowKind.None { return nR; }
                 cnt := ctPool[nR.outcome.valId].intVal;
                 closeB := syntax.skipTrivia(source, nR.next, prefix);
                 resNext = if closeB < limitPos and source.at(closeB) == "]" { closeB + 1 } else { closeB };
@@ -3374,7 +3415,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 }
                 vid := if types.isListKind(expectedKind) { makeListVal("List<" + elKind + ">", elems, mut budget) }
                 else { makeArrayVal("[" + elKind + ";" + cnt.toText() + "]", elems, mut budget) };
-                res = CtOutcome { ok = true, valId = vid, flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = vid, flow = FlowKind.None, error = "" };
             } else {
                 mut elems: List<Int> = [coerceCtValue(elExp, ctPool[firstR.outcome.valId].kind, cloneValIfContainer(firstR.outcome.valId, "", mut budget), mut budget)];
                 cur = afterFirst;
@@ -3383,7 +3424,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                         cur = syntax.skipTrivia(source, cur + 1, prefix);
                         if cur < limitPos and source.at(cur) == "]" { break; }
                         er := evalExprAt(source, cur, limitPos, prefix, elExp, mut frame, mut budget);
-                        if er.outcome.flow =!= FLOW_NONE { return er; }
+                        if er.outcome.flow =!= FlowKind.None { return er; }
                         mut elems.pushBack(coerceCtValue(elExp, ctPool[er.outcome.valId].kind, cloneValIfContainer(er.outcome.valId, "", mut budget), mut budget));
                         cur = syntax.skipTrivia(source, er.next, prefix);
                     } else { break; }
@@ -3403,7 +3444,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 } else {
                     makeListVal("List<" + effEl + ">", elems, mut budget)
                 };
-                res = CtOutcome { ok = true, valId = vid, flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = vid, flow = FlowKind.None, error = "" };
             }
         }
     } else if ch == "." {
@@ -3413,13 +3454,13 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
         afterC := syntax.skipTrivia(source, cEnd, prefix);
         if cName == "count" and frame.loopCount >= 0 {
             resNext = cEnd;
-            res = CtOutcome { ok = true, valId = makeIntVal(frame.loopCount, "", mut budget), flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = makeIntVal(frame.loopCount, "", mut budget), flow = FlowKind.None, error = "" };
         } else if cName == "index" {
             resNext = cEnd;
-            res = CtOutcome { ok = true, valId = makeIntVal(frame.loopIndex, "", mut budget), flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = makeIntVal(frame.loopIndex, "", mut budget), flow = FlowKind.None, error = "" };
         } else if cName == "item" and frame.hasLoopItem {
             resNext = cEnd;
-            res = CtOutcome { ok = true, valId = frame.loopItemId, flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = frame.loopItemId, flow = FlowKind.None, error = "" };
         } else if (cName == "ok" or cName == "err") and types.isResultKind(expectedKind) {
             isErr := cName == "err";
             pKind := if isErr { types.resultErrKind(expectedKind) } else { types.resultOkKind(expectedKind) };
@@ -3428,10 +3469,10 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 if not callA.ok { return (outcome = callA.outcome, next = callA.next); }
                 resNext = callA.next;
                 pId := coerceCtValue(pKind, ctPool[callA.args[0]].kind, callA.args[0], mut budget);
-                res = CtOutcome { ok = true, valId = makeResultVal(expectedKind, isErr, pId, mut budget), flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = makeResultVal(expectedKind, isErr, pId, mut budget), flow = FlowKind.None, error = "" };
             } else {
                 resNext = cEnd;
-                res = CtOutcome { ok = true, valId = makeResultVal(expectedKind, isErr, makeUnitVal(mut budget), mut budget), flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = makeResultVal(expectedKind, isErr, makeUnitVal(mut budget), mut budget), flow = FlowKind.None, error = "" };
             }
         } else if types.isEnumKind(expectedKind) {
             caseIdx := types.enumCaseIndex(expectedKind, cName);
@@ -3439,10 +3480,10 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 callA := evalCallArgs(source, afterC, prefix, mut frame, mut budget);
                 if not callA.ok { return (outcome = callA.outcome, next = callA.next); }
                 resNext = callA.next;
-                res = CtOutcome { ok = true, valId = makeEnumVal(expectedKind, caseIdx, cName, callA.args, mut budget), flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = makeEnumVal(expectedKind, caseIdx, cName, callA.args, mut budget), flow = FlowKind.None, error = "" };
             } else {
                 resNext = cEnd;
-                res = CtOutcome { ok = true, valId = makeEnumVal(expectedKind, caseIdx, cName, [], mut budget), flow = FLOW_NONE, error = "" };
+                res = CtOutcome { ok = true, valId = makeEnumVal(expectedKind, caseIdx, cName, [], mut budget), flow = FlowKind.None, error = "" };
             }
         } else if types.isRecordKind(expectedKind) and afterC < limitPos and source.at(afterC) == "(" {
             /* Contextual static call `.create(...)` */
@@ -3459,7 +3500,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             chosen := selectOverloadFnDef(cands2, callA.args.length() - callA.labels.length(), callA.labels);
             res = invokeCtFnDef(chosen, callA.args, callA.labels, mut budget);
         } else {
-            return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve ." + cName + " at compile time" }, next = cEnd);
+            return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve ." + cName + " at compile time" }, next = cEnd);
         }
     } else if ch == "{" {
         recR := if types.isRecordKind(expectedKind) and not types.isAnonRecordKind(expectedKind) {
@@ -3467,7 +3508,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
         } else {
             evalInferredRecordLiteralAt(source, start, limitPos, prefix, expectedKind, mut frame, mut budget)
         };
-        if recR.outcome.flow =!= FLOW_NONE { return recR; }
+        if recR.outcome.flow =!= FlowKind.None { return recR; }
         res = recR.outcome;
         resNext = recR.next;
     } else if ch.isNameStart() {
@@ -3476,15 +3517,15 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
         afterName := syntax.skipTrivia(source, nEnd, prefix);
         if name == "Unit" {
             resNext = nEnd;
-            res = CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = makeUnitVal(mut budget), flow = FlowKind.None, error = "" };
         } else if name == "true" or name == "false" {
             resNext = nEnd;
-            res = CtOutcome { ok = true, valId = makeBoolVal(name == "true", "", mut budget), flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = makeBoolVal(name == "true", "", mut budget), flow = FlowKind.None, error = "" };
         } else if name == "not" {
             sub := evalExprWithMin(source, afterName, limitPos, prefix, ir.VALUE_KIND_BOOL, 5, mut frame, mut budget);
-            if sub.outcome.flow =!= FLOW_NONE { return sub; }
+            if sub.outcome.flow =!= FlowKind.None { return sub; }
             resNext = sub.next;
-            res = CtOutcome { ok = true, valId = makeBoolVal(ctPool[sub.outcome.valId].intVal == 0, "", mut budget), flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = makeBoolVal(ctPool[sub.outcome.valId].intVal == 0, "", mut budget), flow = FlowKind.None, error = "" };
         } else if name == "mut" {
             return self(source, afterName, limitPos, prefix, expectedKind, mut frame, mut budget);
         } else if name == "do" or name == "comptime" {
@@ -3510,7 +3551,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             if source.at(afterName) == "<" {
                 tyR := resolveCtTypeAt(source, afterName + 1, prefix, frame.aliases);
                 if not tyR.ok {
-                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve compile-time cast type" }, next = afterName + 1);
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve compile-time cast type" }, next = afterName + 1);
                 }
                 gtPos := syntax.skipTrivia(source, tyR.next, prefix);
                 openP = syntax.skipTrivia(source, gtPos + 1, prefix);
@@ -3518,18 +3559,18 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             }
             argExp := if dstK =!= "" and types.isDistinctKind(dstK) { types.distinctUnderlyingKind(dstK) } else { "" };
             ev := evalExprAt(source, openP + 1, limitPos, prefix, argExp, mut frame, mut budget);
-            if ev.outcome.flow =!= FLOW_NONE { return ev; }
+            if ev.outcome.flow =!= FlowKind.None { return ev; }
             closeP := syntax.skipTrivia(source, ev.next, prefix);
             resNext = if closeP < limitPos and source.at(closeP) == ")" { closeP + 1 } else { closeP };
             vCell := ctPool[ev.outcome.valId];
             var cVid := ev.outcome.valId;
-            if numeric.isFloatKind(dstK) and vCell.tag == TAG_INT { cVid = makeFloatVal(cast<Float>(vCell.intVal), dstK, mut budget); }
-            else if numeric.isSignedIntKind(dstK) and vCell.tag == TAG_UINT {
+            if numeric.isFloatKind(dstK) and vCell.tag == CellTag.Int { cVid = makeFloatVal(cast<Float>(vCell.intVal), dstK, mut budget); }
+            else if numeric.isSignedIntKind(dstK) and vCell.tag == CellTag.UInt {
                 uv := parseUInt64Text(vCell.strVal);
                 cVid = makeIntVal(cast<Int>(if uv.ok { uv.value } else { cast<UInt64>(0) }), dstK, mut budget);
-            } else if numeric.isUnsignedIntKind(dstK) and vCell.tag == TAG_INT {
+            } else if numeric.isUnsignedIntKind(dstK) and vCell.tag == CellTag.Int {
                 cVid = makeUIntVal(cast<UInt64>(vCell.intVal), dstK, mut budget);
-            } else if numeric.isSignedIntKind(dstK) and vCell.tag == TAG_INT {
+            } else if numeric.isSignedIntKind(dstK) and vCell.tag == CellTag.Int {
                 cVid = makeIntVal(vCell.intVal, dstK, mut budget);
             } else if dstK =!= "" and (types.isDistinctKind(dstK) or types.isDistinctKind(vCell.kind)) {
                 cVid = allocCell(CtCell {
@@ -3538,7 +3579,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     children = vCell.children, keys = vCell.keys
                 }, mut budget);
             }
-            res = CtOutcome { ok = true, valId = cVid, flow = FLOW_NONE, error = "" };
+            res = CtOutcome { ok = true, valId = cVid, flow = FlowKind.None, error = "" };
         } else {
             /* Module qualifier `mod.sym` or local/module symbol or `Type { ... }` / `Type.op` */
             impHit := findImportInModule(frame.moduleKey, name);
@@ -3557,16 +3598,16 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 if alIdx >= 0 and afterM < limitPos and source.at(afterM) == "{" {
                     recT := resolveCtTypeAt(name + "." + mName, 0, prefix, frame.aliases);
                     if not recT.ok {
-                        return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve compile-time record type " + name + "." + mName }, next = afterM);
+                        return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve compile-time record type " + name + "." + mName }, next = afterM);
                     }
                     recR := evalRecordLiteralAt(source, afterM, limitPos, prefix, recT.kind, mut frame, mut budget);
-                    if recR.outcome.flow =!= FLOW_NONE { return recR; }
+                    if recR.outcome.flow =!= FlowKind.None { return recR; }
                     return evalPostfixChain(source, recR.next, limitPos, prefix, recR.outcome.valId, "", mut frame, mut budget);
                 }
                 if alIdx >= 0 and afterM < limitPos and source.at(afterM) == "." {
                     nomT := resolveCtTypeAt(name + "." + mName, 0, prefix, frame.aliases);
                     if not nomT.ok {
-                        return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve compile-time type " + name + "." + mName }, next = afterM);
+                        return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve compile-time type " + name + "." + mName }, next = afterM);
                     }
                     nomK := nomT.kind;
                     opStart := syntax.skipTrivia(source, afterM + 1, prefix);
@@ -3591,11 +3632,11 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                             if candsT.length() > 0 {
                                 chosen := selectOverloadFnDef(candsT, callA.args.length() - callA.labels.length(), callA.labels);
                                 inv := invokeCtFnDefWithTypeArgs(chosen, splitCanonicalNominalArgs(nomK), callA.args, callA.labels, mut budget);
-                                if inv.flow =!= FLOW_NONE { return (outcome = inv, next = callA.next); }
+                                if inv.flow =!= FlowKind.None { return (outcome = inv, next = callA.next); }
                                 return evalPostfixChain(source, callA.next, limitPos, prefix, inv.valId, "", mut frame, mut budget);
                             }
                             hb := evalHostBuiltinCall(tModId, mName + "." + opName, callA.args, mut budget);
-                            if hb.flow =!= FLOW_NONE { return (outcome = hb, next = callA.next); }
+                            if hb.flow =!= FlowKind.None { return (outcome = hb, next = callA.next); }
                             return evalPostfixChain(source, callA.next, limitPos, prefix, hb.valId, "", mut frame, mut budget);
                         }
                         rawCandsT := findFnIndicesInModule(tModKey, mName + "." + opName);
@@ -3607,7 +3648,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                         };
                         chosen := selectOverloadFnDef(candsT, callA.args.length() - callA.labels.length(), callA.labels);
                         inv := invokeCtFnDefWithTypeArgs(chosen, splitCanonicalNominalArgs(nomK), callA.args, callA.labels, mut budget);
-                        if inv.flow =!= FLOW_NONE { return (outcome = inv, next = callA.next); }
+                        if inv.flow =!= FlowKind.None { return (outcome = inv, next = callA.next); }
                         return evalPostfixChain(source, callA.next, limitPos, prefix, inv.valId, "", mut frame, mut budget);
                     }
                 }
@@ -3617,7 +3658,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     if tModId == "lite.core.file.v1" or tModId == "lite.core.io.v1" or tModId == "lite.core.process.v1" or tModId == "lite.core.time.v1" or tModId == "lite.core.diag.v1" {
                         hbFast := evalHostBuiltinCall(tModId, mName, callA.args, mut budget);
                         if hbFast.ok or not hbFast.error.startsWithAt(0, "unsupported compile-time host operation") {
-                            if hbFast.flow =!= FLOW_NONE { return (outcome = hbFast, next = callA.next); }
+                            if hbFast.flow =!= FlowKind.None { return (outcome = hbFast, next = callA.next); }
                             return evalPostfixChain(source, callA.next, limitPos, prefix, hbFast.valId, "", mut frame, mut budget);
                         }
                     }
@@ -3625,11 +3666,11 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     if cands.length() > 0 {
                         chosen := selectOverloadFnDef(cands, callA.args.length() - callA.labels.length(), callA.labels);
                         inv := invokeCtFnDef(chosen, callA.args, callA.labels, mut budget);
-                        if inv.flow =!= FLOW_NONE { return (outcome = inv, next = callA.next); }
+                        if inv.flow =!= FlowKind.None { return (outcome = inv, next = callA.next); }
                         return evalPostfixChain(source, callA.next, limitPos, prefix, inv.valId, "", mut frame, mut budget);
                     }
                     hb := evalHostBuiltinCall(tModId, mName, callA.args, mut budget);
-                    if hb.flow =!= FLOW_NONE { return (outcome = hb, next = callA.next); }
+                    if hb.flow =!= FlowKind.None { return (outcome = hb, next = callA.next); }
                     return evalPostfixChain(source, callA.next, limitPos, prefix, hb.valId, "", mut frame, mut budget);
                 }
                 /* Imported compile-time constant `mod.VAL` */
@@ -3640,7 +3681,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     return evalPostfixChain(source, mEnd, limitPos, prefix, ctTargetId, "", mut frame, mut budget);
                 }
                 _unused := modRt;
-                return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unknown compile-time value " + name + "." + mName }, next = mEnd);
+                return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unknown compile-time value " + name + "." + mName }, next = mEnd);
             }
 
             /* Record constructor `TypeName { ... }` or `TypeName<...>{ ... }` or enum/type-op `TypeName.Op` */
@@ -3654,16 +3695,16 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
             if alIdx >= 0 and afterTypeExpr < limitPos and source.at(afterTypeExpr) == "{" {
                 recT := resolveCtTypeAt(typeExprSlice, 0, prefix, frame.aliases);
                 if not recT.ok {
-                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve compile-time record type " + typeExprSlice }, next = afterTypeExpr);
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve compile-time record type " + typeExprSlice }, next = afterTypeExpr);
                 }
                 recR := evalRecordLiteralAt(source, afterTypeExpr, limitPos, prefix, recT.kind, mut frame, mut budget);
-                if recR.outcome.flow =!= FLOW_NONE { return recR; }
+                if recR.outcome.flow =!= FlowKind.None { return recR; }
                 res = recR.outcome;
                 resNext = recR.next;
             } else if alIdx >= 0 and afterTypeExpr < limitPos and source.at(afterTypeExpr) == "." {
                 nomT := resolveCtTypeAt(typeExprSlice, 0, prefix, frame.aliases);
                 if not nomT.ok {
-                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve compile-time type " + typeExprSlice }, next = afterTypeExpr);
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve compile-time type " + typeExprSlice }, next = afterTypeExpr);
                 }
                 nomK := nomT.kind;
                 opS := syntax.skipTrivia(source, afterTypeExpr + 1, prefix);
@@ -3676,7 +3717,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     resNext = callA.next;
                     if types.isEnumKind(nomK) and types.enumCaseIndex(nomK, opName) >= 0 {
                         ci := types.enumCaseIndex(nomK, opName);
-                        res = CtOutcome { ok = true, valId = makeEnumVal(nomK, ci, opName, callA.args, mut budget), flow = FLOW_NONE, error = "" };
+                        res = CtOutcome { ok = true, valId = makeEnumVal(nomK, ci, opName, callA.args, mut budget), flow = FlowKind.None, error = "" };
                     } else {
                         cands := findFnIndicesInModule(frame.moduleKey, name + "." + opName);
                         dispN := baseNominalName(nomK);
@@ -3689,9 +3730,9 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                 } else if types.isEnumKind(nomK) {
                     ci := types.enumCaseIndex(nomK, opName);
                     resNext = opE;
-                    res = CtOutcome { ok = true, valId = makeEnumVal(nomK, ci, opName, [], mut budget), flow = FLOW_NONE, error = "" };
+                    res = CtOutcome { ok = true, valId = makeEnumVal(nomK, ci, opName, [], mut budget), flow = FlowKind.None, error = "" };
                 } else {
-                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unknown compile-time static member " + name + "." + opName }, next = opE);
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unknown compile-time static member " + name + "." + opName }, next = opE);
                 }
             } else if afterName < limitPos and (source.at(afterName) == "(" or source.at(afterName) == "<") {
                 /* Local fn binding or module function call, possibly `f<...>(...)` */
@@ -3724,7 +3765,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                                         mut explicitCallTypeArgs.pushBack(tTry.kind);
                                     } else {
                                         vTry := evalExprAt(segSrc, 0, segSrc.length(), prefix, "", mut frame, mut budget);
-                                        if vTry.outcome.ok and vTry.outcome.flow == FLOW_NONE {
+                                        if vTry.outcome.ok and vTry.outcome.flow == FlowKind.None {
                                             tok := comptimeValToken(ctPool[vTry.outcome.valId].kind, vTry.outcome.valId);
                                             mut explicitCallTypeArgs.pushBack(if tok.startsWithAt(0, "$Val:") { tok.slice(5, tok.length()) } else { ctPool[vTry.outcome.valId].kind });
                                         }
@@ -3741,7 +3782,7 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     callA := evalCallArgs(source, argParen, prefix, mut frame, mut budget);
                     if not callA.ok { return (outcome = callA.outcome, next = callA.next); }
                     resNext = callA.next;
-                    if bIdx >= 0 and ctPool[frame.bindings[bIdx].valId].tag == TAG_FN {
+                    if bIdx >= 0 and ctPool[frame.bindings[bIdx].valId].tag == CellTag.Fn {
                         rtIdx := ctFnIdxByRt.get(ctPool[frame.bindings[bIdx].valId].strVal);
                         res = invokeCtFnDefWithTypeArgs(if rtIdx.found { rtIdx.value } else { -1 }, explicitCallTypeArgs, callA.args, callA.labels, mut budget);
                     } else if cands.length() > 0 {
@@ -3750,47 +3791,47 @@ evalPrimaryAt := fn(source: String, startPos: Int, limitPos: Int, prefix: String
                     }
                 } else if bIdx >= 0 {
                     resNext = nEnd;
-                    res = CtOutcome { ok = true, valId = frame.bindings[bIdx].valId, flow = FLOW_NONE, error = "" };
+                    res = CtOutcome { ok = true, valId = frame.bindings[bIdx].valId, flow = FlowKind.None, error = "" };
                     baseName = name;
                 } else {
                     modVal := lookupLocalCtVal("$mod:" + frame.moduleKey + "." + name);
                     if modVal >= 0 {
                         resNext = nEnd;
-                        res = CtOutcome { ok = true, valId = modVal, flow = FLOW_NONE, error = "" };
+                        res = CtOutcome { ok = true, valId = modVal, flow = FlowKind.None, error = "" };
                         baseName = name;
                     } else {
-                        return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unknown or runtime value " + name + " in compile-time expression" }, next = nEnd);
+                        return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unknown or runtime value " + name + " in compile-time expression" }, next = nEnd);
                     }
                 }
             } else {
                 bIdx := frameFindBinding(frame, name);
                 if bIdx >= 0 {
                     resNext = nEnd;
-                    res = CtOutcome { ok = true, valId = frame.bindings[bIdx].valId, flow = FLOW_NONE, error = "" };
+                    res = CtOutcome { ok = true, valId = frame.bindings[bIdx].valId, flow = FlowKind.None, error = "" };
                     baseName = name;
                 } else {
                     modVal := lookupLocalCtVal("$mod:" + frame.moduleKey + "." + name);
                     if modVal >= 0 {
                         resNext = nEnd;
-                        res = CtOutcome { ok = true, valId = modVal, flow = FLOW_NONE, error = "" };
+                        res = CtOutcome { ok = true, valId = modVal, flow = FlowKind.None, error = "" };
                         baseName = name;
                     } else {
                         sameFns := findFnIndicesInModule(frame.moduleKey, name);
                         if sameFns.length() > 0 {
                             def := ctFnDefs[sameFns[0]];
                             resNext = nEnd;
-                            res = CtOutcome { ok = true, valId = makeFnRefVal("", def.runtime, mut budget), flow = FLOW_NONE, error = "" };
+                            res = CtOutcome { ok = true, valId = makeFnRefVal("", def.runtime, mut budget), flow = FlowKind.None, error = "" };
                         } else {
-                            return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unknown or runtime value " + name + " in compile-time expression" }, next = nEnd);
+                            return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unknown or runtime value " + name + " in compile-time expression" }, next = nEnd);
                         }
                     }
                 }
             }
         }
     } else {
-        return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "unsupported token in compile-time expression: " + ch }, next = start + 1);
+        return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "unsupported token in compile-time expression: " + ch }, next = start + 1);
     }
-    if res.flow =!= FLOW_NONE { return (outcome = res, next = resNext); }
+    if res.flow =!= FlowKind.None { return (outcome = res, next = resNext); }
     evalPostfixChain(source, resNext, limitPos, prefix, res.valId, baseName, mut frame, mut budget)
 };
 
@@ -3806,7 +3847,7 @@ evalRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int, prefix:
             kName := source.slice(shS, shE);
             fKind := types.recordFieldKind(recordKind, kName);
             ev := evalExprAt(source, shS, limitPos, prefix, fKind, mut frame, mut budget);
-            if ev.outcome.flow =!= FLOW_NONE { return ev; }
+            if ev.outcome.flow =!= FlowKind.None { return ev; }
             mut supMap.set(kName, coerceCtValue(fKind, ctPool[ev.outcome.valId].kind, cloneValIfContainer(ev.outcome.valId, "", mut budget), mut budget));
             cursor = syntax.skipTrivia(source, ev.next, prefix);
         } else {
@@ -3816,7 +3857,7 @@ evalRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int, prefix:
             eqP := syntax.skipTrivia(source, kE, prefix);
             fKind := types.recordFieldKind(recordKind, kName);
             ev := evalExprAt(source, eqP + 1, limitPos, prefix, fKind, mut frame, mut budget);
-            if ev.outcome.flow =!= FLOW_NONE { return ev; }
+            if ev.outcome.flow =!= FlowKind.None { return ev; }
             mut supMap.set(kName, coerceCtValue(fKind, ctPool[ev.outcome.valId].kind, cloneValIfContainer(ev.outcome.valId, "", mut budget), mut budget));
             cursor = syntax.skipTrivia(source, ev.next, prefix);
         }
@@ -3843,7 +3884,7 @@ evalRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int, prefix:
     if recordKind == types.CORE_ERROR_KIND and not supMap.has("kind") and compCount > 0 {
         mut fieldVals.setAt(0, makeStrVal("Error", "", mut budget));
     }
-    (outcome = CtOutcome { ok = true, valId = makeRecordVal(recordKind, fieldVals, fieldNames, mut budget), flow = FLOW_NONE, error = "" }, next = endPos)
+    (outcome = CtOutcome { ok = true, valId = makeRecordVal(recordKind, fieldVals, fieldNames, mut budget), flow = FlowKind.None, error = "" }, next = endPos)
 };
 
 /** Evaluates an inferred structural record literal `{}` or `{ "k"[: T] = v, k[: T] = v, =shorthand }` in written order and sorts fields into canonical `Record<$anon;...>` order. */
@@ -3852,10 +3893,10 @@ evalInferredRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int,
     var cursor := syntax.skipTrivia(source, openBrace + 1, prefix);
     if cursor < limitPos and source.at(cursor) == "}" {
         emptyK := types.buildAnonRecordKind([]);
-        return (outcome = CtOutcome { ok = true, valId = makeRecordVal(emptyK, [], [], mut budget), flow = FLOW_NONE, error = "" }, next = cursor + 1);
+        return (outcome = CtOutcome { ok = true, valId = makeRecordVal(emptyK, [], [], mut budget), flow = FlowKind.None, error = "" }, next = cursor + 1);
     }
     if cursor >= limitPos {
-        return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "expected } in record literal" }, next = openBrace);
+        return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "expected } in record literal" }, next = openBrace);
     }
     if not syntax.isSingleEquals(source, cursor) and source.at(cursor) =!= "\"" {
         var looksLikeRec := false;
@@ -3868,7 +3909,7 @@ evalInferredRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int,
             }
         }
         if not looksLikeRec {
-            return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "standalone block expressions must use do { ... }" }, next = openBrace);
+            return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "standalone block expressions must use do { ... }" }, next = openBrace);
         }
     }
     mut fieldSpecs: List<(label: String, kind: String)> = [];
@@ -3889,7 +3930,7 @@ evalInferredRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int,
             if afterQ < limitPos and source.at(afterQ) == ":" and not source.startsWithAt(afterQ, ":=") {
                 tyR := resolveCtTypeAt(source, syntax.skipTrivia(source, afterQ + 1, prefix), prefix, frame.aliases);
                 if not tyR.ok {
-                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve record field type" }, next = afterQ);
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve record field type" }, next = afterQ);
                 }
                 explicitKind = tyR.kind;
                 eqP := syntax.skipTrivia(source, tyR.next, prefix);
@@ -3904,7 +3945,7 @@ evalInferredRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int,
             if afterK < limitPos and source.at(afterK) == ":" and not source.startsWithAt(afterK, ":=") {
                 tyR := resolveCtTypeAt(source, syntax.skipTrivia(source, afterK + 1, prefix), prefix, frame.aliases);
                 if not tyR.ok {
-                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve record field type" }, next = afterK);
+                    return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve record field type" }, next = afterK);
                 }
                 explicitKind = tyR.kind;
                 eqP := syntax.skipTrivia(source, tyR.next, prefix);
@@ -3914,11 +3955,11 @@ evalInferredRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int,
             }
         }
         if supMap.has(kName) {
-            return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "duplicate record field " + kName }, next = cursor);
+            return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "duplicate record field " + kName }, next = cursor);
         }
         hintKind := if explicitKind =!= "" { explicitKind } else if expRec =!= "" { types.recordFieldKind(expRec, kName) } else { "" };
         ev := evalExprAt(source, valPos, limitPos, prefix, hintKind, mut frame, mut budget);
-        if ev.outcome.flow =!= FLOW_NONE { return ev; }
+        if ev.outcome.flow =!= FlowKind.None { return ev; }
         vId := cloneValIfContainer(ev.outcome.valId, "", mut budget);
         vKind := if explicitKind =!= "" { explicitKind } else { ctPool[vId].kind };
         cVal := if explicitKind =!= "" { coerceCtValue(explicitKind, ctPool[vId].kind, vId, mut budget) } else { vId };
@@ -3942,7 +3983,7 @@ evalInferredRecordLiteralAt := fn(source: String, openBrace: Int, limitPos: Int,
         mut fieldVals.pushBack(got.value);
         ci = ci + 1;
     }
-    (outcome = CtOutcome { ok = true, valId = makeRecordVal(recKind, fieldVals, fieldNames, mut budget), flow = FLOW_NONE, error = "" }, next = endPos)
+    (outcome = CtOutcome { ok = true, valId = makeRecordVal(recKind, fieldVals, fieldNames, mut budget), flow = FlowKind.None, error = "" }, next = endPos)
 };
 
 /** Precedence-climbing expression evaluator (`minimum` precedence), handling `: Type`, `else`, comparisons, `and`/`or`, and arithmetic. */
@@ -3956,14 +3997,14 @@ evalExprWithMin := fn(source: String, startPos: Int, limitPos: Int, prefix: Stri
         cursor = syntax.skipTrivia(source, le, prefix);
     }
     prim := evalPrimaryAt(source, cursor, limitPos, prefix, expectedKind, mut frame, mut budget);
-    if prim.outcome.flow =!= FLOW_NONE { return prim; }
+    if prim.outcome.flow =!= FlowKind.None { return prim; }
     var left := prim.outcome;
     var leftNext := prim.next;
     loop true {
         opPos := syntax.skipTrivia(source, leftNext, prefix);
         if opPos >= limitPos { break; }
         /* Result `else(err) { ... }` / `else { ... }` lazy recovery */
-        if effMin <= 1 and ctPool[left.valId].tag == TAG_RESULT and source.wordAt(opPos, "else") {
+        if effMin <= 1 and ctPool[left.valId].tag == CellTag.Result and source.wordAt(opPos, "else") {
             afterElse := syntax.skipTrivia(source, opPos + 4, prefix);
             var errBind := "";
             var bracePos := afterElse;
@@ -3979,7 +4020,7 @@ evalExprWithMin := fn(source: String, startPos: Int, limitPos: Int, prefix: Stri
                 lc := ctPool[left.valId];
                 if lc.intVal == 0 {
                     /* Success branch: skip lazy handler completely */
-                    left = CtOutcome { ok = true, valId = if lc.children.length() > 0 { lc.children[0] } else { makeUnitVal(mut budget) }, flow = FLOW_NONE, error = "" };
+                    left = CtOutcome { ok = true, valId = if lc.children.length() > 0 { lc.children[0] } else { makeUnitVal(mut budget) }, flow = FlowKind.None, error = "" };
                     leftNext = resClose;
                     continue;
                 }
@@ -3991,11 +4032,11 @@ evalExprWithMin := fn(source: String, startPos: Int, limitPos: Int, prefix: Stri
                 }
                 hR := evalBracedBlock(source, bracePos, prefix, "", mut frame, mut budget);
                 loop frame.bindings.length() > savedLen { _p := mut frame.bindings.popBack(); }
-                if hR.outcome.flow =!= FLOW_NONE { return (outcome = hR.outcome, next = resClose); }
+                if hR.outcome.flow =!= FlowKind.None { return (outcome = hR.outcome, next = resClose); }
                 okK := types.resultOkKind(lc.kind);
                 hk := ctPool[hR.outcome.valId].kind;
                 joinedK := types.joinBranchKind(okK, hk);
-                left = CtOutcome { ok = true, valId = coerceCtValue(if joinedK =!= "" { joinedK } else { hk }, hk, hR.outcome.valId, mut budget), flow = FLOW_NONE, error = "" };
+                left = CtOutcome { ok = true, valId = coerceCtValue(if joinedK =!= "" { joinedK } else { hk }, hk, hR.outcome.valId, mut budget), flow = FlowKind.None, error = "" };
                 leftNext = resClose;
                 continue;
             }
@@ -4004,10 +4045,10 @@ evalExprWithMin := fn(source: String, startPos: Int, limitPos: Int, prefix: Stri
         if effMin <= 8 and source.at(opPos) == ":" and not source.startsWithAt(opPos, ":=") and not source.startsWithAt(opPos, ":/") and not source.startsWithAt(opPos, ":%") {
             tyR := resolveCtTypeAt(source, opPos + 1, prefix, frame.aliases);
             if not tyR.ok {
-                return (outcome = CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "cannot resolve compile-time type test" }, next = opPos + 1);
+                return (outcome = CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "cannot resolve compile-time type test" }, next = opPos + 1);
             }
             matched := valueMatchesType(left.valId, tyR.kind);
-            left = CtOutcome { ok = true, valId = makeBoolVal(matched, "", mut budget), flow = FLOW_NONE, error = "" };
+            left = CtOutcome { ok = true, valId = makeBoolVal(matched, "", mut budget), flow = FlowKind.None, error = "" };
             leftNext = tyR.next;
             continue;
         }
@@ -4023,18 +4064,18 @@ evalExprWithMin := fn(source: String, startPos: Int, limitPos: Int, prefix: Stri
             if op.text == "and" and not isTrue {
                 /* Short-circuit right operand syntax scan without executing side effects */
                 rhsScan := evalExprSkip(source, opPos + op.width, limitPos, prefix, rightMin);
-                left = CtOutcome { ok = true, valId = makeBoolVal(false, "", mut budget), flow = FLOW_NONE, error = "" };
+                left = CtOutcome { ok = true, valId = makeBoolVal(false, "", mut budget), flow = FlowKind.None, error = "" };
                 leftNext = rhsScan;
                 continue;
             }
             if op.text == "or" and isTrue {
                 rhsScan := evalExprSkip(source, opPos + op.width, limitPos, prefix, rightMin);
-                left = CtOutcome { ok = true, valId = makeBoolVal(true, "", mut budget), flow = FLOW_NONE, error = "" };
+                left = CtOutcome { ok = true, valId = makeBoolVal(true, "", mut budget), flow = FlowKind.None, error = "" };
                 leftNext = rhsScan;
                 continue;
             }
             rightR := self(source, opPos + op.width, limitPos, prefix, ir.VALUE_KIND_BOOL, rightMin, mut frame, mut budget);
-            if rightR.outcome.flow =!= FLOW_NONE { return rightR; }
+            if rightR.outcome.flow =!= FlowKind.None { return rightR; }
             left = rightR.outcome;
             leftNext = rightR.next;
             continue;
@@ -4042,7 +4083,7 @@ evalExprWithMin := fn(source: String, startPos: Int, limitPos: Int, prefix: Stri
 
         if syntax.isComparison(op.text) {
             rightR := self(source, opPos + op.width, limitPos, prefix, "", rightMin, mut frame, mut budget);
-            if rightR.outcome.flow =!= FLOW_NONE { return rightR; }
+            if rightR.outcome.flow =!= FlowKind.None { return rightR; }
             var chainOk := evalComparisonOp(op.text, left.valId, rightR.outcome.valId);
             var prevVal := rightR.outcome.valId;
             var curEnd := rightR.next;
@@ -4053,7 +4094,7 @@ evalExprWithMin := fn(source: String, startPos: Int, limitPos: Int, prefix: Stri
                 if not syntax.isComparison(nop.text) { break; }
                 if chainOk {
                     nextR := self(source, np + nop.width, limitPos, prefix, "", lvl + 1, mut frame, mut budget);
-                    if nextR.outcome.flow =!= FLOW_NONE { return nextR; }
+                    if nextR.outcome.flow =!= FlowKind.None { return nextR; }
                     chainOk = evalComparisonOp(nop.text, prevVal, nextR.outcome.valId);
                     prevVal = nextR.outcome.valId;
                     curEnd = nextR.next;
@@ -4061,15 +4102,15 @@ evalExprWithMin := fn(source: String, startPos: Int, limitPos: Int, prefix: Stri
                     curEnd = evalExprSkip(source, np + nop.width, limitPos, prefix, lvl + 1);
                 }
             }
-            left = CtOutcome { ok = true, valId = makeBoolVal(chainOk, "", mut budget), flow = FLOW_NONE, error = "" };
+            left = CtOutcome { ok = true, valId = makeBoolVal(chainOk, "", mut budget), flow = FlowKind.None, error = "" };
             leftNext = curEnd;
             continue;
         }
 
         rightR := self(source, opPos + op.width, limitPos, prefix, "", rightMin, mut frame, mut budget);
-        if rightR.outcome.flow =!= FLOW_NONE { return rightR; }
+        if rightR.outcome.flow =!= FlowKind.None { return rightR; }
         ap := applyBinaryVal(op.text, left.valId, rightR.outcome.valId, mut budget);
-        if ap.flow =!= FLOW_NONE { return (outcome = ap, next = rightR.next); }
+        if ap.flow =!= FlowKind.None { return (outcome = ap, next = rightR.next); }
         left = ap;
         leftNext = rightR.next;
     }
@@ -4148,11 +4189,15 @@ aliases: List<AliasDecl>, visibleBindings: List<(name: String, runtime: String, 
     closeBrace := syntax.scanBraceEnd(source, openBrace, prefix);
     res := evalStmtRange(source, openBrace + 1, closeBrace - 1, prefix, expectedKind, mut frame, mut budget);
     if ctBudgetPanic =!= "" {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = ctBudgetPanic };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = ctBudgetPanic };
     }
-    if res.flow == FLOW_PANIC { return res; }
-    if res.flow == FLOW_RETURN or res.flow == FLOW_PROP_ERR or res.flow == FLOW_BREAK or res.flow == FLOW_CONTINUE {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "control flow " + res.flow + " cannot escape comptime block" };
+    if res.flow == FlowKind.Panic { return res; }
+    match res.flow {
+        .Return { return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "control flow return cannot escape comptime block" }; }
+        .PropErr { return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "control flow prop_err cannot escape comptime block" }; }
+        .Break { return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "control flow break cannot escape comptime block" }; }
+        .Continue { return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "control flow continue cannot escape comptime block" }; }
+        _ {}
     }
     res
 };
@@ -4194,12 +4239,12 @@ aliases: List<AliasDecl>, visibleBindings: List<(name: String, runtime: String, 
     };
     ev := evalExprAt(source, exprStart, exprEnd, prefix, expectedKind, mut frame, mut budget);
     if ctBudgetPanic =!= "" {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = ctBudgetPanic };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = ctBudgetPanic };
     }
-    if ev.outcome.flow =!= FLOW_NONE { return ev.outcome; }
+    if ev.outcome.flow =!= FlowKind.None { return ev.outcome; }
     if expectedKind =!= "" {
         cId := coerceCtValue(expectedKind, ctPool[ev.outcome.valId].kind, ev.outcome.valId, mut budget);
-        return CtOutcome { ok = true, valId = cId, flow = FLOW_NONE, error = "" };
+        return CtOutcome { ok = true, valId = cId, flow = FlowKind.None, error = "" };
     }
     ev.outcome
 };
@@ -4209,7 +4254,7 @@ pub tryEvalPureSpeculative := fn(source: String, exprStart: Int, exprEnd: Int, p
 aliases: List<AliasDecl>, visibleBindings: List<(name: String, runtime: String, kind: String, constant: Bool, intValue: Int, textValue: String)>): CtOutcome {
     eff := checkExprEffects(source, exprStart, exprEnd, prefix, modKey);
     if not eff.pure {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "" };
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "" };
     }
     ctBudgetPanic = "";
     mut budget := EvalBudget {
@@ -4245,12 +4290,12 @@ aliases: List<AliasDecl>, visibleBindings: List<(name: String, runtime: String, 
     };
     ev := evalExprAt(source, exprStart, exprEnd, prefix, expectedKind, mut frame, mut budget);
     ctBudgetPanic = "";
-    if ev.outcome.flow =!= FLOW_NONE or not ev.outcome.ok {
-        return CtOutcome { ok = false, valId = -1, flow = FLOW_PANIC, error = "" };
+    if ev.outcome.flow =!= FlowKind.None or not ev.outcome.ok {
+        return CtOutcome { ok = false, valId = -1, flow = FlowKind.Panic, error = "" };
     }
     if expectedKind =!= "" {
         cId := coerceCtValue(expectedKind, ctPool[ev.outcome.valId].kind, ev.outcome.valId, mut budget);
-        return CtOutcome { ok = true, valId = cId, flow = FLOW_NONE, error = "" };
+        return CtOutcome { ok = true, valId = cId, flow = FlowKind.None, error = "" };
     }
     ev.outcome
 };
@@ -4259,10 +4304,10 @@ aliases: List<AliasDecl>, visibleBindings: List<(name: String, runtime: String, 
 pub comptimeValToken := fn(kind: String, valId: Int): String {
     if valId < 0 or valId >= ctPool.length() { return ""; }
     c := ctPool[valId];
-    if kind == ir.VALUE_KIND_INT and c.tag == TAG_INT { return "$Val:" + types.comptimeIntToken(c.intVal); }
-    if kind == ir.VALUE_KIND_BOOL and c.tag == TAG_BOOL { return "$Val:" + types.comptimeBoolToken(c.intVal =!= 0); }
-    if kind == ir.VALUE_KIND_STRING and c.tag == TAG_STR { return "$Val:" + types.comptimeStringToken(c.strVal); }
-    if types.isEnumKind(kind) and not types.isPayloadEnumKind(kind) and c.tag == TAG_ENUM {
+    if kind == ir.VALUE_KIND_INT and c.tag == CellTag.Int { return "$Val:" + types.comptimeIntToken(c.intVal); }
+    if kind == ir.VALUE_KIND_BOOL and c.tag == CellTag.Bool { return "$Val:" + types.comptimeBoolToken(c.intVal =!= 0); }
+    if kind == ir.VALUE_KIND_STRING and c.tag == CellTag.Str { return "$Val:" + types.comptimeStringToken(c.strVal); }
+    if types.isEnumKind(kind) and not types.isPayloadEnumKind(kind) and c.tag == CellTag.Enum {
         return "$Val:" + types.comptimeEnumToken(kind, c.intVal);
     }
     ""
@@ -4538,9 +4583,9 @@ pub materializeValue := fn(target: String, kind: String, valId: Int): (code: Str
     }
     if types.isUnionKind(kind) {
         mems := types.unionMembers(kind);
-        innerId := if c.tag == TAG_UNION and c.children.length() > 0 { c.children[0] } else { valId };
-        innerK := if c.tag == TAG_UNION and c.intVal >= 0 and c.intVal < mems.length() { mems[c.intVal] } else { ctPool[innerId].kind };
-        mIdx := if c.tag == TAG_UNION { c.intVal } else { types.unionMemberIndex(kind, innerK) };
+        innerId := if c.tag == CellTag.Union and c.children.length() > 0 { c.children[0] } else { valId };
+        innerK := if c.tag == CellTag.Union and c.intVal >= 0 and c.intVal < mems.length() { mems[c.intVal] } else { ctPool[innerId].kind };
+        mIdx := if c.tag == CellTag.Union { c.intVal } else { types.unionMemberIndex(kind, innerK) };
         innerCode := self(target, innerK, innerId).code;
         if target == ir.TARGET_C {
             uTag := types.cStructTag(kind);
@@ -4550,11 +4595,11 @@ pub materializeValue := fn(target: String, kind: String, valId: Int): (code: Str
         return (code = "({ _u: " + mIdx.toText() + " as const, _v: " + innerCode + " } as " + tsT + ")", constant = false, intValue = 0, textValue = "");
     }
     if types.isResultKind(kind) {
-        isErr := c.tag == TAG_RESULT and c.intVal =!= 0;
+        isErr := c.tag == CellTag.Result and c.intVal =!= 0;
         okK := types.resultOkKind(kind);
         errK := types.resultErrKind(kind);
         payK := if isErr { errK } else { okK };
-        payId := if c.tag == TAG_RESULT and c.children.length() > 0 { c.children[0] } else { valId };
+        payId := if c.tag == CellTag.Result and c.children.length() > 0 { c.children[0] } else { valId };
         if target == ir.TARGET_C {
             rTag := types.cStructTag(kind);
             ctor := rTag + (if isErr { "_err" } else { "_ok" });

@@ -2245,7 +2245,7 @@ stage1EvalTopLevelInit := fn(target: String, source: String, rhsStart: Int, pref
         failAt(source, trimmedStart, prefix, "module initializer type " + displayKind(dstKind) + " cannot be materialized at compile time");
     }
     ev := comptimeEval.evalExprPure(source, trimmedStart, rawParsed.next, prefix, moduleKey, dstKind, aliases, collectVisibleCtBindings(locals));
-    if not ev.ok or ev.flow =!= "" {
+    if not ev.ok or ev.flow =!= comptimeEval.FlowKind.None {
         errMsg := if ev.error =!= "" { ev.error } else { "module initializer must be compile-time known" };
         failAt(source, trimmedStart, prefix, errMsg);
     }

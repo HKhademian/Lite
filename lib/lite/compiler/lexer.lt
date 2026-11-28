@@ -6,35 +6,43 @@ numeric := import "./numeric-literals";
 io := import "core/io";
 tb := import "core/text-builder";
 
+/** Lexical token classification. */
+pub TokenKind := enum {
+    Name;
+    Keyword;
+    Int;
+    Float;
+    String;
+    Bool;
+    Symbol;
+    EOF;
+};
+
+/** Canonical display spelling for `k` used in deterministic token dumps. */
+pub TokenKind.name := fn(k: Self): String {
+    match k {
+        .Name { "Name" }
+        .Keyword { "Keyword" }
+        .Int { "Int" }
+        .Float { "Float" }
+        .String { "String" }
+        .Bool { "Bool" }
+        .Symbol { "Symbol" }
+        .EOF { "EOF" }
+    }
+};
+
 /** One lexical token: kind, decoded text, source offset and 1-based line/column. */
-pub Token := alias (kind: String, text: String, offset: Int, line: Int, column: Int);
+pub Token := record {
+    kind: TokenKind;
+    text: String;
+    offset: Int;
+    line: Int;
+    column: Int;
+};
 
 /** Tokens in source order, ending with one EOF token. */
 pub Tokens := alias List<Token>;
-
-/* Token-kind spellings (Lite has no enum in this bootstrap subset yet). */
-/** Canonical token kind for ordinary names. */
-pub TOKEN_KIND_NAME := "Name";
-
-/** Canonical token kind for keywords other than Bool literals. */
-pub TOKEN_KIND_KEYWORD := "Keyword";
-
-/** Canonical token kind for Int literals. */
-pub TOKEN_KIND_INT := "Int";
-
-/** Token kind for a finite decimal/exponent binary64 Float literal. */
-pub TOKEN_KIND_FLOAT := "Float";
-/** Canonical token kind for String literals. */
-pub TOKEN_KIND_STRING := "String";
-
-/** Canonical token kind for Bool literals. */
-pub TOKEN_KIND_BOOL := "Bool";
-
-/** Canonical token kind for symbols and operators. */
-pub TOKEN_KIND_SYMBOL := "Symbol";
-
-/** Canonical token kind for end of source. */
-pub TOKEN_KIND_EOF := "EOF";
 
 /** Reports one source-positioned lexer diagnostic and exits 2. */
 lexFail := fn(source: String, position: Int, prefix: String, message: String): Unit {
@@ -265,8 +273,8 @@ pub escapedTokenText := fn(text: String): String {
 
 /** Formats one token as `kind@line:column:offset text`. */
 dumpToken := fn(token: Token): String {
-    token.kind + "@" + token.line.toText() + ":" + token.column.toText() + ":" +
-        token.offset.toText() + " " + escapedTokenText(token.text)
+    token.kind.name() + "@" + token.line.toText() + ":" + token.column.toText() + ":" +
+    token.offset.toText() + " " + escapedTokenText(token.text)
 }
 
 /** Reports every token in order, one per line. */
@@ -289,22 +297,22 @@ pub tokenize := fn(source: String, prefix: String): Tokens {
         line = trivia.line;
         lineStart = trivia.lineStart;
         if cursor >= size {
-            mut tokens.pushBack((kind = TOKEN_KIND_EOF, text = "", offset = cursor, line = line, column = cursor - lineStart + 1));
+            mut tokens.pushBack(Token { kind = TokenKind.EOF, text = "", offset = cursor, line = line, column = cursor - lineStart + 1 });
             break;
         }
         start := cursor;
         startLine := line;
         startColumn := cursor - lineStart + 1;
         ch := source.at(cursor);
-        var kind := "";
+        var kind := TokenKind.Symbol;
         var value := "";
         var next := cursor;
         if ch.isNameStart() {
             next = source.skipName(cursor);
             value = source.slice(cursor, next);
-            if value == "true" or value == "false" { kind = TOKEN_KIND_BOOL; }
-            else if isKeyword(value) { kind = TOKEN_KIND_KEYWORD; }
-            else { kind = TOKEN_KIND_NAME; }
+            if value == "true" or value == "false" { kind = TokenKind.Bool; }
+            else if isKeyword(value) { kind = TokenKind.Keyword; }
+            else { kind = TokenKind.Name; }
         } else if ch.isDigit() {
             scanned := numeric.scanNumericLiteral(source, cursor);
             next = scanned.next;
@@ -315,14 +323,14 @@ pub tokenize := fn(source: String, prefix: String): Tokens {
                 if not numeric.finiteFloatDigits(digits, scanned.fractionEnd - scanned.fractionStart, scanned.exponent) {
                     lexFail(source, cursor, prefix, "floating literal is not finite");
                 }
-                kind = TOKEN_KIND_FLOAT;
+                kind = TokenKind.Float;
             } else {
                 if scanned.outsideInt { lexFail(source, cursor, prefix, "integer literal outside signed 64-bit range"); }
-                kind = TOKEN_KIND_INT;
+                kind = TokenKind.Int;
             }
         } else if ch == "\"" {
             scanned := scanString(source, cursor, prefix);
-            kind = TOKEN_KIND_STRING;
+            kind = TokenKind.String;
             value = scanned.text;
             next = scanned.next;
         } else {
@@ -339,11 +347,11 @@ pub tokenize := fn(source: String, prefix: String): Tokens {
             if source.startsWithAt(cursor, "||") {
                 lexFail(source, cursor, prefix, "unsupported operator ||; use or");
             }
-            kind = TOKEN_KIND_SYMBOL;
+            kind = TokenKind.Symbol;
             value = symbol;
             next = cursor + symbol.length();
         }
-        (mut tokens).pushBack((kind = kind, text = value, offset = start, line = startLine, column = startColumn));
+        (mut tokens).pushBack(Token { kind = kind, text = value, offset = start, line = startLine, column = startColumn });
         advanced := advanceLines(source, start, next, line, lineStart);
         line = advanced.line;
         lineStart = advanced.lineStart;

@@ -2,6 +2,9 @@
 
 impl := import "./compiler/comptime-eval";
 
+/** Control-flow outcome tag for compile-time evaluation. */
+pub FlowKind := alias impl.FlowKind;
+
 /** Indexed compile-time value cell. */
 pub CtCell := alias impl.CtCell;
 

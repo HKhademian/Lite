@@ -3,6 +3,9 @@
 lex := import "./compiler/lexer";
 impl := import "./compiler/parser";
 
+/** Parse node classification. */
+pub NodeKind := alias impl.NodeKind;
+
 /** One flat parse node: kind, name, detail text, and source position. */
 pub Node := alias impl.Node;
 
@@ -20,7 +23,7 @@ pub tokenAt := fn(tokens: lex.Tokens, index: Int): lex.Token {
 };
 
 /** Returns the kind of the token at `index`. */
-pub tokenKindAt := fn(tokens: lex.Tokens, index: Int): String {
+pub tokenKindAt := fn(tokens: lex.Tokens, index: Int): lex.TokenKind {
     impl.tokenKindAt(tokens, index)
 };
 

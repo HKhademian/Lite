@@ -3,6 +3,9 @@
 lex := import "./compiler/lexer";
 impl := import "./compiler/check";
 
+/** Top-level symbol classification. */
+pub SymbolKind := alias impl.SymbolKind;
+
 /** One top-level checked symbol: kind, name, detail text, and source position. */
 pub Symbol := alias impl.Symbol;
 

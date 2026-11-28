@@ -18,13 +18,13 @@ runner := import "lite/runner";
 /* 1. Lexer, parser, and checker libraries */
 snippet := "answer := 40 + 2;\n";
 tokens := lexer.tokenize(snippet, "sample.lts");
-test.check("lexer returns tokens ending in EOF", tokens.length() >= 7 and tokens[tokens.length() - 1].kind == lexer.TOKEN_KIND_EOF);
+test.check("lexer returns tokens ending in EOF", tokens.length() >= 7 and tokens[tokens.length() - 1].kind == lexer.TokenKind.EOF);
 
 nodes := parser.parseProgram(tokens, "sample.lts");
-test.check("parser returns program nodes", nodes.length() > 0);
+test.check("parser returns program nodes", nodes.length() > 0 and nodes[nodes.length() - 1].kind == parser.NodeKind.Program);
 
 syms := checker.checkText(snippet, "sample.lts");
-test.check("checker returns top-level symbols", syms.length() > 0);
+test.check("checker returns top-level symbols", syms.length() > 0 and syms[0].kind == checker.SymbolKind.Value);
 
 /* 2. Compile-time evaluator helpers */
 test.check("eval io.outputLine is effectful", eval.isEffectfulHostBuiltin("lite.core.io.v1", "outputLine"));

@@ -3467,7 +3467,7 @@ parseNamedPrimaryExpr := fn(target: String, source: String, start: Int, prefix: 
             }
         }
         ev := comptimeEval.evalBlock(source, afterCt, prefix, comptimeEval.getActiveModule(), typedRes.kind, aliases, visBindings);
-        if not ev.ok or ev.flow =!= "" {
+        if not ev.ok or ev.flow =!= comptimeEval.FlowKind.None {
             errMsg := if ev.error =!= "" { ev.error } else { "compile-time evaluation failed" };
             syntax.failAt(source, nameStart, prefix, errMsg);
         }
