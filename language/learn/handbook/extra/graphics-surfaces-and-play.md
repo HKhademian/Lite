@@ -42,9 +42,9 @@ For animation, add an `onCanvasUpdate(dt: Float): Int` callback. Return `0` to k
 
 ## Native Desktop & Headless Surfaces (`gfx/surface`, `gfx/color`)
 
-[gfx/surface](lite://module/gfx/surface) is Lite's target-independent 2D desktop and headless surface API (`lite.extra.surface.v1`). On macOS it opens a native resizable, fullscreenable AppKit `NSWindow` with GPU-backed presentation, keyboard/pointer polling, native `NSSound` audio (`surface.playTone`), and live frame pacing and resource vitals.
+[gfx/surface](lite://module/gfx/surface) is Lite's target-independent 2D desktop and headless surface API (`lite.gfx.surface.v1`), exposing nominal `Point`, `Rect`, `FrameInput`, `Vitals`, and `Bounds` records alongside `Surface` and `Texture` handles. On macOS it opens a native resizable, fullscreenable AppKit `NSWindow` with GPU-backed presentation, keyboard/pointer polling, native `NSSound` audio (`surface.playTone`), and live frame pacing and resource vitals.
 
-[gfx/color](lite://module/gfx/color) provides encoding-independent nominal `Color` values with static constructors (`Color.fromRgb`, `Color.fromRgba8`, `Color.fromHsl`) and channel/blending methods (`mix`, `withAlphaFloat`, `red8`, `green8`, `blue8`) shared by `gfx/surface`:
+[gfx/color](lite://module/gfx/color) provides encoding-independent nominal `Color` values with static palette constants (`Color.RED`, `Color.CYAN`, `Color.WHITE`, ...), static constructors (`Color.fromRgb`, `Color.fromRgba8`, `Color.fromHsl`), blending (`mix`, `withAlphaFloat`, `red8`, `green8`, `blue8`), and `#packed Rgba<T>` channel types (`Rgba8`, `Rgba16`, `Rgba32`, `RgbaF16`, `RgbaF32`, `RgbaF64`) with `Rgba8.packU32`/`unpackU32` shared with `gfx/surface`:
 
 ```lite
 io := import "core/io";

@@ -19,13 +19,15 @@ Use [scalar math](lite://module/math/scalar), [random](lite://module/math/random
 Use `Vec<T, N>` for any supported numeric component type, or `IVec<N>` and
 `FVec<N>` for `Int` and `Float`. The dimension-specific aliases are
 `Vec2<T>`, `IVec2`, `FVec2`, `Vec3<T>`, `IVec3`, `FVec3`, `Vec4<T>`,
-`IVec4`, and `FVec4`. All support the same constructors, such as
-`IVec4.from([1, 2, 3, 4])`.
+`IVec4`, and `FVec4`. Construct them with inherited constructors such as
+`IVec4.from([1, 2, 3, 4])` or narrowed constructors and basis constants like
+`Vec2.of(3.0, 4.0)`, `FVec2.ZERO`, and `FVec3.UNIT_X`.
 
 Matrices follow the same naming scheme with independent row and column
 counts. Use `Mat<T, R, C>`, `IMat<R, C>`, or `FMat<R, C>` for a general
 shape, and `Mat2<T>` through `Mat4<T>`, `IMat2` through `IMat4`, or
-`FMat2` through `FMat4` for square matrices.
+`FMat2` through `FMat4` for square matrices, including narrowed helpers such
+as `FMat2.IDENTITY`, `Mat2.rotation`, `Mat3.translation`, and `Mat4.scaling`.
 
 ## Data Structures (`lib/ds/` — 11 modules)
 

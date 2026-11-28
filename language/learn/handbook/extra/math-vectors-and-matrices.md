@@ -21,7 +21,7 @@ io.outputLine(a, b, math.clamp(a + b, 2, 12));
 
 ## 2D, 3D & Generic N-D Vector Math (`math/vector`)
 
-[math/vector](lite://module/math/vector) provides one unified generic constrained vector `Vec<T: Type<math.Numeric>, N: Int>` (`Vec2<T>`, `Vec3<T>`, `Vec4<T>`, `FVec2`, `FVec3`, `FVec4`, `IVec2`, `IVec3`) with static constructors inherited by all aliases (`Vec.from`, `Vec.splat`, `Vec.zeroed`, e.g. `IVec2.zeroed()`, `Vec2.splat(1.0)`), positional `vec2`/`vec3`/`vec4`, `ZERO2`–`ZERO4`, `UNIT_X3`–`UNIT_Z3`, `x()`/`y()`/`z()`/`w()`, `setX`/`setY`/`setZ`/`setW`, `dot`, `length`, `normalize`, `lerp`, `cross`, `cross2`, `rotate`, `reflect`:
+[math/vector](lite://module/math/vector) provides one unified generic constrained vector `Vec<T: Type<math.Numeric>, N: Int>` (`Vec2<T>`, `Vec3<T>`, `Vec4<T>`, `FVec2`, `FVec3`, `FVec4`, `IVec2`, `IVec3`) with static constructors inherited by all aliases (`Vec.from`, `Vec.splat`, `Vec.zeroed`, e.g. `IVec2.zeroed()`, `Vec2.splat(1.0)`), narrowed constructors and basis constants (`Vec2.of`, `Vec3.of`, `Vec4.of`, `FVec2.ZERO`–`FVec4.ZERO`, `FVec3.UNIT_X`–`UNIT_Z`), positional `vec2`/`vec3`/`vec4`, `ZERO2`–`ZERO4`, `UNIT_X3`–`UNIT_Z3`, `x()`/`y()`/`z()`/`w()`, `setX`/`setY`/`setZ`/`setW`, `dot`, `length`, `normalize`, `lerp`, `cross`, `cross2`, `rotate`, `reflect`:
 
 ```lite
 io := import "core/io";
@@ -37,7 +37,7 @@ io.outputLine(a.length(), a.dot(b), sum.x(), sum.y());
 
 [math/matrix](lite://module/math/matrix) defines the row-major record `Mat<T, R, C>` backed by `[Vec<T, C>; R]`. Use `IMat<R, C>` for `Int` or `FMat<R, C>` for `Float`. For square matrices, use `Mat2<T>`, `Mat3<T>`, or `Mat4<T>`, with corresponding `IMat2`–`IMat4` and `FMat2`–`FMat4` aliases.
 
-Construct matrices from rows with `Mat.from` or zero-initialize them with `Mat.zeroed`. Matrix operations include `.mul()`, `.mulVec()`, and `.transpose()`. Floating-point square matrices also support `identity`, `.det()`, and shape-specific transforms such as `FMat3.translate2`.
+Construct matrices from rows with `Mat.from` or zero-initialize them with `Mat.zeroed`. Matrix operations include `.mul()`, `.mulVec()`, and `.transpose()`. Floating-point square matrices also support `identity`, `FMat2.IDENTITY`–`FMat4.IDENTITY`, `.det()`, and shape-narrowed transforms such as `Mat2.rotation`, `Mat3.translation`/`FMat3.translate2`, and `Mat4.translation`/`scaling`.
 
 ```lite
 io := import "core/io";
