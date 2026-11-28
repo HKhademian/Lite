@@ -303,7 +303,7 @@ pub extractModuleJson := fn(source: String, namespace: String, name: String, fil
                 } else if normRhs.wordAt(0, "fn") or normRhs.startsWithAt(0, "fn<") or normRhs.startsWithAt(0, "fn(") {
                     kind = "fn";
                 }
-                isHost := kind == "fn" and stoppedAt == ";";
+                isHost := kind == "fn" and (normRhs.endsWith("#host") or stoppedAt == ";");
                 functionKind := if kind =!= "fn" { "" }
                 else if not typeFunction { "module" }
                 else if firstParameterIsReceiver(source, paramsAt, rhsProbe.nextLine) { "instance" }

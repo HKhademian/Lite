@@ -544,4 +544,22 @@ if ccInfo.available {
     _rmEntry := fs.remove(entryTmp.path);
 }
 
+/* Reject #host declarations in user code */
+hostRejectCases: List<(label: String, src: String, expectedErr: String)> = [
+(label = "user top-level #host fn", src = "pub f := fn(): Int #host;\n", expectedErr = "#host declarations are only allowed"),
+(label = "user #host type op", src = "Box := record { x: Int; };\npub Box.get := fn(b: Self): Int #host;\n", expectedErr = "#host declarations are only allowed"),
+(label = "local #host fn literal", src = "f := fn(): Int { g := fn(): Int #host;\n0 };\n", expectedErr = "#host declarations are only allowed"),
+(label = "unknown fn attribute", src = "pub f := fn(): Int #bogus;\n", expectedErr = "unknown function attribute #bogus")
+];
+loop hostRejectCases as hrc {
+    tsRej := compilerTest.compileStdin(root, tsComp, hrc.src, fixtureName);
+    test.check("ts reject " + hrc.label, tsRej.status =!= 0);
+    tsMsg := tsRej.stderr + tsRej.stdout;
+    test.check("ts reject msg " + hrc.label + " got: " + tsMsg, tsMsg.contains(hrc.expectedErr));
+    cRej := compilerTest.compileStdin(root, cComp, hrc.src, fixtureName);
+    test.check("c reject " + hrc.label, cRej.status =!= 0);
+    cMsg := cRej.stderr + cRej.stdout;
+    test.check("c reject msg " + hrc.label + " got: " + cMsg, cMsg.contains(hrc.expectedErr));
+}
+
 test.done("core-host-bindings");
