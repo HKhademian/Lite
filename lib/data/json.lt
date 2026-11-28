@@ -594,12 +594,10 @@ mut rareCtrlChars: List<String> = [];
 
 ensureRareCtrlChars := fn(): List<String> {
     if rareCtrlChars.length() == 0 {
-        var cp := 0;
-        loop cp < 32 {
+        loop 0..32 as cp {
             if cp =!= 9 and cp =!= 10 and cp =!= 13 {
                 mut rareCtrlChars.pushBack(String.fromCodePoint(cp).text);
             }
-            cp += 1;
         }
     }
     rareCtrlChars
@@ -611,8 +609,7 @@ quoteStringWithCodePoints := fn(value: String): String {
     mut out: tb.TextBuilder;
     mut out.append("\"");
     var runStart := 0;
-    var i := 0;
-    loop i < size {
+    loop 0..size as i {
         cp := cps[i];
         var esc := "";
         if cp == 34 { esc = "\\\""; }
@@ -630,7 +627,6 @@ quoteStringWithCodePoints := fn(value: String): String {
             mut out.append(esc);
             runStart = i + 1;
         }
-        i += 1;
     }
     if runStart < size { mut out.append(value.slice(runStart, size)); }
     mut out.append("\"");

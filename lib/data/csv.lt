@@ -92,7 +92,7 @@ pub CsvTable.parse := fn(source: String, delimiter: String): Self {
         mut rowLens.pushBack(rowLen);
     }
 
-    Self { fields = fields, rowStarts = rowStarts, rowLens = rowLens }
+    Self { =fields, =rowStarts, =rowLens }
 };
 
 /** Parses the first CSV record from `line` into a `List<String>`. */
@@ -133,8 +133,8 @@ pub CsvTable.cellOpt := fn(t: Self, row: Int, col: Int): Option<String> {
 pub CsvTable.encodeRowSlice := fn(fields: Slice<String>, delimiter: String): String {
     delim := effectiveDelim(delimiter);
     mut out: tb.TextBuilder;
-    var i := 0;
     n := fields.length();
+    var i := 0;
     loop i < n {
         if i > 0 { mut out.append(delim); }
         mut out.append(Self.encodeField(fields[i], delim));

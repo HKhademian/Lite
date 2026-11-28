@@ -28,15 +28,15 @@ pub Camera3D.perspective := fn(
 eye: vec.FVec3, target: vec.FVec3, up: vec.FVec3, fovYRad: Float, aspect: Float, near: Float, far: Float
 ): Self {
     Self {
-        eye = eye,
-        target = target,
-        up = up,
-        fovYRad = fovYRad,
+        =eye,
+        =target,
+        =up,
+        =fovYRad,
         aspect = if aspect <= 0.0001 { 1.0 } else { aspect },
         near = if near <= 0.0001 { 0.1 } else { near },
         far = if far <= near + 0.001 { near + 100.0 } else { far },
         orthoHalfHeight = 5.0,
-        projection = ProjectionKind.Perspective
+        projection = .Perspective
     }
 };
 
@@ -45,15 +45,15 @@ pub Camera3D.orthographic := fn(
 eye: vec.FVec3, target: vec.FVec3, up: vec.FVec3, halfHeight: Float, aspect: Float, near: Float, far: Float
 ): Self {
     Self {
-        eye = eye,
-        target = target,
-        up = up,
+        =eye,
+        =target,
+        =up,
         fovYRad = math.PI / 3.0,
         aspect = if aspect <= 0.0001 { 1.0 } else { aspect },
-        near = near,
+        =near,
         far = if far <= near + 0.001 { near + 100.0 } else { far },
         orthoHalfHeight = if halfHeight <= 0.0001 { 5.0 } else { halfHeight },
-        projection = ProjectionKind.Orthographic
+        projection = .Orthographic
     }
 };
 
@@ -64,12 +64,12 @@ pub Camera3D.viewMatrix := fn(cam: Self): mat.FMat4 {
 
 /** Computes the 4x4 projection matrix (`perspective` or `ortho`). */
 pub Camera3D.projectionMatrix := fn(cam: Self): mat.FMat4 {
-    if cam.projection == ProjectionKind.Perspective {
+    if cam.projection == .Perspective {
         return mat.Mat.perspective(cam.fovYRad, cam.aspect, cam.near, cam.far);
     }
     hh := cam.orthoHalfHeight;
     hw := hh * cam.aspect;
-    mat.Mat.ortho(0.0 - hw, hw, 0.0 - hh, hh, cam.near, cam.far)
+    mat.Mat.ortho(-hw, hw, -hh, hh, cam.near, cam.far)
 };
 
 /** Computes combined `projection * view` matrix for transforming world coordinates to clip space. */
@@ -155,8 +155,8 @@ pub OrbitCamera := record {
 pub OrbitCamera.new := fn(target: vec.FVec3, yaw: Float, pitch: Float, distance: Float): Self {
     clampedDist := math.clamp(distance, 0.5, 500.0);
     Self {
-        target = target,
-        yaw = yaw,
+        =target,
+        =yaw,
         pitch = math.clamp(pitch, -1.45, 1.45),
         distance = clampedDist,
         minDistance = 1.5,

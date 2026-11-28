@@ -15,6 +15,9 @@ pub Quat := record {
 /** Identity rotation quaternion `(0, 0, 0, 1)`. */
 pub QUAT_IDENTITY := Quat { x = 0.0, y = 0.0, z = 0.0, w = 1.0 };
 
+/** Static identity rotation quaternion on `Quat`. */
+pub Quat.IDENTITY := QUAT_IDENTITY;
+
 /** Returns the identity rotation quaternion `(0, 0, 0, 1)`. */
 pub Quat.identity := fn(): Self {
     QUAT_IDENTITY
@@ -22,7 +25,7 @@ pub Quat.identity := fn(): Self {
 
 /** Constructs a quaternion directly from `(x, y, z, w)` components. */
 pub Quat.fromXYZW := fn(x: Float, y: Float, z: Float, w: Float): Self {
-    Self { x = x, y = y, z = z, w = w }
+    Self { =x, =y, =z, =w }
 };
 
 /** Euclidean squared norm `x^2 + y^2 + z^2 + w^2`. */
@@ -47,7 +50,7 @@ pub Quat.normalize := fn(q: Self): Self {
 
 /** Returns quaternion conjugate `(-x, -y, -z, w)` (exact inverse for unit quaternions). */
 pub Quat.conjugate := fn(q: Self): Self {
-    Self { x = 0.0 - q.x, y = 0.0 - q.y, z = 0.0 - q.z, w = q.w }
+    Self { x = -q.x, y = -q.y, z = -q.z, w = q.w }
 };
 
 /** 4D quaternion dot product `a . b`. */
@@ -114,8 +117,8 @@ pub Quat.slerp := fn(a: Self, b: Self, t: Float): Self {
     var nb := b.normalize();
     var d := na.dot(nb);
     if d < 0.0 {
-        nb = Self { x = 0.0 - nb.x, y = 0.0 - nb.y, z = 0.0 - nb.z, w = 0.0 - nb.w };
-        d = 0.0 - d;
+        nb = Self { x = -nb.x, y = -nb.y, z = -nb.z, w = -nb.w };
+        d = -d;
     }
     if d > 0.9995 {
         lin := Self {
@@ -176,6 +179,13 @@ pub Transform3D.identity := fn(): Self {
     }
 };
 
+/** Static identity 3D transform on `Transform3D`. */
+pub Transform3D.IDENTITY := Transform3D {
+    position = vec.vec3(0.0, 0.0, 0.0),
+    rotation = Quat { x = 0.0, y = 0.0, z = 0.0, w = 1.0 },
+    scale = vec.vec3(1.0, 1.0, 1.0)
+};
+
 /** Constructs a translation-only 3D transform at `pos`. */
 pub Transform3D.fromPosition := fn(pos: vec.FVec3): Self {
     Self {
@@ -187,15 +197,15 @@ pub Transform3D.fromPosition := fn(pos: vec.FVec3): Self {
 
 /** Constructs a 3D transform from explicit `position`, `rotation` quaternion, and `scale`. */
 pub Transform3D.fromTRS := fn(position: vec.FVec3, rotation: Quat, scale: vec.FVec3): Self {
-    Self { position = position, rotation = rotation.normalize(), scale = scale }
+    Self { =position, rotation = rotation.normalize(), =scale }
 };
 
 /** Constructs a 3D transform from `position`, Euler angles `(pitchX, yawY, rollZ)`, and `scale`. */
 pub Transform3D.fromEuler := fn(position: vec.FVec3, pitchX: Float, yawY: Float, rollZ: Float, scale: vec.FVec3): Self {
     Self {
-        position = position,
+        =position,
         rotation = Quat.fromEuler(pitchX, yawY, rollZ),
-        scale = scale
+        =scale
     }
 };
 
