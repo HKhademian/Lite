@@ -413,7 +413,7 @@ parseParenOrTupleExpr := fn(target: String, source: String, start: Int, prefix: 
                 syntax.failAt(source, valueStart, prefix, "tuple field " + failName + " cannot be " + types.displayKind(value.kind));
             }
             (mut labels).pushBack(label);
-            mut codes.pushBack(value.code);
+            mut codes.pushBack(ctx.assignValueCode(target, value.kind, value.kind, value.code));
             mut kinds.pushBack(value.kind);
             count = count + 1;
             cursor = syntax.skipTrivia(source, value.next, prefix);
