@@ -48,7 +48,7 @@ Complex/simultaneous/reentrant grants, views, capacity, indexed writes, general
 user-function mut parameters, recovery and generic infrastructure remain outside
 this implementation. No native/performance claim follows.
 
-In the current self-hosted compiler, `core/list` exports `pushBack`, `popBack`,
+In the current self-hosted compiler, `type/list` exports `pushBack`, `popBack`,
 `pushFront`, and `popFront` for `mut List<T>` alongside indexed element writes
 (`items[i] = v`, `items[i] += v`), copy-by-default range slicing (`items[1..3]`,
 `items[1..=3]`, `items[..3]`, `items[1..]`, `items[..]`), and read-only metadata

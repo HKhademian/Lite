@@ -1,7 +1,7 @@
 /* Project Tutorial 2: UTF-8 byte & word table formatter with 64-bit FNV-1a checksums. */
 
 io := import "core/io";
-text := import "core/text";
+text := import "type/string";
 
 hexDigit := fn(nibble: Int): String {
     digits := "0123456789abcdef";

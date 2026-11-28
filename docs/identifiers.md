@@ -1,6 +1,6 @@
 # Identifiers
 
-Status: **Selected design (2026-11-24): strict UAX #31 `(XID_Start | "_") { XID_Continue }` profile pinned to Unicode 16.0.0 (no format-control characters such as ZWNJ `U+200C` / ZWJ `U+200D`), ordinary underscore bindings and underscore-prefixed unused-name intent, case-sensitive names, NFC normalization for identifier identity, and distinct confusables/Persian-Arabic variants handled via diagnostics and UTS #39 lints. Current executable support: Phase 1 (Unicode 16.0.0 `XID_Start`/`XID_Continue` lexing in `core/text` and ASCII-fast-path C11 identifier mangling) is implemented across both TS and C11 backends; Phase 2 (NFC normalization) and Phase 3 (UTS #39 confusable diagnostics) remain planned.**
+Status: **Selected design (2026-11-24): strict UAX #31 `(XID_Start | "_") { XID_Continue }` profile pinned to Unicode 16.0.0 (no format-control characters such as ZWNJ `U+200C` / ZWJ `U+200D`), ordinary underscore bindings and underscore-prefixed unused-name intent, case-sensitive names, NFC normalization for identifier identity, and distinct confusables/Persian-Arabic variants handled via diagnostics and UTS #39 lints. Current executable support: Phase 1 (Unicode 16.0.0 `XID_Start`/`XID_Continue` lexing in `type/string` and ASCII-fast-path C11 identifier mangling) is implemented across both TS and C11 backends; Phase 2 (NFC normalization) and Phase 3 (UTS #39 confusable diagnostics) remain planned.**
 
 ## Purpose
 
@@ -103,7 +103,7 @@ Selected (2026-11-24):
 - The selected `:/`, `:%`, `:/=` and `:%=` arithmetic symbols retain the user's compact/spaced equivalence requirement. Because the spellings begin with a colon, `a:/b` has exactly one reading, `a` followed by `:/` and `b`; the retired `a_/b` could read as `a_ / b` or `a _/ b`. There is no conflict with `a_` or `_` identifiers and no mandatory-space rule. See [the lexical boundary](lite://doc/arithmetic-methods-and-division-revision#compact-and-spaced-forms-must-agree).
 - Specify reserved words and any identifier escaping syntax.
 - Specify remaining diagnostic severities and configuration (underscore-prefixed unused-name permission is selected; unrelated shadowing, required-use, and UTS #39 confusable lint severities/configuration remain open).
-- Implement the selected Unicode identifier design in the compiler and tooling across phases: Unicode 16.0.0 `XID_Start`/`XID_Continue` tables in lexing and `core/text`, target-safe C identifier mangling, non-ASCII-only NFC normalization, and UTS #39 confusable diagnostics.
+- Implement the selected Unicode identifier design in the compiler and tooling across phases: Unicode 16.0.0 `XID_Start`/`XID_Continue` tables in lexing and `type/string`, target-safe C identifier mangling, non-ASCII-only NFC normalization, and UTS #39 confusable diagnostics.
 
 ## Related concepts and references
 

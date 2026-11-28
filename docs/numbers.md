@@ -1,6 +1,6 @@
 # Numbers and ranges
 
-Status: **full exact-width integer and float ladder (`Int1`..`Int64`/`Int`, `UInt1`..`UInt64`, `Float8`/`Float16`/`Float32`/`Float64`/`Float`/`Double`), bitwise operators, wrapping arithmetic (`+%`, `-%`, `*%`), overflow/division bounds panics, and arithmetic fault contracts implemented across TS and C11 (Phases 2–6); fixed-point decimal remains open**.
+Status: **full exact-width integer and float ladder (`Int1`..`Int64`/`Int`, `UInt1`..`UInt64`, `Byte`, `Float8`/`Float16`/`Float32`/`Float64`/`Float`/`Double`), static `MIN`/`MAX`/`EPSILON` bounds in `type/int` and `type/float`, package-scoped lexical `Int`/`Float` defaulting via `$preload.lt`, bitwise operators, wrapping arithmetic (`+%`, `-%`, `*%`), overflow/division bounds panics, and arithmetic fault contracts implemented across TS and C11 (Phases 2–6); fixed-point decimal remains open**.
 
 ## Purpose
 

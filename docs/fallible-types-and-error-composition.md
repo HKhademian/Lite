@@ -3,7 +3,7 @@
 Status: **`T ! E` fallible types, union `|` binding more tightly than binary type `!`, `T!` shorthand for `T ! Error`, and Alias := alias TypeExpression selected**. Complete error-family composition, propagation membership, and general type grammar still need formalization.
 
 > [!NOTE]
-> **Phase 15 implementation checkpoint:** Binary `T ! E` and attached `T!` fallible types (backed by `core/error.Error` and optional `ToError` propagation conversion) are implemented and verified in `phase15-unions-and-fallibles.test.lts`. Explicit `({ ... })?` flat panic capture and aggregate failure groups remain deferred.
+> **Phase 15 implementation checkpoint:** Binary `T ! E` and attached `T!` fallible types (backed by `type/error.Error` and optional `ToError` propagation conversion) are implemented and verified in `phase15-unions-and-fallibles.test.lts`. Explicit `({ ... })?` flat panic capture and aggregate failure groups remain deferred.
 
 ## Purpose
 

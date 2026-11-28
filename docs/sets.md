@@ -1,6 +1,6 @@
 # Typed sets
 
-Status: **generated-TS `Set<T>` and `core/set` slice implemented; C backend set support deferred**.
+Status: **generated-TS `Set<T>` and `type/set` slice implemented; C backend set support deferred**.
 
 `Set<T>` stores unique typed values with O(1) membership lookup, explicit `mut` mutation grants, and value-copy semantics on assignment.
 
@@ -10,7 +10,7 @@ Declare a set with an explicit `Set<T>` type annotation, optionally initialized 
 
 ```text
 io := import "core/io";
-set := import "core/set";
+set := import "type/set";
 
 fixedTags: Set<String> = ["lite", "typed", "lite"];
 mut tags: Set<String> = ["lite"];
@@ -19,16 +19,16 @@ set.add(mut tags, "typed");
 io.outputLine(tags, tags.size, tags.isEmpty, set.has(fixedTags, "lite"));
 ```
 
-Run the interactive [typed sets example](lite://play/example/typed-sets), follow the [typed sets lesson](lite://learn/types/typed-sets), or inspect the [core/set module API](lite://module/core/set).
+Run the interactive [typed sets example](lite://play/example/typed-sets), follow the [typed sets lesson](lite://learn/types/typed-sets), or inspect the [type/set module API](lite://module/type/set).
 
 ## Element contracts
 
 - **Supported elements:** Scalar types (`Int`, `Int8`, `Int16`, `Int32`, `Int64`, `Float`, `Float32`, `Float64`, `Double`, `String`, `Bool`) and nominal `enum` types. Compound types (`List<T>`, `Map<K, V>`, `Set<T>`, records, tuples, functions) and `Unit`/`Never` are rejected as set elements.
 - **Contextual `.Case` elements:** When `T` is an `enum`, contextual `.Case` shorthand works in `set.add(mut s, .Read)`, `set.has(s, .Read)`, and `set.remove(mut s, .Read)`.
 
-## `core/set` operations
+## `type/set` operations
 
-Import [core/set](lite://module/core/set) for set operations:
+Import [type/set](lite://module/type/set) for set operations:
 
 - `set.add(mut s, value)` — insert `value` if absent (`Unit`, O(1))
 - `set.has(s, value)` — returns `Bool` membership (O(1))

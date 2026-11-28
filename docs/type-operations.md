@@ -116,7 +116,7 @@ Status: **provisional temporary bridge selected 2026-11-23; final operator/inter
 Until LiteLang settles its long-term operator and [interface](lite://doc/composition-and-interfaces) syntax, owned nominal types may define bracket-indexing behavior using a closed, compiler-reserved `$`-prefixed hook pair on `TypeName.$...` — one unified pair for both positional indexing (`List<T>`, `Array`) and keyed lookup (`Map<K, V>`, user types), rather than splitting `[]` into separate `At` versus `Key` operators:
 
 ```text
-// Hard builtins in lib/core/list.lts and lib/core/map.lts:
+// Hard builtins in lib/type/list.lts and lib/type/map.lts:
 pub List.$getIndex := fn<T>(items: Self<T>, index: Int): T;
 pub List.$setIndex := fn<T>(items: mut Self<T>, index: Int, value: T): Unit;
 

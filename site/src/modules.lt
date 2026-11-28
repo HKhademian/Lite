@@ -76,8 +76,9 @@ renderModuleSidebar := fn(
 modIds: List<String>, modNss: List<String>, modNames: List<String>, modSymCounts: List<Int>, activeId: String
 ): String {
     prefix := "../../modules/";
-    grpNss: List<String> = ["core", "math", "ds", "data", "gfx", "media", "ui", "lite"];
+    grpNss: List<String> = ["type", "core", "math", "ds", "data", "gfx", "media", "ui", "lite"];
     grpLabels: List<String> = [
+    "Built-in Types (type/*)",
     "Core Modules (core/*)",
     "Math Modules (math/*)",
     "Data Structures (ds/*)",
@@ -226,6 +227,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         eoIdx = eoIdx + 1;
     }
 
+    var typeCount := 0;
     var coreCount := 0;
     var mathCount := 0;
     var dsCount := 0;
@@ -235,6 +237,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     var uiCount := 0;
     var liteCount := 0;
     var totalSymbols := 0;
+    mut typeCards: List<String> = [];
     mut coreCards: List<String> = [];
     mut mathCards: List<String> = [];
     mut dsCards: List<String> = [];
@@ -254,7 +257,8 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         mSum := modSummaries[mi];
         symCount := modSymCounts[mi];
         totalSymbols = totalSymbols + symCount;
-        if mNs == "core" { coreCount = coreCount + 1; }
+        if mNs == "type" { typeCount = typeCount + 1; }
+        else if mNs == "core" { coreCount = coreCount + 1; }
         else if mNs == "math" { mathCount = mathCount + 1; }
         else if mNs == "ds" { dsCount = dsCount + 1; }
         else if mNs == "data" { dataCount = dataCount + 1; }
@@ -293,7 +297,8 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
         + "    <a href=\"" + escapeHtml(mNs) + "/" + escapeHtml(mName) + ".html\">Inspect API &rarr;</a>\n"
         + "  </div>\n"
         + "</article>";
-        if mNs == "core" { mut coreCards.pushBack(card); }
+        if mNs == "type" { mut typeCards.pushBack(card); }
+        else if mNs == "core" { mut coreCards.pushBack(card); }
         else if mNs == "math" { mut mathCards.pushBack(card); }
         else if mNs == "ds" { mut dsCards.pushBack(card); }
         else if mNs == "data" { mut dataCards.pushBack(card); }
@@ -308,7 +313,7 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "  <h1>Standard &amp; Play Modules</h1>\n"
     + "  <p class=\"hero-lead\">\n"
     + "    Reference documentation extracted directly from all " + modCount.toText() + " shipped Lite modules\n"
-    + "    (" + coreCount.toText() + " <code>core/*</code>, " + mathCount.toText() + " <code>math/*</code>, " + dsCount.toText() + " <code>ds/*</code>, " + dataCount.toText() + " <code>data/*</code>, " + gfxCount.toText() + " <code>gfx/*</code>, " + mediaCount.toText() + " <code>media/*</code>, " + uiCount.toText() + " <code>ui/*</code>, " + liteCount.toText() + " <code>lite/*</code>; " + totalSymbols.toText() + " public symbols).\n"
+    + "    (" + typeCount.toText() + " <code>type/*</code>, " + coreCount.toText() + " <code>core/*</code>, " + mathCount.toText() + " <code>math/*</code>, " + dsCount.toText() + " <code>ds/*</code>, " + dataCount.toText() + " <code>data/*</code>, " + gfxCount.toText() + " <code>gfx/*</code>, " + mediaCount.toText() + " <code>media/*</code>, " + uiCount.toText() + " <code>ui/*</code>, " + liteCount.toText() + " <code>lite/*</code>; " + totalSymbols.toText() + " public symbols).\n"
     + "  </p>\n"
     + "  <p>Search by module or symbol name. Each module page shows its import path, public symbols, and where it runs. Try <a href=\"core/io.html\"><code>core/io</code></a> for input and output, or read <a href=\"../docs/handbook/imports-visibility-and-io.html\">how imports work</a> in the Handbook. Module APIs are provisional.</p>\n"
     + "  <div class=\"filter-pills\" role=\"group\" aria-label=\"Filter modules by environment\">\n"
@@ -317,6 +322,15 @@ pub buildModulesPayloadJson := fn(inputJson: String): (ok: Bool, jsonText: Strin
     + "    <button class=\"filter-pill\" type=\"button\" data-filter-env=\"play\" aria-pressed=\"false\">Lite Play</button>\n"
     + "    <button class=\"filter-pill\" type=\"button\" data-filter-env=\"cli\" aria-pressed=\"false\">CLI / Host OS</button>\n"
     + "    <input id=\"modules-filter-input\" class=\"filter-input\" type=\"search\" placeholder=\"Filter modules or symbol names...\" aria-label=\"Filter modules or symbols\">\n"
+    + "  </div>\n"
+    + "</section>\n\n"
+    + "<section class=\"section\" id=\"type-modules\">\n"
+    + "  <div class=\"section-head\">\n"
+    + "    <h2>Built-in Types (<code>type/*</code>)</h2>\n"
+    + "    <span class=\"code-card-meta\">" + typeCount.toText() + " modules</span>\n"
+    + "  </div>\n"
+    + "  <div class=\"portal-grid\">\n"
+    + "    " + typeCards.join("\n") + "\n"
     + "  </div>\n"
     + "</section>\n\n"
     + "<section class=\"section\" id=\"core-modules\">\n"

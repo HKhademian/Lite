@@ -1,6 +1,6 @@
 # Packages and preload
 
-Status: **package-local `$preload.lt` implemented (with `lib/$preload.lt` default fallback exporting `core/option` and `core/slice`)**. See [modules and imports](lite://doc/modules-and-packages) for source syntax and visibility.
+Status: **package-local `$preload.lt` implemented (with `lib/$preload.lt` default fallback exporting `type/option`, `type/slice`, `Byte`/`Int` from `type/int`, and `Float`/`Double` from `type/float`)**. See [modules and imports](lite://doc/modules-and-packages) for source syntax and visibility.
 
 ## Package contents
 
@@ -12,7 +12,9 @@ Implicit arbitrary module initialization and package installation scripts were d
 
 ### Package preload
 
-Implemented with default fallback [lib/$preload.lt](lite://repo/lib/$preload.lt) (`pub import "core/option"; pub import "core/slice";`). Builtin container/vector families `Rc<T>`, `Slice<T>`, `Simd<T, N>`, `SimdNative<T>`, and `SoA<R>` are module-owned (`core/rc`, `core/slice`, `core/simd`, `core/soa`) rather than naked compiler intrinsics; by default, only `Option<T>` and `Slice<T>` are exposed implicitly through `lib/$preload.lt`.
+Implemented with default fallback [lib/$preload.lt](lite://repo/lib/$preload.lt) (`pub import "type/option"; pub import "type/slice"; pub { Byte, Int } := import "type/int"; pub { Float, Double } := import "type/float";`). Builtin container/vector families `Rc<T>`, `Slice<T>`, `Simd<T, N>`, `SimdNative<T>`, and `SoA<R>` are module-owned (`type/rc`, `type/slice`, `type/simd`, `type/soa`) rather than naked compiler intrinsics; by default, only `Option<T>`, `Slice<T>`, `Byte` (`UInt8`), `Int` (`Int64`), `Float` (`Float64`), and `Double` (`Float64`) are exposed implicitly through `lib/$preload.lt`. Unannotated integer and float literals default to the active lexical `Int` / `Float` alias in scope (for example, overriding `pub Int := alias Int32;` or `pub Float := alias Float32;` in a package `$preload.lt` narrows unannotated literals in that package while `Int64`/`Float64` remain directly addressable).
+
+Host-provided module declarations in `lib/type/` and `lib/core/` end with explicit `= ... #host;` (`#host;`) rather than a bare bodyless `;` (which is reserved exclusively for `interface` method signatures).
 
 The reserved source file `$preload.lt` configures preloaded module names for a package.
 Resolve it independently for each package:
@@ -20,26 +22,26 @@ Resolve it independently for each package:
 1. If the package supplies a `$preload.lt` in its sources (walking up to the package/project root), use that file.
    An empty override selects an empty preload.
 2. Otherwise use Lite's own `lib/$preload.lt`, if present in Lite's source tree.
-3. If neither file exists (or inside `lib/core/`), preload zero modules.
+3. If neither file exists (or inside `lib/core/` and `lib/type/`), preload zero modules.
 
 The package file's sole role is to replace the default preload. The selected
 file's public symbols enter the package's source-file root scopes as private
-imports. For example, `pub import "core/list";` in the preload exposes the
+imports. For example, `pub import "type/list";` in the preload exposes the
 module's public names, such as `List` once it is exported, directly to those
-root scopes. A bare `import "core/list";` in the preload makes the names
+root scopes. A bare `import "type/list";` in the preload makes the names
 available to the preload itself. The application and each dependency compile
 under their own chosen file. Public signatures preserve the types resolved
 in the declaring package.
 
 Keep the default preload's directly visible surface small. Every public
 name from a module expanded with `pub import` enters each default receiving
-module or script scope. For instance, expanding `core/text` directly would
+module or script scope. For instance, expanding `type/string` directly would
 introduce the bare name `UNICODE_REPLACEMENT_CHAR` everywhere that preload
 applies. Prefer a small export surface for modules expanded directly. For a
 broader API, export one alias:
 
 ```text
-pub text := import "core/text";
+pub text := import "type/string";
 ```
 
 Receiving modules and scripts then use `text.UNICODE_REPLACEMENT_CHAR`.
@@ -49,10 +51,10 @@ under it.
 Keep `String` available as a bare type name while qualifying the text module's
 constants and helpers. Today `String` is intrinsic. If its type declaration
 moves to the module, the preload can expose that type explicitly. One possible
-spelling, once `core/text` exports its type:
+spelling, once `type/string` exports its type:
 
 ```text
-pub text := import "core/text";
+pub text := import "type/string";
 pub String := alias text.String;
 ```
 
@@ -77,7 +79,7 @@ Pending contract cases for TS and C11:
   module exposes only what it explicitly publishes.
 - A package using an alternative list loads that list's owner and operations.
   A dependency using the default list retains its original type and operations.
-  Compiling the alternative package alone has no implicit `core/list` edge.
+  Compiling the alternative package alone has no implicit `type/list` edge.
 - An unaliased import scoped to a block introduces the module's public names
   inside that block. The two public import forms expose names directly or
   through the exported alias, respectively.

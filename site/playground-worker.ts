@@ -78,7 +78,7 @@ function looksLikeText(bytes) {
 
 function buildPlaygroundVfs(stdlib, extraModules, sourceText) {
   const files = new Map();
-  const dirs = new Set(['/project', '/project/lib', '/project/lib/core', '/project/lib/math', '/project/lib/ds', '/project/lib/data', '/project/lib/gfx', '/project/lib/media']);
+  const dirs = new Set(['/project', '/project/lib', '/project/lib/type', '/project/lib/core', '/project/lib/math', '/project/lib/ds', '/project/lib/data', '/project/lib/gfx', '/project/lib/media']);
   const writtenPaths = new Set();
   const normVirt = (p) => {
     const raw = String(p ?? '').startsWith('/') ? String(p) : '/project/' + String(p ?? '');

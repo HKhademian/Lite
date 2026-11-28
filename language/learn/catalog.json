@@ -94,7 +94,7 @@
           "helperModules": [],
           "stdin": "",
           "args": [],
-          "teaches": ["String", "core/text"],
+          "teaches": ["String", "type/string"],
           "docs": ["language/learn/handbook/foundations/numbers-operators-and-strings.md", "docs/strings.md"]
         }
       ]
@@ -212,7 +212,7 @@
         {
           "id": "learn.types.collections.typed-maps",
           "slug": "typed-maps",
-          "title": "Typed Maps Map<K, V> & core/map Lookups",
+          "title": "Typed Maps Map<K, V> & type/map Lookups",
           "kind": "lesson",
           "domain": "types",
           "subGroup": "collections",
@@ -222,13 +222,13 @@
           "helperModules": [],
           "stdin": "",
           "args": [],
-          "teaches": ["Map<K, V>", "core/map", "mut", "m[k] = v", "loop m as entry"],
+          "teaches": ["Map<K, V>", "type/map", "mut", "m[k] = v", "loop m as entry"],
           "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/maps.md"]
         },
         {
           "id": "learn.types.collections.typed-sets",
           "slug": "typed-sets",
-          "title": "Typed Sets Set<T> & core/set Membership",
+          "title": "Typed Sets Set<T> & type/set Membership",
           "kind": "lesson",
           "domain": "types",
           "subGroup": "collections",
@@ -238,7 +238,7 @@
           "helperModules": [],
           "stdin": "",
           "args": [],
-          "teaches": ["Set<T>", "core/set", "mut", "loop s as item"],
+          "teaches": ["Set<T>", "type/set", "mut", "loop s as item"],
           "docs": ["language/learn/handbook/types/tuples-arrays-lists-and-aliases.md", "docs/sets.md"]
         },
         {
@@ -443,7 +443,7 @@
           "helperModules": [],
           "stdin": "",
           "args": [],
-          "teaches": ["core/path", "core/file", "core/text", "finally"],
+          "teaches": ["core/path", "core/file", "type/string", "finally"],
           "docs": ["language/learn/handbook/modules/imports-visibility-and-io.md"]
         },
         {
@@ -483,7 +483,7 @@
           "helperModules": [],
           "stdin": "1 + 2 * 3\n(4 + 5) * -2\n100 / 0\n",
           "args": [],
-          "teaches": ["mutual recursion", "type aliases", "match", "core/text"],
+          "teaches": ["mutual recursion", "type aliases", "match", "type/string"],
           "docs": ["language/learn/handbook/execution/blocks-wiring-and-closures.md", "docs/functions.md"]
         },
         {
@@ -499,7 +499,7 @@
           "helperModules": [],
           "stdin": "hello lite\nAé🚀\n",
           "args": [],
-          "teaches": ["core/text", "core/list", ":%"],
+          "teaches": ["type/string", "type/list", ":%"],
           "docs": ["language/learn/handbook/modules/imports-visibility-and-io.md"]
         },
         {

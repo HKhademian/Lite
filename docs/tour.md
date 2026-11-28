@@ -45,7 +45,7 @@ Loops collect committed values with `.collected` (partial `if`/`match` tails ski
 
 ## Borrowed slices, Option, and data layout (Phases 7–8, 18)
 
-`Slice<T>` borrows a contiguous region of a `List<T>`, byte-aligned or bit-packed `[T; N]`, or nested slice without allocating or copying elements. `mut s.splitAt(mid)` splits a mutable slice into two disjoint mutable views, suspending access to `s` until both halves finish. `Option<T>` (`core/option`) packs `.Some(v)` and `.None` compactly — automatically exploiting niche values (including float qNaN niches unless disabled with `#no_niche`). Performance-sensitive records can also use `#packed` / `#align(N)` (`record #packed { ... }`), `Simd<T, N>` / `SimdNative<T>` (`core/simd`), and column-oriented `SoA<R>` (`core/soa`).
+`Slice<T>` borrows a contiguous region of a `List<T>`, byte-aligned or bit-packed `[T; N]`, or nested slice without allocating or copying elements. `mut s.splitAt(mid)` splits a mutable slice into two disjoint mutable views, suspending access to `s` until both halves finish. `Option<T>` (`type/option`) packs `.Some(v)` and `.None` compactly — automatically exploiting niche values (including float qNaN niches unless disabled with `#no_niche`). Performance-sensitive records can also use `#packed` / `#align(N)` (`record #packed { ... }`), `Simd<T, N>` / `SimdNative<T>` (`type/simd`), and column-oriented `SoA<R>` (`type/soa`).
 
 See [Slices, SIMD, SoA & Layout](lite://handbook/slices-simd-and-layout), [Slices & splitAt example](lite://play/slice-split-and-pack), [Option, SIMD & SoA example](lite://play/option-simd-soa), [slices](lite://doc/slices), [optionals](lite://doc/memory-and-performance), and [SIMD/SoA architecture](lite://doc/c11-memory-and-codegen-plan).
 
@@ -92,10 +92,10 @@ See [Unions, Fallibles & Errors](lite://handbook/unions-fallibles-and-errors), [
 - [Growable lists](lite://play/example/growable-lists): explicit storage and mutation;
   continue with [lists](lite://doc/lists).
 - [Typed maps](lite://play/example/typed-maps): `Map<K, V>` key-value indexing,
-  `core/map` lookups, value snapshots, and entry iteration; continue with
+  `type/map` lookups, value snapshots, and entry iteration; continue with
   [maps](lite://doc/maps).
 - [Typed sets](lite://play/example/typed-sets): `Set<T>` deduplication,
-  `core/set` membership and mutation grants, value snapshots, and element
+  `type/set` membership and mutation grants, value snapshots, and element
   iteration; continue with [sets](lite://doc/sets).
 - [Value enums](lite://play/example/value-enums): nominal plain and backing-typed
   enums, contextual `.Case` shorthand, `.value` reads, and exhaustive `match`;

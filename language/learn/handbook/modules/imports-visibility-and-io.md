@@ -43,13 +43,13 @@ to run the caller and inspect its helper. The
 [source import rules](lite://doc/modules-and-packages#source-imports)
 cover how relative paths and public symbols resolve.
 
-## Browser-Safe Core, Math, DS, Extra & Host OS Modules
+## Browser-Safe Type, Core, Math, DS, Data & GFX Modules
 
-All 39 modules documented in [Modules](lite://module) (`15 core/*` + `5 math/*` + `11 ds/*` + `2 data/*` + `6 extra/*`) fall into three runtime environments:
+Shipped modules documented in [Modules](lite://module) (`type/*`, `core/*`, `math/*`, `ds/*`, `data/*`, `gfx/*`, `media/*`, `ui/*`, `lite/*`) fall into three runtime environments:
 
 | Environment | Modules | Where it runs |
 | --- | --- | --- |
-| **Browser + CLI (`core/*`)** | `core/io`, `core/int`, `core/text`, `core/list`, `core/array`, `core/map`, `core/set`, `core/crypto`, `core/source`, `core/test`, `core/diag` | Runs everywhere: Browser Worker, CLI TS & native C11 |
+| **Browser + CLI (`type/*`, `core/*`)** | `type/int`, `type/float`, `type/bool`, `type/string`, `type/list`, `type/array`, `type/map`, `type/set`, `type/option`, `type/error`, `type/slice`, `type/number`, `type/rc`, `type/simd`, `type/soa`, `core/io`, `core/crypto`, `core/source`, `core/test`, `core/diag`, `core/interface`, `core/text-builder` | Runs everywhere: Browser Worker, CLI TS & native C11 |
 | **Browser + CLI (`math/*`, `ds/*`, `data/*`, `extra/*`)** | `math/scalar`, `math/random`, `math/vector`, `math/matrix`, `math/geom`, `ds/grid`, `ds/arena`, `ds/pool`, `ds/intern`, `ds/lru`, `ds/ring`, `ds/deque`, `ds/heap`, `ds/bitset`, `ds/sparse`, `ds/spatial`, `data/json`, `data/csv`, `gfx/color`, `core/timer` | Pure Lite math, geometry, data structures, codecs & allocators on TS & C11 |
 | **Lite Play & Surfaces** | `gfx/canvas`, `gfx/surface`, `gfx/board`, `media/audio` | Browser Play Canvas, `./bin/lite play` desktop stage & headless tests |
 | **CLI / Host OS** | `core/file`, `core/path`, `core/process`, `core/time` | Requires local `./bin/lite run` or native C11 host OS access |
@@ -63,7 +63,7 @@ Inside [core/io](lite://module/core/io):
 - `io.inputArgs()` returns script CLI arguments after `--`.
 - `io.exit(code)` terminates cleanly with exit status `code` (`Never` return type).
 
-On CLI hosts, combine [core/path](lite://module/core/path) and [core/file](lite://module/core/file) with `finally` cleanup for safe temporary-workspace automation, or [core/crypto](lite://module/core/crypto) and [core/text](lite://module/core/text) for deterministic SHA-256 / HMAC digests.
+On CLI hosts, combine [core/path](lite://module/core/path) and [core/file](lite://module/core/file) with `finally` cleanup for safe temporary-workspace automation, or [core/crypto](lite://module/core/crypto) and [type/string](lite://module/type/string) for deterministic SHA-256 / HMAC digests.
 
 See [Visibility](lite://doc/visibility) and [Tooling & Learning](lite://doc/tooling-and-learning).
 

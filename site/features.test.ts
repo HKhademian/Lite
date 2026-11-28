@@ -535,7 +535,7 @@ test('stripLiteTs, highlightLite, formatCodeView, and deriveLibraryTags support 
     badge: 'Sample',
     title: 'Unicode scripts & UTF-8',
     file: 'samples/programs/text/unicode-scripts.lts',
-    source: 'text := import "core/text";\nپیام := "سلام";\n问候 := "你好";\nλέξη := "γεια";\nслово := "привет";\nբառ := "բարև";\nსიტყვა := "სალამი";\n',
+    source: 'text := import "type/string";\nپیام := "سلام";\n问候 := "你好";\nλέξη := "γεια";\nслово := "привет";\nբառ := "բարև";\nსიტყვა := "სალამი";\n',
     stdin: '',
     args: [],
   }, ['english', 'german', 'french']));

@@ -27,11 +27,11 @@ Bit-packed fixed arrays `[Bool; N]`, `[Int1..4; N]`, and `[UInt1..4; N]` also su
 
 ## Layout Attributes (`#packed`, `#align`) & Niche Packing
 
-Control C11 binary layout directly with `#packed`, `#align(N)`, and `#no_niche` right after `record` or `enum` (after any `<T>` or `: BackingType`). By default, `Option<T>` (`core/option`, preloaded via `lib/$preload.lt`) automatically uses sentinel niches (including `Bool`, small enums, non-null heap handles, and finite-checked `Float` NaN niches) so `Option<Bool>` or `Option<rc.Rc<T>>` (`core/rc`) adds zero tag bytes!
+Control C11 binary layout directly with `#packed`, `#align(N)`, and `#no_niche` right after `record` or `enum` (after any `<T>` or `: BackingType`). By default, `Option<T>` (`type/option`, preloaded via `lib/$preload.lt`) automatically uses sentinel niches (including `Bool`, small enums, non-null heap handles, and finite-checked `Float` NaN niches) so `Option<Bool>` or `Option<rc.Rc<T>>` (`type/rc`) adds zero tag bytes!
 
 ```lite
 io := import "core/io";
-opt := import "core/option";
+opt := import "type/option";
 
 PacketHeader := record #packed {
     kind: UInt4;
@@ -46,11 +46,11 @@ io.outputLine(h.kind, h.length, maybeH.isSome());
 
 ## Portable `Simd<T, N>` & Data-Oriented `SoA<R>`
 
-Import [core/simd](lite://module/core/simd) for explicit fixed-width vector math (`Simd<Float32, 4>` / `Float32x4`, `Int32x4`, `fma`, lane reductions) and [core/soa](lite://module/core/soa) for `SoA<Record>`, storing each field in a contiguous column slice for zero-stride SIMD kernels:
+Import [type/simd](lite://module/type/simd) for explicit fixed-width vector math (`Simd<Float32, 4>` / `Float32x4`, `Int32x4`, `fma`, lane reductions) and [type/soa](lite://module/type/soa) for `SoA<Record>`, storing each field in a contiguous column slice for zero-stride SIMD kernels:
 
 ```lite
 io := import "core/io";
-simd := import "core/simd";
+simd := import "type/simd";
 
 xs: [Float32; 4] = [1.0, 2.0, 3.0, 4.0];
 ys: [Float32; 4] = [10.0, 20.0, 30.0, 40.0];
@@ -60,9 +60,9 @@ sumVec := vx.add(vy);
 io.outputLine(sumVec.reduceAdd());
 ```
 
-For manual lifetime and shared-ownership building blocks alongside value types, combine `Rc<T>` ([core/rc](lite://module/core/rc)), `VmArena` ([ds/arena](lite://module/ds/arena)), and `SlotPool` ([ds/pool](lite://module/ds/pool)).
+For manual lifetime and shared-ownership building blocks alongside value types, combine `Rc<T>` ([type/rc](lite://module/type/rc)), `VmArena` ([ds/arena](lite://module/ds/arena)), and `SlotPool` ([ds/pool](lite://module/ds/pool)).
 
-See [Borrowed Slices](lite://doc/slices), [C11 Memory & Codegen Plan](lite://doc/c11-memory-and-codegen-plan), [core/simd](lite://module/core/simd), and [core/soa](lite://module/core/soa).
+See [Borrowed Slices](lite://doc/slices), [C11 Memory & Codegen Plan](lite://doc/c11-memory-and-codegen-plan), [type/simd](lite://module/type/simd), and [type/soa](lite://module/type/soa).
 
 Try the interactive [Slices & Split-Borrow example](lite://play/slice-split-and-pack), [Option, SIMD & SoA example](lite://play/option-simd-soa), and [verified Slices/SIMD/SoA showcase](lite://play/example/showcase-slices-simd-and-soa).
 

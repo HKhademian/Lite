@@ -107,7 +107,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   }
   const searchIndex = JSON.parse(readFileSync(join(out, 'search-index.json'), 'utf8')) as Array<{ kind: string; title: string; href: string; keywords: string; subtitle: string; badge?: string }>;
   assert(searchIndex.length > showcaseSamples.length + 100);
-  assert(searchIndex.some((entry) => entry.kind === 'module' && entry.href === 'modules/core/text.html'));
+  assert(searchIndex.some((entry) => entry.kind === 'module' && entry.href === 'modules/type/string.html'));
   assert(searchIndex.some((entry) => entry.kind === 'symbol' && entry.title === 'gfx/canvas.fillRect'));
   assert(searchIndex.some((entry) => entry.kind === 'tool' && entry.title === 'lite fmt'));
   const quickstartEntry = searchIndex.find(entry => entry.href === 'docs/design/start-here.html');
@@ -125,14 +125,14 @@ test('buildSite generates static pages and metadata in dist/site', () => {
     'modules/core/crypto.html',
     'modules/core/diag.html',
     'modules/core/file.html',
-    'modules/core/int.html',
+    'modules/type/int.html',
     'modules/core/io.html',
-    'modules/core/list.html',
+    'modules/type/list.html',
     'modules/core/path.html',
     'modules/core/process.html',
     'modules/core/source.html',
     'modules/core/test.html',
-    'modules/core/text.html',
+    'modules/type/string.html',
     'modules/core/time.html',
     'modules/media/audio.html',
     'modules/gfx/board.html',
@@ -148,7 +148,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(modulesIndex.includes('Browser + CLI'));
   assert(modulesIndex.includes('Lite Play'));
   assert(modulesIndex.includes('CLI / Host OS'));
-  const coreTextHtml = readFileSync(join(out, 'modules/core/text.html'), 'utf8');
+  const coreTextHtml = readFileSync(join(out, 'modules/type/string.html'), 'utf8');
   assert(coreTextHtml.includes('Host-backed'));
   assert(coreTextHtml.includes('<span class="tok-keyword">pub</span>'));
   assert(coreTextHtml.includes('Browser + CLI'));
@@ -171,7 +171,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(extraCanvasHtml.includes('Lite Play'));
   assert(extraCanvasHtml.includes('id="fillRect"'));
   assert(extraCanvasHtml.includes('Used in Showcases &amp; Gallery'));
-  const coreListHtml = readFileSync(join(out, 'modules/core/list.html'), 'utf8');
+  const coreListHtml = readFileSync(join(out, 'modules/type/list.html'), 'utf8');
   assert(coreListHtml.includes('Used Across Lite Academy'));
   assert(coreListHtml.includes('data-drawer-toggle="sidebar"'));
   assert(coreTextHtml.includes('utf8-roundtrip-count'));
@@ -231,7 +231,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(handbookSingle.includes('All 15 Handbook chapters on one page'));
   assert(handbookSingle.includes('id="chapter-bindings-and-mutability"'));
   assert(handbookSingle.includes('Continue to <a href="#chapter-bindings-and-mutability"'));
-  assert(handbookSingle.includes('#h5-nominal-record-types--name-shorthand'));
+  assert(handbookSingle.includes('#h5-nominal-record-types--field-shorthand'));
   assert(handbookSingle.includes('data-play-href="../../playground/?piece=bindings-and-mutability-0"'));
   const bindingsHbHtml = readFileSync(join(out, 'docs/handbook/bindings-and-mutability.html'), 'utf8');
   assert(bindingsHbHtml.includes('data-play-href="../../playground/?piece=bindings-and-mutability-0"'));
@@ -264,7 +264,7 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(stringsHbHtml.includes('href="../design/strings.html#string-properties"'));
   assert(stringsHbHtml.includes('implementation-status.html#verified-examples'));
   assert(stringsHbHtml.includes('showcase-strings-and-unicode'));
-  const textModule = readFileSync(join(out, 'modules/core/text.html'), 'utf8');
+  const textModule = readFileSync(join(out, 'modules/type/string.html'), 'utf8');
   assert(textModule.includes('data-lite-kind="handbook">UTF-8 round trip</a>'));
   const supportHtml = readFileSync(join(out, 'docs/design/implementation-status.html'), 'utf8');
   assert(supportHtml.includes('id="verified-examples"'));
@@ -459,14 +459,14 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(existsSync(join(out, 'docs/design/site-architecture.html')));
   assert(existsSync(join(out, 'docs/design/maps.html')));
   assert(existsSync(join(out, 'docs/design/sets.html')));
-  assert(existsSync(join(out, 'modules/core/array.html')));
-  assert(existsSync(join(out, 'modules/core/map.html')));
-  assert(existsSync(join(out, 'modules/core/option.html')));
-  assert(existsSync(join(out, 'modules/core/rc.html')));
-  assert(existsSync(join(out, 'modules/core/set.html')));
-  assert(existsSync(join(out, 'modules/core/simd.html')));
-  assert(existsSync(join(out, 'modules/core/slice.html')));
-  assert(existsSync(join(out, 'modules/core/soa.html')));
+  assert(existsSync(join(out, 'modules/type/array.html')));
+  assert(existsSync(join(out, 'modules/type/map.html')));
+  assert(existsSync(join(out, 'modules/type/option.html')));
+  assert(existsSync(join(out, 'modules/type/rc.html')));
+  assert(existsSync(join(out, 'modules/type/set.html')));
+  assert(existsSync(join(out, 'modules/type/simd.html')));
+  assert(existsSync(join(out, 'modules/type/slice.html')));
+  assert(existsSync(join(out, 'modules/type/soa.html')));
   assert(existsSync(join(out, 'modules/math/scalar.html')));
   assert(existsSync(join(out, 'modules/math/random.html')));
   assert(existsSync(join(out, 'modules/math/vector.html')));
@@ -475,9 +475,9 @@ test('buildSite generates static pages and metadata in dist/site', () => {
   assert(existsSync(join(out, 'modules/ds/spatial.html')));
   assert(existsSync(join(out, 'modules/data/json.html')));
   assert(existsSync(join(out, 'modules/data/csv.html')));
-  assert(readFileSync(join(out, 'modules/core/array.html'), 'utf8').includes('Array.length'));
-  assert(readFileSync(join(out, 'modules/core/list.html'), 'utf8').includes('List.pushBack'));
-  assert(readFileSync(join(out, 'modules/core/text.html'), 'utf8').includes('String.trim'));
+  assert(readFileSync(join(out, 'modules/type/array.html'), 'utf8').includes('Array.length'));
+  assert(readFileSync(join(out, 'modules/type/list.html'), 'utf8').includes('List.pushBack'));
+  assert(readFileSync(join(out, 'modules/type/string.html'), 'utf8').includes('String.trim'));
   const refReport = validateBuiltSiteReferences(out);
   assert.deepEqual(refReport.violations, []);
   assert(refReport.htmlFiles >= 300);
@@ -734,7 +734,7 @@ test('emitted playground compiler.js and stdlib.json compile and run Lite code',
   const sample = JSON.parse(readFileSync(join(out, 'playground', 'samples', 'double-sum.json'), 'utf8')) as { source: string; stdin: string; output: string };
   const stdinBytes = new TextEncoder().encode(sample.source);
   const vfsFiles = new Map<string, Uint8Array>();
-  const vfsDirs = new Set<string>(['/project', '/project/lib', '/project/lib/core', '/project/lib/math', '/project/lib/ds', '/project/lib/gfx']);
+  const vfsDirs = new Set<string>(['/project', '/project/lib', '/project/lib/type', '/project/lib/core', '/project/lib/math', '/project/lib/ds', '/project/lib/gfx']);
   for (const entry of Object.values(stdlib)) {
     const p = `/project/${entry.path}`;
     vfsFiles.set(p, new TextEncoder().encode(entry.text));
@@ -2254,7 +2254,7 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
     target: 'tuples-arrays-lists-and-aliases',
     fragment: 'tuples-labels--name-shorthand',
   });
-  assert.deepEqual(parseLiteUri('lite://modules/core/list#pushBack'), { raw: 'lite://modules/core/list#pushBack', ns: 'module', target: 'core/list', fragment: 'pushBack' });
+  assert.deepEqual(parseLiteUri('lite://modules/type/list#pushBack'), { raw: 'lite://modules/type/list#pushBack', ns: 'module', target: 'type/list', fragment: 'pushBack' });
   assert.equal(parseLiteUri('lite://unknown/item'), null);
 
   assert.equal(
@@ -2273,19 +2273,19 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   g.registerNode({ uri: 'lite://learn/records-and-patterns', kind: 'learn', title: 'Records', outPath: 'learn/types/records-and-patterns.html' });
   g.registerNode({ uri: 'lite://gym/record-shorthand-destructure', kind: 'gym', title: 'Drill', outPath: 'gym/drills/record-shorthand-destructure.html' });
   g.registerNode({ uri: 'lite://play/double-sum', kind: 'play', title: 'Double', outPath: 'playground/?sample=double-sum' });
-  g.registerNode({ uri: 'lite://module/core/list', kind: 'module', title: 'core/list', outPath: 'modules/core/list.html' });
-  g.setModuleSymbols('lite://module/core/list', ['List.pushBack']);
+  g.registerNode({ uri: 'lite://module/type/list', kind: 'module', title: 'type/list', outPath: 'modules/type/list.html' });
+  g.setModuleSymbols('lite://module/type/list', ['List.pushBack']);
   g.registerNode({ uri: 'lite://tool/fmt', kind: 'tool', title: 'lite fmt', outPath: 'tools/#cmd-fmt' });
 
   const rewritten = rewriteLiteUriHtml({
-    html: '<a href="lite://play/double-sum" data-lite-uri="lite://play/double-sum">Play</a> <a href="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand" data-lite-uri="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand">Hb</a> <a href="lite://module/core/list#List.pushBack" data-lite-uri="lite://module/core/list#List.pushBack">Mod</a> <a href="lite://spec#ls-001--source-syntax-and-evaluation" data-lite-uri="lite://spec#ls-001--source-syntax-and-evaluation">Spec</a> <a href="lite://brand/name#decision" data-lite-uri="lite://brand/name#decision">Brand</a> <a href="lite://brand/lite-wordmark.svg" data-lite-uri="lite://brand/lite-wordmark.svg">Svg</a> <a href="lite://repo/igniter/.node-version" data-lite-uri="lite://repo/igniter/.node-version">Node</a>',
+    html: '<a href="lite://play/double-sum" data-lite-uri="lite://play/double-sum">Play</a> <a href="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand" data-lite-uri="lite:/doc/handbook/tuples-arrays-lists-and-aliases#nominal-record-types--name-shorthand">Hb</a> <a href="lite://module/type/list#List.pushBack" data-lite-uri="lite://module/type/list#List.pushBack">Mod</a> <a href="lite://spec#ls-001--source-syntax-and-evaluation" data-lite-uri="lite://spec#ls-001--source-syntax-and-evaluation">Spec</a> <a href="lite://brand/name#decision" data-lite-uri="lite://brand/name#decision">Brand</a> <a href="lite://brand/lite-wordmark.svg" data-lite-uri="lite://brand/lite-wordmark.svg">Svg</a> <a href="lite://repo/igniter/.node-version" data-lite-uri="lite://repo/igniter/.node-version">Node</a>',
     outPath: 'learn/types/records-and-patterns.html',
     graph: g,
     fromUri: 'lite://learn/records-and-patterns',
   });
   assert(rewritten.includes('href="../../playground/?sample=double-sum" data-lite-kind="play"'));
   assert(rewritten.includes('href="../../docs/handbook/tuples-arrays-lists-and-aliases.html#nominal-record-types--name-shorthand" data-lite-kind="handbook"'));
-  assert(rewritten.includes('href="../../modules/core/list.html#List.pushBack" data-lite-kind="module"'));
+  assert(rewritten.includes('href="../../modules/type/list.html#List.pushBack" data-lite-kind="module"'));
   assert(rewritten.includes('href="../../docs/design/spec-overview.html#ls-001--source-syntax-and-evaluation" data-lite-kind="doc"'));
   assert(rewritten.includes('href="../../docs/brand/name.html#decision" data-lite-kind="brand"'));
   assert(rewritten.includes('href="../../brand/lite-wordmark.svg" data-lite-kind="brand"'));
@@ -2293,7 +2293,7 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   assert.throws(() => g.resolveUri('lite://repo/does-not-exist.txt', 'docs/index.html'), /Unresolved lite:\/\/repo target/);
   assert.throws(() => g.resolveUri('lite://repo/../secret.txt', 'docs/index.html'), /Invalid lite:\/\/repo URI/);
   assert.throws(() => g.resolveUri('lite://brand/name#missing', 'docs/index.html'), /Missing heading fragment/);
-  assert.equal(g.getBacklinks('lite://module/core/list').length, 1);
+  assert.equal(g.getBacklinks('lite://module/type/list').length, 1);
 
   assert.deepEqual(
     extractLiteUrisFromMarkdown([
@@ -2310,11 +2310,11 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   g.registerNode({ uri: 'lite://learn/hello-lite', kind: 'learn', title: 'Hello', outPath: 'learn/getting-started/hello-lite.html' });
   g.recordLiteUrisFromMarkdown(
     'lite://learn/hello-lite',
-    'Try [`double-sum`](lite://play/double-sum) and [`fmt`](lite://tool/fmt) then [`List.pushBack`](lite://module/core/list#List.pushBack).',
+    'Try [`double-sum`](lite://play/double-sum) and [`fmt`](lite://tool/fmt) then [`List.pushBack`](lite://module/type/list#List.pushBack).',
     'learn/getting-started/hello-lite.html',
   );
   assert.equal(g.getBacklinks('lite://tool/fmt').length, 1);
-  assert.equal(g.getBacklinks('lite://module/core/list').length, 2);
+  assert.equal(g.getBacklinks('lite://module/type/list').length, 2);
   rewriteLiteUriHtml({
     html: '<a href="lite://tool/fmt" data-lite-uri="lite://tool/fmt">fmt</a>',
     outPath: 'learn/getting-started/hello-lite.html',
@@ -2326,7 +2326,7 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   assert.throws(() => g.resolveUri('lite://bogus/x', 'docs/index.html'), /Invalid lite URI/);
   assert.throws(() => g.resolveUri('lite://learn/missing', 'docs/index.html'), /Unresolved lite URI target/);
   assert.throws(() => g.resolveUri('lite://handbook/tuples-arrays-lists-and-aliases#nope', 'docs/index.html'), /Missing heading fragment/);
-  assert.throws(() => g.resolveUri('lite://module/core/list#missingFn', 'docs/index.html'), /Missing module symbol/);
+  assert.throws(() => g.resolveUri('lite://module/type/list#missingFn', 'docs/index.html'), /Missing module symbol/);
 
   const builtGraph = JSON.parse(readFileSync(join(root, 'dist', 'site', 'link-graph.json'), 'utf8')) as {
     schemaVersion: number;
@@ -2346,12 +2346,12 @@ test('lite:// internal URI parser, resolver, broken-link rejection, and link-gra
   assert(builtGraph.edges.some(e => e.from === 'lite://doc/spec-overview' && e.to === 'lite://doc/unambiguous-meaning' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/overview-and-setup' && e.to === 'lite://play/double-sum' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://handbook/overview-and-setup' && e.to === 'lite://tool/check' && e.kind === 'lite-uri'));
-  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'lite-uri' && e.fragment === 'List.pushBack'));
-  assert(builtGraph.edges.some(e => e.from === 'lite://learn/named-calls-and-recursion' && e.to === 'lite://module/core/text' && e.kind === 'lite-uri' && e.fragment === 'String.toInt'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/type/list' && e.kind === 'lite-uri' && e.fragment === 'List.pushBack'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://learn/named-calls-and-recursion' && e.to === 'lite://module/type/string' && e.kind === 'lite-uri' && e.fragment === 'String.toInt'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/arrays-and-lists' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/orb-catcher-game' && e.to === 'lite://play/play-paddle-pong' && e.kind === 'lite-uri'));
-  assert(builtGraph.edges.some(e => e.from === 'lite://gym/utf8-roundtrip-count' && e.to === 'lite://module/core/text' && e.kind === 'lite-uri' && e.fragment === 'String.utf8Encode'));
-  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/core/list' && e.kind === 'lite-uri'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://gym/utf8-roundtrip-count' && e.to === 'lite://module/type/string' && e.kind === 'lite-uri' && e.fragment === 'String.utf8Encode'));
+  assert(builtGraph.edges.some(e => e.from === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.to === 'lite://module/type/list' && e.kind === 'lite-uri'));
   assert(builtGraph.edges.some(e => e.from === 'lite://gym/record-shorthand-destructure' && e.to === 'lite://learn/records-and-patterns' && e.kind === 'catalog-ref'));
   assert(builtGraph.edges.some(e => e.from === 'lite://learn/records-and-patterns' && e.to === 'lite://handbook/tuples-arrays-lists-and-aliases' && e.kind === 'catalog-ref'));
 });

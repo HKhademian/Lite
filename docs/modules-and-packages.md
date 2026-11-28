@@ -239,7 +239,7 @@ Owner-selected namespace collection form, **2026-11-11**:
 
 ```lite
 math := import "./math";
-text := import "core/text";
+text := import "type/string";
 ```
 
 An `import` declaration introduces an immutable **compile-time token**, not a
@@ -251,7 +251,7 @@ independent of where in a file the `import` appears; deeper block-local `import`
 are prevented by the compiler for now. Import paths
 use `/` separators and have three forms: `./name` and `../name` resolve from
 the importing file, `/path/name` is an absolute filesystem path, and a bare
-library path such as `core/text` resolves under the distribution's `lib/`
+library path such as `type/string` resolves under the distribution's `lib/`
 directory. Lite appends `.lts` when the path does not already end in `.lts`.
 Same-directory files use the explicit `./` prefix; bare paths select library
 modules. Package manifests and version solving remain out of scope.
@@ -263,7 +263,7 @@ are rejected so imports cannot implicitly add names to the current scope.
 
 As of **2026-11-12**, the compiler lexer and parser recognize `pub` and
 namespace imports such as `math := import "./math";` and
-`text := import "core/text";`. Relative,
+`text := import "type/string";`. Relative,
 absolute, and library-root paths are normalized by one host resolver shared by
 compiler graph traversal and build-cache edge validation. Extensionless imports
 infer `.lts`; canonical paths drive source caching and dependency tracing. The

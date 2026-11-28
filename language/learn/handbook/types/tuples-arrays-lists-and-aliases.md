@@ -57,7 +57,7 @@ head := mut queue.popFront();
 io.outputLine("ends:", first, third, "head:", head, "queue:", queue.map(fn(x: Int): String { x.toText() }).join(","), "saved:", saved.map(fn(x: Int): String { x.toText() }).join(","));
 ```
 
-Notice `saved: List<Int> = queue;` takes an independent value snapshot of `queue`—popping from `queue` afterward does not mutate `saved`. Both indexing and [core/list](lite://module/core/list) operations ([`List.pushBack`](lite://module/core/list#List.pushBack), [`List.popFront`](lite://module/core/list#List.popFront), etc.) are supported.
+Notice `saved: List<Int> = queue;` takes an independent value snapshot of `queue`—popping from `queue` afterward does not mutate `saved`. Both indexing and [type/list](lite://module/type/list) operations ([`List.pushBack`](lite://module/type/list#List.pushBack), [`List.popFront`](lite://module/type/list#List.popFront), etc.) are supported.
 
 [Run Growable Lists in Play](lite://play/growable-lists) to see the saved list
 alongside the changed list. The [list copy rule](lite://doc/lists#copy-and-ownership-decision)
@@ -65,7 +65,7 @@ explains why the saved value stays independent.
 
 ## Typed Maps `Map<K, V>`
 
-Store typed key-value entries with `Map<K, V>` (scalar or nominal `enum` keys, any value type). Maps support `[k = v, ...]` / `[]` literals and zero-initialization (`Map<K, V>;`), require `mut Map<K, V>` for indexed writes (`scores["alice"] += 1;`) or mutating [core/map](lite://module/core/map) operations, expose `.size()` and `.isEmpty()`, copy independently on assignment, and iterate `(key, value)` pairs in insertion order:
+Store typed key-value entries with `Map<K, V>` (scalar or nominal `enum` keys, any value type). Maps support `[k = v, ...]` / `[]` literals and zero-initialization (`Map<K, V>;`), require `mut Map<K, V>` for indexed writes (`scores["alice"] += 1;`) or mutating [type/map](lite://module/type/map) operations, expose `.size()` and `.isEmpty()`, copy independently on assignment, and iterate `(key, value)` pairs in insertion order:
 
 ```lite
 io := import "core/io";
@@ -118,11 +118,11 @@ io.outputLine(Point.sum(p), p.sum(), pairSum);
 
 ## Typed Sets `Set<T>`
 
-Store unique scalar or nominal `enum` values with `Set<T>`. Sets zero-initialize empty, require `mut Set<T>` for mutating [core/set](lite://module/core/set) calls (`add`, `remove`, `clear`), copy independently on assignment, and iterate elements in insertion order:
+Store unique scalar or nominal `enum` values with `Set<T>`. Sets zero-initialize empty, require `mut Set<T>` for mutating [type/set](lite://module/type/set) calls (`add`, `remove`, `clear`), copy independently on assignment, and iterate elements in insertion order:
 
 ```lite
 io := import "core/io";
-set := import "core/set";
+set := import "type/set";
 
 mut tags: Set<String>;
 set.add(mut tags, "lite");

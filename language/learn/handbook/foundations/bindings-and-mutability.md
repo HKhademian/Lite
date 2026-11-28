@@ -110,7 +110,7 @@ You can test and bind a value in a single condition using `if pattern := expr`, 
 
 ```lite
 io := import "core/io";
-opt := import "core/option";
+opt := import "type/option";
 
 showPositive := fn(v: opt.Option<Int>): String {
     if .Some(n) := v and n > 0 { "positive:" + n.toText() } else { "other" }

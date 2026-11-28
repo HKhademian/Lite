@@ -58,7 +58,7 @@ integer prompts may appear together in captured stdout.
   Reports 123, 123, and 10 on separate lines.
 
 - [013 — Growable lists](lite://play/example/growable-lists): typed list construction, all
-  four `core/list` mut end operations (`list.pushFront`, `list.pushBack`,
+  four `type/list` mut end operations (`list.pushFront`, `list.pushBack`,
   `list.popFront`, `list.popBack`), and an independent saved sequence. Reports
   0 3, then 1, then 2 on separate lines.
 
@@ -115,7 +115,7 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
   `?` execution-trace ordering.
 - [028 — Modules and hashing](lite://play/example/modules-and-hashing): imports a helper
   module ([stats-module](lite://repo/language/examples/modules/core/helpers/stats-module.lts)) exporting `pub` types,
-  constants, and functions alongside `core/text` alignment and `core/crypto`
+  constants, and functions alongside `type/string` alignment and `core/crypto`
   SHA-256 hashing.
 - [029 — Nominal records](lite://play/example/nominal-records): declares nominal `record`
   types with field defaults and zero initialization, constructs values via `Type { = name }`
@@ -127,13 +127,13 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
   over scalars, nominal records, and tuples with comparison patterns, `or` alternatives,
   and `if` guards.
 - [032 — Typed maps](lite://play/example/typed-maps): demonstrates `Map<K, V>` indexed
-  writes/reads, `core/map` operations (`set`, `has`, `getOr`, `remove`, `size`),
+  writes/reads, `type/map` operations (`set`, `has`, `getOr`, `remove`, `size`),
   independent value snapshots, and insertion-order entry iteration.
 - [033 — Value enums](lite://play/example/value-enums): declares an `Int`-backed nominal
   `enum`, uses auto-incremented cases, contextual `.Case` shorthand, `.value` reads,
   and exhaustive `match`.
 - [034 — Typed sets](lite://play/example/typed-sets): demonstrates `Set<T>` deduplication,
-  `core/set` operations (`add`, `has`, `remove`, `size`, `values`), independent value
+  `type/set` operations (`add`, `has`, `remove`, `size`, `values`), independent value
   snapshots, and insertion-order element iteration.
 - [035 — Packed widths & bitwise](lite://play/example/packed-widths-and-bitwise): demonstrates `Int4`/`UInt4`, `UInt8`, and `Float16` widths, `.wrappingAdd`/`.saturatingAdd`/bitwise methods, `wideningMul`, and `.fma`.
 - [036 — Slices, splitAt & bit-packed storage](lite://play/example/slice-split-and-pack): demonstrates zero-copy `Slice<Int>`, disjoint `mut s.splitAt(mid)`, bit-packed `[Bool; N]` slices with `loop mut`, and `String.bytes()`.

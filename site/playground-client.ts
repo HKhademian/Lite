@@ -2265,7 +2265,7 @@ export function renderPlaygroundClientScript(serialized: string, defaultSampleId
     },
     stdin: {
       title: "Input & Loops",
-      code: 'io := import "core/io";\\ninteger := import "core/int";\\n\\nvar i := 0;\\nloop i < 3 {\\n  line := io.inputLine("");\\n  io.outputLine(integer.intText(i + 1) + ": " + line);\\n  i += 1;\\n}\\n',
+      code: 'io := import "core/io";\\ninteger := import "type/int";\\n\\nvar i := 0;\\nloop i < 3 {\\n  line := io.inputLine("");\\n  io.outputLine(integer.intText(i + 1) + ": " + line);\\n  i += 1;\\n}\\n',
       stdin: "alpha\\nbeta\\ngamma",
       args: "",
     },

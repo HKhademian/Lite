@@ -307,7 +307,7 @@ export const playSamples: readonly PlaySample[] = [
     id: 'play-grid-snake',
     group: 'play-games',
     title: 'Grid Snake',
-    note: 'Growable snake tracked with `core/list` queue pushFront/popBack, Arrows/WASD steering, and fruit chimes.',
+    note: 'Growable snake tracked with `type/list` queue pushFront/popBack, Arrows/WASD steering, and fruit chimes.',
     file: 'samples/games/arcade/grid-snake.lts',
     args: [],
     stdin: '',

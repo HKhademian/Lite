@@ -1,6 +1,6 @@
 # Typed maps
 
-Status: **`Map<K, V>` and `core/map` operations implemented on TS and C11; `Option<V>` implemented in Phase 8 (`core/map.get` continues returning `(found: Bool, value: V)` for compatibility).**
+Status: **`Map<K, V>` and `type/map` operations implemented on TS and C11; `Option<V>` implemented in Phase 8 (`type/map.get` continues returning `(found: Bool, value: V)` for compatibility).**
 
 `Map<K, V>` stores typed key-value entries with O(1) lookup, explicit `mut` mutation grants, and value-copy semantics on assignment.
 
@@ -10,7 +10,7 @@ Declare a map with a `[key = value, ...]` literal (inferred or explicitly typed)
 
 ```text
 io := import "core/io";
-map := import "core/map";
+map := import "type/map";
 
 defaults: Map<String, Int> = ["alice" = 10, "bob" = 25];
 mut scores: Map<String, Int> = ["alice" = 10];
@@ -20,19 +20,19 @@ scores["alice"] += 8;
 io.outputLine(scores["alice"], scores.getOr("carol", 0), defaults.size(), defaults.isEmpty());
 ```
 
-Run the interactive [typed maps example](lite://play/example/typed-maps), follow the [typed maps lesson](lite://learn/types/typed-maps), or inspect the [core/map module API](lite://module/core/map).
+Run the interactive [typed maps example](lite://play/example/typed-maps), follow the [typed maps lesson](lite://learn/types/typed-maps), or inspect the [type/map module API](lite://module/type/map).
 
 ## Key and value contracts
 
 - **Supported keys:** Scalar types (`Int`, `Int8`, `Int16`, `Int32`, `Int64`, `Float`, `Float32`, `Float64`, `Double`, `String`, `Bool`) and nominal `enum` types. Compound types (`List<T>`, `Map<K, V>`, records, tuples, functions) and `Unit`/`Never` are rejected as keys.
 - **Supported values:** Any value type (scalars, enums, records, tuples, `List<T>`, nested `Map<K, V>`, or function values). `Unit` and `Never` are rejected as map value types.
-- **Contextual `.Case` keys:** When `K` is an `enum`, contextual `.Case` shorthand works in `m[.Active] = ...`, `m[.Active]`, and `core/map` calls.
+- **Contextual `.Case` keys:** When `K` is an `enum`, contextual `.Case` shorthand works in `m[.Active] = ...`, `m[.Active]`, and `type/map` calls.
 
-## Indexing and `core/map` operations
+## Indexing and `type/map` operations
 
 Direct indexing (`m[key]`) looks up `key` in O(1) time and faults with `KeyPanic: missing map key` if the key is absent. Writing (`m[key] = value;`) requires a `mut Map<K, V>` binding.
 
-The current [core/map](lite://module/core/map) operations use dot calls:
+The current [type/map](lite://module/type/map) operations use dot calls:
 
 - `mut m.set(key, value)` — insert or overwrite an entry (`Unit`)
 - `m.get(key)` — returns `(found: Bool, value: V)` in the current implementation

@@ -4,9 +4,13 @@
 declaration carries a `/** ... */` doc comment and is published automatically to
 the `/modules/` reference on the site (`./bin/lite docs --modules-json`).
 
-## Core Modules (`lib/core/` — 22 modules)
+## Built-in Type Modules (`lib/type/` — 15 modules)
 
-Core facilities cover [I/O](lite://module/core/io), [text](lite://module/core/text), [numbers](lite://module/core/int), [collections](lite://module/core/list), [optional values](lite://module/core/option), [errors](lite://module/core/error), [core interfaces](lite://module/core/interface), zero-copy [borrowed slices](lite://module/core/slice), fixed-width [SIMD vectors](lite://module/core/simd), parallel-column [structure-of-arrays storage](lite://module/core/soa), and explicit [reference-counted handles](lite://module/core/rc). Check each generated module page for its environment and operations.
+Built-in value, container, and numeric owners cover [integers](lite://module/type/int) (`Byte`, `Int`, bounds `MIN`/`MAX`), [floats](lite://module/type/float) (`Float`, `Double`, `MIN`/`MAX`/`EPSILON`), [numeric unions](lite://module/type/number), [booleans](lite://module/type/bool), [strings](lite://module/type/string), [fixed arrays](lite://module/type/array), [lists](lite://module/type/list), [maps](lite://module/type/map), [sets](lite://module/type/set), [optional values](lite://module/type/option), [errors](lite://module/type/error), zero-copy [borrowed slices](lite://module/type/slice), fixed-width [SIMD vectors](lite://module/type/simd), parallel-column [structure-of-arrays storage](lite://module/type/soa), and explicit [reference-counted handles](lite://module/type/rc). Defaults for `Option<T>`, `Slice<T>`, `Byte`, `Int`, `Float`, and `Double` are re-exported by [lib/$preload.lt](lite://repo/lib/$preload.lt).
+
+## Core Modules (`lib/core/` — 12 modules)
+
+Core facilities cover [I/O](lite://module/core/io), [core interfaces](lite://module/core/interface), [text builders](lite://module/core/text-builder), [paths](lite://module/core/path), [filesystem](lite://module/core/file), [processes](lite://module/core/process), [cryptography](lite://module/core/crypto), [time](lite://module/core/time), [timers](lite://module/core/timer), [sources](lite://module/core/source), [diagnostics](lite://module/core/diag), and [unit testing](lite://module/core/test). Check each generated module page for its environment and operations.
 
 ## Math Modules (`lib/math/` — 6 modules)
 

@@ -396,7 +396,7 @@ export function buildSite(options?: BuildSiteOptions): void {
       }
     }
   };
-  for (const ns of ['core', 'math', 'ds', 'data', 'gfx', 'media', 'ui'] as const) {
+  for (const ns of ['type', 'core', 'math', 'ds', 'data', 'gfx', 'media', 'ui'] as const) {
     collectStdlibDir(ns, join(root, 'lib', ns), ns, `lib/${ns}`);
   }
   const preloadRelPath = 'lib/$preload.lt';

@@ -18,4 +18,4 @@ Distinguish fixed-extent arrays from dynamically resizable `List<T>` storage and
 1. Try pushing another item onto `saved`—observe that `saved` lacks `mut` permission.
 2. Print `saved` before and after `mut queue.popFront()` to confirm value-snapshot isolation.
 
-See [Handbook: Tuples, Arrays, Lists & Aliases](lite://handbook/tuples-arrays-lists-and-aliases) and [core/list](lite://module/core/list).
+See [Handbook: Tuples, Arrays, Lists & Aliases](lite://handbook/tuples-arrays-lists-and-aliases) and [type/list](lite://module/type/list).

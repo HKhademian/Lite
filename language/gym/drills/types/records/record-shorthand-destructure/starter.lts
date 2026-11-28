@@ -9,7 +9,7 @@ delta := io.inputInt();
 rawBonus := io.inputInt();
 entry := do {
     bonus := rawBonus;
-    Score { base = 10 + delta, = bonus }
+    Score { base = 10 + delta, bonus }
 };
 { base, bonus } := entry;
 io.outputLine(base + bonus);

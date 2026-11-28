@@ -9,18 +9,18 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [fibonacci](lite://play/fibonacci) — Iterative Fibonacci sequence and explicit formatting.
 - [primes-sieve](lite://play/primes-sieve) — Prime generation up to 50 with `mut List<Int>`.
 - [binary-search](lite://play/binary-search) — Binary search returning a named tuple result.
-- [caesar-cipher](lite://play/caesar-cipher) — ASCII Caesar cipher round-trip over `core/text`.
-- [word-frequency](lite://play/word-frequency) — Word frequency counter via `core/list`.
+- [caesar-cipher](lite://play/caesar-cipher) — ASCII Caesar cipher round-trip over `type/string`.
+- [word-frequency](lite://play/word-frequency) — Word frequency counter via `type/list`.
 - [persian-bookshelf](lite://play/persian-bookshelf) — Native Persian identifiers, nominal records, helper functions, and loops.
 - [unicode-scripts](lite://play/unicode-scripts) — Real Unicode identifiers and UTF-8 lengths across eight approved scripts.
 - [utf8-char-inspector](lite://play/utf8-char-inspector) — Unicode scalar code points, UTF-8 byte lengths, and round-trips.
 - [rpn-evaluator](lite://play/rpn-evaluator) — Stack-based Reverse Polish Notation evaluator.
 - [inventory-ledger](lite://play/inventory-ledger) — Inventory summary combining nominal records, `=name` shorthand, named tuple returns, and fixed-array bounds.
 - [packet-router](lite://play/packet-router) — Network packet classifier using subject-based `match` over records, `or` alternatives, `if` guards, and fixed-array summaries.
-- [map-word-counter](lite://play/map-word-counter) — Word frequency counter using `Map<String, Int>`, `core/map` lookups, and insertion-order entry iteration.
+- [map-word-counter](lite://play/map-word-counter) — Word frequency counter using `Map<String, Int>`, `type/map` lookups, and insertion-order entry iteration.
 - [loop-collect-filter](lite://play/loop-collect-filter) — Map, filter, and classify collections with loop `.collected`, partial `if`/`match` tails, and `.length()`/`.isEmpty()`.
 - [signal-controller](lite://play/signal-controller) — Traffic signal state machine using an `Int`-backed value `enum`, `.value` durations, and exhaustive `match`.
-- [set-deduplicator](lite://play/set-deduplicator) — Deduplicates a sequence in O(n) using `Set<String>`, `core/set`, and insertion-order traversal.
+- [set-deduplicator](lite://play/set-deduplicator) — Deduplicates a sequence in O(n) using `Set<String>`, `type/set`, and insertion-order traversal.
 - [soa-simd-particles](lite://play/soa-simd-particles) — `SoA<Particle>` + `Float32x4` SIMD physics integrator, `Slice.splitAt`, `loop mut`, and `comptime`.
 - [plugin-pipeline](lite://play/plugin-pipeline) — Nominal `interface`/`impl` with associated types and defaults, `dyn` dispatch, lexical `context(...)`, and overloading.
 - [fallible-config-parser](lite://play/fallible-config-parser) — `A | B` unions, `T!` fallible pipeline, `ToError`, postfix `!`, `else(err)` recovery, `{ ... }` records, and defaults.

@@ -1,6 +1,6 @@
 # Escapes, Code-Point Text & UTF-8 Encoding
 
-Strings in Lite store valid Unicode text and separate scalar character indexing from raw UTF-8 byte conversion inside `core/text`.
+Strings in Lite store valid Unicode text and separate scalar character indexing from raw UTF-8 byte conversion inside `type/string`.
 
 ## Walkthrough
 
@@ -16,6 +16,6 @@ Strings in Lite store valid Unicode text and separate scalar character indexing 
 1. Change `phrase` to another multi-byte greeting and inspect the UTF-8 byte sequence vs code point count.
 2. Append an exclamation mark conditionally using `if not tag.endsWith("!")`.
 
-See [Handbook: Numbers, Operators & Strings](lite://handbook/numbers-operators-and-strings) and [core/text](lite://module/core/text).
+See [Handbook: Numbers, Operators & Strings](lite://handbook/numbers-operators-and-strings) and [type/string](lite://module/type/string).
 
 See the [verified UTF-8 round trip](lite://handbook/numbers-operators-and-strings#utf-8-round-trip).

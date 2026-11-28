@@ -27,11 +27,11 @@ io.outputLine(describe(41), describe("lite"), describe(false));
 
 ## Optional Values (`Option<T>`)
 
-Use [core/option](lite://module/core/option) (`Option<T>`, `.Some(v)`, `.None`) whenever absence is a normal outcome. Both `if .Some(x) := opt` and `match` extract the payload cleanly:
+Use [type/option](lite://module/type/option) (`Option<T>`, `.Some(v)`, `.None`) whenever absence is a normal outcome. Both `if .Some(x) := opt` and `match` extract the payload cleanly:
 
 ```lite
 io := import "core/io";
-opt := import "core/option";
+opt := import "type/option";
 
 findFirstPos := fn(xs: List<Int>): opt.Option<Int> {
     loop xs as v {
@@ -47,11 +47,11 @@ io.outputLine(pick.isSome(), out);
 
 ## Fallible Functions (`T ! E`, `T!`), Postfix `!`, & `else(err)` Recovery
 
-Functions that may fail return `SuccessType ! ErrorType` or `SuccessType!` (shorthand for `SuccessType ! Error` using [core/error](lite://module/core/error)). Custom domain errors can implement `ToError` so postfix `!` converts and propagates automatically up to a `T!` caller, while `else(err)` recovers locally:
+Functions that may fail return `SuccessType ! ErrorType` or `SuccessType!` (shorthand for `SuccessType ! Error` using [type/error](lite://module/type/error)). Custom domain errors can implement `ToError` so postfix `!` converts and propagates automatically up to a `T!` caller, while `else(err)` recovers locally:
 
 ```lite
 io := import "core/io";
-errs := import "core/error";
+errs := import "type/error";
 
 ParseErr := enum { Empty; Negative(Int); };
 impl errs.ToError for ParseErr {

@@ -51,7 +51,7 @@ io.outputLine(inBand, notZero);
 
 Double-quoted `"..."` strings support multi-line text and standard escapes (`\n`, `\t`, `\"`, `\\`, `\r`). Concatenate strings with `+` and call `.length()` or `.isEmpty()` directly on any `String`.
 
-Use [core/text](lite://module/core/text) for code-point length, indexing, slicing, trimming, searching, joining, and UTF-8 byte/scalar conversion, [math/scalar](lite://module/math/scalar) for numeric constants and helpers (`PI`, `TAU`, `sqrt`, `clamp`, `min`), and [math/random](lite://module/math/random) for deterministic seedable PRNGs:
+Use [type/string](lite://module/type/string) for code-point length, indexing, slicing, trimming, searching, joining, and UTF-8 byte/scalar conversion, [math/scalar](lite://module/math/scalar) for numeric constants and helpers (`PI`, `TAU`, `sqrt`, `clamp`, `min`), and [math/random](lite://module/math/random) for deterministic seedable PRNGs:
 
 ```lite
 io := import "core/io";
@@ -66,8 +66,8 @@ See [Numbers](lite://doc/numbers), [Division](lite://doc/division), [Comparison 
 ### UTF-8 round trip
 
 `"Aé🚀"` has three Unicode scalars and occupies seven UTF-8 bytes. Encode
-with [`String.utf8Encode`](lite://module/core/text#String.utf8Encode) and decode
-with [`String.fromUtf8Strict`](lite://module/core/text#String.fromUtf8Strict).
+with [`String.utf8Encode`](lite://module/type/string#String.utf8Encode) and decode
+with [`String.fromUtf8Strict`](lite://module/type/string#String.fromUtf8Strict).
 The decode result reports whether the bytes represent valid UTF-8.
 Use the encoded list's length for buffer sizes and `String.length` when
 counting code points. See the [string properties rule](lite://doc/strings#string-properties).

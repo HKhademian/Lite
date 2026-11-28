@@ -57,11 +57,11 @@ The newline inside the quotes is data. The working direction preserves literal c
 
 ## String properties
 
-In the generated-TS compiler, every `String` exposes two read-only metadata properties without importing `core/text`:
+In the generated-TS compiler, every `String` exposes two read-only metadata properties without importing `type/string`:
 
-- `s.length` (`Int`): Unicode code-point count (matching `core/text.length(s)`).
+- `s.length` (`Int`): Unicode code-point count (matching `type/string.length(s)`).
 - `s.isEmpty` (`Bool`): `true` when `s` is `""`.
-- Range slicing (`s[start..end]`, `s[start..=end]`, `s[..end]`, `s[start..]`, `s[..]`): bounds-checked Unicode code-point slice (matching `core/text.slice`). Single-index `s[i]` remains explicit via `core/text.at(s, i)`.
+- Range slicing (`s[start..end]`, `s[start..=end]`, `s[..end]`, `s[start..]`, `s[..]`): bounds-checked Unicode code-point slice (matching `type/string.slice`). Single-index `s[i]` remains explicit via `type/string.at(s, i)`.
 
 ## Notes
 

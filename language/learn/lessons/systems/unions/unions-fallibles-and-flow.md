@@ -6,7 +6,7 @@ Combine normalized `A | B` value unions, `Bool`-correlated definite initializati
 
 1. `Token := alias Int | String;` normalizes the union members; `match tok` narrows `n: Int` and `s: String` exhaustively.
 2. `lim: Int = ?;` is proven initialized before returning because immutable predicate `useDefault` covers both `if useDefault` and `if not useDefault`.
-3. `ConfigErr` implements `core/error.ToError`, allowing `parsePort(...)!` inside `loadBanner(...): String!` to convert and propagate `ConfigErr` into unified `Error` automatically.
+3. `ConfigErr` implements `type/error.ToError`, allowing `parsePort(...)!` inside `loadBanner(...): String!` to convert and propagate `ConfigErr` into unified `Error` automatically.
 4. `loadBanner(44) else(e) { ... }` recovers from the error locally without extra boilerplate.
 
 ## Try Modifying This
