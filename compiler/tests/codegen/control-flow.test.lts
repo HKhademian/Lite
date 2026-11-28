@@ -191,7 +191,7 @@ leadBadErr: List<String> = [
 "1:10: leading and may appear only once\n",
 "1:31: leading or may appear only once\n",
 "1:14: expected an Int, Float, String or Bool expression\n",
-"1:38: host output functions are standalone statements\n",
+"1:36: standalone block expressions must use do { ... }\n",
 "1:8: expected an Int, Float, String or Bool expression\n",
 "1:15: " + condMsg + " \"or\": see docs/conditionals.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n",
 "1:10: " + condMsg + " \"and\": see docs/conditionals.md; the restricted compiler accepts Int/Float/String/Bool expressions, locals, output/outputLine, if/else and loop only\n",
@@ -288,7 +288,7 @@ elseIfBadSrc: List<String> = [
 elseIfBadErr: List<String> = [
 "1:63: else if condition must be Bool\n",
 "1:68: expected {\n",
-"1:65: host output functions are standalone statements\n",
+"1:63: standalone block expressions must use do { ... }\n",
 "1:82: unexpected else\n",
 "1:25: unexpected else\n",
 "1:58: unknown value hidden\n",

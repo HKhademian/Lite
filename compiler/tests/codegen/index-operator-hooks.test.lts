@@ -174,7 +174,7 @@ expectRejectBoth("compound-missing-getIndex",
 "P.$setIndex := fn(p: mut Self, i: Int, v: Int): Unit { p.a = v; };\n" +
 "mut p := P { a = 1 };\n" +
 "p[0] += 2;\n",
-"compound index assignment requires both $getIndex and $setIndex");
+"compound index assignment requires both Index and IndexMut on P");
 
 expectRejectBoth("getIndex-mut-receiver-rejected",
 "P := record { a: Int; }\n" +

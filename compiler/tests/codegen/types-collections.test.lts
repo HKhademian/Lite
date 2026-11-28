@@ -197,7 +197,7 @@ badListSrc: List<String> = [
 ];
 badListErr: List<String> = [
 "1:22: list element 1 must be Int, got String\n",
-"2:16: type Int does not define $getIndex for indexing\n",
+"2:16: type Int does not define $getIndex or Index for indexing\n",
 "2:22: index must be Int, got String\n",
 "2:1: cannot initialize List<String> with List<Int>\n",
 "1:11: empty list literal requires a List element type\n",
@@ -247,8 +247,8 @@ badTravSrc: List<String> = [
 "io := import \"core/io\"; values: List<Int> = [1];\nloop values as item {\n    io.outputLine(item);\n}\nio.outputLine(item);\n",
 ];
 badTravErr: List<String> = [
-"1:30: loop sequence must be a List, Array, Map, or Set, got Int\n",
-"1:30: loop sequence must be a List, Array, Map, or Set, got Bool\n",
+"1:30: loop sequence must be a List, Array, Map, Set, or Slice, got Int\n",
+"1:30: loop sequence must be a List, Array, Map, Set, or Slice, got Bool\n",
 "2:16: expected an item name after as\n",
 "3:5: cannot assign to immutable local item\n",
 "5:15: unknown value item\n",
@@ -336,7 +336,7 @@ badMutErr: List<String> = [
 "1:19: unknown value missing\n",
 "2:25: pushBack expects a value after the mut list\n",
 "2:28: popBack requires mut list argument\n",
-"1:9: mut requires a List, Map, Set, or record type, got Int\n",
+"1:5: mut requires a List, Map, Set, or record type, got Int\n",
 "2:1: cannot declare a Unit local x\n",
 ];
 var mi := 0;

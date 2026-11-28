@@ -51,8 +51,8 @@ src :=
 "\n" +
 "/* 4. Nested finally with LIFO unwinding on early return */\n" +
 "unwindReturn := fn(early: Bool): Int {\n" +
-"    {\n" +
-"        {\n" +
+"    do {\n" +
+"        do {\n" +
 "            if early { return 42; }\n" +
 "            io.outputLine(\"body-normal\");\n" +
 "            7\n" +
