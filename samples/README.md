@@ -50,9 +50,11 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [studio-lamp](lite://play/play-studio-lamp) — `280x180` clickable lamp toggle with Space/Enter support.
 - [color-mixer](lite://play/play-color-mixer) — `320x200` draggable RGBA channel sliders.
 - [pixel-maze](lite://play/play-pixel-maze) — `286x182` maze navigator with WASD/Arrows and chimes.
+- [surface-ripples](lite://play/play-surface-ripples) — `360x220` pure 2D `gfx/surface` & `gfx/color` interactive ripple rings.
 
 ## Audio & Synth (`graphics/audio/`)
 
+- [pure-chime-scale](lite://play/play-pure-chime-scale) — Pure `media/audio` pentatonic chime sequence using `audio.Note` without canvas boilerplate.
 - [synth-arpeggio](lite://play/play-arpeggio) — `320x180` four-pad sequencer using `audio.Note`.
 - [chord-pad](lite://play/play-chord-pad) — `320x180` polyphonic triad chord pads (`1`–`4` or click).
 - [step-sequencer](lite://play/play-step-sequencer) — `320x200` toggleable 4×4 grid step sequencer.
