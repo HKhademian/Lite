@@ -137,7 +137,7 @@ examples. They live under [compiler/](lite://doc/compiler/overview) and are run 
   snapshots, and insertion-order element iteration.
 - [035 — Packed widths & bitwise](lite://play/example/packed-widths-and-bitwise): demonstrates `Int4`/`UInt4`, `UInt8`, and `Float16` widths, `.wrappingAdd`/`.saturatingAdd`/bitwise methods, `wideningMul`, and `.fma`.
 - [036 — Slices, splitAt & bit-packed storage](lite://play/example/slice-split-and-pack): demonstrates zero-copy `Slice<Int>`, disjoint `mut s.splitAt(mid)`, bit-packed `[Bool; N]` slices with `loop mut`, and `String.bytes()`.
-- [037 — Option, @packed layout, SIMD & SoA](lite://play/example/option-simd-soa): demonstrates `@packed` records, `Option<T>` (`if .Some(...) := ...`), `Rc<T>`, `Float32x4` SIMD, and `SoA<Particle>` columns.
+- [037 — Option, #packed layout, SIMD & SoA](lite://play/example/option-simd-soa): demonstrates `#packed` records, `Option<T>` (`if .Some(...) := ...`), `Rc<T>`, `Float32x4` SIMD, and `SoA<Particle>` columns.
 - [038 — Interfaces, associated types & dyn](lite://play/example/interfaces-and-dyn): demonstrates `interface`/`impl`, associated types, default method bodies, bounded generics, and `dyn` dispatch.
 - [039 — Lexical contexts & overloads](lite://play/example/lexical-context-and-overloads): demonstrates `context(...)` defaults and scoped overrides alongside statically resolved overloading.
 - [040 — Loop mut, .static(), do & dependent defaults](lite://play/example/loop-mut-and-static): demonstrates `loop mut`, contextual `.static()` calls, standalone `do { ... }` blocks, `if` pattern bindings, and dependent defaults.

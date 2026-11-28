@@ -1,4 +1,4 @@
-/* Showcase: Zero-copy borrowed Slice<T>, splitAt, bit-packed slices, @packed, Option niches, Simd, SoA, and Rc. */
+/* Showcase: Zero-copy borrowed Slice<T>, splitAt, bit-packed slices, #packed, Option niches, Simd, SoA, and Rc. */
 
 io := import "core/io";
 opt := import "core/option";
@@ -6,8 +6,7 @@ simd := import "core/simd";
 soa := import "core/soa";
 rc := import "core/rc";
 
-@packed
-FrameHeader := record {
+FrameHeader := record #packed {
     version: UInt4;
     flags: UInt4;
     payloadLen: UInt16;

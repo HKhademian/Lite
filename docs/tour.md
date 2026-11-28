@@ -45,7 +45,7 @@ Loops collect committed values with `.collected` (partial `if`/`match` tails ski
 
 ## Borrowed slices, Option, and data layout (Phases 7–8, 18)
 
-`Slice<T>` borrows a contiguous region of a `List<T>`, byte-aligned or bit-packed `[T; N]`, or nested slice without allocating or copying elements. `mut s.splitAt(mid)` splits a mutable slice into two disjoint mutable views, suspending access to `s` until both halves finish. `Option<T>` (`core/option`) packs `.Some(v)` and `.None` compactly — automatically exploiting niche values (including float qNaN niches unless disabled with `@no_niche`). Performance-sensitive records can also use `@packed` / `@align(N)`, `Simd<T, N>` / `SimdNative<T>` (`core/simd`), and column-oriented `SoA<R>` (`core/soa`).
+`Slice<T>` borrows a contiguous region of a `List<T>`, byte-aligned or bit-packed `[T; N]`, or nested slice without allocating or copying elements. `mut s.splitAt(mid)` splits a mutable slice into two disjoint mutable views, suspending access to `s` until both halves finish. `Option<T>` (`core/option`) packs `.Some(v)` and `.None` compactly — automatically exploiting niche values (including float qNaN niches unless disabled with `#no_niche`). Performance-sensitive records can also use `#packed` / `#align(N)` (`record #packed { ... }`), `Simd<T, N>` / `SimdNative<T>` (`core/simd`), and column-oriented `SoA<R>` (`core/soa`).
 
 See [Slices, SIMD, SoA & Layout](lite://handbook/slices-simd-and-layout), [Slices & splitAt example](lite://play/slice-split-and-pack), [Option, SIMD & SoA example](lite://play/option-simd-soa), [slices](lite://doc/slices), [optionals](lite://doc/memory-and-performance), and [SIMD/SoA architecture](lite://doc/c11-memory-and-codegen-plan).
 

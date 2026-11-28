@@ -398,7 +398,7 @@ floatNicheSrc := [
     "io := import \"core/io\";",
     "",
     "Option := enum<T: Type> { None, Some(T) };",
-    "@no_niche FloatWrap := record { v: Float; };",
+    "FloatWrap := record #no_niche { v: Float; };",
     "",
     "inspect_layouts := fn(",
     "    p_opt_f64: Option<Float>,",
@@ -439,7 +439,7 @@ if ccInfo.available {
         "    _Static_assert(sizeof(*lite_p_opt_f32) == sizeof(float), \"Option<Float32> must reuse qNaN niche\");",
         "    _Static_assert(sizeof(*lite_p_opt_f16) == 2, \"Option<Float16> must reuse qNaN niche (2 bytes)\");",
         "    _Static_assert(sizeof(*lite_p_opt_f8) == 1, \"Option<Float8> must reuse NaN niche (1 byte)\");",
-        "    _Static_assert(sizeof(*lite_p_opt_nn_wrap) > sizeof(double), \"@no_niche wrapper must stay tagged\");"
+        "    _Static_assert(sizeof(*lite_p_opt_nn_wrap) > sizeof(double), \"#no_niche wrapper must stay tagged\");"
     ].join("\n");
     patchedFnO1 := injectStaticAsserts(cFnO1.stdout, o1Asserts);
     test.check("injected float-niche -O1 asserts", patchedFnO1 =!= "");

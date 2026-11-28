@@ -568,7 +568,7 @@
     },
     {
       "id": "feature.types.layout.option-simd-soa",
-      "summary": "@packed/@align records, Option<T> niche packing, SoA<R> columns, Simd<T, N>, and Rc<T>.",
+      "summary": "#packed/#align records, Option<T> niche packing, SoA<R> columns, Simd<T, N>, and Rc<T>.",
       "case": "features/types/layout/option-simd-soa.json",
       "status": "verified",
       "docs": [

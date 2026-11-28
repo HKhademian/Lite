@@ -1,4 +1,4 @@
-/* Example: Option<T>, @packed/@align layout attributes, Rc<T>, Simd<Float32, 4>, and SoA<R> columns. */
+/* Example: Option<T>, #packed/#align layout attributes, Rc<T>, Simd<Float32, 4>, and SoA<R> columns. */
 
 io := import "core/io";
 opt := import "core/option";
@@ -6,8 +6,7 @@ simd := import "core/simd";
 soa := import "core/soa";
 rc := import "core/rc";
 
-@packed
-Header := record {
+Header := record #packed {
     kind: UInt4;
     flags: UInt4;
     count: UInt16;

@@ -24,7 +24,7 @@ For core language-specification examples (`001`–`024`), see [language/examples
 - [soa-simd-particles](lite://play/soa-simd-particles) — `SoA<Particle>` + `Float32x4` SIMD physics integrator, `Slice.splitAt`, `loop mut`, and `comptime`.
 - [plugin-pipeline](lite://play/plugin-pipeline) — Nominal `interface`/`impl` with associated types and defaults, `dyn` dispatch, lexical `context(...)`, and overloading.
 - [fallible-config-parser](lite://play/fallible-config-parser) — `A | B` unions, `T!` fallible pipeline, `ToError`, postfix `!`, `else(err)` recovery, `{ ... }` records, and defaults.
-- [packed-nibble-codec](lite://play/packed-nibble-codec) — Bit-packed `Slice<Int4>` & `Slice<Bool>`, `UInt8`/`Int4` bitops, `@packed` records, `Option<T>`, and `Rc<T>`.
+- [packed-nibble-codec](lite://play/packed-nibble-codec) — Bit-packed `Slice<Int4>` & `Slice<Bool>`, `UInt8`/`Int4` bitops, `#packed` records, `Option<T>`, and `Rc<T>`.
 
 ## Canvas Art (`graphics/art/`)
 

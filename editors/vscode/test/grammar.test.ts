@@ -173,8 +173,8 @@ test('type-attached operations, Self, Array, and index hooks highlight cleanly',
   has(rows, 1, 'Self', 'support.type.lite');
 });
 test('Phases 5-18 keywords, layout attributes, numeric types, and operators highlight cleanly', async () => {
-  const rows = await tokenize('@packed Header := record { tag: UInt4; val: Float16; };\nShow := interface { show: fn(self: Self): String; };\nimpl Show for Header;\nrun := fn(s: mut Slice<Int4>, d: dyn Show) context(tag: String): Int! {\n  comptime { cast<UInt8>(1).wrappingAdd(2).shiftLeft(1) }\n}\nxs := arr[0..=3];');
-  has(rows, 0, '@packed', 'entity.name.label.lite');
+  const rows = await tokenize('Header := record #packed { tag: UInt4; val: Float16; };\nShow := interface { show: fn(self: Self): String; };\nimpl Show for Header;\nrun := fn(s: mut Slice<Int4>, d: dyn Show) context(tag: String): Int! {\n  comptime { cast<UInt8>(1).wrappingAdd(2).shiftLeft(1) }\n}\nxs := arr[0..=3];');
+  has(rows, 0, '#packed', 'storage.modifier.directive.lite');
   has(rows, 0, 'UInt4', 'support.type.lite');
   has(rows, 0, 'Float16', 'support.type.lite');
   has(rows, 1, 'interface', 'storage.type.lite');

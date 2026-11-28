@@ -661,7 +661,7 @@
     {
       "id": "systems",
       "title": "Modern Systems: Slices, Interfaces, Fallibles, and Comptime",
-      "summary": "Borrowed Slice<T>/splitAt, @packed Option<T>, Simd/SoA, nominal interfaces & dyn, lexical contexts, overloading, unions, fallible T!, comptime, and structural records.",
+      "summary": "Borrowed Slice<T>/splitAt, #packed Option<T>, Simd/SoA, nominal interfaces & dyn, lexical contexts, overloading, unions, fallible T!, comptime, and structural records.",
       "topics": [
         {
           "id": "showcase.types.slices.slices-simd-and-soa",
@@ -669,8 +669,8 @@
           "file": "language/showcases/types/slices/slices-simd-and-soa.lts",
           "helperFiles": [],
           "manifest": "language/verifications/artifacts/showcases/types/slices/slices-simd-and-soa.json",
-          "summary": "Zero-copy Slice<T>, disjoint splitAt, @packed Option<T>, Float32x4 SIMD over SoA<Particle> columns, and Rc<T>.",
-          "teaches": ["Slice<T>", "splitAt", "@packed", "Option<T>", "Simd<T, N>", "SoA<R>", "Rc<T>"],
+          "summary": "Zero-copy Slice<T>, disjoint splitAt, #packed Option<T>, Float32x4 SIMD over SoA<Particle> columns, and Rc<T>.",
+          "teaches": ["Slice<T>", "splitAt", "#packed", "Option<T>", "Simd<T, N>", "SoA<R>", "Rc<T>"],
           "features": ["feature.types.slices.borrowed-and-split", "feature.types.layout.option-simd-soa"],
           "docs": ["docs/slices.md", "docs/c11-memory-and-codegen-plan.md"],
           "order": 1

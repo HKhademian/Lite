@@ -179,7 +179,7 @@ pub discoverDocsPayloadJson := fn(rootDir: String, includeRendered: Bool): (ok: 
     "Dual-target TS & C11 parity, 3-generation self-hosting, ./bin/lite build, -O0..-O3/-Os, and ./bin/lite ignite.",
     "Plain A | B unions, flow narrowing, Option<T>, T ! E / T!, postfix ! propagation, and else(err) recovery.",
     "Nominal interface/impl, associated types, defaults, dyn dispatch, lexical context(...)/$context.lt, and overloading.",
-    "Non-escaping Slice<T>, splitAt, bit-packed slices, @packed/@align, Float niches, Simd<T, N>, SoA<R>, and Rc<T>.",
+    "Non-escaping Slice<T>, splitAt, bit-packed slices, #packed/#align, Float niches, Simd<T, N>, SoA<R>, and Rc<T>.",
     "Portable comptime { ... }, Stage-1 .lt init, unified alias, parameter defaults with ?:, and callable variance."
     ];
 

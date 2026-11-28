@@ -112,8 +112,19 @@ function highlightCode(source: string, keywords: ReadonlySet<string>, types: Rea
       continue;
     }
 
+    // Inline compiler/layout directives (#packed, #align, #no_niche) in LiteScript
+    if (highlightTags && ch === '#' && i + 1 < n) {
+      const dirStartStep = identStartStep(source, i + 1, false);
+      if (dirStartStep > 0) {
+        const j = consumeIdent(source, i + 1 + dirStartStep, false);
+        out.push(`<span class="tok-keyword">${escapeHtml(source.slice(i, j))}</span>`);
+        i = j;
+        continue;
+      }
+    }
+
     // Preprocessor directive (#include, #define, etc.)
-    if (ch === '#' && (i === 0 || source[i - 1] === '\n')) {
+    if (!highlightTags && ch === '#' && (i === 0 || source[i - 1] === '\n')) {
       const end = source.indexOf('\n', i + 1);
       const slice = end === -1 ? source.slice(i) : source.slice(i, end);
       out.push(`<span class="tok-keyword">${escapeHtml(slice)}</span>`);

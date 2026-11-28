@@ -509,8 +509,9 @@ test('stripLiteTs, highlightLite, formatCodeView, and deriveLibraryTags support 
   const execRes = (new Function(stripped) as () => { مجموع: bigint; خلاصه: string })();
   assert.deepEqual(execRes, { مجموع: 240n, خلاصه: 'الگوریتم' });
 
-  const liteHtml = highlightLite('@حلقه loop قفسه as مورد { break @حلقه; }');
+  const liteHtml = highlightLite('@حلقه loop قفسه as مورد { break @حلقه; }\nHdr := record #packed { x: UInt8; };');
   assert(liteHtml.includes('<span class="tok-keyword">@حلقه</span>'));
+  assert(liteHtml.includes('<span class="tok-keyword">#packed</span>'));
   assert(liteHtml.includes('<span class="tok-keyword">loop</span>'));
   assert(liteHtml.includes('قفسه'));
   assert(liteHtml.includes('مورد'));

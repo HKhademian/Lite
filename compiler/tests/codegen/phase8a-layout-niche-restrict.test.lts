@@ -1,4 +1,4 @@
-/* Phase 8A verification: sound C11 restrict proofs, @packed/@align/@no_niche layout attributes, core/option Option<T>, and C11 niche packing + tagged fallback. */
+/* Phase 8A verification: sound C11 restrict proofs, #packed/#align/#no_niche layout attributes, core/option Option<T>, and C11 niche packing + tagged fallback. */
 
 test := import "core/test";
 tb := import "util/text-builder";
@@ -34,16 +34,11 @@ layoutSrc := [
     "SmallColor := enum: UInt8 { Red; Green; Blue; };",
     "PlainKind := enum { Alpha; Beta; };",
     "FullByte := enum: Int8 { " + e256Cases.build() + "};",
-    "@no_niche",
-    "OptOutColor := enum: UInt8 { Cyan; Magenta; };",
-    "@no_niche",
-    "NoNicheOpt := enum<T: Type> { Empty; Val(T); };",
-    "@packed",
-    "PackedHdr := record { kind: UInt8; size: UInt32; };",
-    "@align(16)",
-    "Aligned16 := record { tag: UInt8; count: UInt32; };",
-    "@align(64)",
-    "Aligned64 := enum<T: Type> { None; Some(T); };",
+    "OptOutColor := enum: UInt8 #no_niche { Cyan; Magenta; };",
+    "NoNicheOpt := enum<T: Type> #no_niche { Empty; Val(T); };",
+    "PackedHdr := record #packed { kind: UInt8; size: UInt32; };",
+    "Aligned16 := record #align(16) { tag: UInt8; count: UInt32; };",
+    "Aligned64 := enum<T: Type> #align(64) { None; Some(T); };",
     "UserRec := record { active: Bool; label: String; score: Int; };",
     "SubIntRec := record { code: Int4; qty: Int; };",
     "checkLayoutProbe := fn(",
@@ -263,11 +258,11 @@ if ccProbe.available {
         "    _Static_assert(sizeof(*lite_p_opt_flt) == sizeof(double), \"Option<Float> must use NaN niche\");",
         "    _Static_assert(sizeof(*lite_p_opt_f32) == sizeof(float), \"Option<Float32> must use NaN niche\");",
         "    _Static_assert(sizeof(*lite_p_opt_e256) > 1, \"Option<256-case Int8 enum> must fall back to tagged\");",
-        "    _Static_assert(sizeof(*lite_p_opt_nn_enum) > 1, \"Option<@no_niche enum> must fall back to tagged\");",
-        "    _Static_assert(sizeof(*lite_p_opt_nn_opt) > 1, \"@no_niche Option must stay tagged\");",
-        "    _Static_assert(sizeof(*lite_p_packed) == 5, \"@packed PackedHdr must be 5 bytes\");",
-        "    _Static_assert(_Alignof(" + align16Tag + ") == 16, \"@align(16) record alignment\");",
-        "    _Static_assert(_Alignof(" + align64Tag + ") == 64, \"@align(64) enum alignment\");"
+        "    _Static_assert(sizeof(*lite_p_opt_nn_enum) > 1, \"Option<#no_niche enum> must fall back to tagged\");",
+        "    _Static_assert(sizeof(*lite_p_opt_nn_opt) > 1, \"#no_niche Option must stay tagged\");",
+        "    _Static_assert(sizeof(*lite_p_packed) == 5, \"#packed PackedHdr must be 5 bytes\");",
+        "    _Static_assert(_Alignof(" + align16Tag + ") == 16, \"#align(16) record alignment\");",
+        "    _Static_assert(_Alignof(" + align64Tag + ") == 64, \"#align(64) enum alignment\");"
     ].join("\n");
 
     patchedO1 := injectStaticAsserts(cCode, nicheAsserts);
@@ -280,8 +275,8 @@ if ccProbe.available {
         "    _Static_assert(sizeof(*lite_p_opt_bool) > 1, \"-fno-niche-opt disables Option<Bool> niche packing\");",
         "    _Static_assert(sizeof(*lite_p_opt_str) > 16, \"-fno-niche-opt disables Option<String> niche packing\");",
         "    _Static_assert(sizeof(*lite_p_opt_rc) > 8, \"-fno-niche-opt disables Option<Rc> niche packing\");",
-        "    _Static_assert(sizeof(*lite_p_packed) == 5, \"@packed still 5 bytes with -fno-niche-opt\");",
-        "    _Static_assert(_Alignof(" + align64Tag + ") == 64, \"@align(64) still 64 on tagged fallback\");"
+        "    _Static_assert(sizeof(*lite_p_packed) == 5, \"#packed still 5 bytes with -fno-niche-opt\");",
+        "    _Static_assert(_Alignof(" + align64Tag + ") == 64, \"#align(64) still 64 on tagged fallback\");"
     ].join("\n");
 
     cNoNiche := compilerTest.compileStdinWithOpts(root, cComp, root, layoutSrc, "phase8a-nn.lts", "", ["-O1", "-fno-niche-opt"]);
@@ -316,40 +311,52 @@ if ccProbe.available {
 }
 
 /* 5. Compile-time layout attribute rejections. */
-compilerTest.assertCompileErrorContains(root, tsComp, "reject @packed on enum",
-"@packed\nE := enum { A; B; };\n", "@packed is only allowed on record declarations");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject #packed on enum",
+"E := enum #packed { A; B; };\n", "#packed is only allowed on record declarations");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject @packed on record with String",
-"@packed\nR := record { s: String; };\n", "@packed record cannot contain heap-owned or drop-requiring fields");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject #packed on record with String",
+"R := record #packed { s: String; };\n", "#packed record cannot contain heap-owned or drop-requiring fields");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject @packed on record with List",
-"@packed\nR := record { xs: List<Int>; };\n", "@packed record cannot contain heap-owned or drop-requiring fields");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject #packed on record with List",
+"R := record #packed { xs: List<Int>; };\n", "#packed record cannot contain heap-owned or drop-requiring fields");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject @packed + @align combined",
-"@packed @align(16)\nR := record { a: UInt8; };\n", "@align cannot be combined with @packed");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject #packed + #align combined",
+"R := record #packed #align(16) { a: UInt8; };\n", "#align cannot be combined with #packed");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject @align(0)",
-"@align(0)\nR := record { a: UInt8; };\n", "@align(0) must be a power of two in 1..4096");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject #align(0)",
+"R := record #align(0) { a: UInt8; };\n", "#align(0) must be a power of two in 1..4096");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject @align(3)",
-"@align(3)\nR := record { a: UInt8; };\n", "@align(3) must be a power of two in 1..4096");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject #align(3)",
+"R := record #align(3) { a: UInt8; };\n", "#align(3) must be a power of two in 1..4096");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject @align(8192)",
-"@align(8192)\nR := record { a: UInt8; };\n", "@align(8192) must be a power of two in 1..4096");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject #align(8192)",
+"R := record #align(8192) { a: UInt8; };\n", "#align(8192) must be a power of two in 1..4096");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate @no_niche",
-"@no_niche @no_niche\nE := enum { A; B; };\n", "duplicate @no_niche attribute");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject duplicate #no_niche",
+"E := enum #no_niche #no_niche { A; B; };\n", "duplicate #no_niche attribute");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject unknown @bogus on decl",
-"@bogus\nR := record { a: UInt8; };\n", "unknown type layout attribute @bogus");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject unknown #bogus on decl",
+"R := record #bogus { a: UInt8; };\n", "unknown type layout attribute #bogus");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject layout attr on fn",
-"@align(16)\nf := fn(): Int { 1 };\n", "layout attributes are only allowed on record and enum declarations");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject leading @packed",
+"@packed\nR := record { a: UInt8; };\n", "leading @packed is no longer supported");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject leading @align",
+"@align(16)\nR := record { a: UInt8; };\n", "leading @align is no longer supported");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject leading @no_niche",
+"@no_niche\nE := enum { A; B; };\n", "leading @no_niche is no longer supported");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject leading #packed before decl",
+"#packed\nR := record { a: UInt8; };\n", "layout attributes go after record/enum");
+
+compilerTest.assertCompileErrorContains(root, tsComp, "reject #packed before generic params",
+"R := record #packed <T> { a: T; };\n", "layout attributes must follow type parameters");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject layout attr on alias",
-"@no_niche\nA := alias Int;\n", "layout attributes are only allowed on record and enum declarations");
+"A := alias #no_niche Int;\n", "layout attributes are only allowed on record and enum declarations");
 
 compilerTest.assertCompileErrorContains(root, tsComp, "reject layout attr on distinct",
-"@no_niche\nD := distinct Int;\n", "layout attributes are only allowed on record and enum declarations");
+"D := distinct #no_niche Int;\n", "layout attributes are only allowed on record and enum declarations");
 
 test.done("phase8a-layout-niche-restrict");

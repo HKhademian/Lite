@@ -524,12 +524,12 @@
       "id": "systems",
       "order": 8,
       "title": "Track 8 — Modern Systems: Slices, Interfaces, Fallibles & Comptime",
-      "summary": "Zero-copy Slice<T> & splitAt, @packed Option<T> & Simd/SoA, nominal interfaces & lexical contexts, unions & T! fallibles, comptime & structural records.",
+      "summary": "Zero-copy Slice<T> & splitAt, #packed Option<T> & Simd/SoA, nominal interfaces & lexical contexts, unions & T! fallibles, comptime & structural records.",
       "lessons": [
         {
           "id": "learn.systems.slices.slices-simd-and-layout",
           "slug": "slices-simd-and-layout",
-          "title": "Slices, splitAt, @packed Option, SIMD & SoA",
+          "title": "Slices, splitAt, #packed Option, SIMD & SoA",
           "kind": "lesson",
           "domain": "systems",
           "subGroup": "slices",
@@ -539,7 +539,7 @@
           "helperModules": [],
           "stdin": "",
           "args": [],
-          "teaches": ["Slice<T>", "splitAt", "@packed", "Option<T>", "Simd<T, N>", "SoA<R>", "Rc<T>"],
+          "teaches": ["Slice<T>", "splitAt", "#packed", "Option<T>", "Simd<T, N>", "SoA<R>", "Rc<T>"],
           "docs": ["language/learn/handbook/types/slices-simd-and-layout.md", "docs/slices.md", "docs/c11-memory-and-codegen-plan.md"]
         },
         {

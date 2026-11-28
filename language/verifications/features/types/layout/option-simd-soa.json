@@ -3,12 +3,12 @@
   "kind": "feature",
   "source": {
     "file": "option-simd-soa.lts",
-    "hash": "sha256:3b97fbcb0dd012286950aac699b485cc507ca797702e7542643357be66762997"
+    "hash": "sha256:2f7abc17c1a30880286fe510a9b51c4d249ba53067467159f5940510e9be3eec"
   },
   "features": [
     "feature.types.layout.option-simd-soa"
   ],
-  "guideline": "Checks @packed records, Option<T>, SoA<R>, Simd<T, N>, and Rc<T>.",
+  "guideline": "Checks #packed records, Option<T>, SoA<R>, Simd<T, N>, and Rc<T>.",
   "cases": [
     {
       "name": "default",

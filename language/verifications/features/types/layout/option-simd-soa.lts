@@ -2,8 +2,7 @@ io := import "core/io";
 opt := import "core/option";
 simd := import "core/simd";
 
-@packed
-Pkt := record { tag: UInt4; len: UInt4; };
+Pkt := record #packed { tag: UInt4; len: UInt4; };
 p := Pkt { tag = 3, len = 9 };
 ov: opt.Option<Int> = .Some(cast<Int>(p.len));
 

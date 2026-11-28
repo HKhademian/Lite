@@ -167,7 +167,7 @@ isSingleSymbol := fn(ch: String): Bool {
     ch == "(" or ch == ")" or ch == "{" or ch == "}" or ch == "[" or ch == "]" or
     ch == "," or ch == ";" or ch == ":" or ch == "." or ch == "?" or ch == "!" or
     ch == "=" or ch == "+" or ch == "-" or ch == "*" or ch == "/" or ch == "%" or
-    ch == "<" or ch == ">" or ch == "|" or ch == "&" or ch == "@"
+    ch == "<" or ch == ">" or ch == "|" or ch == "&" or ch == "@" or ch == "#"
 }
 
 /** Reads the longest selected symbol at `position`, or empty text when none starts there. */

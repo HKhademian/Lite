@@ -261,7 +261,7 @@ if ccProbe.available {
     test.check("C SIMD load OOB faults BoundPanic", cLd.status =!= 0 and cLd.stderr.contains("BoundPanic"));
 }
 
-/* 3. SIMD & @packed compile-time rejections */
+/* 3. SIMD & #packed compile-time rejections */
 compilerTest.assertCompileErrorContains(root, tsComp, "reject sizeless Simd<Float32, *>",
 "v: Simd<Float32, *> = Simd.splat(cast<Float32>(1.0));", "runtime-scalable or sizeless SIMD vectors are not supported");
 
@@ -295,8 +295,8 @@ compilerTest.assertCompileErrorContains(root, tsComp, "reject wrappingAdd on Flo
 compilerTest.assertCompileErrorContains(root, tsComp, "reject neg on UInt32x4",
 "simd := import \"core/simd\";\nv := simd.UInt32x4.splat(cast<UInt32>(1)).neg();", "is not supported on unsigned Simd type");
 
-compilerTest.assertCompileErrorContains(root, tsComp, "reject @packed with Simd field",
-"simd := import \"core/simd\";\n@packed\nP := record { v: simd.Float32x4; };", "@packed record cannot contain heap-owned or drop-requiring fields");
+compilerTest.assertCompileErrorContains(root, tsComp, "reject #packed with Simd field",
+"simd := import \"core/simd\";\nP := record #packed { v: simd.Float32x4; };", "#packed record cannot contain heap-owned or drop-requiring fields");
 
 /* 4. SoA<R> & disjoint column slice compile-time rejections */
 compilerTest.assertCompileErrorContains(root, tsComp, "reject SoA<Int>",

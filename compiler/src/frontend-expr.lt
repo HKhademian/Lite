@@ -2013,6 +2013,12 @@ pub resolveUnifiedAliasDecl := fn(
         syntax.failAt(source, gp.errPos, prefix, gp.errMsg);
     }
     targetStart := syntax.skipTrivia(source, gp.next, prefix);
+    if not isPrepass and targetStart < size and source.at(targetStart) == "#" {
+        aliasAttr := types.parseTypeLayoutAttrs(source, targetStart, prefix);
+        if aliasAttr.hasAttrs {
+            syntax.failAt(source, targetStart, prefix, "layout attributes are only allowed on record and enum declarations");
+        }
+    }
     aliasIdx := types.aliasIndexAt(aliases, nameStart);
     if aliasIdx < 0 {
         if isPrepass { return (kind = "", next = typePos, done = false); }
@@ -4993,52 +4999,20 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 stmtNext := syntax.consumeStatementEnd(source, stmtEndPos, prefix);
                 cursor = if stmtNext >= 0 { stmtNext } else { stmtEndPos };
             }
+        } else if chAtCursor == "#" {
+            leadAttr := types.parseTypeLayoutAttrs(source, cursor, prefix);
+            if not leadAttr.ok {
+                syntax.failAt(source, leadAttr.errPos, prefix, leadAttr.errMsg);
+            }
+            syntax.failAt(source, cursor, prefix, "layout attributes go after record/enum (for example 'record #packed { ... }' or 'enum #no_niche { ... }')");
         } else if chAtCursor == "@" {
-            layoutAttr := types.parseTypeLayoutAttrs(source, cursor, prefix);
-            if not layoutAttr.ok {
-                syntax.failAt(source, layoutAttr.errPos, prefix, layoutAttr.errMsg);
-            }
-            if layoutAttr.hasAttrs {
-                attrDeclPos := syntax.skipTrivia(source, layoutAttr.next, prefix);
-                if source.wordAt(attrDeclPos, "pub") {
-                    syntax.failAt(source, attrDeclPos, prefix, "pub is only allowed on top-level declarations");
-                }
-                if attrDeclPos >= blockSourceSize or not source.at(attrDeclPos).isNameStart() {
-                    syntax.failAt(source, attrDeclPos, prefix, "layout attributes are only allowed on record and enum declarations");
-                }
-                attrDeclEnd := source.skipName(attrDeclPos);
-                attrDeclOp := syntax.skipTrivia(source, attrDeclEnd, prefix);
-                if not source.startsWithAt(attrDeclOp, ":=") {
-                    syntax.failAt(source, attrDeclOp, prefix, "layout attributes are only allowed on record and enum declarations");
-                }
-                attrTargetPos := syntax.skipTrivia(source, attrDeclOp + 2, prefix);
-                if not source.wordAt(attrTargetPos, "record") and not source.wordAt(attrTargetPos, "enum") {
-                    syntax.failAt(source, attrTargetPos, prefix, "layout attributes are only allowed on record and enum declarations");
-                }
-                if layoutAttr.packed and source.wordAt(attrTargetPos, "enum") {
-                    syntax.failAt(source, cursor, prefix, "@packed is only allowed on record declarations");
-                }
-                isStatement = true;
-                cursor = attrDeclPos;
-                continue;
-            }
             tagPeek := syntax.parseTagAt(source, cursor, prefix);
             afterPeek := syntax.skipTrivia(source, tagPeek.next, prefix);
             if afterPeek >= blockSourceSize or (source.at(afterPeek) =!= "{" and source.at(afterPeek) =!= "." and
             not source.wordAt(afterPeek, "do") and not source.wordAt(afterPeek, "if") and
             not source.wordAt(afterPeek, "match") and not source.wordAt(afterPeek, "loop")) {
-                var attrCheckPos := afterPeek;
-                if source.wordAt(attrCheckPos, "pub") {
-                    attrCheckPos = syntax.skipTrivia(source, attrCheckPos + 3, prefix);
-                }
-                if attrCheckPos < blockSourceSize and source.at(attrCheckPos).isNameStart() {
-                    attrEqPos := syntax.skipTrivia(source, source.skipName(attrCheckPos), prefix);
-                    if source.startsWithAt(attrEqPos, ":=") {
-                        attrRhsPos := syntax.skipTrivia(source, attrEqPos + 2, prefix);
-                        if source.wordAt(attrRhsPos, "record") or source.wordAt(attrRhsPos, "enum") {
-                            syntax.failAt(source, cursor, prefix, "unknown type layout attribute @" + tagPeek.tag);
-                        }
-                    }
+                if tagPeek.tag == "packed" or tagPeek.tag == "align" or tagPeek.tag == "no_niche" {
+                    syntax.failAt(source, cursor, prefix, "leading @" + tagPeek.tag + " is no longer supported; write 'record #" + tagPeek.tag + " { ... }' or 'enum #" + tagPeek.tag + " { ... }' instead");
                 }
                 syntax.failAt(source, afterPeek, prefix, "expected {, do, if, match, loop or . after block tag @" + tagPeek.tag);
             }
@@ -6491,6 +6465,21 @@ parseBlockExpr := fn(target: String, source: String, start: Int, prefix: String,
                 enumPos := syntax.skipTrivia(source, afterItemName + 2, prefix);
                 gp := types.scanComptimeTypeParams(source, enumPos + 4, prefix);
                 if not gp.ok { syntax.failAt(source, gp.errPos, prefix, gp.errMsg); }
+                var enumAttrPos := syntax.skipTrivia(source, gp.next, prefix);
+                if enumAttrPos < source.length() and source.at(enumAttrPos) == ":" {
+                    bkStart := syntax.skipTrivia(source, enumAttrPos + 1, prefix);
+                    bkRes := types.collectTypeTarget(source, bkStart, prefix);
+                    enumAttrPos = syntax.skipTrivia(source, bkRes.next, prefix);
+                }
+                enumAttr := types.parseTypeLayoutAttrs(source, enumAttrPos, prefix);
+                if not enumAttr.ok { syntax.failAt(source, enumAttr.errPos, prefix, enumAttr.errMsg); }
+                if enumAttr.packed { syntax.failAt(source, enumAttrPos, prefix, "#packed is only allowed on record declarations"); }
+                if enumAttr.hasAttrs {
+                    afterEnumAttr := syntax.skipTrivia(source, enumAttr.next, prefix);
+                    if afterEnumAttr < source.length() and (source.at(afterEnumAttr) == "<" or source.at(afterEnumAttr) == ":") {
+                        syntax.failAt(source, enumAttrPos, prefix, "layout attributes must follow type parameters and backing type (e.g. 'enum<T> #no_niche { ... }')");
+                    }
+                }
                 aliasIdx := types.aliasIndexAt(blockAliases, itemStart);
                 if aliasIdx < 0 { syntax.failAt(source, itemStart, prefix, "malformed enum declaration " + itemName); }
                 aliasEntry := blockAliases[aliasIdx];
@@ -18472,7 +18461,15 @@ pub parseRecordDecl := fn(target: String, source: String, recPos: Int, nameStart
     if not gp.ok {
         syntax.failAt(source, gp.errPos, prefix, gp.errMsg);
     }
-    bracePos := syntax.skipTrivia(source, gp.next, prefix);
+    attrStart := syntax.skipTrivia(source, gp.next, prefix);
+    layoutAttr := types.parseTypeLayoutAttrs(source, attrStart, prefix);
+    if not layoutAttr.ok {
+        syntax.failAt(source, layoutAttr.errPos, prefix, layoutAttr.errMsg);
+    }
+    bracePos := syntax.skipTrivia(source, layoutAttr.next, prefix);
+    if layoutAttr.hasAttrs and bracePos < size and source.at(bracePos) == "<" {
+        syntax.failAt(source, attrStart, prefix, "layout attributes must follow type parameters (e.g. 'record<T> #packed { ... }')");
+    }
     if bracePos >= size or source.at(bracePos) =!= "{" {
         syntax.failAt(source, bracePos, prefix, "expected { after record");
     }

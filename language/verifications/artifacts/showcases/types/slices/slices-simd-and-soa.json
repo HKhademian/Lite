@@ -3,7 +3,7 @@
   "kind": "showcase",
   "source": {
     "file": "../../../../../showcases/types/slices/slices-simd-and-soa.lts",
-    "hash": "sha256:83ef5e342396b9fa22028ab5a964b332c90f00ee4218a2d509d36088bbd0e831"
+    "hash": "sha256:5159e4b8ad2a5d195fdf9ea070c3e672b5455d1869cebceee6cd8f98ae47af52"
   },
   "features": [
     "feature.types.slices.borrowed-and-split",
